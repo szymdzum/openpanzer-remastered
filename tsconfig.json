@@ -1,0 +1,13 @@
+{
+	// Type checking only (npm run check). The browser gets src/*.ts with the types blanked out
+	// by scripts/build.mjs: TS 7 emits "use strict", which the game's implicit globals don't survive.
+	"compilerOptions": {
+		"target": "es2017",
+		"lib": ["es2017", "dom"],
+		"noEmit": true,
+		"strict": false,
+		"erasableSyntaxOnly": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*.ts", "types/**/*.d.ts"]
+}
