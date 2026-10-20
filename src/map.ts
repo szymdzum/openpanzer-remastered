@@ -13,9 +13,49 @@
  */
 
 //Hex, Player and Map classes
-//Player Object Constructor
-function Player()
+
+//Properties this module sets on objects of other modules, merged into their types
+//TODO move to unit.ts and prototypes.ts
+interface Unit { nodossier: boolean } //disbanded or removed, not a loss for the dossier
+interface pathCell { isVisible: boolean } //moveUnit marks the cells the enemy sees, render reads it
+//What this module uses of AIScripted (Player.handler), until aiscripted.ts types it
+interface AIScripted { buildActions(): void }
+
+//Campaign stats of a player, unit counts by unit class and scenario names by outcome
+interface PlayerDossier
 {
+	units?: {
+		lostaux?: { [uclass: number]: number };
+		lostcore?: { [uclass: number]: number };
+		killed?: { [uclass: number]: number };
+	};
+	outcomes?: { [outcome: string]: string[] }; //outcomeNames keys
+}
+
+//Player Object Constructor
+class Player
+{
+	declare id: number;
+	declare side: number;
+	declare country: number;
+	declare prestige: number;
+	declare score: number;
+	declare dossier: PlayerDossier;
+	declare playedTurn: number;
+	declare type: number; //playerType
+	declare handler: AI | AIScripted;
+	declare airTransports: number;
+	declare navalTransports: number;
+	declare supportCountries: number[];
+	declare prestigePerTurn: number[];
+
+	declare getCoreUnitList: () => Unit[];
+	declare addCoreUnit: (unit: Unit) => boolean;
+	declare removeUndeployedCoreUnit: (index: number) => void;
+	declare setCoreUnitList: (list: Unit[]) => boolean;
+
+	constructor()
+	{
 	this.id = -1;
 	this.side = -1;
 	this.country = -1;
@@ -59,12 +99,35 @@ function Player()
 	}
 
 	//Private property
-	var coreUnitList = []; //Core units obtained during campaign or bought by player
+	var coreUnitList: Unit[] = []; //Core units obtained during campaign or bought by player
+	}
+}
+//Player Object Public Methods, assigned to the prototype so they stay enumerable
+interface Player
+{
+	copy(p: Player, addScore?: boolean): void;
+	initDossier(): void;
+	copyDossier(p: Player): void;
+	getCountryName(): string;
+	getSideName(): string;
+	hasUndeployedUnits(): boolean;
+	buyUnit(unitid: number, transportid?: number): boolean;
+	acquireUnit(unitid: number, transportid?: number): boolean;
+	upgradeUnit(unit: Unit, upgradeid: number, transportid: number): boolean;
+	sellUnit(unit: Unit): boolean;
+	resupplyUnit(unit: Unit, supply: Supply): void;
+	reinforceUnit(unit: Unit, strength: number, overstrength: boolean): number;
+	updateScore(gain: number, count?: number): void;
+	addDestroyedUnitToDossier(unit: Unit): void;
+	addOutcomeToDossier(outcome: string, scenarioName: string): void;
+	endTurn(turn: number): void;
+	setPlayerToHQ(): void;
+	cleanup(): void;
 }
 //Player Object Public Methods
 //addScore: only add the score of p to this player, used to carry the campaign player
 //between scenarios
-Player.prototype.copy = function(p, addScore)
+Player.prototype.copy = function(p: Player, addScore?: boolean)
 {
 	var i;
 
@@ -111,7 +174,7 @@ Player.prototype.initDossier = function()
 
 	for (var c in unitClass)
 	{
-		var uclass = unitClass[c];
+		var uclass = unitClass[c as keyof typeof unitClass];
 		this.dossier.units.lostaux[uclass] = 0;
 		this.dossier.units.lostcore[uclass] = 0;
 		this.dossier.units.killed[uclass] = 0;
@@ -128,7 +191,7 @@ Player.prototype.copyDossier = function(p)
 
 	for (var c in unitClass)
 	{
-		var uclass = unitClass[c];
+		var uclass = unitClass[c as keyof typeof unitClass];
 		this.dossier.units.lostaux[uclass] = p.dossier.units.lostaux[uclass];
 		this.dossier.units.lostcore[uclass] = p.dossier.units.lostcore[uclass];
 		this.dossier.units.killed[uclass] = p.dossier.units.killed[uclass];
@@ -336,8 +399,28 @@ Player.prototype.cleanup = function()
 }
 
 //Hex Object Constructor
-function Hex(row, col)
+class Hex
 {
+	declare unit: Unit;
+	declare airunit: Unit;
+	declare terrain: number; //terrainType
+	declare road: number; //roadType bit mask
+	declare owner: number;
+	declare flag: number;
+	declare isDeployment: number;
+	declare victorySide: number;
+	declare name: string;
+	declare isMoveSel: boolean;
+	declare isAttackSel: boolean;
+
+	declare isZOC: (side: number) => boolean;
+	declare isSpotted: (side: number) => boolean;
+	declare setZOC: (side: number, on: boolean) => void;
+	declare setSpotted: (side: number, on: boolean) => void;
+	declare getPos: () => Cell;
+
+	constructor(row: number, col: number)
+	{
 	//Public Properties
 	this.unit = null; //pointer to the ground unit on this hex
 	this.airunit = null; //pointer to the air unit on this hex
@@ -366,11 +449,11 @@ function Hex(row, col)
 	this.getPos = function() { return new Cell(1 * row, 1 * col); }
 
 	//Private Methods and Properties
-	var zocList = [0, 0]; //Hex is in a unit zone of control from side 0 or 1
-	var spotList = [0, 0]; //Hex is spoted by a unit from side 0 or 1
+	var zocList: number[] = [0, 0]; //Hex is in a unit zone of control from side 0 or 1
+	var spotList: number[] = [0, 0]; //Hex is spoted by a unit from side 0 or 1
 
 	//sets one of the properties list for side on/off, counters don't go below 0
-	function setHexPropList(propList, side, on)
+	function setHexPropList(propList: number[], side: number, on: boolean)
 	{
 		if (side < propList.length)
 		{
@@ -381,15 +464,25 @@ function Hex(row, col)
 		}
 	}
 	//checks if a property is true or false
-	function isHexPropSet(propList, side)
+	function isHexPropSet(propList: number[], side: number)
 	{
 		if (side < propList.length && propList[side] > 0)
 			return true;
 		return false;
 	}
+	}
 }
 
-//Hex Object Public Methods
+//Hex Object Public Methods, assigned to the prototype: gamestate does for-in over a Hex
+interface Hex
+{
+	copy(hex: Hex): void;
+	getUnit(airMode?: boolean | number): Unit; //gamerules passes 0 and 1
+	setUnit(unit: Unit): void;
+	delUnit(unit: Unit): void;
+	getAttackableUnit(atkunit: Unit, airMode: boolean | number): Unit;
+	cleanup(): void;
+}
 //Clone Hex object
 Hex.prototype.copy = function(hex)
 {
@@ -408,7 +501,7 @@ Hex.prototype.copy = function(hex)
 }
 
 //Returns air or ground unit on a hex depending on UI airMode
-Hex.prototype.getUnit = function(airMode)
+Hex.prototype.getUnit = function(airMode?: boolean | number)
 {
 	if (this.unit !== null && this.airunit !== null)
 	{
@@ -494,9 +587,96 @@ Hex.prototype.cleanup = function()
 	}
 }
 
-//Map Object Constructor
-function GameMap() //Map in the original, renamed: it replaced the built-in Map
+//What GameMap.reinforceUnit returns
+interface ReinforceResults { strength: number; ammo: number; fuel: number }
+//What GameMap.captureHex returns
+interface CaptureResults { isWin: boolean; isCapture: boolean }
+//Unit icons by eqid, for preloading
+interface UnitImagesList { [eqid: number]: string }
+//The last move of a unit, saved for undo
+interface MapLastMove
 {
+	unit: Unit;
+	savedUnit: Unit;
+	oldOwner: number;
+	oldFlag: number;
+	oldVictorySide: number;
+	prestigeGain: number;
+	scoreGain: number;
+	clear(): void;
+}
+
+//Map Object Constructor
+class GameMap //Map in the original, renamed: it replaced the built-in Map
+{
+	declare rows: number;
+	declare cols: number;
+	declare isLastRowPartial: boolean;
+	declare isLastColPartial: boolean;
+	declare map: Hex[][];
+	declare terrainImage: string;
+	declare victoryTurns: number[];
+	declare maxTurns: number;
+	declare turn: number;
+	declare currentUnit: Unit;
+	declare sidesVictoryHexes: Cell[][];
+	declare currentPlayer: Player;
+	declare name: string; //only set by copy()
+
+	declare allocMap: () => void;
+	declare addUnit: (unit: Unit) => void;
+	declare getUnits: () => Unit[];
+	declare getUnitById: (id: number) => Unit;
+	declare getUnitImagesList: () => UnitImagesList;
+	declare hasAliveUnits: (side: number) => boolean;
+	declare removeAllSideUnits: (side: number) => void;
+	declare getPlayers: () => Player[];
+	declare addPlayer: (player: Player) => void;
+	declare getPlayer: (id: number) => Player;
+	declare getPlayersByCountry: (country: number) => Player[];
+	declare getCountriesBySide: (side: number) => number[];
+	declare setCurrentUnit: (unit: Unit) => void;
+	declare delCurrentUnit: () => void;
+	declare getUnitNeighbor: (unit: Unit, direction: number, onlyNotMoved: boolean) => Unit;
+	declare delMoveSel: () => void;
+	declare delAttackSel: () => void;
+	declare setHex: (row: number, col: number, hex?: Hex) => void;
+	declare updateVictorySides: (side: number, cell: Cell) => boolean;
+	declare setMoveRange: (unit: Unit) => void;
+	declare getCurrentMoveRange: () => Cell[];
+	declare setAttackRange: (unit: Unit) => void;
+	declare endTurn: () => void;
+	declare attackUnit: (atkunit: Unit, defunit: Unit, supportFire: boolean, isOverrun?: boolean) => combatResults;
+	declare updateUnitList: () => void;
+	declare moveUnit: (unit: Unit, drow: number, dcol: number) => movementResults;
+	declare retreatUnit: (unit: Unit, cell: Cell) => movementResults;
+	declare resupplyUnit: (unit: Unit) => Supply;
+	declare reinforceUnit: (unit: Unit, overstrength: boolean) => ReinforceResults;
+	declare mountUnit: (unit: Unit) => void;
+	declare mountUnitHandler: (unit: Unit) => void;
+	declare unmountUnit: (unit: Unit) => void;
+	declare unmountUnitHandler: (unit: Unit) => void;
+	declare embarkUnit: (unit: Unit) => boolean;
+	declare disembarkUnit: (unit: Unit) => boolean;
+	declare upgradeUnit: (id: number, upgradeid: number, transportid: number) => boolean;
+	declare disbandUnit: (id: number) => boolean;
+	declare deployPlayerUnit: (player: Player, deployid: number, row: number, col: number) => boolean;
+	declare deployNewUnitByEqId: (eqid: number, row: number, col: number, owner: number) => void;
+	declare deployReinforcement: (unit: Unit, row: number, col: number) => Cell;
+	declare selectUnit: (unit: Unit) => boolean;
+	declare buildCoreUnitList: (player: Player) => void;
+	declare restoreCoreUnitList: (player: Player, coreUnits: Unit[]) => void;
+	declare removeNonCampaignUnits: (player: Player) => void;
+	declare canUndoMove: (unit: Unit) => boolean;
+	declare undoLastMove: () => void;
+	declare captureHex: (hex: Hex, unit: Unit) => CaptureResults;
+	declare getDeployHexes: (side: number) => Cell[];
+	declare copy: (m: GameMap) => void;
+	declare cleanup: () => void;
+	declare dumpMap: () => void;
+
+	constructor()
+	{
 	this.rows = 0;
 	this.cols = 0;
 	this.isLastRowPartial = false; //last row/col hexes are only half drawn on the map image
@@ -510,11 +690,13 @@ function GameMap() //Map in the original, renamed: it replaced the built-in Map
 	this.sidesVictoryHexes = [[], []]; //Victory hexes for each side
 	this.currentPlayer = null; //Which player is currently playing
 
-	var unitImagesList = {}; //a "hash" of unique unit images used for caching
-	var moveSelected = []; //selected hexes for current unit move destinations
-	var attackSelected = []; //selected hexes for current unit attack destinations
-	var unitList = []; //internal list of units
-	var playerList = []; //players list
+	var unitImagesList: UnitImagesList = {}; //a "hash" of unique unit images used for caching
+	//selected hexes for current unit move destinations: extendedCells from the move range, plain
+	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
+	var moveSelected: Cell[] = [];
+	var attackSelected: Cell[] = []; //selected hexes for current unit attack destinations
+	var unitList: Unit[] = []; //internal list of units
+	var playerList: Player[] = []; //players list
 	var uniqueID = 0; //gets assigned as unique unit ID and incremented after each unit is added
 
 	this.allocMap = function()
@@ -973,7 +1155,7 @@ function GameMap() //Map in the original, renamed: it replaced the built-in Map
 		var mr = new movementResults();
 		var canCapture = GameRules.canCapture(unit);
 		var moveCost = 0;
-		var c = GameRules.getShortestPath(s, new Cell(drow, dcol), moveSelected);
+		var c = GameRules.getShortestPath(s, new Cell(drow, dcol), moveSelected as extendedCell[]);
 
 		if (!c || !c[0])
 			return mr;
@@ -1548,7 +1730,7 @@ function GameMap() //Map in the original, renamed: it replaced the built-in Map
 	//Private
 
 	//For saving changes made by last move of a unit
-	var lastMove =
+	var lastMove: MapLastMove =
 	{
 		unit: null, 		//Current unit properties
 		savedUnit: null, 	//Old state unit properties (fuel, movesleft)
@@ -1565,4 +1747,5 @@ function GameMap() //Map in the original, renamed: it replaced the built-in Map
 			}
 	};
 
+	}
 } // end GameMap class

@@ -12,7 +12,87 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-var UIBuilder = (function(UIBuilder) { //Module start
+//A unit stat of the info and equipment windows:
+//<id>, <title>, <isSortKey>, <sortKeyName>, <glyph>, <placed on the top row>
+type UIBuilderUnitStat = [string, string, number, string | null, string | null, number];
+
+//A scenario of scenariolist (not a category header)
+type UIBuilderScenarioEntry = [string, string, string, ScenarioListPlayer[], ScenarioListPlayer[], string];
+
+interface UIBuilderModule
+{
+	startMenuImgPath: string;
+	menuImgPath: string;
+	eqImgPath: string;
+	currencyIcon: string;
+	navalReplacementIcon: string;
+	eqClassButtons: { [uclass: string]: [string, string] }; //[button glyph, description]
+	unitContextButtons: { mount: string; embark: string; resupply: string; reinforce: string; overstrength: string; undo: string };
+	unitstats: UIBuilderUnitStat[];
+	smallToolTipList: string[];
+	flagStyleSheets: CSSStyleDeclaration[];
+	buildStartMenu(): void;
+	buildGameStateMenu(): void;
+	fillCloudSavesList(): void;
+	gameStateButton(id: string): void;
+	buildMainMenu(): void;
+	setDefaultUserSelections(): void;
+	buildEquipmentWindow(): void;
+	buildEquipmentSortOptions(): void;
+	buildUnitInfoWindow(): void;
+	showEquipmentCosts(prestige: number, buyCost: number, upCost: number, sellCost: number): void;
+	showAttackInfo(atkunit: Unit, defunit: Unit): void;
+	showAIStatus(isPlaying: boolean): void;
+	scaleUI(scale: number | string): void;
+	createSlider(parent: HTMLElement, id: string, value: number, step: number, min: number, max: number, onChange: () => void): void;
+	resizeUI(width: number | string): void;
+	setLayoutConstrains(isStartup: boolean): void;
+	message(title: string, message: string, onOk?: () => void): void;
+	messageDynamic(title: string, message: string): void;
+	showPrototypeAwardMessage(eqid: number): void;
+	gameToolTip(text: string, x: number, y: number): void;
+	gameSmallToolTip(text: string, x: number, y: number, color?: number, id?: string, style?: number): void;
+	uiToolTip(text: string, x: number, y: number, isRightOriented: boolean | number): void;
+	uiToolTipAtElement(element: HTMLElement, text: string, isRightOriented: boolean | number): void;
+	unitIDToOrdinal(id: number): string;
+	simulateDossier(): PlayerDossier;
+	showCampaignEnd(outcome: ScenarioOutcome, message: string, onClose?: () => void): boolean;
+	showDossier(isInGame: boolean, onClose?: () => void): boolean;
+	closeDossier(): void;
+	setEquipmentFlags(eqp?: string): void;
+	setDeployOrCombatLogState(isDeploy: boolean): void;
+}
+
+//Elements that keep state in expando properties
+//The selected option value strings, the lists are indexed with them
+interface UIBuilderCampaignMenu extends HTMLElement { selectedCampaign: number }
+interface UIBuilderScenarioMenu extends HTMLElement { selectedScenario: number }
+interface UIBuilderSettingsWindow extends HTMLElement { needPageReload: boolean; messageHidden: boolean }
+interface UIBuilderAIButton extends HTMLDivElement { playerid: number }
+interface UIBuilderClassButton extends HTMLDivElement { eqclass: number } //the eqClassButtons key string
+interface UIBuilderSortButton extends HTMLElement { sortproperty: string }
+interface UIBuilderCountrySelection extends HTMLElement { country: number; owner: number }
+interface UIBuilderUserSelection extends HTMLElement
+{
+	deployunit: number;
+	userunit: number;
+	equnit: number;
+	eqtransport: number;
+	sortorder: number;
+	sortproperty: string;
+	eqclass: number; //unitClass, the eqClassButtons key string when set from a class button
+}
+
+//An input set from a number, the DOM converts it
+type UIBuilderNumberInput = Omit<HTMLInputElement, "value"> & { value: string | number };
+//Text set from a number, the DOM converts it
+type UIBuilderNumberText = Omit<HTMLElement, "textContent"> & { textContent: string | number };
+//The boolean settings toggled by the settings window, looked up by the button id
+interface UIBuilderSettingFlags { [setting: string]: boolean }
+//The dossier counts by unit class, looked up by the eqClassButtons keys
+interface UIBuilderClassCounts { [uclass: string]: number }
+
+var UIBuilder: UIBuilderModule = (function(UIBuilder: UIBuilderModule) { //Module start
 
 //Path to menu image assets
 UIBuilder.startMenuImgPath = "resources/ui/dialogs/startmenu/images/";
@@ -62,7 +142,7 @@ UIBuilder.unitstats =
 UIBuilder.smallToolTipList = [];
 
 //Elements that are scaled by scaleUI: <id>, <top offset at scale 1 or negative margin top or null>
-var scaledElements =
+var scaledElements: [string, number | null][] =
 [
 	["gameToolTip", null], ["ui-message", null], ["startmenu", null], ["statusbar", 0],
 	["statusbar-extension", 25], ["menu", null], ["unit-context", -95], ["unit-info", -70],
@@ -77,26 +157,26 @@ UIBuilder.flagStyleSheets = [];
 UIBuilder.buildStartMenu = function()
 {
 	//menu buttons divs with id and title
-	var menubuttons = [["newgame", "New Game"], ["settings", "Settings"], ["saveload", "Save / Load"],
+	var menubuttons: [string, string][] = [["newgame", "New Game"], ["settings", "Settings"], ["saveload", "Save / Load"],
 			   ["continuegame", "Continue Game"]];
 	//New game buttons with id, title and description
-	var newgamebuttons =
+	var newgamebuttons: [string, string, string][] =
 	[
 		["newcampaign", "Campaigns", "Lead your troops to victory over multiple scenarios. Troops gain experience and leaders which will carry over next scenarios. Campaign flow depends on how quickly player conquers all objectives. "],
 		["newscenario", "Scenarios", "Play a single scenario. Most scenarios are designed  for campaign mode, this mode is recommended for players that want to learn the specifics of scenarios or try different things. "],
 		["tutorial", "Tutorial", "Learn the basic mechanics of the game. First turns are automatically played by the computer but later the control is given to the player."]
 	];
 	//Campaign difficulties with value, name and if it's the selected option
-	var difficulties = [[difficultyType.historical, "Historical", 0], [difficultyType.tactical, "Tactical", 1],
+	var difficulties: [number, string, number][] = [[difficultyType.historical, "Historical", 0], [difficultyType.tactical, "Tactical", 1],
 			    [difficultyType.operational, "Operational", 0]];
 	//Settings with key in uiSettings and Title
-	var settings = [["showGridTerrain", "Show terrain with Hex Grid"], ["quickAnimation", "Quick combat and move animations"],
+	var settings: [keyof UISettings, string][] = [["showGridTerrain", "Show terrain with Hex Grid"], ["quickAnimation", "Quick combat and move animations"],
 			["muteUnitSounds", "Mute unit combat sounds"], ["noFOW", "Disable Fog of War"],
 			["useRetina", "Zoom to full device resolution"], ["markOwnUnits", "Mark own units on map"],
 			["markEnemyUnits", "Mark enemy strength in red"], ["showDetailInfoToolTips", "Show optional objectives tooltips"],
 			["showHiddenVictoryHexes", "Show hidden victory hexes"]];
 
-	var i, b, div, container;
+	var i: number, b: number, div: HTMLElement, container: HTMLElement;
 	var exitFunction = getDesktopExitFunction();
 
 	//Desktop builds (nw.js, wails) get a close button
@@ -114,7 +194,7 @@ UIBuilder.buildStartMenu = function()
 		div.title = menubuttons[b][1];
 		div.className = "smMainButton";
 		div.textContent = menubuttons[b][1];
-		div.onclick = function() { game.ui.startMenuButton(this.id); };
+		div.onclick = function(this: HTMLElement) { game.ui.startMenuButton(this.id); };
 	}
 
 	//Add new game buttons each in its own container
@@ -130,29 +210,29 @@ UIBuilder.buildStartMenu = function()
 		div.className = "smMainButtonLight";
 		div.textContent = newgamebuttons[b][1];
 		div.style.margin = "0px auto";
-		div.onclick = function() { game.ui.startMenuButton(this.id); };
+		div.onclick = function(this: HTMLElement) { game.ui.startMenuButton(this.id); };
 	}
 
 	$('smLogoText').innerHTML = "version " + VERSION;
 	$('smCredits').innerHTML = "Copyright Nicu Pavel";
 
 	//Add new campaign options (campaign list, difficulty, description)
-	var camSel = addTag('smCampSel', 'select');
+	var camSel = addTag('smCampSel', 'select') as HTMLSelectElement;
 	for (i = 0; i < campaignlist.length; i++)
 	{
-		var camOpt = addTag(camSel, 'option');
-		camOpt.value = i;
+		var camOpt = addTag(camSel, 'option') as HTMLOptionElement;
+		camOpt.value = i as unknown as string; //the DOM converts it
 		camOpt.text = campaignlist[i].title;
 	}
 
-	var difSel = addTag($('smCampDif'), 'select');
+	var difSel = addTag($('smCampDif'), 'select') as HTMLSelectElement;
 	difSel.id = "smCampDifSel";
 	difSel.style.fontSize = "14px";
 	difSel.style.fontWeight = "normal";
 	difSel.style.color = "#f8e064";
 	difSel.style.height = "26px";
 	for (i = 0; i < difficulties.length; i++)
-		addSelectOption(difSel, difficulties[i][1], difficulties[i][0], difficulties[i][2]);
+		addSelectOption(difSel, difficulties[i][1], difficulties[i][0], difficulties[i][2] as unknown as boolean); //0 or 1
 
 	$('smCampDifHelp').onclick = function()
 	{
@@ -161,15 +241,15 @@ UIBuilder.buildStartMenu = function()
 		$('smCampDesc').innerHTML = help;
 	};
 
-	camSel.onchange = function()
+	camSel.onchange = function(this: HTMLSelectElement)
 	{
-		var v = this.options[this.selectedIndex].value;
+		var v = this.options[this.selectedIndex].value as unknown as number; //the value string indexes the list
 		$('smCampDesc').innerHTML = campaignlist[v].desc;
 		$('smCampCountry').innerHTML = "<b>Country</b><br/>" + Equipment.getCountryNameByEqp(campaignlist[v].flag, campaignlist[v].eqp);
 		$('smCampScenarios').innerHTML = "<b>Scenarios</b><br/>" + campaignlist[v].scenarios;
 		$('smCampPrestige').innerHTML = "<b>Start prestige</b><br/>" + campaignlist[v].prestige + "&nbsp;" + UIBuilder.currencyIcon;
 
-		$('smCamp').selectedCampaign = v; //save index to campaign from campaignlist //TODO move to userSel
+		($('smCamp') as UIBuilderCampaignMenu).selectedCampaign = v; //save index to campaign from campaignlist //TODO move to userSel
 	};
 	$('smCBackBut').onclick = function()
 	{
@@ -178,9 +258,9 @@ UIBuilder.buildStartMenu = function()
 	};
 	$('smCPlayBut').onclick = function()
 	{
-		var s = $('smCamp').selectedCampaign;
-		var sel = $('smCampDifSel');
-		var difficulty = sel.options[sel.selectedIndex].value;
+		var s = ($('smCamp') as UIBuilderCampaignMenu).selectedCampaign;
+		var sel = $('smCampDifSel') as HTMLSelectElement;
+		var difficulty = sel.options[sel.selectedIndex].value as unknown as number; //the option value string
 		//selectedCampaign is the option value string, so "0" passes; it's undefined until a campaign is picked
 		if (!s)	return;
 		game.newCampaign(s, difficulty);
@@ -193,8 +273,8 @@ UIBuilder.buildStartMenu = function()
 	//Shows the scenario flow of the selected campaign in the description
 	$('smCFlowBut').onclick = function()
 	{
-		var s = $('smCamp').selectedCampaign;
-		var flowCampaign = new Campaign(s, difficultyType.historical, function()
+		var s = ($('smCamp') as UIBuilderCampaignMenu).selectedCampaign;
+		var flowCampaign = new (Campaign as unknown as CampaignConstructor)(s, difficultyType.historical, function()
 		{
 			$('smCampDesc').innerHTML = flowCampaign.getCampaignFlow();
 		});
@@ -211,10 +291,10 @@ UIBuilder.buildStartMenu = function()
 
 	//Add new scenario options(scenario list, description, players)
 	//scenariolist entries with a single element are group headers
-	var scnSel = addTag('smScenSel', 'select');
+	var scnSel = addTag('smScenSel', 'select') as HTMLSelectElement;
 	for (i = 0; i < scenariolist.length; i++)
 	{
-		var scnOpt = addTag(scnSel, 'option');
+		var scnOpt = addTag(scnSel, 'option') as HTMLOptionElement;
 		if (scenariolist[i].length == 1)
 		{
 			scnOpt.disabled = true;
@@ -222,24 +302,24 @@ UIBuilder.buildStartMenu = function()
 		}
 		else
 		{
-			scnOpt.value = i;
-			scnOpt.text = "\u00a0\u00a0\u00a0\u00a0" + scenariolist[i][1];
+			scnOpt.value = i as unknown as string; //the DOM converts it
+			scnOpt.text = "\u00a0\u00a0\u00a0\u00a0" + (scenariolist[i] as UIBuilderScenarioEntry)[1];
 		}
 	}
-	scnSel.onchange = function()
+	scnSel.onchange = function(this: HTMLSelectElement)
 	{
-		var v = this.options[this.selectedIndex].value;
-		$('smScenDesc').innerHTML = scenariolist[v][2];
+		var v = this.options[this.selectedIndex].value as unknown as number; //the value string indexes the list
+		$('smScenDesc').innerHTML = (scenariolist[v] as UIBuilderScenarioEntry)[2];
 
 		clearTag('smSide0');
 		$('smVS').innerHTML = "VS";
 		clearTag('smSide1');
-		UIBuilder.setEquipmentFlags(scenariolist[v][5]);
+		UIBuilder.setEquipmentFlags((scenariolist[v] as UIBuilderScenarioEntry)[5]);
 
 		//Add players for side 0 and 1
 		for (var s = 0; s <= 1; s++)
 		{
-			var data = scenariolist[v][3 + s];
+			var data = scenariolist[v][3 + s] as ScenarioListPlayer[];
 			var sideID = "smSide" + s;
 			var sideHeader = addTag(sideID, 'div');
 			sideHeader.className = "smSideHeader";
@@ -256,8 +336,8 @@ UIBuilder.buildStartMenu = function()
 				flagDiv.style.backgroundPosition = "" + data[i]["country"] * -21 + "px 0px"; //Update flag
 				var contentDiv = addTag(containerDiv, 'div');
 				contentDiv.className = "playerName";
-				contentDiv.innerHTML = Equipment.getCountryNameByEqp(data[i]["country"], scenariolist[v][5]);
-				var smAIBut = addTag(containerDiv, 'div');
+				contentDiv.innerHTML = Equipment.getCountryNameByEqp(data[i]["country"], (scenariolist[v] as UIBuilderScenarioEntry)[5]);
+				var smAIBut = addTag(containerDiv, 'div') as UIBuilderAIButton;
 				//The previous AI settings are kept, a truthy value is normalised to 1
 				if (uiSettings.isAI[data[i]["id"]])
 				{
@@ -272,14 +352,14 @@ UIBuilder.buildStartMenu = function()
 				smAIBut.playerid = data[i]["id"];
 				smAIBut.className = "smallButton right";
 				smAIBut.style.marginRight = "5px";
-				smAIBut.onclick = function()
+				smAIBut.onclick = function(this: UIBuilderAIButton)
 				{
 					uiSettings.isAI[this.playerid] = uiSettings.isAI[this.playerid] ? 0 : 1;
 					toggleCheckbox(this);
 				};
 			}
 		}
-		$('smScen').selectedScenario = v; //TODO move to userSel
+		($('smScen') as UIBuilderScenarioMenu).selectedScenario = v; //TODO move to userSel
 	};
 	$('smSBackBut').onclick = function()
 	{
@@ -290,10 +370,10 @@ UIBuilder.buildStartMenu = function()
 	};
 	$('smSPlayBut').onclick = function()
 	{
-		var s = $('smScen').selectedScenario;
+		var s = ($('smScen') as UIBuilderScenarioMenu).selectedScenario;
 		if (!s)	return;
 		game.campaign = null; //New scenario delete campaign
-		game.newScenario(scenariolist[s][0], scenariolist[s][2]);
+		game.newScenario(scenariolist[s][0], (scenariolist[s] as UIBuilderScenarioEntry)[2]);
 		makeHidden('gameToolTip');
 		makeHidden('smScen');
 		makeHidden('startmenu');
@@ -314,7 +394,7 @@ UIBuilder.buildStartMenu = function()
 	div = addTag(container, 'div');
 	div.style.float = "right";
 	UIBuilder.createSlider(div, "uiresize", uiSettings.uiSize, 10, uiSettings.uiSmallSize, 1920,
-		function() { UIBuilder.resizeUI($('uiresize').value); });
+		function() { UIBuilder.resizeUI(($('uiresize') as HTMLInputElement).value); });
 
 	container = addTag('smSettingsContainer', 'div');
 	container.className = "settingContainer left";
@@ -324,7 +404,7 @@ UIBuilder.buildStartMenu = function()
 	div = addTag(container, 'div');
 	div.style.float = "right";
 	UIBuilder.createSlider(div, "uiscale", uiSettings.uiScale, 0.1, 0.5, 3,
-		function() { UIBuilder.scaleUI($('uiscale').value); });
+		function() { UIBuilder.scaleUI(($('uiscale') as HTMLInputElement).value); });
 
 	container = addTag('smSettingsContainer', 'div');
 	container.className = "settingContainer left";
@@ -334,7 +414,7 @@ UIBuilder.buildStartMenu = function()
 	div = addTag(container, 'div');
 	div.style.float = "right";
 	UIBuilder.createSlider(div, "mapscale", uiSettings.zoomLevel, 0.1, 1, 3,
-		function() { game.ui.scaleMap($('mapscale').value); });
+		function() { game.ui.scaleMap(($('mapscale') as HTMLInputElement).value as unknown as number); }); //the value string
 
 	for (b = 0; b < settings.length; b++)
 	{
@@ -348,20 +428,20 @@ UIBuilder.buildStartMenu = function()
 		div.id = settings[b][0];
 		div.className = "settingValue right";
 		div.innerHTML = uiSettings[settings[b][0]] ? "C" : "c";
-		div.onclick = function()
+		div.onclick = function(this: HTMLElement)
 		{
-			uiSettings[this.id] = !uiSettings[this.id];
+			(uiSettings as unknown as UIBuilderSettingFlags)[this.id] = !(uiSettings as unknown as UIBuilderSettingFlags)[this.id];
 			toggleCheckbox(this);
 			if (this.id == "useRetina")
 			{
-				$('smSettings').needPageReload = true;
+				($('smSettings') as UIBuilderSettingsWindow).needPageReload = true;
 				//Suggest a matching interface scale (applied when the settings are closed)
 				if (window.devicePixelRatio >= 1)
 				{
 					if (uiSettings.useRetina && uiSettings.uiScale <= 1)
-						$('uiscale').value = 1.6;
+						($('uiscale') as UIBuilderNumberInput).value = 1.6;
 					if (!uiSettings.useRetina && uiSettings.uiScale >= 1.5)
-						$('uiscale').value = 1;
+						($('uiscale') as UIBuilderNumberInput).value = 1;
 				}
 			}
 		};
@@ -370,13 +450,13 @@ UIBuilder.buildStartMenu = function()
 	{
 		makeHidden('smSettings');
 		makeVisible('startmenu');
-		UIBuilder.resizeUI($('uiresize').value);
-		UIBuilder.scaleUI($('uiscale').value);
+		UIBuilder.resizeUI(($('uiresize') as HTMLInputElement).value);
+		UIBuilder.scaleUI(($('uiscale') as HTMLInputElement).value);
 		game.state.saveSettings();
 
-		if ($('smSettings').needPageReload)
-			location.reload(true);
-		if ($('smSettings').messageHidden)
+		if (($('smSettings') as UIBuilderSettingsWindow).needPageReload)
+			(location as { reload(forceGet?: boolean): void }).reload(true); //Firefox forceGet
+		if (($('smSettings') as UIBuilderSettingsWindow).messageHidden)
 			makeVisible('ui-message');
 	};
 
@@ -386,9 +466,9 @@ UIBuilder.buildStartMenu = function()
 //Builds the save/load window of the start menu
 UIBuilder.buildGameStateMenu = function()
 {
-	var row, div;
+	var row: HTMLElement, div: HTMLElement;
 	//Buttons with id and html, two on a row
-	var buttons = [["disksave", "Save to Disk <a id='savedata' hidden download='none'></a>"],
+	var buttons: [string, string][] = [["disksave", "Save to Disk <a id='savedata' hidden download='none'></a>"],
 		       ["diskload", OSGlue.diskloadHTML], ["cloudsave", "Cloud Save"], ["cloudload", "Cloud Load"]];
 	//Description shown below each row of buttons
 	var descriptions =
@@ -412,7 +492,7 @@ UIBuilder.buildGameStateMenu = function()
 		if (div.id == "diskload")
 			OSGlue.diskloadEvent(div, function() { UIBuilder.gameStateButton("diskload"); });
 		else
-			div.onclick = function() { UIBuilder.gameStateButton(this.id); };
+			div.onclick = function(this: HTMLElement) { UIBuilder.gameStateButton(this.id); };
 
 		if (b % 2 == 1)
 		{
@@ -436,7 +516,7 @@ UIBuilder.fillCloudSavesList = function()
 {
 	clearTag('cloudid_lastsaves');
 	if (defined(uiSettings.lastCloudSave) && uiSettings.lastCloudSave.length > 0)
-		$('cloudid').value = uiSettings.lastCloudSave[uiSettings.lastCloudSave.length - 1].id;
+		($('cloudid') as HTMLInputElement).value = uiSettings.lastCloudSave[uiSettings.lastCloudSave.length - 1].id;
 
 	for (var i = 0; i < 3; i++)
 	{
@@ -446,19 +526,19 @@ UIBuilder.fillCloudSavesList = function()
 		{
 			div.textContent = uiSettings.lastCloudSave[i].name;
 			div.cloudid = uiSettings.lastCloudSave[i].id;
-			div.onclick = function() { $('cloudid').value = this.cloudid; };
+			div.onclick = function(this: HTMLElement & { cloudid: string }) { ($('cloudid') as HTMLInputElement).value = this.cloudid; };
 		}
 		else
 		{
 			div.textContent = "";
-			div.onclick = function() { $('cloudid').value = ""; };
+			div.onclick = function() { ($('cloudid') as HTMLInputElement).value = ""; };
 		}
 	}
 };
 
 //Called when a cloud save finished, error is set when it failed, id is the cloud save id.
 //Remembers the last 3 cloud saves in the settings
-function onCloudSaved(error, id)
+function onCloudSaved(error: string | null, id: string): boolean
 {
 	if (error) return false;
 
@@ -502,7 +582,7 @@ function onGameLoaded()
 	game.ui.startMenuButton("continuegame");
 }
 
-UIBuilder.gameStateButton = function(id)
+UIBuilder.gameStateButton = function(id: string)
 {
 	switch (id)
 	{
@@ -520,10 +600,10 @@ UIBuilder.gameStateButton = function(id)
 			OSGlue.diskload(onGameLoaded, onDiskLoadError);
 			break;
 		case "cloudsave":
-			game.state.saveToCloud($('cloudid'), onCloudSaved);
+			game.state.saveToCloud($('cloudid') as HTMLInputElement, onCloudSaved);
 			break;
 		case "cloudload":
-			game.state.restoreFromCloud($('cloudid'), onGameLoaded);
+			game.state.restoreFromCloud($('cloudid') as HTMLInputElement, onGameLoaded);
 			break;
 	}
 };
@@ -533,14 +613,14 @@ UIBuilder.buildMainMenu = function()
 {
 	//menu buttons divs with id and glyph
 	//format is <id>, <title>, <glyph>, <has a selected glyph>, <0/1 if should be placed in slide div or not>
-	var menubuttons = [["inspectunit", "Inspect Unit", "i", 0, 0], ["endturn", "End Turn", "t", 0, 0],
+	var menubuttons: [string, string, string, number, number][] = [["inspectunit", "Inspect Unit", "i", 0, 0], ["endturn", "End Turn", "t", 0, 0],
 		["mainmenu", "Main  Menu", "o", 1, 0], ["buy", "Upgrade/Buy Units", "w", 0, 1],
 		["hex", "Toggle Hex Grid", "h", 0, 1], ["air", "Toggle Air Mode On", "p", 0, 1],
 		["zoom", "Strategic Map", "m", 0, 1], ["options", "Options", "s", 0, 1]];
 
 	for (var b = 0; b < menubuttons.length; b++)
 	{
-		var div;
+		var div: HTMLElement;
 
 		if (menubuttons[b][4])	//should be placed on slide div
 			div = addTag('slidemenu', 'div');
@@ -554,13 +634,13 @@ UIBuilder.buildMainMenu = function()
 			div.className += " smallButtonEndTurn";
 		div.style.marginTop = "3px";
 		div.innerHTML = menubuttons[b][2];
-		div.onclick = function() { game.ui.mainMenuButton(this.id); };
+		div.onclick = function(this: HTMLElement) { game.ui.mainMenuButton(this.id); };
 		if (menubuttons[b][3])
-			div.hasSelectedGlyph = true;
+			(div as GlyphButton).hasSelectedGlyph = true;
 	}
 
 	//Make the status bar clickable and show the combat log
-	$('combatLogButton').hasSelectedGlyph = true;
+	($('combatLogButton') as GlyphButton).hasSelectedGlyph = true;
 	$('statusbar').onclick = $('combatLogButton').onclick = function() { UICombatLog.toggleCombatLog(false, true); };
 	$('statusBarButton').onclick = function() { game.ui.toggleUnitsAndEquipmentWindow(false); };
 	$('unitsBarButton').onclick = function()
@@ -573,18 +653,18 @@ UIBuilder.buildMainMenu = function()
 UIBuilder.setDefaultUserSelections = function()
 {
 	//The default selected country in the div
-	$('eqSelCountry').country = 0;
-	$('eqSelCountry').owner = 0;
+	($('eqSelCountry') as UIBuilderCountrySelection).country = 0;
+	($('eqSelCountry') as UIBuilderCountrySelection).owner = 0;
 
 	//No user selections by default
-	$('eqUserSel').deployunit = -1;
-	$('eqUserSel').userunit = -1;
-	$('eqUserSel').equnit = -1;
-	$('eqUserSel').eqtransport = -1;
+	($('eqUserSel') as UIBuilderUserSelection).deployunit = -1;
+	($('eqUserSel') as UIBuilderUserSelection).userunit = -1;
+	($('eqUserSel') as UIBuilderUserSelection).equnit = -1;
+	($('eqUserSel') as UIBuilderUserSelection).eqtransport = -1;
 
 	//Sorting options
-	$('eqUserSel').sortorder = 0;
-	$('eqUserSel').sortproperty = 'cost';
+	($('eqUserSel') as UIBuilderUserSelection).sortorder = 0;
+	($('eqUserSel') as UIBuilderUserSelection).sortproperty = 'cost';
 };
 
 UIBuilder.buildEquipmentWindow = function()
@@ -593,18 +673,18 @@ UIBuilder.buildEquipmentWindow = function()
 
 	//Top Sorting buttons
 	$('eqSortOrderBut').title = 'Click to change sorting order ascending/descenting';
-	$('eqSortOrderBut').hasSelectedGlyph = true;
+	($('eqSortOrderBut') as GlyphButton).hasSelectedGlyph = true;
 	$('eqSortOrderBut').onclick = function()
 	{
-		var order = $('eqUserSel').sortorder || 0;
+		var order = ($('eqUserSel') as UIBuilderUserSelection).sortorder || 0;
 		order = ~order & 1;
-		$('eqUserSel').sortorder = order;
-		game.ui.updateEquipmentWindow($('eqUserSel').eqclass);
-		toggleButton($('eqSortOrderBut'), order);
+		($('eqUserSel') as UIBuilderUserSelection).sortorder = order;
+		game.ui.updateEquipmentWindow(($('eqUserSel') as UIBuilderUserSelection).eqclass);
+		toggleButton($('eqSortOrderBut'), order as unknown as boolean); //0 or 1
 	};
 
 	$('eqSortOptionsBut').title = 'Click to change sort category';
-	$('eqSortOptionsBut').hasSelectedGlyph = true;
+	($('eqSortOptionsBut') as GlyphButton).hasSelectedGlyph = true;
 	$('eqSortOptionsBut').onclick = function()
 	{
 		if (isVisible('eqSortOptions'))
@@ -624,17 +704,17 @@ UIBuilder.buildEquipmentWindow = function()
 	//Unit Class buttons
 	for (var b in UIBuilder.eqClassButtons)
 	{
-		var div = addTag('eqSelClass', 'div');
+		var div = addTag('eqSelClass', 'div') as UIBuilderClassButton;
 		div.className = "smallButtonSubMenu";
 		div.title = UIBuilder.eqClassButtons[b][1];
 		div.id = "eqclass-" + b;
-		div.eqclass = b;
+		div.eqclass = b as unknown as number; //the key string, kept
 		div.innerHTML = UIBuilder.eqClassButtons[b][0];
-		div.onclick = function()
+		div.onclick = function(this: UIBuilderClassButton)
 		{
-			$('eqUserSel').userunit = -1; //Clear existing unit selections when changing class
-			$('eqUserSel').equnit = -1;
-			$('eqUserSel').eqtransport = -1;
+			($('eqUserSel') as UIBuilderUserSelection).userunit = -1; //Clear existing unit selections when changing class
+			($('eqUserSel') as UIBuilderUserSelection).equnit = -1;
+			($('eqUserSel') as UIBuilderUserSelection).eqtransport = -1;
 			game.ui.updateEquipmentWindow(this.eqclass);
 		};
 	}
@@ -674,14 +754,14 @@ UIBuilder.buildEquipmentSortOptions = function()
 		div.style.marginRight = "0px";
 		div.sortproperty = UIBuilder.unitstats[s][3];
 		div.innerHTML = UIBuilder.unitstats[s][4];
-		div.onclick = function()
+		div.onclick = function(this: UIBuilderSortButton)
 		{
 			$('eqSortOptions').style.display = "none";
-			var oldProperty = $('eqUserSel').sortproperty || "cost";
+			var oldProperty = ($('eqUserSel') as UIBuilderUserSelection).sortproperty || "cost";
 			toggleButton($('eqsort-' + oldProperty), false);
-			$('eqUserSel').sortproperty = this.sortproperty;
+			($('eqUserSel') as UIBuilderUserSelection).sortproperty = this.sortproperty;
 			toggleButton($('eqsort-' + this.sortproperty), true);
-			game.ui.updateEquipmentWindow($('eqUserSel').eqclass);
+			game.ui.updateEquipmentWindow(($('eqUserSel') as UIBuilderUserSelection).eqclass);
 			$('eqSortInfo').innerHTML = "Sorted by: " + this.title;
 			$('eqSortOptions').style.display = "inline";
 		};
@@ -721,9 +801,9 @@ UIBuilder.buildUnitInfoWindow = function()
 	}
 };
 
-UIBuilder.showEquipmentCosts = function(prestige, buyCost, upCost, sellCost)
+UIBuilder.showEquipmentCosts = function(prestige: number, buyCost: number, upCost: number, sellCost: number)
 {
-	var diff;
+	var diff: number;
 
 	if (buyCost > 0 && buyCost <= prestige)
 	{
@@ -787,11 +867,11 @@ UIBuilder.showEquipmentCosts = function(prestige, buyCost, upCost, sellCost)
 	$('currentPrestigeAmount').innerHTML = prestige + UIBuilder.currencyIcon;
 };
 
-UIBuilder.showAttackInfo = function(atkunit, defunit)
+UIBuilder.showAttackInfo = function(atkunit: Unit, defunit: Unit)
 {
 	var ad = atkunit.unitData();
 	var dd = defunit.unitData();
-	var tmpdiv;
+	var tmpdiv: HTMLElement;
 
 	clearTag($('statusmsg'));
 	tmpdiv = addTag($('statusmsg'), 'div');
@@ -821,7 +901,7 @@ UIBuilder.showAttackInfo = function(atkunit, defunit)
 };
 
 //Shows on the status bar extension that the computer turn started (true) or finished (false)
-UIBuilder.showAIStatus = function(isPlaying)
+UIBuilder.showAIStatus = function(isPlaying: boolean)
 {
 	if (isPlaying)
 	{
@@ -838,20 +918,21 @@ UIBuilder.showAIStatus = function(isPlaying)
 	}
 };
 
-//Scales the UI windows with css zoom or with a css transform where zoom isn't supported
-UIBuilder.scaleUI = function(scale)
+//Scales the UI windows with css zoom or with a css transform where zoom isn't supported.
+//scale is a number or the string of the settings input
+UIBuilder.scaleUI = function(scale: number | string)
 {
-	var i;
+	var i: number;
 	if ("zoom" in document.body.style)
 	{
 		for (i = 0; i < scaledElements.length; i++)
-			$(scaledElements[i][0]).style.zoom = scale;
+			$(scaledElements[i][0]).style.zoom = scale as string;
 	}
 	else
 	{
 		for (i = 0; i < scaledElements.length; i++)
 		{
-			var e = $(scaledElements[i][0]);
+			var e = $(scaledElements[i][0]) as VendorStyled;
 			var transform = "scale(" + scale + "," + scale + ")";
 			e.style.webkitTransform = transform;
 			e.style.MozTransform = transform;
@@ -869,32 +950,32 @@ UIBuilder.scaleUI = function(scale)
 				e.style.transformOrigin = "50% 0";
 			}
 			//Scaled position: top when the offset is positive, margin top when negative
-			var offset = Math.round(scaledElements[i][1] * scale);
+			var offset = Math.round(scaledElements[i][1] * (scale as number));
 			if (scaledElements[i][1] !== null && scaledElements[i][1] >= 0)
 				e.style.top = offset + "px";
 			if (scaledElements[i][1] !== null && scaledElements[i][1] < 0)
 				e.style.marginTop = offset + "px";
 		}
 	}
-	uiSettings.uiScale = scale;
+	uiSettings.uiScale = scale as number; //kept as given, the input's string too
 };
 
 //Creates a - value + slider in parent, the value is in an input with id
 //and changes by step between min and max. onChange is called after a button changed it
-UIBuilder.createSlider = function(parent, id, value, step, min, max, onChange)
+UIBuilder.createSlider = function(parent: HTMLElement, id: string, value: number, step: number, min: number, max: number, onChange: () => void)
 {
-	function changeValue(delta)
+	function changeValue(delta: number)
 	{
-		var v = parseFloat($(id).value);
+		var v: number | string = parseFloat(($(id) as HTMLInputElement).value);
 		v = v + delta;
 		if (v < min) v = min;
 		if (v > max) v = max;
 		if (v % 1 != 0)
 			v = v.toFixed(1);
-		$(id).value = v;
+		($(id) as UIBuilderNumberInput).value = v;
 	}
 
-	var div;
+	var div: HTMLElement;
 	div = addTag(parent, 'div');
 	div.className = "smallButton";
 	div.style.cssFloat = "left";
@@ -922,11 +1003,11 @@ UIBuilder.createSlider = function(parent, id, value, step, min, max, onChange)
 	};
 };
 
-//Sets the width of the UI windows and centers them
-UIBuilder.resizeUI = function(width)
+//Sets the width of the UI windows and centers them. width is a number or the string of the settings input
+UIBuilder.resizeUI = function(width: number | string)
 {
 	var elements = ["statusbar", "unit-info", "container-unitlist", "equipment", "combatLog", "dossier"];
-	var w = width;
+	var w = width as number; //the arithmetic converts a string
 	for (var i = 0; i < elements.length; i++)
 	{
 		var e = $(elements[i]);
@@ -936,11 +1017,11 @@ UIBuilder.resizeUI = function(width)
 		e.style.width = w + "px";
 		e.style.marginLeft = -((w / 2) >> 0) + "px";
 	}
-	uiSettings.uiSize = width;
+	uiSettings.uiSize = width as number; //kept as given, the input's string too
 };
 
 //Adjusts the layout for small screens, isStartup switches the default sizes to the small ones
-UIBuilder.setLayoutConstrains = function(isStartup)
+UIBuilder.setLayoutConstrains = function(isStartup: boolean)
 {
 	if (window.innerWidth < 800)
 	{
@@ -963,7 +1044,7 @@ UIBuilder.setLayoutConstrains = function(isStartup)
 };
 
 //Shows a message window, onOk replaces the default handler of the ok button
-UIBuilder.message = function(title, message, onOk)
+UIBuilder.message = function(title: string, message: string, onOk?: () => void)
 {
 	$('title').innerHTML = title;
 	$('message').innerHTML = message;
@@ -978,7 +1059,7 @@ UIBuilder.message = function(title, message, onOk)
 };
 
 //Shows a message window created on the fly, removed when closed
-UIBuilder.messageDynamic = function(title, message)
+UIBuilder.messageDynamic = function(title: string, message: string)
 {
 	var body = $('mainbody');
 	var box = addTag(body, 'div');
@@ -1003,7 +1084,7 @@ UIBuilder.messageDynamic = function(title, message)
 	};
 };
 
-UIBuilder.showPrototypeAwardMessage = function(eqid)
+UIBuilder.showPrototypeAwardMessage = function(eqid: number)
 {
 	var msg = "<br>Due to your brilliant tactical performance on previous battle High Command awarded you a prototype core unit available for deployment.";
 	var ud = Equipment.equipment[eqid];
@@ -1014,7 +1095,7 @@ UIBuilder.showPrototypeAwardMessage = function(eqid)
 };
 
 //Tooltip with an ok button shown next to a map position, used by the tutorial
-UIBuilder.gameToolTip = function(text, x, y)
+UIBuilder.gameToolTip = function(text: string, x: number, y: number)
 {
 	var tt = $('gameToolTip');
 	tt.setAttribute("type", "game");
@@ -1031,7 +1112,7 @@ UIBuilder.gameToolTip = function(text, x, y)
 };
 
 //Small tooltip on the map, removed when clicked
-UIBuilder.gameSmallToolTip = function(text, x, y, color, id, style)
+UIBuilder.gameSmallToolTip = function(text: string, x: number, y: number, color?: number, id?: string, style?: number)
 {
 	var tt = $('game');
 	tt = addTag(tt, 'div');
@@ -1056,7 +1137,7 @@ UIBuilder.gameSmallToolTip = function(text, x, y, color, id, style)
 	tt.style.display = "inline";
 	tt.innerHTML = text;
 	UIBuilder.smallToolTipList.push(id);
-	tt.onclick = function()
+	tt.onclick = function(this: HTMLElement)
 	{
 		var i = UIBuilder.smallToolTipList.indexOf(this.id);
 		UIBuilder.smallToolTipList.splice(i, 1);
@@ -1065,7 +1146,7 @@ UIBuilder.gameSmallToolTip = function(text, x, y, color, id, style)
 };
 
 //Tooltip for UI elements, closed when clicked
-UIBuilder.uiToolTip = function(text, x, y, isRightOriented)
+UIBuilder.uiToolTip = function(text: string, x: number, y: number, isRightOriented: boolean | number)
 {
 	var tt = $('uiToolTip');
 	tt.setAttribute("type", "ui");
@@ -1081,7 +1162,7 @@ UIBuilder.uiToolTip = function(text, x, y, isRightOriented)
 };
 
 //Shows the ui tooltip left of an element, shown once first to get its width
-UIBuilder.uiToolTipAtElement = function(element, text, isRightOriented)
+UIBuilder.uiToolTipAtElement = function(element: HTMLElement, text: string, isRightOriented: boolean | number)
 {
 	var tt = $('uiToolTip');
 	UIBuilder.uiToolTip(text, 0, 0, isRightOriented);
@@ -1090,7 +1171,7 @@ UIBuilder.uiToolTipAtElement = function(element, text, isRightOriented)
 };
 
 //Unit id as an ordinal number for the unit name, id 0 is shown as 101st
-UIBuilder.unitIDToOrdinal = function(id)
+UIBuilder.unitIDToOrdinal = function(id: number)
 {
 	var lastDigit = id % 10;
 	if (id < 0) return "";
@@ -1116,7 +1197,7 @@ UIBuilder.simulateDossier = function()
 	var data = game.campaign.getCampaignData();
 	for (i = 0; i < data.length; i++)
 	{
-		var outcome = Math.floor(Math.random() * 3);
+		var outcome: number | string = Math.floor(Math.random() * 3);
 		outcome = (outcome == 0) ? "victory" : ((outcome == 1) ? "tactical" : "briliant");
 		var scenarioName = game.campaign.getScenarioNameFromId(i);
 		player.addOutcomeToDossier(outcome, scenarioName);
@@ -1125,7 +1206,7 @@ UIBuilder.simulateDossier = function()
 };
 
 //Shows the dossier with the campaign outcome on top, onClose is called when it's closed
-UIBuilder.showCampaignEnd = function(outcome, message, onClose)
+UIBuilder.showCampaignEnd = function(outcome: ScenarioOutcome, message: string, onClose?: () => void)
 {
 	if (!UIBuilder.showDossier(false, onClose))
 		return false;
@@ -1169,7 +1250,7 @@ UIBuilder.showCampaignEnd = function(outcome, message, onClose)
 //Shows the campaign dossier: units destroyed and lost by class and the medals for the outcomes.
 //isInGame shows it under the combat log, otherwise it's a scrollable window with a close button
 //that calls onClose. Returns false when not playing a campaign
-UIBuilder.showDossier = function(isInGame, onClose)
+UIBuilder.showDossier = function(isInGame: boolean, onClose?: () => void)
 {
 	if (game.campaign === null) return false;
 
@@ -1204,7 +1285,7 @@ UIBuilder.showDossier = function(isInGame, onClose)
 	game.campaign.getCampaignData(); //unused
 
 	//Units destroyed, lost core and lost auxiliary per class
-	var td;
+	var td: HTMLElement;
 	for (var c in UIBuilder.eqClassButtons)
 	{
 		td = addTag('dossierClasses', 'td');
@@ -1214,9 +1295,9 @@ UIBuilder.showDossier = function(isInGame, onClose)
 		td.style.fontSize = "26px";
 		td.title = UIBuilder.eqClassButtons[c][1];
 		td.textContent = UIBuilder.eqClassButtons[c][0];
-		addTag('dossierDestroyed', 'td').textContent = dossier.units.killed[c];
-		addTag('dossierLostCore', 'td').textContent = dossier.units.lostcore[c];
-		addTag('dossierLostAux', 'td').textContent = dossier.units.lostaux[c];
+		(addTag('dossierDestroyed', 'td') as UIBuilderNumberText).textContent = (dossier.units.killed as UIBuilderClassCounts)[c];
+		(addTag('dossierLostCore', 'td') as UIBuilderNumberText).textContent = (dossier.units.lostcore as UIBuilderClassCounts)[c];
+		(addTag('dossierLostAux', 'td') as UIBuilderNumberText).textContent = (dossier.units.lostaux as UIBuilderClassCounts)[c];
 	}
 
 	//Medals with the scenarios won with each outcome
@@ -1243,8 +1324,8 @@ UIBuilder.showDossier = function(isInGame, onClose)
 		if (outcome !== "lose")
 		{
 			hasMedals = true;
-			var img = addTag(medalDiv, 'img');
-			var counter = addTag(medalDiv, 'div');
+			var img = addTag(medalDiv, 'img') as HTMLImageElement;
+			var counter = addTag(medalDiv, 'div') as UIBuilderNumberText;
 			counter.className = "counterBox";
 			counter.textContent = dossier.outcomes[outcome].length;
 			img.src = "resources/ui/dossier/" + game.campaign.country + "_" + outcome + ".png";
@@ -1264,8 +1345,8 @@ UIBuilder.showDossier = function(isInGame, onClose)
 		$('dossierMedals').innerHTML = "You have no medals awarded yet. <br><br>";
 
 	//Height limited by the unit info window position and by the content height
-	var pos = getPosition("unit-info");
-	var height, content;
+	var pos = getPosition("unit-info") as DOMRect;
+	var height: number, content: HTMLElement;
 	if (isInGame)
 	{
 		height = Math.round((pos.top - 30) / uiSettings.uiScale);
@@ -1282,7 +1363,7 @@ UIBuilder.showDossier = function(isInGame, onClose)
 				onClose();
 		};
 	}
-	var last = content.childNodes[content.childNodes.length - 1];
+	var last = content.childNodes[content.childNodes.length - 1] as HTMLElement;
 	var contentHeight = last.offsetTop + last.offsetHeight;
 	if (height > contentHeight)
 		height = contentHeight;
@@ -1299,7 +1380,7 @@ UIBuilder.closeDossier = function()
 
 //Sets the flags image of an equipment set (Equipment.defaultName if none)
 //on the stylesheets that show country flags
-UIBuilder.setEquipmentFlags = function(eqp)
+UIBuilder.setEquipmentFlags = function(eqp?: string)
 {
 	if (!defined(eqp))
 		eqp = Equipment.defaultName;
@@ -1316,7 +1397,7 @@ UIBuilder.setEquipmentFlags = function(eqp)
 
 //In deploy mode the status bar shows the units/equipment buttons and the weather
 //message opens the combat log, otherwise the status bar opens the combat log
-UIBuilder.setDeployOrCombatLogState = function(isDeploy)
+UIBuilder.setDeployOrCombatLogState = function(isDeploy: boolean)
 {
 	if (isDeploy)
 	{
@@ -1337,7 +1418,7 @@ UIBuilder.setDeployOrCombatLogState = function(isDeploy)
 };
 
 //------------------------ MODULE END ----------------------
-return UIBuilder; }(UIBuilder || {})); //Module end giberish
+return UIBuilder; }(UIBuilder || {} as UIBuilderModule)); //Module end giberish
 
 //Mouse drag state
 var curDown = false, curYPos = 0, curXPos = 0;

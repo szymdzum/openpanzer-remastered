@@ -13,23 +13,37 @@
  * carry their names and comments over from the openpanzer 2.9 style.js and sound.js.
  */
 
+//The tutorial units AIScripted picks from their starting positions
+interface TutorialUnits
+{
+	axis: { recon?: Unit; legioninf?: Unit; pz2a?: Unit; ssinf1?: Unit; ssinf2?: Unit; ssinf3?: Unit; arty?: Unit };
+	allies: { inf1?: Unit };
+}
+
+//The methods AIScripted sets up in its constructor, the same as AI's
+interface AIScripted
+{
+	buildActions(): void;
+	getAction(): AIAction;
+}
+
 //Plays the tutorial (tutorial.xml) for both sides: each turn builds a list of actions
 //(messages, selections, moves, attacks) that game.js executes one by one with getAction().
 //After turn 4 the players are handed over to the human and the normal AI.
 //player is the scripted player, map the scenario map with the tutorial units on it
-function AIScripted(player, map)
+function AIScripted(this: AIScripted, player: Player, map: GameMap)
 {
-	var actionList = [];
-	var units = { axis: {}, allies: {} };
+	var actionList: AIAction[] = [];
+	var units: TutorialUnits = { axis: {}, allies: {} };
 
 	//Queues an action for game.js, param is the array of action parameters
-	function addAction(type, param)
+	function addAction(type: number, param: AIActionParam[])
 	{
 		actionList.push({ type: type, param: param });
 	}
 
 	//Queues the actions of the current turn for this player
-	function buildTurnActions()
+	function buildTurnActions(): void
 	{
 		switch (map.turn)
 		{
@@ -223,7 +237,7 @@ function AIScripted(player, map)
 				}
 				else
 				{
-					player.handler = new AI(player, game.scenario.map);
+					player.handler = new (AI as unknown as AIConstructor)(player, game.scenario.map);
 					player.type = playerType.aiLocal;
 				}
 			}
@@ -262,7 +276,21 @@ function AIScripted(player, map)
 /**
  * Style - basic styles support for rendering on canvas
  */
-var hexstyle =
+//How Render draws a hex outline and fill
+interface HexStyle
+{
+	fillColor: string; //null for no fill
+	lineColor: string;
+	lineWidth: number;
+	lineJoin: CanvasLineJoin;
+	shadowOffsetX?: number;
+	shadowOffsetY?: number;
+	shadowColor?: string;
+}
+type HexStyleName = "move" | "movespotted" | "attack" | "current" | "currentstroke" | "generic" | "deploy"
+	| "ownunit" | "airunit" | "combat";
+
+var hexstyle: { [name in HexStyleName]: HexStyle } =
 {
 	"move": //Move selected hexes
 	{
@@ -364,54 +392,54 @@ var terrainencoding = ["A", "B", "C", "D", "D", "E", "F", "G", "H", "I", "J", "K
 /* Looks like PCM Wav is supported on Chrome, Firefox, Safari, Opera */
 
 //Each sound has several variants, play() picks one at random
-var soundData =
+var soundData: { [name: string]: soundSprite } =
 {
 	//move sounds
-	"track": new soundSprite(["resources/sounds/move/track.wav", "resources/sounds/move/track2.mp3",
+	"track": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/track.wav", "resources/sounds/move/track2.mp3",
 		"resources/sounds/move/track3.mp3"]),
-	"htrack": new soundSprite(["resources/sounds/move/htrack.wav", "resources/sounds/move/htrack2.mp3",
+	"htrack": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/htrack.wav", "resources/sounds/move/htrack2.mp3",
 		"resources/sounds/move/htrack3.mp3"]),
-	"leg": new soundSprite(["resources/sounds/move/leg.wav", "resources/sounds/move/leg2.mp3",
+	"leg": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/leg.wav", "resources/sounds/move/leg2.mp3",
 		"resources/sounds/move/leg3.mp3", "resources/sounds/move/leg4.mp3"]),
-	"air": new soundSprite(["resources/sounds/move/air.wav", "resources/sounds/move/air2.mp3",
+	"air": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/air.wav", "resources/sounds/move/air2.mp3",
 		"resources/sounds/move/air3.mp3", "resources/sounds/move/air4.mp3"]),
-	"naval": new soundSprite(["resources/sounds/move/naval.wav", "resources/sounds/move/naval2.mp3",
+	"naval": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/naval.wav", "resources/sounds/move/naval2.mp3",
 		"resources/sounds/move/naval3.mp3"]),
 	//attack sounds
-	"gun": new soundSprite(["resources/sounds/fire/gun.wav"]),
-	"artillery": new soundSprite(["resources/sounds/fire/gun.wav", "resources/sounds/fire/artillery.mp3",
+	"gun": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/gun.wav"]),
+	"artillery": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/gun.wav", "resources/sounds/fire/artillery.mp3",
 		"resources/sounds/fire/artillery2.mp3", "resources/sounds/fire/artillery3.mp3",
 		"resources/sounds/fire/artillery4.mp3"]),
-	"tank": new soundSprite(["resources/sounds/fire/gun.wav", "resources/sounds/fire/tank.mp3",
+	"tank": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/gun.wav", "resources/sounds/fire/tank.mp3",
 		"resources/sounds/fire/tank2.mp3", "resources/sounds/fire/tank3.mp3", "resources/sounds/fire/tank4.mp3"]),
-	"recon": new soundSprite(["resources/sounds/fire/recon.mp3", "resources/sounds/fire/recon2.mp3",
+	"recon": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/recon.mp3", "resources/sounds/fire/recon2.mp3",
 		"resources/sounds/fire/recon3.mp3"]),
-	"airDefence": new soundSprite(["resources/sounds/fire/aa.mp3", "resources/sounds/fire/aa2.mp3",
+	"airDefence": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/aa.mp3", "resources/sounds/fire/aa2.mp3",
 		"resources/sounds/fire/aa3.mp3", "resources/sounds/fire/aa4.mp3", "resources/sounds/fire/aa5.mp3"]),
-	"antiTank": new soundSprite(["resources/sounds/fire/antitank.mp3", "resources/sounds/fire/antitank2.mp3",
+	"antiTank": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/antitank.mp3", "resources/sounds/fire/antitank2.mp3",
 		"resources/sounds/fire/antitank3.mp3", "resources/sounds/fire/antitank4.mp3"]),
-	"smallShip": new soundSprite(["resources/sounds/fire/smallship.mp3", "resources/sounds/fire/smallship2.mp3",
+	"smallShip": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/smallship.mp3", "resources/sounds/fire/smallship2.mp3",
 		"resources/sounds/fire/smallship3.mp3"]),
-	"bigShip": new soundSprite(["resources/sounds/fire/bigship.mp3", "resources/sounds/fire/bigship2.mp3",
+	"bigShip": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/bigship.mp3", "resources/sounds/fire/bigship2.mp3",
 		"resources/sounds/fire/bigship3.mp3", "resources/sounds/fire/bigship4.mp3"]),
-	"submarine": new soundSprite(["resources/sounds/fire/submarine.mp3", "resources/sounds/fire/submarine2.mp3"]),
-	"infantry": new soundSprite(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/infantry.mp3",
+	"submarine": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/submarine.mp3", "resources/sounds/fire/submarine2.mp3"]),
+	"infantry": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/infantry.mp3",
 		"resources/sounds/fire/infantry2.mp3", "resources/sounds/fire/infantry3.mp3",
 		"resources/sounds/fire/infantry4.mp3", "resources/sounds/fire/infantry5.mp3"]),
-	"fighter": new soundSprite(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/fighter.mp3",
+	"fighter": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/fighter.mp3",
 		"resources/sounds/fire/fighter2.mp3", "resources/sounds/fire/fighter3.mp3"]),
-	"bomber": new soundSprite(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/bomber.mp3",
+	"bomber": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/smallgun.wav", "resources/sounds/fire/bomber.mp3",
 		"resources/sounds/fire/bomber2.mp3", "resources/sounds/fire/bomber3.mp3",
 		"resources/sounds/fire/bomber4.mp3"]),
-	"fortification": new soundSprite(["resources/sounds/fire/fortification.mp3",
+	"fortification": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/fortification.mp3",
 		"resources/sounds/fire/fortification2.mp3"]),
-	"smallgun": new soundSprite(["resources/sounds/fire/smallgun.wav"]),
+	"smallgun": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/smallgun.wav"]),
 	//explosion sounds
-	"explosion": new soundSprite(["resources/sounds/fire/explosion.wav", "resources/sounds/fire/explosion2.mp3",
+	"explosion": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/fire/explosion.wav", "resources/sounds/fire/explosion2.mp3",
 		"resources/sounds/fire/explosion3.mp3", "resources/sounds/fire/explosion4.mp3",
 		"resources/sounds/fire/explosion5.mp3"]),
 	//dummy sound
-	"dummy": new soundSprite([""])
+	"dummy": new (soundSprite as unknown as soundSpriteConstructor)([""])
 };
 
 var moveSoundByMoveMethod =
@@ -430,13 +458,21 @@ var moveSoundByMoveMethod =
 	"leg"		//allTerrainLeg
 ];
 
-//paths is a list of variants of the same sound
-function soundSprite(paths)
+//A sound with its variants, play() returns the play() promise or nothing when muted or missing
+interface soundSprite
 {
-	var sounds = [];
+	play(): Promise<void>;
+}
+//soundSprite is a constructor function (soundData above uses it before a class would exist)
+interface soundSpriteConstructor { new (paths: string[]): soundSprite; }
+
+//paths is a list of variants of the same sound
+function soundSprite(this: soundSprite, paths: string[])
+{
+	var sounds: HTMLAudioElement[] = [];
 
 	//Loads one variant, browsers without Audio() support just get no sound
-	function addSound(path)
+	function addSound(path: string): void
 	{
 		try
 		{
@@ -449,7 +485,7 @@ function soundSprite(paths)
 	for (var i = 0; i < paths.length; i++)
 		addSound(paths[i]);
 
-	this.play = function()
+	this.play = function(): Promise<void>
 	{
 		var sound;
 		//The variant is picked (Math.random called) even when sounds are muted

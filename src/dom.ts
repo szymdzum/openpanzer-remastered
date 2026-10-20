@@ -12,38 +12,59 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+//An element with the vendor prefixed style properties the game still sets (Firefox's Moz*)
+interface VendorCSSStyle extends CSSStyleDeclaration
+{
+	mozTransformOrigin?: string;
+	MozTransform?: string;
+	MozTransition?: string;
+}
+type VendorStyled<T extends HTMLElement = HTMLElement> = T & { style: VendorCSSStyle };
+
+//A glyph button (see toggleButton), hasSelectedGlyph is set by UIBuilder on the buttons that have one
+interface GlyphButton extends HTMLElement
+{
+	hasSelectedGlyph?: boolean;
+}
+
 //True if v is neither undefined nor null
-function defined(v)
+function defined<T>(v: T): v is NonNullable<T>
 {
 	return typeof v !== "undefined" && v !== null;
 }
 
 // Get the element with ID id
-function $(id)
+//The element type is the caller's: $<HTMLInputElement>("x").value, or inferred from the variable
+//it is assigned to. Elements with custom properties take an interface extending HTMLElement
+function $<T extends HTMLElement = HTMLElement>(id: string): T
 {
-	return document.getElementById(id);
+	return document.getElementById(id) as T;
 }
 
 //querySelector shortcut: $$(selector) searches the document, $$(parent, selector) the parent
-function $$(parent, selector)
+function $$<T extends Element = HTMLElement>(selector: string): T;
+function $$<T extends Element = HTMLElement>(parent: ParentNode | null, selector: string): T;
+function $$(parent: ParentNode | string | null, selector?: string): Element
 {
 	if (arguments.length == 1)
 	{
-		selector = parent;
+		selector = parent as string;
 		parent = document;
 	}
 
 	if (!parent)
 		parent = document;
 
-	return parent.querySelector(selector);
+	return (parent as ParentNode).querySelector(selector);
 }
 
 //can be called with a id string or a element object directly
 //return pointer to the newly created tag
-function addTag(parent, tag)
+function addTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node | null, tag: K): HTMLElementTagNameMap[K];
+function addTag(parent: string | Node | null, tag: string): HTMLElement;
+function addTag(parent: string | Node | null, tag: string): HTMLElement
 {
-	var e;
+	var e: Node;
 	var t = document.createElement(tag);
 
 	if (typeof(parent) === 'string') {	e = $(parent); }
@@ -56,9 +77,11 @@ function addTag(parent, tag)
 }
 
 //inserta a tag before a child element if child is null is placed at the end of node list
-function insertTag(parent, tag, child)
+function insertTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node, tag: K, child: string | Node | null): HTMLElementTagNameMap[K];
+function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement;
+function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement
 {
-	var e, c;
+	var e: Node, c: Node;
 	var t = document.createElement(tag);
 
 	if (typeof(parent) === 'string') { e = $(parent); }
@@ -74,16 +97,16 @@ function insertTag(parent, tag, child)
 }
 
 //remove a DOM tag
-function delTag(tag)
+function delTag(tag: Node | null): void
 {
 	if (tag && tag.parentNode)
 		tag.parentNode.removeChild(tag);
 }
 
 //remove all children of a tag
-function clearTag(tag)
+function clearTag(tag: string | Node): void
 {
-	var t;
+	var t: Node;
 	if (typeof(tag) === 'string') {	t = $(tag); }
 	else {t = tag;}
 
@@ -92,9 +115,9 @@ function clearTag(tag)
 }
 
 //remove one style property of a tag, or the whole style attribute when no property is given
-function clearStyle(tag, property)
+function clearStyle(tag: string | HTMLElement, property?: string): void
 {
-	var t;
+	var t: HTMLElement;
 	if (typeof(tag) === 'string') {	t = $(tag); }
 	else {t = tag;}
 
@@ -105,7 +128,7 @@ function clearStyle(tag, property)
 }
 
 //append copies of the children of the template element with id templateId to parent
-function insertTemplate(templateId, parent)
+function insertTemplate(templateId: string, parent: Node): void
 {
 	var template = $$("#" + templateId);
 
@@ -114,9 +137,9 @@ function insertTemplate(templateId, parent)
 }
 
 //Returns tag position
-function getPosition(tag)
+function getPosition(tag: string): DOMRect
 {
-	var r = {};
+	var r = {} as DOMRect; //always replaced below
 
 	if (isVisible(tag))
 	{
@@ -133,7 +156,7 @@ function getPosition(tag)
 }
 
 //Returns the page coordinates of an element, relative to the body
-function getCoordinates(e)
+function getCoordinates(e: Element): { x: number; y: number }
 {
 	var r = e.getBoundingClientRect();
 	var body = document.body.getBoundingClientRect();
@@ -142,19 +165,19 @@ function getCoordinates(e)
 }
 
 //add an option to a select element
-function addSelectOption(e, text, value, selected)
+function addSelectOption(e: string | Node, text: string, value: string | number, selected?: boolean): void
 {
 	if (selected === undefined || selected === null)
 		selected = false;
 
 	var o = addTag(e, "option");
-	o.value = value;
+	o.value = value as string; //numbers are converted by the DOM
 	o.textContent = text;
 	o.selected = selected;
 }
 
 //set current option of a select element by matching string
-function setSelectOption(e, str)
+function setSelectOption(e: HTMLSelectElement, str: string): boolean
 {
 	var o = e.options;
 	for (var i = 0; i < o.length; i++)
@@ -163,7 +186,7 @@ function setSelectOption(e, str)
 		if (str.trim() === o[i].text.trim())
 		{
 			o[i].selected = true;
-			e.onchange(); //Call the onchange() function
+			(e.onchange as () => void)(); //Call the onchange() function
 			return true;
 		}
 	}
@@ -171,24 +194,24 @@ function setSelectOption(e, str)
 }
 
 //Taken from http://modernizr.github.com/Modernizr/touch.html
-function hasTouch()
+function hasTouch(): boolean
 {
 	return "ontouchstart" in window;
 }
 
 //Running as a Chrome packaged app
-function isChromeApp()
+function isChromeApp(): any
 {
 	return window.chrome && chrome.app && chrome.app.runtime;
 }
 
 //Function to disable/enable right click
-function toggleRightClick( status )
+function toggleRightClick( status: boolean ): void
 {
 	window.oncontextmenu = function() { return status; }
 }
 
-function hasBrokenScroll()
+function hasBrokenScroll(): boolean
 {
 	var ua = navigator.userAgent;
 	//Stock android browser on froyo/gingerbread suffers from div overflow scroll issue
@@ -202,7 +225,7 @@ function hasBrokenScroll()
 
 //Android 4.x stock browser has issues clearing the canvas. Canvas retain a random drawing state from the first
 //writes that come in a certain time after the canvas was created
-function hasBrokenClearRect()
+function hasBrokenClearRect(): boolean
 {
 	var ua = navigator.userAgent;
 	if (ua.match(/android 4/i) && !ua.match(/chrome/i))
@@ -210,7 +233,7 @@ function hasBrokenClearRect()
 	return false;
 }
 
-function hoverin(e)
+function hoverin(e: HTMLImageElement | null): void
 {
 	if (!e || typeof e === "undefined")
 		return;
@@ -219,7 +242,7 @@ function hoverin(e)
 	e.src = path + e.id + "-over.png";
 }
 
-function hoverout(e)
+function hoverout(e: HTMLImageElement | null): void
 {
 	if (!e || typeof e === "undefined")
 		return;
@@ -229,7 +252,7 @@ function hoverout(e)
 }
 
 //Toggle a button made with a font glyph normal button is has lower case letter, selected is uppercase
-function toggleButton(e, state)
+function toggleButton(e: GlyphButton | null, state: boolean): boolean
 {
 	if (!e)
 		return false;
@@ -252,14 +275,14 @@ function toggleButton(e, state)
 	return true;
 }
 
-function toggleButtonWithImage(p, state)
+function toggleButtonWithImage(p: HTMLElement | null, state: boolean): void
 {
-	var e;
+	var e: HTMLImageElement;
 	//Change the image from the button which *usually* is the firstChild
 	if (p && typeof p.firstChild !== "undefined")
-		e = p.firstChild;
+		e = p.firstChild as HTMLImageElement;
 	else
-		e = p;
+		e = p as HTMLImageElement;
 
 	if (state)
 		hoverin(e);
@@ -268,7 +291,7 @@ function toggleButtonWithImage(p, state)
 }
 
 //Toggles a checkbox with glyph, same as toggleButton() but without state
-function toggleCheckbox(e)
+function toggleCheckbox(e: HTMLElement | null): boolean
 {
 	if (!e)
 		return false;
@@ -284,13 +307,13 @@ function toggleCheckbox(e)
 }
 
 //Toggles a checkbox image(<name>-checked.png must exist)
-function toggleCheckboxWithImage(e)
+function toggleCheckboxWithImage(e: HTMLImageElement | null): void
 {
 	if (! e || !e.src) return;
 
 	var path = e.src.substring(0, e.src.lastIndexOf('/') + 1);
 	var hasChecked = e.src.lastIndexOf('-checked');
-	var name;
+	var name: string;
 
 	if (hasChecked > -1)
 		name = e.src.substring(e.src.lastIndexOf('/') + 1, hasChecked);
@@ -300,7 +323,7 @@ function toggleCheckboxWithImage(e)
 	e.src = path + name + ".png";
 }
 
-function isVisible(tag)
+function isVisible(tag: string): boolean
 {
 	var v = $(tag).style.display;
 
@@ -310,21 +333,21 @@ function isVisible(tag)
 	return false;
 }
 
-function makeVisible(tag)
+function makeVisible(tag: string): void
 {
 	$(tag).style.display = "inline";
 	$(tag).focus();
 }
 
-function makeHidden(tag)
+function makeHidden(tag: string): void
 {
 	$(tag).style.display = "none";
 	$('game').focus(); //focus back the game canvas
 }
 
-function bounceText(x, y, text, positive)
+function bounceText(x: number, y: number, text: string, positive: boolean): void
 {
-	var cdiv = addTag('game', 'div');
+	var cdiv: VendorStyled = addTag('game', 'div');
 	var ldiv = addTag(cdiv, 'div');
 
 	cdiv.style.cssText = "position:absolute; top:"+ y + "px; left:" + x + "px; z-index:200;";
@@ -353,7 +376,7 @@ function bounceText(x, y, text, positive)
 }
 
 //Taken from seabreezecomputers.com/tips/scroll-div.htm
-function touchScroll(id)
+function touchScroll(id: string): void
 {
 	var scrollStartPosY = 0;
 	var scrollStartPosX = 0;
@@ -387,7 +410,7 @@ function touchScroll(id)
 		}, false);
 }
 
-function addStyleSheet(name)
+function addStyleSheet(name: string): boolean
 {
 	var ss = document.createElement("link");
 	ss.setAttribute("rel", "stylesheet");
@@ -401,18 +424,18 @@ function addStyleSheet(name)
 
 //Returns the style of the first css rule with this selector, looking into
 //imported stylesheets too. undefined if there is none
-function getStyleSheet(selector)
+function getStyleSheet(selector: string): CSSStyleDeclaration | undefined
 {
 	for (var i = 0; i < document.styleSheets.length; i++)
 	{
-		var rules = document.styleSheets[i].cssRules;
+		var rules = document.styleSheets[i].cssRules as ArrayLike<AnyCSSRule>;
 		for (var j = 0; j < rules.length; j++)
 		{
 			if (defined(rules[j].styleSheet)) //@import rule
 			{
 				for (var k = 0; k < rules[j].styleSheet.cssRules.length; k++)
 				{
-					var rule = rules[j].styleSheet.cssRules[k];
+					var rule = rules[j].styleSheet.cssRules[k] as AnyCSSRule;
 					if (rule.selectorText === selector)
 						return rule.style;
 				}
@@ -426,10 +449,19 @@ function getStyleSheet(selector)
 	}
 }
 
-//Returns the function that closes the desktop app window (NW.js or Wails), null in a browser
-function getDesktopExitFunction()
+//A css rule read as either an @import rule or a style rule
+type AnyCSSRule = CSSRule & Partial<Pick<CSSImportRule, "styleSheet">> & Partial<Pick<CSSStyleRule, "selectorText" | "style">>;
+
+//The Wails desktop runtime, window.runtime when running in Wails
+interface WailsWindow extends Window
 {
-	var exitFunction = null;
+	runtime?: { EventsEmit(name: string): void; Quit(): void };
+}
+
+//Returns the function that closes the desktop app window (NW.js or Wails), null in a browser
+function getDesktopExitFunction(): (() => void) | null
+{
+	var exitFunction: (() => void) | null = null;
 
 	try {
 		nw.Window.get(); //unused, throws when not running in NW.js
@@ -437,23 +469,23 @@ function getDesktopExitFunction()
 	} catch (e) {}
 
 	try {
-		window.runtime.EventsEmit("check"); //throws when not running in Wails
-		exitFunction = window.runtime.Quit;
+		(window as WailsWindow).runtime.EventsEmit("check"); //throws when not running in Wails
+		exitFunction = (window as WailsWindow).runtime.Quit;
 	} catch (e) {}
 
 	return exitFunction;
 }
 
-function changeViewPort()
+function changeViewPort(): void
 {
-	var i, meta = null;
+	var i: number, meta: HTMLMetaElement = null;
 	var scale = 1.0;
 	var maximumScale = 1.0;
 	var deviceWidth = "width=device-width, "; //Device width viewport statement. For iPhone 5 FS it won't be applied
 	var ratio = window.devicePixelRatio || 1;
 	var metaTags = document.getElementsByTagName("meta");
 
-	new GameState(null).restoreSettings(); //To restore only settings
+	new (GameState as unknown as GameStateConstructor)(null).restoreSettings(); //To restore only settings
 
 	for (i = 0; i < metaTags.length; i++)
 			if (metaTags[i].name == "viewport")

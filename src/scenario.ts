@@ -12,11 +12,60 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-Scenario.loader = new ScenarioLoader();
+//The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
+type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
+
+//A unit to deploy later, Scenario.reinforcements[turn]
+interface Reinforcement
+{
+	row: number;
+	col: number;
+	unit: Unit;
+	turn: number; //after a copy the turn key string of the copied scenario
+	id: number;   //1 based position in its turn list when added
+}
+
+interface Scenario
+{
+	name: string;
+	maxTurns: number;
+	date: Date;
+	atmosferic: number;
+	latitude: number;
+	ground: number;
+	turnsPerDay: number;
+	dayTurn: number;
+	reinforcements: { [turn: string]: Reinforcement[] };
+	map: GameMap;
+	file: string;
+	expPerSide: { exp: number; count: number }[];
+	unitsCostPerSide: number[];
+	isLoaded: boolean;
+	eqp: string;
+	load(onFinished: () => void): void;
+	onLoadFinished(): void;
+	addReinforcement(turn: number, row: number, col: number, unit: Unit): void;
+	getReinforcements(turn: number, playerId: number): Reinforcement[];
+	removeReinforcement(turn: number, id: number): boolean;
+	checkDefeat(lastSide: number, localPlayingSide: number): boolean;
+	checkVictory(): ScenarioOutcome;
+	getDescription(): string;
+	setDescription(str: string): void;
+	endTurn(): void;
+	setMoveTable(): void;
+	getPrototypeUnitsAvailable(country: number): number[];
+	getRandomPrototype(country: number): number;
+	getBalancedPrestige(side: number): number;
+	getSideUnitsAvgExp(side: number): number;
+	showStatistics(): void;
+	copy(s: Scenario): void;
+}
+
+Scenario.loader = new (ScenarioLoader as unknown as ScenarioLoaderConstructor)();
 Scenario.scenarioPath = "resources/scenarios/data/";
 
 //Lookup information about scenario in scenariolist, returns the scenariolist entry or null
-Scenario.getScenarioDataByFileName = function(scenFile)
+Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEntry
 {
 	for (var i = 0; i < scenariolist.length; i++)
 		if (scenariolist[i][0] == scenFile)
@@ -24,7 +73,7 @@ Scenario.getScenarioDataByFileName = function(scenFile)
 	return null;
 }
 
-function Scenario(scenFile)
+function Scenario(this: Scenario, scenFile?: string)
 {
 	this.name = "";
 	this.maxTurns = 0;
@@ -43,7 +92,7 @@ function Scenario(scenFile)
 	this.eqp = "eqp-adlerkorps"; //equipment set used by the scenario
 
 	var description = "";
-	var loadCallback = null;
+	var loadCallback: () => void = null;
 
 	if (typeof scenFile !== "undefined")
 	{
@@ -56,7 +105,7 @@ function Scenario(scenFile)
 	}
 
 	//Loads scenario data files, calls onFinished when done (through onLoadFinished)
-	this.load = function(onFinished)
+	this.load = function(onFinished: () => void)
 	{
 		loadCallback = onFinished;
 		Scenario.loader.loadScenario(this);
@@ -71,7 +120,7 @@ function Scenario(scenFile)
 
 			//Initial score of each player: objectives worth per turn and the units it has
 			var map = this.map;
-			var scores = {};
+			var scores: { [playerId: string]: number } = {};
 			var players = map.getPlayers();
 			var i;
 			for (i = 0; i < players.length; i++)
@@ -89,7 +138,7 @@ function Scenario(scenFile)
 			loadCallback();
 	}
 
-	this.addReinforcement = function(turn, row, col, unit)
+	this.addReinforcement = function(turn: number, row: number, col: number, unit: Unit)
 	{
 		if (this.reinforcements[turn] === null || typeof this.reinforcements[turn] === "undefined")
 			this.reinforcements[turn] = [];
@@ -99,12 +148,12 @@ function Scenario(scenFile)
 	}
 
 	//Returns the reinforcements of a player up to and including turn
-	this.getReinforcements = function(turn, playerId)
+	this.getReinforcements = function(turn: number, playerId: number)
 	{
-		var list = [];
+		var list: Reinforcement[] = [];
 		for (var t in this.reinforcements)
 		{
-			if (t > turn) continue;
+			if ((t as unknown as number) > turn) continue; //compares the turn key string as a number
 			if (this.reinforcements[t] === null || typeof this.reinforcements[t] === "undefined")
 				continue;
 			for (var i = 0; i < this.reinforcements[t].length; i++)
@@ -114,7 +163,7 @@ function Scenario(scenFile)
 		return list;
 	}
 
-	this.removeReinforcement = function(turn, id)
+	this.removeReinforcement = function(turn: number, id: number)
 	{
 		if (this.reinforcements[turn] === null || typeof this.reinforcements[turn] === "undefined")
 			return false;
@@ -131,7 +180,7 @@ function Scenario(scenFile)
 	}
 
 	//Checks if local human player (not net/ai) has reached the map turn limit
-	this.checkDefeat = function(lastSide, localPlayingSide)
+	this.checkDefeat = function(lastSide: number, localPlayingSide: number)
 	{
 		if (this.map.turn >= this.map.maxTurns && (lastSide == localPlayingSide || localPlayingSide == 2))
 		{
@@ -141,7 +190,7 @@ function Scenario(scenFile)
 		return false;
 	}
 
-	this.checkVictory = function()
+	this.checkVictory = function(): ScenarioOutcome
 	{
 		if (this.map.turn <= this.map.victoryTurns[0])
 			return "briliant";
@@ -154,7 +203,7 @@ function Scenario(scenFile)
 	}
 
 	this.getDescription = function() { return description; }
-	this.setDescription = function(str) { description = str; }
+	this.setDescription = function(str: string) { description = str; }
 
 	this.endTurn = function()
 	{
@@ -191,7 +240,7 @@ function Scenario(scenFile)
 
 	//Returns the equipment ids of a country that can be awarded as prototypes:
 	//units that appear next year, only combat ground and air classes and not too cheap
-	this.getPrototypeUnitsAvailable = function(country)
+	this.getPrototypeUnitsAvailable = function(country: number)
 	{
 		var year = this.date.getFullYear() + 1;
 		var list = Equipment.getCountryEquipmentByYearRange(year, year, country);
@@ -210,7 +259,7 @@ function Scenario(scenFile)
 		return list;
 	}
 
-	this.getRandomPrototype = function(country)
+	this.getRandomPrototype = function(country: number)
 	{
 		var list = this.getPrototypeUnitsAvailable(country);
 		var index = (Math.random() * list.length) >> 0;
@@ -218,7 +267,7 @@ function Scenario(scenFile)
 	}
 
 	//Start prestige for scenarios outside a campaign: the side with cheaper units gets the difference
-	this.getBalancedPrestige = function(side)
+	this.getBalancedPrestige = function(side: number)
 	{
 		var prestige = SCENARIO_START_PRESTIGE + this.unitsCostPerSide[+!side] - this.unitsCostPerSide[side];
 		if (prestige < SCENARIO_START_PRESTIGE)
@@ -226,7 +275,7 @@ function Scenario(scenFile)
 		return prestige;
 	}
 
-	this.getSideUnitsAvgExp = function(side)
+	this.getSideUnitsAvgExp = function(side: number)
 	{
 		return Math.round(this.expPerSide[side].exp / +this.expPerSide[side].count || 0);
 	}
@@ -234,7 +283,7 @@ function Scenario(scenFile)
 	this.showStatistics = function() {};
 
 	//Copy constructor
-	this.copy = function(s)
+	this.copy = function(s: Scenario)
 	{
 		//name already set in constructor
 		this.maxTurns = s.maxTurns;
@@ -265,7 +314,7 @@ function Scenario(scenFile)
 	//Private methods
 	//Check if all players from a side have played certain turn
 	//(inlined by the compiler in the bundle)
-	function hasSidePlayedTurn(playerList, side, turn)
+	function hasSidePlayedTurn(playerList: Player[], side: number, turn: number)
 	{
 		for (var i = 0; i < playerList.length; i++)
 		{

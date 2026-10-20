@@ -12,7 +12,54 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-var Equipment = (function(Equipment) { //Module start
+//The index lists of a country file: equipment ids by unit class
+interface EquipmentIndexes
+{
+	unitclass?: { [uclass: string]: number[] };
+}
+
+//A country equipment file as loaded, the units are value arrays in the parsehints order
+interface EquipmentCountryFile
+{
+	indexes: EquipmentIndexes;
+	parsehints: (keyof EquipmentEntry)[];
+	units: { [eqid: string]: (number | string)[] };
+}
+
+//What addPlayersEquipment reads of a player (a Player, or the player data of a saved game)
+interface EquipmentPlayerCountries
+{
+	country: number;
+	supportCountries: number[];
+}
+
+interface EquipmentModule
+{
+	equipment: { [eqid: string]: EquipmentEntry };
+	equipmentIndexes: { [country: string]: EquipmentIndexes };
+	equipmentPath: string;
+	filePrefix: string;
+	defaultName: string;
+	name: string;
+	equipmentToLoadSet: { [country: string]: boolean };
+	equipmentToLoad: number;
+	countryNames: { [eqpName: string]: string[] };
+	getCountryName(country: number): string;
+	getCountryNameByEqp(country: number, eqpName: string): string;
+	resetEquipment(): void;
+	addPlayersEquipment(players: EquipmentPlayerCountries[], callback: () => void): void;
+	addCountryEquipment(country: number, callback: () => void): void;
+	parseCountryEquipment(country: number, e: EquipmentCountryFile): boolean;
+	getCountryEquipmentByClass(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean): number[];
+	getCountryEquipmentByYearRange(startYear: number, endYear: number, country: number): number[];
+	addUnitsToEquipment(countryUnitHash: unknown): void;
+	isBridge(eqid: number): boolean;
+	ignoresEntrenchment(eqid: number): boolean;
+	isPurchasable(eqid: number): boolean;
+	canInitiateAttackOnUnitType(eqid: number, targetEqid: number): boolean;
+}
+
+var Equipment: EquipmentModule = (function(Equipment: EquipmentModule) { //Module start
 
 Equipment.equipment = {};
 Equipment.equipmentIndexes = {};
@@ -47,12 +94,12 @@ var START_AIR_ATTACK_MASK	= 1 << 6;
 var ATTACK_AIR_MASK			= 1 << 15;
 var PURCHASABLE_MASK		= 1 << 18;
 
-Equipment.getCountryName = function(country)
+Equipment.getCountryName = function(country: number)
 {
 	return Equipment.countryNames[Equipment.name][country];
 }
 
-Equipment.getCountryNameByEqp = function(country, eqpName)
+Equipment.getCountryNameByEqp = function(country: number, eqpName: string)
 {
 	return Equipment.countryNames[eqpName][country];
 }
@@ -67,7 +114,7 @@ Equipment.resetEquipment = function()
 
 //Loads the equipment of the players countries and of their supporting countries
 //callback is called after each country file finished loading (see Equipment.equipmentToLoad)
-Equipment.addPlayersEquipment = function(players, callback)
+Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], callback: () => void)
 {
 	Equipment.resetEquipment();
 	Equipment.equipmentToLoadSet[-1] = true; //country file 0, the generic equipment
@@ -87,27 +134,28 @@ Equipment.addPlayersEquipment = function(players, callback)
 		Equipment.addCountryEquipment(+country, callback);
 }
 
-Equipment.addCountryEquipment = function(country, callback)
+Equipment.addCountryEquipment = function(country: number, callback: () => void)
 {
 	loadEquipment(country + 1, callback); //TODO fix indexes
 }
 
-Equipment.parseCountryEquipment = function(country, e)
+Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile)
 {
 	Equipment.equipmentIndexes[country] = e.indexes;
 	for (var u in e.units)
 	{
 		//TODO Without this defined the retained size of each object is much bigger
 		//See: https://code.google.com/p/v8/issues/detail?id=2547
+		//A placeholder of zeros (also for the string fields, and without embark), filled below
 		Equipment.equipment[u] = { gunrange:0, icon:0, yearexpired:0, cost:0, initiative:0, spotrange:0,
 			hardatk:0, softatk:0, uclass:0, airdef:0, fuel:0, airseaweight:0, rangedefmod:0,
 			airatk:0, groundweight:0, movmethod:0, navalatk:0, movpoints:0, grounddef:0, target:0,
-			yearavailable:0, name:0, country:0, closedef:0, ammo:0, attr:0 };
+			yearavailable:0, name:0, country:0, closedef:0, ammo:0, attr:0 } as unknown as EquipmentEntry;
 
-		Equipment.equipment[u].__proto__ = null;
+		(Equipment.equipment[u] as { __proto__?: object | null }).__proto__ = null;
 
 		for(var h = 0; h < e.parsehints.length; h++)
-			Equipment.equipment[u][e.parsehints[h]] = e.units[u][h];
+			(Equipment.equipment[u] as unknown as { [field: string]: number | string })[e.parsehints[h]] = e.units[u][h];
 
 		//TODO freeze object foreach Object.freeze(Equipment.equipment[u]) to prevent modifications
 	}
@@ -123,9 +171,9 @@ Equipment.parseCountryEquipment = function(country, e)
 //(getCountryEquipmentByKey of 2.9 inlined, without the early return: an index without
 //the unitclass key leaves the empty list, a class missing from it leaves undefined and sort throws)
 //The sort is done in place on the index list
-Equipment.getCountryEquipmentByClass = function(uclass, country, sortkey, reverse)
+Equipment.getCountryEquipmentByClass = function(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean)
 {
-	var eqList = [];
+	var eqList: number[] = [];
 
 	if (typeof Equipment.equipmentIndexes[country] !== "undefined")
 	{
@@ -139,10 +187,10 @@ Equipment.getCountryEquipmentByClass = function(uclass, country, sortkey, revers
 	return eqList;
 }
 
-Equipment.getCountryEquipmentByYearRange = function(startYear, endYear, country)
+Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: number, country: number)
 {
-	var eqList = [];
-	var u, id = 0;
+	var eqList: number[] = [];
+	var u: EquipmentEntry, id: any = 0; //id is the for...in key, a string
 
 	if (typeof Equipment.equipmentIndexes[country] === "undefined") //TODO send load request ?
 		return eqList;
@@ -160,12 +208,12 @@ Equipment.getCountryEquipmentByYearRange = function(startYear, endYear, country)
 }
 
 //TODO for the case where a campaign player buys units from a supporting country in a scenario
-Equipment.addUnitsToEquipment = function(countryUnitHash)
+Equipment.addUnitsToEquipment = function(countryUnitHash: unknown)
 {
 
 }
 
-Equipment.isBridge = function(eqid)
+Equipment.isBridge = function(eqid: number)
 {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
@@ -176,7 +224,7 @@ Equipment.isBridge = function(eqid)
 	return false;
 }
 
-Equipment.ignoresEntrenchment = function(eqid)
+Equipment.ignoresEntrenchment = function(eqid: number)
 {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
@@ -187,7 +235,7 @@ Equipment.ignoresEntrenchment = function(eqid)
 	return false;
 }
 
-Equipment.isPurchasable = function(eqid)
+Equipment.isPurchasable = function(eqid: number)
 {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
@@ -199,7 +247,7 @@ Equipment.isPurchasable = function(eqid)
 }
 
 //Can a unit of type eqid start an attack on a unit of type targetEqid
-Equipment.canInitiateAttackOnUnitType = function(eqid, targetEqid)
+Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: number)
 {
 	if (!defined(Equipment.equipment[eqid]) || !defined(Equipment.equipment[targetEqid]))
 		return false;
@@ -235,7 +283,7 @@ Equipment.canInitiateAttackOnUnitType = function(eqid, targetEqid)
 
 //Loads a country equipment file from the current equipment set, callback is called after
 //the request finished, also when it failed
-function loadEquipment(country, callback)
+function loadEquipment(country: number, callback: () => void): boolean
 {
 	var jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
 	var req = new XMLHttpRequest();
@@ -258,12 +306,12 @@ function loadEquipment(country, callback)
 		return Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
 }
 
-function keySort(key, reverse)
+function keySort(key: keyof EquipmentEntry, reverse: boolean)
 {
 	var order = 1; //ascending
 	if (reverse) order = -1; //descending
 
-	return function(a, b) {
+	return function(a: number, b: number) {
 		if (Equipment.equipment[a][key] < Equipment.equipment[b][key]) return -1 * order;
 		if (Equipment.equipment[a][key] > Equipment.equipment[b][key]) return +1 * order;
 
@@ -271,4 +319,4 @@ function keySort(key, reverse)
 	}
 }
 //------------------------ MODULE END ----------------------
-return Equipment; }(Equipment || {})); //Module end
+return Equipment; }(Equipment || {} as EquipmentModule)); //Module end

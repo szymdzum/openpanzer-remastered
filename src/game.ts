@@ -12,9 +12,49 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-var game = new Game();
+//Game keeps the campaign progress in its closure, its methods are assigned in the constructor.
+//It stays a function: "var game = new Game()" runs before the declaration, which a class
+//(not hoisted) can't do
+interface Game
+{
+	ui: UI;
+	state: GameState;
+	campaign: Campaign;
+	scenario: Scenario;
+	gameStarted: boolean;
+	gameEnded: boolean;
+	waitUIAnimation: boolean;
+	spotSide: number;
+	uiMessageClicked: boolean;
+	loop: number;
+	init(): void;
+	processTurn(): void;
+	startTurn(): void;
+	processAIActions(): void;
+	endTurn(): void;
+	setupGameState(): void;
+	newScenario(scenFile: string, scenIntro?: string): void;
+	onScenarioLoadFinished(scenIntro: string | null, isRestore: boolean): false | void;
+	newCampaign(campIndex: number, difficulty: number): void;
+	onCampaignLoadFinished(): void;
+	continueCampaign(outcomeType: ScenarioOutcome, endType?: string): void; //endType: an endGameType value
+	getCampaignPlayer(): Player | null;
+	setCurrentSide(): void;
+	deployReinforcements(turn: number, playerId: number): boolean;
+	cleanup(): void;
+}
 
-function Game()
+//Game, GameState, Scenario, Campaign, UI and AIScripted are constructor functions, not classes:
+//these give `new` on them a type (AIConstructor is ai.ts's)
+interface GameConstructor { new (): Game; }
+interface ScenarioConstructor { new (scenFile: string): Scenario; }
+interface CampaignConstructor { new (campIndex: number, difficulty: number, onLoaded: () => void): Campaign; }
+interface UIConstructor { new (game: Game): UI; }
+interface AIScriptedConstructor { new (player: Player, map: GameMap): AIScripted; }
+
+var game: Game = new (Game as unknown as GameConstructor)();
+
+function Game(this: Game)
 {
 	this.ui = null;
 	this.state = null;
@@ -28,10 +68,10 @@ function Game()
 	this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window //TODO change to event
 
 	var localPlayingSide = -1; //Which player side plays locally on this computer
-	var campaignPlayer = null; //Player that plays campaign locally
-	var savedPlayer = null; //Saved copy of the campaign player used between campaign scenarios
+	var campaignPlayer: Player = null; //Player that plays campaign locally
+	var savedPlayer: Player = null; //Saved copy of the campaign player used between campaign scenarios
 	var needScenarioLoad = false; //If a new scenario should be loaded during campaign progress
-	var scenData = null; //campaign scenario data passed for delayed load during campaign progress
+	var scenData: CampaignScenario = null; //campaign scenario data passed for delayed load during campaign progress
 	var shouldRemoveNonCampaignUnits = false; //If we should remove scenario only units from campaign scenarios
 	var shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
 	var isCampaignStart = false; //First scenario of a campaign: set prestige, dossier and core units
@@ -39,7 +79,7 @@ function Game()
 	//Restores the last saved game, or starts the default scenario if there is none
 	this.init = function()
 	{
-		this.state = new GameState(this);
+		this.state = new (GameState as unknown as GameStateConstructor)(this);
 		this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 			this.newScenario.bind(this, "failRestore"));
 	}
@@ -133,7 +173,7 @@ function Game()
 	}
 
 	//scenFile "failRestore" is passed when restoring the last save failed at startup
-	this.newScenario = function(scenFile, scenIntro)
+	this.newScenario = function(scenFile: string, scenIntro?: string)
 	{
 		if (scenFile === "failRestore")
 		{
@@ -144,12 +184,12 @@ function Game()
 
 		this.cleanup();
 
-		this.scenario = new Scenario(scenFile);
+		this.scenario = new (Scenario as unknown as ScenarioConstructor)(scenFile);
 		this.scenario.load(this.onScenarioLoadFinished.bind(this, scenIntro, false));
 	}
 
 	//isRestore is true when the scenario came from a saved game
-	this.onScenarioLoadFinished = function(scenIntro, isRestore)
+	this.onScenarioLoadFinished = function(scenIntro: string | null, isRestore: boolean)
 	{
 		if (!this.scenario.isLoaded)
 		{
@@ -213,14 +253,14 @@ function Game()
 		}
 		else //First scenario after startup
 		{
-			this.ui = new UI(this);
+			this.ui = new (UI as unknown as UIConstructor)(this);
 			this.ui.mainMenuButton("options"); //Bring up the "Main Menu"
 		}
 	}
 
-	this.newCampaign = function(campIndex, difficulty)
+	this.newCampaign = function(campIndex: number, difficulty: number)
 	{
-		this.campaign = new Campaign(campIndex, difficulty, this.onCampaignLoadFinished.bind(this));
+		this.campaign = new (Campaign as unknown as CampaignConstructor)(campIndex, difficulty, this.onCampaignLoadFinished.bind(this));
 	}
 
 	this.onCampaignLoadFinished = function()
@@ -235,7 +275,7 @@ function Game()
 	}
 
 	//endType (endGameType) is only given on a loss, it picks the loss reason text
-	this.continueCampaign = function(outcomeType, endType)
+	this.continueCampaign = function(outcomeType: ScenarioOutcome, endType?: string)
 	{
 		//Add prestige for finishing scenario
 		campaignPlayer.prestige += this.campaign.getOutcomePrestige(outcomeType);
@@ -288,7 +328,7 @@ function Game()
 	}
 
 	//Deploys the reinforcements of player playerId for this turn, returns false if there are none
-	this.deployReinforcements = function(turn, playerId)
+	this.deployReinforcements = function(turn: number, playerId: number)
 	{
 		var deployed = false;
 		var reinforcements = this.scenario.getReinforcements(turn, playerId);
@@ -298,7 +338,7 @@ function Game()
 
 		for (var i = 0; i < reinforcements.length; i++)
 		{
-			var cell = null;
+			var cell: Cell = null;
 			if ((cell = this.scenario.map.deployReinforcement(reinforcements[i].unit,
 				reinforcements[i].row, reinforcements[i].col)) !== null)
 			{
@@ -337,7 +377,7 @@ function Game()
 	}
 
 	//Set AI, Network or campaign for players. Local player is the default value
-	function setupPlayers(game)
+	function setupPlayers(game: Game)
 	{
 		var i;
 		var players = game.scenario.map.getPlayers();
@@ -352,7 +392,7 @@ function Game()
 				if (players[i].country != game.campaign.country)
 				{
 					players[i].type = playerType.aiLocal;
-					players[i].handler = new AI(players[i], game.scenario.map);
+					players[i].handler = new (AI as unknown as AIConstructor)(players[i], game.scenario.map);
 				}
 				else //Copy or load the local player for campaign progress (should be only 1 or hell breaks lose see copy)
 				{
@@ -374,12 +414,12 @@ function Game()
 				if (uiSettings.isAI[players[i].id] == 1 || players[i].type == playerType.aiLocal)
 				{
 					players[i].type = playerType.aiLocal;
-					players[i].handler = new AI(players[i], game.scenario.map);
+					players[i].handler = new (AI as unknown as AIConstructor)(players[i], game.scenario.map);
 				}
 				else if (uiSettings.isAI[players[i].id] == 2 || players[i].type == playerType.aiScripted)
 				{
 					players[i].type = playerType.aiScripted;
-					players[i].handler = new AIScripted(players[i], game.scenario.map);
+					players[i].handler = new (AIScripted as unknown as AIScriptedConstructor)(players[i], game.scenario.map);
 				}
 			}
 		}
@@ -387,7 +427,7 @@ function Game()
 	}
 
 	//Plays an AI action on the UI, returns false when the AI turn should end
-	function processAction(game, action)
+	function processAction(game: Game, action: AIAction)
 	{
 		if (!action) return false;
 		var p = action.param;
@@ -396,10 +436,10 @@ function Game()
 		{
 			case actionType.move:
 			{
-				game.scenario.map.setMoveRange(p[0]);
+				game.scenario.map.setMoveRange(p[0] as Unit);
 				game.waitUIAnimation = true;
-				if (game.ui.uiUnitMove(p[0], p[1].row, p[1].col))
-					game.ui.uiSetUnitOnViewPort(p[0]);
+				if (game.ui.uiUnitMove(p[0] as Unit, (p[1] as Cell).row, (p[1] as Cell).col))
+					game.ui.uiSetUnitOnViewPort(p[0] as Unit);
 				else
 					game.waitUIAnimation = false;
 				break;
@@ -407,30 +447,30 @@ function Game()
 			case actionType.attack:
 			{
 				game.waitUIAnimation = true;
-				if (GameRules.isInAttackRange(p[0], p[1]) && game.ui.uiUnitAttack(p[0], p[1]))
-					game.ui.uiSetUnitOnViewPort(p[0]);
+				if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit) && game.ui.uiUnitAttack(p[0] as Unit, p[1] as Unit))
+					game.ui.uiSetUnitOnViewPort(p[0] as Unit);
 				else
 					game.waitUIAnimation = false;
 				break;
 			}
 			case actionType.resupply:
 			{
-				game.scenario.map.resupplyUnit(p[0]);
+				game.scenario.map.resupplyUnit(p[0] as Unit);
 				break;
 			}
 			case actionType.reinforce:
 			{
-				game.scenario.map.reinforceUnit(p[0], false);
+				game.scenario.map.reinforceUnit(p[0] as Unit, false);
 				break;
 			}
 			case actionType.mount:
 			{
-				game.scenario.map.mountUnit(p[0]);
+				game.scenario.map.mountUnit(p[0] as Unit);
 				break;
 			}
 			case actionType.umount:
 			{
-				game.scenario.map.unmountUnit(p[0]);
+				game.scenario.map.unmountUnit(p[0] as Unit);
 				break;
 			}
 			case actionType.upgrade:
@@ -447,8 +487,8 @@ function Game()
 			}
 			case actionType.select:
 			{
-				game.ui.uiSetUnitOnViewPort(p[0]);
-				game.ui.uiUnitSelect(p[0]);
+				game.ui.uiSetUnitOnViewPort(p[0] as Unit);
+				game.ui.uiUnitSelect(p[0] as Unit);
 				break;
 			}
 			case actionType.endturn:
@@ -458,13 +498,13 @@ function Game()
 			case actionType.message:
 			{
 				game.waitUIAnimation = true;
-				game.ui.showGameToolTip(p[0], p[1].row, p[1].col);
-				game.ui.uiSetCellOnViewPort(p[1]);
+				game.ui.showGameToolTip(p[0] as string, (p[1] as Cell).row, (p[1] as Cell).col);
+				game.ui.uiSetCellOnViewPort(p[1] as Cell);
 				break;
 			}
 			case actionType.viewport:
 			{
-				game.ui.uiSetCellOnViewPort(p[0]);
+				game.ui.uiSetCellOnViewPort(p[0] as Cell);
 				break;
 			}
 			default:
@@ -478,7 +518,7 @@ function Game()
 	//Returns which sides are played by players on this computer
 	//will return -1 no local sides, 0 side 0, 1 side 1, 2 both sides
 	//are playing on local computer (hotseat mode). Scripted AI sides count as local
-	function getLocalSide(playerList)
+	function getLocalSide(playerList: Player[])
 	{
 		var nrSides = 1;
 		var localSide = -1;

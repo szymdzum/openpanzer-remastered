@@ -12,9 +12,41 @@
  * come from what the code does and how game.js calls it.
  */
 
+//getCellScore calls Hex.getUnit() without airMode (undefined, the ground unit first):
+//an overload merged into map.ts's Hex until its airMode parameter is optional there
+interface Hex { getUnit(): Unit; }
+
+//One queued action, param depends on type (actionType): [unit] for resupply, reinforce,
+//mount and select, [unit, cell] for move, [unit, target] for attack, and for the tutorial
+//messages [text, cell it points at]. type is a plain number, so it can't narrow a union:
+//the elements stay any for game.js, which reads them as the type says
+type AIActionParam = Unit | Cell | string;
+interface AIAction { type: number; param: any[]; }
+
+//AI and AIScripted are constructor functions, not classes (a class body is strict mode and
+//they assign implicit globals): this gives `new` on them a type
+interface AIConstructor { new (player: Player, map: GameMap): AI; }
+
+//The AI's estimate of an attack and of the objective nearest to a cell
+interface AIAttackScore { score: number; kills: number; }
+interface AIObjectiveScore { cell: Cell; score: number; }
+
 //The AI state of one of its own units during a turn: what it did and what it can't do anymore
-function AIUnit(unit)
+class AIUnit
 {
+	declare unit: Unit;
+	declare noAttack: boolean;
+	declare noMove: boolean;
+	declare noReinforce: boolean;
+	declare noResupply: boolean;
+	declare didAttack: boolean;
+	declare didMove: boolean;
+	declare didResupplyReinforce: boolean;
+	declare newPosition: Cell;
+	declare noResupplyReinforce?: boolean; //only set by the typo in AI attackUnit
+
+	constructor(unit: Unit)
+	{
 	this.unit = unit;
 	this.noAttack = false;
 	this.noMove = false;
@@ -24,28 +56,44 @@ function AIUnit(unit)
 	this.didMove = false;
 	this.didResupplyReinforce = false;
 	this.newPosition = null; //cell the unit was ordered to move to
+	}
 }
 
 //An enemy unit already targeted by the AI this turn
-function EnemyUnit(unit)
+class EnemyUnit
 {
+	declare unit: Unit;
+	declare isAttacked: boolean;
+	declare losses: number;
+	declare isKilled: boolean;
+
+	constructor(unit: Unit)
+	{
 	this.unit = unit;
 	this.isAttacked = false;
 	this.losses = 0; //expected losses from the attacks ordered so far
 	this.isKilled = false;
+	}
+}
+
+//The methods AI sets up in its constructor
+interface AI
+{
+	buildActions(): void;
+	getAction(): AIAction;
 }
 
 //player is the AI controlled player, map the scenario map
-function AI(player, map)
+function AI(this: AI, player: Player, map: GameMap)
 {
-	var allUnits = [];
-	var aiUnits = []; //AIUnit list of the units still having something to do
-	var enemyUnits = {}; //EnemyUnit by unit id of the units attacked this turn
-	var actionsQueue = [];
-	var takenPositions = []; //cells the AI units were ordered to move to
-	var freedPositions = []; //cells the AI units were ordered to leave
-	var defendObjectives = []; //victory hexes the enemy side has to capture
-	var objectives = []; //victory hexes this side has to capture
+	var allUnits: Unit[] = [];
+	var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do
+	var enemyUnits: { [unitId: number]: EnemyUnit } = {}; //EnemyUnit by unit id of the units attacked this turn
+	var actionsQueue: AIAction[] = [];
+	var takenPositions: Cell[] = []; //cells the AI units were ordered to move to
+	var freedPositions: Cell[] = []; //cells the AI units were ordered to leave
+	var defendObjectives: Cell[] = []; //victory hexes the enemy side has to capture
+	var objectives: Cell[] = []; //victory hexes this side has to capture
 	var prestigeLeft = player.prestige; //prestige left for reinforcements
 
 	this.buildActions = function()
@@ -114,7 +162,7 @@ function AI(player, map)
 		}
 
 		//Each unit gets another pass until it can't do anything else
-		var aiUnit = null;
+		var aiUnit: AIUnit = null;
 		while (aiUnits.length > 0)
 		{
 			aiUnit = aiUnits[0];
@@ -136,13 +184,13 @@ function AI(player, map)
 		return action;
 	}
 
-	function addAction(actionType, params)
+	function addAction(actionType: number, params: AIActionParam[])
 	{
 		actionsQueue.push({ type: actionType, param: params });
 	}
 
 	//Reinforces a weak unit or one that can't move or attack anymore, if there is prestige left
-	function reinforceUnit(aiUnit)
+	function reinforceUnit(aiUnit: AIUnit): boolean
 	{
 		var unit = aiUnit.unit;
 		if (!GameRules.canReinforce(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack
@@ -172,7 +220,7 @@ function AI(player, map)
 
 	//Resupplies a unit low on ammo or fuel or one that can't move or attack anymore
 	//(inlined into buildActions in the bundle)
-	function resupplyUnit(aiUnit)
+	function resupplyUnit(aiUnit: AIUnit): void
 	{
 		var unit = aiUnit.unit;
 		if (!GameRules.canResupply(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack || aiUnit.didMove)
@@ -192,7 +240,7 @@ function AI(player, map)
 	}
 
 	//Moves the unit to the best scored cell in its move range, if better than where it stands
-	function moveUnit(aiUnit)
+	function moveUnit(aiUnit: AIUnit): boolean
 	{
 		var unit = aiUnit.unit;
 		if (aiUnit.didMove || aiUnit.didResupplyReinforce || !unit)
@@ -206,10 +254,10 @@ function AI(player, map)
 			aiUnit.noMove = true;
 			return false;
 		}
-		var pos = unit.getPos();
+		var pos: Cell & { canMove?: boolean } = unit.getPos();
 		pos.canMove = true;
 		var bestScore = getCellScore(unit, pos);
-		var objective;
+		var objective: AIObjectiveScore;
 		if (GameRules.isGround(unit))
 		{
 			objective = getObjectiveScore(pos);
@@ -218,7 +266,7 @@ function AI(player, map)
 		bestScore = bestScore + unit.entrenchment * entrenchmentScore;
 		var attackScore = getAttackPotential(unit, pos);
 		bestScore = bestScore + attackScore;
-		var bestCell = null;
+		var bestCell: Cell = null;
 		var score = 0;
 		for (var i = 0; i < moveCells.length; i++)
 		{
@@ -243,7 +291,7 @@ function AI(player, map)
 			//Mark the destination taken and the old position free (inlined in the bundle)
 			var dest = bestCell;
 			var oldPos = unit.getPos();
-			var index;
+			var index: number;
 			takenPositions.push(dest);
 			if ((index = findFreedPosition(dest)) >= 0)
 				freedPositions.splice(index, 1);
@@ -260,7 +308,7 @@ function AI(player, map)
 
 	//Attacks the best scored target from where the unit stands or was ordered to move to
 	//(inlined into buildActions in the bundle)
-	function attackUnit(aiUnit)
+	function attackUnit(aiUnit: AIUnit): void
 	{
 		var unit = aiUnit.unit;
 		if (unit.hasFired || aiUnit.didAttack || aiUnit.didResupplyReinforce)
@@ -268,8 +316,8 @@ function AI(player, map)
 			aiUnit.noAttack = true;
 			return;
 		}
-		var target = null;
-		var result = {};
+		var target: Unit = null;
+		var result = {} as AIAttackScore;
 		var unitHex = unit.getHex();
 		var attackHex = unitHex;
 		//An attack must score more than these losses
@@ -324,7 +372,7 @@ function AI(player, map)
 	//Returns the score and the expected kills of unit attacking the unit on cell
 	//isPotential: scoring a possible position, attacks on killed targets or with
 	//too many losses count as their score or 0 instead of the bad attack score
-	function getAttackScore(unit, cell, isPotential)
+	function getAttackScore(unit: Unit, cell: Cell, isPotential: boolean): AIAttackScore
 	{
 		var score = 0;
 		var kills = 0;
@@ -364,9 +412,9 @@ function AI(player, map)
 	}
 
 	//Returns the sum of the attack scores unit would have if standing on cell
-	function getAttackPotential(unit, cell)
+	function getAttackPotential(unit: Unit, cell: Cell): number
 	{
-		var result = 0;
+		var result: number | AIAttackScore = 0; //holds the attack scores, starts as a number
 		var score = 0;
 		var unitHex = unit.getHex();
 		unit.setHex(map.map[cell.row][cell.col]);
@@ -381,7 +429,7 @@ function AI(player, map)
 	}
 
 	//Returns the score of unit standing on cell: terrain, objectives and neighbours
-	function getCellScore(unit, cell)
+	function getCellScore(unit: Unit, cell: Cell & { canMove?: boolean }): number
 	{
 		var score = 0;
 		var unitHex = unit.getHex();
@@ -504,12 +552,12 @@ function AI(player, map)
 
 	//Returns the nearest objective to cell and a score growing as it gets closer
 	//toCapture false scores against the objectives to defend (no caller passes it)
-	function getObjectiveScore(cell, toCapture)
+	function getObjectiveScore(cell: Cell, toCapture?: boolean): AIObjectiveScore
 	{
 		var list = objectives;
 		if (defined(toCapture) && !toCapture)
 			list = defendObjectives;
-		var result = { cell: null, score: 0 };
+		var result: AIObjectiveScore = { cell: null, score: 0 };
 		for (var i = 0; i < list.length; i++)
 		{
 			var d = GameRules.distance(cell.row, cell.col, list[i].row, list[i].col);
@@ -532,7 +580,7 @@ function AI(player, map)
 	}
 
 	//Returns the index of cell in freedPositions or -1
-	function findFreedPosition(cell)
+	function findFreedPosition(cell: Cell): number
 	{
 		for (var i = 0; i < freedPositions.length; i++)
 			if (freedPositions[i].row == cell.row && freedPositions[i].col == cell.col)
@@ -541,16 +589,16 @@ function AI(player, map)
 	}
 
 	//Random integer between min and max inclusive
-	function random(min, max)
+	function random(min: number, max: number): number
 	{
 		return Math.floor(Math.random() * (max - min + 1) + min);
 	}
 
 	//Picks random affordable units of the classes in classList, cycling through the list,
 	//until prestige runs out or a whole cycle ends on a class with nothing to buy
-	function buyUnits(prestige, classList)
+	function buyUnits(prestige: number, classList: number[]): { prestige: number; units: number[] }
 	{
-		var units = [];
+		var units: number[] = [];
 		var country = player.country + 1;
 		var classIndex = 0;
 		var noneFound = false;

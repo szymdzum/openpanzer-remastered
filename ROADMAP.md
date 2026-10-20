@@ -12,9 +12,11 @@ it changed (and the reference traces of that step are then the new expected beha
 
 ## 2. TypeScript, then Vite
 
-- [ ] 2a. Modules become .ts files compiled by tsc as before: global scripts in one bundle,
-      no behavior change (replays identical). Type errors are a number to bring down.
-- [ ] 2b. Types for the core model (Unit, Hex, Map, Player, equipment data) and GameRules
+- [x] 2a. Modules become .ts files, type checked by tsc 7, types blanked out by the build:
+      still global scripts, no behavior change (replays identical)
+- [x] 2b. Real types everywhere: tsc and noImplicitAny clean (from 365 and 1491 errors), the
+      model as classes, replays identical
+- [ ] 2b+. Replace the local stand-in interfaces modules declared for each other's types
 - [ ] 2c. ES modules instead of globals, Vite dev server with hot reload, production build
 
 ## 3. Quick visible wins

@@ -12,7 +12,54 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-function GameState(Game)
+//The campaign progress kept in a save, see getCampaignSave
+interface CampaignSave
+{
+	id: number;
+	file: string;
+	scenario: number;
+	country: number;
+	difficulty: number;
+	coreUnits: Unit[];
+}
+
+//A game as exportGameState writes it (and the scenario and players items of a local save):
+//the JSON of the objects, read back into new ones with their copy()
+interface GameStateExport
+{
+	scenario: Scenario;
+	players: Player[];
+	campaign: CampaignSave | null;
+}
+
+//What saveToCloud and restoreFromCloud read from the GitHub gists API
+interface GistReply
+{
+	id: string;
+	files: { [fileName: string]: { content: string } };
+}
+
+//GameState keeps its save names and restored items in the closure, its methods are
+//assigned in the constructor. It stays a function: restoreFromCloud has a "delete reply"
+//that is a SyntaxError in a class body (strict mode)
+interface GameState
+{
+	save(): void;
+	saveToCloud(inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void): void;
+	restore(onDone: () => void, onFail: () => void): void;
+	restoreFromString(saveData: string): boolean;
+	restoreFromFile(file: Blob, onDone?: () => void, onFail?: () => void): boolean;
+	restoreFromCloud(inputElement: HTMLInputElement, onDone?: () => void): boolean;
+	clear(): void;
+	saveCampaign(): void;
+	saveSettings(): void;
+	restoreSettings(): void;
+	exportGameState(): string;
+}
+
+interface GameStateConstructor { new (Game: Game | null): GameState; }
+
+function GameState(this: GameState, Game: Game | null)
 {
 	var saveName =
 	{
@@ -24,7 +71,7 @@ function GameState(Game)
 
 	//Items read back so far by restoreItem, keyed by save name. Never emptied, so it
 	//keeps the items for the lifetime of this GameState: restore() works once per instance
-	var restoredItems = {};
+	var restoredItems: { [key: string]: any } = {};
 
 	this.save = function()
 	{
@@ -35,14 +82,14 @@ function GameState(Game)
 	//Saves the game as a public gist on GitHub. inputElement holds the gist id to overwrite,
 	//or is empty to create a new one, and receives the new id or status messages.
 	//callback(error, gistId) is called when the request completes
-	this.saveToCloud = function(inputElement, callback)
+	this.saveToCloud = function(inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void)
 	{
 		var saveData = this.exportGameState();
 		//The bundle embeds the author's GitHub token here ("ghp_" + pieces with whitespace
 		//stripped out), used to create and update the gists. Not copied into the source
 		var token = "";
 		//Uses the global game, not the Game this GameState was created with
-		var gist =
+		var gist: { description: string; public: boolean; files: { [fileName: string]: { content?: string } } } =
 		{
 			description: game.scenario.name + "-" + game.scenario.map.turn,
 			public: true,
@@ -77,7 +124,7 @@ function GameState(Game)
 			{
 				if ((this.status >= 200 && this.status < 300) || this.status == 304)
 				{
-					var reply = JSON.parse(this.responseText);
+					var reply: GistReply = JSON.parse(this.responseText);
 					if (!reply)
 						return callback("Bad response from server");
 					inputElement.value = reply.id;
@@ -94,7 +141,7 @@ function GameState(Game)
 	//Restores settings, scenario, players and campaign. The items are read one by one
 	//(asynchronously in a Chrome app) and the game is rebuilt when all 4 are in.
 	//onDone is called when the scenario has been restored, onFail when there is no saved game
-	this.restore = function(onDone, onFail)
+	this.restore = function(onDone: () => void, onFail: () => void)
 	{
 		restoreItem(saveName.settings, onDone, onFail, 4);
 		restoreItem(saveName.scenario, onDone, onFail, 4);
@@ -103,18 +150,18 @@ function GameState(Game)
 	}
 
 	//Restores a game from an exportGameState() string, returns false if it can't be parsed
-	this.restoreFromString = function(saveData)
+	this.restoreFromString = function(saveData: string)
 	{
 		return restoreFromJSON(saveData);
 	}
 
 	//Restores a game from a file exported with exportGameState()
-	this.restoreFromFile = function(file, onDone, onFail)
+	this.restoreFromFile = function(file: Blob, onDone?: () => void, onFail?: () => void)
 	{
 		var reader = new FileReader();
 		reader.onloadend = function()
 		{
-			if (!restoreFromJSON(this.result))
+			if (!restoreFromJSON(this.result as string))
 			{
 				if (typeof onFail === "function")
 					onFail();
@@ -128,7 +175,7 @@ function GameState(Game)
 	}
 
 	//Restores a game from a GitHub gist whose id is in inputElement
-	this.restoreFromCloud = function(inputElement, onDone)
+	this.restoreFromCloud = function(inputElement: HTMLInputElement, onDone?: () => void)
 	{
 		var gistId = inputElement.value;
 		if (gistId == "" || typeof gistId === "undefined")
@@ -146,7 +193,7 @@ function GameState(Game)
 			{
 				if ((this.status >= 200 && this.status < 300) || this.status == 304)
 				{
-					var reply = JSON.parse(this.responseText);
+					var reply: GistReply = JSON.parse(this.responseText);
 					if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json"))
 					{
 						inputElement.value = "";
@@ -159,6 +206,7 @@ function GameState(Game)
 						inputElement.setAttribute("placeholder", "Cannot find game data in the save file");
 						return false;
 					}
+					// @ts-ignore: a var can't be deleted (TS1102, TS2703), kept as in the bundle
 					delete reply; //no effect, a var can't be deleted
 					inputElement.value = gistId;
 					if (typeof onDone === "function")
@@ -204,9 +252,9 @@ function GameState(Game)
 	//Returns the game (scenario, players, campaign) as a JSON string
 	this.exportGameState = function()
 	{
-		var state = {};
+		var state = {} as GameStateExport;
 		//A hex with these values holds nothing worth saving and is written as {}
-		var emptyHex =
+		var emptyHex: { [p: string]: unknown } =
 		{
 			unit: null,
 			airunit: null,
@@ -251,15 +299,15 @@ function GameState(Game)
 	}
 
 	//Private functions
-	function saveItem(key, object)
+	function saveItem(key: string, object: unknown)
 	{
 		if (isChromeApp())
 		{
 			if (object)
 			{
-				var item = {};
+				var item: { [key: string]: unknown } = {};
 				item[key] = object;
-				chrome.storage.local.get(function(items) {}); //unused
+				chrome.storage.local.get(function(items: { [key: string]: unknown }) {}); //unused
 				chrome.storage.local.set(item);
 			}
 		}
@@ -272,13 +320,13 @@ function GameState(Game)
 	}
 
 	//Reads one item and hands it to onItemRestored, which acts once itemCount items are in
-	function restoreItem(key, onDone, onFail, itemCount)
+	function restoreItem(key: string, onDone: (() => void) | null, onFail: () => void, itemCount: number)
 	{
-		var object = null;
+		var object: string = null;
 
 		if (isChromeApp())
 		{
-			chrome.storage.local.get(key, function(items)
+			chrome.storage.local.get(key, function(items: { [key: string]: any })
 			{
 				//a null items makes onItemRestored throw
 				if (chrome.runtime.lastError)
@@ -295,7 +343,7 @@ function GameState(Game)
 		}
 	}
 
-	function deleteItem(key)
+	function deleteItem(key: string)
 	{
 		if (isChromeApp())
 			chrome.storage.local.remove(key);
@@ -304,9 +352,9 @@ function GameState(Game)
 	}
 
 	//Restores a game from a JSON string, returns false if it doesn't hold a scenario
-	function restoreFromJSON(saveData)
+	function restoreFromJSON(saveData: string)
 	{
-		var state = null;
+		var state: GameStateExport = null;
 		try
 		{
 			state = JSON.parse(saveData);
@@ -325,9 +373,9 @@ function GameState(Game)
 	}
 
 	//Creates the scenario and loads the equipment of all players and supporting countries
-	function loadGameState(scenarioData, playersData, campaignData, onDone)
+	function loadGameState(scenarioData: Scenario, playersData: Player[], campaignData: CampaignSave | null, onDone: () => void)
 	{
-		Game.scenario = new Scenario(scenarioData.file);
+		Game.scenario = new (Scenario as unknown as ScenarioConstructor)(scenarioData.file);
 		if (scenarioData.eqp)
 			Equipment.name = scenarioData.eqp;
 
@@ -335,7 +383,7 @@ function GameState(Game)
 	}
 
 	//Called once for each equipment file, the game is rebuilt after the last one
-	function onEquipmentLoaded(scenarioData, playersData, campaignData, onDone)
+	function onEquipmentLoaded(scenarioData: Scenario, playersData: Player[], campaignData: CampaignSave | null, onDone: () => void)
 	{
 		if (--Equipment.equipmentToLoad)
 			return;
@@ -361,7 +409,7 @@ function GameState(Game)
 				if (campaignId < 0)
 					campaignId = campaignData.id;
 			}
-			Game.campaign = new Campaign(campaignId, campaignData.difficulty || 0, restoreCampaign.bind(null, campaignData, onDone));
+			Game.campaign = new (Campaign as unknown as CampaignConstructor)(campaignId, campaignData.difficulty || 0, restoreCampaign.bind(null, campaignData, onDone));
 		}
 		else
 		{
@@ -371,7 +419,7 @@ function GameState(Game)
 	}
 
 	//Called when the campaign has loaded
-	function restoreCampaign(campaignData, onDone)
+	function restoreCampaign(campaignData: CampaignSave, onDone: () => void)
 	{
 		var map = Game.scenario.map;
 		Game.campaign.setScenarioById(campaignData.scenario);
@@ -381,7 +429,7 @@ function GameState(Game)
 	}
 
 	//Stores a restored item, when all itemCount items are in restores the settings then the game
-	function onItemRestored(onDone, onFail, key, object, itemCount)
+	function onItemRestored(onDone: (() => void) | null, onFail: () => void, key: string, object: any, itemCount: number)
 	{
 		if (isChromeApp())
 			restoredItems[key] = object[key];
@@ -390,10 +438,10 @@ function GameState(Game)
 
 		if (Object.keys(restoredItems).length == itemCount)
 		{
-			var s = restoredItems[saveName.scenario];
-			var p = restoredItems[saveName.players];
-			var c = restoredItems[saveName.campaign];
-			var settings = restoredItems[saveName.settings];
+			var s: Scenario = restoredItems[saveName.scenario];
+			var p: Player[] = restoredItems[saveName.players];
+			var c: CampaignSave | null = restoredItems[saveName.campaign];
+			var settings: UISettings = restoredItems[saveName.settings];
 
 			//Need to restore the settings since some players might be assigned to AI
 			if (settings !== undefined && settings)
@@ -410,7 +458,7 @@ function GameState(Game)
 		}
 	}
 
-	function applySettings(s)
+	function applySettings(s: UISettings)
 	{
 		//Not all settings need to be restored since some are temp only
 		uiSettings.markOwnUnits = s.markOwnUnits;
@@ -439,9 +487,9 @@ function GameState(Game)
 	}
 
 	//Returns the campaign state to save, null when not playing a campaign
-	function getCampaignSave()
+	function getCampaignSave(): CampaignSave | null
 	{
-		var campaignSave = null;
+		var campaignSave: CampaignSave | null = null;
 
 		if (Game.campaign !== null)
 		{

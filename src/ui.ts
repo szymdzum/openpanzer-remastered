@@ -12,12 +12,129 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-function UI(game)
+//The UI's public methods, assigned in the constructor. UI stays a constructor function, not a
+//class: a class body is strict mode, and its private functions are called with a window this.
+//game.ts types `new UI(game)` through its UIConstructor
+interface UI
+{
+	handleReinforcementDeployment(): void;
+	uiUnitSelect(unit: Unit | null): boolean;
+	uiUnitMove(unit: Unit, row: number, col: number): boolean;
+	uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit): boolean;
+	showAlert(row: number, col: number, text: string | number, positive?: boolean): void;
+	showGameToolTip(text: string, row: number, col: number): void;
+	showSmallToolTip(text: string, row: number, col: number, color: number, id?: string, style?: number): void;
+	addSmallToolTips(unitsOnly?: boolean): void;
+	removeUnitToolTip(unitId: number): void;
+	removeAllSmallToolTips(onlyUnits?: boolean): void;
+	setNewScenario(): void;
+	startMenuButton(id: string): void;
+	mainMenuButton(id: string): void;
+	toggleUnitsAndEquipmentWindow(withEquipment: boolean): void;
+	equipmentWindowButtons(id: string): void;
+	updateEquipmentWindow(eqclass?: number): void;
+	uiEndTurnInfo(): void;
+	uiSetUnitOnViewPort(unit: Unit | null): boolean;
+	uiSetCellOnViewPort(cell: Cell | null): boolean;
+	scaleMap(level: number): void; //the map scale slider passes its value string, coerced in the arithmetic
+}
+
+//What the UI uses of render.ts's Render, until Render is typed there (then this can be Render)
+interface UIRender
+{
+	render(orow?: number, ocol?: number, range?: number): void;
+	drawCursor(cell: Cell): void;
+	drawHexByCell(cell: Cell, style: HexStyle): void;
+	runAnimation(animationCBData: UIAttackAnimationData | null): void;
+	addAnimation(row: number, col: number, animationName: string, facing?: number): void;
+	moveAnimation(moveAnimationCBData: UIMoveAnimationData): void;
+	screenToCell(x: number, y: number): Cell;
+	cellToScreen(row: number, col: number, absolute?: boolean): screenPos;
+	cacheImages(func: () => void): void;
+	getCursorCanvas(): HTMLCanvasElement;
+	setNewMap(mapObj: GameMap): void;
+	positionLayers(): void;
+}
+interface UIRenderConstructor { new (mapObj: GameMap): UIRender; }
+
+//The callback data of the move and attack animations, Render calls cbfunc with it when done
+interface UIMoveAnimationData
+{
+	unit: Unit;
+	moveResults: movementResults;
+	cbfunc: (moveAnimationCBData: UIMoveAnimationData) => void;
+}
+
+interface UIAttackSide
+{
+	unit: Unit;
+	cell: Cell;
+	oldstr: number;
+	newstr: number;
+	leaderGain: boolean;
+	attackStopped?: boolean; //attacking side only
+}
+
+interface UIAttackAnimationData
+{
+	attacking: UIAttackSide;
+	defending: UIAttackSide;
+	cbfunc: (animationCBData: UIAttackAnimationData) => void;
+}
+
+//The unit context buttons shown, by action
+interface UIContextButtons
+{
+	mount?: boolean;
+	embark?: boolean;
+	resupply?: boolean;
+	reinforce?: boolean;
+	overstrength?: boolean;
+	undo?: boolean;
+}
+
+//The equipment window keeps the user selections as expando properties on its DOM elements
+//(set by UIBuilder.setDefaultUserSelections): eqid, unit id or unit list index, -1 for none
+interface EqUserSelElement extends HTMLElement
+{
+	userunit: number;     //unit id on map
+	deployunit: number;   //index in the core unit list of the undeployed units
+	equnit: number;       //eqid
+	eqtransport: number;  //eqid, -2 when the transport was deselected
+	eqclass: number;      //unitClass
+	sortorder: boolean;   //0 at start, the reverse flag of getCountryEquipmentByClass
+	sortproperty: keyof EquipmentEntry;
+	unitscroll: number;
+	eqscroll: number;
+}
+interface EqSelCountryElement extends HTMLElement { country: number; } //index in the side's countries
+interface SettingsMenuElement extends HTMLElement { messageHidden: boolean; }
+
+//The unit boxes of the unit and equipment lists carry what their onclick needs
+interface UIUnitBoxElement extends HTMLDivElement
+{
+	unitid: number;       //unit id, or core unit list index in deploy mode
+	uniteqid: number;
+	eqclass: number;
+	country: number;
+	equnitid: number;
+	eqtransportid: number;
+}
+
+//updateUnitInfoWindow and uiAddUnitBox show a Unit, or an equipment entry from the equipment
+//window, told apart by unitData: a Unit with the entry fields they read. On the entry
+//updateUnitInfoWindow sets flag and strength. The entries are passed as one (as unknown as)
+type UIUnitOrEntry = Unit & { country?: number; name?: string; icon?: string; cost?: number };
+
+//The Firefox prefixed transform the strategic zoom also sets
+interface UIPrefixedStyle extends CSSStyleDeclaration { MozTransform: string; }
+
+function UI(this: UI, game: Game)
 {
 	var map = game.scenario.map;
-	var R = new Render(map);
+	var R = new (Render as unknown as UIRenderConstructor)(map);
 	var countries = map.getCountriesBySide(game.spotSide); //array for current side countries
-	var contextButtons = {}; //unit context buttons shown for the current unit, for the keyboard shortcuts
+	var contextButtons: UIContextButtons = {}; //unit context buttons shown for the current unit, for the keyboard shortcuts
 
 	//redraw screen and center unit on screen when images have finished loading
 	uiMapCacheImages();
@@ -47,7 +164,7 @@ function UI(game)
 		window.onresize = function() { R.positionLayers(); };
 	}
 
-	canvas.addEventListener("mousedown", function(e)
+	canvas.addEventListener("mousedown", function(e: MouseEvent)
 	{
 		if (!game.gameStarted || game.gameEnded)
 			return false;
@@ -167,7 +284,7 @@ function UI(game)
 	updateEquipmentWindow(); //Update after making deploy/current unit list visible or it won't update
 	uiMessage(game.scenario.name, game.scenario.getDescription());
 
-function handleMouseMove(e)
+function handleMouseMove(e: MouseEvent)
 {
 	var minfo = getMouseInfo(canvas, e);
 	var c = R.screenToCell(minfo.x, minfo.y);
@@ -184,7 +301,7 @@ function handleMouseMove(e)
 }
 
 //Keyboard shortcuts
-function handleKeyboard(e)
+function handleKeyboard(e: KeyboardEvent)
 {
 	switch (e.code)
 	{
@@ -252,14 +369,14 @@ function handleKeyboard(e)
 }
 
 //handle unit deployment
-function handleUnitDeployment(row, col)
+function handleUnitDeployment(row: number, col: number)
 {
-	var deployUnit = $("eqUserSel").deployunit;
+	var deployUnit = $<EqUserSelElement>("eqUserSel").deployunit;
 	if (map.deployPlayerUnit(map.currentPlayer, deployUnit, row, col))
 	{
 		R.cacheImages(function() { R.render(row, col, 1); });
 		handleUnitDeselect();
-		updateEquipmentWindow($("eqUserSel").eqclass);
+		updateEquipmentWindow($<EqUserSelElement>("eqUserSel").eqclass);
 	}
 }
 
@@ -277,7 +394,7 @@ function handleUnitDeselect()
 }
 
 //handle the selection of a new unit
-function handleUnitSelect(row, col)
+function handleUnitSelect(row: number, col: number)
 {
 	if (map.currentPlayer.type != playerType.humanLocal)
 		return false;
@@ -293,14 +410,14 @@ function handleUnitSelect(row, col)
 	}
 
 	//Select unit on equipment window (can't be in uiUnitSelect because will loop in updateEquipmentWindow())
-	$("eqUserSel").userunit = unit.id; //save selected player unit
+	$<EqUserSelElement>("eqUserSel").userunit = unit.id; //save selected player unit
 	updateEquipmentWindow(unit.unitData(true).uclass);
 	game.ui.removeUnitToolTip(unit.id);
 
 	return uiUnitSelect(unit);
 }
 
-function uiUnitSelect(unit)
+function uiUnitSelect(unit: Unit | null)
 {
 	if (unit === null)
 		return false;
@@ -318,7 +435,7 @@ function uiUnitSelect(unit)
 }
 
 //handle the move of a unit to row,col destination
-function uiUnitMove(unit, row, col)
+function uiUnitMove(unit: Unit, row: number, col: number)
 {
 	var mm = unit.unitData().movmethod;
 	if (GameRules.isTrain(unit))
@@ -328,7 +445,7 @@ function uiUnitMove(unit, row, col)
 	var oldpos = unit.getPos();
 	var mr = map.moveUnit(unit, row, col);
 
-	var moveAnimationCBData =
+	var moveAnimationCBData: UIMoveAnimationData =
 	{
 		unit: unit,
 		moveResults: mr,
@@ -351,7 +468,7 @@ function uiUnitMove(unit, row, col)
 }
 
 //Called when move animation finishes
-function uiMoveAnimationFinished(moveAnimationCBData)
+function uiMoveAnimationFinished(moveAnimationCBData: UIMoveAnimationData)
 {
 	var mr = moveAnimationCBData.moveResults;
 	var unit = moveAnimationCBData.unit;
@@ -376,7 +493,7 @@ function uiMoveAnimationFinished(moveAnimationCBData)
 }
 
 //A side has won by capturing all victory hexes (or by destroying all the enemy units)
-function uiMoveVictory(side)
+function uiMoveVictory(side: number)
 {
 	var victoryType = game.scenario.checkVictory();
 	if (game.campaign !== null)
@@ -408,17 +525,17 @@ function uiMoveVictory(side)
 }
 
 //handle attack performed by attacking unit on row,col unit
-function handleUnitAttack(attackingUnit, row, col)
+function handleUnitAttack(attackingUnit: Unit, row: number, col: number)
 {
 	var hex = map.map[row][col];
-	var enemyUnit = null;
+	var enemyUnit: Unit = null;
 	if ((enemyUnit = hex.getAttackableUnit(attackingUnit, uiSettings.airMode)) !== null) //Select which unit to attack depending on uiSettings.airMode
 		return uiUnitAttack(attackingUnit, enemyUnit);
 	return false;
 }
 
 //TODO most of the code here pertaining to support fire should be moved to map object
-function uiUnitAttack(attackingUnit, enemyUnit)
+function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit)
 {
 	var renderRange = 7; //biggest attack range including support fire
 	var cpos = attackingUnit.getPos();
@@ -431,7 +548,7 @@ function uiUnitAttack(attackingUnit, enemyUnit)
 	var cclass = attackingUnit.unitData().uclass;
 	var eclass = enemyUnit.unitData().uclass;
 	var attackStopped = false;
-	var animationCBData =
+	var animationCBData: UIAttackAnimationData =
 	{
 		attacking: { unit: attackingUnit, cell: cpos, oldstr: attackingUnit.strength, newstr: 0, leaderGain: false, attackStopped: false },
 		defending: { unit: enemyUnit, cell: epos, oldstr: enemyUnit.strength, newstr: 0, leaderGain: false },
@@ -496,9 +613,9 @@ function uiUnitAttack(attackingUnit, enemyUnit)
 }
 
 //Called when attack animation finishes
-function uiAttackAnimationFinished(animationCBData)
+function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData)
 {
-	var aloss, dloss, tmp, rpos, mr, moveAnimationCBData;
+	var aloss: number, dloss: number, tmp: number, rpos: Cell, mr: movementResults, moveAnimationCBData: UIMoveAnimationData;
 	var refreshRender = false;
 
 	var a = animationCBData.attacking;
@@ -602,16 +719,16 @@ function uiAttackAnimationFinished(animationCBData)
 }
 
 //Bouncing text over a map hex
-function uiShowAlert(row, col, text, positive)
+function uiShowAlert(row: number, col: number, text: string | number, positive?: boolean)
 {
 	var pos = R.cellToScreen(row, col, true); //return absolute(window) values
 	if (typeof positive === "undefined")
 		positive = false;
-	bounceText(pos.x, pos.y, text, positive);
+	bounceText(pos.x, pos.y, text as string, positive); //the losses are numbers
 }
 
 //Shows or hides the unit list, with the equipment window when withEquipment
-function toggleUnitsAndEquipmentWindow(withEquipment)
+function toggleUnitsAndEquipmentWindow(withEquipment: boolean)
 {
 	if (map.currentPlayer.type != playerType.humanLocal)
 		return;
@@ -647,9 +764,9 @@ function toggleUnitsAndEquipmentWindow(withEquipment)
 	R.render(); //Full page render is needed for showing/hiding deployment hexes over all map
 }
 
-function updateUnitContextWindow(u)
+function updateUnitContextWindow(u?: Unit)
 {
-	var div;
+	var div: HTMLElement;
 	var nbuttons = 0;
 	contextButtons = {};
 	clearTag("unit-context");
@@ -736,10 +853,11 @@ function updateUnitContextWindow(u)
 }
 
 //Updates the unit stats info window
-function updateUnitInfoWindow(u)
+function updateUnitInfoWindow(u: UIUnitOrEntry)
 {
 	var isEqUnit = false;
-	var uinfo, ammo, fuel = "-", exp = 0, ent = 0, ordinal = "";
+	//ammo and fuel become html when low, the numbers go to textContent as they are
+	var uinfo: EquipmentEntry, ammo: number | string, fuel: number | string = "-", exp = 0, ent = 0, ordinal = "";
 
 	if (!isVisible("unit-info") || !uiSettings.unitInfoVisibility)
 		return;
@@ -758,7 +876,7 @@ function updateUnitInfoWindow(u)
 	if (typeof u.unitData === "undefined")
 	{
 		isEqUnit = true;
-		uinfo = u;
+		uinfo = u as unknown as EquipmentEntry;
 		u.flag = u.country;
 		u.strength = 10;
 		ammo = u.ammo;
@@ -783,8 +901,8 @@ function updateUnitInfoWindow(u)
 			ordinal = UIBuilder.unitIDToOrdinal(u.id);
 	}
 
-	if (ammo < uinfo.ammo / 4) ammo = "<span style='color: #FF6347'>" + ammo + "</span>";
-	if (fuel < uinfo.fuel / 4) fuel = "<span style='color: #FF6347'>" + fuel + "</span>";
+	if ((ammo as number) < uinfo.ammo / 4) ammo = "<span style='color: #FF6347'>" + ammo + "</span>";
+	if ((fuel as number) < uinfo.fuel / 4) fuel = "<span style='color: #FF6347'>" + fuel + "</span>";
 	if (uinfo.gunrange == 0) uinfo.gunrange = 1; //Changes the equipment data
 
 	$("uImage").style.backgroundImage = "url(" + uinfo.icon + ")";
@@ -808,25 +926,25 @@ function updateUnitInfoWindow(u)
 		$("uMoveType").textContent = movMethodNames[uinfo.movmethod];
 
 	$("uStr").textContent = u.strength + "/10";
-	$("uFuel").innerHTML = fuel;
-	$("uAmmo").innerHTML = ammo;
-	$("uGunRange").textContent = uinfo.gunrange;
-	$("uMovement").textContent = uinfo.movpoints;
+	$("uFuel").innerHTML = fuel as string;
+	$("uAmmo").innerHTML = ammo as string;
+	$("uGunRange").textContent = uinfo.gunrange as unknown as string;
+	$("uMovement").textContent = uinfo.movpoints as unknown as string;
 
-	$("uExp").textContent = exp;
-	$("uEnt").textContent = ent;
-	$("uIni").textContent = uinfo.initiative;
-	$("uSpot").textContent = uinfo.spotrange;
+	$("uExp").textContent = exp as unknown as string;
+	$("uEnt").textContent = ent as unknown as string;
+	$("uIni").textContent = uinfo.initiative as unknown as string;
+	$("uSpot").textContent = uinfo.spotrange as unknown as string;
 
-	$("uAHard").textContent = uinfo.hardatk;
-	$("uASoft").textContent = uinfo.softatk;
-	$("uAAir").textContent = uinfo.airatk;
-	$("uANaval").textContent = uinfo.navalatk;
+	$("uAHard").textContent = uinfo.hardatk as unknown as string;
+	$("uASoft").textContent = uinfo.softatk as unknown as string;
+	$("uAAir").textContent = uinfo.airatk as unknown as string;
+	$("uANaval").textContent = uinfo.navalatk as unknown as string;
 
-	$("uDHard").textContent = uinfo.grounddef;
-	$("uDAir").textContent = uinfo.airdef;
-	$("uDClose").textContent = uinfo.closedef;
-	$("uDRange").textContent = uinfo.rangedefmod;
+	$("uDHard").textContent = uinfo.grounddef as unknown as string;
+	$("uDAir").textContent = uinfo.airdef as unknown as string;
+	$("uDClose").textContent = uinfo.closedef as unknown as string;
+	$("uDRange").textContent = uinfo.rangedefmod as unknown as string;
 
 	if (isEqUnit) return;
 
@@ -835,13 +953,13 @@ function updateUnitInfoWindow(u)
 	{
 		$("uCarrier").className = "smallButtonSubMenu";
 		$("uCarrier").innerHTML = "2";
-		$("uCarrier").onclick = function() { updateUnitInfoWindow(Equipment.equipment[u.carrier]); };
+		$("uCarrier").onclick = function() { updateUnitInfoWindow(Equipment.equipment[u.carrier] as unknown as UIUnitOrEntry); };
 	}
 
 	//Add button to see transport/unit properties depending on unit state
 	if (u.transport)
 	{
-		var simulateMount;
+		var simulateMount: boolean;
 
 		$("uTransport").className = "smallButtonSubMenu";
 		if (u.isMounted)
@@ -902,7 +1020,7 @@ function updateUnitInfoWindow(u)
 	}
 }
 
-function toggleUnitInfoWindow(visible)
+function toggleUnitInfoWindow(visible: boolean)
 {
 	if (visible)
 		makeVisible("unit-info");
@@ -913,7 +1031,7 @@ function toggleUnitInfoWindow(visible)
 }
 
 //Selects the next (direction 1) or previous unit of the unit's player and brings it into view
-function selectNeighbourUnit(unit, direction, onlyNotMoved)
+function selectNeighbourUnit(unit: Unit, direction: number, onlyNotMoved: boolean)
 {
 	var u = map.getUnitNeighbor(unit, direction, onlyNotMoved);
 	uiUnitSelect(u);
@@ -921,14 +1039,14 @@ function selectNeighbourUnit(unit, direction, onlyNotMoved)
 	updateUnitInfoWindow(u);
 }
 
-function unitContextButton(action, unit)
+function unitContextButton(action: string, unit: Unit)
 {
 	//Remember the render range and position of unit before actions
-	var r = getRenderRange(unit);
+	var r: number | ReinforceResults = getRenderRange(unit); //the reinforce results take it, see below
 	var p = unit.getPos();
 	var refreshRender = false; //If a unit gets a new range after action
 	var overstrength = false;
-	var ret, pos, text;
+	var ret: Supply, pos: Cell, text: string;
 
 	switch (action)
 	{
@@ -995,7 +1113,7 @@ function unitContextButton(action, unit)
 	}
 	updateUnitContextWindow(unit);
 	updateUnitInfoWindow(unit);
-	R.render(p.row, p.col, r); //remove old range
+	R.render(p.row, p.col, r as number); //remove old range
 	if (refreshRender)
 	{
 		r = getRenderRange(unit); //probably different range
@@ -1004,7 +1122,7 @@ function unitContextButton(action, unit)
 	}
 }
 
-function updateEquipmentWindow(eqclass)
+function updateEquipmentWindow(eqclass?: number)
 {
 	if (!isVisible("container-unitlist"))
 		return;
@@ -1019,24 +1137,25 @@ function updateEquipmentWindow(eqclass)
 	clearTag("eqTransportList");
 
 	//The current selected coutry in the div
-	var c = $("eqSelCountry").country;
-	var country = +countries[c] + 1; //country id that is saved on unit data starts from 1
+	var c: number | number[] = $<EqSelCountryElement>("eqSelCountry").country; //the onclick below reuses it for the countries
+	var country = +countries[c as number] + 1; //country id that is saved on unit data starts from 1
 
-	$("eqSelCountry").style.backgroundPosition = "" + countries[c] * -21 + "px 0px"; //Update flag
+	$("eqSelCountry").style.backgroundPosition = "" + countries[c as number] * -21 + "px 0px"; //Update flag
 
 	var scenarioYear = game.scenario.date.getFullYear();
-	var unitList = [];
-	var forcedScroll, eqForcedScroll;
-	var u, ud, userUnitSelected, div, i;
-	var eqUnitList, eqUnitSelected, eqTransportSelected, sortOrder, sortProperty, eqid, eu, t, tdiv;
-	var hasTransportSelected;
+	var unitList: Unit[] = [];
+	var forcedScroll: number, eqForcedScroll: number;
+	var u: Unit, ud: EquipmentEntry, userUnitSelected: number, div: UIUnitBoxElement, i: number;
+	var eqUnitList: number[], eqUnitSelected: number, eqTransportSelected: number, sortOrder: boolean,
+		sortProperty: keyof EquipmentEntry, eqid: number, eu: EquipmentEntry, t: EquipmentEntry, tdiv: UIUnitBoxElement;
+	var hasTransportSelected: boolean;
 
 	var oldDeployMode = uiSettings.deployMode;
 
 	if (map.currentPlayer.hasUndeployedUnits())
 	{
 		//The units that current player hasn't deployed yet
-		userUnitSelected = $("eqUserSel").deployunit;
+		userUnitSelected = $<EqUserSelElement>("eqUserSel").deployunit;
 		unitList = map.currentPlayer.getCoreUnitList();
 		unitList.sort(unitListSorter(false)); //Sorts the player core unit list itself
 		uiSettings.deployMode = true;
@@ -1045,7 +1164,7 @@ function updateEquipmentWindow(eqclass)
 	else
 	{
 		//The actual units on the map
-		userUnitSelected = $("eqUserSel").userunit;
+		userUnitSelected = $<EqUserSelElement>("eqUserSel").userunit;
 		unitList = map.getUnits();
 		unitList.sort(unitListSorter(true));
 		uiSettings.deployMode = false;
@@ -1072,7 +1191,7 @@ function updateEquipmentWindow(eqclass)
 
 		//Make a default selection for deployment mode so we don't have to click each time we deploy.
 		if (uiSettings.deployMode && (userUnitSelected == -1 || unitList[userUnitSelected].isDeployed))
-			$("eqUserSel").deployunit = userUnitSelected = i;
+			$<EqUserSelElement>("eqUserSel").deployunit = userUnitSelected = i;
 
 		if (uiSettings.deployMode)
 			div.unitid = i;
@@ -1090,9 +1209,9 @@ function updateEquipmentWindow(eqclass)
 		{
 			//Automatically set transport on transport list if user has not selected a new transport
 			//Check if user selected equipment unit for upgrade can be transported
-			if (u.transport !== null && $("eqUserSel").eqtransport == -1
-				&& ($("eqUserSel").equnit == -1 || GameRules.isTransportable($("eqUserSel").equnit)))
-				$("eqUserSel").eqtransport = u.transport.eqid;
+			if (u.transport !== null && $<EqUserSelElement>("eqUserSel").eqtransport == -1
+				&& ($<EqUserSelElement>("eqUserSel").equnit == -1 || GameRules.isTransportable($<EqUserSelElement>("eqUserSel").equnit)))
+				$<EqUserSelElement>("eqUserSel").eqtransport = u.transport.eqid;
 
 			div.setAttribute("selectedUnit", ud.name); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
 
@@ -1108,7 +1227,7 @@ function updateEquipmentWindow(eqclass)
 			forcedScroll = $("unitlist").offsetWidth - ($("container-unitlist").offsetWidth + div.offsetWidth) / 2;
 		}
 
-		div.onclick = function()
+		div.onclick = function(this: UIUnitBoxElement)
 		{
 			c = map.getCountriesBySide(game.spotSide);
 			for (i = 0; i < c.length; i++)
@@ -1116,28 +1235,28 @@ function updateEquipmentWindow(eqclass)
 
 			if (uiSettings.deployMode)
 			{
-				$("eqUserSel").deployunit = this.unitid; //save selected player unit for deployment
-				$("eqUserSel").userunit = -1; //clear any remaining selection
+				$<EqUserSelElement>("eqUserSel").deployunit = this.unitid; //save selected player unit for deployment
+				$<EqUserSelElement>("eqUserSel").userunit = -1; //clear any remaining selection
 			}
 			else
 			{
-				$("eqUserSel").userunit = this.unitid; //save selected player unit
-				$("eqUserSel").deployunit = -1; //clear any remaining selection
+				$<EqUserSelElement>("eqUserSel").userunit = this.unitid; //save selected player unit
+				$<EqUserSelElement>("eqUserSel").deployunit = -1; //clear any remaining selection
 			}
 
-			$("eqSelCountry").country = i;
-			$("eqUserSel").eqtransport = -1; //clear transport selection on new unit selection
-			$("eqUserSel").equnit = this.uniteqid; //the unit own equipment is selected
-			$("eqUserSel").unitscroll = $("hscroll-unitlist").scrollLeft; //save scroll position so at refresh we autoscroll
+			$<EqSelCountryElement>("eqSelCountry").country = i;
+			$<EqUserSelElement>("eqUserSel").eqtransport = -1; //clear transport selection on new unit selection
+			$<EqUserSelElement>("eqUserSel").equnit = this.uniteqid; //the unit own equipment is selected
+			$<EqUserSelElement>("eqUserSel").unitscroll = $("hscroll-unitlist").scrollLeft; //save scroll position so at refresh we autoscroll
 
-			var unit;
+			var unit: Unit;
 			if (uiSettings.deployMode)
 				unit = map.currentPlayer.getCoreUnitList()[this.unitid];
 			else
 				unit = map.getUnitById(this.unitid);
 			updateUnitInfoWindow(unit);
 			updateEquipmentWindow(this.eqclass);
-			$("hscroll-unitlist").scrollLeft = $("eqUserSel").unitscroll; //scroll to the selected unit
+			$("hscroll-unitlist").scrollLeft = $<EqUserSelElement>("eqUserSel").unitscroll; //scroll to the selected unit
 		};
 	}
 	//Force scrolling when units are selected from the map to bring them into unit list view
@@ -1151,19 +1270,19 @@ function updateEquipmentWindow(eqclass)
 		eqclass = unitClass.tank;
 
 	//Toggle equipment class button on/off
-	var prevClass = $("eqUserSel").eqclass || unitClass.tank;
+	var prevClass = $<EqUserSelElement>("eqUserSel").eqclass || unitClass.tank;
 	if (typeof UIBuilder.eqClassButtons[prevClass] !== "undefined")
 		toggleButton($("eqclass-" + prevClass), false);
 	if (typeof UIBuilder.eqClassButtons[eqclass] !== "undefined")
 		toggleButton($("eqclass-" + eqclass), true);
-	$("eqUserSel").eqclass = eqclass;
+	$<EqUserSelElement>("eqUserSel").eqclass = eqclass;
 
 	//Info text above
 	$("eqInfoText").innerHTML = scenarioYear + " " + unitClassNames[eqclass] + " upgrades for " + Equipment.getCountryName(country - 1);
 	//Units in equipment
-	eqUnitSelected = $("eqUserSel").equnit;
-	sortOrder = $("eqUserSel").sortorder;
-	sortProperty = $("eqUserSel").sortproperty || "cost";
+	eqUnitSelected = $<EqUserSelElement>("eqUserSel").equnit;
+	sortOrder = $<EqUserSelElement>("eqUserSel").sortorder;
+	sortProperty = $<EqUserSelElement>("eqUserSel").sortproperty || "cost";
 	eqUnitList = Equipment.getCountryEquipmentByClass(eqclass, country, sortProperty, sortOrder);
 
 	for (i = 0; i < eqUnitList.length; i++)
@@ -1175,28 +1294,28 @@ function updateEquipmentWindow(eqclass)
 			continue;
 
 		//Add the unit to the list
-		div = uiAddUnitBox("eqUnitList", eu);
+		div = uiAddUnitBox("eqUnitList", eu as unknown as UIUnitOrEntry);
 		div.equnitid = eqid;
 		if (eqid == eqUnitSelected)
 		{
-			div.setAttribute("selectedUnit", eqid); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
+			div.setAttribute("selectedUnit", eqid as unknown as string); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
 			eqForcedScroll = $("eqUnitList").offsetWidth - ($("hscroll-eqUnitList").offsetWidth + div.offsetWidth) / 2;
 		}
-		div.onclick = function()
+		div.onclick = function(this: UIUnitBoxElement)
 		{
-			$("eqUserSel").equnit = this.equnitid; //save the selected unit in the equipment list
-			$("eqUserSel").eqtransport = -1; //clear transport selection on new unit selection
-			$("eqUserSel").eqscroll = $("hscroll-eqUnitList").scrollLeft; //save scroll position so at refresh we autoscroll
-			updateUnitInfoWindow(Equipment.equipment[this.equnitid]);
+			$<EqUserSelElement>("eqUserSel").equnit = this.equnitid; //save the selected unit in the equipment list
+			$<EqUserSelElement>("eqUserSel").eqtransport = -1; //clear transport selection on new unit selection
+			$<EqUserSelElement>("eqUserSel").eqscroll = $("hscroll-eqUnitList").scrollLeft; //save scroll position so at refresh we autoscroll
+			updateUnitInfoWindow(Equipment.equipment[this.equnitid] as unknown as UIUnitOrEntry);
 			updateEquipmentWindow(eqclass); //To "unselect" previous selected unit
-			$("hscroll-eqUnitList").scrollLeft = $("eqUserSel").eqscroll; //scroll to the selected unit
+			$("hscroll-eqUnitList").scrollLeft = $<EqUserSelElement>("eqUserSel").eqscroll; //scroll to the selected unit
 		};
 	}
 	if (eqUnitSelected > 0)
 		$("hscroll-eqUnitList").scrollLeft = eqForcedScroll;
 
 	//Add the transport to the list if unit can be transported
-	eqTransportSelected = $("eqUserSel").eqtransport;
+	eqTransportSelected = $<EqUserSelElement>("eqUserSel").eqtransport;
 	hasTransportSelected = false;
 	if (GameRules.isTransportable(eqUnitSelected) || eqTransportSelected > 0)
 	{
@@ -1213,34 +1332,34 @@ function updateEquipmentWindow(eqclass)
 				|| (eu.groundweight & t.groundweight) == 0)
 				continue;
 
-			tdiv = uiAddUnitBox("eqTransportList", t);
+			tdiv = uiAddUnitBox("eqTransportList", t as unknown as UIUnitOrEntry);
 			tdiv.eqtransportid = eqid;
 			if (eqid == eqTransportSelected)
 			{
 				tdiv.setAttribute("selectedUnit", t.name); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
 				hasTransportSelected = true;
 			}
-			tdiv.onclick = function()
+			tdiv.onclick = function(this: UIUnitBoxElement)
 			{
 				//handle deselect of transport, -2 is no transport
-				if ($("eqUserSel").eqtransport == this.eqtransportid)
-					$("eqUserSel").eqtransport = -2;
+				if ($<EqUserSelElement>("eqUserSel").eqtransport == this.eqtransportid)
+					$<EqUserSelElement>("eqUserSel").eqtransport = -2;
 				else
-					$("eqUserSel").eqtransport = this.eqtransportid; //save the selected unit in the equipment list
-				updateUnitInfoWindow(Equipment.equipment[this.eqtransportid]);
+					$<EqUserSelElement>("eqUserSel").eqtransport = this.eqtransportid; //save the selected unit in the equipment list
+				updateUnitInfoWindow(Equipment.equipment[this.eqtransportid] as unknown as UIUnitOrEntry);
 				updateEquipmentWindow(eqclass); //To "unselect" previous selected unit
 			};
 		}
 		if (!hasTransportSelected) //the selected transport can't carry the unit
-			$("eqUserSel").eqtransport = -1;
+			$<EqUserSelElement>("eqUserSel").eqtransport = -1;
 	}
 	updateEquipmentCosts();
 }
 
 //Sorts units by class, name and id, with the core units first when coreFirst
-function unitListSorter(coreFirst)
+function unitListSorter(coreFirst: boolean)
 {
-	return function(a, b)
+	return function(a: Unit, b: Unit)
 	{
 		var ua = a.unitData(true);
 		var ub = b.unitData(true);
@@ -1257,17 +1376,17 @@ function unitListSorter(coreFirst)
 //Updates the costs of user selected units in equipment window
 function updateEquipmentCosts()
 {
-	var userUnitSelected = $("eqUserSel").userunit; //unit already on map
-	var deployUnitSelected = $("eqUserSel").deployunit; //unit no deployed on map
-	var eqUnitSelected = $("eqUserSel").equnit;
-	var eqTransportSelected = $("eqUserSel").eqtransport;
+	var userUnitSelected = $<EqUserSelElement>("eqUserSel").userunit; //unit already on map
+	var deployUnitSelected = $<EqUserSelElement>("eqUserSel").deployunit; //unit no deployed on map
+	var eqUnitSelected = $<EqUserSelElement>("eqUserSel").equnit;
+	var eqTransportSelected = $<EqUserSelElement>("eqUserSel").eqtransport;
 	var buyCost = 0;
 	var upCost = 0;
 	var sellCost = 0;
 	var prestige = map.currentPlayer.prestige;
-	var unit = null;
+	var unit: Unit = null;
 	var scenarioYear = game.scenario.date.getFullYear();
-	var uclass, ucountry, eqclass, eqcountry;
+	var uclass: number, ucountry: number, eqclass: number, eqcountry: number;
 
 	if (deployUnitSelected == -1 || typeof deployUnitSelected === "undefined")
 		unit = map.getUnitById(userUnitSelected);
@@ -1311,9 +1430,9 @@ function updateEquipmentCosts()
 	UIBuilder.showEquipmentCosts(prestige, buyCost, upCost, sellCost);
 }
 
-function updateStatusBarLocation(row, col)
+function updateStatusBarLocation(row: number, col: number)
 {
-	var unit;
+	var unit: Unit;
 	var hex = map.map[row][col];
 
 	if (!hex || typeof hex === "undefined")
@@ -1358,10 +1477,10 @@ function updateStatusBarLocation(row, col)
 }
 
 //Simple function to list a unit (or an equipment entry with its price) in a graphical unit box returns a DOM object
-function uiAddUnitBox(parentTagName, u)
+function uiAddUnitBox(parentTagName: string, u: UIUnitOrEntry)
 {
-	var div = addTag(parentTagName, "div");
-	var img = addTag(div, "img");
+	var div = addTag(parentTagName, "div") as UIUnitBoxElement;
+	var img = addTag(div, "img") as HTMLImageElement;
 	var txt = addTag(div, "div");
 	var icons = addTag(div, "div");
 
@@ -1372,7 +1491,7 @@ function uiAddUnitBox(parentTagName, u)
 		//Naval units have a generic icon on the unit list
 		if (ud.uclass > unitClass.submarine)
 		{
-			var nd = {};
+			var nd = {} as EquipmentEntry; //only name, icon and cost
 			nd.name = ud.name;
 			nd.icon = UIBuilder.navalReplacementIcon;
 			nd.cost = ud.cost;
@@ -1437,10 +1556,10 @@ function uiTurnInfo()
 				+ weatherConditionNames[game.scenario.atmosferic] + " weather";
 }
 
-function uiMessage(title, message, cbfunc) { UIBuilder.message(title, message, cbfunc); }
+function uiMessage(title: string, message: string, cbfunc?: () => void) { UIBuilder.message(title, message, cbfunc); }
 
 //Centers the screen on a map cell
-function uiSetCellOnViewPort(cell)
+function uiSetCellOnViewPort(cell: Cell | null)
 {
 	if (!cell || typeof cell === "undefined")
 		return false;
@@ -1451,9 +1570,9 @@ function uiSetCellOnViewPort(cell)
 	return true;
 }
 
-function getMouseInfo(canvas, e)
+function getMouseInfo(canvas: HTMLCanvasElement, e: MouseEvent)
 {
-	var rclick;
+	var rclick: boolean;
 	var vp = $("game");
 	if (e.which) rclick = (e.which == 3);
 	else if (e.button) rclick = (e.button == 2);
@@ -1498,7 +1617,7 @@ function uiMapCacheImages()
 }
 
 //Returns the biggest range around a unit that should be rendered
-function getRenderRange(unit)
+function getRenderRange(unit: Unit | null)
 {
 	if (unit === null)
 		return 0;
@@ -1544,7 +1663,7 @@ function uiToggleMapZoom()
 	var vp = $("game");
 	var zoom = Math.min(window.innerWidth / (canvas.width * uiSettings.zoomLevel) * 100,
 		window.innerHeight / (canvas.height * uiSettings.zoomLevel) * 100) >> 0;
-	var transform;
+	var transform: string;
 
 	if (uiSettings.strategicZoom)
 	{
@@ -1558,7 +1677,7 @@ function uiToggleMapZoom()
 		{
 			transform = "";
 			vp.style.webkitTransform = transform;
-			vp.style.MozTransform = transform;
+			(vp.style as UIPrefixedStyle).MozTransform = transform;
 			vp.style.transform = transform;
 		}
 		uiSettings.strategicZoom = false;
@@ -1574,7 +1693,7 @@ function uiToggleMapZoom()
 		{
 			transform = "scale(" + zoom / 100 + "," + zoom / 100 + ")";
 			vp.style.webkitTransform = transform;
-			vp.style.MozTransform = transform;
+			(vp.style as UIPrefixedStyle).MozTransform = transform;
 			vp.style.transform = transform;
 		}
 		vp.style.width = ((window.innerWidth * 100 / zoom) >> 0) + "px";
@@ -1587,10 +1706,10 @@ function uiToggleMapZoom()
 }
 
 //Map zoom level from the map scale slider, keeps the view centered
-function uiScaleMap(level)
+function uiScaleMap(level: number)
 {
 	var zoom = (level * 100) >> 0;
-	var mapCanvas = $("map");
+	var mapCanvas = $<HTMLCanvasElement>("map");
 	var vp = $("game");
 	var oldLevel = uiSettings.zoomLevel;
 	var w = mapCanvas.width;
@@ -1606,7 +1725,7 @@ function uiScaleMap(level)
 	vp.scrollTop = scrollTop + h * (level - oldLevel) / 2;
 	uiSettings.mapZoom = (level != 1);
 	uiSettings.zoomLevel = level;
-	$("mapscale").value = level;
+	$<HTMLInputElement>("mapscale").value = level as unknown as string;
 	R.positionLayers();
 }
 
@@ -1615,18 +1734,18 @@ function uiScaleMap(level)
 		R.cacheImages(function() { R.render(); });
 	};
 
-	this.uiUnitSelect = function(unit) { return uiUnitSelect(unit); };
-	this.uiUnitMove = function(unit, row, col) { return uiUnitMove(unit, row, col); };
-	this.uiUnitAttack = function(attackingUnit, enemyUnit) { return uiUnitAttack(attackingUnit, enemyUnit); };
-	this.showAlert = function(row, col, text, positive) { return uiShowAlert(row, col, text, positive); };
+	this.uiUnitSelect = function(unit: Unit | null) { return uiUnitSelect(unit); };
+	this.uiUnitMove = function(unit: Unit, row: number, col: number) { return uiUnitMove(unit, row, col); };
+	this.uiUnitAttack = function(attackingUnit: Unit, enemyUnit: Unit) { return uiUnitAttack(attackingUnit, enemyUnit); };
+	this.showAlert = function(row: number, col: number, text: string | number, positive?: boolean) { return uiShowAlert(row, col, text, positive); };
 
-	this.showGameToolTip = function(text, row, col)
+	this.showGameToolTip = function(text: string, row: number, col: number)
 	{
 		var pos = R.cellToScreen(row, col, true);
 		UIBuilder.gameToolTip(text, pos.x, pos.y);
 	};
 
-	this.showSmallToolTip = function(text, row, col, color, id, style)
+	this.showSmallToolTip = function(text: string, row: number, col: number, color: number, id?: string, style?: number)
 	{
 		var pos = R.cellToScreen(row, col, true);
 		UIBuilder.gameSmallToolTip(text, pos.x, pos.y, color, id, style);
@@ -1634,7 +1753,7 @@ function uiScaleMap(level)
 
 	//Small tooltips over the map: hex names, objectives and transports, and low ammo/fuel on own units
 	//unitsOnly skips the hex tooltips
-	this.addSmallToolTips = function(unitsOnly)
+	this.addSmallToolTips = function(this: UI, unitsOnly?: boolean)
 	{
 		var m = map.map;
 		var p = map.currentPlayer;
@@ -1644,7 +1763,7 @@ function uiScaleMap(level)
 			for (var col = 0; col < m[row].length; col++)
 			{
 				var hex = m[row][col];
-				var text = null;
+				var text: string = null;
 				var color = tooltipColor.enemy;
 				var style = tooltipStyle.text;
 
@@ -1688,7 +1807,7 @@ function uiScaleMap(level)
 		}
 	};
 
-	this.removeUnitToolTip = function(unitId)
+	this.removeUnitToolTip = function(unitId: number)
 	{
 		for (var i = UIBuilder.smallToolTipList.length - 1; i >= 0; i--)
 		{
@@ -1702,7 +1821,7 @@ function uiScaleMap(level)
 	};
 
 	//onlyUnits removes only the unit tooltips but the whole list is cleared anyway
-	this.removeAllSmallToolTips = function(onlyUnits)
+	this.removeAllSmallToolTips = function(onlyUnits?: boolean)
 	{
 		for (var i = UIBuilder.smallToolTipList.length - 1; i >= 0; i--)
 		{
@@ -1733,7 +1852,7 @@ function uiScaleMap(level)
 		uiMessage(game.scenario.name, game.scenario.getDescription());
 	};
 
-	this.startMenuButton = function(id)
+	this.startMenuButton = function(id: string)
 	{
 		switch (id)
 		{
@@ -1749,10 +1868,10 @@ function uiScaleMap(level)
 				makeVisible("smCamp");
 				//Make the current campaign selected
 				if (game.campaign === null) //Select first campaign in list
-					setSelectOption($("smCampSel").firstChild, $("smCampSel").firstChild.options[0].text);
+					setSelectOption($("smCampSel").firstChild as HTMLSelectElement, ($("smCampSel").firstChild as HTMLSelectElement).options[0].text);
 				else //Select saved campaign
-					setSelectOption($("smCampSel").firstChild, game.campaign.name);
-				$("smCampSel").firstChild.onchange();
+					setSelectOption($("smCampSel").firstChild as HTMLSelectElement, game.campaign.name);
+				(($("smCampSel").firstChild as HTMLSelectElement).onchange as () => void)();
 				break;
 			}
 			case "newscenario":
@@ -1761,7 +1880,7 @@ function uiScaleMap(level)
 				makeHidden("smMain");
 				makeVisible("smScen");
 				//Make the current scenarion selected
-				setSelectOption($("smScenSel").firstChild, game.scenario.name);
+				setSelectOption($("smScenSel").firstChild as HTMLSelectElement, game.scenario.name);
 				break;
 			}
 			case "tutorial":
@@ -1799,13 +1918,13 @@ function uiScaleMap(level)
 				if (isVisible("ui-message"))
 				{
 					makeHidden("ui-message");
-					$("smSettings").messageHidden = true;
+					$<SettingsMenuElement>("smSettings").messageHidden = true;
 				}
 			}
 		}
 	};
 
-	this.mainMenuButton = function(id)
+	this.mainMenuButton = function(this: UI, id: string)
 	{
 		switch (id)
 		{
@@ -1862,7 +1981,7 @@ function uiScaleMap(level)
 					if (!uiSettings.shownEndTurnTip)
 						UIBuilder.uiToolTipAtElement(endTurnButton, "Tap again to confirm End Turn", 1);
 					//Added again at every first click, never removed
-					var resetConfirmation = function()
+					var resetConfirmation = function(this: HTMLElement)
 					{
 						this.removeAttribute("confirmation");
 						endTurnButton.innerHTML = "t";
@@ -1953,29 +2072,29 @@ function uiScaleMap(level)
 	this.toggleUnitsAndEquipmentWindow = toggleUnitsAndEquipmentWindow;
 
 	//Equipment window buttons that can't be directly handled in UIBuilder
-	this.equipmentWindowButtons = function(id)
+	this.equipmentWindowButtons = function(id: string)
 	{
-		var eqUnit, eqTransport, unitId, deployId, p, u;
+		var eqUnit: number, eqTransport: number, unitId: number, deployId: number, p: Player, u: Unit;
 		switch (id)
 		{
 			case "changecountry":
 			{
-				if ($("eqSelCountry").country >= countries.length - 1) $("eqSelCountry").country = 0;
-				else $("eqSelCountry").country++;
-				$("eqUserSel").userunit = -1; //Clear existing unit selection when changing country
-				$("eqUserSel").equnit = -1;
-				game.ui.updateEquipmentWindow($("eqUserSel").eqclass || unitClass.tank); //previous class or tank class
+				if ($<EqSelCountryElement>("eqSelCountry").country >= countries.length - 1) $<EqSelCountryElement>("eqSelCountry").country = 0;
+				else $<EqSelCountryElement>("eqSelCountry").country++;
+				$<EqUserSelElement>("eqUserSel").userunit = -1; //Clear existing unit selection when changing country
+				$<EqUserSelElement>("eqUserSel").equnit = -1;
+				game.ui.updateEquipmentWindow($<EqUserSelElement>("eqUserSel").eqclass || unitClass.tank); //previous class or tank class
 				break;
 			}
 			case "buy":
 			{
-				eqUnit = $("eqUserSel").equnit;
-				eqTransport = $("eqUserSel").eqtransport;
+				eqUnit = $<EqUserSelElement>("eqUserSel").equnit;
+				eqTransport = $<EqUserSelElement>("eqUserSel").eqtransport;
 
 				if (typeof eqUnit === "undefined" || eqUnit <= 0)
 					break;
 
-				if (typeof eqTransport === "undefined" || eqTransport == "")
+				if (typeof eqTransport === "undefined" || (eqTransport as number | string) == "")
 					eqTransport = -1;
 
 				map.currentPlayer.buyUnit(eqUnit, eqTransport);
@@ -1984,14 +2103,14 @@ function uiScaleMap(level)
 			}
 			case "upgrade":
 			{
-				unitId = $("eqUserSel").userunit; //real unit id on map
-				deployId = $("eqUserSel").deployunit; //id for units on deployment list
-				eqUnit = $("eqUserSel").equnit; //Can be undefined as we can only upgrade transport
-				eqTransport = $("eqUserSel").eqtransport;
+				unitId = $<EqUserSelElement>("eqUserSel").userunit; //real unit id on map
+				deployId = $<EqUserSelElement>("eqUserSel").deployunit; //id for units on deployment list
+				eqUnit = $<EqUserSelElement>("eqUserSel").equnit; //Can be undefined as we can only upgrade transport
+				eqTransport = $<EqUserSelElement>("eqUserSel").eqtransport;
 				p = map.currentPlayer;
 				u = null;
 
-				if (typeof eqTransport === "undefined" || eqTransport == "")
+				if (typeof eqTransport === "undefined" || (eqTransport as number | string) == "")
 					eqTransport = -1;
 
 				if (typeof unitId === "undefined" || unitId == -1) //Upgrade an undeployed unit
@@ -2014,9 +2133,9 @@ function uiScaleMap(level)
 			{
 				p = map.currentPlayer;
 				u = null;
-				unitId = $("eqUserSel").userunit;
-				deployId = $("eqUserSel").deployunit;
-				eqUnit = $("eqUserSel").equnit;
+				unitId = $<EqUserSelElement>("eqUserSel").userunit;
+				deployId = $<EqUserSelElement>("eqUserSel").deployunit;
+				eqUnit = $<EqUserSelElement>("eqUserSel").equnit;
 
 				if (typeof unitId === "undefined" || unitId == -1) //Sell an undeployed unit
 				{
@@ -2032,7 +2151,7 @@ function uiScaleMap(level)
 					if (map.disbandUnit(unitId))
 					{
 						R.cacheImages(function() { R.render(); });
-						$("eqUserSel").userunit = -1;
+						$<EqUserSelElement>("eqUserSel").userunit = -1;
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 					}
 				}
@@ -2040,7 +2159,7 @@ function uiScaleMap(level)
 		}
 	};
 
-	this.updateEquipmentWindow = function(eqclass) { return updateEquipmentWindow(eqclass); };
+	this.updateEquipmentWindow = function(eqclass?: number) { return updateEquipmentWindow(eqclass); };
 
 	//Called from game after AI/NET turn
 	this.uiEndTurnInfo = function()
@@ -2050,13 +2169,13 @@ function uiScaleMap(level)
 	};
 
 	//Centers unit on player screen
-	this.uiSetUnitOnViewPort = function(unit)
+	this.uiSetUnitOnViewPort = function(unit: Unit | null)
 	{
 		if (!unit) return false;
 		return uiSetCellOnViewPort(unit.getPos());
 	};
 
-	this.uiSetCellOnViewPort = function(cell) { return uiSetCellOnViewPort(cell); };
+	this.uiSetCellOnViewPort = function(cell: Cell | null) { return uiSetCellOnViewPort(cell); };
 
-	this.scaleMap = function(level) { return uiScaleMap(level); };
+	this.scaleMap = function(level: number) { return uiScaleMap(level); };
 } //End of UI class

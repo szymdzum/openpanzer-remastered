@@ -12,8 +12,68 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+//The GameRules module API. map is the hex grid of a GameMap (GameMap.map), rows/cols its size
+interface GameRulesModule
+{
+	getMoveRange(mapObj: GameMap, unit: Unit): extendedCell[];
+	getUnitMoveRange(unit: Unit): number;
+	getUnitAttackCells(map: Hex[][], unit: Unit, rows: number, cols: number): Cell[];
+	getUnitAttackRange(unit: Unit): number;
+	setZOCRange(map: Hex[][], unit: Unit, on: boolean, mrows: number, mcols: number): void;
+	setSpotRange(map: Hex[][], unit: Unit, on: boolean, mrows: number, mcols: number): number;
+	getUnitSpotRange(unit: Unit): number;
+	getShortestPath(startCell: Cell, endCell: Cell, cellList: extendedCell[]): pathCell[];
+	calculateCombatResults(atkunit: Unit, defunit: Unit, unitlist: Unit[], withHiddenUnits: boolean,
+		estimate: boolean): combatResults;
+	calculateAttackResults(atkunit: Unit, defunit: Unit, estimate: boolean): combatResults;
+	isLossOverRetreatThreshold(strength: number, oldStrength: number): boolean;
+	shouldDefenderRetreat(atkunit: Unit, defunit: Unit, oldStrength: number): boolean;
+	getRetreatPosition(map: Hex[][], unit: Unit, rows: number, cols: number): Cell | null;
+	isRuggedDefense(atkunit: Unit, defunit: Unit): boolean;
+	isEntrenchmentIntact(atkunit: Unit, defunit: Unit, terrain: number): boolean;
+	getResupplyValue(map: Hex[][], unit: Unit, isTurnStart?: boolean): Supply;
+	getReinforceValue(map: Hex[][], unit: Unit, overstrength?: boolean): number;
+	canInitiateAttack(unit: Unit | null, targetUnit: Unit | null): boolean;
+	canFire(unit: Unit | null, targetUnit: Unit | null): boolean;
+	canPassInto(map: Hex[][], unit: Unit, cell: Cell): boolean;
+	isBridgeForSide(hex: Hex | null, side: number): boolean;
+	canResupply(map: Hex[][], unit: Unit): boolean;
+	canReinforce(map: Hex[][], unit: Unit, overstrength?: boolean): boolean;
+	canCapture(unit: Unit): boolean;
+	canEntrench(unit: Unit | null): boolean;
+	isEnemy(unit: Unit | null, targetUnit: Unit | null): boolean;
+	getSupportFireUnits(unitList: Unit[], atkunit: Unit, defunit: Unit): Unit[];
+	isInAttackRange(unit: Unit, targetUnit: Unit): boolean;
+	getEmbarkType(map: Hex[][], unit: Unit): number; //a unitClass
+	getDisembarkPositions(map: Hex[][], unit: Unit): Cell[];
+	getReinforcementDeployPositions(map: Hex[][], unit: Unit, row: number, col: number): Cell | null;
+	canEmbark(map: Hex[][], unit: Unit): boolean;
+	canDisembark(map: Hex[][], unit: Unit): boolean;
+	canMount(unit: Unit): boolean;
+	canUnmount(unit: Unit): boolean;
+	isTransportable(unitID: number): boolean;
+	isAir(unit: Unit | null): boolean;
+	isSea(unit: Unit | null): boolean;
+	isGround(unit: Unit | null): boolean;
+	isTrain(unit: Unit | null): boolean;
+	isCloseCombatTerrain(t: number): boolean; //a terrainType
+	unitUsesFuel(unit: Unit | Transport): boolean; //Unit.move checks its transport too
+	unitLowFuel(unit: Unit, threshold: number): boolean;
+	unitUsesAmmo(unit: Unit): boolean;
+	unitLowAmmo(unit: Unit, threshold: number): boolean;
+	calculateUnitCosts(unitid: number, transportid?: number): number;
+	calculateUpgradeCosts(unit: Unit | null, upgradeid: number, transportid: number): number;
+	calculateUnitCostPerStrength(unit: Unit | null): number;
+	calculateUnitSellCost(unit: Unit): number;
+	getDirection(x1: number, y1: number, x2: number, y2: number): number; //a direction
+	distance(x1: number, y1: number, x2: number, y2: number): number;
+	getAdjacent(row: number, col: number): Cell[];
+	facingToAdjacentIndex(facing: number): number;
+	rollDice(min: number, max: number): number;
+}
+
 //var GameRules = GameRules || {}; //Namespace emulation
-var GameRules = (function(GameRules) { //Module start
+var GameRules: GameRulesModule = (function(GameRules: GameRulesModule) { //Module start
 
 //returns a cell list with hexes that a unit can move to
 //Works by computing cost of ajacent hexes by range expanding from 0 to unit movpoints
@@ -373,7 +433,7 @@ GameRules.getShortestPath = function(startCell, endCell, cellList)
 //estimate: compute the expected result instead of rolling dice
 GameRules.calculateCombatResults = function(atkunit, defunit, unitlist, withHiddenUnits, estimate)
 {
-	var supportUnits = [];
+	var supportUnits: Unit[] = [];
 	var realLosses = 0;
 	var realKills = 0;
 	var evalLosses = 0;
@@ -801,7 +861,7 @@ GameRules.isEntrenchmentIntact = function(atkunit, defunit, terrain)
 	return true;
 }
 
-function getCombatKills(atkval, defval, atkunit, defunit, estimate)
+function getCombatKills(atkval: number, defval: number, atkunit: Unit, defunit: Unit, estimate: boolean): number
 {
 	var atkclass = atkunit.unitData().uclass;
 	var kF = atkval - defval; //Kill fractions
@@ -959,7 +1019,7 @@ GameRules.getReinforceValue = function(map, unit, overstrength)
 }
 
 //Checks if a unit can attack another unit without considering range
-function canAttack(unit, targetUnit)
+function canAttack(unit: Unit | null, targetUnit: Unit | null): boolean
 {
 	if (unit === null || unit.destroyed)
 		return false;
@@ -997,7 +1057,7 @@ GameRules.canInitiateAttack = function(unit, targetUnit)
 GameRules.canFire = function(unit, targetUnit) { return canAttack(unit, targetUnit); }
 
 //Checks if a given unit can move into a hex
-function canMoveInto(map, unit, cell)
+function canMoveInto(map: Hex[][], unit: Unit, cell: Cell): boolean
 {
 	var hex = map[cell.row][cell.col];
 
@@ -1016,7 +1076,7 @@ function canMoveInto(map, unit, cell)
 }
 
 //Checks if a unit can pass thru a hex ocupied by a friendly unit
-function canPassInto(map, unit, cell)
+function canPassInto(map: Hex[][], unit: Unit, cell: Cell): boolean
 {
 	var hex = map[cell.row][cell.col];
 
@@ -1218,7 +1278,7 @@ GameRules.isInAttackRange = function(unit, targetUnit)
 	return false;
 }
 
-function isAirfieldAroundUnit(map, unit)
+function isAirfieldAroundUnit(map: Hex[][], unit: Unit): boolean
 {
 	var p = unit.getPos();
 	var hex = map[p.row][p.col];
@@ -1367,7 +1427,7 @@ GameRules.isTransportable = function(unitID)
 	return true;
 }
 
-function isAir(unit)
+function isAir(unit: Unit | null): boolean
 {
 	if (unit === null)
 		return false;
@@ -1380,7 +1440,7 @@ function isAir(unit)
 }
 GameRules.isAir = function(unit) { return isAir(unit); }
 
-function isSea(unit)
+function isSea(unit: Unit | null): boolean
 {
 	if (unit === null)
 		return false;
@@ -1393,7 +1453,7 @@ function isSea(unit)
 }
 GameRules.isSea = function(unit) { return isSea(unit); }
 
-function isGround(unit)
+function isGround(unit: Unit | null): boolean
 {
 	if (unit === null)
 		return false;
@@ -1663,7 +1723,7 @@ GameRules.rollDice = function(min, max)
 }
 
 //Checks if 2 coordonates are adjacent x row, y col
-function isAdjacent(x1, y1, x2, y2)
+function isAdjacent(x1: number, y1: number, x2: number, y2: number): boolean
 {
 	if ((x1 - 1 + (y1 % 2) == x2) && (y1 - 1 == y2)) return true;
 	if ((x1 + (y1 % 2) == x2) && (y1 - 1 == y2)) return true;
@@ -1675,9 +1735,9 @@ function isAdjacent(x1, y1, x2, y2)
 	return false;
 }
 //returns a list of adjacent cells of a row,col clockwise from N
-function getAdjacent(x1, y1)
+function getAdjacent(x1: number, y1: number): Cell[]
 {
-	var cellList=[];
+	var cellList: Cell[]=[];
 
 	cellList.push(new Cell(1 * x1 - 1, y1));
 	cellList.push(new Cell(x1 - 1 + (y1 % 2), y1 - 1));
@@ -1691,9 +1751,11 @@ function getAdjacent(x1, y1)
 
 //Returns a list of cells that are in a certain range to another cell
 //extended: return extendedCell objects with range set instead of plain Cells
-function getCellsInRange(row, col, range, mrows, mcols, extended)
+function getCellsInRange(row: number, col: number, range: number, mrows: number, mcols: number, extended: true): extendedCell[];
+function getCellsInRange(row: number, col: number, range: number, mrows: number, mcols: number, extended: false): Cell[];
+function getCellsInRange(row: number, col: number, range: number, mrows: number, mcols: number, extended: boolean): Cell[]
 {
-	var cellList = [];
+	var cellList: Cell[] = [];
 	var cell = null;
 
 	if ( range <= 0) return cellList;
@@ -1762,4 +1824,4 @@ function getCellsInRange(row, col, range, mrows, mcols, extended)
 	return cellList;
 }
 //------------------------ MODULE END ----------------------
-return GameRules; }(GameRules || {})); //Module end giberish
+return GameRules; }(GameRules || {} as GameRulesModule)); //Module end giberish

@@ -13,86 +13,168 @@
  */
 
 //Transport Object Constructor
-function Transport(equipmentID)
+//A class so other modules can type `new Transport(...)`. Fields are `declare`d (they emit nothing),
+//the methods stay assigned to the prototype (enumerable, as the original), typed by the interface below
+class Transport
 {
-	if (typeof Equipment.equipment[equipmentID] === "undefined")
-		this.eqid = Object.keys(Equipment.equipment)[0];
-	else
-		this.eqid = equipmentID;
-	this.ammo = Equipment.equipment[this.eqid].ammo;
-	this.fuel = Equipment.equipment[this.eqid].fuel;
-	this.icon = Equipment.equipment[this.eqid].icon; //This is only used when building image cache list in map.js
+	declare eqid: number;
+	declare ammo: number;
+	declare fuel: number;
+	declare icon: string;
+
+	constructor(equipmentID: number)
+	{
+		if (typeof Equipment.equipment[equipmentID] === "undefined")
+			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
+		else
+			this.eqid = equipmentID;
+		this.ammo = Equipment.equipment[this.eqid].ammo;
+		this.fuel = Equipment.equipment[this.eqid].fuel;
+		this.icon = Equipment.equipment[this.eqid].icon; //This is only used when building image cache list in map.js
+	}
+}
+
+interface Transport
+{
+	copy(t: Transport | null): void;
+	unitData(): EquipmentEntry;
 }
 
 //Transport Object Public Methods
-Transport.prototype.copy = function(t)
+Transport.prototype.copy = function(t: Transport | null)
 {
 	if (t === null) return;
 	this.eqid = t.eqid;
 	this.ammo = t.ammo;
 	this.fuel = t.fuel;
 }
-Transport.prototype.unitData = function() { return Equipment.equipment[this.eqid]; }
+Transport.prototype.unitData = function(): EquipmentEntry { return Equipment.equipment[this.eqid]; }
 
 //Unit Object Constructor
-function Unit(equipmentID)
+//A class so other modules can type `new Unit(...)`: the constructor body is the original one
+//(hex stays private to its closures), fields and privileged methods are `declare`d (they emit
+//nothing), the public methods stay assigned to the prototype, typed by the interface below
+class Unit
 {
-	//Public Properties
-	if (typeof Equipment.equipment[equipmentID] === "undefined")
-		this.eqid = Object.keys(Equipment.equipment)[0];
-	else
-		this.eqid = equipmentID;
-	this.id = -1;
-	this.owner = -1;
-	this.hasMoved = false;
-	this.hasFired = false;
-	this.hasResupplied = false;
-	this.hasOverstrength = false; //Unit can't be reinforced over strength after moving or firing
-	this.isMounted = false;
-	this.isSurprised = false; //Unit has been surprised during move
-	this.isDeployed = false; //Unit is deployed on map or it's on equipment window
-	this.isCore = false; //Unit is a core unit for the campaign player
-	this.tempSpotted = false;
-	this.strength = 10;
-	this.facing = 2; //default unit facing
-	this.flag = this.owner; //default flag
-	this.destroyed = false; //flag to check if a unit is destroyed
-	this.player = null; //TODO remove use owner ID
-	this.transport = null; //transport class pointer
-	this.carrier = 0; //air/naval carrier which is not a unit assigned transport, negative when temporarily disembarked
-	this.moveLeft = Equipment.equipment[this.eqid].movpoints; //for phased/recon movement
-	this.ammo = Equipment.equipment[this.eqid].ammo; //holds the ammo of the unit but it's getter is getAmmo()
-	this.fuel = Equipment.equipment[this.eqid].fuel; //holds the fuel of the unit but it's getter is getFuel()
-	this.hasAnimation = false; //flag if the unit has a move animation
-	this.hits = 0; //the number of hits unit received this turn
-	this.experience = 0; //combat experience
-	this.entrenchment = 0; //level of entrenchment this unit has
-	this.entrenchTicks = 0; //how many tick to gain another entrenchment
-	this.leader = -1; //leader id, -1 for none
+	declare eqid: number;
+	declare id: number;
+	declare owner: number;
+	declare hasMoved: boolean;
+	declare hasFired: boolean;
+	declare hasResupplied: boolean;
+	declare hasRessuplied?: boolean; //only set by reinforce(), a typo kept from the original
+	declare hasOverstrength: boolean;
+	declare isMounted: boolean;
+	declare isSurprised: boolean;
+	declare isDeployed: boolean;
+	declare isCore: boolean;
+	declare tempSpotted: boolean;
+	declare strength: number;
+	declare facing: number;
+	declare flag: number;
+	declare destroyed: boolean;
+	declare player: Player | null;
+	declare transport: Transport | null;
+	declare carrier: number;
+	declare moveLeft: number;
+	declare ammo: number;
+	declare fuel: number;
+	declare hasAnimation: boolean;
+	declare hits: number;
+	declare experience: number;
+	declare entrenchment: number;
+	declare entrenchTicks: number;
+	declare leader: number;
 
-	//Privileged Methods that access private properties/methods
-	this.getHex = function() { return hex; }
-	this.setHex = function(h)
+	declare getHex: () => Hex | null;
+	declare setHex: (h: Hex | null) => void;
+	declare getPos: () => Cell | null;
+
+	constructor(equipmentID: number)
 	{
-		hex = h;
-		if (h !== null) // set unit as deployed (might be called from map.deployUnit)
-			this.isDeployed = true;
-		//We don't set isDeployed to false here only in setPlayerToHQ() when units are sent to HQ pool
+		//Public Properties
+		if (typeof Equipment.equipment[equipmentID] === "undefined")
+			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
+		else
+			this.eqid = equipmentID;
+		this.id = -1;
+		this.owner = -1;
+		this.hasMoved = false;
+		this.hasFired = false;
+		this.hasResupplied = false;
+		this.hasOverstrength = false; //Unit can't be reinforced over strength after moving or firing
+		this.isMounted = false;
+		this.isSurprised = false; //Unit has been surprised during move
+		this.isDeployed = false; //Unit is deployed on map or it's on equipment window
+		this.isCore = false; //Unit is a core unit for the campaign player
+		this.tempSpotted = false;
+		this.strength = 10;
+		this.facing = 2; //default unit facing
+		this.flag = this.owner; //default flag
+		this.destroyed = false; //flag to check if a unit is destroyed
+		this.player = null; //TODO remove use owner ID
+		this.transport = null; //transport class pointer
+		this.carrier = 0; //air/naval carrier which is not a unit assigned transport, negative when temporarily disembarked
+		this.moveLeft = Equipment.equipment[this.eqid].movpoints; //for phased/recon movement
+		this.ammo = Equipment.equipment[this.eqid].ammo; //holds the ammo of the unit but it's getter is getAmmo()
+		this.fuel = Equipment.equipment[this.eqid].fuel; //holds the fuel of the unit but it's getter is getFuel()
+		this.hasAnimation = false; //flag if the unit has a move animation
+		this.hits = 0; //the number of hits unit received this turn
+		this.experience = 0; //combat experience
+		this.entrenchment = 0; //level of entrenchment this unit has
+		this.entrenchTicks = 0; //how many tick to gain another entrenchment
+		this.leader = -1; //leader id, -1 for none
+
+		//Privileged Methods that access private properties/methods
+		this.getHex = function() { return hex; }
+		this.setHex = function(h: Hex | null)
+		{
+			hex = h;
+			if (h !== null) // set unit as deployed (might be called from map.deployUnit)
+				this.isDeployed = true;
+			//We don't set isDeployed to false here only in setPlayerToHQ() when units are sent to HQ pool
+		}
+
+		this.getPos = function()
+		{
+			if (hex === null)
+				return null;
+			return hex.getPos();
+		};
+
+		//Private Methods and Properties
+		var hex: Hex | null = null; //The hex that this unit is on
 	}
-
-	this.getPos = function()
-	{
-		if (hex === null)
-			return null;
-		return hex.getPos();
-	};
-
-	//Private Methods and Properties
-	var hex = null; //The hex that this unit is on
 };
 
+interface Unit
+{
+	copy(u: Unit | null): void;
+	getEqid(forceUnit?: boolean): number;
+	unitData(forceUnit?: boolean): EquipmentEntry;
+	getMovesLeft(): number;
+	getAmmo(): number;
+	getFuel(): number;
+	hit(losses: number): void;
+	fire(isAttacking: boolean): void;
+	move(cost: number): void;
+	upgrade(upgradeid: number, transportid: number): boolean;
+	resupply(supply: Supply): void;
+	reinforce(str: number, isOverstrength: boolean): void;
+	setTransport(id: number): void;
+	mount(): void;
+	unmount(): void;
+	embark(type: number): boolean;
+	entrench(): boolean;
+	toggleEmbark(): void;
+	getIcon(): string;
+	refillAmmoFuel(): void;
+	unitEndTurn(): void;
+	cleanup(): void;
+}
+
 //Unit Object Public Methods
-Unit.prototype.copy = function(u)
+Unit.prototype.copy = function(u: Unit | null)
 {
 	if (u === null) return;
 	if (typeof Equipment.equipment[u.eqid] === "undefined")
@@ -133,7 +215,7 @@ Unit.prototype.copy = function(u)
 }
 
 //Returns the equipment id of what the unit currently is: carrier, transport or the unit itself
-Unit.prototype.getEqid = function(forceUnit)
+Unit.prototype.getEqid = function(forceUnit?: boolean): number
 {
 	if (this.carrier > 0 && !forceUnit) //Unit on carrier
 		return this.carrier;
@@ -142,13 +224,13 @@ Unit.prototype.getEqid = function(forceUnit)
 	return this.eqid; //Real Unit
 }
 
-Unit.prototype.unitData = function(forceUnit)
+Unit.prototype.unitData = function(forceUnit?: boolean): EquipmentEntry
 {
 	if (!defined(forceUnit)) forceUnit = false;
 	return Equipment.equipment[this.getEqid(forceUnit)];
 }
 
-Unit.prototype.getMovesLeft = function()
+Unit.prototype.getMovesLeft = function(): number
 {
 	//On carrier always has movement of the carrier
 	if (this.carrier > 0)
@@ -162,7 +244,7 @@ Unit.prototype.getMovesLeft = function()
 	return this.moveLeft;
 }
 
-Unit.prototype.getAmmo = function()
+Unit.prototype.getAmmo = function(): number
 {
 	if (this.isMounted && this.transport !== null)
 		return this.transport.ammo;
@@ -170,7 +252,7 @@ Unit.prototype.getAmmo = function()
 		return this.ammo;
 }
 
-Unit.prototype.getFuel = function()
+Unit.prototype.getFuel = function(): number
 {
 	if (this.isMounted && this.transport !== null)
 		return this.transport.fuel;
@@ -178,7 +260,7 @@ Unit.prototype.getFuel = function()
 		return this.fuel;
 }
 
-Unit.prototype.hit = function(losses)
+Unit.prototype.hit = function(losses: number)
 {
 	this.strength -= losses;
 	this.hits++;
@@ -186,7 +268,7 @@ Unit.prototype.hit = function(losses)
 	if (this.strength <= 0) this.destroyed = true;
 }
 
-Unit.prototype.fire = function(isAttacking)
+Unit.prototype.fire = function(isAttacking: boolean)
 {
 	//Unit is shown on map when fires even if it's on a non spotted hex (support fire)
 	this.tempSpotted = true;
@@ -198,7 +280,7 @@ Unit.prototype.fire = function(isAttacking)
 	}
 }
 
-Unit.prototype.move = function(cost)
+Unit.prototype.move = function(cost: number)
 {
 	this.entrenchment = 0; //loses all entrenchment
 	var fuelUsed = 0;
@@ -230,7 +312,7 @@ Unit.prototype.move = function(cost)
 	if (this.carrier < 0) this.carrier = 0;
 }
 
-Unit.prototype.upgrade = function(upgradeid, transportid)
+Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boolean
 {
 	// 0 or -1 means keep the current unit and upgrade the transport eventually
 	if (upgradeid <= 0)
@@ -268,7 +350,7 @@ Unit.prototype.upgrade = function(upgradeid, transportid)
 }
 
 //supply is a Supply object (see GameRules.getResupplyValue)
-Unit.prototype.resupply = function(supply)
+Unit.prototype.resupply = function(supply: Supply)
 {
 	this.ammo += supply.ammo;
 	this.fuel += supply.fuel;
@@ -280,7 +362,7 @@ Unit.prototype.resupply = function(supply)
 	this.hasMoved = this.hasFired = this.hasResupplied = true;
 }
 
-Unit.prototype.reinforce = function(str, isOverstrength)
+Unit.prototype.reinforce = function(str: number, isOverstrength: boolean)
 {
 	this.strength += str;
 	//hasRessuplied is a typo kept from the original, it sets a new property and not hasResupplied
@@ -288,7 +370,7 @@ Unit.prototype.reinforce = function(str, isOverstrength)
 	if (isOverstrength) this.hasOverstrength = true;
 }
 
-Unit.prototype.setTransport = function(id)
+Unit.prototype.setTransport = function(id: number)
 {
 	delete this.transport;
 	this.transport = new Transport(id);
@@ -297,7 +379,7 @@ Unit.prototype.setTransport = function(id)
 Unit.prototype.mount = function() { this.isMounted = true; }
 Unit.prototype.unmount = function() { this.isMounted = false; }
 
-Unit.prototype.embark = function(type)
+Unit.prototype.embark = function(type: number): boolean
 {
 	var id = Equipment.getCountryEquipmentByClass(type, this.player.country + 1)[0]; //TODO Already found in map.addPlayer
 
@@ -309,9 +391,9 @@ Unit.prototype.embark = function(type)
 	return true;
 }
 
-Unit.prototype.entrench = function()
+Unit.prototype.entrench = function(): boolean
 {
-	var hex = null;
+	var hex: Hex | null = null;
 	var uc = this.unitData().uclass;
 	var terrainEntrench = 0;
 
@@ -348,7 +430,7 @@ Unit.prototype.entrench = function()
 
 //Switches between embarked (carrier > 0) and disembarked keeping the carrier (carrier < 0)
 Unit.prototype.toggleEmbark = function() { this.carrier = -this.carrier; }
-Unit.prototype.getIcon = function() { return this.unitData().icon; }
+Unit.prototype.getIcon = function(): string { return this.unitData().icon; }
 
 Unit.prototype.refillAmmoFuel = function()
 {

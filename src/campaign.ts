@@ -12,8 +12,47 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+//One scenario of a campaign data file (resources/campaigns/data/*.json)
+interface CampaignScenario
+{
+	id: number;
+	intro: string;
+	scenario: string; //scenario file name, without path
+	startprestige: number;
+	outcome: { [outcomeType in ScenarioOutcome]: CampaignOutcome };
+}
+
+//goto is the next campaign scenario id, 254 and 255 end the campaign
+interface CampaignOutcome
+{
+	goto: number;
+	gotoplayed: number[];
+	prestige: number;
+	text: string;
+}
+
+interface Campaign
+{
+	startprestige: number;
+	name: string;
+	country: number;
+	file: string;
+	id: number;
+	difficulty: number;
+	isLoaded: boolean;
+	setScenarioById(scenarioID: number): void;
+	setScenarioByName(scenarioName: string): boolean;
+	getCurrentScenario(): CampaignScenario;
+	loadNextScenario(outcomeType: ScenarioOutcome): CampaignScenario;
+	getOutcomePrestige(outcomeType: ScenarioOutcome): number;
+	getOutcomeText(outcomeType: ScenarioOutcome): string;
+	getCampaignFlow(): string;
+	getScenarioNameFromId(id: number): string;
+	getCampaignData(): CampaignScenario[];
+}
+
 //Returns the campaignlist index of the campaign with this data file or -1
-Campaign.findCampaignByFile = function(file)
+Campaign.findCampaignByFile = function(file: string)
 {
 	for (var i = 0; i < campaignlist.length; i++)
 		if (campaignlist[i].file === file)
@@ -22,7 +61,7 @@ Campaign.findCampaignByFile = function(file)
 }
 
 //Loads the campaign data asynchronously, calls onLoaded when done (also on failure)
-function Campaign(campIndex, difficulty, onLoaded)
+function Campaign(this: Campaign, campIndex: number, difficulty: number, onLoaded: () => void)
 {
 	var campaignInfo = campaignlist[campIndex];
 
@@ -35,21 +74,21 @@ function Campaign(campIndex, difficulty, onLoaded)
 	this.difficulty = difficulty;
 
 	var currentScenario = 0;
-	var campaignData = null;
+	var campaignData: CampaignScenario[] = null;
 	var campaignPath = "resources/campaigns/data/";
 
 	this.isLoaded = false;
 
 	loadCampaign(campaignInfo.file, onLoaded);
 
-	this.setScenarioById = function(scenarioID)
+	this.setScenarioById = function(scenarioID: number)
 	{
 		if (scenarioID < campaignData.length)
 			currentScenario = scenarioID;
 	}
 
 	//Lookup scenario name in the campaignData and set currentScenario
-	this.setScenarioByName = function(scenarioName)
+	this.setScenarioByName = function(scenarioName: string)
 	{
 		var i;
 		var hasPath = scenarioName.lastIndexOf('/');
@@ -74,7 +113,7 @@ function Campaign(campIndex, difficulty, onLoaded)
 		return campaignData[currentScenario];
 	}
 
-	this.loadNextScenario = function(outcomeType)
+	this.loadNextScenario = function(outcomeType: ScenarioOutcome)
 	{
 		var o = getOutcome(outcomeType);
 		if (o.goto < campaignData.length)
@@ -86,13 +125,13 @@ function Campaign(campIndex, difficulty, onLoaded)
 			return null;
 	}
 
-	this.getOutcomePrestige = function(outcomeType)
+	this.getOutcomePrestige = function(outcomeType: ScenarioOutcome)
 	{
 		var o = getOutcome(outcomeType);
 		return o.prestige;
 	}
 
-	this.getOutcomeText = function(outcomeType)
+	this.getOutcomeText = function(outcomeType: ScenarioOutcome)
 	{
 		var o = getOutcome(outcomeType);
 		return o.text || "Continue to the next phase.";
@@ -127,7 +166,7 @@ function Campaign(campIndex, difficulty, onLoaded)
 	}
 
 	//Scenario name for a campaign scenario id, 255 and 254 are the campaign end outcomes
-	this.getScenarioNameFromId = function(id)
+	this.getScenarioNameFromId = function(id: number)
 	{
 		if (id == 255)
 			return "Defeat (End Campaign)";
@@ -142,12 +181,12 @@ function Campaign(campIndex, difficulty, onLoaded)
 	}
 
 	//Private methods
-	function getOutcome(outcomeType)
+	function getOutcome(outcomeType: ScenarioOutcome)
 	{
 		return campaignData[currentScenario].outcome[outcomeType];
 	}
 
-	function loadCampaign(jsonFile, onFinished)
+	function loadCampaign(jsonFile: string, onFinished: () => void): void
 	{
 		if (jsonFile == null || typeof jsonFile === "undefined")
 			return null;

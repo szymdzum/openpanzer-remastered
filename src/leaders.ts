@@ -11,7 +11,20 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, there is no 2.9 counterpart.
  */
 
-var Leaders = (function(Leaders) { //Module start
+//The Leaders module API. A leader is a leaderType value, -1 for none
+interface LeadersModule
+{
+	unitClassLeaders: { [uclass: number]: number[] };
+	description: [string, string][]; //[name, description] by leaderType
+	LEADER_CHANCE_THRESHOLD: number;
+	generateLeader(unit: Unit | null): number;
+	generateLeaderWithChance(unit: Unit | null, expGained: number): number;
+	getUnitClassLeader(unit: Unit | null): number;
+	unitHasLeader(unit: Unit | null, leader: number): boolean;
+	getUnitLeaderDescriptions(unit: Unit | null): [string, string][];
+}
+
+var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module start
 
 //Leaders a unit class can get, by unitClass. The first one is the class leader, which every
 //unit with a leader also has, the others are the random leaders generateLeader picks from
@@ -310,7 +323,7 @@ Leaders.getUnitLeaderDescriptions = function(unit)
 {
 	if (!unit || unit.leader == -1) return [];
 
-	var descriptions = [];
+	var descriptions: [string, string][] = [];
 	var classLeader = Leaders.getUnitClassLeader(unit);
 
 	descriptions.push(Leaders.description[unit.leader]);
@@ -318,4 +331,4 @@ Leaders.getUnitLeaderDescriptions = function(unit)
 	return descriptions;
 }
 //------------------------ MODULE END ----------------------
-return Leaders; }(Leaders || {})); //Module end giberish
+return Leaders; }(Leaders || {} as LeadersModule)); //Module end giberish

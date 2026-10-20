@@ -96,7 +96,7 @@ var movMethodNames =
 	"Costal", "All Terrain", "Amphibious", "Naval", "Mountain Leg"
 ];
 
-var outcomeNames =
+var outcomeNames: { [outcome: string]: string } =
 {
 	"lose": "Defeat",
 	"victory": "Victory",
@@ -233,8 +233,48 @@ var scoreGains =
 	resupply: -10 //per action
 };
 
+//A cloud save remembered in the settings (see UIBuilder), id is the cloud save id
+interface CloudSave
+{
+	name: string;
+	id: string;
+}
+
+interface UISettings
+{
+	airMode: boolean;
+	strategicZoom: boolean;
+	strategicZoomLevel: number;
+	mapZoom: boolean;
+	zoomLevel: number;
+	uiScale: number;
+	uiSize: number;
+	uiSmallSize: number;
+	hexGrid: boolean;
+	showGridTerrain: boolean;
+	muteUnitSounds: boolean;
+	deployMode: boolean;
+	markCombatUnits: boolean;
+	markOwnUnits: boolean;
+	markEnemyUnits: boolean;
+	markFOW: boolean;
+	noFOW: boolean;
+	quickAnimation: boolean;
+	hasTouch: boolean;
+	use3D: boolean;
+	useRetina: boolean;
+	allowZoom: boolean;
+	isAI: number[];
+	shownEndTurnTip: boolean;
+	unitInfoVisibility: boolean;
+	lastCloudSave: CloudSave[];
+	showInfoToolTips: boolean;
+	showDetailInfoToolTips: boolean;
+	showHiddenVictoryHexes: boolean;
+}
+
 //Holds the settings for the game ui and renderer
-var uiSettings =
+var uiSettings: UISettings =
 {
 	airMode: false,			//flag used to select between overlapping ground/air units
 	strategicZoom: false,	//flag used to draw map in strategic zoom mode or not
@@ -275,7 +315,7 @@ var endGameType =
 	noEnemyLeft: "noEnemyLeft"			//All enemy units destroyed
 };
 
-var endGameLossText =
+var endGameLossText: { [endType: string]: string } =
 {
 	moveCapture: "Enemy has captured all your objectives !<br>",
 	noTurnsLeft: "You don't have any turns left !<br>",
@@ -323,89 +363,167 @@ var leaderType =
 
 var difficultyType = { historical: 0, tactical: 1, operational: 2 };
 
+interface DifficultyModifier
+{
+	startPrestige: number;
+	turnPrestige: number;
+	extraTurns: number;
+	scoreCoef: number;
+}
+
 //Prestige and turn modifiers for each difficultyType
-var difficultyModifiers =
+var difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
 {
 	0: { startPrestige: 0, turnPrestige: 0, extraTurns: 1, scoreCoef: 1 },		//historical
 	1: { startPrestige: 0.2, turnPrestige: 0.1, extraTurns: 1.2, scoreCoef: 0.8 },	//tactical
 	2: { startPrestige: 0.5, turnPrestige: 0.25, extraTurns: 1.5, scoreCoef: 0.5 }	//operational
 };
 
-function Cell(row, col)
+//The constructors are classes so other modules can type `new Cell(...)`. Fields are `declare`d:
+//they emit nothing and the constructor bodies assign them as before
+class Cell
 {
-	this.row = row;
-	this.col = col;
+	declare row: number;
+	declare col: number;
+
+	constructor(row: number, col: number)
+	{
+		this.row = row;
+		this.col = col;
+	}
 }
 //used for movement and attack range cells
-function extendedCell(row, col)
+//extendedCell.prototype = new Cell() and Cell.call(this, row, col) of the original became extends/super
+class extendedCell extends Cell
 {
-	Cell.call(this, row, col);
-	this.range = 0; //the range that this cell is from a selected cell
-	this.cin = 0;   //the cost to enter the cell
-	this.cout = 0;  //the cost to exit the cell = cin + cell cost
-	this.cost = 0;  //terrain cost
-	this.canMove = false; //if the movement is allowed on this cell after cost calculations
-	this.canPass = false; //if friendly units can pass thru this cell
+	declare range: number;
+	declare cin: number;
+	declare cout: number;
+	declare cost: number;
+	declare canMove: boolean;
+	declare canPass: boolean;
+
+	constructor(row: number, col: number)
+	{
+		super(row, col);
+		this.range = 0; //the range that this cell is from a selected cell
+		this.cin = 0;   //the cost to enter the cell
+		this.cout = 0;  //the cost to exit the cell = cin + cell cost
+		this.cost = 0;  //terrain cost
+		this.canMove = false; //if the movement is allowed on this cell after cost calculations
+		this.canPass = false; //if friendly units can pass thru this cell
+	}
 }
-extendedCell.prototype = new Cell();
 
 //used for shortest path calculations
-function pathCell(cell)
+//pathCell.prototype = new Cell() and Cell.call(this, cell.row, cell.col) of the original became extends/super
+class pathCell extends Cell
 {
-	Cell.call(this, cell.row, cell.col);
-	this.cost = 1;
-	this.prev = null;
-	this.dist = Infinity;
-}
-pathCell.prototype = new Cell();
+	declare cost: number;
+	declare prev: pathCell | null;
+	declare dist: number;
 
-function movementResults()
-{
-	this.isVisible = false; //Move is at least partially visible on the player screen
-	this.surpriseCell = []; //Where did the surprise contact took place
-	this.isVictorySide = -1; //Did it end in a scenario win for a side
-	this.passedCells = []; //Which cell it passed so we can draw the animation in render accordingly
-	this.isCapture = false; //Did it capture any kind of objective
+	constructor(cell: Cell)
+	{
+		super(cell.row, cell.col);
+		this.cost = 1;
+		this.prev = null;
+		this.dist = Infinity;
+	}
 }
 
-function combatResults()
+class movementResults
 {
-	this.kills = 0;
-	this.losses = 0;
-	this.atkSuppress = 0;
-	this.defSuppress = 0;
-	this.atkExpGained = 0;
-	this.defExpGained = 0;
-	this.defcanfire = true;
-	this.atkLeaderGain = false;
-	this.defLeaderGain = false;
-	this.isOverrun = false; //Tank overrun
-	this.isRugged = false; //Infantry rugged defense
+	declare isVisible: boolean;
+	declare surpriseCell: Cell; //[] until a surprise contact sets it (see GameMap.moveUnit)
+	declare isVictorySide: number;
+	declare passedCells: Cell[];
+	declare isCapture: boolean;
+
+	constructor()
+	{
+		this.isVisible = false; //Move is at least partially visible on the player screen
+		this.surpriseCell = [] as unknown as Cell; //Where did the surprise contact took place
+		this.isVictorySide = -1; //Did it end in a scenario win for a side
+		this.passedCells = []; //Which cell it passed so we can draw the animation in render accordingly
+		this.isCapture = false; //Did it capture any kind of objective
+	}
 }
 
-function Supply(ammo, fuel, transportAmmo, transportFuel)
+class combatResults
 {
-	this.ammo = ammo;
-	this.fuel = fuel;
-	this.transportAmmo = transportAmmo || 0;
-	this.transportFuel = transportFuel || 0;
+	declare kills: number;
+	declare losses: number;
+	declare atkSuppress: number;
+	declare defSuppress: number;
+	declare atkExpGained: number;
+	declare defExpGained: number;
+	declare defcanfire: boolean;
+	declare atkLeaderGain: boolean;
+	declare defLeaderGain: boolean;
+	declare isOverrun: boolean;
+	declare isRugged: boolean;
+
+	constructor()
+	{
+		this.kills = 0;
+		this.losses = 0;
+		this.atkSuppress = 0;
+		this.defSuppress = 0;
+		this.atkExpGained = 0;
+		this.defExpGained = 0;
+		this.defcanfire = true;
+		this.atkLeaderGain = false;
+		this.defLeaderGain = false;
+		this.isOverrun = false; //Tank overrun
+		this.isRugged = false; //Infantry rugged defense
+	}
 }
 
-function mouseInfo(x, y, rclick)
+class Supply
 {
-	this.x = x;
-	this.y = y;
-	this.rclick = rclick;
+	declare ammo: number;
+	declare fuel: number;
+	declare transportAmmo: number;
+	declare transportFuel: number;
+
+	constructor(ammo: number, fuel: number, transportAmmo?: number, transportFuel?: number)
+	{
+		this.ammo = ammo;
+		this.fuel = fuel;
+		this.transportAmmo = transportAmmo || 0;
+		this.transportFuel = transportFuel || 0;
+	}
 }
 
-function screenPos(x, y)
+class mouseInfo
 {
-	this.x = x;
-	this.y = y;
+	declare x: number;
+	declare y: number;
+	declare rclick: boolean;
+
+	constructor(x: number, y: number, rclick: boolean)
+	{
+		this.x = x;
+		this.y = y;
+		this.rclick = rclick;
+	}
+}
+
+class screenPos
+{
+	declare x: number;
+	declare y: number;
+
+	constructor(x: number, y: number)
+	{
+		this.x = x;
+		this.y = y;
+	}
 }
 
 //"3.2.14" -> "3.2"
-function major_version(version)
+function major_version(version: string): string
 {
 	return version.split(".").slice(0, 2).join(".");
 }

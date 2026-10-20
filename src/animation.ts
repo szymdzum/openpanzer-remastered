@@ -12,38 +12,72 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-//Runs a series of animations in order
-function AnimationChain()
+//What runAnimation is given: called back with itself when the chain ends. A method so callers
+//can pass their own data type (method parameters are bivariant)
+interface AnimationCBData
 {
-	var animationTasks = [];
-	var i = 0;
+	cbfunc(animationCBData: AnimationCBData): void;
+}
 
-	this.add = function(o)
+//One sprite of an animation: the image holds the frames side by side, frames is the last frame index
+interface AnimationSpriteFrame
+{
+	image: HTMLImageElement;
+	width: number;
+	frames: number;
+	sound: soundSprite;
+}
+
+//What SpriteAnimation animates (see Render.addAnimation)
+interface SpriteAnimationOptions
+{
+	ctx: CanvasRenderingContext2D;
+	x: number;
+	y: number;
+	rotate: number;
+	sprite: AnimationSpriteFrame;
+}
+
+//Runs a series of animations in order
+//A class with its closure body as the constructor: the methods are own properties, as the original
+class AnimationChain
+{
+	declare add: (o: SpriteAnimationOptions) => void;
+	declare clear: () => void;
+	declare start: (animationCBData: AnimationCBData | null) => void;
+
+	constructor()
 	{
-		animationTasks.push(new SpriteAnimation(o));
-	}
+		var animationTasks: SpriteAnimation[] = [];
+		var i = 0;
 
-	this.clear = function()
-	{
-		animationTasks = [];
-		i = 0;
-	}
-
-	this.start = function(animationCBData)
-	{
-		var obj = this; //save this pointer as it gets overwritten by window. context
-
-		if (i < animationTasks.length)
+		this.add = function(o)
 		{
-			animationTasks[i].start();
-			setTimeout(function() { obj.start(animationCBData); }, animationTasks[i].getDuration() + 500); //chain delay
-			i++;
+			animationTasks.push(new SpriteAnimation(o));
 		}
-		else
+
+		this.clear = function()
 		{
-			if (animationCBData !== null && typeof animationCBData !== "undefined")
-				animationCBData.cbfunc(animationCBData);
-			setTimeout(function() {	obj.clear(); }, 100);
+			animationTasks = [];
+			i = 0;
+		}
+
+		this.start = function(animationCBData)
+		{
+			var obj = this; //save this pointer as it gets overwritten by window. context
+
+			if (i < animationTasks.length)
+			{
+				animationTasks[i].start();
+				setTimeout(function() { obj.start(animationCBData); }, animationTasks[i].getDuration() + 500); //chain delay
+				i++;
+			}
+			else
+			{
+				if (animationCBData !== null && typeof animationCBData !== "undefined")
+					animationCBData.cbfunc(animationCBData);
+				setTimeout(function() {	obj.clear(); }, 100);
+			}
 		}
 	}
 }
@@ -51,58 +85,73 @@ function AnimationChain()
 
 //o = {ctx, x, y, rotate, sprite}
 //Animates a series of frames from image on ctx context at x,y position
-function SpriteAnimation(o) //Animation in the original, renamed: it replaced the DOM Animation
+class SpriteAnimation //Animation in the original, renamed: it replaced the DOM Animation
 {
-	//Erases the previous frame by drawing it again with destination-out instead of clearing
-	//its rectangle, so whatever else is on the canvas there survives
-	function animate()
+	declare delay: number;
+	declare start: () => void;
+	declare getDuration: () => number;
+
+	constructor(o: SpriteAnimationOptions)
 	{
-		if (useClearRect)
-			o.ctx.clearRect(o.x, o.y, o.sprite.width, o.sprite.image.height);
-		else
-			drawFrame(o, count - 1, "destination-out");
-		//Do one more loop to clear last frame rendered
-		if (count > o.sprite.frames) clearInterval(timer);
-		if (count <= o.sprite.frames)
-			drawFrame(o, count, "source-over");
-		count++;
-	}
+		//Erases the previous frame by drawing it again with destination-out instead of clearing
+		//its rectangle, so whatever else is on the canvas there survives
+		function animate()
+		{
+			if (useClearRect)
+				o.ctx.clearRect(o.x, o.y, o.sprite.width, o.sprite.image.height);
+			else
+				drawFrame(o, count - 1, "destination-out");
+			//Do one more loop to clear last frame rendered
+			if (count > o.sprite.frames) clearInterval(timer);
+			if (count <= o.sprite.frames)
+				drawFrame(o, count, "source-over");
+			count++;
+		}
 
-	function drawFrame(o, frame, compositeOperation)
-	{
-		if (frame < 0 || !o)
-			return;
+		function drawFrame(o: SpriteAnimationOptions, frame: number, compositeOperation: GlobalCompositeOperation): void
+		{
+			if (frame < 0 || !o)
+				return;
 
-		o.ctx.save();
-		o.ctx.globalCompositeOperation = compositeOperation;
-		o.ctx.translate(o.x + o.sprite.width/2, o.y + o.sprite.image.height/2);
-		o.ctx.rotate(o.rotate);
-		o.ctx.drawImage(o.sprite.image, o.sprite.width * frame, 0, o.sprite.width,
-			o.sprite.image.height, -o.sprite.width/2, -o.sprite.image.height/2,
-			o.sprite.width, o.sprite.image.height);
-		o.ctx.restore();
-	}
+			o.ctx.save();
+			o.ctx.globalCompositeOperation = compositeOperation;
+			o.ctx.translate(o.x + o.sprite.width/2, o.y + o.sprite.image.height/2);
+			o.ctx.rotate(o.rotate);
+			o.ctx.drawImage(o.sprite.image, o.sprite.width * frame, 0, o.sprite.width,
+				o.sprite.image.height, -o.sprite.width/2, -o.sprite.image.height/2,
+				o.sprite.width, o.sprite.image.height);
+			o.ctx.restore();
+		}
 
-	var useClearRect = false; //never set, the clearRect path is dead
-	var timer;
-	var count = 0;
+		var useClearRect = false; //never set, the clearRect path is dead
+		var timer: ReturnType<typeof setInterval>;
+		var count = 0;
 
-	this.delay = uiSettings.quickAnimation ? 50 : 150;
+		this.delay = uiSettings.quickAnimation ? 50 : 150;
 
-	this.start = function()
-	{
-		o.sprite.sound.play(); //Play the associated sound
-		timer = setInterval(animate, this.delay);
-	}
+		this.start = function()
+		{
+			o.sprite.sound.play(); //Play the associated sound
+			timer = setInterval(animate, this.delay);
+		}
 
-	this.getDuration = function()
-	{
-		return this.delay * o.sprite.frames;
+		this.getDuration = function()
+		{
+			return this.delay * o.sprite.frames;
+		}
 	}
 }
 
+//A sprite sheet of an animation, frames side by side, each width pixels wide
+interface AnimationFile
+{
+	path: string;
+	frames: number;
+	width: number;
+}
+
 //Sprite sheets of each animation, one is picked at random each time it plays
-var animationFiles =
+var animationFiles: { [name: string]: AnimationFile[] } =
 {
 	"explosion": [
 		{ path: "resources/animations/explosions.png", frames: 12, width: 120 },
@@ -114,28 +163,28 @@ var animationFiles =
 };
 
 //List of all existing animations
-var animationsData =
+var animationsData: { [name: string]: AnimationSpritePicker } =
 {
 	//AnimationName: new animationSprite(spriteFiles, soundSpriteName)
-	"explosion": new animationSprite(animationFiles.explosion, "explosion"),
-	"gun": new animationSprite(animationFiles.gun, "gun"),
-	"artillery": new animationSprite(animationFiles.gun, "artillery"),
-	"tank": new animationSprite(animationFiles.gun, "tank"),
-	"recon": new animationSprite(animationFiles.gun, "recon"),
-	"antiTank": new animationSprite(animationFiles.gun, "antiTank"),
-	"airDefence": new animationSprite(animationFiles.gun, "airDefence"),
-	"smallgun": new animationSprite(animationFiles.smallgun, "smallgun"),
-	"infantry": new animationSprite(animationFiles.smallgun, "infantry"),
-	"fighter": new animationSprite(animationFiles.smallgun, "fighter"),
-	"bomber": new animationSprite(animationFiles.smallgun, "bomber"),
-	"submarine": new animationSprite(animationFiles.gun, "submarine"),
-	"smallShip": new animationSprite(animationFiles.gun, "smallShip"),
-	"bigShip": new animationSprite(animationFiles.gun, "bigShip"),
-	"fortification": new animationSprite(animationFiles.smallgun, "fortification"),
+	"explosion": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.explosion, "explosion"),
+	"gun": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "gun"),
+	"artillery": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "artillery"),
+	"tank": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "tank"),
+	"recon": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "recon"),
+	"antiTank": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "antiTank"),
+	"airDefence": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "airDefence"),
+	"smallgun": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.smallgun, "smallgun"),
+	"infantry": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.smallgun, "infantry"),
+	"fighter": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.smallgun, "fighter"),
+	"bomber": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.smallgun, "bomber"),
+	"submarine": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "submarine"),
+	"smallShip": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "smallShip"),
+	"bigShip": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "bigShip"),
+	"fortification": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.smallgun, "fortification"),
 };
 
 //Which attack animations belong to each unit class
-var attackAnimationByClass =
+var attackAnimationByClass: string[] =
 [
 "none", //None
 "infantry", //infantry
@@ -161,16 +210,21 @@ var attackAnimationByClass =
 "smallShip", //lightCruiser
 ];
 
+//animationSprite(...) returns this, each call a random sprite of the animation
+type AnimationSpritePicker = () => AnimationSpriteFrame;
+//animationSprite stays a function: animationsData above uses it before a class would exist
+interface AnimationSpriteConstructor { new (spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker; }
+
 //TODO preloading
 //Called with new but returns a function: each call of it returns one of the sprites
 //{image, width, frames, sound} at random
-function animationSprite(spriteFiles, soundSpriteName)
+function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker
 {
-	var sprites = [];
+	var sprites: AnimationSpriteFrame[] = [];
 
 	for (var i = 0; i < spriteFiles.length; i++)
 	{
-		var sprite = {};
+		var sprite = {} as AnimationSpriteFrame;
 		sprite.image = new Image();
 		sprite.image.src = spriteFiles[i].path;
 		sprite.width = spriteFiles[i].width;

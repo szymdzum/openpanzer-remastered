@@ -15,13 +15,22 @@
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries. scen.onLoadFinished() is called at the
 //end, with scen.isLoaded telling if the scenario loaded.
-function ScenarioLoader()
+//Stays a constructor function: its body assigns the implicit global u, which a class
+//(strict mode) would turn into a ReferenceError. new needs ScenarioLoaderConstructor.
+interface ScenarioLoader
 {
-	var scen = null;
+	noCache: boolean;
+	loadScenario(scenarioObject: Scenario): void;
+}
+type ScenarioLoaderConstructor = new () => ScenarioLoader;
+
+function ScenarioLoader(this: ScenarioLoader)
+{
+	var scen: Scenario = null;
 
 	this.noCache = true; //add a timestamp to the scenario url so the browser doesn't cache it
 
-	this.loadScenario = function(scenarioObject)
+	this.loadScenario = function(scenarioObject: Scenario)
 	{
 		var xmlHttp = new XMLHttpRequest();
 		var url;
@@ -46,14 +55,14 @@ function ScenarioLoader()
 	}
 
 	// Private functions
-	function parseScenario(xmlData)
+	function parseScenario(xmlData: Document)
 	{
 		if (xmlData == null || !parseMapHeader(xmlData))
 			loadFailed();
 	}
 
 	//Inlined into parseScenario in the bundle
-	function parseMapHeader(xmlData)
+	function parseMapHeader(xmlData: Document)
 	{
 		var mapHeader = xmlData.getElementsByTagName("map")[0];
 		if (mapHeader)
@@ -74,7 +83,8 @@ function ScenarioLoader()
 				scen.eqp = eqp;
 				Equipment.name = eqp;
 			}
-			scen.map.victoryTurns = mapHeader.getAttribute("turns").split(", ");
+			//strings at first, converted below
+			scen.map.victoryTurns = mapHeader.getAttribute("turns").split(", ") as unknown as number[];
 
 			for (var i = 0; i < scen.map.victoryTurns.length; i++)
 				scen.map.victoryTurns[i] = +scen.map.victoryTurns[i] //convert to int
@@ -106,7 +116,7 @@ function ScenarioLoader()
 	}
 
 	//Called after each equipment file loaded, the last one loads the rest of the scenario
-	function equipmentLoaded(players, xmlData)
+	function equipmentLoaded(players: Player[], xmlData: Document)
 	{
 		if (--Equipment.equipmentToLoad)
 			return;
@@ -126,7 +136,7 @@ function ScenarioLoader()
 	}
 
 	//Inlined into equipmentLoaded in the bundle
-	function loadReinforcements(xmlData)
+	function loadReinforcements(xmlData: Document)
 	{
 		var reinforceNodes = xmlData.getElementsByTagName("reinforce");
 		if (reinforceNodes)
@@ -142,7 +152,7 @@ function ScenarioLoader()
 					if (reinforceNodes[i].childNodes[j].nodeName != "at")
 						continue;
 
-					var atNode = reinforceNodes[i].childNodes[j];
+					var atNode = reinforceNodes[i].childNodes[j] as Element;
 					var row = +atNode.getAttribute("row");
 					var col = +atNode.getAttribute("col");
 					if (row == null || col == null) //never true, row and col are numbers
@@ -153,7 +163,7 @@ function ScenarioLoader()
 						if (atNode.childNodes[k].nodeName == "unit")
 						{
 							//u is not declared: an implicit global, kept as in the bundle
-							u = loadUnit(atNode.childNodes[k]);
+							u = loadUnit(atNode.childNodes[k] as Element);
 							if (u !== null)
 								scen.addReinforcement(turn, row, col, u);
 						}
@@ -164,7 +174,7 @@ function ScenarioLoader()
 	}
 
 	//Inlined into equipmentLoaded in the bundle
-	function loadHexes(xmlData)
+	function loadHexes(xmlData: Document)
 	{
 		var hexNodes = xmlData.getElementsByTagName("hex");
 		if (hexNodes)
@@ -205,7 +215,7 @@ function ScenarioLoader()
 				{
 					if (hexNodes[i].childNodes[j].nodeName == "unit")
 					{
-						v = loadUnit(hexNodes[i].childNodes[j]);
+						v = loadUnit(hexNodes[i].childNodes[j] as Element);
 						if (v !== null)
 							hex.setUnit(v);
 					}
@@ -216,7 +226,7 @@ function ScenarioLoader()
 	}
 
 	//The map size is computed from the map image, the scenario rows/cols are only an upper limit
-	function loadMapImage(xmlData)
+	function loadMapImage(xmlData: Document)
 	{
 		var img = new Image();
 		img.src = scen.map.terrainImage;
@@ -278,10 +288,10 @@ function ScenarioLoader()
 
 	//Inlined into loadMapImage in the bundle. Players are only parsed here, they are added
 	//to the map after the equipment loaded
-	function loadPlayers(xmlData)
+	function loadPlayers(xmlData: Document)
 	{
 		var playerNodes = xmlData.getElementsByTagName("player");
-		var players = [];
+		var players: Player[] = [];
 		var minPrestige = 0; //campaigns give a minimum prestige per turn
 
 		if (game && game.campaign)
@@ -300,7 +310,8 @@ function ScenarioLoader()
 				p.airTransports = +playerNodes[i].getAttribute("airtrans");
 				p.navalTransports = +playerNodes[i].getAttribute("navaltrans");
 
-				p.prestigePerTurn = playerNodes[i].getAttribute("turnprestige").split(", ");
+				//strings at first, converted below
+				p.prestigePerTurn = playerNodes[i].getAttribute("turnprestige").split(", ") as unknown as number[];
 				for (var j = 0; j < p.prestigePerTurn.length; j++)
 				{
 					v = +p.prestigePerTurn[j]; //convert to int
@@ -325,7 +336,7 @@ function ScenarioLoader()
 		return players;
 	}
 
-	function loadUnit(node)
+	function loadUnit(node: Element): Unit
 	{
 		//create the unit object
 		var unitId = +node.getAttribute("id");
