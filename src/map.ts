@@ -495,7 +495,7 @@ Hex.prototype.cleanup = function()
 }
 
 //Map Object Constructor
-function Map()
+function GameMap() //Map in the original, renamed: it replaced the built-in Map
 {
 	this.rows = 0;
 	this.cols = 0;
@@ -1565,4 +1565,4 @@ function Map()
 			}
 	};
 
-} // end Map class
+} // end GameMap class

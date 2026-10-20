@@ -16,11 +16,15 @@
         <script src="resources/scenarios/scenariolist.js"></script>
         <script src="resources/campaigns/campaignlist.js"></script>
         <!-- The game: dist/ is built from src/*.ts by npm run build, in the order of src/modules.ts -->
-        <script src="/dist/modules.js"></script>
+        <!-- ?dist=<dir> loads another build directory (the harness builds one per session) -->
+        <script>
+            var distDir = new URLSearchParams(location.search).get("dist") || "dist";
+            document.write('<script src="/' + distDir + '/modules.js"><\/script>');
+        </script>
         <script>
             (function() {
                 for (var i = 0; i < srcModules.length; i++)
-                    document.write('<script src="/dist/' + srcModules[i] + '.js"><\/script>');
+                    document.write('<script src="/' + distDir + '/' + srcModules[i] + '.js"><\/script>');
                 //?harness: hooks for harness/lib/harness.js, after the modules
                 if (new URLSearchParams(location.search).has("harness"))
                     document.write('<script src="/harness/lib/hooks.js"><\/script>');

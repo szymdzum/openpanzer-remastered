@@ -20,10 +20,14 @@ REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 PORT=${PORT:-8644}
 REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
-VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
+# MINE=<module,...>: test only those modules from the working tree, the others from the last
+# commit (for parallel work), in a build directory of this session
+DIST=dist
+[ -n "${MINE:-}" ] && DIST="dist-${BDG_SESSION:-default}"
+VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness&dist=$DIST"
 MODULES=$(node -e 'eval(require("fs").readFileSync("src/modules.ts", "utf8")); console.log(srcModules.join(","))')
 # The remaster runs dist/, build it from src/ first
-npm run --silent build >/dev/null
+node scripts/build.mjs --out "$DIST" ${MINE:+--mine "$MINE"} >/dev/null
 
 # serve <dir> <port>: a static server per repo, left running for the next runs
 serve() {
@@ -87,12 +91,12 @@ for script in "${SCRIPTS[@]}"; do
 	node harness/ui-diff.js "$BASELINE" "$OUT/$script.json" "$script" || STATUS=1
 done
 
-node -e '
+DIST=$DIST node -e '
 const { uncoveredLines, printUncovered } = require("./harness/coverage");
 const [modules, ...files] = process.argv.slice(1);
 for (const mod of modules.split(",").filter(Boolean)) {
 	// dist/<mod>.js is src/<mod>.ts with the types blanked out: same lines
 	const file = "src/" + mod + ".ts";
-	printUncovered(file + " (ui replay, all scripts)", require("fs").existsSync(file) ? uncoveredLines(files, "/dist/" + mod + ".js", file, "") : null);
-}' "$MODULES" "${COVERAGE[@]}"
+	printUncovered(file + " (ui replay, all scripts)", require("fs").existsSync(file) ? uncoveredLines(files, "/" + (process.env.DIST || "dist") + "/" + mod + ".js", file, "") : null);
+}' "${MINE:-$MODULES}" "${COVERAGE[@]}"
 exit $STATUS

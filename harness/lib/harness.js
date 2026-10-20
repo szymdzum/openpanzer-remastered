@@ -179,11 +179,13 @@ function cyrb53(str) {
 
 // Built from plain properties so it doesn't depend on the modules under test more than
 // necessary. Keys are sorted: a different property assignment order isn't a difference.
-const ENTITIES = ["Unit", "Player", "Hex", "Map", "Scenario", "AI", "AIScripted", "Game", "Campaign", "Transport"];
+const ENTITIES = ["Unit", "Player", "Hex", "Map", "GameMap", "Scenario", "AI", "AIScripted", "Game", "Campaign", "Transport"];
+// Classes the remaster renamed, under their original names so traces compare with the reference
+const RENAMED = { GameMap: "Map", SpriteAnimation: "Animation" };
 const SKIP_KEYS = { handler: 1, map: 1 };
 
 function entityRef(v) {
-	const name = v.constructor && v.constructor.name;
+	const name = v.constructor && (RENAMED[v.constructor.name] || v.constructor.name);
 	if (name === "Unit" || name === "Transport") return name + "#" + v.id;
 	if (name === "Player") return "player#" + v.id;
 	if (name === "Hex" && typeof v.getPos === "function") { const p = v.getPos(); return "hex#" + p.row + "," + p.col; }

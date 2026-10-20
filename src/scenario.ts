@@ -35,7 +35,7 @@ function Scenario(scenFile)
 	this.turnsPerDay = 1;  //how many turns to increase day
 	this.dayTurn = 0;      //the turn in current day
 	this.reinforcements = {}; //units deployed later, keyed by turn
-	this.map = new Map();
+	this.map = new GameMap();
 	this.file = scenFile;
 	this.expPerSide = [{exp: 0, count: 0}, {exp: 0, count: 0}]; //total experience and unit count per side
 	this.unitsCostPerSide = [0, 0]; //total cost of the units of each side

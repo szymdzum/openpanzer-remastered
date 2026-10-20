@@ -76,7 +76,7 @@ if (coverageFile && modules && fs.existsSync(coverageFile)) {
 	for (const mod of modules.split(",").filter(Boolean)) {
 		// dist/<mod>.js is src/<mod>.ts with the types blanked out: same lines
 		const file = "src/" + mod + ".ts";
-		printUncovered(file + " (replay)", fs.existsSync(file) ? uncoveredLines(coverageFile, "/dist/" + mod + ".js", file, "") : null);
+		printUncovered(file + " (replay)", fs.existsSync(file) ? uncoveredLines(coverageFile, "/" + (process.env.DIST || "dist") + "/" + mod + ".js", file, "") : null);
 	}
 }
 process.exit(different ? 1 : 0);

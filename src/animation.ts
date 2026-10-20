@@ -20,7 +20,7 @@ function AnimationChain()
 
 	this.add = function(o)
 	{
-		animationTasks.push(new Animation(o));
+		animationTasks.push(new SpriteAnimation(o));
 	}
 
 	this.clear = function()
@@ -51,7 +51,7 @@ function AnimationChain()
 
 //o = {ctx, x, y, rotate, sprite}
 //Animates a series of frames from image on ctx context at x,y position
-function Animation(o)
+function SpriteAnimation(o) //Animation in the original, renamed: it replaced the DOM Animation
 {
 	//Erases the previous frame by drawing it again with destination-out instead of clearing
 	//its rectangle, so whatever else is on the canvas there survives
