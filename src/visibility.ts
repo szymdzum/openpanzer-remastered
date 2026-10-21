@@ -47,10 +47,10 @@ export class MapVisibility
 	alloc(rows: number, cols: number)
 	{
 		this.counters = new Array(rows);
-		for (var i = 0; i < rows; i++)
+		for (let i = 0; i < rows; i++)
 		{
 			this.counters[i] = new Array(cols);
-			for (var j = 0; j < cols; j++)
+			for (let j = 0; j < cols; j++)
 				this.counters[i][j] = new HexCounters();
 		}
 	}

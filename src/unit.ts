@@ -291,7 +291,7 @@ Unit.prototype.fire = function(isAttacking: boolean)
 Unit.prototype.move = function(cost: number)
 {
 	this.entrenchment = 0; //loses all entrenchment
-	var fuelUsed = 0;
+	let fuelUsed = 0;
 	if (cost >= 254) //Remove stopmov or noenter costs
 		fuelUsed = (cost / 254 + cost % 254) >> 0; //TODO: fix in GameRules unit shouldn't be allowed to move if cost > 254
 	else
@@ -326,8 +326,8 @@ Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boole
 	if (upgradeid <= 0)
 		upgradeid = this.eqid;
 
-	var oldClass = Equipment.equipment[this.eqid].uclass;
-	var newClass = Equipment.equipment[upgradeid].uclass;
+	let oldClass = Equipment.equipment[this.eqid].uclass;
+	const newClass = Equipment.equipment[upgradeid].uclass;
 	//Flak can be upgraded to air defence
 	if (oldClass == unitClass.flak && newClass == unitClass.airDefence)
 		oldClass = unitClass.airDefence;
@@ -389,7 +389,7 @@ Unit.prototype.unmount = function() { this.isMounted = false; }
 
 Unit.prototype.embark = function(type: number): boolean
 {
-	var id = Equipment.getCountryEquipmentByClass(type, this.player.country + 1)[0]; //TODO Already found in map.addPlayer
+	const id = Equipment.getCountryEquipmentByClass(type, this.player.country + 1)[0]; //TODO Already found in map.addPlayer
 
 	if (!id || typeof id === "undefined")
 		return false;
@@ -401,9 +401,9 @@ Unit.prototype.embark = function(type: number): boolean
 
 Unit.prototype.entrench = function(): boolean
 {
-	var hex: Hex | null = null;
-	var uc = this.unitData().uclass;
-	var terrainEntrench = 0;
+	let hex: Hex | null = null;
+	const uc = this.unitData().uclass;
+	let terrainEntrench = 0;
 
 	if (!GameRules.canEntrench(this))
 		return false;
@@ -416,8 +416,8 @@ Unit.prototype.entrench = function(): boolean
 
 	if (this.entrenchment >= terrainEntrenchment[hex.terrain])
 	{
-		var entrenchLevel = this.entrenchment - terrainEntrench;
-		var nextEntrenchLevel = 9 * entrenchLevel + 4;
+		let entrenchLevel = this.entrenchment - terrainEntrench;
+		let nextEntrenchLevel = 9 * entrenchLevel + 4;
 		this.entrenchTicks += +(this.experience/100) + (terrainEntrench + 1) * unitEntrenchRate[uc];
 		while(this.entrenchTicks >= nextEntrenchLevel && this.entrenchment < (terrainEntrench + 5))
 		{
@@ -460,7 +460,7 @@ Unit.prototype.unitEndTurn = function()
 	//Fortifications stay visible once seen, other units hide when their hex is no longer spotted
 	if (this.unitData().uclass !== unitClass.fortification)
 	{
-		var hex = this.getHex();
+		const hex = this.getHex();
 		if (hex !== null && !hex.isSpotted(engineContext.spotSide()))
 			this.tempSpotted = false;
 	}

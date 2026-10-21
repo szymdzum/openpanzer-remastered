@@ -122,7 +122,7 @@ export interface ActionsAPI
 	checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null;
 }
 
-export var Actions: ActionsAPI = {
+export let Actions: ActionsAPI = {
 	resolveAttack: resolveAttack,
 	finishAttack: finishAttack,
 	finishMove: finishMove,
@@ -135,13 +135,13 @@ export var Actions: ActionsAPI = {
 //support fire destroyed the attacker or stopped the attack. Null when a unit isn't on the map
 function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null
 {
-	var h = hooks || {};
-	var cpos = attackingUnit.getPos();
-	var epos = enemyUnit.getPos();
+	const h = hooks || {};
+	const cpos = attackingUnit.getPos();
+	const epos = enemyUnit.getPos();
 	if (!cpos || !epos)
 		return null;
 
-	var result: AttackResult =
+	const result: AttackResult =
 	{
 		attacking: { unit: attackingUnit, cell: cpos, oldstr: attackingUnit.strength, newstr: 0, leaderGain: false },
 		defending: { unit: enemyUnit, cell: epos, oldstr: enemyUnit.strength, newstr: 0, leaderGain: false },
@@ -155,13 +155,13 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 		victorySides: []
 	};
 
-	var cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
+	let cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
 	if (!attackingUnit.isSurprised && !cr.isOverrun)
 	{
-		var supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
-		for (var u in supportUnits)
+		let supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
+		for (const u in supportUnits)
 		{
-			var sp = supportUnits[u].getPos();
+			const sp = supportUnits[u].getPos();
 			if (attackingUnit.destroyed)
 				break;
 			map.attackUnit(supportUnits[u], attackingUnit, true);
@@ -193,15 +193,15 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 //was destroyed is read from the strengths in result (the UI's callback can see them at 0)
 function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult
 {
-	var h = hooks || {};
-	var a = result.attacking;
-	var d = result.defending;
-	var rpos: Cell;
+	const h = hooks || {};
+	const a = result.attacking;
+	const d = result.defending;
+	let rpos: Cell;
 
 	if (h.onLosses) h.onLosses(result);
 
-	var aDestroyed = a.oldstr - a.newstr >= a.oldstr;
-	var dDestroyed = d.oldstr - d.newstr >= d.oldstr;
+	const aDestroyed = a.oldstr - a.newstr >= a.oldstr;
+	const dDestroyed = d.oldstr - d.newstr >= d.oldstr;
 	if (aDestroyed)
 	{
 		result.destroyed.push(a.unit);
@@ -252,14 +252,14 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 //toggle picks it), the capture and the capture victory
 function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult
 {
-	var h = hooks || {};
-	var result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
+	const h = hooks || {};
+	const result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
 
 	if (unit.isSurprised)
 	{
-		var cell = mr.surpriseCell;
+		const cell = mr.surpriseCell;
 		if (h.onSurprised) h.onSurprised(unit, cell);
-		var target = map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
+		const target = map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
 		result.surprise = { cell: cell, target: target, attack: null };
 		if (target !== null)
 			result.surprise.attack = h.attack ? h.attack(unit, target) : resolveAttack(map, unit, target, h);
@@ -278,15 +278,15 @@ function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: bool
 function deployReinforcements(scenario: Scenario, turn: number, playerId: number,
 	onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null
 {
-	var deployed: DeployedReinforcement[] = [];
-	var reinforcements = scenario.getReinforcements(turn, playerId);
+	const deployed: DeployedReinforcement[] = [];
+	const reinforcements = scenario.getReinforcements(turn, playerId);
 
 	if (reinforcements.length <= 0)
 		return null;
 
-	for (var i = 0; i < reinforcements.length; i++)
+	for (let i = 0; i < reinforcements.length; i++)
 	{
-		var cell: Cell = null;
+		let cell: Cell = null;
 		if ((cell = scenario.map.deployReinforcement(reinforcements[i].unit,
 			reinforcements[i].row, reinforcements[i].col)) !== null)
 		{
@@ -304,7 +304,7 @@ function deployReinforcements(scenario: Scenario, turn: number, playerId: number
 //as Game's getLocalSide: -1 none, 0, 1, 2 both)
 function endTurn(scenario: Scenario, localSide: number): boolean
 {
-	var lastSide = scenario.map.currentPlayer.side;
+	const lastSide = scenario.map.currentPlayer.side;
 	scenario.endTurn();
 	return scenario.checkDefeat(lastSide, localSide);
 }
@@ -321,9 +321,9 @@ function endTurn(scenario: Scenario, localSide: number): boolean
 //Null when the game goes on
 function checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null
 {
-	var l = last || {};
-	var m = scenario.map;
-	var winner = -1;
+	const l = last || {};
+	const m = scenario.map;
+	let winner = -1;
 
 	if (l.move && l.move.victorySide >= 0)
 		return { kind: "capture", winner: l.move.victorySide, loser: ~l.move.victorySide & 1, rating: scenario.checkVictory() };
