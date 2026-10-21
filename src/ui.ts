@@ -37,6 +37,7 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import { Game } from "./game";
 import { Leaders } from "./leaders";
+import { Actions, type AttackResult } from "./actions";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
 //bundle: game.ts types `new UI(game)` through its UIConstructor
@@ -66,20 +67,9 @@ export interface UI
 
 //The callback data of the attack animation, Render calls cbfunc with it when done (the move
 //animation's is render.ts's MoveAnimationCBData)
-export interface UIAttackSide
-{
-	unit: Unit;
-	cell: Cell;
-	oldstr: number;
-	newstr: number;
-	leaderGain: boolean;
-	attackStopped?: boolean; //attacking side only
-}
-
 export interface UIAttackAnimationData
 {
-	attacking: UIAttackSide;
-	defending: UIAttackSide;
+	result: AttackResult;
 	cbfunc: (animationCBData: UIAttackAnimationData) => void;
 }
 
@@ -536,74 +526,52 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number)
 	var hex = map.map[row][col];
 	var enemyUnit: Unit = null;
 	if ((enemyUnit = hex.getAttackableUnit(attackingUnit, uiSettings.airMode)) !== null) //Select which unit to attack depending on uiSettings.airMode
-		return uiUnitAttack(attackingUnit, enemyUnit);
+		return uiUnitAttack(attackingUnit, enemyUnit) !== null;
 	return false;
 }
 
-//TODO most of the code here pertaining to support fire should be moved to map object
+//handle attack performed by attacking unit on the unit it attacks, the combat itself is Actions.resolveAttack's.
+//Null when a unit isn't on the map
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit)
 {
 	var renderRange = 7; //biggest attack range including support fire
 	var cpos = attackingUnit.getPos();
 	var epos = enemyUnit.getPos();
 	if (!cpos || !epos)
-		return false; //No attacking or defending unit, skipping attack
+		return null; //No attacking or defending unit, skipping attack
 
 	var row = epos.row;
 	var col = epos.col;
 	var cclass = attackingUnit.unitData().uclass;
 	var eclass = enemyUnit.unitData().uclass;
-	var attackStopped = false;
-	var animationCBData: UIAttackAnimationData =
-	{
-		attacking: { unit: attackingUnit, cell: cpos, oldstr: attackingUnit.strength, newstr: 0, leaderGain: false, attackStopped: false },
-		defending: { unit: enemyUnit, cell: epos, oldstr: enemyUnit.strength, newstr: 0, leaderGain: false },
-		cbfunc: uiAttackAnimationFinished
-	};
 
 	UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar
 
-	var cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
-	//Support Fire if attacking unit wasn't surprised and doesn't overrun
-	if (!attackingUnit.isSurprised && !cr.isOverrun)
+	//The animations are added as the combat goes: their sprite picks draw from Math.random between the dice
+	var result = Actions.resolveAttack(map, attackingUnit, enemyUnit,
 	{
-		var supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
-		for (var u in supportUnits)
+		onSupportShot: function(unit: Unit, sp: Cell)
 		{
-			var sp = supportUnits[u].getPos();
-			var sclass = supportUnits[u].unitData().uclass;
-			if (attackingUnit.destroyed)
-				break;
-			map.attackUnit(supportUnits[u], attackingUnit, true);
-			R.addAnimation(sp.row, sp.col, attackAnimationByClass[sclass], supportUnits[u].facing); //Hits by supporting units
-		}
-	}
-	//The support fire losses can stop the attack
-	attackStopped = GameRules.isLossOverRetreatThreshold(attackingUnit.strength, animationCBData.attacking.oldstr);
-	if (!attackingUnit.destroyed && !attackStopped) //Can we still attack ?
-	{
-		cr = map.attackUnit(attackingUnit, enemyUnit, false, cr.isOverrun); //Only attack an enemy unit on that hex
-		if (cr.isOverrun)
+			R.addAnimation(sp.row, sp.col, attackAnimationByClass[unit.unitData().uclass], unit.facing); //Hits by supporting units
+		},
+		onAttack: function(r: AttackResult)
 		{
-			uiShowAlert(epos.row - 0.2, epos.col - 0.6, "OverRun ", true);
-			renderRange = 1;
+			var cr = r.cr;
+			if (cr.isOverrun)
+			{
+				uiShowAlert(epos.row - 0.2, epos.col - 0.6, "OverRun ", true);
+				renderRange = 1;
+			}
+			if (cr.isRugged && !cr.isOverrun)
+				uiShowAlert(epos.row - 0.2, epos.col - 0.6, "Rugged Defense ", false);
+
+			R.addAnimation(cpos.row, cpos.col, attackAnimationByClass[cclass], attackingUnit.facing);
+
+			if (!enemyUnit.destroyed && cr.defcanfire)
+				R.addAnimation(row, col, attackAnimationByClass[eclass], enemyUnit.facing); //Hits to the unit being attacked
 		}
-		if (cr.isRugged && !cr.isOverrun)
-			uiShowAlert(epos.row - 0.2, epos.col - 0.6, "Rugged Defense ", false);
+	});
 
-		R.addAnimation(cpos.row, cpos.col, attackAnimationByClass[cclass], attackingUnit.facing);
-
-		if (!enemyUnit.destroyed && cr.defcanfire)
-			R.addAnimation(row, col, attackAnimationByClass[eclass], enemyUnit.facing); //Hits to the unit being attacked
-
-		animationCBData.attacking.leaderGain = cr.atkLeaderGain;
-		animationCBData.defending.leaderGain = cr.defLeaderGain;
-	}
-	if (attackStopped)
-	{
-		animationCBData.attacking.attackStopped = true;
-		attackingUnit.hasFired = true;
-	}
 	//Render so new unit facings are shown correctly
 	R.render(cpos.row, cpos.col, renderRange);
 	//Show the AI combats on map
@@ -612,112 +580,96 @@ function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit)
 		R.drawHexByCell(cpos, hexstyle.combat);
 		R.drawHexByCell(epos, hexstyle.combat);
 	}
+	var animationCBData: UIAttackAnimationData = { result: result, cbfunc: uiAttackAnimationFinished };
+	//An empty animation chain (a carrier or naval transport attack without support fire) calls back
+	//at once, before the bundle set the new strengths: the finish then sees both units at 0 (kept)
+	var newstr = [result.attacking.newstr, result.defending.newstr];
+	result.attacking.newstr = result.defending.newstr = 0;
 	R.runAnimation(animationCBData);
-	animationCBData.attacking.newstr = attackingUnit.strength;
-	animationCBData.defending.newstr = enemyUnit.strength;
-	return true;
+	result.attacking.newstr = newstr[0];
+	result.defending.newstr = newstr[1];
+	return result;
 }
 
-//Called when attack animation finishes
+//Called when attack animation finishes, the rest of the combat is Actions.finishAttack's
 function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData)
 {
-	var aloss: number, dloss: number, tmp: number, rpos: Cell, mr: movementResults, moveAnimationCBData: MoveAnimationCBData;
-	var refreshRender = false;
+	var tmp: number, moveAnimationCBData: MoveAnimationCBData;
 
-	var a = animationCBData.attacking;
-	var d = animationCBData.defending;
+	var result = animationCBData.result;
+	var a = result.attacking;
+	var d = result.defending;
 	var renderRange = GameRules.getUnitAttackRange(a.unit);
-	var aDestroyed = false;
-	var dDestroyed = false;
 
-	aloss = a.oldstr - a.newstr;
-	if (aloss > 0 && aloss < a.oldstr)
-		uiShowAlert(a.cell.row, a.cell.col, -aloss);
-
-	dloss = d.oldstr - d.newstr;
-	if (dloss > 0 && dloss < d.oldstr)
-		uiShowAlert(d.cell.row, d.cell.col, -dloss);
-
-	//Do explosion animation along with deleting units from map and refreshing selection
-	if (aloss >= a.oldstr)
+	Actions.finishAttack(map, result,
 	{
-		aDestroyed = true;
-		R.addAnimation(a.cell.row, a.cell.col, "explosion");
-		R.runAnimation(null);
-	}
-
-	if (dloss >= d.oldstr)
-	{
-		dDestroyed = true;
-		R.addAnimation(d.cell.row, d.cell.col, "explosion");
-		R.runAnimation(null);
-	}
-
-	if (aDestroyed || dDestroyed) //Cleanup dead units
-	{
-		map.updateUnitList();
-		refreshRender = true;
-	}
-
-	//Refresh map selections
-	if (map.currentUnit)
-	{
-		if (a.unit.destroyed && map.currentUnit.id == a.unit.id)
+		onLosses: function()
 		{
-			map.delCurrentUnit(); //remove current selection if unit was destroyed in attack
-			R.drawCursor(a.cell); //refresh cursor or it gets stuck in attack cursor
-		}
-		else
+			var aloss = a.oldstr - a.newstr;
+			if (aloss > 0 && aloss < a.oldstr)
+				uiShowAlert(a.cell.row, a.cell.col, -aloss);
+
+			var dloss = d.oldstr - d.newstr;
+			if (dloss > 0 && dloss < d.oldstr)
+				uiShowAlert(d.cell.row, d.cell.col, -dloss);
+		},
+		//Explosion animation along with deleting units from map and refreshing selection
+		onDestroyed: function(unit: Unit, cell: Cell)
 		{
-			map.selectUnit(map.currentUnit);
-		}
-		//refresh move range if unit has destroyed another unit, currentUnit can be null by now
-		if (d.unit.destroyed && !map.currentUnit.hasMoved)
+			R.addAnimation(cell.row, cell.col, "explosion");
+			R.runAnimation(null);
+		},
+		afterCleanup: function()
 		{
-			map.setMoveRange(map.currentUnit);
-			tmp = getRenderRange(map.currentUnit);
-			if (tmp > renderRange) renderRange = tmp;
-		}
-	}
+			//Refresh map selections
+			if (map.currentUnit)
+			{
+				if (a.unit.destroyed && map.currentUnit.id == a.unit.id)
+				{
+					map.delCurrentUnit(); //remove current selection if unit was destroyed in attack
+					R.drawCursor(a.cell); //refresh cursor or it gets stuck in attack cursor
+				}
+				else
+				{
+					map.selectUnit(map.currentUnit);
+				}
+				//refresh move range if unit has destroyed another unit, currentUnit can be null by now
+				if (d.unit.destroyed && !map.currentUnit.hasMoved)
+				{
+					map.setMoveRange(map.currentUnit);
+					tmp = getRenderRange(map.currentUnit);
+					if (tmp > renderRange) renderRange = tmp;
+				}
+			}
 
-	if (a.attackStopped)
-		uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "Attack Stopped ", false);
+			if (result.attackStopped)
+				uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "Attack Stopped ", false);
 
-	if (!aDestroyed && a.leaderGain && a.unit.player.side == game.spotSide)
-		uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "New Leader", true);
+			if (result.destroyed.indexOf(a.unit) < 0 && a.leaderGain && a.unit.player.side == game.spotSide)
+				uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "New Leader", true);
 
-	if (!dDestroyed && d.leaderGain && d.unit.player.side == game.spotSide)
-		uiShowAlert(d.cell.row - 0.2, d.cell.col - 0.6, "New Leader", true);
-
-	//Defender retreats on big losses or surrenders when it has nowhere to go
-	if (!dDestroyed && GameRules.shouldDefenderRetreat(a.unit, d.unit, d.oldstr))
-	{
-		refreshRender = true;
-		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows, map.cols)))
+			if (result.destroyed.indexOf(d.unit) < 0 && d.leaderGain && d.unit.player.side == game.spotSide)
+				uiShowAlert(d.cell.row - 0.2, d.cell.col - 0.6, "New Leader", true);
+		},
+		//Defender retreats on big losses or surrenders when it has nowhere to go
+		onRetreat: function(unit: Unit, rpos: Cell, mr: movementResults)
 		{
 			uiShowAlert(rpos.row - 0.2, rpos.col - 0.6, "Retreat ", false);
-			mr = map.retreatUnit(d.unit, rpos);
-			moveAnimationCBData = { unit: d.unit, moveResults: mr, cbfunc: uiMoveAnimationFinished };
-			d.unit.hasAnimation = true;
+			moveAnimationCBData = { unit: unit, moveResults: mr, cbfunc: uiMoveAnimationFinished };
+			unit.hasAnimation = true;
 			R.moveAnimation(moveAnimationCBData);
-		}
-		else
+		},
+		onSurrender: function(unit: Unit, cell: Cell)
 		{
-			uiShowAlert(d.cell.row - 0.2, d.cell.col - 0.6, "Surrender ", false);
-			d.unit.destroyed = true;
-			map.updateUnitList();
-			R.addAnimation(d.cell.row, d.cell.col, "explosion");
+			uiShowAlert(cell.row - 0.2, cell.col - 0.6, "Surrender ", false);
+			R.addAnimation(cell.row, cell.col, "explosion");
 			R.runAnimation(null);
-		}
-	}
+		},
+		//A side without units left loses
+		onVictory: uiMoveVictory
+	});
 
-	//A side without units left loses
-	if (!map.hasAliveUnits(playerSide.axis))
-		uiMoveVictory(playerSide.allies);
-	if (!map.hasAliveUnits(playerSide.allies))
-		uiMoveVictory(playerSide.axis);
-
-	if (refreshRender)
+	if (result.destroyed.length > 0 || result.retreat !== null || result.surrender)
 		R.render(a.cell.row, a.cell.col, renderRange);
 
 	game.waitUIAnimation = false;
@@ -1743,7 +1695,7 @@ function uiScaleMap(level: number)
 
 	this.uiUnitSelect = function(unit: Unit | null) { return uiUnitSelect(unit); };
 	this.uiUnitMove = function(unit: Unit, row: number, col: number) { return uiUnitMove(unit, row, col); };
-	this.uiUnitAttack = function(attackingUnit: Unit, enemyUnit: Unit) { return uiUnitAttack(attackingUnit, enemyUnit); };
+	this.uiUnitAttack = function(attackingUnit: Unit, enemyUnit: Unit) { return uiUnitAttack(attackingUnit, enemyUnit) !== null; };
 	this.showAlert = function(row: number, col: number, text: string | number, positive?: boolean) { return uiShowAlert(row, col, text, positive); };
 
 	this.showGameToolTip = function(text: string, row: number, col: number)

@@ -1,0 +1,192 @@
+/**
+ * Actions - the game's combat and move sequence, without the UI
+ *
+ * Licensed under the GPL license:
+ * http://www.gnu.org/licenses/gpl.html
+ *
+ * The sequence the UI ran in its animation callbacks (ui.ts uiUnitAttack, uiAttackAnimationFinished,
+ * uiMoveAnimationFinished) and Game ran around the end of a turn, in the same order. An attack is
+ * two calls: resolveAttack (support fire, the attack or attack stopped), then finishAttack (the
+ * destroyed units removed, retreat or surrender, the elimination victory). The UI calls the second
+ * from the attack animation's callback, a headless caller right after the first.
+ *
+ * The hooks are called synchronously where the UI animated or alerted. Their order matters: the
+ * animations' sprite and sound picks draw from the same Math.random as the dice, between the
+ * support fire shots.
+ *
+ * No module-level `map` here: Map.attackUnit reads a global one (#28).
+ */
+
+import { type Cell, type combatResults, type movementResults, playerSide } from "./prototypes";
+import { GameRules } from "./gamerules";
+import type { Unit } from "./unit";
+import type { GameMap } from "./map";
+
+//One side of an attack, its strength before and after the attack (newstr is set by resolveAttack)
+export interface AttackSide
+{
+	unit: Unit;
+	cell: Cell;
+	oldstr: number;
+	newstr: number;
+	leaderGain: boolean;
+}
+
+export interface AttackResult
+{
+	attacking: AttackSide;
+	defending: AttackSide;
+	cr: combatResults; //the attack's results, the estimate when the attack didn't take place
+	support: Unit[]; //the units that fired in support of the defender, in order
+	attackStopped: boolean; //the support fire losses stopped the attack
+	//Set by finishAttack
+	destroyed: Unit[]; //removed from the map after the attack, by their losses (attacker first)
+	retreat: Cell | null; //where the defender retreated to
+	retreatMove: movementResults | null; //the retreat's move, its finishMove is the caller's
+	surrender: boolean; //the defender had nowhere to retreat to
+	victorySides: number[]; //the sides that won because the other one has no units left
+}
+
+export interface AttackHooks
+{
+	onSupportShot?(unit: Unit, cell: Cell): void; //after each support fire shot, the unit and its cell before it
+	onAttack?(result: AttackResult): void; //after the attack (not when it was stopped)
+}
+
+export interface FinishAttackHooks
+{
+	onLosses?(result: AttackResult): void; //first, before anything is removed
+	onDestroyed?(unit: Unit, cell: Cell): void; //a unit destroyed by its losses (attacker first), before the cleanup
+	afterCleanup?(result: AttackResult): void; //the destroyed units are removed, before retreat or surrender
+	onRetreat?(unit: Unit, cell: Cell, mr: movementResults): void; //after the retreat's move
+	onSurrender?(unit: Unit, cell: Cell): void; //after the surrendered unit was removed
+	onVictory?(side: number): void; //a side won, the other has no units left
+}
+
+export interface ActionsAPI
+{
+	resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null;
+	finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult;
+}
+
+export var Actions: ActionsAPI = {
+	resolveAttack: resolveAttack,
+	finishAttack: finishAttack,
+};
+
+//Support fire if the attacker wasn't surprised and doesn't overrun, then the attack unless the
+//support fire destroyed the attacker or stopped the attack. Null when a unit isn't on the map
+function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null
+{
+	var h = hooks || {};
+	var cpos = attackingUnit.getPos();
+	var epos = enemyUnit.getPos();
+	if (!cpos || !epos)
+		return null;
+
+	var result: AttackResult =
+	{
+		attacking: { unit: attackingUnit, cell: cpos, oldstr: attackingUnit.strength, newstr: 0, leaderGain: false },
+		defending: { unit: enemyUnit, cell: epos, oldstr: enemyUnit.strength, newstr: 0, leaderGain: false },
+		cr: null,
+		support: [],
+		attackStopped: false,
+		destroyed: [],
+		retreat: null,
+		retreatMove: null,
+		surrender: false,
+		victorySides: []
+	};
+
+	var cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
+	if (!attackingUnit.isSurprised && !cr.isOverrun)
+	{
+		var supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
+		for (var u in supportUnits)
+		{
+			var sp = supportUnits[u].getPos();
+			if (attackingUnit.destroyed)
+				break;
+			map.attackUnit(supportUnits[u], attackingUnit, true);
+			result.support.push(supportUnits[u]);
+			if (h.onSupportShot) h.onSupportShot(supportUnits[u], sp);
+		}
+	}
+	//The support fire losses can stop the attack
+	result.attackStopped = GameRules.isLossOverRetreatThreshold(attackingUnit.strength, result.attacking.oldstr);
+	if (!attackingUnit.destroyed && !result.attackStopped)
+	{
+		cr = map.attackUnit(attackingUnit, enemyUnit, false, cr.isOverrun);
+		result.cr = cr;
+		result.attacking.leaderGain = cr.atkLeaderGain;
+		result.defending.leaderGain = cr.defLeaderGain;
+		if (h.onAttack) h.onAttack(result);
+	}
+	result.cr = cr;
+	if (result.attackStopped)
+		attackingUnit.hasFired = true;
+
+	result.attacking.newstr = attackingUnit.strength;
+	result.defending.newstr = enemyUnit.strength;
+	return result;
+}
+
+//After the attack: the units destroyed by their losses are removed, the defender retreats on big
+//losses or surrenders when it has nowhere to go, a side without units left loses. Whether a unit
+//was destroyed is read from the strengths in result (the UI's callback can see them at 0)
+function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult
+{
+	var h = hooks || {};
+	var a = result.attacking;
+	var d = result.defending;
+	var rpos: Cell;
+
+	if (h.onLosses) h.onLosses(result);
+
+	var aDestroyed = a.oldstr - a.newstr >= a.oldstr;
+	var dDestroyed = d.oldstr - d.newstr >= d.oldstr;
+	if (aDestroyed)
+	{
+		result.destroyed.push(a.unit);
+		if (h.onDestroyed) h.onDestroyed(a.unit, a.cell);
+	}
+	if (dDestroyed)
+	{
+		result.destroyed.push(d.unit);
+		if (h.onDestroyed) h.onDestroyed(d.unit, d.cell);
+	}
+	if (aDestroyed || dDestroyed) //Cleanup dead units
+		map.updateUnitList();
+
+	if (h.afterCleanup) h.afterCleanup(result);
+
+	if (!dDestroyed && GameRules.shouldDefenderRetreat(a.unit, d.unit, d.oldstr))
+	{
+		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows, map.cols)))
+		{
+			result.retreat = rpos;
+			result.retreatMove = map.retreatUnit(d.unit, rpos);
+			if (h.onRetreat) h.onRetreat(d.unit, rpos, result.retreatMove);
+		}
+		else
+		{
+			result.surrender = true;
+			d.unit.destroyed = true;
+			map.updateUnitList();
+			if (h.onSurrender) h.onSurrender(d.unit, d.cell);
+		}
+	}
+
+	if (!map.hasAliveUnits(playerSide.axis))
+	{
+		result.victorySides.push(playerSide.allies);
+		if (h.onVictory) h.onVictory(playerSide.allies);
+	}
+	if (!map.hasAliveUnits(playerSide.allies))
+	{
+		result.victorySides.push(playerSide.axis);
+		if (h.onVictory) h.onVictory(playerSide.axis);
+	}
+
+	return result;
+}

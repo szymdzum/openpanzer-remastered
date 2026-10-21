@@ -31,9 +31,11 @@ import * as uicombatlog from "./uicombatlog";
 import * as game from "./game";
 import * as osglue from "./osglue";
 import * as leaders from "./leaders";
+import * as actions from "./actions";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, animation, gamerules, unit,
-	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders];
+	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
+	actions];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import
