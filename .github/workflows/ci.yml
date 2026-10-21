@@ -30,9 +30,9 @@ jobs:
       - run: npm run check
       - run: npm run check:strict
       - run: npm run lint
-      - name: fallow audit (what this change adds: unused code, import cycles, duplicates, complexity)
+      - name: "fallow audit: what this change adds (unused code, import cycles, duplicates, complexity)"
         run: npx fallow audit --base origin/${{ github.base_ref || 'main' }}
-      - name: fallow health (a report, doesn't fail)
+      - name: "fallow health: a report, doesn't fail"
         run: npx fallow health --format markdown >> "$GITHUB_STEP_SUMMARY" || true
       - uses: crate-ci/typos@v1
       - run: npm run test:coverage
