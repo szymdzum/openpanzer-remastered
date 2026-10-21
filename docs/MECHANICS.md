@@ -211,7 +211,7 @@ moves ahead and doesn't react to combat results during the turn.
 
 What it doesn't do: defend its own objectives (`getObjectiveScore` has the option, no caller
 uses it), withdraw damaged units, or think about the enemy's next turn. Known bugs are in
-ROADMAP 4.
+ROADMAP, Stable campaigns.
 
 It also cheats a little: it scores attacks with `calculateCombatResults(..., withHiddenUnits =
 true, ...)` (ai.ts), so it counts the support fire of the player's units hidden in the fog of
