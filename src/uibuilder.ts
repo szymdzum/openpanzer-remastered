@@ -22,7 +22,7 @@ import {
 	getPosition, getStyleSheet, type GlyphButton, insertTag, insertTemplate, isVisible, makeHidden,
 	makeVisible, setHandler, toggleButton, toggleCheckbox, type VendorStyled
 } from "./dom";
-import { tooltipColor, tooltipStyle } from "./aiscripted";
+import { tooltipColor, tooltipStyle } from "./style";
 import type { Unit } from "./unit";
 import type { PlayerDossier } from "./map";
 import type { ScenarioOutcome } from "./scenario";

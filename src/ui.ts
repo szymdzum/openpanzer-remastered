@@ -25,9 +25,8 @@ import {
 	hasTouch, isVisible, makeHidden, makeVisible, setHandler, setSelectOption, toggleButton, toggleRightClick,
 	touchScroll
 } from "./dom";
-import {
-	hexstyle, moveSoundByMoveMethod, soundData, tooltipColor, tooltipStyle
-} from "./aiscripted";
+import { hexstyle, tooltipColor, tooltipStyle } from "./style";
+import { moveSoundByMoveMethod, soundData } from "./sound";
 import { attackAnimationByClass } from "./animation";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
