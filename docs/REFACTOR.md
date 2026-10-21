@@ -145,7 +145,7 @@ Left for later, as deliberate commits: closing the surprise race (#58, the UI ca
 by the air mode (#77), a surrender drill (forcing the surrendered unit back to life fails no
 test today).
 
-### 2. After step 1, in parallel (each in its own worktree)
+### 2. After step 1, in parallel (each in its own worktree) — done
 
 - **RNG seam and a headless engine.** `src/rng.ts` used at the engine's draw sites (dice,
   leaders, AI), defaulting to `Math.random`, every draw at its call site. Move `defined()` out
@@ -174,8 +174,10 @@ test today).
   stayed `this.m = function` closures: in the class body they couldn't reach that state. The
   new files are in the coverage and mutated with `map`. #68, #72, #73, #74 stay.
 - **The lifecycle classes** (#30): Scenario, ScenarioLoader, Campaign, GameState, now with step
-  0's tests. Keep the save keys and shapes. #27 goes with Campaign (nothing reads
-  `campaign.isLoaded`, so the fix is identical).
+  0's tests. Keep the save keys and shapes. **Done**, one commit each, nothing re-recorded.
+  #27 stays: nothing in the game reads `campaign.isLoaded`, but the harness snapshot compares
+  the campaign object at every step, so setting it would change the campaign replays. It needs
+  a deliberate commit (or a harness exclusion).
 - **AI seams** instead of "AI and AIScripted as classes" (that alone removes 4 casts): the
   injected rng and config, no `game` import, `startTurn` split from planning, the evaluator
   exported.
@@ -215,7 +217,7 @@ engine context is set, as before; the instances have the same own properties in 
 The `new (X as unknown as XConstructor)` casts for them are gone; `UI` is still a constructor
 function (`UIConstructor`), and so are the sprites in animation.ts and aiscripted.ts.
 
-### 3. Cleanup
+### 3. Cleanup — done (engine files)
 
 `var` to `let`/`const`, the write-only `aInitiative`/`dInitiative`, the dead code the
 reconstruction documented, the implicit globals (#34). The module objects (`GameRules`,
@@ -227,6 +229,33 @@ namespace facade over plain functions is fine.
 Also worth doing early: move the unit styles and sounds out of aiscripted.ts (lines 286-521,
 45% of the file, imported by render, ui, uibuilder and animation) into style.ts and sound.ts,
 same export names, `soundData` still loaded before animation.
+
+**Done** for the engine files, three threads by file, nothing re-recorded, verify as before:
+
+- `var` became `let`/`const` only where it is provably the same (no use before the
+  declaration, no closure in a loop, no use outside the new block). Left as `var`: the
+  exported module objects (`GameRules`, `Leaders`, `CombatLog`, `Equipment`, `Rng`,
+  `engineContext`: the harness reassigns them through `__harnessSet`, and the
+  `X = (function(X){...})(X || {})` pattern reads X before it is set), a few closure variables
+  used before their declaration, and loop counters reused by a later loop. Module-level names
+  are `let`, not `const`, for the same `__harnessSet` reason.
+- Dead code the reconstruction marked as never taken is gone (`GameMap.dumpMap`, the second
+  `NATIVE_PLATFORM`/`DEBUG_CAMPAIGN` assignments, unreachable branches and unused locals in
+  gamerules, equipment, ai, scenario, the loader). Kept: calls marked unused that still run
+  code (`u.unitData(true)` in the loader, the AI's `isOwned` lookup, which can throw, the
+  `chrome.storage` call), and `combatlog`'s always-undefined `isSupport`, which creates an own
+  property.
+- The implicit globals of #34 in the engine files are local now (ai, aiscripted, scenario, the
+  loader, gamerules' write-only `aInitiative`/`dInitiative`, combatlog). The UI's (uibuilder)
+  are left.
+- src/style.ts and src/sound.ts hold the styles and sounds; aiscripted.ts re-exports them, so
+  render, ui, uibuilder and animation still import from there. Pointing them at the new files
+  and dropping the re-export is a later UI change.
+- The UI modules (ui, uibuilder, uicombatlog, render, animation, dom) were not cleaned.
+
+After the cleanup, `src/` and `test/` were reformatted to put opening braces on the same line
+(and `} else`): one formatting-only commit, listed in `.git-blame-ignore-revs`, every file's
+syntax tree checked identical before and after. New code uses that style.
 
 ### Not worth it now
 

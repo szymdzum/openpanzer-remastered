@@ -1,0 +1,4 @@
+# Formatting-only commits, skipped by git blame (GitHub reads this file;
+# locally: git config blame.ignoreRevsFile .git-blame-ignore-revs)
+# Put opening braces on the same line
+9310fdf30df4d30acdc9e94b5eacf818ef2e6adc
