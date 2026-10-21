@@ -109,7 +109,9 @@ states recorded on the reference and replays the reference's calls on them.
   a hash of the whole state after each step; then the campaign functions, the saved game, the
   combat log and the equipment data
 
-A bug fixed on purpose changes a contract: record it again and say in the commit what changed.
+A bug fixed on purpose changes a contract, and the reference still has the bug: `UPDATE_CONTRACTS=1
+npm test` writes the remaster's results into the fixtures (the recorded states stay). Do it only in
+the commit that fixes the issue, and say in it what changed; a refactor never re-records.
 
 GitHub Actions runs the types and the contract tests on every push (`.github/workflows/ci.yml`).
 Mutation testing checks the tests themselves: Stryker changes the engine one small thing at a

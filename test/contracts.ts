@@ -64,7 +64,26 @@ export async function runFixture(module: string, run: string, name: string)
 		game.spotSide = fixture.spotSide;
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
 		c.apply(env, fixture.setup);
-	return { expected: fixture.results, actual: c.run(env) };
+	const actual = c.run(env);
+	if (process.env.UPDATE_CONTRACTS)
+	{
+		writeFixture(module, name, { ...fixture, results: actual });
+		return { expected: actual, actual };
+	}
+	return { expected: fixture.results, actual };
+}
+
+//UPDATE_CONTRACTS=1 npm test: the fixture keeps the reference's state, setup and spotSide and
+//takes this repo's results instead, for a deliberate change record.sh can't record (the reference
+//still has the old behavior). Only a fixture whose results changed is written, the others keep
+//their bytes
+export function writeFixture(module: string, name: string, fixture: ContractFixture)
+{
+	const file = path.join(contractDir(module), name);
+	const json = JSON.stringify(fixture);
+	if (fs.existsSync(file) && zlib.gunzipSync(fs.readFileSync(file)).toString("utf8") === json)
+		return;
+	fs.writeFileSync(file, zlib.gzipSync(json, { level: 9 }));
 }
 
 //Fresh modules (Equipment keeps what it loaded), then the state restored the way the recorder

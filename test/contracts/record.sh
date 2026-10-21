@@ -3,8 +3,10 @@
 # Vitest contract tests compare this repo with. Every state plays in its own Chrome, in parallel.
 # Usage: test/contracts/record.sh [module=gamerules]   (gamerules, unit or engine)
 # Writes test/contracts/<module>/<scenario>-t<turns>.json.gz: the exported game state and the
-# serialized result of every call. Record again when the reference changes, or when a bug is
-# fixed on purpose here (then the contract changes with it, and the diff shows how).
+# serialized result of every call. Record again when the reference or a contract changes.
+# A bug fixed on purpose here can't be recorded on the reference, which still has it:
+# UPDATE_CONTRACTS=1 npm test writes this repo's results into the fixtures instead (same state,
+# setup and spotSide), only in a commit that names the fixed issue.
 # Record in the Europe/Warsaw time zone: test/setup.ts pins it (the scenario dates are local).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
