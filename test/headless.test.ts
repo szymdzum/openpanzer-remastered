@@ -12,7 +12,7 @@ import { type EngineContext, engineContext, setEngineContext } from "../src/cont
 import { GameRules } from "../src/gamerules";
 import { GameMap, Player } from "../src/map";
 import { Unit } from "../src/unit";
-import { AI, type AIAction, type AIConstructor, type AIOptions, type AIPlan, aiDefaultConfig, createAIEvaluator } from "../src/ai";
+import { AI, type AIAction, type AIOptions, type AIPlan, aiDefaultConfig, createAIEvaluator } from "../src/ai";
 import { Scenario } from "../src/scenario";
 import { Actions } from "../src/actions";
 import { Equipment, type EquipmentCountryFile } from "../src/equipment";
@@ -83,7 +83,7 @@ const describeActions = (actions: AIAction[]) => actions.map((a) => a.type + ":"
 function planAI(options?: AIOptions): string[]
 {
 	const { map, players } = smallGame();
-	const ai = new (AI as unknown as AIConstructor)(players[1], map, options);
+	const ai = new AI(players[1], map, options);
 	ai.buildActions();
 	const actions: AIAction[] = [];
 	for (let a = ai.getAction(); a !== null; a = ai.getAction()) actions.push(a);
@@ -158,7 +158,7 @@ test("The AI takes its settings: aiDefaultConfig is the bundle's AI", () => {
 
 test("buildActions is startTurn then planTurn; the evaluator scores on the AI's plan", () => {
 	const { map, players } = smallGame();
-	const ai = new (AI as unknown as AIConstructor)(players[1], map, { rng: mulberry32(3) });
+	const ai = new AI(players[1], map, { rng: mulberry32(3) });
 	ai.startTurn();
 	ai.planTurn();
 	const actions: AIAction[] = [];
@@ -187,7 +187,7 @@ test("Map.endTurn hands the next player's turn to the turn driver", () => {
 	//The default plans an AI player's turn there
 	GameMap.onPlayerTurn = defaultTurnDriver;
 	const { map: map2, players: players2 } = smallGame();
-	const ai = new (AI as unknown as AIConstructor)(players2[1], map2, { rng: mulberry32(3) });
+	const ai = new AI(players2[1], map2, { rng: mulberry32(3) });
 	players2[1].handler = ai;
 	map2.endTurn();
 	expect(ai.getAction()).not.toBeNull();

@@ -206,7 +206,14 @@ nothing re-recorded, verify as before step 2):
   order changed (equipment before dom; unit and map before the scenario loader): all of them only
   declare things while loading, and the scenario loader still runs before scenario.
 
-Then **Game** (game.ts) as a class, after the lifecycle classes.
+Then **Game** (game.ts) as a class, after the lifecycle classes. **Done** (#30), nothing
+re-recorded, verify as before: `Game`, `AI` and `AIScripted` are classes whose constructor is the
+old function's body (the campaign progress, the AI's plan and the tutorial's action list stay in
+the closure, the methods are `declare` fields, `AI.onUnitsDeployed` and `Game.defaultScenario` stay
+assigned after the class). A class isn't hoisted, so `game` is made after the class, then the
+engine context is set, as before; the instances have the same own properties in the same order.
+The `new (X as unknown as XConstructor)` casts for them are gone; `UI` is still a constructor
+function (`UIConstructor`), and so are the sprites in animation.ts and aiscripted.ts.
 
 ### 3. Cleanup
 

@@ -34,9 +34,6 @@ var h: any;
 export type AIActionParam = Unit | Cell | string;
 export interface AIAction { type: number; param: any[]; }
 
-//AI and AIScripted are constructor functions, as in the bundle: this gives `new` on them a type
-export interface AIConstructor { new (player: Player, map: GameMap, options?: AIOptions): AI; }
-
 //The AI's settings: what it buys, when it reinforces and resupplies, how it scores
 export interface AIConfig
 {
@@ -152,375 +149,377 @@ export class EnemyUnit
 	}
 }
 
-//The methods AI sets up in its constructor
-export interface AI
+//player is the AI controlled player, map the scenario map, options its random numbers and settings.
+//The constructor's body keeps the state in its closure and sets up the methods (docs/TYPES.md rule 3)
+export class AI
 {
-	buildActions(): void; //startTurn, then planTurn
-	startTurn(): void;
-	planTurn(): void;
-	getAction(): AIAction;
-	getEvaluator(): AIEvaluator;
-}
+	declare buildActions: () => void; //startTurn, then planTurn
+	declare startTurn: () => void;
+	declare planTurn: () => void;
+	declare getAction: () => AIAction;
+	declare getEvaluator: () => AIEvaluator;
 
-//player is the AI controlled player, map the scenario map, options its random numbers and settings
-export function AI(this: AI, player: Player, map: GameMap, options?: AIOptions)
-{
-	var config = options && options.config ? options.config : aiDefaultConfig;
-	var rng = options && options.rng ? options.rng : Rng.random;
-	var allUnits: Unit[] = [];
-	var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do
-	var actionsQueue: AIAction[] = [];
-	var plan: AIPlan = { enemyUnits: {}, takenPositions: [], freedPositions: [], defendObjectives: [], objectives: [] };
-	var evaluator = createAIEvaluator(player, map, plan, config, rng);
-	var prestigeLeft = player.prestige; //prestige left for reinforcements
+	declare static onUnitsDeployed: (() => void) | null; //assigned below
 
-	//The turn as Map.endTurn starts it (GameMap.onPlayerTurn): the start, then the plan
-	this.buildActions = function()
+	constructor(player: Player, map: GameMap, options?: AIOptions)
 	{
-		startTurn();
-		planTurn();
-	}
+		var config = options && options.config ? options.config : aiDefaultConfig;
+		var rng = options && options.rng ? options.rng : Rng.random;
+		var allUnits: Unit[] = [];
+		var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do
+		var actionsQueue: AIAction[] = [];
+		var plan: AIPlan = { enemyUnits: {}, takenPositions: [], freedPositions: [], defendObjectives: [], objectives: [] };
+		var evaluator = createAIEvaluator(player, map, plan, config, rng);
+		var prestigeLeft = player.prestige; //prestige left for reinforcements
 
-	//Buys units with the prestige over the reserve, deploys the core units, lets the UI redraw
-	//(AI.onUnitsDeployed). The prestige left for reinforcements is taken before buying (#21)
-	function startTurn(): void
-	{
-		var i, j;
-		prestigeLeft = player.prestige;
-		var prestige = player.prestige;
-
-		//Buy new units with the prestige over the reserve, part of it for air units
-		if (!(prestige <= prestigeReserve))
+		//The turn as Map.endTurn starts it (GameMap.onPlayerTurn): the start, then the plan
+		this.buildActions = function()
 		{
-			prestige = prestige - prestigeReserve;
-			var airPrestige = prestige * airPrestigeRatio;
-			if (airPrestige < 300)
-				airPrestige = 0;
-			prestige = prestige - airPrestige;
-			var airPurchase = buyUnits(airPrestige, airPurchaseClasses);
-			var groundPurchase = buyUnits(prestige, groundPurchaseClasses);
-			var eqList = airPurchase.units;
-			for (i = eqList.length - 1; i >= 0; i--)
-				player.buyUnit(eqList[i]);
-			airPurchase.units = [];
-			eqList = groundPurchase.units;
-			for (i = eqList.length - 1; i >= 0; i--)
-				player.buyUnit(eqList[i]);
-			groundPurchase.units = [];
+			startTurn();
+			planTurn();
 		}
 
-		//Deploy the undeployed core units on the deployment hexes
-		var coreUnits = player.getCoreUnitList();
-		var deployHexes = map.getDeployHexes(player.side);
-		//h is not declared: an implicit global, kept as in the bundle
-		for (h = 0; h < deployHexes.length; h++)
+		//Buys units with the prestige over the reserve, deploys the core units, lets the UI redraw
+		//(AI.onUnitsDeployed). The prestige left for reinforcements is taken before buying (#21)
+		function startTurn(): void
 		{
-			for (j = 0; j < coreUnits.length; j++)
+			var i, j;
+			prestigeLeft = player.prestige;
+			var prestige = player.prestige;
+
+			//Buy new units with the prestige over the reserve, part of it for air units
+			if (!(prestige <= prestigeReserve))
 			{
-				if (!coreUnits[j].isDeployed)
+				prestige = prestige - prestigeReserve;
+				var airPrestige = prestige * airPrestigeRatio;
+				if (airPrestige < 300)
+					airPrestige = 0;
+				prestige = prestige - airPrestige;
+				var airPurchase = buyUnits(airPrestige, airPurchaseClasses);
+				var groundPurchase = buyUnits(prestige, groundPurchaseClasses);
+				var eqList = airPurchase.units;
+				for (i = eqList.length - 1; i >= 0; i--)
+					player.buyUnit(eqList[i]);
+				airPurchase.units = [];
+				eqList = groundPurchase.units;
+				for (i = eqList.length - 1; i >= 0; i--)
+					player.buyUnit(eqList[i]);
+				groundPurchase.units = [];
+			}
+
+			//Deploy the undeployed core units on the deployment hexes
+			var coreUnits = player.getCoreUnitList();
+			var deployHexes = map.getDeployHexes(player.side);
+			//h is not declared: an implicit global, kept as in the bundle
+			for (h = 0; h < deployHexes.length; h++)
+			{
+				for (j = 0; j < coreUnits.length; j++)
 				{
-					var cell = deployHexes[h];
-					map.deployPlayerUnit(player, j, cell.row, cell.col);
+					if (!coreUnits[j].isDeployed)
+					{
+						var cell = deployHexes[h];
+						map.deployPlayerUnit(player, j, cell.row, cell.col);
+					}
 				}
 			}
-		}
-		for (j = 0; j < coreUnits.length; j++); //empty loop, kept from the bundle
-		if (AI.onUnitsDeployed) AI.onUnitsDeployed();
-	}
-
-	//Plans the turn: the actions getAction hands out, unit by unit
-	function planTurn(): void
-	{
-		var i;
-		allUnits = map.getUnits();
-		plan.takenPositions = [];
-		plan.freedPositions = [];
-		plan.objectives = map.sidesVictoryHexes[player.side];
-		plan.defendObjectives = map.sidesVictoryHexes[+!player.side];
-		plan.enemyUnits = {};
-		aiUnits = [];
-		//Artillery, fortifications, air and naval combat units act first
-		for (i = 0; i < allUnits.length; i++)
-		{
-			if (allUnits[i].player.id != player.id)
-				continue;
-			if (allUnits[i].unitData().uclass == unitClass.artillery
-				|| allUnits[i].unitData().uclass == unitClass.fortification
-				|| (GameRules.isAir(allUnits[i]) && allUnits[i].unitData().uclass != unitClass.airTransport)
-				|| (GameRules.isSea(allUnits[i]) && allUnits[i].unitData().uclass != unitClass.navalTransport))
-				aiUnits.unshift(new AIUnit(allUnits[i]));
-			else
-				aiUnits.push(new AIUnit(allUnits[i]));
+			for (j = 0; j < coreUnits.length; j++); //empty loop, kept from the bundle
+			if (AI.onUnitsDeployed) AI.onUnitsDeployed();
 		}
 
-		//Each unit gets another pass until it can't do anything else
-		var aiUnit: AIUnit = null;
-		while (aiUnits.length > 0)
+		//Plans the turn: the actions getAction hands out, unit by unit
+		function planTurn(): void
 		{
-			aiUnit = aiUnits[0];
-			reinforceUnit(aiUnit);
-			resupplyUnit(aiUnit);
-			moveUnit(aiUnit);
-			attackUnit(aiUnit);
-			if (aiUnit.noReinforce && aiUnit.noResupply && aiUnit.noAttack && aiUnit.noMove)
-				aiUnits.shift();
-		}
-	}
-
-	this.startTurn = startTurn;
-	this.planTurn = planTurn;
-
-	//The scores this AI plans with, on its plan of the turn
-	this.getEvaluator = function() { return evaluator; }
-
-	this.getAction = function()
-	{
-		if (actionsQueue.length == 0)
-			return null;
-		var action = actionsQueue[0];
-		actionsQueue.splice(0, 1);
-		return action;
-	}
-
-	function addAction(actionType: number, params: AIActionParam[])
-	{
-		actionsQueue.push({ type: actionType, param: params });
-	}
-
-	//Reinforces a weak unit or one that can't move or attack anymore, if there is prestige left
-	function reinforceUnit(aiUnit: AIUnit): boolean
-	{
-		var unit = aiUnit.unit;
-		if (!GameRules.canReinforce(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack
-			|| aiUnit.didMove || unit.unitData().uclass == unitClass.fortification || prestigeLeft <= 0)
-		{
-			aiUnit.noReinforce = true;
-			return false;
-		}
-		if ((aiUnit.noAttack && aiUnit.noMove) || unit.strength < minReinforceStrength)
-		{
-			var costPerStrength = GameRules.calculateUnitCostPerStrength(unit);
-			var reinforceValue = GameRules.getReinforceValue(map.map, unit);
-			var strength = (prestigeLeft / costPerStrength) >> 0;
-			if (strength > reinforceValue)
-				strength = reinforceValue;
-			if (reinforceValue > 0 && strength > 0)
+			var i;
+			allUnits = map.getUnits();
+			plan.takenPositions = [];
+			plan.freedPositions = [];
+			plan.objectives = map.sidesVictoryHexes[player.side];
+			plan.defendObjectives = map.sidesVictoryHexes[+!player.side];
+			plan.enemyUnits = {};
+			aiUnits = [];
+			//Artillery, fortifications, air and naval combat units act first
+			for (i = 0; i < allUnits.length; i++)
 			{
-				addAction(actionType.reinforce, [ unit ]);
-				prestigeLeft -= strength * costPerStrength;
-				return (aiUnit.didResupplyReinforce = true);
+				if (allUnits[i].player.id != player.id)
+					continue;
+				if (allUnits[i].unitData().uclass == unitClass.artillery
+					|| allUnits[i].unitData().uclass == unitClass.fortification
+					|| (GameRules.isAir(allUnits[i]) && allUnits[i].unitData().uclass != unitClass.airTransport)
+					|| (GameRules.isSea(allUnits[i]) && allUnits[i].unitData().uclass != unitClass.navalTransport))
+					aiUnits.unshift(new AIUnit(allUnits[i]));
+				else
+					aiUnits.push(new AIUnit(allUnits[i]));
+			}
+
+			//Each unit gets another pass until it can't do anything else
+			var aiUnit: AIUnit = null;
+			while (aiUnits.length > 0)
+			{
+				aiUnit = aiUnits[0];
+				reinforceUnit(aiUnit);
+				resupplyUnit(aiUnit);
+				moveUnit(aiUnit);
+				attackUnit(aiUnit);
+				if (aiUnit.noReinforce && aiUnit.noResupply && aiUnit.noAttack && aiUnit.noMove)
+					aiUnits.shift();
 			}
 		}
-		if (aiUnit.noAttack && aiUnit.noMove)
-			aiUnit.noReinforce = true;
-		return false;
-	}
 
-	//Resupplies a unit low on ammo or fuel or one that can't move or attack anymore
-	//(inlined into buildActions in the bundle)
-	function resupplyUnit(aiUnit: AIUnit): void
-	{
-		var unit = aiUnit.unit;
-		if (!GameRules.canResupply(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack || aiUnit.didMove)
-		{
-			aiUnit.noResupply = true;
-		}
-		else if ((aiUnit.noAttack && aiUnit.noMove) || unit.ammo < minAmmo
-				|| (GameRules.unitUsesFuel(unit) && unit.fuel < minFuel))
-		{
-			addAction(actionType.resupply, [ unit ]);
-			aiUnit.didResupplyReinforce = true;
-		}
-		else if (aiUnit.noAttack && aiUnit.noMove) //never true, the previous check already caught it
-		{
-			aiUnit.noResupply = true;
-		}
-	}
+		this.startTurn = startTurn;
+		this.planTurn = planTurn;
 
-	//Moves the unit to the best scored cell in its move range, if better than where it stands
-	function moveUnit(aiUnit: AIUnit): boolean
-	{
-		var unit = aiUnit.unit;
-		if (aiUnit.didMove || aiUnit.didResupplyReinforce || !unit)
+		//The scores this AI plans with, on its plan of the turn
+		this.getEvaluator = function() { return evaluator; }
+
+		this.getAction = function()
 		{
+			if (actionsQueue.length == 0)
+				return null;
+			var action = actionsQueue[0];
+			actionsQueue.splice(0, 1);
+			return action;
+		}
+
+		function addAction(actionType: number, params: AIActionParam[])
+		{
+			actionsQueue.push({ type: actionType, param: params });
+		}
+
+		//Reinforces a weak unit or one that can't move or attack anymore, if there is prestige left
+		function reinforceUnit(aiUnit: AIUnit): boolean
+		{
+			var unit = aiUnit.unit;
+			if (!GameRules.canReinforce(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack
+				|| aiUnit.didMove || unit.unitData().uclass == unitClass.fortification || prestigeLeft <= 0)
+			{
+				aiUnit.noReinforce = true;
+				return false;
+			}
+			if ((aiUnit.noAttack && aiUnit.noMove) || unit.strength < minReinforceStrength)
+			{
+				var costPerStrength = GameRules.calculateUnitCostPerStrength(unit);
+				var reinforceValue = GameRules.getReinforceValue(map.map, unit);
+				var strength = (prestigeLeft / costPerStrength) >> 0;
+				if (strength > reinforceValue)
+					strength = reinforceValue;
+				if (reinforceValue > 0 && strength > 0)
+				{
+					addAction(actionType.reinforce, [ unit ]);
+					prestigeLeft -= strength * costPerStrength;
+					return (aiUnit.didResupplyReinforce = true);
+				}
+			}
+			if (aiUnit.noAttack && aiUnit.noMove)
+				aiUnit.noReinforce = true;
+			return false;
+		}
+
+		//Resupplies a unit low on ammo or fuel or one that can't move or attack anymore
+		//(inlined into buildActions in the bundle)
+		function resupplyUnit(aiUnit: AIUnit): void
+		{
+			var unit = aiUnit.unit;
+			if (!GameRules.canResupply(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack || aiUnit.didMove)
+			{
+				aiUnit.noResupply = true;
+			}
+			else if ((aiUnit.noAttack && aiUnit.noMove) || unit.ammo < minAmmo
+					|| (GameRules.unitUsesFuel(unit) && unit.fuel < minFuel))
+			{
+				addAction(actionType.resupply, [ unit ]);
+				aiUnit.didResupplyReinforce = true;
+			}
+			else if (aiUnit.noAttack && aiUnit.noMove) //never true, the previous check already caught it
+			{
+				aiUnit.noResupply = true;
+			}
+		}
+
+		//Moves the unit to the best scored cell in its move range, if better than where it stands
+		function moveUnit(aiUnit: AIUnit): boolean
+		{
+			var unit = aiUnit.unit;
+			if (aiUnit.didMove || aiUnit.didResupplyReinforce || !unit)
+			{
+				aiUnit.noMove = true;
+				return false;
+			}
+			var moveCells = GameRules.getMoveRange(map, unit);
+			if (!moveCells || moveCells.length == 0)
+			{
+				aiUnit.noMove = true;
+				return false;
+			}
+			var pos: Cell & { canMove?: boolean } = unit.getPos();
+			pos.canMove = true;
+			var bestScore = evaluator.getCellScore(unit, pos);
+			var objective: AIObjectiveScore;
+			if (GameRules.isGround(unit))
+			{
+				objective = evaluator.getObjectiveScore(pos);
+				bestScore = bestScore + objective.score;
+			}
+			bestScore = bestScore + unit.entrenchment * entrenchmentScore;
+			var attackScore = evaluator.getAttackPotential(unit, pos);
+			bestScore = bestScore + attackScore;
+			var bestCell: Cell = null;
+			var score = 0;
+			for (var i = 0; i < moveCells.length; i++)
+			{
+				objective = evaluator.getObjectiveScore(moveCells[i]);
+				if (GameRules.isAir(unit))
+					objective.score *= 0.3;
+				if (GameRules.isSea(unit))
+					objective.score = 0;
+				score = evaluator.getCellScore(unit, moveCells[i]) + objective.score;
+				if (score < -2000)
+					continue;
+				attackScore = evaluator.getAttackPotential(unit, moveCells[i]);
+				score += attackScore;
+				if (score > bestScore)
+				{
+					bestCell = moveCells[i];
+					bestScore = score;
+				}
+			}
+			if (bestCell !== null)
+			{
+				//Mark the destination taken and the old position free (inlined in the bundle)
+				var dest = bestCell;
+				var oldPos = unit.getPos();
+				var index: number;
+				plan.takenPositions.push(dest);
+				if ((index = evaluator.findFreedPosition(dest)) >= 0)
+					plan.freedPositions.splice(index, 1);
+				plan.freedPositions.push(oldPos);
+
+				addAction(actionType.move, [ unit, bestCell ]);
+				aiUnit.didMove = true;
+				aiUnit.newPosition = bestCell;
+				return true;
+			}
 			aiUnit.noMove = true;
 			return false;
 		}
-		var moveCells = GameRules.getMoveRange(map, unit);
-		if (!moveCells || moveCells.length == 0)
+
+		//Attacks the best scored target from where the unit stands or was ordered to move to
+		//(inlined into buildActions in the bundle)
+		function attackUnit(aiUnit: AIUnit): void
 		{
-			aiUnit.noMove = true;
-			return false;
-		}
-		var pos: Cell & { canMove?: boolean } = unit.getPos();
-		pos.canMove = true;
-		var bestScore = evaluator.getCellScore(unit, pos);
-		var objective: AIObjectiveScore;
-		if (GameRules.isGround(unit))
-		{
-			objective = evaluator.getObjectiveScore(pos);
-			bestScore = bestScore + objective.score;
-		}
-		bestScore = bestScore + unit.entrenchment * entrenchmentScore;
-		var attackScore = evaluator.getAttackPotential(unit, pos);
-		bestScore = bestScore + attackScore;
-		var bestCell: Cell = null;
-		var score = 0;
-		for (var i = 0; i < moveCells.length; i++)
-		{
-			objective = evaluator.getObjectiveScore(moveCells[i]);
-			if (GameRules.isAir(unit))
-				objective.score *= 0.3;
-			if (GameRules.isSea(unit))
-				objective.score = 0;
-			score = evaluator.getCellScore(unit, moveCells[i]) + objective.score;
-			if (score < -2000)
-				continue;
-			attackScore = evaluator.getAttackPotential(unit, moveCells[i]);
-			score += attackScore;
-			if (score > bestScore)
+			var unit = aiUnit.unit;
+			if (unit.hasFired || aiUnit.didAttack || aiUnit.didResupplyReinforce)
 			{
-				bestCell = moveCells[i];
-				bestScore = score;
+				aiUnit.noAttack = true;
+				return;
+			}
+			var target: Unit = null;
+			var result = {} as AIAttackScore;
+			var unitHex = unit.getHex();
+			var attackHex = unitHex;
+			//An attack must score more than these losses
+			var bestScore = -(attackLossesThreshold * unitClassLossCost[unit.unitData().uclass]);
+			var bestKills = 0;
+			if (aiUnit.didMove && aiUnit.newPosition !== null)
+			{
+				attackHex = map.map[aiUnit.newPosition.row][aiUnit.newPosition.col];
+				unit.setHex(attackHex);
+			}
+			//Less eager to attack from a victory hex
+			if (attackHex.victorySide != -1)
+				bestScore -= 50;
+			var cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
+			for (var i = 0; i < cells.length; i++)
+			{
+				result = evaluator.getAttackScore(unit, cells[i], false);
+				if (result.score > bestScore)
+				{
+					bestScore = result.score;
+					bestKills = result.kills;
+					var targetHex = map.map[cells[i].row][cells[i].col];
+					target = targetHex.getAttackableUnit(unit, false);
+				}
+			}
+			if (aiUnit.didMove && unitHex !== null)
+				unit.setHex(unitHex);
+
+			if (target)
+			{
+				//Record the expected losses of the target (inlined in the bundle)
+				var enemy = target;
+				if (enemy)
+				{
+					if (typeof plan.enemyUnits[enemy.id] === "undefined")
+						plan.enemyUnits[enemy.id] = new EnemyUnit(enemy);
+					plan.enemyUnits[enemy.id].isAttacked = true;
+					plan.enemyUnits[enemy.id].losses += bestKills;
+					if (plan.enemyUnits[enemy.id].losses > enemy.strength)
+						plan.enemyUnits[enemy.id].isKilled = true;
+				}
+				addAction(actionType.attack, [ unit, target ]);
+				//noResupplyReinforce is not an AIUnit property (a typo for noResupply?), kept from the bundle
+				aiUnit.didAttack = aiUnit.noResupplyReinforce = true;
+			}
+			else if (aiUnit.noMove || aiUnit.didMove)
+			{
+				aiUnit.noAttack = true;
 			}
 		}
-		if (bestCell !== null)
-		{
-			//Mark the destination taken and the old position free (inlined in the bundle)
-			var dest = bestCell;
-			var oldPos = unit.getPos();
-			var index: number;
-			plan.takenPositions.push(dest);
-			if ((index = evaluator.findFreedPosition(dest)) >= 0)
-				plan.freedPositions.splice(index, 1);
-			plan.freedPositions.push(oldPos);
 
-			addAction(actionType.move, [ unit, bestCell ]);
-			aiUnit.didMove = true;
-			aiUnit.newPosition = bestCell;
-			return true;
+		//Picks random affordable units of the classes in classList, cycling through the list,
+		//until prestige runs out or a whole cycle ends on a class with nothing to buy
+		function buyUnits(prestige: number, classList: number[]): { prestige: number; units: number[] }
+		{
+			var units: number[] = [];
+			var country = player.country + 1;
+			var classIndex = 0;
+			var noneFound = false;
+			while (prestige > 0)
+			{
+				if (classIndex > classList.length - 1)
+				{
+					if (noneFound)
+						break;
+					classIndex = 0;
+				}
+				var eqList = Equipment.getCountryEquipmentByClass(classList[classIndex], country);
+				for (var i = eqList.length - 1; i >= 0; i--)
+				{
+					var cost = GameRules.calculateUnitCosts(eqList[i]);
+					if (cost > prestige || cost > maxUnitCost || cost < minUnitCost
+						|| Equipment.equipment[eqList[i]].movmethod == movMethod.deepnaval
+						|| Equipment.equipment[eqList[i]].yearavailable > engineContext.scenario().date.getFullYear())
+						eqList.splice(i, 1);
+				}
+				if (eqList.length > 0)
+				{
+					var eqid = eqList[randomInt(rng, 0, eqList.length - 1)];
+					prestige -= GameRules.calculateUnitCosts(eqid);
+					units.push(eqid);
+					noneFound = false;
+				}
+				else
+				{
+					noneFound = true;
+				}
+				classIndex++;
+			}
+			return { prestige: prestige, units: units };
 		}
-		aiUnit.noMove = true;
-		return false;
+
+		//The settings (AIConfig), assigned last as in the bundle
+		var minReinforceStrength = config.minReinforceStrength;
+		var minAmmo = config.minAmmo;
+		var minFuel = config.minFuel;
+		var attackLossesThreshold = config.attackLossesThreshold;
+		var entrenchmentScore = config.entrenchmentScore;
+		var prestigeReserve = config.prestigeReserve;
+		var airPrestigeRatio = config.airPrestigeRatio;
+		var maxUnitCost = config.maxUnitCost;
+		var minUnitCost = config.minUnitCost;
+		var airPurchaseClasses = config.airPurchaseClasses;
+		var groundPurchaseClasses = config.groundPurchaseClasses;
+		var unitClassLossCost = config.unitClassLossCost;
 	}
-
-	//Attacks the best scored target from where the unit stands or was ordered to move to
-	//(inlined into buildActions in the bundle)
-	function attackUnit(aiUnit: AIUnit): void
-	{
-		var unit = aiUnit.unit;
-		if (unit.hasFired || aiUnit.didAttack || aiUnit.didResupplyReinforce)
-		{
-			aiUnit.noAttack = true;
-			return;
-		}
-		var target: Unit = null;
-		var result = {} as AIAttackScore;
-		var unitHex = unit.getHex();
-		var attackHex = unitHex;
-		//An attack must score more than these losses
-		var bestScore = -(attackLossesThreshold * unitClassLossCost[unit.unitData().uclass]);
-		var bestKills = 0;
-		if (aiUnit.didMove && aiUnit.newPosition !== null)
-		{
-			attackHex = map.map[aiUnit.newPosition.row][aiUnit.newPosition.col];
-			unit.setHex(attackHex);
-		}
-		//Less eager to attack from a victory hex
-		if (attackHex.victorySide != -1)
-			bestScore -= 50;
-		var cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
-		for (var i = 0; i < cells.length; i++)
-		{
-			result = evaluator.getAttackScore(unit, cells[i], false);
-			if (result.score > bestScore)
-			{
-				bestScore = result.score;
-				bestKills = result.kills;
-				var targetHex = map.map[cells[i].row][cells[i].col];
-				target = targetHex.getAttackableUnit(unit, false);
-			}
-		}
-		if (aiUnit.didMove && unitHex !== null)
-			unit.setHex(unitHex);
-
-		if (target)
-		{
-			//Record the expected losses of the target (inlined in the bundle)
-			var enemy = target;
-			if (enemy)
-			{
-				if (typeof plan.enemyUnits[enemy.id] === "undefined")
-					plan.enemyUnits[enemy.id] = new EnemyUnit(enemy);
-				plan.enemyUnits[enemy.id].isAttacked = true;
-				plan.enemyUnits[enemy.id].losses += bestKills;
-				if (plan.enemyUnits[enemy.id].losses > enemy.strength)
-					plan.enemyUnits[enemy.id].isKilled = true;
-			}
-			addAction(actionType.attack, [ unit, target ]);
-			//noResupplyReinforce is not an AIUnit property (a typo for noResupply?), kept from the bundle
-			aiUnit.didAttack = aiUnit.noResupplyReinforce = true;
-		}
-		else if (aiUnit.noMove || aiUnit.didMove)
-		{
-			aiUnit.noAttack = true;
-		}
-	}
-
-	//Picks random affordable units of the classes in classList, cycling through the list,
-	//until prestige runs out or a whole cycle ends on a class with nothing to buy
-	function buyUnits(prestige: number, classList: number[]): { prestige: number; units: number[] }
-	{
-		var units: number[] = [];
-		var country = player.country + 1;
-		var classIndex = 0;
-		var noneFound = false;
-		while (prestige > 0)
-		{
-			if (classIndex > classList.length - 1)
-			{
-				if (noneFound)
-					break;
-				classIndex = 0;
-			}
-			var eqList = Equipment.getCountryEquipmentByClass(classList[classIndex], country);
-			for (var i = eqList.length - 1; i >= 0; i--)
-			{
-				var cost = GameRules.calculateUnitCosts(eqList[i]);
-				if (cost > prestige || cost > maxUnitCost || cost < minUnitCost
-					|| Equipment.equipment[eqList[i]].movmethod == movMethod.deepnaval
-					|| Equipment.equipment[eqList[i]].yearavailable > engineContext.scenario().date.getFullYear())
-					eqList.splice(i, 1);
-			}
-			if (eqList.length > 0)
-			{
-				var eqid = eqList[randomInt(rng, 0, eqList.length - 1)];
-				prestige -= GameRules.calculateUnitCosts(eqid);
-				units.push(eqid);
-				noneFound = false;
-			}
-			else
-			{
-				noneFound = true;
-			}
-			classIndex++;
-		}
-		return { prestige: prestige, units: units };
-	}
-
-	//The settings (AIConfig), assigned last as in the bundle
-	var minReinforceStrength = config.minReinforceStrength;
-	var minAmmo = config.minAmmo;
-	var minFuel = config.minFuel;
-	var attackLossesThreshold = config.attackLossesThreshold;
-	var entrenchmentScore = config.entrenchmentScore;
-	var prestigeReserve = config.prestigeReserve;
-	var airPrestigeRatio = config.airPrestigeRatio;
-	var maxUnitCost = config.maxUnitCost;
-	var minUnitCost = config.minUnitCost;
-	var airPurchaseClasses = config.airPurchaseClasses;
-	var groundPurchaseClasses = config.groundPurchaseClasses;
-	var unitClassLossCost = config.unitClassLossCost;
 }
 
 //Random integer between min and max inclusive, from rng's number in [0, 1)
