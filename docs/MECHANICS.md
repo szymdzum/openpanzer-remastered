@@ -1,0 +1,276 @@
+# Game mechanics
+
+How the game plays, as the code does it (src/, 3.2.14 behavior), with the player's view first
+and the numbers after. The [manual](https://nicupavel.github.io/openpanzer-manual/) describes
+some rules the code doesn't have, see the end.
+
+## Combat
+
+An attack is one exchange: the attacker fires, the defender fires back at the same time
+(`GameRules.calculateAttackResults`, gamerules.ts).
+
+**Every strength point fires on its own.** A unit at strength 10 rolls a d20 ten times
+(`getCombatKills`). Each roll at or above the hit threshold kills one strength point of the
+other unit. A weak unit hits weakly: strength 4 deals about 40% of what strength 10 deals.
+
+- Kill fraction `kF = attack value - defense value`. Above 4 it grows slower:
+  `kF = 4 + (2kF - 8) / 5` (the PG2 formula).
+- Each roll other than a 1 or a 20 adds kF. 1 always misses, 20 always hits.
+- Hit threshold 15. It's 19 for artillery, level bombers, fortifications and ships firing at
+  land: they hit less often, but nothing fires back at them from range.
+- The estimate (the AI's and a future odds preview) uses no dice:
+  `kills = (5 * clamp(kF + 21 - threshold, 1, 19) * strength + 50) / 100`.
+
+**Which values fight.** Every unit has a target type: soft (infantry, trucks), hard (tanks),
+air or naval. The attacker uses its attack against the defender's target type (soft, hard, air
+or naval attack). Each side defends with ground defense (air defense against aircraft).
+
+**Modifiers**, added to the attack (av) and defense (dv) values:
+
+| Situation | Effect |
+|-----------|--------|
+| Close combat: infantry attacks into city, forest, mountain, swamp... or a fortification | defender uses close defense; infantry defender makes the attacker use its close defense too, other defenders give the attacker +4 av |
+| Defender in a city | defender +4 dv |
+| A side standing in a river or stream without a road | the other side +4 av and +4 dv |
+| Defender is artillery | attacker +3 dv |
+| Entrenchment | + its level to dv (see below) |
+| Infantry defending in close terrain, attacked by tanks, recon, anti-tank... (not infantry, artillery, air or naval) | entrenchment counts twice |
+| Experience | +1 av and dv per 100 experience |
+| Earlier attacks this turn on the defender | defender -2 dv per hit taken (not when attacked by artillery, fortifications or ships) |
+| Ground vs ground, not close combat | range defense modifier: full at range, half when adjacent; anti-tank that moved loses it |
+| Initiative (see below) | the higher side +4 dv and up to +4 av |
+| Surprised attacker or rugged defense | attacker dv = 0, av halved |
+| Leaders | see Leaders |
+
+**Initiative** compares the two units' equipment initiative. The higher side (attacker on a
+tie) gets +4 defense and +min(4, difference) attack. In practice: it takes fewer losses.
+
+**The defender fires back** only when attacked from an adjacent hex (ships in gun range also
+fire back at ships), and only if it can attack that target type and has ammo.
+
+**Support fire.** Before an attack from an adjacent hex, the defender's artillery that has the
+attacker within its gun range fires at the attacker (`getSupportFireUnits`). Against aircraft,
+flak, air defense and fighters do it. Ranged attacks get no support fire. Your own artillery
+protects your units the same way.
+
+**After the combat:**
+
+- Losses come off strength. Every hit also takes 1 entrenchment level and counts toward the -2
+  dv per hit (`Unit.hit`).
+- Retreat: a ground defender attacked by a ground unit (not artillery, tactical bombers or
+  fortifications) that lost `0.6 - (10 - strength) / 20` of its strength or more retreats to a
+  free hex behind it. Weaker units retreat sooner. With no free hex it surrenders.
+- Overrun: a tank that destroys an adjacent defender with at most 1 loss and wasn't surprised
+  takes no return fire and gets an extra move (map.ts).
+- Experience: both sides gain it, more for kills against stronger or better-defended enemies.
+  The cap is 500 (`UNIT_MAX_EXPERIENCE`).
+
+## Entrenchment
+
+- A unit that doesn't move entrenches over the turns (`Unit` entrench, unit.ts), up to the
+  terrain's base + 5. Experience and the unit class's entrench rate make it faster.
+- Terrain base (`terrainEntrenchment`, prototypes.ts): fortification 4, city 3; forest,
+  bocage, mountain and rough 2; hill and port 1; everything else 0.
+- Moving out of the hex loses all of it. Every hit taken loses 1 level.
+- Some equipment ignores entrenchment (engineers). The infiltration tactics and street fighter
+  leaders ignore it in cities, rough terrain and ports.
+- **Rugged defense** (`isRuggedDefense`): an adjacent attack on an entrenched defender can turn
+  into a rugged defense when its entrenchment, experience and class entrench rate are high
+  enough against the attacker's experience. The attacker then has no defense and half its
+  attack. This is where "why did I lose 6 points?" comes from.
+
+So: bomb and shell first (no return fire, entrenchment and defense go down with every hit),
+then assault, then overrun with tanks.
+
+## Movement and zone of control
+
+- Move cost per hex comes from the movement table of the unit's move method (tracked, wheeled,
+  leg, towed, air, naval...) and the ground condition: dry, frozen or mud (`movTableDry`,
+  `movTableFrozen`, `movTableMud`). Roads, and bridges for their owner's side, use the road cost.
+- **Zone of control**: every ground unit controls its 6 adjacent hexes. Entering a spotted hex
+  in the enemy's ZOC stops the move (`getMoveRange`). Air units have no ZOC.
+- Moving into a hidden enemy is a surprise: the combat goes badly and the move ends.
+- Recon can split its movement over several moves in a turn.
+- Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
+- A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank
+  and air defense have to stay in place to fire (`Unit.move`).
+
+## Spotting
+
+Each unit spots its equipment's spot range around it (+2 elite recon veteran leader, +1
+skilled reconnaissance). A spotted hex stays visible for the rest of the turn. Units that fire
+are shown even on unspotted hexes.
+
+## Supply and reinforcement
+
+Both need a unit that hasn't moved, attacked or already been supplied this turn
+(`getResupplyValue`, `getReinforceValue`, `canReinforce`).
+
+- Full amount in a city with no adjacent enemy. Outside a city /1.3, with 1-2 adjacent enemies
+  /1.5, with 3 or more /3. Air and naval units always get the full amount; air units reinforce
+  next to an airfield, naval units outside ports.
+- At turn start, units in a city with no adjacent enemy are resupplied automatically.
+- Reinforcing costs prestige, by the unit's cost per strength point.
+- **Overstrength**: a unit at strength 10 with 100+ experience can reinforce over 10, one point
+  per 100 experience.
+
+## Experience and leaders
+
+- One experience level per 100 (the stars). It adds to attack, defense and, through
+  overstrength, to strength.
+- A unit that goes up a level rolls for a leader: a roll from its level to 10 has to be above
+  8, so higher levels get one more easily. At the experience cap it always gets one
+  (`generateLeaderWithChance`).
+- A leader gives two abilities: the class leader (the first in `unitClassLeaders` for the unit
+  class) and a random one from that class's list (leaders.ts). They change the combat values,
+  move range, spotting, entrenchment and kill rolls, e.g. aggressive attack +4 av +2 dv, first
+  strike makes initiative always favor the unit, overwhelming attack +2 kF and +1 kill,
+  resilience -2 kF for the enemy, aggressive maneuver +1 move.
+
+## Prestige and victory
+
+- Prestige buys and upgrades units and pays for reinforcements. It comes from captured flags
+  (50), objectives (150), the scenario's turn gains and the scenario outcome.
+- Unit cost is the PG2 equipment cost x 12 (`CURRENCY_MULTIPLIER`), plus its transport.
+- Victory: hold all the side's victory hexes (gold flags) before the turn limit. The sooner,
+  the better: brilliant, victory or tactical, set per scenario. A campaign branches on the
+  outcome and a brilliant victory can give a prototype unit (at least 200 prestige worth).
+- Running out of turns is a defeat, which can end the campaign.
+
+## Weather
+
+Only the ground condition has an effect: mud and frozen ground change the movement costs
+(`Scenario` sets the movement table, scenario.ts). The atmospheric weather (fair, overcast,
+rain, snow) is shown in the status bar and the turn summary but changes nothing in combat,
+movement or spotting (`//TODO Weather` in `calculateAttackResults`).
+
+## Tactics
+
+What the rules above mean for playing a turn.
+
+**Not everything moves first.** A unit moved in its transport can't fire that turn, so towed
+artillery, anti-tank and air defense fire from where they stood since the last turn. Firing
+doesn't stop a unit from moving afterwards (`getMoveRange` only checks `hasMoved`): fire
+first, then reposition.
+
+**A turn, in order:**
+
+1. **Recon.** Reveal the ground before moving into it: a hidden enemy means a surprise combat
+   and the end of the move. It also shows where the enemy artillery and air defense are.
+2. **Artillery, from where it stands.** A ranged attack takes no return fire and no support
+   fire, and every hit takes an entrenchment level. Shell the enemy artillery and air defense
+   next to the target first, or they'll support it.
+3. **Aircraft.** Bombers on the targets the artillery softened. Enemy flak, air defense and
+   fighters in range fire at every air attack, so take them out or stay away from them.
+4. **Ground assault, weakest attacker first.** Every attack on a unit, even one that kills
+   nothing, lowers its defense by 2 and its entrenchment by 1 for the next non-artillery
+   attackers. The strongest unit attacks last, into the lowest defense.
+   - Infantry for cities, forests and mountains: close combat, where tanks are weak.
+   - Tanks in the open, and to finish: destroying an adjacent unit with at most 1 loss is an
+     overrun, with no return fire and an extra move.
+5. **Occupy.** Move into the freed hexes and objectives. Put the artillery where it can fire
+   next turn.
+6. **Units that didn't move.** Reinforce and resupply them, best in a city with no enemy
+   adjacent (outside a city or next to enemies they get 1.3 to 3 times less). The others stay
+   put and entrench.
+
+**Rules of thumb:**
+
+- Don't assault a freshly entrenched unit unprepared: that's where rugged defense happens
+  (attacker loses its defense and half its attack). Bring its entrenchment down first.
+- Your artillery defends during the enemy's turn: it fires at anyone attacking a friendly unit
+  from an adjacent hex within its gun range. Keep it behind the line, in range of your units.
+- Concentrate on one target instead of spreading damage: heavy losses make a unit retreat, and
+  a surrounded unit with nowhere to go surrenders.
+- Keep the veterans: experience adds to every combat value, allows overstrength and brings
+  leaders. Pull a damaged veteran back to a city and reinforce it rather than lose it.
+- The gold flags win the battle, other towns only give prestige. Faster captures give a better
+  victory.
+
+## AI
+
+`AI` (ai.ts) plans the whole turn once, at its start, by scoring options. It doesn't search
+moves ahead and doesn't react to combat results during the turn.
+
+1. Buys units with the prestige over a reserve of 1000, 30% of it for aircraft.
+2. Deploys undeployed core units.
+3. Orders its units: artillery, fortifications, combat aircraft and warships first, so they
+   soften targets before the assault.
+4. For each unit, until it has nothing left to do: reinforce if weak (strength under 4) or
+   idle, resupply if low (ammo under 2, fuel under 5) or idle, move, attack.
+5. Move: scores every reachable hex (`getCellScore`) and goes to the best one if it beats
+   staying. The score adds up, for example: free victory hex +600 for infantry (+350 tanks),
+   infantry in close terrain +120, next to own artillery +80, river without road -70, hex not
+   spotted by the enemy -40, distance to the nearest objective (4000 / distance), and the
+   attacks possible from there.
+6. Attack: the target with the best expected kills x target class value minus losses x own
+   class cost, from `calculateCombatResults` as an estimate. +100 to finish a unit already
+   attacked, +350 for a target on a victory hex. It skips attacks where it would lose more
+   than strength / 2.5, and targets it already expects to be destroyed.
+7. Every score is multiplied by a random 0.8-1.2, so it doesn't play the same twice.
+
+What it doesn't do: defend its own objectives (`getObjectiveScore` has the option, no caller
+uses it), withdraw damaged units, or think about the enemy's next turn. Known bugs are in
+ROADMAP 4.
+
+It also cheats a little: it scores attacks with `calculateCombatResults(..., withHiddenUnits =
+true, ...)` (ai.ts), so it counts the support fire of the player's units hidden in the fog of
+war.
+
+`AIScripted` (aiscripted.ts) is only the tutorial's scripted opponent.
+
+### Good attacker, weak defender
+
+Surprising in play: the AI attacks well and defends badly, because it is driven by the
+objectives it has to capture.
+
+Every victory hex belongs to the side that has to capture it (`sidesVictoryHexes`, map.ts).
+In a scenario where the player defends, the AI's side has the victory hexes to take and the
+player's side has none (it wins by holding until the last turn). The objective scores pull the
+AI toward them, and the rest of its heuristics fit an attack: artillery and aircraft plan
+first, units stay next to their artillery, losing attacks are skipped, attacked units get
+finished, infantry takes the close terrain. Together with the scenario's units and prestige,
+it reads as an opponent that attacks with a plan.
+
+When the player attacks, the AI's side usually has no victory hexes to capture, so the
+objective score is 0 and only the terrain and the attack potential are left. Its units then
+leave cities and entrenchments to attack whatever is in range (+50 per entrenchment level for
+staying loses to the attacks possible elsewhere), and nothing reinforces a threatened city.
+It defends only by counterattacking: a victory hex the player captures moves to the AI's list
+of objectives (`updateVictorySides`, map.ts), and the AI goes to take it back. It never
+garrisons one beforehand.
+
+Where to improve it first, then: a score for holding a victory hex and an entrenchment, a
+threat map of where the player can attack next turn, and withdrawing damaged units to cities.
+
+## Difficulty
+
+The difficulty doesn't change the AI: it plays the same at every level. Only campaigns have a
+difficulty, single scenarios don't (`difficultyModifiers`, prototypes.ts):
+
+| Level | Start prestige | Minimum prestige per turn | Turn limit | Score |
+|-------|----------------|---------------------------|------------|-------|
+| Historical (hardest) | as set | none | x1 | x1 |
+| Tactical | +20% | 10% of the start prestige | x1.2 | x0.8 |
+| Operational (easiest) | +50% | 25% of the start prestige | x1.5 | x0.5 |
+
+The minimum prestige per turn is applied to every player of the scenario, the AI's included
+(`loadPlayers`, scenarioloader.ts): on an easier level the AI can get more prestige than on
+Historical.
+
+The real difficulty is in the scenario files: the enemy's units, their entrenchment, its
+prestige per turn and the turn limit.
+
+## Manual vs code
+
+The manual describes rules the code doesn't have (or a different version of them):
+
+| Manual | Code |
+|--------|------|
+| Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
+| Bad weather reduces spotting | Spot range only from equipment and leaders |
+| Recon ignores zone of control | ZOC stops every ground unit; recon only has split movement |
+| An attack preview shows the expected losses | No preview in the UI, the target hex is only marked red |
+| Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
+| Units over 1000 experience always get a leader | Always at the cap (500) |
+| Retreat above 60% losses | 60% at strength 10, less for weaker units |

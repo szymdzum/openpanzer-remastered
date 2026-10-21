@@ -12,7 +12,9 @@ faithful source reconstruction in [openpanzer-src](../openpanzer-src). See ROADM
 
 - `src/` the game as TypeScript ES modules, `src/main.ts` is the entry
 - `game/` the 3.2.14 build with all the assets (the page has `<base href="/game/">`)
-- `harness/` the comparison with the reference, `docs/TYPES.md` the typing rules
+- `harness/` the comparison with the reference, `docs/TYPES.md` the typing rules,
+  `docs/MECHANICS.md` how the game plays (rules, combat, AI), `docs/RESEARCH.md` what PG2 and
+  other WW2 strategy games teach about design, `docs/design/` the current UI
 
 Vite blanks the types out with ts-blank-space instead of compiling: the browser runs src/ line
 for line and column for column (only the import paths change), so coverage and stack traces
