@@ -1,4 +1,5 @@
-# Types (also without implicit any), the linter, unused code (knip), typos and the tests with the per-file coverage floors
+# Types (also without implicit any), the linter, fallow (what a change adds:
+# unused code, import cycles, duplicates, complexity), typos and the tests with the per-file coverage floors
 # (vite.config.mts), on every pull request and on main. The tests need the game's data
 # (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
 # npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step.
@@ -19,6 +20,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # fallow audit compares with the base branch
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -27,6 +30,9 @@ jobs:
       - run: npm run check
       - run: npm run check:strict
       - run: npm run lint
-      - run: npm run knip
+      - name: fallow audit (what this change adds: unused code, import cycles, duplicates, complexity)
+        run: npx fallow audit --base origin/${{ github.base_ref || 'main' }}
+      - name: fallow health (a report, doesn't fail)
+        run: npx fallow health --format markdown >> "$GITHUB_STEP_SUMMARY" || true
       - uses: crate-ci/typos@v1
       - run: npm run test:coverage
