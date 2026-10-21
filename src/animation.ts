@@ -13,7 +13,7 @@
  */
 
 import { uiSettings } from "./prototypes";
-import { soundData, type soundSprite } from "./aiscripted";
+import { soundData, type soundSprite } from "./sound";
 
 //What runAnimation is given: called back with itself when the chain ends. A method so callers
 //can pass their own data type (method parameters are bivariant)

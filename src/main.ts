@@ -17,6 +17,8 @@ import * as equipment from "./equipment";
 import * as dom from "./dom";
 import * as ai from "./ai";
 import * as aiscripted from "./aiscripted";
+import * as style from "./style";
+import * as sound from "./sound";
 import * as animation from "./animation";
 import * as gamerules from "./gamerules";
 import * as unit from "./unit";
@@ -35,7 +37,7 @@ import * as actions from "./actions";
 import * as rng from "./rng";
 import * as context from "./context";
 
-const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, animation, gamerules, unit,
+const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
 	actions, rng, context];
 
