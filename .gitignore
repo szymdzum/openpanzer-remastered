@@ -8,3 +8,4 @@ reports/
 .stryker-tmp/
 .DS_Store
 .claude/worktrees/
+.fallow/

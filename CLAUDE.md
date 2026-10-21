@@ -18,7 +18,7 @@ game plays.
 | Command | Time | When |
 |---|---|---|
 | `npm run check`, `npm run check:strict`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
-| `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, knip, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
+| `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, fallow audit, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
 | `npm test` (`npm run test:coverage` in CI, with per-file coverage floors) | ~9 s | after every small step |
 | `npm run verify` | 3-4 min, up to 6 Chromes | before every pull request that touches `src/` |
 
@@ -56,6 +56,9 @@ pixels on purpose. Compare a change with a verify run on main, not with "identic
 - Engine modules (`actions`, `gamerules`, `map` and its parts, `unit`, `ai`, `scenario`...) don't
   import UI modules (`ui`, `uibuilder`, `render`, `animation`, `dom`) or `game`: they read the
   game through `src/context.ts`. The linter and `test/headless.test.ts` check it.
+- `npm run fallow` (fallow audit against main) fails on what a change adds: an unused file, a new
+  import cycle (they decide the load order), duplicated code, an overly complex function. Inherited
+  findings don't count; `npm run fallow:report` shows them all.
 - `git commit` runs lefthook (`lefthook.yml`): types, lint and typos on the staged files.
 - The linter (`.oxlintrc.json`) runs every rule as an error; its `overrides` list the old files
   exempt from a rule. New files get every rule; don't add a file to an exemption list, and take a

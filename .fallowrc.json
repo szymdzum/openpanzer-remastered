@@ -1,0 +1,15 @@
+{
+	// fallow (npm run fallow, CI): unused files, exports, types and dependencies, import cycles,
+	// duplicated code and complexity. `fallow audit` fails only on what a change adds (compared
+	// with main), so the code inherited from the original game doesn't block anyone; `npm run
+	// fallow:report` shows everything, inherited included.
+	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+	"entry": ["src/main.ts", "test/**/*.test.ts"],
+	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
+	// the contract scripts (read as text by test/contracts.ts and record.js)
+	"ignorePatterns": ["game/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
+	//index.html loads the game's stylesheet and data lists from game/ as classic files
+	"ignoreUnresolvedImports": ["/game/css/ui.css", "/game/resources/campaigns/campaignlist.js", "/game/resources/scenarios/scenariolist.js"],
+	"ignoreExportsUsedInFile": true,
+	"duplicates": { "minOccurrences": 2 }
+}
