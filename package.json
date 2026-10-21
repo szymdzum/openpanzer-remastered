@@ -9,14 +9,20 @@
 		"dev": "vite",
 		"build": "vite build",
 		"preview": "vite preview --port 8645",
-		"check": "tsc -p .",
+		"check": "tsc -p . && tsc -p test",
 		"check:strict": "tsc -p tsconfig.strict.json",
-		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
+		"record": "test/contracts/record.sh"
 	},
 	"devDependencies": {
+		"@types/node": "^24.19.0",
+		"jsdom": "^30.1.1",
 		"ts-blank-space": "^0.9.0",
 		"typescript": "^7.0.2",
-		"vite": "^8.3.1"
+		"vite": "^8.3.1",
+		"vitest": "^5.0.3"
 	},
 	"private": true,
 	"license": "GPL-2.0-or-later"

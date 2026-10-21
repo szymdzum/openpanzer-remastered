@@ -8,9 +8,8 @@
 //The modules in the order of the bundle's script tags. A module runs after the modules it
 //imports (in a cycle, after those not already running), so the import graph decides the real
 //order. What modules need of each other while loading: prototypes (everything reads it, it
-//imports nothing so it runs first), aiscripted's soundData (animation's animationsData),
-//ScenarioLoader (scenario) and GameState (dom's changeViewPort restores the settings: a
-//function declaration, usable before gamestate.ts runs). The game starts on window load.
+//imports nothing so it runs first), aiscripted's soundData (animation's animationsData) and
+//ScenarioLoader (scenario). The game starts on window load.
 import * as prototypes from "./prototypes";
 import * as gamestate from "./gamestate";
 import * as combatlog from "./combatlog";
@@ -35,6 +34,11 @@ import * as leaders from "./leaders";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders];
+
+//Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
+//reads the settings while loading); here the modules only declare things, so a test can import
+//any of them
+dom.changeViewPort();
 
 //The combat log's HTML has inline onclick handlers, they run in the global scope
 Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuilder,

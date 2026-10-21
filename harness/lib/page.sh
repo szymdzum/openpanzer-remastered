@@ -35,13 +35,30 @@ run_page() {
 	bdg page navigate "${url%%/index.html*}/harness/lib/hooks.js" >/dev/null
 	bdg eval "localStorage.clear(); sessionStorage.clear(); 'ok'" >/dev/null
 	bdg page navigate "$url" >/dev/null
+	# The game starts on window load. Under load navigate can return before it: a run started then
+	# finds no start menu, and on the reference that broken trace would be cached as the baseline
+	local loaded=0
+	until bdg eval "document.readyState" --json 2>/dev/null | grep -q '"result":"complete"'; do
+		loaded=$((loaded + 1))
+		[ $loaded -lt 120 ] || { echo "the page didn't load in 120s"; bdg stop >/dev/null 2>&1; return 1; }
+		sleep 1
+	done
 	# (no waiting for the start menu: with ?harness the game's loads complete once harness.js runs)
 	# bdg eval waits at most 20s for a promise, so the run goes on in the page and we poll
 	bdg eval "$setup; window.__harnessSummary = null;
 		(async () => { $(cat "$@") })()
 			.then(r => window.__harnessSummary = r, e => window.__harnessSummary = { error: e.message, stack: e.stack });
 		'started'" >/dev/null
-	until bdg eval "window.__harnessSummary !== null" --json | grep -q '"result":true'; do sleep 1; done
+	# A session that died answers with an error: fail instead of waiting forever (and give up
+	# after HARNESS_TIMEOUT seconds, 900 by default)
+	local waited=0 answer
+	while :; do
+		answer=$(bdg eval "window.__harnessSummary !== null" --json 2>&1) || { echo "$answer" | tail -3; bdg stop >/dev/null 2>&1; return 1; }
+		case $answer in *'"result":true'*) break ;; esac
+		waited=$((waited + 1))
+		[ $waited -lt "${HARNESS_TIMEOUT:-900}" ] || { echo "no result after ${HARNESS_TIMEOUT:-900}s"; bdg stop >/dev/null 2>&1; return 1; }
+		sleep 1
+	done
 	if bdg eval "window.__harnessSummary.error !== undefined" --json | grep -q '"result":true'; then
 		bdg eval "window.__harnessSummary" --json; bdg stop >/dev/null; return 1
 	fi

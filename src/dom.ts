@@ -521,4 +521,3 @@ export function changeViewPort(): void
 
 	meta.content = deviceWidth + "initial-scale=" + scale +",maximum-scale=" + maximumScale + " , user-scalable=1";
 }
-changeViewPort(); //Set default viewport settings

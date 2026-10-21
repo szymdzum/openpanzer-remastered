@@ -1,0 +1,9 @@
+{
+	// The tests (npm run check): Node and Vitest types, which the game's own config leaves out
+	// (Node's setTimeout returns an object, the browser's a number)
+	"extends": "../tsconfig.strict.json",
+	"compilerOptions": {
+		"types": ["node"]
+	},
+	"include": ["**/*.ts", "../types/**/*.d.ts"]
+}

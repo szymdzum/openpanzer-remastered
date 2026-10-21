@@ -1,5 +1,6 @@
 import fs from "node:fs";
-import { defineConfig, type Plugin } from "vite";
+import type { Plugin } from "vite";
+import { defineConfig } from "vitest/config";
 import tsBlankSpace from "ts-blank-space";
 
 //src/*.ts with the types blanked out, nothing else changed: same lines and columns as the
@@ -49,6 +50,14 @@ export default defineConfig({
 	oxc: false, //types are blanked out by blankTypes
 	plugins: [blankTypes(), harnessSetters(), copyGameAssets()],
 	optimizeDeps: { noDiscovery: true }, //no dependencies (and game/ has pages of its own)
+	test: {
+		//the game's modules need a DOM; the page is served from /game/ like index.html
+		environment: "jsdom",
+		environmentOptions: { jsdom: { url: "http://127.0.0.1/game/index.html" } },
+		setupFiles: ["test/setup.ts"],
+		include: ["test/**/*.test.ts"],
+		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
+	},
 	server: {
 		host: "127.0.0.1",
 		port: 8644,

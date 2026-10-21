@@ -170,7 +170,7 @@ export function Game(this: Game)
 		}
 	}
 
-	this.loop = setInterval(this.processTurn, 1000);
+	this.loop = window.setInterval(this.processTurn, 1000); //window.: the browser's, a number (the tests also see Node's)
 
 	//Called by GameState after a game was restored from a save (local, file or cloud)
 	this.setupGameState = function()

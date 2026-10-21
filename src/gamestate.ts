@@ -49,8 +49,7 @@ export interface GistReply
 }
 
 //GameState keeps its save names and restored items in the closure, its methods are
-//assigned in the constructor. It stays a function: dom's changeViewPort calls it while the
-//modules load, maybe before gamestate.ts ran (a function declaration is usable then, a class not)
+//assigned in the constructor. A constructor function, as in the bundle
 export interface GameState
 {
 	save(): void;
