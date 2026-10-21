@@ -66,6 +66,7 @@ sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
     npm run dev          # http://127.0.0.1:8644/, reloads on every change in src/
     npm run check        # types (tsc); check:strict with noImplicitAny
     npm run lint         # oxlint, type-aware (.oxlintrc.json)
+    npm run gate         # what CI runs: types, lint, unused code (knip), tests with coverage
     npm run build        # dist/: the bundled game with its assets; npm run preview serves it
 
 - `src/` the game as TypeScript ES modules, `src/main.ts` is the entry
@@ -114,7 +115,7 @@ A bug fixed on purpose changes a contract, and the reference still has the bug: 
 npm test` writes the remaster's results into the fixtures (the recorded states stay). Do it only in
 the commit that fixes the issue, and say in it what changed; a refactor never re-records.
 
-GitHub Actions runs the types (also `check:strict`), the linter and the tests with coverage on every pull request
+GitHub Actions runs the types (also `check:strict`), the linter, knip, typos and the tests with coverage on every pull request
 and on main (`.github/workflows/ci.yml`); main takes changes only through a pull request with that
 check green. Each engine file has a coverage floor (`thresholds` in `vite.config.mts`): a change may
 raise it, not lower it.
