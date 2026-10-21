@@ -57,6 +57,13 @@ export default defineConfig({
 		setupFiles: ["test/setup.ts"],
 		include: ["test/**/*.test.ts"],
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
+		//npm run test:coverage: what the contracts run of the engine (coverage/index.html)
+		coverage: {
+			provider: "v8",
+			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/leaders.ts",
+				"src/scenario.ts", "src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts"],
+			reporter: ["text", "html", "json-summary"],
+		},
 	},
 	server: {
 		host: "127.0.0.1",

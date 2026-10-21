@@ -1,6 +1,7 @@
 // The engine contract: the AI plays every player of a game state for a few turns through Map,
-// Unit, GameRules and Leaders, with random legal actions of every kind mixed in, and every step
-// records its result and a hash of the whole state after it. Same recording and testing as the
+// Unit, GameRules, Leaders and Scenario, with random legal actions of every kind mixed in, and
+// every step records its result and a hash of the whole state after it. Then the campaign
+// functions, and hashes of the saved game, the combat log and the equipment data. Same recording and testing as the
 // GameRules contract (see gamerules.contract.js). Uses contractRecorder, contractUnitState and
 // contractHash from common.js.
 //
@@ -8,7 +9,8 @@
 // uiUnitMove, uiUnitAttack and uiAttackAnimationFinished) without the UI: the same calls on Map
 // in the same order, so it tests the engine and stays the same on both sides.
 //
-//   runEngineContract({ GameRules, Equipment, AI, game, actionType, map, contractTurns })
+//   runEngineContract({ GameRules, Equipment, AI, GameState, CombatLog, game, actionType,
+//     playerType, terrainType, map, scenario, contractTurns })
 //     -> [[name, context, serialized result], ...]
 //   contractCapture(env) -> what the test has to apply before running (the reference's equipment
 //     indexes: the AI's purchases prune them, see ai.ts buyUnits); contractApply(env, captured)
@@ -22,9 +24,11 @@ function contractApply(env, captured) {
 }
 
 function runEngineContract(env) {
-	const GR = env.GameRules, m = env.map, A = env.actionType;
+	const GR = env.GameRules, m = env.map, A = env.actionType, CL = env.CombatLog;
 	const out = [];
 	const check = contractRecorder(out);
+	// The combat log holds what was played before the export: start empty on both sides
+	CL.reset();
 
 	// The engine calls into the UI in one place: the AI after deploying its purchases
 	const realUI = env.game.ui;
@@ -128,57 +132,170 @@ function runEngineContract(env) {
 	if (!eqids.length) eqids = allEqids; // (no player country in the equipment's in some scenarios)
 	const transports = eqids.filter((id) => env.Equipment.equipment[id].uclass == 7); // ground transport
 
-	// What the AI never does: player actions of every kind on random units of the player
+	// Player actions of every kind, the AI's and those it never does: a random kind, then a random
+	// unit of the player that can do it
+	function attackTargets(u) {
+		return GR.getUnitAttackCells(m.map, u, m.rows, m.cols)
+			.map((cell) => m.map[cell.row][cell.col].getAttackableUnit(u, false)).filter(Boolean);
+	}
+	const kinds = {
+		"move": { can: (u) => GR.getMoveRange(m, u).length > 0,
+			run: (u, pick) => { m.selectUnit(u); const cells = GR.getMoveRange(m, u); return move(u, cells[pick(cells.length)]); } },
+		"attack": { can: (u) => attackTargets(u).length > 0,
+			run: (u, pick) => { const t = attackTargets(u); return attack(u, t[pick(t.length)]); } },
+		"resupply": { can: (u) => GR.canResupply(m.map, u), run: (u) => m.resupplyUnit(u) },
+		"reinforce": { can: (u) => GR.canReinforce(m.map, u), run: (u) => m.reinforceUnit(u, false) },
+		"reinforce over": { can: (u) => GR.canReinforce(m.map, u, true), run: (u) => m.reinforceUnit(u, true) },
+		"mount": { can: (u) => GR.canMount(u), run: (u) => m.mountUnit(u) },
+		"unmount": { can: (u) => GR.canUnmount(u), run: (u) => m.unmountUnit(u) },
+		"embark": { can: (u) => GR.canEmbark(m.map, u), run: (u) => m.embarkUnit(u) },
+		"disembark": { can: (u) => GR.canDisembark(m.map, u), run: (u) => m.disembarkUnit(u) },
+		"upgrade": { can: () => true, run: (u, pick, rng) => m.upgradeUnit(u.id, eqids[pick(eqids.length)],
+			rng() < 0.5 || !transports.length ? -1 : transports[pick(transports.length)]) },
+		"undo": { can: (u) => m.canUndoMove(u), run: () => m.undoLastMove() },
+		"select": { can: () => true, run: (u) => m.selectUnit(u) },
+		"neighbor": { can: () => true, run: (u, pick, rng) => {
+			const n = m.getUnitNeighbor(u, rng() < 0.5 ? 1 : -1, rng() < 0.5);
+			return n ? n.id : n;
+		} },
+	};
+	const kindNames = Object.keys(kinds);
 	function randomActions(player, ctx, rng) {
 		const pick = (n) => Math.floor(rng() * n);
-		const own = () => m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed && u.getPos());
-		const kinds = ["move", "attack", "move", "attack", "resupply", "reinforce", "reinforce over", "mount",
-			"unmount", "embark", "disembark", "upgrade", "undo", "select", "disband"];
-		for (let i = 0; i < 12; i++) {
-			const units = own();
-			if (!units.length) return;
+		for (let i = 0; i < 20; i++) {
+			const kind = kindNames[pick(kindNames.length)];
+			const units = m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed && u.getPos() && kinds[kind].can(u));
+			const u = units.length ? units[pick(units.length)] : null;
+			check("player " + kind, ctx + " #" + i + (u ? " unit#" + u.id : " no unit"), () => [u ? kinds[kind].run(u, pick, rng) : null, hash()]);
+		}
+		// Rarer: disband a unit, deploy a new one on a free hex
+		const units = m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed);
+		if (units.length > 1 && rng() < 0.3) {
 			const u = units[pick(units.length)];
-			let kind = kinds[pick(kinds.length)];
-			if (kind === "disband" && rng() < 0.8) kind = "select";
-			const c = ctx + " #" + i + " unit#" + u.id;
-			check("player " + kind, c, () => {
-				let r;
-				switch (kind) {
-					case "move": {
-						m.selectUnit(u);
-						const cells = GR.getMoveRange(m, u);
-						r = cells.length ? move(u, cells[pick(cells.length)]) : "can't move";
-						break;
-					}
-					case "attack": {
-						const cells = GR.getUnitAttackCells(m.map, u, m.rows, m.cols);
-						const targets = cells.map((cell) => m.map[cell.row][cell.col].getAttackableUnit(u, false)).filter(Boolean);
-						r = targets.length ? attack(u, targets[pick(targets.length)]) : "no target";
-						break;
-					}
-					case "resupply": r = GR.canResupply(m.map, u) ? m.resupplyUnit(u) : "can't"; break;
-					case "reinforce": r = GR.canReinforce(m.map, u) ? m.reinforceUnit(u, false) : "can't"; break;
-					case "reinforce over": r = GR.canReinforce(m.map, u, true) ? m.reinforceUnit(u, true) : "can't"; break;
-					case "mount": r = GR.canMount(u) ? m.mountUnit(u) : "can't"; break;
-					case "unmount": r = GR.canUnmount(u) ? m.unmountUnit(u) : "can't"; break;
-					case "embark": r = GR.canEmbark(m.map, u) ? m.embarkUnit(u) : "can't"; break;
-					case "disembark": r = GR.canDisembark(m.map, u) ? m.disembarkUnit(u) : "can't"; break;
-					case "upgrade": {
-						const up = eqids[pick(eqids.length)];
-						r = m.upgradeUnit(u.id, up, rng() < 0.5 || !transports.length ? -1 : transports[pick(transports.length)]);
-						break;
-					}
-					case "undo": r = m.canUndoMove(u) ? m.undoLastMove() : "can't"; break;
-					case "select": r = m.selectUnit(u); break;
-					case "disband": r = m.disbandUnit(u.id); break;
-				}
-				return [r, hash()];
+			check("player disband", ctx + " unit#" + u.id, () => [m.disbandUnit(u.id), hash()]);
+		}
+		const row = pick(m.rows), col = pick(m.cols), eqid = eqids[pick(eqids.length)];
+		if (!m.map[row][col].unit && !m.map[row][col].airunit)
+			check("deployNewUnitByEqId", ctx + " " + eqid + " at " + row + "," + col, () => [m.deployNewUnitByEqId(eqid, row, col, player.id), hash()]);
+	}
+
+	function queries(ctx) {
+		check("queries", ctx, () => {
+			const ps = m.getPlayers();
+			return {
+				alive: [m.hasAliveUnits(0), m.hasAliveUnits(1)],
+				countries: [m.getCountriesBySide(0), m.getCountriesBySide(1)],
+				byCountry: ps.map((p) => m.getPlayersByCountry(p.country).map((x) => x.id)),
+				players: ps.map((p) => [p.getCountryName(), p.getSideName(), p.hasUndeployedUnits()]),
+				deploy: [m.getDeployHexes(0), m.getDeployHexes(1)],
+				images: m.getUnitImagesList(),
+			};
+		});
+		const sc = env.scenario;
+		check("scenario queries", ctx, () => m.getPlayers().map((p) => [sc.getPrototypeUnitsAvailable(p.country),
+			sc.getRandomPrototype(p.country), sc.getBalancedPrestige(p.side)]));
+		// The defeat and victory checks at the turn limit
+		check("turn limit", ctx, () => {
+			const turn = m.turn;
+			m.turn = m.maxTurns;
+			try { return [sc.checkDefeat(0, 2), sc.checkDefeat(1, 2), sc.checkDefeat(0, 0), sc.checkDefeat(1, 1), sc.checkVictory()]; }
+			finally { m.turn = turn; }
+		});
+	}
+
+	// game.js deployReinforcements, without the alerts
+	function deployReinforcements(turn, playerId) {
+		const deployed = [];
+		for (const r of env.scenario.getReinforcements(turn, playerId)) {
+			const cell = m.deployReinforcement(r.unit, r.row, r.col);
+			if (cell === null) continue;
+			CL.addReinforcement(r.unit);
+			env.scenario.removeReinforcement(r.turn, r.id);
+			deployed.push([r.id, cell]);
+		}
+		return deployed;
+	}
+	const logHash = () => contractHash(contractSerialize(CL.log));
+
+	// The campaign side of Map and Player, each step on every player in turn as a campaign does
+	function campaign() {
+		const ps = m.getPlayers();
+		for (const p of ps) check("buildCoreUnitList", "player#" + p.id, () => [m.buildCoreUnitList(p), hash()]);
+		for (const p of ps) check("dossier", "player#" + p.id, () => {
+			p.initDossier();
+			const u = m.getUnits().find((x) => x.player.id == p.id);
+			if (u) p.addDestroyedUnitToDossier(u);
+			p.addOutcomeToDossier("victory", "contract");
+			const other = ps.find((x) => x.id != p.id);
+			if (other) other.copyDossier(p);
+			return [p.dossier, other ? other.dossier : null];
+		});
+		// (a copy of the list, as the saved list the game passes: the function adds to the player's)
+		for (const p of ps) check("restoreCoreUnitList", "player#" + p.id, () => [m.restoreCoreUnitList(p, p.getCoreUnitList().slice()), hash()]);
+		for (const p of ps) check("removeNonCampaignUnits", "player#" + p.id, () => [m.removeNonCampaignUnits(p), hash()]);
+		for (const p of ps) check("setPlayerToHQ", "player#" + p.id, () => [p.setPlayerToHQ(), hash()]);
+		for (const p of ps) check("removeUndeployedCoreUnit", "player#" + p.id, () => [p.removeUndeployedCoreUnit(0), hash()]);
+	}
+
+	// Moves u onto hex the way moveUnit leaves a unit: ZOC and spotting go with it
+	function place(u, hex) {
+		const p = u.getPos();
+		GR.setZOCRange(m.map, u, false, m.rows, m.cols);
+		GR.setSpotRange(m.map, u, false, m.rows, m.cols);
+		m.map[p.row][p.col].delUnit(u);
+		hex.setUnit(u);
+		GR.setZOCRange(m.map, u, true, m.rows, m.cols);
+		GR.setSpotRange(m.map, u, true, m.rows, m.cols);
+	}
+
+	// Embarking needs a unit on a port or an airfield with transports left, which the recorded
+	// states rarely have: a ground unit of the player is put on a free one, then embarks
+	function transportDrill(player, ctx, rng) {
+		const pick = (n) => Math.floor(rng() * n);
+		for (const [terrain, field] of [[env.terrainType.Airfield, "airTransports"], [env.terrainType.Port, "navalTransports"]]) {
+			const hexes = [];
+			for (let r = 0; r < m.rows; r++)
+				for (let c = 0; c < m.cols; c++)
+					if (m.map[r][c].terrain == terrain && !m.map[r][c].unit && !m.map[r][c].airunit) hexes.push(m.map[r][c]);
+			const units = m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed && u.getPos() && GR.isGround(u) && !u.hasMoved);
+			if (!hexes.length || !units.length) continue;
+			const hex = hexes[pick(hexes.length)], u = units[pick(units.length)];
+			const p = hex.getPos();
+			check("embark drill", ctx + " " + field + " unit#" + u.id + " at " + p.row + "," + p.col, () => {
+				place(u, hex);
+				if (!(player[field] > 0)) player[field] = 1;
+				const can = GR.canEmbark(m.map, u);
+				const r = can ? m.embarkUnit(u) : "can't";
+				const back = GR.canDisembark(m.map, u) ? m.disembarkUnit(u) : "can't";
+				return [can, r, back, contractUnitState(u), hash()];
 			});
 		}
 	}
 
+	// Undo is for a human player's last move: a move, then the undo, as a human player
+	function undoDrill(player, ctx, rng) {
+		const pick = (n) => Math.floor(rng() * n);
+		const units = m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed && u.getPos() && GR.getMoveRange(m, u).length);
+		if (!units.length) return;
+		const u = units[pick(units.length)];
+		const type = player.type;
+		player.type = env.playerType.humanLocal;
+		try {
+			check("undo drill", ctx + " unit#" + u.id, () => {
+				m.selectUnit(u);
+				const cells = GR.getMoveRange(m, u);
+				const mv = move(u, cells[pick(cells.length)]);
+				const can = m.canUndoMove(u);
+				return [mv, can, can ? m.undoLastMove() : "can't", contractUnitState(u), hash()];
+			});
+		} finally { player.type = type; }
+	}
+
 	try {
 		check("start", "", hash);
+		// The state was restored from a save (record.js, runFixture): saving it again shows what the
+		// load kept and what it lost
+		check("saved game after loading", "", () => new env.GameState(env.game).exportGameState());
 		const rng = contractRandom(31);
 		const steps = (env.contractTurns || 2) * m.getPlayers().length;
 		for (let t = 0; t < steps; t++) {
@@ -198,9 +315,26 @@ function runEngineContract(env) {
 				if (!a || !more) break;
 			}
 			randomActions(player, ctx, rng);
-			check("endTurn", ctx, () => { m.endTurn(); return hash(); });
+			transportDrill(player, ctx, rng);
+			undoDrill(player, ctx, rng);
+			queries(ctx);
+			// game.js endTurn without the UI and the saving: Scenario.endTurn, the defeat check for
+			// both sides, then the next player's reinforcements
+			check("endTurn", ctx, () => {
+				const lastSide = player.side;
+				env.scenario.endTurn();
+				const r = [env.scenario.checkDefeat(lastSide, 2), env.scenario.checkVictory(),
+					deployReinforcements(m.turn, m.currentPlayer.id), env.scenario.dayTurn,
+					[env.scenario.date.getFullYear(), env.scenario.date.getMonth(), env.scenario.date.getDate()]];
+				return [r, hash(), logHash()];
+			});
 		}
 		check("end", "", stateString);
+		check("saved game", "", () => contractHash(new env.GameState(env.game).exportGameState()));
+		check("combat log", "", () => contractSerialize(CL.log));
+		check("equipment data", "", () => contractHash(contractSerialize(eqids.map((id) => env.Equipment.equipment[id]))));
+		campaign();
+		check("removeAllSideUnits", "", () => [m.removeAllSideUnits(0), m.removeAllSideUnits(1), hash()]);
 	} finally {
 		env.game.ui = realUI;
 	}

@@ -31,8 +31,8 @@ new GameState(game).restoreFromString(state);
 if (!await waitFor(() => restored, 30000)) throw new Error(args.file + ": the export didn't restore");
 
 // Every contract gets the same environment, the test builds it from this repo's modules
-const env = { GameRules, Equipment, Unit, AI, game, terrainType, leaderType, actionType,
-	map: game.scenario.map, fuzzRounds: args.fuzzRounds };
+const env = { GameRules, Equipment, Unit, AI, GameState, CombatLog, game, terrainType, leaderType, actionType, playerType,
+	scenario: game.scenario, map: game.scenario.map, fuzzRounds: args.fuzzRounds };
 const setup = typeof contractCapture === "function" ? contractCapture(env) : null;
 const results = runContract(env);
 // game.spotSide (the side whose view is shown, Unit.unitEndTurn reads it) isn't in the export

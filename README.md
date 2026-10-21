@@ -98,13 +98,16 @@ A refactor must leave both identical. A deliberate change shows exactly what it 
 The contract tests check the engine in seconds, without a browser: Vitest restores 13 game
 states recorded on the reference and replays the reference's calls on them.
 
-    npm test                     # 3 contracts on 13 states, about 6 seconds
+    npm test                     # 3 contracts on 13 states, about 8 seconds
+    npm run test:coverage        # the same, with what they run of the engine (coverage/)
     npm run record <module>      # record a contract again on the reference
 
 - `gamerules`: every rule (movement, combat, supply, experience) on every unit and unit pair
 - `unit`: every Unit method on a copy of every unit
-- `engine`: the AI plays every player for 2 turns through Map, Unit, GameRules and Leaders,
-  with random player actions of every kind mixed in, a hash of the whole state after each step
+- `engine`: the AI plays every player for 2 turns through Map, Unit, GameRules, Leaders and
+  Scenario, with random player actions of every kind mixed in (embarking and undo included),
+  a hash of the whole state after each step; then the campaign functions, the saved game, the
+  combat log and the equipment data
 
 A bug fixed on purpose changes a contract: record it again and say in the commit what changed.
 
