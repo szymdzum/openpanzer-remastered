@@ -65,7 +65,7 @@ Rhythm: small steps; `check` and `test` after each, `verify` before each commit.
 - **The harness surface:** a static test that the identifiers `harness/` and `test/contracts`
   use exist in the module exports and the listed `game.*` / `game.ui.*` members.
 
-### 1. Engine out of the UI (one after the other)
+### 1. Engine out of the UI (one after the other) — done
 
 The combat sequence lives in `src/ui.ts`, in the animation code: `uiUnitAttack` (support fire,
 the attack, attack stopped) and `uiAttackAnimationFinished` (destroyed units removed, retreat or
@@ -104,6 +104,46 @@ surrender, selection refresh, elimination victory), `uiUnitMove` and `uiMoveAnim
 3. **One `checkOutcome()`** for capture, elimination and the turn limit, independent of the
    local side. Game keeps calling the old functions at the same points; checkOutcome is what
    the arena and the contract use. Needs step 0's capture and wipe-out drills.
+
+**How it was done, and where it differs from the plan above.** Every sub-step re-recorded
+nothing: the contracts kept their fixtures, and verify gave the same result as before step 1
+(12 of 16 replays and the 24 UI scripts differ from the reference only in canvas pixels, the
+unit markers of fb58437, with the same hashes; nothing in game state or DOM).
+
+- **1a, `moveUnit`.** `pathTo` lives in `GameRules` (`GameRules.pathTo(map, unit, cell)`, next to
+  `getShortestPath` and `getMoveRange`), not in actions.ts: actions.ts calls into the map, and
+  the map must not import it. `moveUnit(unit, drow, dcol, cells?)` uses `pathTo` without
+  `cells`. The player's click passes the range the UI shows (`map.getCurrentMoveRange()`): it
+  can be the disembark hexes, or older than the state after a surrender (#89), so the UI owns
+  its selection and passes it. `processAction` keeps its `setMoveRange` (the flags are hashed
+  and saved), `retreatUnit` passes its one cell.
+- **1b, actions.ts.** `resolveAttack`, `finishAttack`, `finishMove`, `deployReinforcements` and
+  `endTurn`. Besides `onSupportShot` and `onAttack`, `finishAttack` takes hooks for the UI's
+  alerts and animations (`onLosses`, `onDestroyed`, `afterCleanup`, `onRetreat`,
+  `onSurrender`, `onVictory`); the selection refresh (#29) is the UI's `afterCleanup`. A move
+  isn't an action yet: the map moves the unit, `finishMove` does what followed the animation
+  (the surprise attack through the caller's `attack` hook, the capture, the capture victory).
+  The empty animation chain of carrier and naval transport attacks still calls back before the
+  new strengths are set; the UI keeps that. `endTurn(scenario, localSide)` returns the defeat at
+  the turn limit, still only for a local side. The AI's call into the UI after deploying its
+  purchases became `AI.onUnitsDeployed`, set by `Game.init`, not a hook. The contract still
+  goes through `game.deployReinforcements` (its alerts are recorded).
+- **1c, `checkOutcome(scenario, last?)`** returns `{kind: capture | elimination | turnLimit,
+  winner, loser, rating}` or null, for any side. A capture can't be read from the state (a side
+  without objectives has an empty list from the start, campaign-3-1; one that took back what it
+  lost has the same list as before), so it needs the move's result: `last.move`. The turn limit
+  needs the side that just ended its turn: `last.endedSide` (nobody wins it, `winner` is -1).
+  Elimination is the state's, so at a campaign's start, before the player deployed the core
+  units (ruscam09-t0), it already reports one. Game and the UI don't call it: they keep the
+  victory hooks and `endTurn`'s local-side defeat (#76 stays). The contract ends its game with
+  it when `env.Actions` is there (the recorded victories still come from the hooks), and
+  test/outcome.test.ts checks it against every recorded capture and wipe-out drill, and against
+  `checkDefeat` at the turn limit.
+
+Left for later, as deliberate commits: closing the surprise race (#58, the UI calling
+`finishAttack` right after `resolveAttack`, which re-records the replays), the surprise target
+by the air mode (#77), a surrender drill (forcing the surrendered unit back to life fails no
+test today).
 
 ### 2. After step 1, in parallel (each in its own worktree)
 
