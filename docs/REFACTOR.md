@@ -169,6 +169,32 @@ test today).
   injected rng and config, no `game` import, `startTurn` split from planning, the evaluator
   exported.
 
+**How the RNG seam, the headless engine and the AI seams were done** (one thread, a commit each;
+nothing re-recorded, verify as before step 2):
+
+- **`src/rng.ts`**: `Rng.random()` is `Rng.source()` when set, otherwise `Math.random()` read at
+  the call, so the harness's and record.js's seeded `Math.random` still seeds the engine.
+  `GameRules.rollDice`, both leader rolls, `getRandomPrototype` and the AI draw through it, one
+  call per former `Math.random()`. The UI's sprite, sound and menu picks keep `Math.random`.
+- **`defined()`** is in `src/util.ts`; dom.ts imports and re-exports it for the UI. `isChromeApp`
+  stays in dom.ts (only gamestate.ts uses it).
+- **game.ts loads without side effects**: `main.ts` starts `game.loop` and adds the load listener;
+  the constructor sets `loop = 0`, so the harness's `clearInterval(game.loop)` still works.
+- **`src/context.ts`**: `engineContext` has `scenario()`, `campaign()`, `campaignPlayer()` and
+  `spotSide()`; game.ts sets one that reads `game.*` at the call. Map, Player, Unit, the AI and the
+  scenario loader use it; none imports game.ts. Without a game: nothing loaded, side -1. Unit.copy
+  still takes the player from the scenario's map (#68), unitEndTurn still the old side.
+- **The turn driver**: `Map.endTurn` calls `GameMap.onPlayerTurn(map, player)` where it called
+  `handler.buildActions()`; the default does the same for AI and scripted players (#94 stays).
+- **The AI**: `new AI(player, map, {rng, config}?)`, `aiDefaultConfig` the bundle's constants;
+  `buildActions` is `startTurn` (the reinforcement budget, purchases, deployment,
+  `onUnitsDeployed`) then `planTurn`; the scores come from the exported `createAIEvaluator` over an
+  `AIPlan` (`getEvaluator()` gives the AI's own). Only function properties were added to the AI:
+  a player's handler would otherwise show up in the save.
+- **test/headless.test.ts**, in Vitest's `node` environment, locks these in. The module evaluation
+  order changed (equipment before dom; unit and map before the scenario loader): all of them only
+  declare things while loading, and the scenario loader still runs before scenario.
+
 Then **Game** (game.ts) as a class, after the lifecycle classes.
 
 ### 3. Cleanup
