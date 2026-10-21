@@ -3,6 +3,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+//The game keeps the scenario date as a local Date: the day after midnight UTC depends on the
+//time zone. The contracts were recorded in Europe/Warsaw, CI runs in UTC
+process.env.TZ = "Europe/Warsaw";
+
 //OPENPANZER_GAME_DIR: Stryker runs the tests in a copy of the repo without game/ (300 MB)
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
 

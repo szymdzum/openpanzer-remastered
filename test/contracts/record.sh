@@ -5,6 +5,7 @@
 # Writes test/contracts/<module>/<scenario>-t<turns>.json.gz: the exported game state and the
 # serialized result of every call. Record again when the reference changes, or when a bug is
 # fixed on purpose here (then the contract changes with it, and the diff shows how).
+# Record in the Europe/Warsaw time zone: test/setup.ts pins it (the scenario dates are local).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
