@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Records the contracts of a module on the reference (openpanzer-src): the expected results the
 # Vitest contract tests compare this repo with. Every state plays in its own Chrome, in parallel.
-# Usage: test/contracts/record.sh [module=gamerules]
+# Usage: test/contracts/record.sh [module=gamerules]   (gamerules, unit or engine)
 # Writes test/contracts/<module>/<scenario>-t<turns>.json.gz: the exported game state and the
 # serialized result of every call. Record again when the reference changes, or when a bug is
 # fixed on purpose here (then the contract changes with it, and the diff shows how).
@@ -25,6 +25,8 @@ STATES=(drpzop01.xml:0 drpzop01.xml:2 drstu02.xml:0 dr9fr03.xml:2 ruscam09.xml:0
 FUZZ_ROUNDS=${FUZZ_ROUNDS:-1}
 case $MODULE in
 	gamerules) RUN=runGameRulesContract ;;
+	unit) RUN=runUnitContract ;;
+	engine) RUN=runEngineContract ;;
 	*) echo "no contract for $MODULE"; exit 2 ;;
 esac
 
@@ -34,7 +36,7 @@ if [ "${1:-}" = "--job" ]; then
 	echo "const runContract = $RUN;" > "$OUT/$2.run.js"
 	run_page_retry "$REFERENCE_URL" "$OUT/$2.json" "" __recordResult \
 		"window.__record = { file: \"$file\", turns: $turns, fuzzRounds: $FUZZ_ROUNDS }" \
-		harness/lib/harness.js "test/contracts/$MODULE.contract.js" "$OUT/$2.run.js" test/contracts/record.js
+		harness/lib/harness.js test/contracts/common.js "test/contracts/$MODULE.contract.js" "$OUT/$2.run.js" test/contracts/record.js
 	gzip -9 -c "$OUT/$2.json" > "test/contracts/$MODULE/${file%.xml}-t$turns.json.gz"
 	echo "recorded $MODULE ${file%.xml}-t$turns: $(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).results.length)' "$OUT/$2.json") calls"
 	exit

@@ -3,42 +3,10 @@
 // stores the results with the state; test/gamerules.test.ts runs it on this repo's GameRules in
 // Node on the same state and compares. Plain script (no imports or exports): the recorder pastes
 // it into the page, the test evaluates it. Adapted from openpanzer-src harness/compare.js.
+// Uses contractRandom and contractSerialize from common.js.
 //
 //   runGameRulesContract({ GameRules, Equipment, terrainType, leaderType, map, fuzzRounds })
 //     -> [[name, context, serialized result], ...]
-
-function contractRandom(a) {
-	return function() {
-		a |= 0; a = a + 0x6D2B79F5 | 0;
-		let t = Math.imul(a ^ a >>> 15, 1 | a);
-		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-		return ((t ^ t >>> 14) >>> 0) / 4294967296;
-	};
-}
-
-// JSON with sorted keys; units, players and hexes become ids, functions are left out
-function contractSerialize(v) {
-	const seen = [];
-	return JSON.stringify(v, function(k, val) {
-		if (typeof val === "function") return undefined;
-		if (typeof val === "number" && !isFinite(val)) return String(val);
-		if (val === undefined) return "undefined";
-		if (val && typeof val === "object") {
-			if (k !== "" && typeof val.unitData === "function") return "unit#" + val.id;
-			const name = val.constructor && val.constructor.name;
-			if (k !== "" && name === "Player") return "player#" + val.id;
-			if (k !== "" && name === "Hex" && typeof val.getPos === "function") { const p = val.getPos(); return "hex#" + p.row + "," + p.col; }
-			if (seen.indexOf(val) >= 0) return "[cycle]";
-			seen.push(val);
-			if (!Array.isArray(val)) {
-				const sorted = {};
-				for (const key of Object.keys(val).sort()) sorted[key] = val[key];
-				return sorted;
-			}
-		}
-		return val;
-	});
-}
 
 function runGameRulesContract(env) {
 	const GR = env.GameRules, m = env.map;

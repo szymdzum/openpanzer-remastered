@@ -95,6 +95,19 @@ means a stuck request.
 
 A refactor must leave both identical. A deliberate change shows exactly what it changed.
 
+The contract tests check the engine in seconds, without a browser: Vitest restores 13 game
+states recorded on the reference and replays the reference's calls on them.
+
+    npm test                     # 3 contracts on 13 states, about 6 seconds
+    npm run record <module>      # record a contract again on the reference
+
+- `gamerules`: every rule (movement, combat, supply, experience) on every unit and unit pair
+- `unit`: every Unit method on a copy of every unit
+- `engine`: the AI plays every player for 2 turns through Map, Unit, GameRules and Leaders,
+  with random player actions of every kind mixed in, a hash of the whole state after each step
+
+A bug fixed on purpose changes a contract: record it again and say in the commit what changed.
+
 ## Credits
 
 Panzer General 2 by SSI. OpenPanzer and Panzer Marshal, code and assets, by Nicu Pavel and

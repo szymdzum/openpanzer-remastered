@@ -11,6 +11,8 @@ export interface ContractFixture
 	turns: number;
 	fuzzRounds: number;
 	state: string; //GameState.exportGameState() of the reference
+	setup: string | null; //what the contract's contractCapture took on the reference, for contractApply
+	spotSide?: number; //game.spotSide on the reference: not in the export, Unit.unitEndTurn reads it
 	results: [string, string, string][]; //[call name, context, serialized result]
 }
 
@@ -26,11 +28,41 @@ export function readFixture(module: string, name: string): ContractFixture
 	return JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(contractDir(module), name))).toString("utf8"));
 }
 
-//The contract's run function: the file is a plain script shared with the recorder
-export function contract<T>(module: string, run: string): T
+export type ContractEnv = Record<string, unknown>;
+export interface Contract
 {
-	const src = fs.readFileSync(path.join(__dirname, "contracts", module + ".contract.js"), "utf8");
-	return new Function(src + "\nreturn " + run + ";")() as T;
+	run: (env: ContractEnv) => ContractFixture["results"];
+	apply: ((env: ContractEnv, setup: string) => void) | null;
+}
+
+//The contract's functions: the file is a plain script shared with the recorder, after common.js
+export function contract(module: string, run: string): Contract
+{
+	const read = (f: string) => fs.readFileSync(path.join(__dirname, "contracts", f), "utf8");
+	return new Function(read("common.js") + "\n" + read(module + ".contract.js") + "\nreturn { run: " + run
+		+ ", apply: typeof contractApply === 'function' ? contractApply : null };")() as Contract;
+}
+
+//Restores the fixture's state, builds the environment record.js builds on the reference from
+//this repo's modules, applies the contract's setup and runs it
+export async function runFixture(module: string, run: string, name: string)
+{
+	const c = contract(module, run);
+	const fixture = readFixture(module, name);
+	const scenario = await restoreState(fixture.state);
+	const { GameRules } = await import("../src/gamerules");
+	const { Equipment } = await import("../src/equipment");
+	const { Unit } = await import("../src/unit");
+	const { AI } = await import("../src/ai");
+	const { game } = await import("../src/game");
+	const { terrainType, leaderType, actionType } = await import("../src/prototypes");
+	const env: ContractEnv = { GameRules, Equipment, Unit, AI, game, terrainType, leaderType, actionType,
+		map: scenario.map, fuzzRounds: fixture.fuzzRounds };
+	if (fixture.spotSide !== undefined)
+		game.spotSide = fixture.spotSide;
+	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
+		c.apply(env, fixture.setup);
+	return { expected: fixture.results, actual: c.run(env) };
 }
 
 //Fresh modules (Equipment keeps what it loaded), then the state restored the way the recorder
@@ -61,10 +93,20 @@ export function compareResults(expected: ContractFixture["results"], actual: Con
 		if (want === got) continue;
 		byName.set(name, (byName.get(name) || 0) + 1);
 		if (examples.length < 5)
-			examples.push(`#${i} ${name} (${context})\n    expected ${want.slice(0, 300)}\n    actual   ${got.slice(0, 300)}`);
+			examples.push(`#${i} ${name} (${context})\n` + around(want, got));
 	}
 	if (!byName.size) return null;
 	return [...byName].map(([n, c]) => `${n}: ${c} different`).join(", ") + "\n" + examples.join("\n");
+}
+
+//The two serialized results around their first different character
+function around(want: string, got: string): string
+{
+	let d = 0;
+	while (d < want.length && want[d] === got[d]) d++;
+	const from = Math.max(0, d - 150);
+	const cut = (t: string) => (from > 0 ? "…" : "") + t.slice(from, d + 150) + (t.length > d + 150 ? "…" : "");
+	return `    expected ${cut(want)}\n    actual   ${cut(got)}`;
 }
 
 function firstDifference(expected: ContractFixture["results"], actual: ContractFixture["results"]): string
