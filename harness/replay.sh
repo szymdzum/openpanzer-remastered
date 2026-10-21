@@ -2,22 +2,53 @@
 # Replay test: plays the same scenarios AI vs AI on the reference (openpanzer-src, the faithful
 # reconstruction of the original) and on this remaster, then diffs the state traces and reports
 # the coverage of src/. Any difference is a change of behavior against the original.
+# The items play in parallel, each in its own Chrome.
 # Usage: harness/replay.sh [turns=3] [items...]
 #   items: scenario files, campaign:<index> or scripted:<file>; default is a fixed sample
-# Env: BDG_SESSION (own browser per parallel run, default "replay"), REFERENCE_DIR
-#   (../openpanzer-src), REFERENCE_PORT (8643), PORT (8644), SEED (1),
-#   FULL_FROM (keep full states from that action index on, for debugging)
+# Env: JOBS (Chromes at once, default 3/4 of the cores), BDG_SESSION (prefix of the sessions,
+#   default "replay"), REFERENCE_DIR (../openpanzer-src), REFERENCE_PORT (8643), PORT (8644),
+#   SEED (1), FULL_FROM (keep full states from that action index on, for debugging)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TURNS=${1:-3}
-[ $# -gt 0 ] && shift
-ITEMS=("$@")
 SEED=${SEED:-1}
 export BDG_SESSION=${BDG_SESSION:-replay}
 OUT=harness/out/replay-$BDG_SESSION
-mkdir -p "$OUT" harness/out/baseline
 
+REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
+REFERENCE_PORT=${REFERENCE_PORT:-8643}
+PORT=${PORT:-8644}
+REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
+VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
+MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
+source harness/lib/servers.sh
+source harness/lib/page.sh
+# file name of an item's outputs
+item_file() { printf %s "$1" | tr -c 'A-Za-z0-9.-' '-'; }
+
+# --job <item>: one item, the reference's trace from the cache or played, then the remaster's.
+# Each item plays in a fresh page, so its trace doesn't depend on the other items.
+if [ "${1:-}" = "--job" ]; then
+	item=$2
+	export BDG_SESSION=$(session_name "$BDG_SESSION" "$item")
+	setup="window.__replay = { items: [$(node -e 'console.log(JSON.stringify(process.argv[1]))' "$item")], turns: $TURNS, seed: $SEED ${FULL_FROM:+, fullFrom: $FULL_FROM} }"
+	files=(harness/lib/harness.js harness/replay.js)
+	KEY=$( (reference_version; printf '%s|%s|%s|%s\n' "$item" "$TURNS" "$SEED" "${FULL_FROM:-}"; cat "${files[@]}" harness/lib/hooks.js harness/lib/page.sh) | shasum | cut -c1-16)
+	BASELINE=harness/out/baseline/replay-$(item_file "$item")-$KEY.json
+	if [ ! -s "$BASELINE" ]; then
+		echo "reference: $item"
+		run_page_retry "$REFERENCE_URL" "$BASELINE.$BDG_SESSION.tmp" "" __replayResult "$setup" "${files[@]}"
+		mv "$BASELINE.$BDG_SESSION.tmp" "$BASELINE"
+	fi
+	ln -sf "$PWD/$BASELINE" "$OUT/$(item_file "$item").baseline.json"
+	echo "remaster: $item"
+	run_page_retry "$VARIANT_URL" "$OUT/$(item_file "$item").json" "$OUT/$(item_file "$item").coverage.json" __replayResult "$setup" "${files[@]}"
+	exit
+fi
+
+export TURNS=${1:-3}
+[ $# -gt 0 ] && shift
+ITEMS=("$@")
 if [ ${#ITEMS[@]} -eq 0 ]; then
 	ITEMS=(drpzop01.xml drstu02.xml dr9fr03.xml campaign:0)
 	# plus every 40th scenario of the list, so all eras and both equipment sets show up
@@ -27,66 +58,26 @@ if [ ${#ITEMS[@]} -eq 0 ]; then
 	ITEMS+=(campaign:10 scripted:tutorial.xml) # the tutorial keeps its scripted players (AIScripted)
 fi
 ITEMS_JSON=$(printf '%s\n' "${ITEMS[@]}" | node -e 'console.log(JSON.stringify(require("fs").readFileSync(0, "utf8").trim().split("\n")))')
-
-REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
-REFERENCE_PORT=${REFERENCE_PORT:-8643}
-PORT=${PORT:-8644}
-REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
-VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
-MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
-
-source harness/lib/servers.sh
+rm -rf "$OUT"
+mkdir -p "$OUT" harness/out/baseline
 serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"
 serve_vite "$PORT"
 
-# run <url> <out.json> [coverage.json]
-run() {
-	local url=$1 out=$2 coverage=${3:-}
-	bdg stop >/dev/null 2>&1 || true
-	# Canvas drawing on the CPU only: Chrome moves canvases between GPU and CPU rasterizing by
-	# heuristics that carry over between sessions, and the two antialias edges differently
-	bdg about:blank --headless --viewport 1280x800 --chrome-flags="--disable-gpu --disable-accelerated-2d-canvas --disable-gpu-compositing" >/dev/null
-	# No HTTP cache: a cached /src/<module>.js can be stale, and V8's code cache for it reports
-	# coverage per function instead of per block
-	bdg cdp Network.enable >/dev/null
-	bdg cdp Network.setCacheDisabled --params '{"cacheDisabled":true}' >/dev/null
-	if [ -n "$coverage" ]; then
-		bdg cdp Profiler.enable >/dev/null
-		bdg cdp Profiler.startPreciseCoverage --params '{"callCount":true,"detailed":true}' >/dev/null
-	fi
-	# The game restores its last save from localStorage at start, every run starts clean
-	bdg page navigate "${url%%/index.html*}/harness/lib/hooks.js" >/dev/null
-	bdg eval "localStorage.clear(); sessionStorage.clear(); 'ok'" >/dev/null
-	bdg page navigate "$url" >/dev/null
-	# (no waiting for the start menu: with ?harness the game's loads complete once harness.js runs)
-	# bdg eval waits at most 20s for a promise, so the run goes on in the page and we poll
-	bdg eval "window.__replay = { items: $ITEMS_JSON, turns: $TURNS, seed: $SEED ${FULL_FROM:+, fullFrom: $FULL_FROM} };
-		window.__replaySummary = null;
-		(async () => { $(cat harness/lib/harness.js harness/replay.js) })()
-			.then(r => window.__replaySummary = r, e => window.__replaySummary = { error: e.message, stack: e.stack });
-		'started'" >/dev/null
-	until bdg eval "window.__replaySummary !== null" --json | grep -q '"result":true'; do sleep 2; done
-	if bdg eval "window.__replaySummary.error !== undefined" --json | grep -q '"result":true'; then
-		bdg eval "window.__replaySummary" --json; exit 1
-	fi
-	bdg eval "JSON.stringify(window.__replayResult)" --full --json \
-		| node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0)).data.result)' > "$out"
-	if [ -n "$coverage" ]; then bdg cdp Profiler.takePreciseCoverage --json > "$coverage"; fi
-	bdg stop >/dev/null
-}
+echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once"
+run_jobs "$0" "${ITEMS[@]}" >"$OUT/jobs.log" || { cat "$OUT/jobs.log"; echo "a job failed, logs in $OUT"; }
 
-# The baseline only depends on the bundle and the run parameters, cache it
-# The reference only changes with its commit (uncommitted changes there count too)
-REF_VERSION=$(git -C "$REFERENCE_DIR" rev-parse HEAD)$(git -C "$REFERENCE_DIR" status --porcelain | shasum | cut -c1-8)
-KEY=$(printf '%s|%s|%s|%s|%s' "$ITEMS_JSON" "$TURNS" "$SEED" "$REF_VERSION" "$(cat harness/lib/harness.js harness/lib/hooks.js harness/replay.js harness/replay.sh | shasum | cut -c1-12)" | shasum | cut -c1-16)
-BASELINE=harness/out/baseline/$KEY.json
-if [ ! -s "$BASELINE" ]; then
-	echo "reference: playing ${#ITEMS[@]} items on $REFERENCE_DIR"
-	run "$REFERENCE_URL" "$BASELINE.$BDG_SESSION.tmp" && mv "$BASELINE.$BDG_SESSION.tmp" "$BASELINE"
-fi
-
-echo "remaster: playing ${#ITEMS[@]} items"
-run "$VARIANT_URL" "$OUT/variant.json" "$OUT/coverage.json"
+# One trace per side, in the order of the items (a missing variant trace counts as a difference)
+node -e '
+const fs = require("fs");
+const [out, items] = [process.argv[1], JSON.parse(process.argv[2])];
+const read = (f) => fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8"))[0] : null;
+const file = (i) => out + "/" + i.replace(/[^A-Za-z0-9.-]/g, "-");
+const base = items.map((i) => read(file(i) + ".baseline.json"));
+if (base.some((b) => !b)) { console.error("no reference trace for " + items.filter((i, k) => !base[k]).join(", ")); process.exit(1); }
+fs.writeFileSync(out + "/baseline.json", JSON.stringify(base));
+fs.writeFileSync(out + "/variant.json", JSON.stringify(items.map((i) => read(file(i) + ".json"))));
+' "$OUT" "$ITEMS_JSON"
+COVERAGE=$(for i in "${ITEMS[@]}"; do printf '%s,' "$OUT/$(item_file "$i").coverage.json"; done)
 
 save_served "$PORT" "$OUT/served" "$MODULES"
-SERVED=$OUT/served node harness/diff-traces.js "$BASELINE" "$OUT/variant.json" "$OUT/coverage.json" "$MODULES"
+SERVED=$OUT/served node harness/diff-traces.js "$OUT/baseline.json" "$OUT/variant.json" "${COVERAGE%,}" "$MODULES"

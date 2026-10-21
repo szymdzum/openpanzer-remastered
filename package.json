@@ -10,7 +10,8 @@
 		"build": "vite build",
 		"preview": "vite preview --port 8645",
 		"check": "tsc -p .",
-		"check:strict": "tsc -p tsconfig.strict.json"
+		"check:strict": "tsc -p tsconfig.strict.json",
+		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r"
 	},
 	"devDependencies": {
 		"ts-blank-space": "^0.9.0",

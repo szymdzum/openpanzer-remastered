@@ -1,5 +1,5 @@
 // Compares two replay traces (baseline vs variant) and reports coverage of the tested modules.
-// Usage: node harness/diff-traces.js baseline.json variant.json [coverage.json modules]
+// Usage: node harness/diff-traces.js baseline.json variant.json [coverage.json[,...] modules]
 // Exit code 1 when the traces differ.
 const fs = require("fs");
 const [baseFile, varFile, coverageFile, modules] = process.argv.slice(2);
@@ -7,6 +7,17 @@ const base = JSON.parse(fs.readFileSync(baseFile, "utf8"));
 const variant = JSON.parse(fs.readFileSync(varFile, "utf8"));
 
 const { firstDiff, domDiff, short } = require("./difflib");
+
+// coverageFile: one dump or a comma separated list (one per item)
+const coverageFiles = coverageFile ? coverageFile.split(",").filter((f) => fs.existsSync(f)) : [];
+if (coverageFiles.length && modules) {
+	const { uncoveredLines, printUncovered } = require("./coverage");
+	for (const mod of modules.split(",").filter(Boolean)) {
+		const file = "src/" + mod + ".ts";
+		printUncovered(file + " (replay)", fs.existsSync(file)
+			? uncoveredLines(coverageFiles, "/src/" + mod + ".ts", file, process.env.SERVED + "/" + mod + ".js") : null);
+	}
+}
 
 let different = 0;
 console.log("\n== Replay diff");
@@ -70,13 +81,4 @@ for (let i = 0; i < base.length; i++) {
 	else console.log("same " + label);
 }
 console.log(different ? `\n${different} of ${base.length} items differ` : `\nall ${base.length} items identical`);
-
-if (coverageFile && modules && fs.existsSync(coverageFile)) {
-	const { uncoveredLines, printUncovered } = require("./coverage");
-	for (const mod of modules.split(",").filter(Boolean)) {
-		const file = "src/" + mod + ".ts";
-		printUncovered(file + " (replay)", fs.existsSync(file)
-			? uncoveredLines(coverageFile, "/src/" + mod + ".ts", file, process.env.SERVED + "/" + mod + ".js") : null);
-	}
-}
 process.exit(different ? 1 : 0);

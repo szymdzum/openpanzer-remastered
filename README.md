@@ -24,7 +24,13 @@ Every change is compared with openpanzer-src (served on 8643) in headless Chrome
 game state, DOM and canvas pixels. The remaster runs on the Vite dev server (8644), the scripts
 start both servers when they're not running.
 
+    npm run verify               # both below, about 3 minutes
     harness/replay.sh            # 16 scenarios, campaigns and the tutorial played AI vs AI
-    harness/ui-replay.sh         # 24 scripts of user steps (harness/ui/)
+    harness/ui-replay.sh         # 24 scripts of user steps (harness/ui/), or some of them
+
+Every item and script plays in its own Chrome, several at once (JOBS, default 3/4 of the
+cores). The reference's traces are cached per item in harness/out/baseline, until openpanzer-src
+or the harness changes. A step that waits for loads until the timeout is reported: it usually
+means a stuck request.
 
 A refactor must leave both identical. A deliberate change shows exactly what it changed.
