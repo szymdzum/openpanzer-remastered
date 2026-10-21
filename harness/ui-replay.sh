@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# UI replay: runs user step scripts (harness/ui/<script>.js) on the reference (openpanzer-src)
+# UI replay: runs user step scripts (harness/ui/<script>.js) on the reference (see replay.sh)
 # and on this remaster, diffs state, DOM and canvas after every step, and reports the coverage
 # of src/ over all the scripts run. The scripts run in parallel, each in its own Chrome.
 # Usage: harness/ui-replay.sh [script...]   (default: every script in harness/ui)
 # Env: JOBS (Chromes at once, default 3/4 of the cores), BDG_SESSION (prefix of the sessions,
-#   default "ui"), REFERENCE_DIR, REFERENCE_PORT, PORT, SEED as in replay.sh, DUMP_STEP=<n>
+#   default "ui"), BASELINE_REF, REFERENCE_DIR, REFERENCE_PORT, PORT, SEED as in replay.sh, DUMP_STEP=<n>
 #   (keep step n's canvases as PNGs in the trace), RENDER_LOG=1 (record render() calls per step)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -12,14 +12,13 @@ cd "$(dirname "$0")/.."
 SEED=${SEED:-1}
 export BDG_SESSION=${BDG_SESSION:-ui}
 OUT=harness/out/ui-$BDG_SESSION
-REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 PORT=${PORT:-8644}
-REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
 VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
 MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
 source harness/lib/servers.sh
 source harness/lib/page.sh
+source harness/lib/reference.sh
 
 # --job <script>: one script, the reference's trace from the cache or played, then the remaster's
 if [ "${1:-}" = "--job" ]; then
@@ -44,7 +43,7 @@ SCRIPTS=("$@")
 for script in "${SCRIPTS[@]}"; do [ -f "harness/ui/$script.js" ] || { echo "no harness/ui/$script.js"; exit 2; }; done
 rm -rf "$OUT"
 mkdir -p "$OUT" harness/out/baseline
-serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"
+start_reference
 serve_vite "$PORT"
 
 echo "${#SCRIPTS[@]} scripts, $JOBS at once"

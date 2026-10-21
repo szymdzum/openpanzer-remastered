@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Replay test: plays the same scenarios AI vs AI on the reference (openpanzer-src, the faithful
-# reconstruction of the original) and on this remaster, then diffs the state traces and reports
-# the coverage of src/. Any difference is a change of behavior against the original.
+# Replay test: plays the same scenarios AI vs AI on the reference (harness/lib/reference.sh: the
+# original game reconstructed in reference/, or this repo at BASELINE_REF) and on this remaster,
+# then diffs the state traces and reports the coverage of src/. Any difference is a change of
+# behavior against the reference.
 # The items play in parallel, each in its own Chrome.
 # Usage: harness/replay.sh [turns=3] [items...]
 #   items: scenario files, campaign:<index> or scripted:<file>; default is a fixed sample
 # Env: JOBS (Chromes at once, default 3/4 of the cores), BDG_SESSION (prefix of the sessions,
-#   default "replay"), REFERENCE_DIR (../openpanzer-src), REFERENCE_PORT (8643), PORT (8644),
+#   default "replay"), BASELINE_REF (compare with this repo at a git ref, e.g. origin/main),
+#   REFERENCE_DIR (reference), REFERENCE_PORT (8643), PORT (8644),
 #   SEED (1), FULL_FROM (keep full states from that action index on, for debugging)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,14 +17,13 @@ SEED=${SEED:-1}
 export BDG_SESSION=${BDG_SESSION:-replay}
 OUT=harness/out/replay-$BDG_SESSION
 
-REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 PORT=${PORT:-8644}
-REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
 VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
 MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
 source harness/lib/servers.sh
 source harness/lib/page.sh
+source harness/lib/reference.sh
 # file name of an item's outputs
 item_file() { printf %s "$1" | tr -c 'A-Za-z0-9.-' '-'; }
 
@@ -60,7 +61,7 @@ fi
 ITEMS_JSON=$(printf '%s\n' "${ITEMS[@]}" | node -e 'console.log(JSON.stringify(require("fs").readFileSync(0, "utf8").trim().split("\n")))')
 rm -rf "$OUT"
 mkdir -p "$OUT" harness/out/baseline
-serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"
+start_reference
 serve_vite "$PORT"
 
 echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once"

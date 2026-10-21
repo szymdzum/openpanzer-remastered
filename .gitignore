@@ -9,3 +9,4 @@ reports/
 .DS_Store
 .claude/worktrees/
 .fallow/
+.lfs-ids

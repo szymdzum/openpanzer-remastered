@@ -154,5 +154,5 @@ From the safest to the most invasive to the spirit:
 6. **Encirclement as a mechanic**, Unity of Command style. The biggest change and the furthest
    from PG2; Panzer Corps 2 tried it and was criticised for it.
 
-Every rule change shows in the harness comparison with openpanzer-src, so each should be a
+Every rule change shows in the harness comparison with the original (`reference/`), so each should be a
 deliberate, separate step, possibly behind a classic/remaster rules switch.

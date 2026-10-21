@@ -17,7 +17,7 @@ transition lose data.
 |---|---|---|
 | `npm run check` | seconds | types |
 | `npm test` | ~9 s | the contracts: 3 × 15 game states recorded on the reference; the invariant, loader, save and harness-surface tests |
-| `npm run verify` | 3-4 min | the whole game in Chrome against openpanzer-src: 16 AI vs AI replays, 24 UI scripts, state, DOM and pixels |
+| `npm run verify` | 3-4 min | the whole game in Chrome against the original (`reference/`, or main with `BASELINE_REF`): 16 AI vs AI replays, 24 UI scripts, state, DOM and pixels |
 | CI (`ci.yml`) | ~30 s | check and test on every push |
 | Mutation testing (`mutation.yml`) | hours, on GitHub | whether the tests notice small changes, per module |
 
@@ -274,8 +274,8 @@ then cleanup per module in parallel by file.
 
 At most 3 agents at a time, and **one verify at a time on the machine** (it runs up to 6
 Chromes; `JOBS=3`). Each worktree uses its own `PORT`, `REFERENCE_PORT` and `BDG_SESSION`
-(docs/TYPES.md, Checks), and an absolute `REFERENCE_DIR` (the default `../openpanzer-src` is
-relative). The branches merge back one at a time, each rebased and verified on top of the
+(docs/TYPES.md, Checks). Since then verify runs on GitHub for every pull request, against its
+base branch. The branches merge back one at a time, each rebased and verified on top of the
 previous ones.
 
 ## After the refactor: deliberate changes
