@@ -19,7 +19,7 @@ import type { Unit } from "./unit";
 import { Player } from "./map";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
-import { type CampaignConstructor, type Game, game } from "./game";
+import { type Game, game } from "./game";
 
 //The campaign progress kept in a save, see getCampaignSave
 export interface CampaignSave
@@ -416,7 +416,7 @@ export function GameState(this: GameState, Game: Game | null)
 				if (campaignId < 0)
 					campaignId = campaignData.id;
 			}
-			Game.campaign = new (Campaign as unknown as CampaignConstructor)(campaignId, campaignData.difficulty || 0, restoreCampaign.bind(null, campaignData, onDone));
+			Game.campaign = new Campaign(campaignId, campaignData.difficulty || 0, restoreCampaign.bind(null, campaignData, onDone));
 		}
 		else
 		{

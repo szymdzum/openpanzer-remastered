@@ -28,7 +28,7 @@ import type { PlayerDossier } from "./map";
 import type { ScenarioOutcome } from "./scenario";
 import { Campaign } from "./campaign";
 import { UICombatLog } from "./uicombatlog";
-import { type CampaignConstructor, game } from "./game";
+import { game } from "./game";
 import { OSGlue } from "./osglue";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (fillCloudSavesList, buildEquipmentSortOptions)
@@ -297,7 +297,7 @@ UIBuilder.buildStartMenu = function()
 	$('smCFlowBut').onclick = function()
 	{
 		var s = ($('smCamp') as UIBuilderCampaignMenu).selectedCampaign;
-		var flowCampaign = new (Campaign as unknown as CampaignConstructor)(s, difficultyType.historical, function()
+		var flowCampaign = new Campaign(s, difficultyType.historical, function()
 		{
 			$('smCampDesc').innerHTML = flowCampaign.getCampaignFlow();
 		});
