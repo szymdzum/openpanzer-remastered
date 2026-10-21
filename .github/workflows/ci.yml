@@ -7,6 +7,10 @@ on:
   push:
   pull_request:
 
+# The contracts were recorded in this time zone (test/setup.ts)
+env:
+  TZ: Europe/Warsaw
+
 jobs:
   test:
     runs-on: ubuntu-latest

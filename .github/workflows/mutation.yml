@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: "0 2 * * 0"
 
+# The contracts were recorded in this time zone (test/setup.ts)
+env:
+  TZ: Europe/Warsaw
+
 jobs:
   mutate:
     runs-on: ubuntu-latest

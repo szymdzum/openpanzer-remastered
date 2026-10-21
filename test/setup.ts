@@ -4,7 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 //The game keeps the scenario date as a local Date: the day after midnight UTC depends on the
-//time zone. The contracts were recorded in Europe/Warsaw, CI runs in UTC
+//time zone. The contracts were recorded in Europe/Warsaw, CI runs in UTC. This works in a forked
+//worker (Vitest's default); in worker threads (Stryker's) only TZ set on the process does, so
+//npm run test:mutation and the workflows set it too
 process.env.TZ = "Europe/Warsaw";
 
 //OPENPANZER_GAME_DIR: Stryker runs the tests in a copy of the repo without game/ (300 MB)

@@ -14,7 +14,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"test:mutation": "OPENPANZER_GAME_DIR=$PWD/game nice -n 10 stryker run",
+		"test:mutation": "TZ=Europe/Warsaw OPENPANZER_GAME_DIR=$PWD/game nice -n 10 stryker run",
 		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
 		"record": "test/contracts/record.sh"
 	},
