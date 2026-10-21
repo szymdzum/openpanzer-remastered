@@ -3,7 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const GAME_DIR = path.resolve(__dirname, "../game");
+//OPENPANZER_GAME_DIR: Stryker runs the tests in a copy of the repo without game/ (300 MB)
+const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
 
 class FileXMLHttpRequest
 {

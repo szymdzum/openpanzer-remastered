@@ -1,0 +1,22 @@
+# Types and the contract tests on every push and pull request. The tests need the game's data
+# (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
+# npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test

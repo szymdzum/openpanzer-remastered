@@ -4,3 +4,5 @@ dist/
 dist-*/
 public/hd/
 coverage/
+reports/
+.stryker-tmp/

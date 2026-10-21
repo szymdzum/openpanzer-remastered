@@ -1,0 +1,40 @@
+# Mutation testing of the engine (stryker.config.mjs): each module on its own runner, in
+# parallel. On demand (Actions > Mutation testing > Run workflow) and every Sunday night.
+# The incremental file is cached per module, so a run only tests the mutants of changed code.
+# Reports: the run's artifacts (mutation-<module>, open index.html).
+name: Mutation testing
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 0"
+
+jobs:
+  mutate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [gamerules, unit, map, ai, leaders, scenario]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v6
+        with:
+          path: reports/mutation/${{ matrix.module }}/incremental.json
+          key: mutation-${{ matrix.module }}-${{ github.sha }}
+          restore-keys: mutation-${{ matrix.module }}-
+      - name: Stryker on src/${{ matrix.module }}.ts
+        run: npm run test:mutation -- --concurrency 4
+        env:
+          MUTATE: ${{ matrix.module }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mutation-${{ matrix.module }}
+          path: reports/mutation/${{ matrix.module }}/

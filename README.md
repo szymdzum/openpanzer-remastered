@@ -111,6 +111,12 @@ states recorded on the reference and replays the reference's calls on them.
 
 A bug fixed on purpose changes a contract: record it again and say in the commit what changed.
 
+GitHub Actions runs the types and the contract tests on every push (`.github/workflows/ci.yml`).
+Mutation testing checks the tests themselves: Stryker changes the engine one small thing at a
+time and expects a contract to fail every time. It takes hours for the whole engine, so CI runs
+it every Sunday and on demand, one runner per module, the reports as the run's artifacts
+(`mutation.yml`). Locally, one module at a time: `MUTATE=map npm run test:mutation`.
+
 ## Credits
 
 Panzer General 2 by SSI. OpenPanzer and Panzer Marshal, code and assets, by Nicu Pavel and
