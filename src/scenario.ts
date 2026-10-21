@@ -22,9 +22,6 @@ import { GameMap, type Player } from "./map";
 import { ScenarioLoader } from "./scenarioloader";
 import { Rng } from "./rng";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (copy)
-var t: any;
-
 //The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
 export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 
@@ -300,8 +297,7 @@ export class Scenario
 			this.eqp = s.eqp;
 			if (s.reinforcements)
 			{
-				//t is an implicit global in the bundle, kept as is
-				for (t in s.reinforcements)
+				for (const t in s.reinforcements)
 				{
 					for (let i = 0; i < s.reinforcements[t].length; i++)
 					{

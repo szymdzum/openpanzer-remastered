@@ -24,9 +24,6 @@ import type { GameMap, Player } from "./map";
 import { engineContext } from "./context";
 import { Rng } from "./rng";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (buildActions)
-var h: any;
-
 //One queued action, param depends on type (actionType): [unit] for resupply, reinforce,
 //mount and select, [unit, cell] for move, [unit, target] for attack, and for the tutorial
 //messages [text, cell it points at]. type is a plain number, so it can't narrow a union:
@@ -210,8 +207,7 @@ export class AI
 			//Deploy the undeployed core units on the deployment hexes
 			const coreUnits = player.getCoreUnitList();
 			const deployHexes = map.getDeployHexes(player.side);
-			//h is not declared: an implicit global, kept as in the bundle
-			for (h = 0; h < deployHexes.length; h++)
+			for (let h = 0; h < deployHexes.length; h++)
 			{
 				for (j = 0; j < coreUnits.length; j++)
 				{

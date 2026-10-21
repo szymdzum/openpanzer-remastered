@@ -20,9 +20,6 @@ import type { GameMap, Player } from "./map";
 import { UIBuilder } from "./uibuilder";
 import { game } from "./game";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (the tutorial turns, buildActions)
-var u: any, e: any, firstTurn: any;
-
 //The tutorial units AIScripted picks from their starting positions
 export interface TutorialUnits
 {
@@ -54,6 +51,7 @@ export class AIScripted
 		//Queues the actions of the current turn for this player
 		function buildTurnActions(): void
 		{
+			let u: Unit, e: Unit; //the units of turns 3 and 4, implicit globals in the bundle
 			switch (map.turn)
 			{
 				case 1:
@@ -155,7 +153,6 @@ export class AIScripted
 					}
 					break;
 				}
-				//Turns 3 and 4 use the undeclared u and e: implicit globals, kept as in the bundle
 				case 3:
 				{
 					if (player.side == playerSide.axis)
@@ -269,7 +266,6 @@ export class AIScripted
 		this.buildActions = function()
 		{
 			buildTurnActions();
-			firstTurn = false; //implicit global, nothing else uses it
 		}
 
 		//Returns the next queued action and removes it from the list, null when there are none left

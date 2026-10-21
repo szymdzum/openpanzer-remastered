@@ -21,9 +21,6 @@ import { Scenario } from "./scenario";
 import { engineContext } from "./context";
 import { Leaders } from "./leaders";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (loadReinforcements)
-var u: any;
-
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries. scen.onLoadFinished() is called at the
 //end, with scen.isLoaded telling if the scenario loaded.
@@ -167,8 +164,7 @@ export class ScenarioLoader
 						{
 							if (atNode.childNodes[k].nodeName == "unit")
 							{
-								//u is not declared: an implicit global, kept as in the bundle
-								u = loadUnit(atNode.childNodes[k] as Element);
+								const u = loadUnit(atNode.childNodes[k] as Element);
 								if (u !== null)
 									scen.addReinforcement(turn, row, col, u);
 							}
