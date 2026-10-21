@@ -254,7 +254,8 @@ for (const name of fixtures("engine")) {
 //"still failing") and what the invariants say after it (the bug's test.fails)
 interface DrillResult { setup: string[]; broken: string[] }
 const drillRuns = new Map<string, Promise<DrillResult>>();
-function drill(name: string, fixture: string, run: (w: World, setup: string[]) => string[]) {
+//fixed: the bug is fixed, the drill must come out clean (a plain test instead of test.fails)
+function drill(name: string, fixture: string, run: (w: World, setup: string[]) => string[], fixed = false) {
 	const result = () => {
 		if (!drillRuns.has(name))
 			drillRuns.set(name, load(fixture).then((w) => {
@@ -270,7 +271,7 @@ function drill(name: string, fixture: string, run: (w: World, setup: string[]) =
 	test(`Drill sets up on ${fixture}: ${name}`, async () => {
 		expect((await result()).setup).toEqual([]);
 	});
-	test.fails(`${name} (known bug, drill on ${fixture})`, async () => {
+	(fixed ? test : test.fails)(`${name} (${fixed ? "fixed" : "known bug"}, drill on ${fixture})`, async () => {
 		expect((await result()).broken).toEqual([]);
 	});
 }
@@ -292,7 +293,7 @@ function movers(w: World): Unit[] {
 	return m.getUnits().filter((u) => u.player.id == m.currentPlayer.id && u.getPos() && GR.getMoveRange(m, u).length > 0);
 }
 
-drill("#68 undo detaches the unit from its player", "ruscam09-t2.json.gz", (w, setup) => {
+drill("#68 undo keeps the unit attached to its player", "ruscam09-t2.json.gz", (w, setup) => {
 	const { m, GameRules: GR, playerType } = w;
 	m.currentPlayer.type = playerType.humanLocal;
 	//The first move that spots nothing new, so it can be undone
@@ -311,7 +312,7 @@ drill("#68 undo detaches the unit from its player", "ruscam09-t2.json.gz", (w, s
 		}
 	setup.push("no unit could move");
 	return [];
-});
+}, true);
 
 drill("#72 removeNonCampaignUnits leaves phantom zone of control and spotting", "wdmillazzo-t0.json.gz", (w, setup) => {
 	const { m } = w;

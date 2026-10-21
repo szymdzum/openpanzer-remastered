@@ -201,12 +201,11 @@ test("The engine reads the game through the context, at the moment it needs it",
 	};
 	setEngineContext(context);
 
-	//Unit.copy takes the player from the context's scenario map, by owner, as a detached copy (#68)
+	//Unit.copy takes the player from the context's scenario map, by owner: the map's own player (#68)
 	const unit = map.getUnits().find((u) => u.owner == 1)!;
 	const copy = new Unit(unit.eqid);
 	copy.copy(unit);
-	expect(copy.player).not.toBe(players[1]);
-	expect(copy.player.id).toBe(1);
+	expect(copy.player).toBe(players[1]);
 
 	//unitEndTurn hides a unit whose hex the side shown doesn't spot, read at the call
 	const enemy = map.getUnits().find((u) => u.owner == 1 && !u.getHex()!.isSpotted(0))!;
