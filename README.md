@@ -14,8 +14,18 @@ Panzer Marshal 3.2.14, its last version, and carries it forward.
 limit, the joy of an overrun and the dread of a rugged defense, quick turns, rules you learn in
 an hour. We don't add complexity for its own sake. [docs/RESEARCH.md](docs/RESEARCH.md) is why.
 
+![The new campaign window: campaigns grouped by side, the briefing typed as an order, difficulty explained in one line](docs/screenshots/ui-campaigns.webp)
+
+*Design mockup. All 17 campaigns of Panzer Marshal stay, picked from a list grouped by side,
+with the starting prestige and what each difficulty changes in plain words.*
+
 **Make it readable.** PG2 made you do the combat maths in your head. The remaster shows you the
 odds before you attack and tells you why a battle went the way it did.
+
+![The in-game HUD over the Ciechanów map: a Pz IIA about to attack a Polish 7TP, with the estimated losses on both sides](docs/screenshots/ui-hud.webp)
+
+*Design mockup. Before attacking the 7TP the Pz IIA sees it would lose 4 strength for 1: hard
+attack 3 against ground defence 7. Low fuel and ammo say so in words, not only in colour.*
 
 **Make good on the old promises first.** Rain and snow that do nothing, leader abilities with
 no effect, an AI that never defends its own flags: the manual promises things the game doesn't
@@ -27,6 +37,20 @@ discussion in the [issues](https://github.com/szymdzum/openpanzer-remastered/iss
 
 **Make it look good on today's screens.** Sharp on HiDPI, upscaled maps and units, a period
 look and a soundtrack, without losing the painted-map feel.
+
+![Six 1939 units at 2x: the original pixels above, the upscaled sprites over the upscaled map below](docs/screenshots/units-upscale.webp)
+
+*The first test, on a HiDPI screen: today's pixels above, the remaster below. The map went
+through Real-ESRGAN, the hand-drawn sprites through hqx, a pixel-art filter that keeps their
+edges.*
+
+The interface becomes a 1940s war room, paper, typed orders and brass, in a light theme and a
+dark one for long evenings, and gets out of the map's way.
+
+![The equipment window in the dark theme: a Pz 38(t)A compared stat by stat with the Pz IIA it would replace](docs/screenshots/ui-equipment.webp)
+
+*Design mockup. Upgrading the 1st Panzer: every stat of the new tank next to the old one,
+and the prestige left after paying.*
 
 **Change nothing by accident.** The game was first reconstructed from its minified build, bug
 for bug. Every build of the remaster is replayed against that reconstruction, step by step:
