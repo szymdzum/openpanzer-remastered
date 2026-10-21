@@ -1,4 +1,4 @@
-# Types (also without implicit any) and the tests with the per-file coverage floors
+# Types (also without implicit any), the linter and the tests with the per-file coverage floors
 # (vite.config.mts), on every pull request and on main. The tests need the game's data
 # (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
 # npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step.
@@ -26,4 +26,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run check:strict
+      - run: npm run lint
       - run: npm run test:coverage
