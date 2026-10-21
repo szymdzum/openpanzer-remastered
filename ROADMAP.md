@@ -1,6 +1,6 @@
 # Roadmap
 
-The remaster starts as a copy of the faithful reconstruction ([openpanzer-src](../openpanzer-src))
+The remaster starts as a copy of the faithful reconstruction (openpanzer-src, a separate repo)
 and changes it on purpose, one step at a time. The harness compares every build with that
 reference: a refactor must leave the replays identical, a deliberate change shows exactly what
 it changed (and the reference traces of that step are then the new expected behavior).

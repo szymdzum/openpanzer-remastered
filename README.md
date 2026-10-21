@@ -1,7 +1,45 @@
-# openpanzer-remastered
+![Panzer Marshal Remastered](docs/banner.webp)
 
-A remaster of Panzer Marshal 3.2.14 (the HTML5 Panzer General 2 by Nicu Pavel), built on the
-faithful source reconstruction in [openpanzer-src](../openpanzer-src). See ROADMAP.md.
+# Panzer Marshal Remastered
+
+Panzer General 2, in the browser, made better without being made different.
+
+Panzer General 2 (SSI, 1997) took the paperwork out of wargames and kept the fun: one unit per
+hex, a campaign from Poland 1939 to the gates of Moscow or Washington, and a core of units that
+grow from green recruits into veterans with leaders. You remember the name of the Tiger
+battalion that broke the line at Kursk. That attachment is the game.
+
+Nicu Pavel rebuilt it for the browser as [OpenPanzer](https://github.com/nicupavel/openpanzer)
+and then [Panzer Marshal](https://github.com/nicupavel/panzermarshal). This project takes
+Panzer Marshal 3.2.14, its last version, and carries it forward.
+
+## What we're doing
+
+**Keep the spirit.** Core units you care about, scenarios that play like puzzles against the turn
+limit, the joy of an overrun and the dread of a rugged defense, quick turns, rules you learn in
+an hour. We don't add complexity for its own sake. [docs/RESEARCH.md](docs/RESEARCH.md) is why.
+
+**Make it readable.** PG2 made you do the combat maths in your head. The remaster shows you the
+odds before you attack and tells you why a battle went the way it did.
+
+**Make good on the old promises first.** Rain and snow that do nothing, leader abilities with
+no effect, an AI that never defends its own flags: the manual promises things the game doesn't
+do. Those come before anything new ([docs/MECHANICS.md](docs/MECHANICS.md)).
+
+**Then fix what players always wished for**, carefully: supply lines and encirclement, units
+that fight better together, a campaign that doesn't snowball or spiral. Each one is a design
+discussion in the [issues](https://github.com/szymdzum/openpanzer-remastered/issues) first.
+
+**Make it look good on today's screens.** Sharp on HiDPI, upscaled maps and units, a period
+look and a soundtrack, without losing the painted-map feel.
+
+**Change nothing by accident.** The game was first reconstructed from its minified build, bug
+for bug. Every build of the remaster is replayed against that reconstruction, step by step:
+a refactor must change nothing, and a deliberate change shows exactly what it changed.
+
+Where we are: the code is typed, modular TypeScript on Vite. Next are the quick visible wins:
+sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
+[ROADMAP.md](ROADMAP.md).
 
 ## Play and develop
 
@@ -37,3 +75,8 @@ or the harness changes. A step that waits for loads until the timeout is reporte
 means a stuck request.
 
 A refactor must leave both identical. A deliberate change shows exactly what it changed.
+
+## Credits
+
+Panzer General 2 by SSI. OpenPanzer and Panzer Marshal, code and assets, by Nicu Pavel and
+contributors. The remaster builds on their work.
