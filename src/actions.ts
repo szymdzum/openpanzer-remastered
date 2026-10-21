@@ -63,15 +63,34 @@ export interface FinishAttackHooks
 	onVictory?(side: number): void; //a side won, the other has no units left
 }
 
+export interface MoveResult
+{
+	move: movementResults;
+	//The unit ran into a hidden enemy: the attack on it is resolved, its finishAttack is the caller's
+	surprise: { cell: Cell; target: Unit | null; attack: AttackResult | null } | null;
+	capture: boolean;
+	victorySide: number; //-1, or the side that captured all its objectives
+}
+
+export interface FinishMoveHooks extends AttackHooks
+{
+	onSurprised?(unit: Unit, cell: Cell): void; //before the surprise attack
+	attack?(attackingUnit: Unit, enemyUnit: Unit): AttackResult | null; //resolves the surprise attack, resolveAttack by default
+	onCapture?(unit: Unit): void;
+	onVictory?(side: number): void; //the side captured all its objectives
+}
+
 export interface ActionsAPI
 {
 	resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null;
 	finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult;
+	finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult;
 }
 
 export var Actions: ActionsAPI = {
 	resolveAttack: resolveAttack,
 	finishAttack: finishAttack,
+	finishMove: finishMove,
 };
 
 //Support fire if the attacker wasn't surprised and doesn't overrun, then the attack unless the
@@ -187,6 +206,31 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 		result.victorySides.push(playerSide.axis);
 		if (h.onVictory) h.onVictory(playerSide.axis);
 	}
+
+	return result;
+}
+
+//After a move: the surprise attack (the hidden enemy picked with airMode, as the UI's air mode
+//toggle picks it), the capture and the capture victory
+function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult
+{
+	var h = hooks || {};
+	var result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
+
+	if (unit.isSurprised)
+	{
+		var cell = mr.surpriseCell;
+		if (h.onSurprised) h.onSurprised(unit, cell);
+		var target = map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
+		result.surprise = { cell: cell, target: target, attack: null };
+		if (target !== null)
+			result.surprise.attack = h.attack ? h.attack(unit, target) : resolveAttack(map, unit, target, h);
+		unit.isSurprised = false; //When combat ends unit is no longer surprised
+	}
+	if (mr.isCapture && h.onCapture)
+		h.onCapture(unit);
+	if (mr.isVictorySide >= 0 && h.onVictory)
+		h.onVictory(mr.isVictorySide);
 
 	return result;
 }

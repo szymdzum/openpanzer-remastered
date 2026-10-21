@@ -473,17 +473,14 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData)
 
 	R.render(p.row, p.col, r);
 
-	if (unit.isSurprised)
+	//The surprise attack's target is picked by uiSettings.airMode (#77)
+	Actions.finishMove(map, unit, mr, uiSettings.airMode,
 	{
-		var cell = mr.surpriseCell;
-		uiShowAlert(cell.row, cell.col, "Surprised");
-		handleUnitAttack(moveAnimationCBData.unit, cell.row, cell.col); //TODO select which unit has surprised (air / ground)
-		unit.isSurprised = false; //When combat ends unit is no longer surprised
-	}
-	if (mr.isCapture)
-		uiShowAlert(p.row, p.col, "Captured", unit.player.side == game.spotSide || game.spotSide == 2);
-	if (mr.isVictorySide >= 0)
-		uiMoveVictory(mr.isVictorySide);
+		onSurprised: function(u: Unit, cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
+		attack: uiUnitAttack, //its finish runs when its animation ends
+		onCapture: function(u: Unit) { uiShowAlert(p.row, p.col, "Captured", u.player.side == game.spotSide || game.spotSide == 2); },
+		onVictory: uiMoveVictory
+	});
 
 	game.waitUIAnimation = false;
 }
