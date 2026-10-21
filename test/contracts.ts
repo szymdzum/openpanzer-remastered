@@ -98,7 +98,6 @@ export async function restoreState(state: string)
 {
 	vi.resetModules();
 	const { GameState } = await import("../src/gamestate");
-	type GameStateConstructor = import("../src/gamestate").GameStateConstructor;
 	const { game } = await import("../src/game");
 	clearInterval(game.loop); //the turn loop, record.js runs no clock while the contract plays
 	const setupGameState = game.setupGameState;
@@ -106,7 +105,7 @@ export async function restoreState(state: string)
 		game.setupGameState = () => {
 			if (game.campaign)
 			{
-				game.state = new (GameState as unknown as GameStateConstructor)(game);
+				game.state = new GameState(game);
 				game.ui = { setNewScenario() {} } as unknown as typeof game.ui;
 				setupGameState.call(game);
 			}
@@ -114,7 +113,7 @@ export async function restoreState(state: string)
 		};
 	});
 	game.cleanup = () => {};
-	new (GameState as unknown as GameStateConstructor)(game).restoreFromString(state);
+	new GameState(game).restoreFromString(state);
 	await loaded;
 	return game.scenario;
 }

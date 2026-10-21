@@ -16,7 +16,7 @@ import {
 	actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, outcomeNames, playerType,
 	uiSettings
 } from "./prototypes";
-import { GameState, type GameStateConstructor } from "./gamestate";
+import { GameState } from "./gamestate";
 import { defined } from "./dom";
 import { AI, type AIAction, type AIConstructor } from "./ai";
 import { AIScripted } from "./aiscripted";
@@ -62,7 +62,7 @@ export interface Game
 	cleanup(): void;
 }
 
-//Game, GameState, UI and AIScripted are constructor functions, not classes:
+//Game, UI and AIScripted are constructor functions, not classes:
 //these give `new` on them a type (AIConstructor is ai.ts's)
 export interface GameConstructor { new (): Game; }
 export interface UIConstructor { new (game: Game): UI; }
@@ -96,7 +96,7 @@ export function Game(this: Game)
 	this.init = function()
 	{
 		AI.onUnitsDeployed = function() { game.ui.handleReinforcementDeployment(); };
-		this.state = new (GameState as unknown as GameStateConstructor)(this);
+		this.state = new GameState(this);
 		this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 			this.newScenario.bind(this, "failRestore"));
 	}

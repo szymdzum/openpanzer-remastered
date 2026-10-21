@@ -13,7 +13,7 @@
  */
 
 import { uiSettings } from "./prototypes";
-import { GameState, type GameStateConstructor } from "./gamestate";
+import { GameState } from "./gamestate";
 
 //An element with the vendor prefixed style properties the game still sets (Firefox's Moz*)
 export interface VendorCSSStyle extends CSSStyleDeclaration
@@ -488,7 +488,7 @@ export function changeViewPort(): void
 	var ratio = window.devicePixelRatio || 1;
 	var metaTags = document.getElementsByTagName("meta");
 
-	new (GameState as unknown as GameStateConstructor)(null).restoreSettings(); //To restore only settings
+	new GameState(null).restoreSettings(); //To restore only settings
 
 	for (i = 0; i < metaTags.length; i++)
 			if (metaTags[i].name == "viewport")

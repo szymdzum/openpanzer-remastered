@@ -6,7 +6,6 @@ import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 import { until } from "./lifecycle";
 
-type GameStateConstructor = import("../src/gamestate").GameStateConstructor;
 //Saves are parsed JSON, walked freely
 type Json = any;
 
@@ -15,7 +14,7 @@ async function exportGame()
 {
 	const { GameState } = await import("../src/gamestate");
 	const { game } = await import("../src/game");
-	return new (GameState as unknown as GameStateConstructor)(game).exportGameState();
+	return new GameState(game).exportGameState();
 }
 
 //A save restored the way the contracts restore it (GameState.restoreFromString), exported again
@@ -196,7 +195,7 @@ test.each(fixtures("engine"))("GameState local save and startup restore %s", asy
 	await restoreState(readFixture("engine", name).state);
 	const { GameState } = await import("../src/gamestate");
 	const { game } = await import("../src/game");
-	game.state = new (GameState as unknown as GameStateConstructor)(game);
+	game.state = new GameState(game);
 	game.state.save();
 	const exported = await exportGame();
 	const { MAJOR_VERSION } = await import("../src/prototypes");

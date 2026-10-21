@@ -67,9 +67,8 @@ export async function freshGame(): Promise<Game>
 	(globalThis as unknown as { Image: unknown }).Image = MapImage;
 	const { game } = await import("../src/game");
 	const { GameState } = await import("../src/gamestate");
-	type GameStateConstructor = import("../src/gamestate").GameStateConstructor;
 	clearInterval(game.loop);
-	game.state = new (GameState as unknown as GameStateConstructor)(game);
+	game.state = new GameState(game);
 	game.ui = { setNewScenario() {}, mainMenuButton() {}, handleReinforcementDeployment() {},
 		showAlert() {} } as unknown as Game["ui"];
 	return game;
