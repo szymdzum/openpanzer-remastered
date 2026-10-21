@@ -2,8 +2,9 @@
 //restoring it and exporting again shows what a save keeps and what it loses. A load is a fixed
 //point after one pass (load, save, load gives the same save), but the first load loses fields:
 //those tests are test.fails with the issue that describes the loss, a fix flips them
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
+import { until } from "./lifecycle";
 
 type GameStateConstructor = import("../src/gamestate").GameStateConstructor;
 //Saves are parsed JSON, walked freely
@@ -112,8 +113,12 @@ test.fails.each(fixtures("engine"))("GameState load keeps the partial map edges 
 	expect(edges(again)).toEqual(edges(saved));
 });
 
-//#55: Scenario.copy doesn't copy dayTurn. Two fixtures were saved in the middle of a day
-const midDay = ["dr9fr03-t2.json.gz", "ruscam09-t2.json.gz"];
+//The fixtures whose save has something a load can lose
+const savedState = (name: string): Json => JSON.parse(readFixture("engine", name).state);
+const midDay = fixtures("engine").filter((f) => savedState(f).scenario.dayTurn !== 0);
+const withReinforcements = fixtures("engine").filter((f) => Object.keys(savedState(f).scenario.reinforcements).length);
+
+//#55: Scenario.copy doesn't copy dayTurn
 test.fails.each(midDay)("GameState load keeps the time of day (#55) %s", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	expect(saved.scenario.dayTurn).not.toBe(0);
@@ -127,17 +132,16 @@ test.each(fixtures("engine").filter((f) => !midDay.includes(f)))("GameState load
 
 //#55: Scenario.copy adds the reinforcements again: the turn becomes the key string, the ids are
 //renumbered from 1 and turns whose list was emptied by deployments are dropped
-test.fails.each(fixtures("engine").filter((f) => f !== "winter-t2.json.gz" && f !== "wdmillazzo-t0.json.gz"))(
-	"GameState load keeps the reinforcement list (#55) %s", async (name) => {
-		const { saved, again } = await loadFixture(name);
-		expect(again.scenario.reinforcements).toEqual(saved.scenario.reinforcements);
-	});
-//The two scenarios without reinforcements
-test.each(["winter-t2.json.gz", "wdmillazzo-t0.json.gz"])("GameState load keeps no reinforcements %s", async (name) => {
+test.fails.each(withReinforcements)("GameState load keeps the reinforcement list (#55) %s", async (name) => {
 	const { saved, again } = await loadFixture(name);
-	expect(saved.scenario.reinforcements).toEqual({});
-	expect(again.scenario.reinforcements).toEqual({});
+	expect(again.scenario.reinforcements).toEqual(saved.scenario.reinforcements);
 });
+test.each(fixtures("engine").filter((f) => !withReinforcements.includes(f)))(
+	"GameState load keeps no reinforcements %s", async (name) => {
+		const { saved, again } = await loadFixture(name);
+		expect(saved.scenario.reinforcements).toEqual({});
+		expect(again.scenario.reinforcements).toEqual({});
+	});
 
 //#83: Scenario.copy doesn't copy expPerSide and unitsCostPerSide (filled only by the loader), so
 //units bought after a load get 0 experience
@@ -158,19 +162,25 @@ test.fails.each(renumbered)("GameState load keeps the unit ids %s", async (name)
 });
 
 //Not filed: tempSpotted isn't saved (Unit.copy), and the spotting a load replays (setHex,
-//GameRules.setSpotRange) marks every enemy unit in sight as tempSpotted
-test.fails.each(renumbered)("GameState load keeps tempSpotted %s", async (name) => {
-	const { saved, again } = await loadFixture(name);
+//GameRules.setSpotRange) marks every enemy unit in sight as tempSpotted. Whether a fixture shows
+//it depends on where its units stand: one test over all of them
+test.fails("GameState load keeps tempSpotted", async () => {
 	const spotted = (s: Json) => [...units(s)].filter(([, u]) => u.tempSpotted).map(([where]) => where);
-	expect(spotted(again)).toEqual(spotted(saved));
+	for (const name of fixtures("engine"))
+	{
+		const { saved, again } = await loadFixture(name);
+		expect(spotted(again), name).toEqual(spotted(saved));
+	}
 });
 
 //#71: Map.copy doesn't restore currentPlayer, addPlayer sets the first player. The game saves
 //right after Scenario.endTurn (Game.endTurn), so a save is usually made on the next player's turn.
-//On a fresh fixture both players are human, so endTurn plans no AI turn
+//The AI players (of a campaign) plan nothing here: Map.endTurn asks their handler
 test.fails.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 	"GameState load keeps whose turn it is (#71) %s", async (name) => {
 		const scenario = await restoreState(readFixture("engine", name).state);
+		for (const p of scenario.map.getPlayers())
+			p.handler = { buildActions() {}, getAction() { return null; } };
 		scenario.endTurn();
 		const saved = JSON.parse(await exportGame());
 		expect(saved.scenario.map.currentPlayer.id).not.toBe(0);
@@ -178,9 +188,10 @@ test.fails.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 		expect(again.scenario.map.currentPlayer.id).toBe(saved.scenario.map.currentPlayer.id);
 	});
 
-//The local save (GameState.save, plain JSON.stringify of the live objects) read back by
-//GameState.restore, as the game does at startup, gives the same game as the exported save
-test.each(fixtures("engine"))("GameState local save and restore %s", async (name) => {
+//The local save (GameState.save, plain JSON.stringify of the live objects) read back at startup
+//(Game.init: GameState.restore, then onScenarioLoadFinished) gives the same game as the exported
+//save, apart from the AI handlers the startup builds (setupPlayers)
+test.each(fixtures("engine"))("GameState local save and startup restore %s", async (name) => {
 	localStorage.clear();
 	await restoreState(readFixture("engine", name).state);
 	const { GameState } = await import("../src/gamestate");
@@ -191,12 +202,20 @@ test.each(fixtures("engine"))("GameState local save and restore %s", async (name
 	const { MAJOR_VERSION } = await import("../src/prototypes");
 	expect(localStorage.getItem("openpanzer-scenario-" + MAJOR_VERSION)).not.toBeNull();
 
-	await restoreState(exported); //fresh modules, the local save stays
-	const { GameState: FreshGameState } = await import("../src/gamestate");
+	vi.resetModules(); //a new page, the local save stays
 	const { game: fresh } = await import("../src/game");
-	await new Promise<void>((resolve, reject) => {
-		new (FreshGameState as unknown as GameStateConstructor)(fresh).restore(resolve, () => reject(new Error("no save")));
-	});
-	expect(JSON.parse(await exportGame())).toEqual(JSON.parse(exported));
-	expect(await exportGame()).toBe(exported);
+	clearInterval(fresh.loop);
+	fresh.ui = { setNewScenario() {} } as unknown as typeof fresh.ui;
+	fresh.init();
+	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the startup restore");
+	expect(fresh.scenario.file, "restored, not the default scenario").toBe(JSON.parse(exported).scenario.file);
+	const withoutHandlers = (state: string) => {
+		const o = JSON.parse(state);
+		for (const p of [...o.players, o.scenario.map.currentPlayer])
+			if (p) delete p.handler;
+		return JSON.stringify(o);
+	};
+	const restored = withoutHandlers(await exportGame());
+	expect(JSON.parse(restored)).toEqual(JSON.parse(withoutHandlers(exported)));
+	expect(restored).toBe(withoutHandlers(exported));
 });

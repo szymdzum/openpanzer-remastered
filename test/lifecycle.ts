@@ -75,22 +75,34 @@ export async function freshGame(): Promise<Game>
 	return game;
 }
 
-//Game.newScenario as record.js calls it: Math.random seeded, the players' isAI set, no campaign.
-//Resolves when the scenario has loaded
-export async function newScenario(game: Game, file: string, isAI = [0, 0, 0, 0])
+//Starts a state of record.sh the way record.js does, before the AI plays: Math.random seeded, then
+//Game.newScenario (a scenario file, its players human; "scripted:<file>", every player the
+//scripted AI) or Game.newCampaign ("campaign:<index>:<difficulty>"). Resolves when it has loaded
+export async function startState(game: Game, item: string)
 {
 	const { uiSettings } = await import("../src/prototypes");
 	Math.random = mulberry32(1);
-	uiSettings.isAI = isAI;
-	game.campaign = null;
-	const entry = scenariolist.find((x) => x[0] === file);
-	game.newScenario(file, entry ? entry[2] : "");
-	await until(() => game.scenario !== null && game.scenario.isLoaded && game.gameStarted, file + " to load");
+	const old = game.scenario;
+	if (item.startsWith("campaign:"))
+	{
+		const [, index, difficulty] = item.split(":");
+		game.newCampaign(+index, +difficulty);
+	}
+	else
+	{
+		const scripted = item.startsWith("scripted:");
+		const file = scripted ? item.slice("scripted:".length) : item;
+		uiSettings.isAI = scripted ? [2, 2, 2, 2] : [0, 0, 0, 0];
+		game.campaign = null;
+		const entry = scenariolist.find((x) => x[0] === file);
+		game.newScenario(file, entry ? entry[2] : "");
+	}
+	await until(() => game.scenario !== old && game.scenario !== null && game.scenario.isLoaded && game.gameStarted,
+		item + " to load");
 	return game.scenario;
 }
 
-//The scenario files of the 6 "-t0" fixtures: their state is the reference's export right after
-//newScenario
+//The "-t0" fixtures: their state is the reference's export right after startState
 export function freshFixtures(module: string): string[]
 {
 	return fs.readdirSync(path.join(__dirname, "contracts", module)).filter((f) => f.endsWith("-t0.json.gz")).sort();

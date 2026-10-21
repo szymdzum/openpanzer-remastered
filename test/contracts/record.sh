@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Records the contracts of a module on the reference (openpanzer-src): the expected results the
 # Vitest contract tests compare this repo with. Every state plays in its own Chrome, in parallel.
-# Usage: test/contracts/record.sh [module=gamerules]   (gamerules, unit or engine)
-# Writes test/contracts/<module>/<scenario>-t<turns>.json.gz: the exported game state and the
+# Usage: test/contracts/record.sh [module=gamerules] [state...]   (gamerules, unit or engine; the
+# states below by default)
+# Writes test/contracts/<module>/<state>-t<turns>.json.gz: the exported game state and the
 # serialized result of every call. Record again when the reference or a contract changes.
 # A bug fixed on purpose here can't be recorded on the reference, which still has it:
 # UPDATE_CONTRACTS=1 npm test writes this repo's results into the fixtures instead (same state,
@@ -22,9 +23,12 @@ source harness/lib/servers.sh
 source harness/lib/page.sh
 
 # The states: scenario files of every era and both equipment sets, at the start and after the
-# AI played some turns (damage, experience, entrenchment, captured flags). <file>:<turns>
+# AI played some turns (damage, experience, entrenchment, captured flags). <file>:<turns>. Also
+# (record.js) the tutorial played by its scripted AI, scripted:<file>:<turns>, and the start of a
+# campaign, campaign:<index>:<difficulty>:0 (the Russian one, at the tactical difficulty)
 STATES=(drpzop01.xml:0 drpzop01.xml:2 drstu02.xml:0 dr9fr03.xml:2 ruscam09.xml:0 ruscam09.xml:2
-	ant03.xml:2 it12baxe.xml:0 winter.xml:2 wdmillazzo.xml:0 dragrom02.xml:2 sb6buna.xml:0 rcampx06.xml:2)
+	ant03.xml:2 it12baxe.xml:0 winter.xml:2 wdmillazzo.xml:0 dragrom02.xml:2 sb6buna.xml:0 rcampx06.xml:2
+	scripted:tutorial.xml:2 campaign:3:1:0)
 FUZZ_ROUNDS=${FUZZ_ROUNDS:-1}
 case $MODULE in
 	gamerules) RUN=runGameRulesContract ;;
@@ -34,17 +38,19 @@ case $MODULE in
 esac
 
 if [ "${1:-}" = "--job" ]; then
-	file=${2%:*} turns=${2#*:}
+	file=${2%:*} turns=${2##*:}
+	name=$(printf %s "${file%.xml}" | tr : -)
 	export BDG_SESSION=$(session_name "$BDG_SESSION" "$2")
 	echo "const runContract = $RUN;" > "$OUT/$2.run.js"
 	run_page_retry "$REFERENCE_URL" "$OUT/$2.json" "" __recordResult \
 		"window.__record = { file: \"$file\", turns: $turns, fuzzRounds: $FUZZ_ROUNDS }" \
 		harness/lib/harness.js test/contracts/common.js "test/contracts/$MODULE.contract.js" "$OUT/$2.run.js" test/contracts/record.js
-	gzip -9 -c "$OUT/$2.json" > "test/contracts/$MODULE/${file%.xml}-t$turns.json.gz"
-	echo "recorded $MODULE ${file%.xml}-t$turns: $(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).results.length)' "$OUT/$2.json") calls"
+	gzip -9 -c "$OUT/$2.json" > "test/contracts/$MODULE/$name-t$turns.json.gz"
+	echo "recorded $MODULE $name-t$turns: $(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).results.length)' "$OUT/$2.json") calls"
 	exit
 fi
 
+[ $# -gt 1 ] && STATES=("${@:2}")
 rm -rf "$OUT"
 mkdir -p "$OUT" "test/contracts/$MODULE"
 serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"

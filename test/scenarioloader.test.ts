@@ -1,17 +1,17 @@
 //Scenario and ScenarioLoader against the reference: the state of every "-t0" engine fixture is
-//the reference's export right after Game.newScenario (test/contracts/record.js). Loading the same
-//XML here, with Math.random seeded the same way, must export the same game
+//the reference's export right after Game.newScenario or Game.newCampaign (test/contracts/record.js).
+//Loading the same XML here, with Math.random seeded the same way, must export the same game
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { readFixture } from "./contracts";
-import { freshFixtures, freshGame, mapSizes, newScenario } from "./lifecycle";
+import { freshFixtures, freshGame, mapSizes, startState } from "./lifecycle";
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test.each(freshFixtures("engine"))("ScenarioLoader contract %s", async (name) => {
 	const fixture = readFixture("engine", name);
 	const game = await freshGame();
-	await newScenario(game, fixture.file);
+	await startState(game, fixture.file);
 	const actual = game.state.exportGameState();
 	expect(JSON.parse(actual), "a different scenario than the reference loaded").toEqual(JSON.parse(fixture.state));
 	expect(actual, "same data, different key order").toBe(fixture.state);

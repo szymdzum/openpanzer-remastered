@@ -88,14 +88,28 @@ export function writeFixture(module: string, name: string, fixture: ContractFixt
 }
 
 //Fresh modules (Equipment keeps what it loaded), then the state restored the way the recorder
-//restored it: GameState.restoreFromString into the game, which builds no UI (setupGameState)
+//restored it: GameState.restoreFromString into the game, which builds no UI (setupGameState).
+//A campaign runs the game's setupGameState, as record.js does: it links the campaign player
+//(Game.getCampaignPlayer). Its UI calls go to a stub, its saves to jsdom's localStorage
 export async function restoreState(state: string)
 {
 	vi.resetModules();
 	const { GameState } = await import("../src/gamestate");
 	type GameStateConstructor = import("../src/gamestate").GameStateConstructor;
 	const { game } = await import("../src/game");
-	const loaded = new Promise<void>((resolve) => { game.setupGameState = resolve; });
+	clearInterval(game.loop); //the turn loop, record.js runs no clock while the contract plays
+	const setupGameState = game.setupGameState;
+	const loaded = new Promise<void>((resolve) => {
+		game.setupGameState = () => {
+			if (game.campaign)
+			{
+				game.state = new (GameState as unknown as GameStateConstructor)(game);
+				game.ui = { setNewScenario() {} } as unknown as typeof game.ui;
+				setupGameState.call(game);
+			}
+			resolve();
+		};
+	});
 	game.cleanup = () => {};
 	new (GameState as unknown as GameStateConstructor)(game).restoreFromString(state);
 	await loaded;

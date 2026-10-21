@@ -4,17 +4,29 @@
 // runContract is the contract's run function, contractCapture an optional one of the contract.
 // Loads the scenario, lets the AI play `turns` turns, exports the game state and restores it
 // with the game's own loader into the game (without building the UI: setupGameState does
-// nothing), then runs the contract on it. The test restores the same export the same way, so
+// nothing, except for a campaign), then runs the contract on it. The test restores the same export the same way, so
 // both start from the same objects.
+// args.file is a state of record.sh: a scenario file (its players human at turn 0, AI after),
+// "scripted:<file>" (every player the scripted AI, AIScripted: the tutorial) or
+// "campaign:<index>:<difficulty>" (the campaign's first scenario, Game.newCampaign, turn 0 only:
+// the campaign player is human).
 const args = window.__record;
 
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(1);
-uiSettings.isAI = args.turns ? [1, 1, 1, 1] : [0, 0, 0, 0];
-game.campaign = null;
 const old = game.scenario;
-const s = scenariolist.find((x) => x[0] === args.file);
-game.newScenario(args.file, s ? s[2] : "");
+if (args.file.startsWith("campaign:")) {
+	if (args.turns) throw new Error(args.file + ": a campaign is recorded at turn 0, its player is human");
+	const [, index, difficulty] = args.file.split(":");
+	game.newCampaign(+index, +difficulty);
+} else {
+	const scripted = args.file.startsWith("scripted:");
+	const file = scripted ? args.file.slice("scripted:".length) : args.file;
+	uiSettings.isAI = scripted ? [2, 2, 2, 2] : args.turns ? [1, 1, 1, 1] : [0, 0, 0, 0];
+	game.campaign = null;
+	const s = scenariolist.find((x) => x[0] === file);
+	game.newScenario(file, s ? s[2] : "");
+}
 if (!await waitFor(() => game.scenario !== old && game.scenario.isLoaded && game.gameStarted
 	&& game.scenario.map.getUnits().length > 0, 30000)) throw new Error(args.file + " didn't load");
 if (args.turns) {
@@ -26,7 +38,13 @@ if (args.turns) {
 const state = game.state.exportGameState();
 let restored = false;
 game.cleanup = () => {};
-game.setupGameState = () => { restored = true; };
+// The game's setupGameState builds the UI again; a campaign game also links its campaign player
+// there (Game.getCampaignPlayer, which the engine and the save read), so a campaign gets it
+const setupGameState = game.setupGameState;
+game.setupGameState = () => {
+	if (game.campaign) setupGameState.call(game);
+	restored = true;
+};
 new GameState(game).restoreFromString(state);
 if (!await waitFor(() => restored, 30000)) throw new Error(args.file + ": the export didn't restore");
 

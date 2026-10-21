@@ -71,12 +71,14 @@ function runEngineContract(env) {
 	// The combat log holds what was played before the export: start empty on both sides
 	CL.reset();
 
-	// The UI as the engine and Game call it: the AI after deploying its purchases, and
-	// Game.deployReinforcements (its alerts are recorded)
+	// The UI as the engine and Game call it: the AI after deploying its purchases,
+	// Game.deployReinforcements (its alerts are recorded) and the tutorial's scripted AI, which
+	// opens the main menu while it plans its last turn
 	const realUI = game.ui, realSpotSide = game.spotSide;
 	let alerts = [];
 	game.ui = {
 		handleReinforcementDeployment() {},
+		mainMenuButton() {},
 		showAlert(row, col, text, positive) { alerts.push([row, col, text, positive]); },
 	};
 
@@ -86,7 +88,7 @@ function runEngineContract(env) {
 	const standIns = {}; // the driver's AI playing a human player
 	for (const p of players) {
 		if (p.type == PT.aiLocal) p.handler = new env.AI(p, m);
-		else if (p.type == PT.aiScripted) p.handler = new env.AIScripted(p, m); // (no state has one)
+		else if (p.type == PT.aiScripted) p.handler = new env.AIScripted(p, m); // (the tutorial)
 		else standIns[p.id] = new env.AI(p, m);
 	}
 	const isAI = (p) => p.type == PT.aiLocal || p.type == PT.aiScripted;
