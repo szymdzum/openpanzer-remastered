@@ -27,6 +27,7 @@ import { Unit } from "./unit";
 import { engineContext } from "./context";
 import { Leaders } from "./leaders";
 import { HexCounters, MapVisibility } from "./visibility";
+import { MapBoard } from "./board";
 
 //Hex, Player and Map classes
 
@@ -682,15 +683,15 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.sidesVictoryHexes = [[], []]; //Victory hexes for each side
 	this.currentPlayer = null; //Which player is currently playing
 
-	var unitImagesList: UnitImagesList = {}; //a "hash" of unique unit images used for caching
 	//selected hexes for current unit move destinations: extendedCells from the move range, plain
 	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
 	var moveSelected: Cell[] = [];
 	var attackSelected: Cell[] = []; //selected hexes for current unit attack destinations
-	var unitList: Unit[] = []; //internal list of units
 	var playerList: Player[] = []; //players list
-	var uniqueID = 0; //gets assigned as unique unit ID and incremented after each unit is added
 	var visibility = new MapVisibility(this); //the hexes' zone of control and spotting counters
+	var board = new MapBoard(this, visibility); //the units: the list, their ids, placing and moving them
+	var unitList = board.units; //internal list of units
+	var unitImagesList = board.images; //a "hash" of unique unit images used for caching
 
 	this.allocMap = function()
 	{
@@ -706,31 +707,8 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		}
 	}
 
-	this.addUnit = function(unit)
-	{
-		//Assign an unique id to the unit
-		unit.id = uniqueID;
-		uniqueID++;
-
-		unitList.push(unit);
-		unitImagesList[unit.eqid] = Equipment.equipment[unit.eqid].icon; //unit.getIcon(); //TODO rewrite this
-
-		if (unit.transport !== null)
-			unitImagesList[unit.transport.eqid] = unit.transport.icon;
-
-		if (unit.carrier > 0)
-			unitImagesList[unit.carrier] = Equipment.equipment[unit.carrier].icon;
-
-		//Sets the player struct
-		unit.player = this.getPlayer(unit.owner);
-
-		//Some units have no flag defined put player country flag
-		if (unit.flag == -1)
-			unit.flag = unit.player.country + 1;
-
-		//Set zone of control and spotting range of this unit
-		visibility.setUnit(unit, true);
-	}
+	//Adds a unit already on its hex to the map: a new id, its player, its zone of control and spotting
+	this.addUnit = function(unit) { board.add(unit); }
 
 	this.getUnits = function() { return unitList; }
 	this.getUnitById = function(id)
@@ -1115,10 +1093,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			{
 				var pos = unitList[i].getPos();
 				if (pos)
-				{
-					visibility.setUnit(unitList[i], false); //remove old ZOC and spotting range
-					this.map[pos.row][pos.col].delUnit(unitList[i]);
-				}
+					board.remove(unitList[i], this.map[pos.row][pos.col]);
 				//Count the loss in the campaign player dossier unless the unit was disbanded or removed
 				if (engineContext.campaign() !== null)
 				{
@@ -1204,11 +1179,8 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			moveCost = 0;
 
 		unit.move(moveCost);
-		visibility.setUnit(unit, false); //remove old ZOC and spotting range
-		srcHex.delUnit(unit);
-		dstHex.setUnit(unit);
-		unit.facing = GameRules.getDirection(s.row, s.col, lastCell.row, lastCell.col);
-		var newSpotted = visibility.setUnit(unit, true); //set new ZOC and spotting range
+		//Returns the enemy units spotted for the first time
+		var newSpotted = board.relocate(unit, srcHex, dstHex, GameRules.getDirection(s.row, s.col, lastCell.row, lastCell.col));
 
 		this.setMoveRange(unit); //if unit can still move put new range
 		this.setAttackRange(unit) //Put new attack range
@@ -1406,8 +1378,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		if (!isAir && hex.terrain == terrainType.Ocean)
 			u.embark(unitClass.navalTransport);
 
-		hex.setUnit(u);
-		this.addUnit(u);
+		board.place(u, hex);
 
 		return true;
 	}
@@ -1416,8 +1387,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	{
 		var u = new Unit(eqid);
 		u.owner = owner;
-		this.map[row][col].setUnit(u);
-		this.addUnit(u);
+		board.place(u, this.map[row][col]);
 	}
 
 	//Places a reinforcement unit at row, col or a free hex around it, returns the cell used or null
@@ -1430,8 +1400,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		if (c === null)
 			return null;
 
-		this.map[c.row][c.col].setUnit(unit);
-		this.addUnit(unit);
+		board.place(unit, this.map[c.row][c.col]);
 		return c;
 	}
 
@@ -1514,7 +1483,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 				h = unitList[i].getHex();
 				if (h && h.isDeployment == player.id)
 				{
-					h.delUnit(unitList[i]);
+					h.delUnit(unitList[i]); //Off the hex, its zone of control and spotting stay (#72)
 					unitList[i].destroyed = true;
 					unitList[i].nodossier = true;
 					update = true;
@@ -1545,10 +1514,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		var dstHex = this.map[dCell.row][dCell.col];
 
 		unit.copy(sUnit); //restore unit properties to previous state
-		visibility.setUnit(unit, false); //remove old ZOC and spotting range
-		srcHex.delUnit(unit);
-		dstHex.setUnit(unit);
-		visibility.setUnit(unit, true); //set new ZOC and spotting range
+		board.relocate(unit, srcHex, dstHex);
 		this.selectUnit(unit);
 
 		var currentPlayer = this.getPlayer(unit.player.id);

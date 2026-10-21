@@ -6,7 +6,7 @@
 // and incremental file in reports/mutation/map/: CI runs each module on its own runner.
 const engine = ["gamerules", "unit", "map", "ai", "leaders", "scenario"];
 // GameMap's parts are mutated with the map
-const parts = { map: ["map", "visibility"] };
+const parts = { map: ["map", "visibility", "board"] };
 const only = process.env.MUTATE;
 if (only && !engine.includes(only)) throw new Error("MUTATE: one of " + engine.join(", "));
 const out = "reports/mutation/" + (only || "all");
