@@ -1,4 +1,4 @@
-// Records a contract on the reference: runs inside index.html?harness of openpanzer-src as the
+// Records a contract on the reference: runs inside index.html?harness of the reference (reference/) as the
 // body of an async function, after harness/lib/harness.js and the contract file (record.sh
 // pastes them together, after common.js). Input window.__record = { file, turns, fuzzRounds };
 // runContract is the contract's run function, contractCapture an optional one of the contract.

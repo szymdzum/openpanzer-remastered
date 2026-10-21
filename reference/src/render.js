@@ -1,0 +1,1000 @@
+/**
+ * Render - draws the graphic elements on canvases
+ *
+ * http://www.linuxconsulting.ro
+ * http://openpanzer.net
+ *
+ * Copyright (c) 2012 Nicu Pavel
+ * Licensed under the GPL license:
+ * http://www.gnu.org/licenses/gpl.html
+ *
+ * Reconstructed from the Panzer Marshal 3.2.14 bundle, names and comments
+ * carried over from the openpanzer 2.9 source where the code matches.
+ */
+
+function Render(mapObj)
+{
+	var map = mapObj;
+
+	var imgUnits = {};
+	var imgAttackCursor = null;
+	var imgFlags = null;
+	var imgMapBackground = null;
+	var imgUnitFire = null;
+	var imgUnitNoAmmo = null;
+	var imgBridge = null; //Drawn instead of a ground unit sitting on a bridge of its side
+	var imgLeaderAxis = null;
+	var imgLeaderAllied = null;
+
+	var drawnHexGrid = false; //Force first time rendering of hex grid but prevent redraw if no changes
+	var lastCursorCell = null; //Last cell for which the cursor was built
+	var lastCursorImage = null;//last cursor image
+	var lastCursorUnit = null; //last unit for which a cursor was generated
+
+	var ch; // The hexes canvas element
+	var cm; // The map canvas element
+	var ca; // The animation canvas element.Also used as cursor coords but c canvas can be used as well
+	var cbb; //A backbuffer canvas for dynamically creating images (as in cursor image)
+	var cubb; //A backbuffer canvas for dynamically creating unit images //TODO: merge the 2 backbuffers into one
+	var c = null; //This is the context where the main drawing takes place (units, move and attack selection)
+	var cb = null;//This is the context where the map image and hex grid is drawn.
+	var a = null; //This is where the animations(explosions/fire/etc) are drawn. Also used as cursor coords but c canvas can be used as well
+	var bb = null; //Backbuffer context
+	var ubb = null; //Backbuffer for unit rendering
+
+	//Hex sizes compatible with PG2 sizes
+	var s = 30;  //hexagon segment size                    |\
+	var h = s/2; //hexagon height h = sin(30)*s           r| \ s
+	var r = 25;  //hexagon radius r = cos(30)*s ~ s*0.833  -h-
+
+	//Medium flag sizes used to mark objectives on map
+	var flw = 21; //Flag width
+	var flh = 14; //Flag height
+
+	// Canvas offset from the browser window (leaves space for top menu)
+	var canvasOffsetX = 0;
+	var canvasOffsetY = 30;
+	// Where to start rendering respective to the canvas
+	// Since PG2 maps define even the half and "quarter" hexes that form at the edges we need to offset those
+	var renderOffsetX = - (s + h);
+	var renderOffsetY = - r;
+
+	//we slice the screen in columns of s + h size
+	var colSlice = s + h;
+	//add an offset for better rounding of mouse position in a column
+	var mousePrecisionOffset = s/100;
+	//Unit strength text size (px)
+	var unitTextHeight = 8;
+	//Animation Chain
+	var animationChain = new AnimationChain();
+
+	//Check if the canvases already exists in the curent document to prevent
+	//overlaying multiple rendering instances
+	//Map image as background
+	if ((cm = $('map')) === null) cm = addTag('game', 'canvas');
+	cm.id = "map";
+	// Hexes/units/flags
+	if ((ch = $('hexes')) === null) ch = addTag('game', 'canvas');
+	ch.id = "hexes";
+	// Animation and cursors
+	if ((ca = $('cursor')) === null) ca = addTag('game', 'canvas');
+	ca.id = "cursor";
+	// Backbuffer (not added as child to DOM)
+	cbb = addTag(null, 'canvas');
+	cbb.id = "backbuffer";
+
+	// Unit Backbuffer used for moving units as css sprites
+	if ((cubb = $('unitbackbuffer')) === null) cubb = addTag('game', 'canvas');
+	cubb.id = "unitbackbuffer";
+
+	cb = cm.getContext('2d');
+	c = ch.getContext('2d');
+	a = ca.getContext('2d');
+	bb = cbb.getContext('2d');
+	ubb = cubb.getContext('2d');
+
+	cbb.width = cbb.height = 54; //Currently the size of the attack cursor
+	cubb.width = cubb.height = 120; //Currently the max size of a unit sprite //TODO compute this
+
+	//Renders the units/decals/hexgrid if orow,ocol and range are defined then it will
+	//only partially render the canvas around orow,ocol with range around this location
+	//Called without parameters it renders the whole map (range + 1 is NaN)
+	this.render = function(orow, ocol, range)
+	{
+		var x0, y0;
+
+		//Since cellToScreen returns top left corner of a hex in range we need to increase the range with at least 1 hex
+		//but since the clearing rectangle can half clear staggered hexes we render by 2 more hexes in each direction but
+		//we only clear a 1 hex smaller area in each direction
+		var clearZone = getZoneRangeLimits(orow, ocol, range + 1); //the map (cell) coords that will be cleared by clearRect
+		var renderZone = getZoneRangeLimits(orow, ocol, range + 2); //the map (cell) coords that will be rendered hex by hex
+
+		var hex;
+		var current = null;
+		var unit = null;
+		var drawHexGrid = false;
+
+		if (uiSettings.hexGrid != drawnHexGrid)
+		{
+			drawnHexGrid = drawHexGrid = uiSettings.hexGrid;
+			cb.clearRect(0, 0, imgMapBackground.width, imgMapBackground.height + 65);
+		}
+
+		if (map.currentUnit !== null)
+			current = map.currentUnit.getPos();
+
+		var spos = cellToScreen(clearZone.srow, clearZone.scol, false);
+		var epos = cellToScreen(clearZone.erow, clearZone.ecol, false);
+
+		c.clearRect(spos.x, spos.y, epos.x - spos.x, epos.y - spos.y);
+
+		for (var row = renderZone.srow; row < renderZone.erow; row++)
+		{
+			//we space the hexagons on each line next column being on the row below
+			for (var col = renderZone.scol; col < renderZone.ecol; col++)
+			{
+				hex = map.map[row][col];
+
+				//flat-out hex layout //inline for performance gain
+				if (col & 1) // odd column
+					y0 = row * 2 * r + r + renderOffsetY;
+				else
+					y0 = row * 2 * r + renderOffsetY;
+				x0 = col * (s + h) + h + renderOffsetX;
+
+				if ((current !== null) && (typeof current !== "undefined")
+					&& (row == current.row) && (col == current.col))
+				{
+					drawHex(c, x0, y0, hexstyle.currentstroke);
+					drawHex(c, x0, y0, hexstyle.current);
+				}
+
+				//Show deployment hexes of the current player side on deploy mode
+				if (uiSettings.deployMode && hex.isDeployment > -1
+					&& map.getPlayer(hex.isDeployment).side == map.currentPlayer.side)
+					drawHex(c, x0, y0, hexstyle.deploy);
+
+				//Strategic map: only flags, of the units and of the victory hexes
+				if (uiSettings.strategicZoom)
+				{
+					var tx = (x0 + (s - h)/2 - flw/2) >> 0;
+					var ty = (y0 + r - flh - 2) >> 0;
+					var flag = -1;
+					var scale = 0;
+					var flagUnit = null;
+
+					c.save();
+					//Only renders flag for air or ground units not both if they are spotted
+					if (hex.isSpotted(map.currentPlayer.side))
+					{
+						if (uiSettings.airMode)
+							flagUnit = hex.airunit;
+						else
+							flagUnit = hex.unit;
+
+						if (flagUnit !== null)
+						{
+							flag = flagUnit.player.country;
+							scale = 1.4;
+							if (flagUnit.hasMoved)
+								c.globalAlpha = 0.6;
+						}
+					}
+					if (hex.flag != -1 && hex.victorySide != -1)
+					{
+						flag = hex.flag;
+						scale = 3;
+					}
+					//The context is only restored when a flag is drawn, the saved states pile up otherwise
+					if (flag != -1)
+					{
+						c.drawImage(imgFlags, flw * flag, 0, flw, flh, tx, ty, scale * s, scale * s/(flw/flh));
+						c.restore();
+					}
+					continue;
+				}
+
+				if (uiSettings.showHiddenVictoryHexes)
+				{
+					//Victory hexes without a flag get the flag of their owner and a thicker box
+					var vtx = (x0 + s/2 - flw/2) >> 0;
+					var vty = (y0 + 2 * r - flh - 2) >> 0;
+					var boxWidth = 2;
+					var vflag = hex.flag;
+
+					if (hex.victorySide != -1)
+					{
+						if (vflag == -1 && hex.owner != -1)
+						{
+							vflag = map.getPlayer(hex.owner).country;
+							boxWidth = 6;
+						}
+						c.beginPath();
+						c.lineWidth = boxWidth;
+						c.strokeStyle = "rgba(139,0,0,1)";
+						c.strokeRect(vtx - 1, vty - 1, flw + 2, flh + 2);
+						c.strokeStyle = "rgba(127,255,0,1)";
+						c.strokeRect(vtx - 3, vty - 3, flw + 6, flh + 6);
+						c.strokeStyle = "rgba(0,0,0,1)";
+						c.lineWidth = 1;
+						c.strokeRect(vtx - 4, vty - 4, flw + 8, flh + 8);
+						c.closePath();
+					}
+					if (vflag != -1)
+						c.drawImage(imgFlags, flw * vflag, 0, flw, flh, vtx, vty, flw, flh);
+				}
+				else
+				{
+					//Hex decals
+					if (hex.flag != -1)
+					{
+						var dtx = (x0 + s/2 - flw/2) >> 0;
+						var dty = (y0 + 2 * r - flh - 2) >> 0;
+
+						c.drawImage(imgFlags, flw * hex.flag, 0, flw, flh, dtx, dty, flw, flh);
+
+						if (hex.victorySide != -1)
+						{
+							c.beginPath();
+							c.lineWidth = 2;
+							c.strokeStyle = "rgba(139,0,0,1)";
+							c.strokeRect(dtx - 1, dty - 1, flw + 2, flh + 2);
+							c.strokeStyle = "rgba(127,255,0,1)";
+							c.strokeRect(dtx - 3, dty - 3, flw + 6, flh + 6);
+							c.strokeStyle = "rgba(0,0,0,1)";
+							c.lineWidth = 1;
+							c.strokeRect(dtx - 4, dty - 4, flw + 8, flh + 8);
+							c.closePath();
+						}
+					}
+				}
+
+				if (drawHexGrid)
+					drawHex(cb, x0, y0, hexstyle.generic, hex.terrain);
+
+				//Don't render unit if it has a move animation or it's not spotted by
+				//the local playing player side
+				unit = hex.getUnit(!uiSettings.airMode);
+				if (unit !== null && !unit.hasAnimation
+						&& (hex.isSpotted(game.spotSide) || unit.tempSpotted
+								|| unit.player.side == game.spotSide))
+				{
+					if (uiSettings.markOwnUnits && unit.player.id == map.currentPlayer.id)
+						drawHex(c, x0, y0, hexstyle.ownunit);
+					drawHexUnit(c, x0, y0, unit, false); //Unit below depending on airMode without strength box
+				}
+
+				unit = hex.getUnit(uiSettings.airMode);
+				if (unit !== null && !unit.hasAnimation
+						&& (hex.isSpotted(game.spotSide) || unit.tempSpotted
+								|| unit.player.side == game.spotSide))
+				{
+					if (uiSettings.airMode && hex.airunit !== null)
+						drawHex(c, x0, y0, hexstyle.airunit);
+					drawHexUnit(c, x0, y0, unit, true); //Unit above with strength box drawn
+				}
+
+				//Only show deployment hexes not move/attack hexes on deploy mode
+				//Don't show move/attack hexes for non local players
+				if (!uiSettings.deployMode && map.currentPlayer.side == game.spotSide)
+				{
+					if (hex.isMoveSel)
+					{
+						if (hex.isSpotted(map.currentPlayer.side))
+							drawHex(c, x0, y0, hexstyle.movespotted);
+						else
+							drawHex(c, x0, y0, hexstyle.move);
+					}
+
+					if (hex.isAttackSel)
+						drawHex(c, x0, y0, hexstyle.attack);
+				}
+
+				if (uiSettings.hasTouch && hex.isAttackSel && map.currentUnit) //For touchScreens where we can't have mousecursors
+				{
+					var localx = x0 - s/2;
+					var atkunit = map.currentUnit;
+					var defunit = hex.getAttackableUnit(atkunit, uiSettings.airMode);
+					//generateAttackCursor returns null without a defending unit and drawImage throws
+					c.drawImage(generateAttackCursor(atkunit, defunit, false), localx, y0);
+				}
+			}
+		}
+	}
+
+	//Renders attack or transport move cursor
+	this.drawCursor = function(cell)
+	{
+		var row = cell.row;
+		var col = cell.col;
+		var hex = map.map[row][col];
+		var curw = bb.canvas.width; //cursor width
+		var curh = bb.canvas.height; //cursor height
+		var redraw = false;
+
+		if (lastCursorUnit !== map.currentUnit)
+			redraw = true; //Redraw because a new unit has been selected
+
+		//Check if we should generate an ATTACK cursor
+		if (hex.isAttackSel && map.currentUnit !== null && !map.currentUnit.hasFired)
+		{
+			//check cell if a cursor should be generated again
+			if ((redraw == true) || (lastCursorCell === null) || (lastCursorImage === null) ||
+				(lastCursorCell.row != row) || (lastCursorCell.col != col))
+			{
+				redraw = true; //Force css cursor assignment
+				var atkunit = map.currentUnit;
+				var defunit = hex.getAttackableUnit(atkunit, uiSettings.airMode);
+				lastCursorUnit = atkunit;
+				lastCursorCell = cell;
+				lastCursorImage = generateAttackCursor(atkunit, defunit, true);
+			}
+			//only assign a new css cursor if needed (to reduce html element load)
+			if ((ca.style.cursor == 'default') || (ca.style.cursor == 'pointer')
+				|| (ca.style.cursor == 'auto') || (redraw == true))
+			{
+				//cursor data, hotspot x, hotspot y, fallback cursor image
+				ca.style.cursor = "url('" + lastCursorImage + "') " + curw/2 + " " + curh/2 +", auto";
+			}
+		}
+		else
+		{
+			//TODO PG2 default cursor
+			ca.style.cursor = 'default';
+		}
+	}
+
+	//Draws a hex with a style on the units canvas (used to mark the hexes in combat)
+	this.drawHexByCell = function(cell, style)
+	{
+		var pos = cellToScreen(cell.row, cell.col, false);
+		drawHex(c, pos.x, pos.y, style);
+	}
+
+	//Runs all animations in order that they were added and then delete all animations
+	this.runAnimation = function(animationCBData)
+	{
+		animationChain.start(animationCBData);
+	}
+
+	//Adds an animation to the list
+	this.addAnimation = function(row, col, animationName, facing)
+	{
+		if (! (animationName in animationsData))
+			return false;
+
+		if (typeof facing === "undefined")
+			facing = direction.N;
+		var anim = animationsData[animationName](); //a new sprite each time
+		var pos = cellToScreen(row, col);
+
+		animationChain.add({
+			ctx: a,
+			x: (pos.x - anim.width/2 + s/2) >> 0,
+			y: (pos.y - anim.image.height/2 + r) >> 0,
+			rotate: directionToRadians[facing],
+			sprite: anim
+		});
+
+		return true;
+	}
+
+	//TODO stop another running animation
+	this.moveAnimation = function(moveAnimationCBData)
+	{
+		if (moveAnimationCBData.unit === null) return;
+		var ma = new MoveAnimation(moveAnimationCBData);
+		ma.movTimer = setInterval( function() { ma.start();}, ma.delay);
+	}
+
+	//Animates the unit moving thru a list of cells
+	function MoveAnimation(moveAnimationCBData)
+	{
+		var animSteps = 5;
+		var movIndex = 0;
+		var movStep = 0;
+		var unit = moveAnimationCBData.unit;
+		var cellList = moveAnimationCBData.moveResults.passedCells;
+		var cPos, dPos;
+		var cCell, dCell;
+		var xstep, ystep;
+		var actualFacing;
+		var needRedraw = true;
+
+		this.movTimer = null;
+		this.delay = uiSettings.quickAnimation ? 5 : 30;
+
+		//Directly blits the unit to the animation canvas (slow on Android) //unused
+		this.directDraw = function(cPos, unit)
+		{
+			a.clearRect(cPos.x - 20, cPos.y - 20, 80, 70); //hex size + 20
+			cPos.x += xstep;
+			cPos.y += ystep;
+			drawHexUnit(a, cPos.x, cPos.y, unit, false);
+		}
+		//Blits unit image to a separate canvas and animates using css properties
+		this.cssDraw = function(cPos, unit, needRedraw)
+		{
+			if (needRedraw)
+			{
+				ubb.clearRect(0, 0, ubb.canvas.width, ubb.canvas.height);
+				//Offset the sprite drawing on canvas otherwise it will be clipped
+				drawUnitSprite(ubb, -renderOffsetX, -renderOffsetY, unit);
+				if (cubb.style.display == "none")
+					cubb.style.display = "inline";
+			}
+			cPos.x += xstep;
+			cPos.y += ystep;
+			if (!uiSettings.use3D)
+			{
+				cubb.style.top = cPos.y + renderOffsetY + "px";
+				cubb.style.left = cPos.x + renderOffsetX + "px";
+			}
+			else
+			{
+				var transform = "translate3d(" + 1*(cPos.x + renderOffsetX) + "px, " + 1*(cPos.y + renderOffsetY) + "px, 0)";
+
+				if (cubb.style.transition != "linear")
+				{
+					cubb.style.MozTransition = "linear";
+					cubb.style.webkitTransition = "linear";
+					cubb.style.transition = "linear";
+				}
+
+				cubb.style.MozTransform = transform;
+				cubb.style.webkitTransform = transform;
+				cubb.style.transform = transform;
+			}
+		}
+
+		this.start = function()
+		{
+			if (movIndex >= cellList.length - 1)
+			{
+				movStep = 0;
+				movIndex = 0;
+				clearInterval(this.movTimer);
+				unit.hasAnimation = false;
+				cubb.style.display = "none";
+				moveAnimationCBData.cbfunc(moveAnimationCBData);
+				return;
+			}
+
+			if (movStep == 0)
+			{
+				cCell = cellList[movIndex];
+				dCell = cellList[movIndex + 1];
+
+				cPos = cellToScreen(cCell.row, cCell.col);
+				dPos = cellToScreen(dCell.row, dCell.col);
+
+				xstep = ((dPos.x - cPos.x)/animSteps) >> 0;
+				ystep = ((dPos.y - cPos.y)/animSteps) >> 0;
+
+				actualFacing = GameRules.getDirection(cCell.row, cCell.col, dCell.row, dCell.col);
+
+				if (Math.abs(actualFacing - unit.facing) > 1)
+				{
+					unit.facing = actualFacing;
+					needRedraw = true;
+				}
+			}
+
+			//Only the cells the local player sees show the moving unit
+			if (cellList[movIndex].isVisible)
+				this.cssDraw(cPos, unit, needRedraw);
+
+			needRedraw = false;
+			movStep++;
+
+			if (movStep >= animSteps)
+			{
+				movIndex++;
+				movStep = 0;
+			}
+		}
+	}
+
+	//Converts from screen x,y to row,col in map array
+	this.screenToCell = function(x, y)
+	{
+		var vrow; //virtual graphical rows
+		var trow, tcol; //true map rows/cols
+
+		//If we're in tactical map scale the values coresponding to zoom level
+		if (uiSettings.mapZoom)
+		{
+			x = x / uiSettings.zoomLevel;
+			y = y / uiSettings.zoomLevel;
+		}
+		//Strategic map is scaled down by css
+		if (uiSettings.strategicZoom)
+		{
+			x = x * uiSettings.strategicZoomLevel;
+			y = y * uiSettings.strategicZoomLevel;
+		}
+
+		tcol = Math.round((x - renderOffsetX) / colSlice + mousePrecisionOffset) - 1;
+		//a graphical row (half hex) not the array row
+		vrow = (y - renderOffsetY * (~tcol & 1)) / r; //Half hexes add r if col is odd
+		//shift to correct row index
+		trow = Math.round(vrow/2 - 1 * (vrow & 1));
+		if (trow < 0) { trow = 0; }
+		if (trow > map.rows - 1) trow = map.rows - 1;
+		if (tcol > map.cols - 1) tcol = map.cols - 1;
+		return new Cell(trow, tcol);
+	}
+
+	//Returns the top corner position of a hex in screen coordinates relative to canvas
+	//if absolute is set canvas offsets are added to positions and the result is scaled by zoom level
+	function cellToScreen(row, col, absolute)
+	{
+		var x0, y0;
+
+		if (col & 1) // odd column
+			y0 = row * 2 * r + r + renderOffsetY;
+		else
+			y0 = row * 2 * r + renderOffsetY;
+		x0 = col * (s + h) + h + renderOffsetX;
+
+		if (absolute)
+		{
+			var vp = $('game');
+			x0 += canvasOffsetX - vp.clientLeft - vp.offsetLeft;
+			y0 += canvasOffsetY - vp.clientTop - vp.offsetTop;
+			x0 *= uiSettings.zoomLevel;
+			y0 *= uiSettings.zoomLevel;
+		}
+
+		return new screenPos(x0, y0);
+	}
+	this.cellToScreen = function(row, col, absolute) { return cellToScreen(row, col, absolute); }
+
+	//Caches images, func a function to call upon cache completion
+	this.cacheImages = function(func)
+	{
+		if (!imgAttackCursor)
+		{
+			imgAttackCursor = new Image();
+			imgAttackCursor.src = "resources/ui/cursors/attack.png";
+		}
+		if (!imgFlags)
+		{
+			imgFlags = new Image();
+			imgFlags.src = "resources/ui/flags/" + Equipment.name + "/flags_med.png";
+		}
+		if (!imgUnitFire)
+		{
+			imgUnitFire = new Image();
+			imgUnitFire.src = "resources/ui/indicators/unit-fire.png";
+		}
+		if (!imgUnitNoAmmo)
+		{
+			imgUnitNoAmmo = new Image();
+			imgUnitNoAmmo.src = "resources/ui/indicators/unit-fire-no-ammo.png";
+		}
+		if (!imgLeaderAxis)
+		{
+			imgLeaderAxis = new Image();
+			imgLeaderAxis.src = "resources/ui/indicators/unit-leader-axis.png";
+		}
+		if (!imgLeaderAllied)
+		{
+			imgLeaderAllied = new Image();
+			imgLeaderAllied.src = "resources/ui/indicators/unit-leader-allied.png";
+		}
+		if (!imgBridge)
+		{
+			imgBridge = new Image();
+			imgBridge.src = "resources/units/images/bridg.png";
+		}
+		if (!imgMapBackground)
+		{
+			imgMapBackground = new Image();
+			imgMapBackground.src = map.terrainImage;
+			imgMapBackground.onload = function()
+			{
+				//Size the canvases to the map image, with 65px more height
+				cm.width = ch.width = ca.width = imgMapBackground.width;
+				cm.height = ch.height = ca.height = imgMapBackground.height + 65;
+				cm.style.cssText = ch.style.cssText = ca.style.cssText = "";
+				cm.style.width = ch.style.width = ca.style.width = imgMapBackground.width + "px";
+				cm.style.height = ch.style.height = ca.style.height = imgMapBackground.height + 65 + "px";
+
+				cb.imageSmoothingEnabled = false;
+				cb.webkitImageSmoothingEnabled = false;
+				cb.mozImageSmoothingEnabled = false;
+				c.imageSmoothingEnabled = false;
+				c.webkitImageSmoothingEnabled = false;
+				c.mozImageSmoothingEnabled = false;
+				a.imageSmoothingEnabled = false;
+				a.webkitImageSmoothingEnabled = false;
+				a.mozImageSmoothingEnabled = false;
+				ubb.imageSmoothingEnabled = false;
+				ubb.webkitImageSmoothingEnabled = false;
+				ubb.mozImageSmoothingEnabled = false;
+
+				setupLayers();
+				func();
+			}
+			imgMapBackground.onerror = function()
+			{
+				UIBuilder.message("Error", OSGlue.canvasErrorMsg);
+			}
+		}
+
+		cacheUnitImages(map.getUnitImagesList(), func);
+	}
+
+	//Returns canvases
+	this.getHexesCanvas = function() { return ch; }
+	this.getMapCanvas = function() { return cm; }
+	this.getCursorCanvas = function() { return ca; }
+
+	//Sets a new map for rendering. Only used to dinamically change the map being rendered
+	this.setNewMap = function(mapObj)
+	{
+		map = mapObj;
+		drawnHexGrid = false;
+		//Force reload of background image and flags
+		imgFlags = imgMapBackground = null;
+		//Cleanup no longer user unit images
+		var imgList = map.getUnitImagesList();
+		for (var i in imgUnits)
+		{
+			//Looks up the Image object instead of its file name: always undefined, so the whole cache is cleared
+			if (typeof imgList[imgUnits[i]] === "undefined")
+			{
+				imgUnits[i] = null;
+				delete(imgUnits[i]);
+			}
+		}
+	}
+
+	//Positions the canvases (after the map image is loaded, on zoom and window resize)
+	this.positionLayers = function() { return setupLayers(); }
+
+	// "Private"
+	//Sets canvases position on screen and the size of the game area
+	function setupLayers()
+	{
+		var fitsWidth = false;
+		var fitsHeight = false;
+		var hScrollHeight = 0; //Room for the horizontal scrollbar when the map is wider than the window
+		var vScrollWidth = 0; //Room for the vertical scrollbar when the map is higher than the window
+
+		canvasOffsetX = window.innerWidth/2 - imgMapBackground.width/2;
+		if (canvasOffsetX < 0) { canvasOffsetX = 0;}
+
+		cm.style.cssText += "z-index: 0; position:absolute; left: 0px; top: 0px;";
+		ch.style.cssText += "z-index: 1; position:absolute; left: 0px; top: 0px;";
+		ca.style.cssText += "z-index: 2; position:absolute; left: 0px; top: 0px;";
+		cubb.style.cssText += "z-index: 3; position:absolute; left: 0px; top: 0px;";
+		cubb.style.display = "none";
+		//Add map image as background
+		cm.style.cssText += "background-color: none; background-image:url('" + imgMapBackground.src + "');"
+				+ "background-size:" + imgMapBackground.width + "px " + imgMapBackground.height + "px;"
+				+ "background-repeat: no-repeat;"
+				+ "background-attachment: scroll;";
+
+		if (window.innerWidth >= imgMapBackground.width)
+			fitsWidth = true;
+		else
+			hScrollHeight = 10;
+
+		if (window.innerHeight >= imgMapBackground.height + canvasOffsetY)
+			fitsHeight = true;
+		else
+			vScrollWidth = 30;
+
+		//Size the container div to the map or to the browser window when the map is bigger
+		//The user will scroll the div instead of window
+		if (fitsWidth)
+			$('game').style.width = imgMapBackground.width + vScrollWidth + "px";
+		else
+			$('game').style.width = window.innerWidth + "px";
+
+		if (fitsHeight)
+			$('game').style.height = imgMapBackground.height + canvasOffsetY + hScrollHeight + "px";
+		else
+			$('game').style.height = window.innerHeight - canvasOffsetY + "px";
+
+		// Center the game area
+		$('game').style.cssText += "position:absolute;left:" + canvasOffsetX + "px;top:" + canvasOffsetY + "px;";
+		$('game').tabIndex = 1; //For focusing the game area
+		$('game').focus();
+	}
+
+	//Generates an attack cursor on backbuffer canvas
+	function generateAttackCursor(atkunit, defunit, asDataURL)
+	{
+		var bbw = bb.canvas.width;
+		var bbh = bb.canvas.height;
+
+		if (!atkunit || !defunit)
+			return null;
+
+		var atkflag = atkunit.flag - 1; //flags from 1-25, array from 0-24
+		var defflag = defunit.flag - 1;
+		var cr = GameRules.calculateCombatResults(atkunit, defunit, map.getUnits(), false, true);
+
+		bb.clearRect(0, 0, bbw, bbh);
+		bb.drawImage(imgAttackCursor, bbw/2 - imgAttackCursor.width/2, bbh/2 - imgAttackCursor.height/2);
+		bb.drawImage(imgFlags, flw*atkflag, 0, flw, flh, 0, 0, flw, flh);
+		bb.drawImage(imgFlags, flw*defflag, 0, flw, flh, bbw - flw, 0, flw, flh);
+
+		//estimated losses and kills
+		bb.font = unitTextHeight + "px coreUnitFont, sans-serif";
+		bb.fillStyle = "yellow";
+		bb.textBaseline = "top";
+
+		var tx = flw/2 - 4;
+		var ty = flh;
+		bb.strokeText(cr.losses, tx+1, ty+1);
+		bb.fillText(cr.losses, tx, ty);
+		tx = bbw - flw/2 - 4;
+		bb.strokeText(cr.kills, tx+1, ty+1);
+		bb.fillText(cr.kills, tx, ty);
+
+		if (asDataURL)
+			return cbb.toDataURL(); //return canvas pixels encoded to base64
+
+		//return a copy of the canvas, the backbuffer is reused for the next cursor
+		var copy = document.createElement("canvas");
+		copy.width = cbb.width;
+		copy.height = cbb.height;
+		copy.getContext("2d").drawImage(cbb, 0, 0);
+		return copy;
+	}
+
+	//imgList a list of image file names, func a function to call upon cache completion
+	//Units are saved from Luiz Guzman SHPTool to a 1x9 sprites bmp and
+	//converted to transparent png by convert.py
+	function cacheUnitImages(imgList, func)
+	{
+		var loaded = 0;
+		var toLoad = Object.keys(imgList).length; //Size of the "hash"
+		var hasNewImages = false;
+
+		for (var i in imgList)
+		{
+			if (typeof imgUnits[imgList[i]] !== "undefined")
+			{
+				loaded++;
+				continue;
+			}
+			hasNewImages = true;
+			imgUnits[imgList[i]] = new Image();
+			imgUnits[imgList[i]].onload = function()
+			{
+				loaded++;
+				if (loaded == toLoad)
+					if (func) func();
+			}
+			imgUnits[imgList[i]].src = imgList[i];
+		}
+		//All already cached
+		if (!hasNewImages)
+			if (func) func();
+	}
+
+	//TODO performance render unit to a backbuffer and on main render function render
+	// units in order of their image id so we can save some translate/rotate operations
+	function drawUnitSprite(c, x0, y0, unit)
+	{
+		if (unit === null)
+			return false;
+
+		var image = null;
+		//A ground unit on a bridge of its side is drawn as the bridge, unless it's selected or moving
+		if (unit.hasAnimation || (map.currentUnit && map.currentUnit.id == unit.id)
+			|| !GameRules.isGround(unit) || !GameRules.isBridgeForSide(unit.getHex(), unit.player.side))
+			image = imgUnits[unit.getIcon()];
+		else
+			image = imgBridge;
+
+		if (!image)
+			return false;
+
+		// Units have 15 possible orientations there are 9 sprites each ~80x50 in 1 row
+		// to get the rest of the orientations the sprite must be mirrored
+		var mirror = false;
+		var imagew = image.width/9; //Some images have bigger width
+		var imageh = image.height;
+		//Offset the transparent regions of the unit sprite
+		var ix0 = (x0 - imagew/2 + s/2) >> 0;
+		var iy0 = (y0 - imageh/2 + r - unitTextHeight) >> 0;
+		var facing = unit.facing;
+		if (facing > 8)
+		{
+			facing = 16 - facing;
+			mirror = true;
+		}
+		var imgidx = imagew * facing;
+		if (mirror)
+		{
+			var flip = ix0 + imagew/2;
+			c.save();
+			c.translate(flip, 0);
+			c.scale(-1,1);
+			c.translate(-flip,0);
+		}
+		c.drawImage(image, imgidx , 0, imagew, imageh, ix0, iy0, imagew, imageh);
+
+		if (mirror) c.restore();
+
+		return true;
+	}
+
+	function drawHexUnit(c, x0, y0, unit, drawIndicators)
+	{
+		if (!drawUnitSprite(c, x0, y0, unit)) return;
+		if (!drawIndicators || unit.strength < 1) return;
+		//TODO performance, consider caching glyphs digits and use drawImage/putImageData
+		//Currently fillText and fillRect doubles the rendering time
+
+		//Write unit strength in a box below unit
+		//Core units (and all units in scenario mode) use a different font and a bordered box
+		var isCore = true;
+		if (game.campaign !== null && !unit.isCore)
+			isCore = false;
+
+		if (isCore)
+			c.font = unitTextHeight + "px coreUnitFont, sans-serif";
+		else
+			c.font = unitTextHeight + "px unitInfo, sans-serif"; //normal units
+
+		var text = "" + unit.strength;
+		var tx = (x0 + h/2) >> 0;
+		var ty = y0 + 2 * r - (unitTextHeight + 4); //text size + spacing
+		var textOffset = 1;
+		var side = unit.player.side;
+		var boxWidth = 19;  // c.measureText(text).width + 2 too slow
+		if (unit.strength < 10)
+		{
+			boxWidth = 12;
+			textOffset = 2;
+		}
+
+		if (side == 1)
+			c.fillStyle = unitstyle.alliedBox;
+		else
+			c.fillStyle = unitstyle.axisBox;
+		if (uiSettings.markEnemyUnits && side != game.spotSide)
+			c.fillStyle = unitstyle.enemyBoxMarked;
+
+		if (isCore)
+		{
+			if (side == 1)
+				c.strokeStyle = unitstyle.alliedBorder;
+			else
+				c.strokeStyle = unitstyle.axisBorder;
+			c.lineWidth = 2;
+			c.strokeRect(tx, ty - 1, boxWidth, unitTextHeight + 4);
+		}
+		c.fillRect(tx, ty - 1, boxWidth, unitTextHeight + 4); //Add pixels above and below unit strength
+
+		if (unit.player.id != map.currentPlayer.id && unit.player.side == map.currentPlayer.side)
+			c.fillStyle = unitstyle.alliedPlayerText;
+		else
+			c.fillStyle = unitstyle.playerText;
+
+		if (unit.hasMoved && unit.player.id == map.currentPlayer.id)
+			c.fillStyle = unitstyle.movedUnitText;
+
+		c.fillText(text, tx + textOffset, ty + 9);
+
+		//draw indicator for unit.hasFired, the no ammo indicator when it can't fire anymore
+		if (!unit.hasFired && GameRules.unitUsesAmmo(unit) && side == map.currentPlayer.side)
+		{
+			if (unit.getAmmo() > 0)
+				c.drawImage(imgUnitFire, x0 - 4, y0 + 2 * r - 12);
+			else
+				c.drawImage(imgUnitNoAmmo, x0 - 4, y0 + 2 * r - 12);
+		}
+
+		//draw leader indicator after the strength box
+		if (unit.leader != -1)
+		{
+			if (side == 1)
+				c.drawImage(imgLeaderAllied, tx + boxWidth + 1, y0 + 2 * r - 13);
+			else
+				c.drawImage(imgLeaderAxis, tx + boxWidth + 1, y0 + 2 * r - 13);
+		}
+	}
+
+	function drawHex(ctx, x0, y0, style, terrain)
+	{
+		ctx.beginPath();
+		ctx.moveTo(x0, y0);
+		ctx.lineTo(x0 + s, y0);
+		ctx.lineTo(x0 + s + h, y0 + r);
+		ctx.lineTo(x0 + s, y0 + 2 * r);
+		ctx.lineTo(x0, y0 + 2 * r);
+		ctx.lineTo(x0 - h, y0 + r);
+		if (style.fillColor !== null)
+		{
+			ctx.fillStyle = style.fillColor;
+			ctx.fill();
+		}
+
+		ctx.closePath();
+
+		if (style.lineWidth > 0)
+		{
+			ctx.lineWidth = style.lineWidth;
+			ctx.lineJoin = style.lineJoin;
+			ctx.strokeStyle = style.lineColor;
+			if (style.hasOwnProperty("shadowColor"))
+			{
+				ctx.shadowOffsetX = style.shadowOffsetX;
+				ctx.shadowOffsetY = style.shadowOffsetY;
+				ctx.shadowColor = style.shadowColor;
+			}
+			else
+			{
+				ctx.shadowOffsetX = null;
+				ctx.shadowOffsetY = null;
+				ctx.shadowColor = null;
+			}
+			ctx.stroke();
+		}
+		var tx, ty;
+		if ((uiSettings.showGridTerrain && typeof terrain !== "undefined") && terrain != terrainType.Clear)
+		{
+			tx = (x0 + h + h/2 -2) >> 0;
+			ty = y0 + 2*r -24/2; //text size + spacing
+			ctx.font = "24px openpanzer, sans-serif"; //TODO use vm vh instead of px when mobile support it
+
+			ctx.strokeStyle = unitstyle.terrainTextStroke;
+			ctx.lineWidth = 1;
+			ctx.strokeText(terrainencoding[terrain], tx - 1, ty - 1);
+			ctx.fillStyle = unitstyle.terrainText;
+			ctx.fillText(terrainencoding[terrain], tx, ty);
+		}
+		//Deployment hexes are marked with a Z glyph
+		if (style === hexstyle.deploy)
+		{
+			tx = (x0 + 4) >> 0;
+			ty = y0 + 2*r -24/2;
+			ctx.font = "24px openpanzer, sans-serif";
+			ctx.strokeStyle = unitstyle.terrainTextStroke;
+			ctx.lineWidth = 1;
+			ctx.strokeText("Z", tx - 1, ty - 1);
+			ctx.fillStyle = unitstyle.terrainText;
+			ctx.fillText("Z", tx, ty);
+		}
+		//Move hexes get a ' glyph with the terrain grid
+		if (uiSettings.showGridTerrain && style === hexstyle.move)
+		{
+			ty = y0 + 2*r -24/2;
+			ctx.font = "26px openpanzer-menu, sans-serif";
+			ctx.strokeStyle = unitstyle.terrainText;
+			ctx.lineWidth = 1;
+			ctx.strokeText("'", ((x0 + 4) >> 0) - 1, ty - 1);
+		}
+	}
+
+	//Returns min and max row,col for a range around a cell(row,col)
+	function getZoneRangeLimits(row, col, range)
+	{
+		var z = { srow: 0, scol: 0, erow: map.rows, ecol: map.cols };
+
+		if (row === null || col === null)
+			row = col = 0;
+
+		if (range !== null && range >= 0)
+		{
+			z.srow = row - range;
+			z.scol = col - range;
+			z.erow = row + range;
+			z.ecol = col + range;
+
+			if (z.srow < 0) z.srow = 0;
+			if (z.scol < 0) z.scol = 0;
+			if (z.erow > map.rows) z.erow = map.rows;
+			if (z.ecol > map.cols) z.ecol = map.cols;
+		}
+		return z;
+	}
+}

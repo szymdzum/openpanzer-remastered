@@ -8,4 +8,4 @@ ba = "ba"             # harness/diff-traces.js: baseline arrays
 PN = "PN"
 
 [files]
-extend-exclude = ["game/", "public/", "dist/", "dist-*/", "coverage/", "reports/", "harness/out/", "test/contracts/**/*.gz", "test/mapsizes.json", "package-lock.json", "*.svg", "docs/design/"]
+extend-exclude = ["game/", "reference/", "public/", "dist/", "dist-*/", "coverage/", "reports/", "harness/out/", "test/contracts/**/*.gz", "test/mapsizes.json", "package-lock.json", "*.svg", "docs/design/"]

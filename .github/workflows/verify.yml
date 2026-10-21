@@ -1,0 +1,68 @@
+# npm run verify on pull requests: the whole game in headless Chrome (16 AI vs AI replays, 24 UI
+# scripts, state, DOM and canvas after every step) compared with the base branch
+# (BASELINE_REF, harness/lib/reference.sh), not with the original game: main differs from the
+# original on purpose (the unit markers). A refactor must come out identical; a deliberate change
+# shows what it changed in the run's summary and artifacts.
+name: Verify
+
+on:
+  pull_request:
+    paths: ["src/**", "harness/**", "reference/**", "game/**", "index.html", "public/**", "vite.config.mts", "package.json", "package-lock.json", ".github/workflows/verify.yml"]
+  workflow_dispatch:
+
+# The contracts and the scenario dates were recorded in this time zone (test/setup.ts)
+env:
+  TZ: Europe/Warsaw
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the base branch is checked out next to this one
+      # The game's images and sounds are in Git LFS (about 300 MB): cached, so the LFS bandwidth
+      # quota is spent once per change of the assets, not on every run
+      - name: List the LFS objects
+        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+      - uses: actions/cache@v6
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-ids') }}
+          restore-keys: lfs-
+      - run: git lfs pull
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm install --global browser-debugger-cli@0.21.0
+      # The base branch's traces, kept between runs (the file names carry the base commit)
+      - uses: actions/cache@v6
+        with:
+          path: harness/out/baseline
+          key: verify-baseline-${{ github.event.pull_request.base.sha || github.sha }}-${{ hashFiles('harness/**') }}
+          restore-keys: verify-baseline-
+      - name: Verify against the base branch
+        run: |
+          set -o pipefail
+          BASELINE_REF=origin/${{ github.base_ref || 'main' }} JOBS=3 npm run verify 2>&1 | tee "$RUNNER_TEMP/verify.log"
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### verify against ${{ github.base_ref || 'main' }}"
+            echo '```'
+            grep -E 'items differ|identical|scripts identical|DIFF|TIMED OUT' "$RUNNER_TEMP/verify.log" | head -80 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: verify-traces
+          path: |
+            harness/out/replay-*/
+            harness/out/ui-*/
+            ${{ runner.temp }}/verify.log
+          retention-days: 7

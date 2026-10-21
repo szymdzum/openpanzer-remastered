@@ -1,5 +1,5 @@
 // The GameRules contract: a fixed sequence of GameRules calls on a game state, every result
-// serialized. contracts/record.sh runs it on the reference (openpanzer-src) in the browser and
+// serialized. contracts/record.sh runs it on the reference (reference/) in the browser and
 // stores the results with the state; test/gamerules.test.ts runs it on this repo's GameRules in
 // Node on the same state and compares. Plain script (no imports or exports): the recorder pastes
 // it into the page, the test evaluates it. Adapted from openpanzer-src harness/compare.js.

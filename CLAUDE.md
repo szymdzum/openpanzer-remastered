@@ -1,8 +1,8 @@
 # Working on openpanzer-remastered
 
 A TypeScript remaster of Panzer Marshal 3.2.14 (an HTML5 Panzer General 2). The reference is
-the original game in `../openpanzer-src`: the harness and the contract tests compare this repo
-with it. Read README "Play and develop" and "Verification" first; docs/REFACTOR.md says how the
+the original game, reconstructed in `reference/`: the harness and the contract tests compare this
+repo with it. Read README "Play and develop" and "Verification" first; docs/REFACTOR.md says how the
 engine is laid out after the refactor, docs/TYPES.md the typing rules, docs/MECHANICS.md how the
 game plays.
 
@@ -20,14 +20,14 @@ game plays.
 | `npm run check`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
 | `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, fallow audit, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
 | `npm test` (`npm run test:coverage` in CI, with per-file coverage floors) | ~9 s | after every small step |
-| `npm run verify` | 3-4 min, up to 6 Chromes | before every pull request that touches `src/` |
+| `npm run verify` | 3-4 min, up to 6 Chromes | on GitHub: every pull request that touches `src/`, `harness/` or `game/` runs it against its base branch (`verify.yml`). Locally only to debug a difference |
 
-`verify` runs locally only. One verify at a time on the machine (the laptop overheats): take the
-lock first, `until mkdir /tmp/openpanzer-chrome.lock 2>/dev/null; do sleep 15; done`, remove it
+Locally, compare with main: `BASELINE_REF=origin/main npm run verify`. One verify at a time on
+the machine (the laptop overheats): take the lock first, `until mkdir /tmp/openpanzer-chrome.lock 2>/dev/null; do sleep 15; done`, remove it
 after (use a trap); `JOBS=3`. The same goes for `test/contracts/record.sh`. Redirect their output
 to a file: piping them into `tail` or `head` hangs (the background server keeps the pipe open).
-On main, verify is not "all identical": the unit markers differ from the reference in canvas
-pixels on purpose. Compare a change with a verify run on main, not with "identical".
+Against the original (no BASELINE_REF), main is not "all identical": the unit markers differ in
+canvas pixels on purpose.
 
 ## Rules
 
@@ -67,11 +67,16 @@ pixels on purpose. Compare a change with a verify run on main, not with "identic
 ## Git
 
 - main takes changes only through a pull request with the CI check `test` green; rebase merge.
-  A branch per piece of work. Ask before pushing a branch or opening a pull request.
+  A branch per piece of work.
+- Work fast locally, let CI do the heavy checks: the hooks and `npm test` before a commit, then
+  push the branch and open the pull request right away (no need to ask), with
+  `gh pr merge --auto --rebase` so it merges itself once the required checks are green. Keep
+  working on the next branch meanwhile. Read the Verify job's summary before relying on a merge
+  that touches `src/` until Verify is a required check. Run verify locally only to debug a
+  difference CI showed.
 - Commit messages: an imperative subject, a short plain-English body saying what changed and
   what verify showed. No AI attribution, no Co-Authored-By.
 - Parallel agents: a git worktree each, outside the repo (`../openpanzer-wt/<name>`), with
   `node_modules` symlinked from the main checkout (stage files by path, never `git add -A`; remove
-  only the symlink when cleaning up), and their own `PORT`, `REFERENCE_PORT`, `BDG_SESSION` and an
-  absolute `REFERENCE_DIR` for verify. Other agents may be working in the repo at the same time:
+  only the symlink when cleaning up), and their own `PORT`, `REFERENCE_PORT` and `BDG_SESSION` for verify. Other agents may be working in the repo at the same time:
   only touch your own files.

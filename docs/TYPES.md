@@ -1,7 +1,7 @@
 # Typing the modules (ROADMAP 2b)
 
 Goal: real types on the reconstructed code, **without changing what it does**. The harness
-proves it: the replays stay identical to openpanzer-src.
+proves it: the replays stay identical to the original (`reference/`).
 
 ## Checks
 

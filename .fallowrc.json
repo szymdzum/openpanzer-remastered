@@ -7,7 +7,7 @@
 	"entry": ["src/main.ts", "test/**/*.test.ts"],
 	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
 	// the contract scripts (read as text by test/contracts.ts and record.js)
-	"ignorePatterns": ["game/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
+	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
 	//index.html loads the game's stylesheet and data lists from game/ as classic files
 	"ignoreUnresolvedImports": ["/game/css/ui.css", "/game/resources/campaigns/campaignlist.js", "/game/resources/scenarios/scenariolist.js"],
 	"ignoreExportsUsedInFile": true,

@@ -16,7 +16,7 @@ MODULE=${MODULE:-${1:-gamerules}}
 export MODULE
 export BDG_SESSION=${BDG_SESSION:-record}
 OUT=harness/out/record-$BDG_SESSION
-REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
+REFERENCE_DIR=${REFERENCE_DIR:-reference}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
 source harness/lib/servers.sh

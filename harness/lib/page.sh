@@ -7,12 +7,6 @@ JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu 2>/dev/null || nproc) * 3 / 4 ))}
 # session_name <text>: a bdg session name for a job (its own browser)
 session_name() { printf '%s-%s' "$1" "$2" | tr -c 'A-Za-z0-9-' '-'; }
 
-# reference_version: the reference's commit, uncommitted changes there count too
-reference_version() {
-	git -C "$REFERENCE_DIR" rev-parse HEAD
-	git -C "$REFERENCE_DIR" status --porcelain | shasum | cut -c1-8
-}
-
 # run_page <url> <out.json> <coverage.json or ""> <result global> <setup js> <files...>
 # Opens url on clean storage in the session $BDG_SESSION, runs the files as the body of an async
 # function (after the setup), waits for it and saves window[<result global>] as JSON.

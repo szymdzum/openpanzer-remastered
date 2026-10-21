@@ -83,16 +83,23 @@ point at the source.
 
 ## Verification
 
-Every change is compared with openpanzer-src (served on 8643) in headless Chrome, step by step:
-game state, DOM and canvas pixels. The remaster runs on the Vite dev server (8644), the scripts
-start both servers when they're not running.
+Every change is compared with a reference in headless Chrome, step by step: game state, DOM and
+canvas pixels. The reference is the original game (`reference/`: the 3.2.14 source
+reconstructed from its bundle, on the same assets, served on 8643), or with `BASELINE_REF=<git
+ref>` this repo at that commit on its own Vite. The remaster runs on the Vite dev server (8644);
+the scripts start the servers when they're not running.
 
     npm run verify               # both below, about 3 minutes
     harness/replay.sh            # 16 scenarios, campaigns and the tutorial played AI vs AI
     harness/ui-replay.sh         # 24 scripts of user steps (harness/ui/), or some of them
+    BASELINE_REF=origin/main npm run verify   # against main: what a pull request changes
+
+Pull requests run verify on GitHub Actions against their base branch (`.github/workflows/
+verify.yml`): main differs from the original on purpose (the unit markers), so against main a
+refactor comes out identical and a deliberate change shows only itself.
 
 Every item and script plays in its own Chrome, several at once (JOBS, default 3/4 of the
-cores). The reference's traces are cached per item in harness/out/baseline, until openpanzer-src
+cores). The reference's traces are cached per item in harness/out/baseline, until the reference
 or the harness changes. A step that waits for loads until the timeout is reported: it usually
 means a stuck request.
 
