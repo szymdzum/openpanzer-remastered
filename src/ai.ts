@@ -12,27 +12,36 @@
  * come from what the code does and how game.js calls it.
  */
 
-//getCellScore calls Hex.getUnit() without airMode (undefined, the ground unit first):
-//an overload merged into map.ts's Hex until its airMode parameter is optional there
-interface Hex { getUnit(): Unit; }
+import {
+	actionType, type Cell, movMethod, roadType, terrainEntrenchment, terrainInitiative, terrainType,
+	unitClass
+} from "./prototypes";
+import { Equipment } from "./equipment";
+import { defined } from "./dom";
+import { GameRules } from "./gamerules";
+import type { Unit } from "./unit";
+import type { GameMap, Player } from "./map";
+import { game } from "./game";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (buildActions)
+var h: any;
 
 //One queued action, param depends on type (actionType): [unit] for resupply, reinforce,
 //mount and select, [unit, cell] for move, [unit, target] for attack, and for the tutorial
 //messages [text, cell it points at]. type is a plain number, so it can't narrow a union:
 //the elements stay any for game.js, which reads them as the type says
-type AIActionParam = Unit | Cell | string;
-interface AIAction { type: number; param: any[]; }
+export type AIActionParam = Unit | Cell | string;
+export interface AIAction { type: number; param: any[]; }
 
-//AI and AIScripted are constructor functions, not classes (a class body is strict mode and
-//they assign implicit globals): this gives `new` on them a type
-interface AIConstructor { new (player: Player, map: GameMap): AI; }
+//AI and AIScripted are constructor functions, as in the bundle: this gives `new` on them a type
+export interface AIConstructor { new (player: Player, map: GameMap): AI; }
 
 //The AI's estimate of an attack and of the objective nearest to a cell
-interface AIAttackScore { score: number; kills: number; }
-interface AIObjectiveScore { cell: Cell; score: number; }
+export interface AIAttackScore { score: number; kills: number; }
+export interface AIObjectiveScore { cell: Cell; score: number; }
 
 //The AI state of one of its own units during a turn: what it did and what it can't do anymore
-class AIUnit
+export class AIUnit
 {
 	declare unit: Unit;
 	declare noAttack: boolean;
@@ -60,7 +69,7 @@ class AIUnit
 }
 
 //An enemy unit already targeted by the AI this turn
-class EnemyUnit
+export class EnemyUnit
 {
 	declare unit: Unit;
 	declare isAttacked: boolean;
@@ -77,14 +86,14 @@ class EnemyUnit
 }
 
 //The methods AI sets up in its constructor
-interface AI
+export interface AI
 {
 	buildActions(): void;
 	getAction(): AIAction;
 }
 
 //player is the AI controlled player, map the scenario map
-function AI(this: AI, player: Player, map: GameMap)
+export function AI(this: AI, player: Player, map: GameMap)
 {
 	var allUnits: Unit[] = [];
 	var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do

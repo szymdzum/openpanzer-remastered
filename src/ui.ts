@@ -12,10 +12,35 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-//The UI's public methods, assigned in the constructor. UI stays a constructor function, not a
-//class: a class body is strict mode, and its private functions are called with a window this.
-//game.ts types `new UI(game)` through its UIConstructor
-interface UI
+import {
+	type Cell, CURRENCY_MULTIPLIER, endGameType, groundConditionNames, groundFontEncoding, mouseInfo,
+	type movementResults, movMethod, movMethodNames, NATIVE_PLATFORM, outcomeNames, playerSide,
+	playerType, roadType, type screenPos, sideNames, type Supply, terrainNames, terrainType, uiSettings,
+	unitClass, unitClassNames, unitTypeNames, weatherConditionNames, weatherFontEncoding
+} from "./prototypes";
+import { CombatLog } from "./combatlog";
+import { Equipment } from "./equipment";
+import {
+	$, addStyleSheet, addTag, bounceText, clearTag, defined, delTag, hasBrokenClearRect, hasBrokenScroll,
+	hasTouch, isVisible, makeHidden, makeVisible, setSelectOption, toggleButton, toggleRightClick,
+	touchScroll
+} from "./dom";
+import {
+	type HexStyle, hexstyle, moveSoundByMoveMethod, soundData, tooltipColor, tooltipStyle
+} from "./aiscripted";
+import { attackAnimationByClass } from "./animation";
+import { GameRules } from "./gamerules";
+import type { Unit } from "./unit";
+import type { GameMap, Player, ReinforceResults } from "./map";
+import { type MoveAnimationCBData, Render } from "./render";
+import { UIBuilder } from "./uibuilder";
+import { UICombatLog } from "./uicombatlog";
+import { Game } from "./game";
+import { Leaders } from "./leaders";
+
+//The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
+//bundle: game.ts types `new UI(game)` through its UIConstructor
+export interface UI
 {
 	handleReinforcementDeployment(): void;
 	uiUnitSelect(unit: Unit | null): boolean;
@@ -39,33 +64,9 @@ interface UI
 	scaleMap(level: number): void; //the map scale slider passes its value string, coerced in the arithmetic
 }
 
-//What the UI uses of render.ts's Render, until Render is typed there (then this can be Render)
-interface UIRender
-{
-	render(orow?: number, ocol?: number, range?: number): void;
-	drawCursor(cell: Cell): void;
-	drawHexByCell(cell: Cell, style: HexStyle): void;
-	runAnimation(animationCBData: UIAttackAnimationData | null): void;
-	addAnimation(row: number, col: number, animationName: string, facing?: number): void;
-	moveAnimation(moveAnimationCBData: UIMoveAnimationData): void;
-	screenToCell(x: number, y: number): Cell;
-	cellToScreen(row: number, col: number, absolute?: boolean): screenPos;
-	cacheImages(func: () => void): void;
-	getCursorCanvas(): HTMLCanvasElement;
-	setNewMap(mapObj: GameMap): void;
-	positionLayers(): void;
-}
-interface UIRenderConstructor { new (mapObj: GameMap): UIRender; }
-
-//The callback data of the move and attack animations, Render calls cbfunc with it when done
-interface UIMoveAnimationData
-{
-	unit: Unit;
-	moveResults: movementResults;
-	cbfunc: (moveAnimationCBData: UIMoveAnimationData) => void;
-}
-
-interface UIAttackSide
+//The callback data of the attack animation, Render calls cbfunc with it when done (the move
+//animation's is render.ts's MoveAnimationCBData)
+export interface UIAttackSide
 {
 	unit: Unit;
 	cell: Cell;
@@ -75,7 +76,7 @@ interface UIAttackSide
 	attackStopped?: boolean; //attacking side only
 }
 
-interface UIAttackAnimationData
+export interface UIAttackAnimationData
 {
 	attacking: UIAttackSide;
 	defending: UIAttackSide;
@@ -83,7 +84,7 @@ interface UIAttackAnimationData
 }
 
 //The unit context buttons shown, by action
-interface UIContextButtons
+export interface UIContextButtons
 {
 	mount?: boolean;
 	embark?: boolean;
@@ -95,7 +96,7 @@ interface UIContextButtons
 
 //The equipment window keeps the user selections as expando properties on its DOM elements
 //(set by UIBuilder.setDefaultUserSelections): eqid, unit id or unit list index, -1 for none
-interface EqUserSelElement extends HTMLElement
+export interface EqUserSelElement extends HTMLElement
 {
 	userunit: number;     //unit id on map
 	deployunit: number;   //index in the core unit list of the undeployed units
@@ -107,11 +108,11 @@ interface EqUserSelElement extends HTMLElement
 	unitscroll: number;
 	eqscroll: number;
 }
-interface EqSelCountryElement extends HTMLElement { country: number; } //index in the side's countries
-interface SettingsMenuElement extends HTMLElement { messageHidden: boolean; }
+export interface EqSelCountryElement extends HTMLElement { country: number; } //index in the side's countries
+export interface SettingsMenuElement extends HTMLElement { messageHidden: boolean; }
 
 //The unit boxes of the unit and equipment lists carry what their onclick needs
-interface UIUnitBoxElement extends HTMLDivElement
+export interface UIUnitBoxElement extends HTMLDivElement
 {
 	unitid: number;       //unit id, or core unit list index in deploy mode
 	uniteqid: number;
@@ -124,15 +125,18 @@ interface UIUnitBoxElement extends HTMLDivElement
 //updateUnitInfoWindow and uiAddUnitBox show a Unit, or an equipment entry from the equipment
 //window, told apart by unitData: a Unit with the entry fields they read. On the entry
 //updateUnitInfoWindow sets flag and strength. The entries are passed as one (as unknown as)
-type UIUnitOrEntry = Unit & { country?: number; name?: string; icon?: string; cost?: number };
+export type UIUnitOrEntry = Unit & { country?: number; name?: string; icon?: string; cost?: number };
 
 //The Firefox prefixed transform the strategic zoom also sets
-interface UIPrefixedStyle extends CSSStyleDeclaration { MozTransform: string; }
+export interface UIPrefixedStyle extends CSSStyleDeclaration { MozTransform: string; }
 
-function UI(this: UI, game: Game)
+//Mouse drag state (declared in uibuilder.js in the bundle, only the UI uses it)
+export var curDown = false, curYPos = 0, curXPos = 0;
+
+export function UI(this: UI, game: Game)
 {
 	var map = game.scenario.map;
-	var R = new (Render as unknown as UIRenderConstructor)(map);
+	var R = new Render(map);
 	var countries = map.getCountriesBySide(game.spotSide); //array for current side countries
 	var contextButtons: UIContextButtons = {}; //unit context buttons shown for the current unit, for the keyboard shortcuts
 
@@ -445,7 +449,7 @@ function uiUnitMove(unit: Unit, row: number, col: number)
 	var oldpos = unit.getPos();
 	var mr = map.moveUnit(unit, row, col);
 
-	var moveAnimationCBData: UIMoveAnimationData =
+	var moveAnimationCBData: MoveAnimationCBData =
 	{
 		unit: unit,
 		moveResults: mr,
@@ -468,7 +472,7 @@ function uiUnitMove(unit: Unit, row: number, col: number)
 }
 
 //Called when move animation finishes
-function uiMoveAnimationFinished(moveAnimationCBData: UIMoveAnimationData)
+function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData)
 {
 	var mr = moveAnimationCBData.moveResults;
 	var unit = moveAnimationCBData.unit;
@@ -615,7 +619,7 @@ function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit)
 //Called when attack animation finishes
 function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData)
 {
-	var aloss: number, dloss: number, tmp: number, rpos: Cell, mr: movementResults, moveAnimationCBData: UIMoveAnimationData;
+	var aloss: number, dloss: number, tmp: number, rpos: Cell, mr: movementResults, moveAnimationCBData: MoveAnimationCBData;
 	var refreshRender = false;
 
 	var a = animationCBData.attacking;

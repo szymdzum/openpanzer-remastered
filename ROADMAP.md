@@ -16,8 +16,12 @@ it changed (and the reference traces of that step are then the new expected beha
       still global scripts, no behavior change (replays identical)
 - [x] 2b. Real types everywhere: tsc and noImplicitAny clean (from 365 and 1491 errors), the
       model as classes, replays identical
-- [ ] 2b+. Replace the local stand-in interfaces modules declared for each other's types
-- [ ] 2c. ES modules instead of globals, Vite dev server with hot reload, production build
+- [x] 2b+. The local stand-in interfaces modules declared for each other's types replaced by
+      the real ones (imports made them visible)
+- [x] 2c. ES modules instead of globals, Vite dev server with reload on change, production
+      build; the implicit globals became module variables; the harness runs the dev server
+- [ ] 2d. Constructor functions to classes where the load order allows it, which removes the
+      `new (X as unknown as XConstructor)` casts
 
 ## 3. Quick visible wins
 
@@ -38,7 +42,10 @@ reconstruction notes, to check against the PG2 rules (Luis Guzman's PG2 file spe
 - [ ] Combat log scenario info button hides the log
 - [ ] "No Ammo" and "No Fuel" tooltips share an id
 - [ ] Unit info writes gunrange 1 into the equipment data
-- [ ] Implicit globals (aInitiative, t, u, c, h, isLoaded, div)
+- [ ] Cloud saves on GitHub gists: off until the game has its own (the bundle's used its
+      author's token)
+- [ ] Implicit globals of the bundle, now module variables (aInitiative, t, u, c, h, div);
+      Campaign's loader sets isLoaded on window instead of the campaign
 
 ## 5. Comfort and guidance
 

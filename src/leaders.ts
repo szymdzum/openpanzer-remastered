@@ -11,8 +11,11 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, there is no 2.9 counterpart.
  */
 
+import { leaderType, UNIT_MAX_EXPERIENCE, unitClass } from "./prototypes";
+import type { Unit } from "./unit";
+
 //The Leaders module API. A leader is a leaderType value, -1 for none
-interface LeadersModule
+export interface LeadersModule
 {
 	unitClassLeaders: { [uclass: number]: number[] };
 	description: [string, string][]; //[name, description] by leaderType
@@ -24,7 +27,7 @@ interface LeadersModule
 	getUnitLeaderDescriptions(unit: Unit | null): [string, string][];
 }
 
-var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module start
+export var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module start
 
 //Leaders a unit class can get, by unitClass. The first one is the class leader, which every
 //unit with a leader also has, the others are the random leaders generateLeader picks from

@@ -13,8 +13,15 @@
  * names come from the property names and the callers (Map.attackUnit, UICombatLog).
  */
 
+import { Cell } from "./prototypes";
+import type { Unit } from "./unit";
+import { Leaders } from "./leaders";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (addCombatEnd)
+var c: any;
+
 //A unit's state saved by addCombatStart
-interface CombatUnitState
+export interface CombatUnitState
 {
 	id: number;
 	eqid: number;
@@ -29,7 +36,7 @@ interface CombatUnitState
 }
 
 //A combat started and not yet ended
-interface CombatRound
+export interface CombatRound
 {
 	attacker: CombatUnitState;
 	defender: CombatUnitState;
@@ -37,7 +44,7 @@ interface CombatRound
 }
 
 //A unit's combat totals for the turn
-interface CombatUnitInfo
+export interface CombatUnitInfo
 {
 	id: number;
 	eqid: number;
@@ -61,7 +68,7 @@ interface CombatUnitInfo
 }
 
 //A unit's state after a resupply
-interface UnitEndTurnInfo
+export interface UnitEndTurnInfo
 {
 	eqid: number;
 	side: number;
@@ -70,11 +77,11 @@ interface UnitEndTurnInfo
 	isCore: boolean;
 }
 
-interface CombatLogReinforcement { eqid: number; pos: Cell; side: number }
-interface CombatLogLeader { id: number; eqid: number; isCore: boolean; pos: Cell; leader: number; classLeader: number; side: number }
-interface CombatLogObjective { pos: Cell; side: number }
+export interface CombatLogReinforcement { eqid: number; pos: Cell; side: number }
+export interface CombatLogLeader { id: number; eqid: number; isCore: boolean; pos: Cell; leader: number; classLeader: number; side: number }
+export interface CombatLogObjective { pos: Cell; side: number }
 
-interface CombatLogEntries
+export interface CombatLogEntries
 {
 	combat: { [unitId: number]: CombatUnitInfo };
 	reinforce: CombatLogReinforcement[];
@@ -83,7 +90,7 @@ interface CombatLogEntries
 	objectives: CombatLogObjective[];
 }
 
-interface CombatLogModule
+export interface CombatLogModule
 {
 	log: CombatLogEntries;
 	combatRound: { [combatId: number]: CombatRound | {} };
@@ -100,7 +107,7 @@ interface CombatLogModule
 }
 
 //var CombatLog = CombatLog || {}; //Namespace emulation
-var CombatLog: CombatLogModule = (function(CombatLog: CombatLogModule) { //Module start
+export var CombatLog: CombatLogModule = (function(CombatLog: CombatLogModule) { //Module start
 
 CombatLog.log = {} as CombatLogEntries;
 CombatLog.log.combat = {}; //combatUnitInfo by unit id

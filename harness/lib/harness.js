@@ -267,10 +267,13 @@ function domSnapshot(root) {
 	return out.join("\n").replace(/https?:\/\/127\.0\.0\.1:\d+/g, "");
 }
 
-// Real image loads are async: canvases are only comparable once every image is in
+// Real image loads are async: canvases are only comparable once every image is in.
+// Returns null, or on a timeout what was still pending
 async function waitImages(ms) {
-	await waitFor(() => !clock.loading() && !(window.__harnessAsync || []).some((op) => op.done && !op.delivered)
-		&& Array.from(document.images).every((i) => i.complete || !i.src), ms || 15000);
+	const pending = () => [].concat(clock.loading() ? ["clock loading"] : [],
+		(window.__harnessAsync || []).filter((op) => op.done && !op.delivered).map((op) => "undelivered " + op.kind),
+		Array.from(document.images).filter((i) => !i.complete && i.src).map((i) => "image " + i.src.replace(/^https?:\/\/[^/]+/, "")));
+	return await waitFor(() => pending().length === 0, ms || 15000) ? null : pending();
 }
 
 function hashPixels(canvas) {

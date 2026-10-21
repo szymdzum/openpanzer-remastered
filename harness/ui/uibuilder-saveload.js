@@ -22,7 +22,9 @@ XMLHttpRequest.prototype.send = function(body) {
 	Object.defineProperty(xhr, "readyState", { value: 4 });
 	Object.defineProperty(xhr, "status", { value: status });
 	Object.defineProperty(xhr, "responseText", { value: JSON.stringify(reply) });
-	Promise.resolve().then(() => xhr.onreadystatechange());
+	// the load event too: lib/hooks.js waits for it, and the harness delivers the requests in
+	// order, so an unfinished one would hold back every later request until each step timed out
+	Promise.resolve().then(() => { xhr.onreadystatechange(); xhr.dispatchEvent(new ProgressEvent("load")); });
 };
 
 function loadFile(text) {

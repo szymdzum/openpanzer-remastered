@@ -58,9 +58,11 @@ for (const [name, run] of steps) {
 	if (window.__renderLog) window.__renderLog = [];
 	let threw = null;
 	try { await run(); } catch (e) { threw = e.message; }
+	const started = Date.now();
 	await settle();
-	await waitImages();
-	__ui.steps.push({ name, threw, state: snapshot(), dom: domSnapshot(), canvas: canvasHashes(),
+	const pending = await waitImages();
+	// real time the step took and what a timed out wait was waiting for, to find slow steps
+	__ui.steps.push({ name, threw, ms: Date.now() - started, pending: pending || undefined, state: snapshot(), dom: domSnapshot(), canvas: canvasHashes(),
 		errors: window.__replayErrors.slice(errorsBefore),
 		renderLog: window.__renderLog ? window.__renderLog.slice() : undefined,
 		// DUMP_STEP=<n> keeps that step's canvases as PNG data URLs, to look at a pixel difference

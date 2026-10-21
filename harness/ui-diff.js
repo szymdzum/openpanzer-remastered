@@ -32,4 +32,7 @@ for (let i = 0; i < Math.max(base.steps.length, variant.steps.length) && !first;
 const threw = base.steps.filter((s) => s.threw).map((s) => `"${s.name}": ${s.threw}`);
 console.log(`\n== UI replay ${label || ""}: ${first ? "DIFF " + first : `all ${base.steps.length} steps identical`}`);
 if (threw.length) console.log("   steps that threw (in both): " + threw.join("; ").slice(0, 400));
+// A step that waited for loads until the timeout costs 15s and usually means a stuck request
+const stuck = variant.steps.filter((s) => s.pending).map((s) => `"${s.name}" (${s.pending.slice(0, 3).join(", ")})`);
+if (stuck.length) console.log(`   ${stuck.length} steps waited for loads until the timeout: ` + stuck.join("; ").slice(0, 400));
 process.exit(first ? 1 : 0);

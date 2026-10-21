@@ -12,8 +12,17 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { MAJOR_VERSION, type UISettings, uiSettings } from "./prototypes";
+import { Equipment } from "./equipment";
+import { defined, isChromeApp } from "./dom";
+import type { Unit } from "./unit";
+import { Player } from "./map";
+import { Scenario } from "./scenario";
+import { Campaign } from "./campaign";
+import { type CampaignConstructor, type Game, game, type ScenarioConstructor } from "./game";
+
 //The campaign progress kept in a save, see getCampaignSave
-interface CampaignSave
+export interface CampaignSave
 {
 	id: number;
 	file: string;
@@ -25,7 +34,7 @@ interface CampaignSave
 
 //A game as exportGameState writes it (and the scenario and players items of a local save):
 //the JSON of the objects, read back into new ones with their copy()
-interface GameStateExport
+export interface GameStateExport
 {
 	scenario: Scenario;
 	players: Player[];
@@ -33,16 +42,16 @@ interface GameStateExport
 }
 
 //What saveToCloud and restoreFromCloud read from the GitHub gists API
-interface GistReply
+export interface GistReply
 {
 	id: string;
 	files: { [fileName: string]: { content: string } };
 }
 
 //GameState keeps its save names and restored items in the closure, its methods are
-//assigned in the constructor. It stays a function: restoreFromCloud has a "delete reply"
-//that is a SyntaxError in a class body (strict mode)
-interface GameState
+//assigned in the constructor. It stays a function: dom's changeViewPort calls it while the
+//modules load, maybe before gamestate.ts ran (a function declaration is usable then, a class not)
+export interface GameState
 {
 	save(): void;
 	saveToCloud(inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void): void;
@@ -57,9 +66,9 @@ interface GameState
 	exportGameState(): string;
 }
 
-interface GameStateConstructor { new (Game: Game | null): GameState; }
+export interface GameStateConstructor { new (Game: Game | null): GameState; }
 
-function GameState(this: GameState, Game: Game | null)
+export function GameState(this: GameState, Game: Game | null)
 {
 	var saveName =
 	{
@@ -206,8 +215,7 @@ function GameState(this: GameState, Game: Game | null)
 						inputElement.setAttribute("placeholder", "Cannot find game data in the save file");
 						return false;
 					}
-					// @ts-ignore: a var can't be deleted (TS1102, TS2703), kept as in the bundle
-					delete reply; //no effect, a var can't be deleted
+					//The bundle has "delete reply;" here: no effect on a var, and a syntax error in a module
 					inputElement.value = gistId;
 					if (typeof onDone === "function")
 						onDone();

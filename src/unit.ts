@@ -12,10 +12,17 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { type Cell, type Supply, terrainEntrenchment, unitClass, unitEntrenchRate } from "./prototypes";
+import { Equipment } from "./equipment";
+import { defined } from "./dom";
+import { GameRules } from "./gamerules";
+import { type Hex, Player } from "./map";
+import { game } from "./game";
+
 //Transport Object Constructor
 //A class so other modules can type `new Transport(...)`. Fields are `declare`d (they emit nothing),
 //the methods stay assigned to the prototype (enumerable, as the original), typed by the interface below
-class Transport
+export class Transport
 {
 	declare eqid: number;
 	declare ammo: number;
@@ -34,7 +41,7 @@ class Transport
 	}
 }
 
-interface Transport
+export interface Transport
 {
 	copy(t: Transport | null): void;
 	unitData(): EquipmentEntry;
@@ -54,7 +61,7 @@ Transport.prototype.unitData = function(): EquipmentEntry { return Equipment.equ
 //A class so other modules can type `new Unit(...)`: the constructor body is the original one
 //(hex stays private to its closures), fields and privileged methods are `declare`d (they emit
 //nothing), the public methods stay assigned to the prototype, typed by the interface below
-class Unit
+export class Unit
 {
 	declare eqid: number;
 	declare id: number;
@@ -147,8 +154,9 @@ class Unit
 	}
 };
 
-interface Unit
+export interface Unit
 {
+	nodossier: boolean; //set by map.js: disbanded or removed, not a loss for the dossier
 	copy(u: Unit | null): void;
 	getEqid(forceUnit?: boolean): number;
 	unitData(forceUnit?: boolean): EquipmentEntry;

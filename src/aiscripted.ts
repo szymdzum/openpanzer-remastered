@@ -13,15 +13,25 @@
  * carry their names and comments over from the openpanzer 2.9 style.js and sound.js.
  */
 
+import { actionType, playerSide, playerType, uiSettings } from "./prototypes";
+import { AI, type AIAction, type AIActionParam, type AIConstructor } from "./ai";
+import type { Unit } from "./unit";
+import type { GameMap, Player } from "./map";
+import { UIBuilder } from "./uibuilder";
+import { game } from "./game";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (the tutorial turns, buildActions)
+var u: any, e: any, firstTurn: any;
+
 //The tutorial units AIScripted picks from their starting positions
-interface TutorialUnits
+export interface TutorialUnits
 {
 	axis: { recon?: Unit; legioninf?: Unit; pz2a?: Unit; ssinf1?: Unit; ssinf2?: Unit; ssinf3?: Unit; arty?: Unit };
 	allies: { inf1?: Unit };
 }
 
 //The methods AIScripted sets up in its constructor, the same as AI's
-interface AIScripted
+export interface AIScripted
 {
 	buildActions(): void;
 	getAction(): AIAction;
@@ -31,7 +41,7 @@ interface AIScripted
 //(messages, selections, moves, attacks) that game.js executes one by one with getAction().
 //After turn 4 the players are handed over to the human and the normal AI.
 //player is the scripted player, map the scenario map with the tutorial units on it
-function AIScripted(this: AIScripted, player: Player, map: GameMap)
+export function AIScripted(this: AIScripted, player: Player, map: GameMap)
 {
 	var actionList: AIAction[] = [];
 	var units: TutorialUnits = { axis: {}, allies: {} };
@@ -277,7 +287,7 @@ function AIScripted(this: AIScripted, player: Player, map: GameMap)
  * Style - basic styles support for rendering on canvas
  */
 //How Render draws a hex outline and fill
-interface HexStyle
+export interface HexStyle
 {
 	fillColor: string; //null for no fill
 	lineColor: string;
@@ -287,10 +297,10 @@ interface HexStyle
 	shadowOffsetY?: number;
 	shadowColor?: string;
 }
-type HexStyleName = "move" | "movespotted" | "attack" | "current" | "currentstroke" | "generic" | "deploy"
+export type HexStyleName = "move" | "movespotted" | "attack" | "current" | "currentstroke" | "generic" | "deploy"
 	| "ownunit" | "airunit" | "combat";
 
-var hexstyle: { [name in HexStyleName]: HexStyle } =
+export var hexstyle: { [name in HexStyleName]: HexStyle } =
 {
 	"move": //Move selected hexes
 	{
@@ -367,7 +377,7 @@ var hexstyle: { [name in HexStyleName]: HexStyle } =
 	}
 };
 
-var unitstyle =
+export var unitstyle =
 {
 	axisBox				: "#383838", //grey
 	alliedBox			: "#808000", //green
@@ -381,10 +391,10 @@ var unitstyle =
 	terrainTextStroke	: "#f8e064"
 };
 
-var tooltipColor = { player: 0, enemy: 1 };
-var tooltipStyle = { text: 0, pin: 1 };
+export var tooltipColor = { player: 0, enemy: 1 };
+export var tooltipStyle = { text: 0, pin: 1 };
 
-var terrainencoding = ["A", "B", "C", "D", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "Q"];
+export var terrainencoding = ["A", "B", "C", "D", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "Q"];
 
 /**
  * Sound sound interface for OpenPanzer
@@ -392,7 +402,7 @@ var terrainencoding = ["A", "B", "C", "D", "D", "E", "F", "G", "H", "I", "J", "K
 /* Looks like PCM Wav is supported on Chrome, Firefox, Safari, Opera */
 
 //Each sound has several variants, play() picks one at random
-var soundData: { [name: string]: soundSprite } =
+export var soundData: { [name: string]: soundSprite } =
 {
 	//move sounds
 	"track": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/track.wav", "resources/sounds/move/track2.mp3",
@@ -442,7 +452,7 @@ var soundData: { [name: string]: soundSprite } =
 	"dummy": new (soundSprite as unknown as soundSpriteConstructor)([""])
 };
 
-var moveSoundByMoveMethod =
+export var moveSoundByMoveMethod =
 [
 	"track",	//tracked 0
 	"htrack",	//halfTracked
@@ -459,15 +469,15 @@ var moveSoundByMoveMethod =
 ];
 
 //A sound with its variants, play() returns the play() promise or nothing when muted or missing
-interface soundSprite
+export interface soundSprite
 {
 	play(): Promise<void>;
 }
 //soundSprite is a constructor function (soundData above uses it before a class would exist)
-interface soundSpriteConstructor { new (paths: string[]): soundSprite; }
+export interface soundSpriteConstructor { new (paths: string[]): soundSprite; }
 
 //paths is a list of variants of the same sound
-function soundSprite(this: soundSprite, paths: string[])
+export function soundSprite(this: soundSprite, paths: string[])
 {
 	var sounds: HTMLAudioElement[] = [];
 

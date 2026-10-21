@@ -12,15 +12,18 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { uiSettings } from "./prototypes";
+import { soundData, type soundSprite } from "./aiscripted";
+
 //What runAnimation is given: called back with itself when the chain ends. A method so callers
 //can pass their own data type (method parameters are bivariant)
-interface AnimationCBData
+export interface AnimationCBData
 {
 	cbfunc(animationCBData: AnimationCBData): void;
 }
 
 //One sprite of an animation: the image holds the frames side by side, frames is the last frame index
-interface AnimationSpriteFrame
+export interface AnimationSpriteFrame
 {
 	image: HTMLImageElement;
 	width: number;
@@ -29,7 +32,7 @@ interface AnimationSpriteFrame
 }
 
 //What SpriteAnimation animates (see Render.addAnimation)
-interface SpriteAnimationOptions
+export interface SpriteAnimationOptions
 {
 	ctx: CanvasRenderingContext2D;
 	x: number;
@@ -40,7 +43,7 @@ interface SpriteAnimationOptions
 
 //Runs a series of animations in order
 //A class with its closure body as the constructor: the methods are own properties, as the original
-class AnimationChain
+export class AnimationChain
 {
 	declare add: (o: SpriteAnimationOptions) => void;
 	declare clear: () => void;
@@ -85,7 +88,7 @@ class AnimationChain
 
 //o = {ctx, x, y, rotate, sprite}
 //Animates a series of frames from image on ctx context at x,y position
-class SpriteAnimation //Animation in the original, renamed: it replaced the DOM Animation
+export class SpriteAnimation //Animation in the original, renamed: it replaced the DOM Animation
 {
 	declare delay: number;
 	declare start: () => void;
@@ -143,7 +146,7 @@ class SpriteAnimation //Animation in the original, renamed: it replaced the DOM 
 }
 
 //A sprite sheet of an animation, frames side by side, each width pixels wide
-interface AnimationFile
+export interface AnimationFile
 {
 	path: string;
 	frames: number;
@@ -151,7 +154,7 @@ interface AnimationFile
 }
 
 //Sprite sheets of each animation, one is picked at random each time it plays
-var animationFiles: { [name: string]: AnimationFile[] } =
+export var animationFiles: { [name: string]: AnimationFile[] } =
 {
 	"explosion": [
 		{ path: "resources/animations/explosions.png", frames: 12, width: 120 },
@@ -163,7 +166,7 @@ var animationFiles: { [name: string]: AnimationFile[] } =
 };
 
 //List of all existing animations
-var animationsData: { [name: string]: AnimationSpritePicker } =
+export var animationsData: { [name: string]: AnimationSpritePicker } =
 {
 	//AnimationName: new animationSprite(spriteFiles, soundSpriteName)
 	"explosion": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.explosion, "explosion"),
@@ -184,7 +187,7 @@ var animationsData: { [name: string]: AnimationSpritePicker } =
 };
 
 //Which attack animations belong to each unit class
-var attackAnimationByClass: string[] =
+export var attackAnimationByClass: string[] =
 [
 "none", //None
 "infantry", //infantry
@@ -211,14 +214,14 @@ var attackAnimationByClass: string[] =
 ];
 
 //animationSprite(...) returns this, each call a random sprite of the animation
-type AnimationSpritePicker = () => AnimationSpriteFrame;
+export type AnimationSpritePicker = () => AnimationSpriteFrame;
 //animationSprite stays a function: animationsData above uses it before a class would exist
-interface AnimationSpriteConstructor { new (spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker; }
+export interface AnimationSpriteConstructor { new (spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker; }
 
 //TODO preloading
 //Called with new but returns a function: each call of it returns one of the sprites
 //{image, width, frames, sound} at random
-function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker
+export function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker
 {
 	var sprites: AnimationSpriteFrame[] = [];
 

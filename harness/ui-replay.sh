@@ -20,24 +20,12 @@ REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 PORT=${PORT:-8644}
 REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
-# MINE=<module,...>: test only those modules from the working tree, the others from the last
-# commit (for parallel work), in a build directory of this session
-DIST=dist
-[ -n "${MINE:-}" ] && DIST="dist-${BDG_SESSION:-default}"
-VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness&dist=$DIST"
-MODULES=$(node -e 'eval(require("fs").readFileSync("src/modules.ts", "utf8")); console.log(srcModules.join(","))')
-# The remaster runs dist/, build it from src/ first
-node scripts/build.mjs --out "$DIST" ${MINE:+--mine "$MINE"} >/dev/null
+VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
+MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
 
-# serve <dir> <port>: a static server per repo, left running for the next runs
-serve() {
-	if ! curl -s -o /dev/null "http://127.0.0.1:$2/index.html"; then
-		(cd "$1" && nohup python3 -m http.server "$2" --bind 127.0.0.1 >/dev/null 2>&1 &)
-		sleep 1
-	fi
-}
-serve "$REFERENCE_DIR" "$REFERENCE_PORT"
-serve . "$PORT"
+source harness/lib/servers.sh
+serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"
+serve_vite "$PORT"
 
 # run <url> <script> <out.json> [coverage.json]
 run() {
@@ -91,12 +79,13 @@ for script in "${SCRIPTS[@]}"; do
 	node harness/ui-diff.js "$BASELINE" "$OUT/$script.json" "$script" || STATUS=1
 done
 
-DIST=$DIST node -e '
+save_served "$PORT" "$OUT/served" "$MODULES"
+SERVED=$OUT/served node -e '
 const { uncoveredLines, printUncovered } = require("./harness/coverage");
 const [modules, ...files] = process.argv.slice(1);
 for (const mod of modules.split(",").filter(Boolean)) {
-	// dist/<mod>.js is src/<mod>.ts with the types blanked out: same lines
 	const file = "src/" + mod + ".ts";
-	printUncovered(file + " (ui replay, all scripts)", require("fs").existsSync(file) ? uncoveredLines(files, "/" + (process.env.DIST || "dist") + "/" + mod + ".js", file, "") : null);
-}' "${MINE:-$MODULES}" "${COVERAGE[@]}"
+	printUncovered(file + " (ui replay, all scripts)", require("fs").existsSync(file)
+		? uncoveredLines(files, "/src/" + mod + ".ts", file, process.env.SERVED + "/" + mod + ".js") : null);
+}' "$MODULES" "${COVERAGE[@]}"
 exit $STATUS

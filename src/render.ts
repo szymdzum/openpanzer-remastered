@@ -12,8 +12,23 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	Cell, direction, directionToRadians, type movementResults, type pathCell, screenPos, terrainType,
+	uiSettings
+} from "./prototypes";
+import { Equipment } from "./equipment";
+import { $, addTag, type VendorStyled } from "./dom";
+import { type HexStyle, hexstyle, terrainencoding, unitstyle } from "./aiscripted";
+import { type AnimationCBData, AnimationChain, animationsData } from "./animation";
+import { GameRules } from "./gamerules";
+import type { Unit } from "./unit";
+import type { GameMap, Hex, UnitImagesList } from "./map";
+import { UIBuilder } from "./uibuilder";
+import { game } from "./game";
+import { OSGlue } from "./osglue";
+
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
-interface MoveAnimationCBData
+export interface MoveAnimationCBData
 {
 	unit: Unit;
 	moveResults: movementResults;
@@ -22,7 +37,7 @@ interface MoveAnimationCBData
 
 //The canvas 2d context with the vendor prefixed smoothing flags the game still sets. The
 //canvas converts the text to draw to a string, Render draws numbers (unit strength, losses)
-type RenderContext = CanvasRenderingContext2D & {
+export type RenderContext = CanvasRenderingContext2D & {
 	webkitImageSmoothingEnabled?: boolean;
 	mozImageSmoothingEnabled?: boolean;
 	fillText(text: number, x: number, y: number): void;
@@ -30,7 +45,7 @@ type RenderContext = CanvasRenderingContext2D & {
 };
 
 //The map rows and cols of a zone, end excluded
-interface ZoneRangeLimits
+export interface ZoneRangeLimits
 {
 	srow: number;
 	scol: number;
@@ -39,7 +54,7 @@ interface ZoneRangeLimits
 }
 
 //A class with its closure body as the constructor: the methods are own properties, as the original
-class Render
+export class Render
 {
 	declare render: (orow?: number, ocol?: number, range?: number) => void;
 	declare drawCursor: (cell: Cell) => void;

@@ -12,14 +12,36 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	DEBUG_CAMPAIGN, difficultyType, outcomeNames, sideNames, type UISettings, uiSettings, unitClassNames,
+	VERSION
+} from "./prototypes";
+import { Equipment } from "./equipment";
+import {
+	$, addSelectOption, addTag, clearTag, defined, delTag, getCoordinates, getDesktopExitFunction,
+	getPosition, getStyleSheet, type GlyphButton, insertTag, insertTemplate, isVisible, makeHidden,
+	makeVisible, toggleButton, toggleCheckbox, type VendorStyled
+} from "./dom";
+import { tooltipColor, tooltipStyle } from "./aiscripted";
+import type { Unit } from "./unit";
+import type { PlayerDossier } from "./map";
+import type { ScenarioOutcome } from "./scenario";
+import { Campaign } from "./campaign";
+import { UICombatLog } from "./uicombatlog";
+import { type CampaignConstructor, game } from "./game";
+import { OSGlue } from "./osglue";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (fillCloudSavesList, buildEquipmentSortOptions)
+var div: any;
+
 //A unit stat of the info and equipment windows:
 //<id>, <title>, <isSortKey>, <sortKeyName>, <glyph>, <placed on the top row>
-type UIBuilderUnitStat = [string, string, number, string | null, string | null, number];
+export type UIBuilderUnitStat = [string, string, number, string | null, string | null, number];
 
 //A scenario of scenariolist (not a category header)
-type UIBuilderScenarioEntry = [string, string, string, ScenarioListPlayer[], ScenarioListPlayer[], string];
+export type UIBuilderScenarioEntry = [string, string, string, ScenarioListPlayer[], ScenarioListPlayer[], string];
 
-interface UIBuilderModule
+export interface UIBuilderModule
 {
 	startMenuImgPath: string;
 	menuImgPath: string;
@@ -65,14 +87,14 @@ interface UIBuilderModule
 
 //Elements that keep state in expando properties
 //The selected option value strings, the lists are indexed with them
-interface UIBuilderCampaignMenu extends HTMLElement { selectedCampaign: number }
-interface UIBuilderScenarioMenu extends HTMLElement { selectedScenario: number }
-interface UIBuilderSettingsWindow extends HTMLElement { needPageReload: boolean; messageHidden: boolean }
-interface UIBuilderAIButton extends HTMLDivElement { playerid: number }
-interface UIBuilderClassButton extends HTMLDivElement { eqclass: number } //the eqClassButtons key string
-interface UIBuilderSortButton extends HTMLElement { sortproperty: string }
-interface UIBuilderCountrySelection extends HTMLElement { country: number; owner: number }
-interface UIBuilderUserSelection extends HTMLElement
+export interface UIBuilderCampaignMenu extends HTMLElement { selectedCampaign: number }
+export interface UIBuilderScenarioMenu extends HTMLElement { selectedScenario: number }
+export interface UIBuilderSettingsWindow extends HTMLElement { needPageReload: boolean; messageHidden: boolean }
+export interface UIBuilderAIButton extends HTMLDivElement { playerid: number }
+export interface UIBuilderClassButton extends HTMLDivElement { eqclass: number } //the eqClassButtons key string
+export interface UIBuilderSortButton extends HTMLElement { sortproperty: string }
+export interface UIBuilderCountrySelection extends HTMLElement { country: number; owner: number }
+export interface UIBuilderUserSelection extends HTMLElement
 {
 	deployunit: number;
 	userunit: number;
@@ -84,15 +106,15 @@ interface UIBuilderUserSelection extends HTMLElement
 }
 
 //An input set from a number, the DOM converts it
-type UIBuilderNumberInput = Omit<HTMLInputElement, "value"> & { value: string | number };
+export type UIBuilderNumberInput = Omit<HTMLInputElement, "value"> & { value: string | number };
 //Text set from a number, the DOM converts it
-type UIBuilderNumberText = Omit<HTMLElement, "textContent"> & { textContent: string | number };
+export type UIBuilderNumberText = Omit<HTMLElement, "textContent"> & { textContent: string | number };
 //The boolean settings toggled by the settings window, looked up by the button id
-interface UIBuilderSettingFlags { [setting: string]: boolean }
+export interface UIBuilderSettingFlags { [setting: string]: boolean }
 //The dossier counts by unit class, looked up by the eqClassButtons keys
-interface UIBuilderClassCounts { [uclass: string]: number }
+export interface UIBuilderClassCounts { [uclass: string]: number }
 
-var UIBuilder: UIBuilderModule = (function(UIBuilder: UIBuilderModule) { //Module start
+export var UIBuilder: UIBuilderModule = (function(UIBuilder: UIBuilderModule) { //Module start
 
 //Path to menu image assets
 UIBuilder.startMenuImgPath = "resources/ui/dialogs/startmenu/images/";
@@ -1419,6 +1441,3 @@ UIBuilder.setDeployOrCombatLogState = function(isDeploy: boolean)
 
 //------------------------ MODULE END ----------------------
 return UIBuilder; }(UIBuilder || {} as UIBuilderModule)); //Module end giberish
-
-//Mouse drag state
-var curDown = false, curYPos = 0, curXPos = 0;

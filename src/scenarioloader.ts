@@ -12,19 +12,30 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { difficultyModifiers } from "./prototypes";
+import { Equipment } from "./equipment";
+import { GameRules } from "./gamerules";
+import { Unit } from "./unit";
+import { Player } from "./map";
+import { Scenario } from "./scenario";
+import { game } from "./game";
+import { Leaders } from "./leaders";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (loadReinforcements)
+var u: any;
+
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries. scen.onLoadFinished() is called at the
 //end, with scen.isLoaded telling if the scenario loaded.
-//Stays a constructor function: its body assigns the implicit global u, which a class
-//(strict mode) would turn into a ReferenceError. new needs ScenarioLoaderConstructor.
-interface ScenarioLoader
+//A constructor function, as in the bundle: new needs ScenarioLoaderConstructor.
+export interface ScenarioLoader
 {
 	noCache: boolean;
 	loadScenario(scenarioObject: Scenario): void;
 }
-type ScenarioLoaderConstructor = new () => ScenarioLoader;
+export type ScenarioLoaderConstructor = new () => ScenarioLoader;
 
-function ScenarioLoader(this: ScenarioLoader)
+export function ScenarioLoader(this: ScenarioLoader)
 {
 	var scen: Scenario = null;
 

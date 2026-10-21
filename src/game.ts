@@ -12,10 +12,28 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, outcomeNames, playerType,
+	uiSettings
+} from "./prototypes";
+import { GameState, type GameStateConstructor } from "./gamestate";
+import { CombatLog } from "./combatlog";
+import { defined } from "./dom";
+import { AI, type AIAction, type AIConstructor } from "./ai";
+import { AIScripted } from "./aiscripted";
+import { GameRules } from "./gamerules";
+import type { Unit } from "./unit";
+import { type GameMap, Player } from "./map";
+import { Scenario, type ScenarioOutcome } from "./scenario";
+import { Campaign, type CampaignScenario } from "./campaign";
+import { UIBuilder } from "./uibuilder";
+import { UI } from "./ui";
+import { OSGlue } from "./osglue";
+
 //Game keeps the campaign progress in its closure, its methods are assigned in the constructor.
 //It stays a function: "var game = new Game()" runs before the declaration, which a class
 //(not hoisted) can't do
-interface Game
+export interface Game
 {
 	ui: UI;
 	state: GameState;
@@ -46,15 +64,15 @@ interface Game
 
 //Game, GameState, Scenario, Campaign, UI and AIScripted are constructor functions, not classes:
 //these give `new` on them a type (AIConstructor is ai.ts's)
-interface GameConstructor { new (): Game; }
-interface ScenarioConstructor { new (scenFile: string): Scenario; }
-interface CampaignConstructor { new (campIndex: number, difficulty: number, onLoaded: () => void): Campaign; }
-interface UIConstructor { new (game: Game): UI; }
-interface AIScriptedConstructor { new (player: Player, map: GameMap): AIScripted; }
+export interface GameConstructor { new (): Game; }
+export interface ScenarioConstructor { new (scenFile: string): Scenario; }
+export interface CampaignConstructor { new (campIndex: number, difficulty: number, onLoaded: () => void): Campaign; }
+export interface UIConstructor { new (game: Game): UI; }
+export interface AIScriptedConstructor { new (player: Player, map: GameMap): AIScripted; }
 
-var game: Game = new (Game as unknown as GameConstructor)();
+export var game: Game = new (Game as unknown as GameConstructor)();
 
-function Game(this: Game)
+export function Game(this: Game)
 {
 	this.ui = null;
 	this.state = null;
@@ -544,7 +562,7 @@ function Game(this: Game)
 Game.defaultScenario = "tutorial.xml";
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
-function gameStart()
+export function gameStart()
 {
 	game.init();
 }

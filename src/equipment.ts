@@ -12,14 +12,17 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { unitClass, unitType } from "./prototypes";
+import { defined } from "./dom";
+
 //The index lists of a country file: equipment ids by unit class
-interface EquipmentIndexes
+export interface EquipmentIndexes
 {
 	unitclass?: { [uclass: string]: number[] };
 }
 
 //A country equipment file as loaded, the units are value arrays in the parsehints order
-interface EquipmentCountryFile
+export interface EquipmentCountryFile
 {
 	indexes: EquipmentIndexes;
 	parsehints: (keyof EquipmentEntry)[];
@@ -27,13 +30,13 @@ interface EquipmentCountryFile
 }
 
 //What addPlayersEquipment reads of a player (a Player, or the player data of a saved game)
-interface EquipmentPlayerCountries
+export interface EquipmentPlayerCountries
 {
 	country: number;
 	supportCountries: number[];
 }
 
-interface EquipmentModule
+export interface EquipmentModule
 {
 	equipment: { [eqid: string]: EquipmentEntry };
 	equipmentIndexes: { [country: string]: EquipmentIndexes };
@@ -59,7 +62,7 @@ interface EquipmentModule
 	canInitiateAttackOnUnitType(eqid: number, targetEqid: number): boolean;
 }
 
-var Equipment: EquipmentModule = (function(Equipment: EquipmentModule) { //Module start
+export var Equipment: EquipmentModule = (function(Equipment: EquipmentModule) { //Module start
 
 Equipment.equipment = {};
 Equipment.equipmentIndexes = {};

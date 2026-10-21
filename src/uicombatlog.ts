@@ -13,7 +13,21 @@
  * names come from the property names and the callers (UIBuilder, the UI end turn handlers).
  */
 
-interface UICombatLogModule
+import {
+	type Cell, groundConditionNames, groundFontEncoding, outcomeNames, playerType, prestigeGains,
+	terrainNames, terrainType, uiSettings, unitClass, weatherConditionNames, weatherFontEncoding
+} from "./prototypes";
+import { CombatLog, type UnitEndTurnInfo } from "./combatlog";
+import { Equipment } from "./equipment";
+import {
+	$, addTag, clearTag, getPosition, insertTag, isVisible, makeHidden, makeVisible, toggleButton
+} from "./dom";
+import type { Hex } from "./map";
+import { UIBuilder } from "./uibuilder";
+import { game } from "./game";
+import { Leaders } from "./leaders";
+
+export interface UICombatLogModule
 {
 	showCombatLog(isExtended: boolean): void;
 	buildExtendButton(div: HTMLElement): void;
@@ -27,10 +41,10 @@ interface UICombatLogModule
 }
 
 //A log line that centers the map on its position when clicked
-interface UICombatLogLine extends HTMLDivElement { row: number; col: number }
+export interface UICombatLogLine extends HTMLDivElement { row: number; col: number }
 
 //var UICombatLog = UICombatLog || {}; //Namespace emulation
-var UICombatLog: UICombatLogModule = (function(UICombatLog: UICombatLogModule) { //Module start
+export var UICombatLog: UICombatLogModule = (function(UICombatLog: UICombatLogModule) { //Module start
 
 //Highlights a number in the log text
 function logNumber(value: number | string): string

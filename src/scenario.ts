@@ -12,11 +12,23 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	CURRENCY_MULTIPLIER, groundCondition, movTableDry, movTableFrozen, movTableMud, setMovTable,
+	PROTOTYPE_MIN_COST, SCENARIO_START_PRESTIGE, scoreGains, unitClass
+} from "./prototypes";
+import { Equipment } from "./equipment";
+import { Unit } from "./unit";
+import { GameMap, type Player } from "./map";
+import { ScenarioLoader, type ScenarioLoaderConstructor } from "./scenarioloader";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (copy)
+var t: any;
+
 //The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
-type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
+export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 
 //A unit to deploy later, Scenario.reinforcements[turn]
-interface Reinforcement
+export interface Reinforcement
 {
 	row: number;
 	col: number;
@@ -25,7 +37,7 @@ interface Reinforcement
 	id: number;   //1 based position in its turn list when added
 }
 
-interface Scenario
+export interface Scenario
 {
 	name: string;
 	maxTurns: number;
@@ -73,7 +85,7 @@ Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEnt
 	return null;
 }
 
-function Scenario(this: Scenario, scenFile?: string)
+export function Scenario(this: Scenario, scenFile?: string)
 {
 	this.name = "";
 	this.maxTurns = 0;
@@ -225,16 +237,16 @@ function Scenario(this: Scenario, scenFile?: string)
 		switch (this.ground)
 		{
 			case groundCondition.dry:
-				movTable = movTableDry;
+				setMovTable(movTableDry);
 				break;
 			case groundCondition.frozen:
-				movTable = movTableFrozen;
+				setMovTable(movTableFrozen);
 				break;
 			case groundCondition.mud:
-				movTable = movTableMud;
+				setMovTable(movTableMud);
 				break;
 			default:
-				movTable = movTableDry;
+				setMovTable(movTableDry);
 		}
 	}
 

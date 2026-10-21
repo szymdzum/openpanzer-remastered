@@ -1,9 +1,12 @@
 {
-	// Type checking only (npm run check). The browser gets src/*.ts with the types blanked out
-	// by scripts/build.mjs: TS 7 emits "use strict", which the game's implicit globals don't survive.
+	// Type checking only (npm run check). Vite serves and builds src/*.ts with the types blanked
+	// out by ts-blank-space (vite.config.ts): same lines and columns as the source.
 	"compilerOptions": {
 		"target": "es2017",
 		"lib": ["es2017", "dom"],
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
 		"noEmit": true,
 		"strict": false,
 		"erasableSyntaxOnly": true,

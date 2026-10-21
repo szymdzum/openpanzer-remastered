@@ -12,8 +12,11 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { difficultyModifiers } from "./prototypes";
+import { Scenario, type ScenarioOutcome } from "./scenario";
+
 //One scenario of a campaign data file (resources/campaigns/data/*.json)
-interface CampaignScenario
+export interface CampaignScenario
 {
 	id: number;
 	intro: string;
@@ -23,7 +26,7 @@ interface CampaignScenario
 }
 
 //goto is the next campaign scenario id, 254 and 255 end the campaign
-interface CampaignOutcome
+export interface CampaignOutcome
 {
 	goto: number;
 	gotoplayed: number[];
@@ -31,7 +34,7 @@ interface CampaignOutcome
 	text: string;
 }
 
-interface Campaign
+export interface Campaign
 {
 	startprestige: number;
 	name: string;
@@ -61,7 +64,7 @@ Campaign.findCampaignByFile = function(file: string)
 }
 
 //Loads the campaign data asynchronously, calls onLoaded when done (also on failure)
-function Campaign(this: Campaign, campIndex: number, difficulty: number, onLoaded: () => void)
+export function Campaign(this: Campaign, campIndex: number, difficulty: number, onLoaded: () => void)
 {
 	var campaignInfo = campaignlist[campIndex];
 
@@ -195,9 +198,10 @@ function Campaign(this: Campaign, campIndex: number, difficulty: number, onLoade
 		var onSuccess = function()
 		{
 			campaignData = JSON.parse(req.responseText);
-			//Bug kept from the bundle: called as a plain function, so this is the
-			//global object and the campaign isLoaded stays false
-			this.isLoaded = true;
+			//Bug kept from the bundle: called as a plain function, so this was the
+			//global object and the campaign isLoaded stays false (a module is strict, this
+			//would be undefined: the global object is named)
+			(window as Window & { isLoaded?: boolean }).isLoaded = true;
 			onFinished();
 		};
 		req.onload = function()

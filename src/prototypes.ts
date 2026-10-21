@@ -12,10 +12,10 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-var unitType = { none:-1, soft:0, hard:1, air:2, sea:3 };
-var unitTypeNames = ["Soft", "Hard", "Air", "Sea"];
+export var unitType = { none:-1, soft:0, hard:1, air:2, sea:3 };
+export var unitTypeNames = ["Soft", "Hard", "Air", "Sea"];
 
-var unitClass =
+export var unitClass =
 {
 	none: 0, infantry: 1, tank: 2, recon: 3, antiTank: 4, flak: 5, fortification: 6,
 	groundTransport: 7, artillery: 8, airDefence: 9, fighter: 10, tacticalBomber: 11,
@@ -23,7 +23,7 @@ var unitClass =
 	carrier: 17, navalTransport: 18, battleCruiser: 19, cruiser: 20, lightCruiser: 21
 };
 
-var unitClassNames =
+export var unitClassNames =
 [
 	"No Class", "Infantry", "Tank", "Recon", "Anti Tank", "Flak", "Fortification",
 	"Ground Transport", "Artillery", "Air Defence", "Fighter Aircraft", "Tactical Bomber",
@@ -32,31 +32,31 @@ var unitClassNames =
 ];
 
 //How fast a unit class entrench
-var unitEntrenchRate = [0, 3, 1, 2, 2, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+export var unitEntrenchRate = [0, 3, 1, 2, 2, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 //Power of 2 bit masks. Hex with road value 136 means it has a road starting from mid of the hex
 //and going NW (128) and one starting from mid of the hex and going SE (8)
-var roadType =
+export var roadType =
 {
 	none:0, north:1, northeast: 2, eastunused: 4, southeast:8,
 	south: 16, southwest: 32, westunused: 64, northwest: 128
 };
 
 //Compass (used for unit facing) counter clockwise
-var direction =
+export var direction =
 {
 	S:0, SSE:1, SE:2, ESE:3, E:4, ENE:5, NE:6, NNE:7, N:8, NNW:9, NW:10, WNW:11,
 	W:12, WSW:13, SW:14, SSW:15
 };
 
-var terrainType =
+export var terrainType =
 {
 	Clear:0, City:1, Airfield:2, Forest:3, Bocage:4, Hill:5, Mountain:6, Sand:7,
 	Swamp:8, Ocean:9, River:10, Fortification:11, Port:12, Stream:13, Escarpment:14,
 	impassableRiver:15, Rough:16
 };
 
-var terrainNames =
+export var terrainNames =
 [
 	"Clear", "City", "Airfield", "Forest", "Bocage", "Hill", "Mountain", "Sand",
 	"Swamp", "Ocean", "River", "Fortification", "Port", "Stream", "Escarpment",
@@ -64,39 +64,39 @@ var terrainNames =
 ];
 
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
-var terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 0, 2 ];
-var terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99, 99, 99, 3, 1 ];
+export var terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 0, 2 ];
+export var terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99, 99, 99, 3, 1 ];
 
-var groundCondition = { dry:0, frozen: 1, mud: 2 };
-var groundConditionNames = [ "Dry", "Frozen", "Mud" ];
-var groundFontEncoding = ["6", "8", "7"]; //openpanzer icon font mapping
-var weatherCondition = { fair:0, overcast: 1, rain: 2, snow: 3 };
-var weatherConditionNames = ["Fair", "Overcast", "Raining", "Snowing"];
-var weatherFontEncoding = ["4", "5", "1", "2"]; //openpanzer icon font mapping
+export var groundCondition = { dry:0, frozen: 1, mud: 2 };
+export var groundConditionNames = [ "Dry", "Frozen", "Mud" ];
+export var groundFontEncoding = ["6", "8", "7"]; //openpanzer icon font mapping
+export var weatherCondition = { fair:0, overcast: 1, rain: 2, snow: 3 };
+export var weatherConditionNames = ["Fair", "Overcast", "Raining", "Snowing"];
+export var weatherFontEncoding = ["4", "5", "1", "2"]; //openpanzer icon font mapping
 
 //The countryNames list of 2.9 is no longer defined here
-var playerSide = { axis: 0, allies: 1 };
+export var playerSide = { axis: 0, allies: 1 };
 
-var sideNames =
+export var sideNames =
 [
 	"Axis",
 	"Allies"
 ];
 
-var movMethod =
+export var movMethod =
 {
 	tracked: 0, halfTracked: 1, wheeled: 2, leg: 3, towed: 4, air: 5,
 	deepnaval: 6, costal: 7, allTerrainTracked: 8, amphibious: 9, naval: 10,
 	allTerrainLeg: 11
 };
 
-var movMethodNames =
+export var movMethodNames =
 [
 	"Tracked", "Half Tracked", "Wheeled", "Leg", "Towed", "Air", "Deep Naval",
 	"Costal", "All Terrain", "Amphibious", "Naval", "Mountain Leg"
 ];
 
-var outcomeNames: { [outcome: string]: string } =
+export var outcomeNames: { [outcome: string]: string } =
 {
 	"lose": "Defeat",
 	"victory": "Victory",
@@ -105,10 +105,10 @@ var outcomeNames: { [outcome: string]: string } =
 };
 
 //How a unit is carried: by sea, by air transport, or by air dropped
-var embarkType = { none: 0, naval: 1, airmobile: 2, airborne: 3 };
+export var embarkType = { none: 0, naval: 1, airmobile: 2, airborne: 3 };
 
 //Tables for movement cost for different ground conditions 254 Stop move (but select the tile), 255 Don't enter
-var movTableDry =
+export var movTableDry =
 [
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
 [1, 1, 1, 2, 4, 2, 254, 1, 4, 255, 254, 1, 1, 2, 255, 255, 2, 1], //Tracked
@@ -125,7 +125,7 @@ var movTableDry =
 [1, 1, 1, 1, 2, 1, 1, 2, 2, 255, 254, 1, 1, 1, 255, 255, 1, 1] //All Terrain Leg (Mountain)
 ];
 
-var movTableFrozen =
+export var movTableFrozen =
 [
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
 [1, 1, 1, 2, 4, 2, 254, 1, 2, 255, 2, 1, 1, 2, 255, 255, 2, 1], //Tracked
@@ -142,7 +142,7 @@ var movTableFrozen =
 [1, 1, 1, 1, 2, 1, 2, 2, 1, 255, 2, 1, 1, 1, 255, 255, 2, 1] //All Terrain Leg (Mountain)
 ];
 
-var movTableMud =
+export var movTableMud =
 [
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
 [2, 1, 1, 2, 4, 3, 254, 1, 254, 255, 254, 2, 1, 2, 255, 255, 3, 2], //Tracked
@@ -160,11 +160,13 @@ var movTableMud =
 ];
 
 //The default movement table it will be changed on scenario depending on weather conditions
-var movTable = movTableDry;
+export var movTable = movTableDry;
+//Scenario.setMoveTable sets it (other modules can't assign an imported variable)
+export function setMovTable(table: number[][]) { movTable = table; }
 
 //Lookup table used for rotation of animations for a certain direction
 //Our animations are by default facing North table gives the radians for rotate
-var directionToRadians =
+export var directionToRadians =
 [
 	Math.PI, //S
 	5*Math.PI/6, //SSE
@@ -184,7 +186,7 @@ var directionToRadians =
 	7*Math.PI/6 //SSW
 ];
 
-var playerType =
+export var playerType =
 {
 	humanLocal: 0,
 	humanNetwork: 1,
@@ -193,7 +195,7 @@ var playerType =
 	aiScripted: 4
 };
 
-var actionType =
+export var actionType =
 {
 	move: 0,
 	attack: 1,
@@ -211,14 +213,14 @@ var actionType =
 };
 
 //Define prestige gains on different situations
-var prestigeGains =
+export var prestigeGains =
 {
 	flagCapture: 50,
 	objectiveCapture: 150
 };
 
 //Define score gains
-var scoreGains =
+export var scoreGains =
 {
 	coreUnit: -15, //initial score calculation number of core units * this score
 	normalUnit: -5, //initial score calculation number of non core units * this score
@@ -234,13 +236,13 @@ var scoreGains =
 };
 
 //A cloud save remembered in the settings (see UIBuilder), id is the cloud save id
-interface CloudSave
+export interface CloudSave
 {
 	name: string;
 	id: string;
 }
 
-interface UISettings
+export interface UISettings
 {
 	airMode: boolean;
 	strategicZoom: boolean;
@@ -274,7 +276,7 @@ interface UISettings
 }
 
 //Holds the settings for the game ui and renderer
-var uiSettings: UISettings =
+export var uiSettings: UISettings =
 {
 	airMode: false,			//flag used to select between overlapping ground/air units
 	strategicZoom: false,	//flag used to draw map in strategic zoom mode or not
@@ -308,21 +310,21 @@ var uiSettings: UISettings =
 };
 
 //What triggered end of the campaign/scenario
-var endGameType =
+export var endGameType =
 {
 	moveCapture: "moveCapture",			//Captured all objectives
 	noTurnsLeft: "noTurnsLeft",			//No more turns left
 	noEnemyLeft: "noEnemyLeft"			//All enemy units destroyed
 };
 
-var endGameLossText: { [endType: string]: string } =
+export var endGameLossText: { [endType: string]: string } =
 {
 	moveCapture: "Enemy has captured all your objectives !<br>",
 	noTurnsLeft: "You don't have any turns left !<br>",
 	noEnemyLeft: "All your units had been destroyed !<br>"
 };
 
-var leaderType =
+export var leaderType =
 {
 	//Class Leaders
 	mechanizedVeteran: 		1, 	//Air Defence unit may move and fire in the same turn.
@@ -361,9 +363,9 @@ var leaderType =
 	superiorManeuver:		33	//The unit may bypass enemy units’ zones of control.
 };
 
-var difficultyType = { historical: 0, tactical: 1, operational: 2 };
+export var difficultyType = { historical: 0, tactical: 1, operational: 2 };
 
-interface DifficultyModifier
+export interface DifficultyModifier
 {
 	startPrestige: number;
 	turnPrestige: number;
@@ -372,7 +374,7 @@ interface DifficultyModifier
 }
 
 //Prestige and turn modifiers for each difficultyType
-var difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
+export var difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
 {
 	0: { startPrestige: 0, turnPrestige: 0, extraTurns: 1, scoreCoef: 1 },		//historical
 	1: { startPrestige: 0.2, turnPrestige: 0.1, extraTurns: 1.2, scoreCoef: 0.8 },	//tactical
@@ -381,7 +383,7 @@ var difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
 
 //The constructors are classes so other modules can type `new Cell(...)`. Fields are `declare`d:
 //they emit nothing and the constructor bodies assign them as before
-class Cell
+export class Cell
 {
 	declare row: number;
 	declare col: number;
@@ -394,7 +396,7 @@ class Cell
 }
 //used for movement and attack range cells
 //extendedCell.prototype = new Cell() and Cell.call(this, row, col) of the original became extends/super
-class extendedCell extends Cell
+export class extendedCell extends Cell
 {
 	declare range: number;
 	declare cin: number;
@@ -417,11 +419,12 @@ class extendedCell extends Cell
 
 //used for shortest path calculations
 //pathCell.prototype = new Cell() and Cell.call(this, cell.row, cell.col) of the original became extends/super
-class pathCell extends Cell
+export class pathCell extends Cell
 {
 	declare cost: number;
 	declare prev: pathCell | null;
 	declare dist: number;
+	declare isVisible: boolean; //set by map.js moveUnit on the cells the enemy sees, render reads it
 
 	constructor(cell: Cell)
 	{
@@ -432,7 +435,7 @@ class pathCell extends Cell
 	}
 }
 
-class movementResults
+export class movementResults
 {
 	declare isVisible: boolean;
 	declare surpriseCell: Cell; //[] until a surprise contact sets it (see GameMap.moveUnit)
@@ -450,7 +453,7 @@ class movementResults
 	}
 }
 
-class combatResults
+export class combatResults
 {
 	declare kills: number;
 	declare losses: number;
@@ -480,7 +483,7 @@ class combatResults
 	}
 }
 
-class Supply
+export class Supply
 {
 	declare ammo: number;
 	declare fuel: number;
@@ -496,7 +499,7 @@ class Supply
 	}
 }
 
-class mouseInfo
+export class mouseInfo
 {
 	declare x: number;
 	declare y: number;
@@ -510,7 +513,7 @@ class mouseInfo
 	}
 }
 
-class screenPos
+export class screenPos
 {
 	declare x: number;
 	declare y: number;
@@ -523,23 +526,23 @@ class screenPos
 }
 
 //"3.2.14" -> "3.2"
-function major_version(version: string): string
+export function major_version(version: string): string
 {
 	return version.split(".").slice(0, 2).join(".");
 }
 
-var UNIT_MAX_EXPERIENCE = 500; //Experience cap of a unit
-var UNIT_RETREAT_THRESHOLD = 0.6; //Percentage of losses for which a unit starts to retreat
-var CURRENCY_MULTIPLIER = 12; //PG2 uses this multiplier for unit costs defined in equipment
-var UPGRADE_PENALTY = 1.2; //Upgrade costs is multiplied with this value
-var OVERSTRENGTH_PENALTY = 1.2; //Overstrength reinforcement costs is multiplied with this value
-var SCENARIO_START_PRESTIGE = 2000; //Start prestige for scenarios played outside of a campaign
-var PROTOTYPE_MIN_COST = 200; //Don't give players prototypes that are cheaper than this (with CURRENCY_MULTIPLIER)
-var DEBUG_CAMPAIGN = false; //If victory choices buttons should be shown for easy campaign progress
-var DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js)
-var VERSION = "3.2.14";
-var MAJOR_VERSION = major_version(VERSION);
-var NATIVE_PLATFORM = "generic";
-//The bundle declares these two a second time, kept as is
-var NATIVE_PLATFORM = "generic";
-var DEBUG_CAMPAIGN = false;
+export var UNIT_MAX_EXPERIENCE = 500; //Experience cap of a unit
+export var UNIT_RETREAT_THRESHOLD = 0.6; //Percentage of losses for which a unit starts to retreat
+export var CURRENCY_MULTIPLIER = 12; //PG2 uses this multiplier for unit costs defined in equipment
+export var UPGRADE_PENALTY = 1.2; //Upgrade costs is multiplied with this value
+export var OVERSTRENGTH_PENALTY = 1.2; //Overstrength reinforcement costs is multiplied with this value
+export var SCENARIO_START_PRESTIGE = 2000; //Start prestige for scenarios played outside of a campaign
+export var PROTOTYPE_MIN_COST = 200; //Don't give players prototypes that are cheaper than this (with CURRENCY_MULTIPLIER)
+export var DEBUG_CAMPAIGN = false; //If victory choices buttons should be shown for easy campaign progress
+export var DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js)
+export var VERSION = "3.2.14";
+export var MAJOR_VERSION = major_version(VERSION);
+export var NATIVE_PLATFORM = "generic";
+//The bundle declares these two a second time (an exported name is declared once, so assigned here)
+NATIVE_PLATFORM = "generic";
+DEBUG_CAMPAIGN = false;

@@ -12,8 +12,22 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	Cell, combatResults, CURRENCY_MULTIPLIER, direction, embarkType, extendedCell, leaderType, movMethod,
+	movTable, pathCell, roadType, Supply, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD,
+	unitClass, unitEntrenchRate, unitType, UPGRADE_PENALTY
+} from "./prototypes";
+import { Equipment } from "./equipment";
+import { defined } from "./dom";
+import type { Transport, Unit } from "./unit";
+import type { GameMap, Hex } from "./map";
+import { Leaders } from "./leaders";
+
+//Undeclared in the bundle (implicit globals): module variables here, same lifetime (assigned by calculateAttackResults)
+var aInitiative: number, dInitiative: number;
+
 //The GameRules module API. map is the hex grid of a GameMap (GameMap.map), rows/cols its size
-interface GameRulesModule
+export interface GameRulesModule
 {
 	getMoveRange(mapObj: GameMap, unit: Unit): extendedCell[];
 	getUnitMoveRange(unit: Unit): number;
@@ -73,7 +87,7 @@ interface GameRulesModule
 }
 
 //var GameRules = GameRules || {}; //Namespace emulation
-var GameRules: GameRulesModule = (function(GameRules: GameRulesModule) { //Module start
+export var GameRules: GameRulesModule = (function(GameRules: GameRulesModule) { //Module start
 
 //returns a cell list with hexes that a unit can move to
 //Works by computing cost of ajacent hexes by range expanding from 0 to unit movpoints

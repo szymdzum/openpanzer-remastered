@@ -1,21 +1,22 @@
 // Lines of a source file that V8 precise coverage dumps never executed.
 // coverageFiles: one dump or a list, a line counts as covered when any dump executed it.
-// prefix: text the harness put in front of the file on its first line when injecting it.
+// servedFile: the code the browser ran (the coverage offsets refer to it), line for line the
+// source file: Vite serves src/ with the types blanked out and the import paths rewritten.
 const fs = require("fs");
 
-// Per line of src: "hit", "zero" or undefined (no code, or the script isn't in the dump)
-function lineStates(coverageFile, urlSuffix, src, prefix) {
+// Per line of the served code: "hit", "zero" or undefined (no code, or the script isn't in the dump)
+function lineStates(coverageFile, urlSuffix, src) {
 	const cov = JSON.parse(fs.readFileSync(coverageFile)).data.result.result;
-	const script = cov.find((s) => s.url.endsWith(urlSuffix));
+	const script = cov.find((s) => s.url.split("?")[0].endsWith(urlSuffix)); // Vite adds ?t= to changed modules
 	if (!script) return null;
-	const text = (prefix || "") + src;
+	const text = src;
 	// Innermost range wins: V8 lists nested ranges after the ones containing them
 	const counts = new Int32Array(text.length).fill(-1);
 	for (const fn of script.functions)
 		for (const r of fn.ranges)
 			for (let i = r.startOffset; i < Math.min(r.endOffset, text.length); i++) counts[i] = r.count;
 	const states = [];
-	let off = (prefix || "").length;
+	let off = 0;
 	for (const line of src.split("\n")) {
 		let hit = false, zero = false;
 		for (let c = 0; c < line.length; c++) {
@@ -28,10 +29,11 @@ function lineStates(coverageFile, urlSuffix, src, prefix) {
 	return states;
 }
 
-function uncoveredLines(coverageFiles, urlSuffix, file, prefix) {
+function uncoveredLines(coverageFiles, urlSuffix, file, servedFile) {
 	const src = fs.readFileSync(file, "utf8");
+	const served = servedFile && fs.existsSync(servedFile) ? fs.readFileSync(servedFile, "utf8") : src;
 	const all = [].concat(coverageFiles).filter((f) => fs.existsSync(f))
-		.map((f) => lineStates(f, urlSuffix, src, prefix)).filter(Boolean);
+		.map((f) => lineStates(f, urlSuffix, served)).filter(Boolean);
 	if (!all.length) return null;
 	const lines = src.split("\n");
 	const out = [];

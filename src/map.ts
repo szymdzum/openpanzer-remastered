@@ -12,17 +12,25 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import {
+	Cell, type combatResults, difficultyModifiers, type extendedCell, leaderType, movementResults,
+	outcomeNames, OVERSTRENGTH_PENALTY, playerType, prestigeGains, roadType, scoreGains, sideNames,
+	type Supply, terrainType, uiSettings, unitClass
+} from "./prototypes";
+import { CombatLog } from "./combatlog";
+import { Equipment } from "./equipment";
+import { defined } from "./dom";
+import type { AI } from "./ai";
+import type { AIScripted } from "./aiscripted";
+import { GameRules } from "./gamerules";
+import { Unit } from "./unit";
+import { game } from "./game";
+import { Leaders } from "./leaders";
+
 //Hex, Player and Map classes
 
-//Properties this module sets on objects of other modules, merged into their types
-//TODO move to unit.ts and prototypes.ts
-interface Unit { nodossier: boolean } //disbanded or removed, not a loss for the dossier
-interface pathCell { isVisible: boolean } //moveUnit marks the cells the enemy sees, render reads it
-//What this module uses of AIScripted (Player.handler), until aiscripted.ts types it
-interface AIScripted { buildActions(): void }
-
 //Campaign stats of a player, unit counts by unit class and scenario names by outcome
-interface PlayerDossier
+export interface PlayerDossier
 {
 	units?: {
 		lostaux?: { [uclass: number]: number };
@@ -33,7 +41,7 @@ interface PlayerDossier
 }
 
 //Player Object Constructor
-class Player
+export class Player
 {
 	declare id: number;
 	declare side: number;
@@ -103,7 +111,7 @@ class Player
 	}
 }
 //Player Object Public Methods, assigned to the prototype so they stay enumerable
-interface Player
+export interface Player
 {
 	copy(p: Player, addScore?: boolean): void;
 	initDossier(): void;
@@ -399,7 +407,7 @@ Player.prototype.cleanup = function()
 }
 
 //Hex Object Constructor
-class Hex
+export class Hex
 {
 	declare unit: Unit;
 	declare airunit: Unit;
@@ -474,7 +482,7 @@ class Hex
 }
 
 //Hex Object Public Methods, assigned to the prototype: gamestate does for-in over a Hex
-interface Hex
+export interface Hex
 {
 	copy(hex: Hex): void;
 	getUnit(airMode?: boolean | number): Unit; //gamerules passes 0 and 1
@@ -588,13 +596,13 @@ Hex.prototype.cleanup = function()
 }
 
 //What GameMap.reinforceUnit returns
-interface ReinforceResults { strength: number; ammo: number; fuel: number }
+export interface ReinforceResults { strength: number; ammo: number; fuel: number }
 //What GameMap.captureHex returns
-interface CaptureResults { isWin: boolean; isCapture: boolean }
+export interface CaptureResults { isWin: boolean; isCapture: boolean }
 //Unit icons by eqid, for preloading
-interface UnitImagesList { [eqid: number]: string }
+export interface UnitImagesList { [eqid: number]: string }
 //The last move of a unit, saved for undo
-interface MapLastMove
+export interface MapLastMove
 {
 	unit: Unit;
 	savedUnit: Unit;
@@ -607,7 +615,7 @@ interface MapLastMove
 }
 
 //Map Object Constructor
-class GameMap //Map in the original, renamed: it replaced the built-in Map
+export class GameMap //Map in the original, renamed: it replaced the built-in Map
 {
 	declare rows: number;
 	declare cols: number;

@@ -32,24 +32,12 @@ REFERENCE_DIR=${REFERENCE_DIR:-../openpanzer-src}
 REFERENCE_PORT=${REFERENCE_PORT:-8643}
 PORT=${PORT:-8644}
 REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
-# MINE=<module,...>: test only those modules from the working tree, the others from the last
-# commit (for parallel work), in a build directory of this session
-DIST=dist
-[ -n "${MINE:-}" ] && DIST="dist-${BDG_SESSION:-default}"
-VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness&dist=$DIST"
-MODULES=$(node -e 'eval(require("fs").readFileSync("src/modules.ts", "utf8")); console.log(srcModules.join(","))')
-# The remaster runs dist/, build it from src/ first
-node scripts/build.mjs --out "$DIST" ${MINE:+--mine "$MINE"} >/dev/null
+VARIANT_URL="http://127.0.0.1:$PORT/index.html?harness"
+MODULES=$(cd src && ls *.ts | sed 's/\.ts$//' | paste -sd, -)
 
-# serve <dir> <port>: a static server per repo, left running for the next runs
-serve() {
-	if ! curl -s -o /dev/null "http://127.0.0.1:$2/index.html"; then
-		(cd "$1" && nohup python3 -m http.server "$2" --bind 127.0.0.1 >/dev/null 2>&1 &)
-		sleep 1
-	fi
-}
-serve "$REFERENCE_DIR" "$REFERENCE_PORT"
-serve . "$PORT"
+source harness/lib/servers.sh
+serve_static "$REFERENCE_DIR" "$REFERENCE_PORT"
+serve_vite "$PORT"
 
 # run <url> <out.json> [coverage.json]
 run() {
@@ -100,4 +88,5 @@ fi
 echo "remaster: playing ${#ITEMS[@]} items"
 run "$VARIANT_URL" "$OUT/variant.json" "$OUT/coverage.json"
 
-DIST=$DIST node harness/diff-traces.js "$BASELINE" "$OUT/variant.json" "$OUT/coverage.json" "${MINE:-$MODULES}"
+save_served "$PORT" "$OUT/served" "$MODULES"
+SERVED=$OUT/served node harness/diff-traces.js "$BASELINE" "$OUT/variant.json" "$OUT/coverage.json" "$MODULES"

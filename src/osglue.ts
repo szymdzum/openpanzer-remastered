@@ -11,8 +11,12 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle (no 2.9 source exists for this module).
  */
 
+import { NATIVE_PLATFORM } from "./prototypes";
+import { $ } from "./dom";
+import { game } from "./game";
+
 //The platform glue instance the module returns
-interface OSGlue
+export interface OSGlue
 {
 	diskloadHTML: string;
 	diskloadEvent(element: HTMLElement, handler: (e: Event) => void): void;
@@ -24,7 +28,7 @@ interface OSGlue
 }
 
 //The namespace object the module function fills
-interface OSGlueModule
+export interface OSGlueModule
 {
 	ios: new () => OSGlue;
 	generic: new () => OSGlue;
@@ -32,7 +36,7 @@ interface OSGlueModule
 
 //The namespace object only holds the two constructors, the module returns an instance of one.
 //(Loaded over the bundle, OSGlue is the bundle's instance and gets the constructors added)
-var OSGlue: OSGlue = (function(OSGlue: OSGlueModule): OSGlue { //Module start
+export var OSGlue: OSGlue = (function(OSGlue: OSGlueModule): OSGlue { //Module start
 
 //Native iOS/Android wrapper: disk operations go through the openpanzer:// url scheme
 //which the native application intercepts

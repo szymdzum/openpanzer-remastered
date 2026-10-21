@@ -12,23 +12,26 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { uiSettings } from "./prototypes";
+import { GameState, type GameStateConstructor } from "./gamestate";
+
 //An element with the vendor prefixed style properties the game still sets (Firefox's Moz*)
-interface VendorCSSStyle extends CSSStyleDeclaration
+export interface VendorCSSStyle extends CSSStyleDeclaration
 {
 	mozTransformOrigin?: string;
 	MozTransform?: string;
 	MozTransition?: string;
 }
-type VendorStyled<T extends HTMLElement = HTMLElement> = T & { style: VendorCSSStyle };
+export type VendorStyled<T extends HTMLElement = HTMLElement> = T & { style: VendorCSSStyle };
 
 //A glyph button (see toggleButton), hasSelectedGlyph is set by UIBuilder on the buttons that have one
-interface GlyphButton extends HTMLElement
+export interface GlyphButton extends HTMLElement
 {
 	hasSelectedGlyph?: boolean;
 }
 
 //True if v is neither undefined nor null
-function defined<T>(v: T): v is NonNullable<T>
+export function defined<T>(v: T): v is NonNullable<T>
 {
 	return typeof v !== "undefined" && v !== null;
 }
@@ -36,15 +39,15 @@ function defined<T>(v: T): v is NonNullable<T>
 // Get the element with ID id
 //The element type is the caller's: $<HTMLInputElement>("x").value, or inferred from the variable
 //it is assigned to. Elements with custom properties take an interface extending HTMLElement
-function $<T extends HTMLElement = HTMLElement>(id: string): T
+export function $<T extends HTMLElement = HTMLElement>(id: string): T
 {
 	return document.getElementById(id) as T;
 }
 
 //querySelector shortcut: $$(selector) searches the document, $$(parent, selector) the parent
-function $$<T extends Element = HTMLElement>(selector: string): T;
-function $$<T extends Element = HTMLElement>(parent: ParentNode | null, selector: string): T;
-function $$(parent: ParentNode | string | null, selector?: string): Element
+export function $$<T extends Element = HTMLElement>(selector: string): T;
+export function $$<T extends Element = HTMLElement>(parent: ParentNode | null, selector: string): T;
+export function $$(parent: ParentNode | string | null, selector?: string): Element
 {
 	if (arguments.length == 1)
 	{
@@ -60,9 +63,9 @@ function $$(parent: ParentNode | string | null, selector?: string): Element
 
 //can be called with a id string or a element object directly
 //return pointer to the newly created tag
-function addTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node | null, tag: K): HTMLElementTagNameMap[K];
-function addTag(parent: string | Node | null, tag: string): HTMLElement;
-function addTag(parent: string | Node | null, tag: string): HTMLElement
+export function addTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node | null, tag: K): HTMLElementTagNameMap[K];
+export function addTag(parent: string | Node | null, tag: string): HTMLElement;
+export function addTag(parent: string | Node | null, tag: string): HTMLElement
 {
 	var e: Node;
 	var t = document.createElement(tag);
@@ -77,9 +80,9 @@ function addTag(parent: string | Node | null, tag: string): HTMLElement
 }
 
 //inserta a tag before a child element if child is null is placed at the end of node list
-function insertTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node, tag: K, child: string | Node | null): HTMLElementTagNameMap[K];
-function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement;
-function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement
+export function insertTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node, tag: K, child: string | Node | null): HTMLElementTagNameMap[K];
+export function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement;
+export function insertTag(parent: string | Node, tag: string, child: string | Node | null): HTMLElement
 {
 	var e: Node, c: Node;
 	var t = document.createElement(tag);
@@ -97,14 +100,14 @@ function insertTag(parent: string | Node, tag: string, child: string | Node | nu
 }
 
 //remove a DOM tag
-function delTag(tag: Node | null): void
+export function delTag(tag: Node | null): void
 {
 	if (tag && tag.parentNode)
 		tag.parentNode.removeChild(tag);
 }
 
 //remove all children of a tag
-function clearTag(tag: string | Node): void
+export function clearTag(tag: string | Node): void
 {
 	var t: Node;
 	if (typeof(tag) === 'string') {	t = $(tag); }
@@ -115,7 +118,7 @@ function clearTag(tag: string | Node): void
 }
 
 //remove one style property of a tag, or the whole style attribute when no property is given
-function clearStyle(tag: string | HTMLElement, property?: string): void
+export function clearStyle(tag: string | HTMLElement, property?: string): void
 {
 	var t: HTMLElement;
 	if (typeof(tag) === 'string') {	t = $(tag); }
@@ -128,7 +131,7 @@ function clearStyle(tag: string | HTMLElement, property?: string): void
 }
 
 //append copies of the children of the template element with id templateId to parent
-function insertTemplate(templateId: string, parent: Node): void
+export function insertTemplate(templateId: string, parent: Node): void
 {
 	var template = $$("#" + templateId);
 
@@ -137,7 +140,7 @@ function insertTemplate(templateId: string, parent: Node): void
 }
 
 //Returns tag position
-function getPosition(tag: string): DOMRect
+export function getPosition(tag: string): DOMRect
 {
 	var r = {} as DOMRect; //always replaced below
 
@@ -156,7 +159,7 @@ function getPosition(tag: string): DOMRect
 }
 
 //Returns the page coordinates of an element, relative to the body
-function getCoordinates(e: Element): { x: number; y: number }
+export function getCoordinates(e: Element): { x: number; y: number }
 {
 	var r = e.getBoundingClientRect();
 	var body = document.body.getBoundingClientRect();
@@ -165,7 +168,7 @@ function getCoordinates(e: Element): { x: number; y: number }
 }
 
 //add an option to a select element
-function addSelectOption(e: string | Node, text: string, value: string | number, selected?: boolean): void
+export function addSelectOption(e: string | Node, text: string, value: string | number, selected?: boolean): void
 {
 	if (selected === undefined || selected === null)
 		selected = false;
@@ -177,7 +180,7 @@ function addSelectOption(e: string | Node, text: string, value: string | number,
 }
 
 //set current option of a select element by matching string
-function setSelectOption(e: HTMLSelectElement, str: string): boolean
+export function setSelectOption(e: HTMLSelectElement, str: string): boolean
 {
 	var o = e.options;
 	for (var i = 0; i < o.length; i++)
@@ -194,24 +197,24 @@ function setSelectOption(e: HTMLSelectElement, str: string): boolean
 }
 
 //Taken from http://modernizr.github.com/Modernizr/touch.html
-function hasTouch(): boolean
+export function hasTouch(): boolean
 {
 	return "ontouchstart" in window;
 }
 
 //Running as a Chrome packaged app
-function isChromeApp(): any
+export function isChromeApp(): any
 {
 	return window.chrome && chrome.app && chrome.app.runtime;
 }
 
 //Function to disable/enable right click
-function toggleRightClick( status: boolean ): void
+export function toggleRightClick( status: boolean ): void
 {
 	window.oncontextmenu = function() { return status; }
 }
 
-function hasBrokenScroll(): boolean
+export function hasBrokenScroll(): boolean
 {
 	var ua = navigator.userAgent;
 	//Stock android browser on froyo/gingerbread suffers from div overflow scroll issue
@@ -225,7 +228,7 @@ function hasBrokenScroll(): boolean
 
 //Android 4.x stock browser has issues clearing the canvas. Canvas retain a random drawing state from the first
 //writes that come in a certain time after the canvas was created
-function hasBrokenClearRect(): boolean
+export function hasBrokenClearRect(): boolean
 {
 	var ua = navigator.userAgent;
 	if (ua.match(/android 4/i) && !ua.match(/chrome/i))
@@ -233,7 +236,7 @@ function hasBrokenClearRect(): boolean
 	return false;
 }
 
-function hoverin(e: HTMLImageElement | null): void
+export function hoverin(e: HTMLImageElement | null): void
 {
 	if (!e || typeof e === "undefined")
 		return;
@@ -242,7 +245,7 @@ function hoverin(e: HTMLImageElement | null): void
 	e.src = path + e.id + "-over.png";
 }
 
-function hoverout(e: HTMLImageElement | null): void
+export function hoverout(e: HTMLImageElement | null): void
 {
 	if (!e || typeof e === "undefined")
 		return;
@@ -252,7 +255,7 @@ function hoverout(e: HTMLImageElement | null): void
 }
 
 //Toggle a button made with a font glyph normal button is has lower case letter, selected is uppercase
-function toggleButton(e: GlyphButton | null, state: boolean): boolean
+export function toggleButton(e: GlyphButton | null, state: boolean): boolean
 {
 	if (!e)
 		return false;
@@ -275,7 +278,7 @@ function toggleButton(e: GlyphButton | null, state: boolean): boolean
 	return true;
 }
 
-function toggleButtonWithImage(p: HTMLElement | null, state: boolean): void
+export function toggleButtonWithImage(p: HTMLElement | null, state: boolean): void
 {
 	var e: HTMLImageElement;
 	//Change the image from the button which *usually* is the firstChild
@@ -291,7 +294,7 @@ function toggleButtonWithImage(p: HTMLElement | null, state: boolean): void
 }
 
 //Toggles a checkbox with glyph, same as toggleButton() but without state
-function toggleCheckbox(e: HTMLElement | null): boolean
+export function toggleCheckbox(e: HTMLElement | null): boolean
 {
 	if (!e)
 		return false;
@@ -307,7 +310,7 @@ function toggleCheckbox(e: HTMLElement | null): boolean
 }
 
 //Toggles a checkbox image(<name>-checked.png must exist)
-function toggleCheckboxWithImage(e: HTMLImageElement | null): void
+export function toggleCheckboxWithImage(e: HTMLImageElement | null): void
 {
 	if (! e || !e.src) return;
 
@@ -323,7 +326,7 @@ function toggleCheckboxWithImage(e: HTMLImageElement | null): void
 	e.src = path + name + ".png";
 }
 
-function isVisible(tag: string): boolean
+export function isVisible(tag: string): boolean
 {
 	var v = $(tag).style.display;
 
@@ -333,19 +336,19 @@ function isVisible(tag: string): boolean
 	return false;
 }
 
-function makeVisible(tag: string): void
+export function makeVisible(tag: string): void
 {
 	$(tag).style.display = "inline";
 	$(tag).focus();
 }
 
-function makeHidden(tag: string): void
+export function makeHidden(tag: string): void
 {
 	$(tag).style.display = "none";
 	$('game').focus(); //focus back the game canvas
 }
 
-function bounceText(x: number, y: number, text: string, positive: boolean): void
+export function bounceText(x: number, y: number, text: string, positive: boolean): void
 {
 	var cdiv: VendorStyled = addTag('game', 'div');
 	var ldiv = addTag(cdiv, 'div');
@@ -376,7 +379,7 @@ function bounceText(x: number, y: number, text: string, positive: boolean): void
 }
 
 //Taken from seabreezecomputers.com/tips/scroll-div.htm
-function touchScroll(id: string): void
+export function touchScroll(id: string): void
 {
 	var scrollStartPosY = 0;
 	var scrollStartPosX = 0;
@@ -410,7 +413,7 @@ function touchScroll(id: string): void
 		}, false);
 }
 
-function addStyleSheet(name: string): boolean
+export function addStyleSheet(name: string): boolean
 {
 	var ss = document.createElement("link");
 	ss.setAttribute("rel", "stylesheet");
@@ -424,7 +427,7 @@ function addStyleSheet(name: string): boolean
 
 //Returns the style of the first css rule with this selector, looking into
 //imported stylesheets too. undefined if there is none
-function getStyleSheet(selector: string): CSSStyleDeclaration | undefined
+export function getStyleSheet(selector: string): CSSStyleDeclaration | undefined
 {
 	for (var i = 0; i < document.styleSheets.length; i++)
 	{
@@ -450,16 +453,16 @@ function getStyleSheet(selector: string): CSSStyleDeclaration | undefined
 }
 
 //A css rule read as either an @import rule or a style rule
-type AnyCSSRule = CSSRule & Partial<Pick<CSSImportRule, "styleSheet">> & Partial<Pick<CSSStyleRule, "selectorText" | "style">>;
+export type AnyCSSRule = CSSRule & Partial<Pick<CSSImportRule, "styleSheet">> & Partial<Pick<CSSStyleRule, "selectorText" | "style">>;
 
 //The Wails desktop runtime, window.runtime when running in Wails
-interface WailsWindow extends Window
+export interface WailsWindow extends Window
 {
 	runtime?: { EventsEmit(name: string): void; Quit(): void };
 }
 
 //Returns the function that closes the desktop app window (NW.js or Wails), null in a browser
-function getDesktopExitFunction(): (() => void) | null
+export function getDesktopExitFunction(): (() => void) | null
 {
 	var exitFunction: (() => void) | null = null;
 
@@ -476,7 +479,7 @@ function getDesktopExitFunction(): (() => void) | null
 	return exitFunction;
 }
 
-function changeViewPort(): void
+export function changeViewPort(): void
 {
 	var i: number, meta: HTMLMetaElement = null;
 	var scale = 1.0;

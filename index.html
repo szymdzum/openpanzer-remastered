@@ -6,31 +6,23 @@
         <meta name="author" content="Nicu Pavel, npavel@linuxconsulting.ro"/>
         <meta name="description" content="Turn Based World War 2 Strategy Game"/>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <link rel="icon" href="resources/ui/page/icon/icon.png" type="image/png"/>
-        <link rel="apple-touch-icon" href="resources/ui/page/icon/icon-57x57.png" />
-        <link rel="apple-touch-icon" sizes="72x72" href="resources/ui/page/icon/icon-72x72.png" />
-        <link rel="apple-touch-icon" sizes="114x114" href="resources/ui/page/icon/icon-114x114.png" />
-        <link rel="apple-touch-icon" sizes="144x144" href="resources/ui/page/icon/icon-144x144.png" />
-        <link rel="apple-touch-startup-image" href="resources/ui/splash/splash-1280x775">
+        <link rel="icon" href="/game/resources/ui/page/icon/icon.png" type="image/png"/>
+        <link rel="apple-touch-icon" href="/game/resources/ui/page/icon/icon-57x57.png" />
+        <link rel="apple-touch-icon" sizes="72x72" href="/game/resources/ui/page/icon/icon-72x72.png" />
+        <link rel="apple-touch-icon" sizes="114x114" href="/game/resources/ui/page/icon/icon-114x114.png" />
+        <link rel="apple-touch-icon" sizes="144x144" href="/game/resources/ui/page/icon/icon-144x144.png" />
+        <link rel="apple-touch-startup-image" href="/game/resources/ui/splash/splash-1280x775">
 
-        <script src="resources/scenarios/scenariolist.js"></script>
-        <script src="resources/campaigns/campaignlist.js"></script>
-        <!-- The game: dist/ is built from src/*.ts by npm run build, in the order of src/modules.ts -->
-        <!-- ?dist=<dir> loads another build directory (the harness builds one per session) -->
+        <script src="/game/resources/scenarios/scenariolist.js"></script>
+        <script src="/game/resources/campaigns/campaignlist.js"></script>
+        <!-- The game, src/main.ts and the modules it imports, served and built by Vite -->
+        <script type="module" src="/src/main.ts"></script>
         <script>
-            var distDir = new URLSearchParams(location.search).get("dist") || "dist";
-            document.write('<script src="/' + distDir + '/modules.js"><\/script>');
+            //?harness: hooks for harness/lib/harness.js, after the game's modules ran
+            if (new URLSearchParams(location.search).has("harness"))
+                document.write('<script type="module" src="/harness/lib/hooks.js"><\/script>');
         </script>
-        <script>
-            (function() {
-                for (var i = 0; i < srcModules.length; i++)
-                    document.write('<script src="/' + distDir + '/' + srcModules[i] + '.js"><\/script>');
-                //?harness: hooks for harness/lib/harness.js, after the modules
-                if (new URLSearchParams(location.search).has("harness"))
-                    document.write('<script src="/harness/lib/hooks.js"><\/script>');
-            })();
-        </script>
-        <link href="css/ui.css" rel="stylesheet" type="text/css">
+        <link href="/game/css/ui.css" rel="stylesheet" type="text/css">
     </head>
   <body id="mainbody">
         <div id="ui-message" class="uiMessageBox"> <!-- Message popup -->
