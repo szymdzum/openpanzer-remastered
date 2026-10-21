@@ -295,7 +295,7 @@ GameRules.setSpotRange = function(map, unit, on, mrows, mcols) {
 
 	const p = unit.getPos();
 
-	if (!p) return;
+	if (!p) return 0; //a unit off the map spots nothing
 
 	const side = unit.player.side;
 	const range = GameRules.getUnitSpotRange(unit);
