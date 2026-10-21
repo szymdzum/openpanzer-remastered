@@ -977,7 +977,7 @@ function updateEquipmentWindow(eqclass?: number) {
 	clearTag("eqUnitList");
 	clearTag("eqTransportList");
 
-	//The current selected coutry in the div
+	//The current selected country in the div
 	var c: number | number[] = $<EqSelCountryElement>("eqSelCountry").country; //the onclick below reuses it for the countries
 	var country = +countries[c as number] + 1; //country id that is saved on unit data starts from 1
 
@@ -1349,7 +1349,7 @@ function uiEndTurnInfo() {
 	}
 }
 
-//Show turn info status bar messaage
+//Show turn info status bar message
 function uiTurnInfo() {
 	clearTag($("statusmsg"));
 	$("statusmsg").innerHTML = "&nbsp; " + map.currentPlayer.getCountryName() + " Turn: " + map.turn + "/" + map.maxTurns + " " + game.scenario.name;
@@ -1638,7 +1638,7 @@ function uiScaleMap(level: number) {
 				makeHidden("smNewGame");
 				makeHidden("smMain");
 				makeVisible("smScen");
-				//Make the current scenarion selected
+				//Make the current scenario selected
 				setSelectOption($("smScenSel").firstChild as HTMLSelectElement, game.scenario.name);
 				break;
 			}
