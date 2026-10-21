@@ -112,6 +112,7 @@ if (!window.__clock) {
 	game.loop = setInterval(game.processTurn, 1e3);
 	uiSettings.quickAnimation = true;
 	uiSettings.muteUnitSounds = true;
+	uiSettings.hdGraphics = false; // the remaster's @2x images (the harness runs at 1x anyway)
 	window.__replayErrors = [];
 	window.addEventListener("error", (e) => window.__replayErrors.push(String(e.message)
 		+ (e.error && e.error.stack ? " @ " + e.error.stack.split("\n").slice(1, 4).map((l) => l.trim()).join(" < ") : "")));
@@ -238,15 +239,22 @@ function normStyle(st) {
 
 // One line per element and text node, attributes sorted, so the order in which code sets
 // attributes, classes or style properties doesn't count as a difference
+// Deliberate additions of the remaster, left out of the DOM snapshot so that the rest of the
+// page still compares with the reference: selectors of elements the reference doesn't have
+const REMASTER_ONLY = [
+	".settingContainer:has(> #hdGraphics)", // the "High resolution map and units" setting
+];
+
 function domSnapshot(root) {
 	const out = [];
+	const skip = new Set(document.querySelectorAll(REMASTER_ONLY.join(",")));
 	(function walk(n, depth) {
 		if (n.nodeType === 3) {
 			const t = n.nodeValue.replace(/\s+/g, " ").trim();
 			if (t) out.push(depth + ' "' + t);
 			return;
 		}
-		if (n.nodeType !== 1) return;
+		if (n.nodeType !== 1 || skip.has(n)) return;
 		const tag = n.tagName.toLowerCase();
 		if (tag === "script") return;
 		const attrs = [];

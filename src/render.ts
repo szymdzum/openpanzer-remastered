@@ -64,13 +64,11 @@ function hdScale(): number
 
 //The @2x file of a map or unit image, generated into public/hd/ by scripts/upscale-assets.sh:
 //resources/maps/images/map_12.png -> /hd/maps/images/map_12.webp,
-//resources/units/images/pa909.png -> /hd/units/images/pa909.png. null for any other image
+//resources/units/images/pa909.png -> /hd/units/images/pa909.webp. null for any other image
 function hdPath(path: string): string | null
 {
-	if (path.indexOf("resources/maps/images/") == 0)
+	if (path.indexOf("resources/maps/images/") == 0 || path.indexOf("resources/units/images/") == 0)
 		return "/hd/" + path.slice("resources/".length).replace(/\.png$/, ".webp");
-	if (path.indexOf("resources/units/images/") == 0)
-		return "/hd/" + path.slice("resources/".length);
 	return null;
 }
 
@@ -184,7 +182,8 @@ export class Render
 
 		cbb.width = cbb.height = 54; //Currently the size of the attack cursor
 		cubb.width = cubb.height = 120 * dpr; //Currently the max size of a unit sprite //TODO compute this
-		cubb.style.width = cubb.style.height = "120px";
+		if (dpr > 1)
+			cubb.style.width = cubb.style.height = "120px"; //at 1x the canvas stays as the original (no css size)
 		ubb.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		//Renders the units/decals/hexgrid if orow,ocol and range are defined then it will

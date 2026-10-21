@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Generates the @2x game assets into public/hd/ (served at /hd/, gitignored).
 #   maps:  Real-ESRGAN x4plus, scaled back down to 2x, WebP q85  -> public/hd/maps/images/map_N.webp
-#   units: xBR 2x on the colour, the alpha scaled separately     -> public/hd/units/images/NAME.png
+#   units: hqx 2x on the colour, the alpha scaled separately,
+#          WebP q90 with lossless alpha (a third of the PNG)     -> public/hd/units/images/NAME.webp
 # Already generated files are skipped, so a stopped run can be restarted.
 #
 # usage: scripts/upscale-assets.sh [maps|units|all]
@@ -30,17 +31,18 @@ maps() {
 	rm -rf $tmp
 }
 
-# one unit sprite strip: colour with transparent pixels filled dark (no light halo), xBR 2x,
-# alpha xBR 2x, merged back
+# one unit sprite strip: colour with transparent pixels filled dark (no light halo), hqx 2x,
+# alpha hqx 2x, merged back (xBR smoothed the hand-drawn pixels away, like watercolour)
 unit() {
-	local f=$1 out=$OUT/units/images/${1:t}
+	local f=$1 out=$OUT/units/images/${1:t:r}.webp
 	[[ -s $out ]] && return
 	local tmp=$(mktemp -d)
 	local w=$(ffprobe -v error -show_entries stream=width -of csv=p=0 $f) h=$(ffprobe -v error -show_entries stream=height -of csv=p=0 $f)
 	ffmpeg -loglevel error -y -f lavfi -i color=c=0x1a1a14:s=${w}x${h} -i $f \
-		-filter_complex "[1]format=rgba[s];[0][s]overlay=format=auto,format=rgb24,xbr=2" -frames:v 1 $tmp/c.png
-	ffmpeg -loglevel error -y -i $f -vf "format=rgba,alphaextract,format=rgb24,xbr=2,format=gray" $tmp/a.png
-	ffmpeg -loglevel error -y -i $tmp/c.png -i $tmp/a.png -filter_complex "[0]format=rgb24[c];[1]format=gray[a];[c][a]alphamerge" -pix_fmt rgba $out
+		-filter_complex "[1]format=rgba[s];[0][s]overlay=format=auto,format=rgb24,hqx=2" -frames:v 1 $tmp/c.png
+	ffmpeg -loglevel error -y -i $f -vf "format=rgba,alphaextract,format=rgb24,hqx=2,format=gray" $tmp/a.png
+	ffmpeg -loglevel error -y -i $tmp/c.png -i $tmp/a.png -filter_complex "[0]format=rgb24[c];[1]format=gray[a];[c][a]alphamerge" -pix_fmt rgba $tmp/x2.png
+	cwebp -quiet -q 90 -alpha_q 100 -m 6 $tmp/x2.png -o $out
 	rm -rf $tmp
 }
 
