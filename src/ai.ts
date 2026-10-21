@@ -21,7 +21,7 @@ import { defined } from "./util";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
-import { game } from "./game";
+import { engineContext } from "./context";
 import { Rng } from "./rng";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (buildActions)
@@ -626,7 +626,7 @@ export function AI(this: AI, player: Player, map: GameMap)
 				var cost = GameRules.calculateUnitCosts(eqList[i]);
 				if (cost > prestige || cost > maxUnitCost || cost < minUnitCost
 					|| Equipment.equipment[eqList[i]].movmethod == movMethod.deepnaval
-					|| Equipment.equipment[eqList[i]].yearavailable > game.scenario.date.getFullYear())
+					|| Equipment.equipment[eqList[i]].yearavailable > engineContext.scenario().date.getFullYear())
 					eqList.splice(i, 1);
 			}
 			if (eqList.length > 0)

@@ -17,7 +17,7 @@ import { Equipment } from "./equipment";
 import { defined } from "./util";
 import { GameRules } from "./gamerules";
 import { type Hex, Player } from "./map";
-import { game } from "./game";
+import { engineContext } from "./context";
 
 //Transport Object Constructor
 //A class so other modules can type `new Transport(...)`. Fields are `declare`d (they emit nothing),
@@ -214,7 +214,7 @@ Unit.prototype.copy = function(u: Unit | null)
 	this.leader = u.leader;
 	//The player is taken from the current map by owner id, not from u.player
 	this.player = new Player();
-	this.player.copy(game.scenario.map.getPlayer(this.owner));
+	this.player.copy(engineContext.scenario().map.getPlayer(this.owner));
 	if (u.transport !== null)
 	{
 		this.transport = new Transport(u.transport.eqid);
@@ -461,7 +461,7 @@ Unit.prototype.unitEndTurn = function()
 	if (this.unitData().uclass !== unitClass.fortification)
 	{
 		var hex = this.getHex();
-		if (hex !== null && !hex.isSpotted(game.spotSide))
+		if (hex !== null && !hex.isSpotted(engineContext.spotSide()))
 			this.tempSpotted = false;
 	}
 }

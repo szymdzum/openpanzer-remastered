@@ -29,6 +29,7 @@ import { UIBuilder } from "./uibuilder";
 import { UI } from "./ui";
 import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
+import { setEngineContext } from "./context";
 
 //Game keeps the campaign progress in its closure, its methods are assigned in the constructor.
 //It stays a function: "var game = new Game()" runs before the declaration, which a class
@@ -69,6 +70,15 @@ export interface UIConstructor { new (game: Game): UI; }
 export interface AIScriptedConstructor { new (player: Player, map: GameMap): AIScripted; }
 
 export var game: Game = new (Game as unknown as GameConstructor)();
+
+//What the engine reads of the game (src/context.ts): this game's fields, read at the moment the
+//engine needs them, so what a harness or a test assigns to game.* is seen as before
+setEngineContext({
+	scenario: function() { return game.scenario; },
+	campaign: function() { return game.campaign; },
+	campaignPlayer: function() { return game.getCampaignPlayer(); },
+	spotSide: function() { return game.spotSide; }
+});
 
 export function Game(this: Game)
 {

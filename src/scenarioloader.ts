@@ -18,7 +18,7 @@ import { GameRules } from "./gamerules";
 import { Unit } from "./unit";
 import { Player } from "./map";
 import { Scenario } from "./scenario";
-import { game } from "./game";
+import { engineContext } from "./context";
 import { Leaders } from "./leaders";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (loadReinforcements)
@@ -82,8 +82,8 @@ export class ScenarioLoader
 				var eqp = mapHeader.getAttribute("eqp");
 				var turnsModifier = 1;
 
-				if (game && game.campaign)
-					turnsModifier = difficultyModifiers[game.campaign.difficulty].extraTurns;
+				if (engineContext.campaign())
+					turnsModifier = difficultyModifiers[engineContext.campaign().difficulty].extraTurns;
 
 				scen.map.rows = rows;
 				scen.map.cols = cols;
@@ -303,9 +303,9 @@ export class ScenarioLoader
 			var players: Player[] = [];
 			var minPrestige = 0; //campaigns give a minimum prestige per turn
 
-			if (game && game.campaign)
-				minPrestige = Math.round(game.campaign.startprestige
-					* difficultyModifiers[game.campaign.difficulty].turnPrestige);
+			if (engineContext.campaign())
+				minPrestige = Math.round(engineContext.campaign().startprestige
+					* difficultyModifiers[engineContext.campaign().difficulty].turnPrestige);
 
 			if (playerNodes)
 			{

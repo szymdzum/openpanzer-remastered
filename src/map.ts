@@ -24,7 +24,7 @@ import type { AI } from "./ai";
 import type { AIScripted } from "./aiscripted";
 import { GameRules } from "./gamerules";
 import { Unit } from "./unit";
-import { game } from "./game";
+import { engineContext } from "./context";
 import { Leaders } from "./leaders";
 
 //Hex, Player and Map classes
@@ -250,8 +250,8 @@ Player.prototype.acquireUnit = function(unitid, transportid)
 	u.player = this;
 
 	//Outside campaigns new units get the average experience of the enemy side (side is 0 or 1)
-	if (game.campaign === null)
-		u.experience = +game.scenario.getSideUnitsAvgExp(+!this.side);
+	if (engineContext.campaign() === null)
+		u.experience = +engineContext.scenario().getSideUnitsAvgExp(+!this.side);
 
 	this.addCoreUnit(u);
 
@@ -318,8 +318,8 @@ Player.prototype.updateScore = function(gain, count)
 		count = 1;
 
 	var coef = 1;
-	if (game.campaign !== null)
-		coef = difficultyModifiers[game.campaign.difficulty].scoreCoef;
+	if (engineContext.campaign() !== null)
+		coef = difficultyModifiers[engineContext.campaign().difficulty].scoreCoef;
 
 	this.score += (gain * count * coef) >> 0;
 }
@@ -1137,10 +1137,10 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 					this.map[pos.row][pos.col].delUnit(unitList[i]);
 				}
 				//Count the loss in the campaign player dossier unless the unit was disbanded or removed
-				if (game.campaign !== null)
+				if (engineContext.campaign() !== null)
 				{
 					if (!(defined(unitList[i].nodossier) && unitList[i].nodossier != false))
-						game.getCampaignPlayer().addDestroyedUnitToDossier(unitList[i]);
+						engineContext.campaignPlayer().addDestroyedUnitToDossier(unitList[i]);
 				}
 				unitList.splice(i, 1);
 				i--;
