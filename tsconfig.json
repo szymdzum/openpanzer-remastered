@@ -1,6 +1,7 @@
 {
 	// Type checking only (npm run check). Vite serves and builds src/*.ts with the types blanked
 	// out by ts-blank-space (vite.config.ts): same lines and columns as the source.
+	// strict stays off until strictNullChecks gets its own pass; the other strict flags are on.
 	"compilerOptions": {
 		"target": "es2017",
 		"lib": ["es2017", "dom"],
@@ -9,6 +10,15 @@
 		"verbatimModuleSyntax": true,
 		"noEmit": true,
 		"strict": false,
+		"noImplicitAny": true,
+		"noImplicitOverride": true,
+		"useUnknownInCatchVariables": true,
+		"strictBindCallApply": true,
+		"strictFunctionTypes": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"erasableSyntaxOnly": true,
 		"skipLibCheck": true
 	},

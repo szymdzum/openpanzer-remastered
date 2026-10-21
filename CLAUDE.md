@@ -17,7 +17,7 @@ game plays.
 
 | Command | Time | When |
 |---|---|---|
-| `npm run check`, `npm run check:strict`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
+| `npm run check`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
 | `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, fallow audit, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
 | `npm test` (`npm run test:coverage` in CI, with per-file coverage floors) | ~9 s | after every small step |
 | `npm run verify` | 3-4 min, up to 6 Chromes | before every pull request that touches `src/` |

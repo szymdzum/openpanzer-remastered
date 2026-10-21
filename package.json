@@ -10,7 +10,6 @@
 		"build": "vite build",
 		"preview": "vite preview --port 8645",
 		"check": "tsc -p . && tsc -p test",
-		"check:strict": "tsc -p tsconfig.strict.json",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
@@ -18,7 +17,7 @@
 		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
 		"record": "test/contracts/record.sh",
 		"lint": "oxlint --type-aware --deny-warnings src test",
-		"gate": "npm run -s check && npm run -s check:strict && npm run -s lint && npm run -s fallow && npm run -s test:coverage",
+		"gate": "npm run -s check && npm run -s lint && npm run -s fallow && npm run -s test:coverage",
 		"prepare": "lefthook install",
 		"fallow": "fallow audit --base origin/main",
 		"fallow:report": "fallow"

@@ -58,10 +58,10 @@ export interface AttackHooks {
 
 export interface FinishAttackHooks {
 	onLosses?(result: AttackResult): void; //first, before anything is removed
-	onDestroyed?(unit: Unit, cell: Cell): void; //a unit destroyed by its losses (attacker first), before the cleanup
+	onDestroyed?(cell: Cell, unit: Unit): void; //a unit destroyed by its losses (attacker first), before the cleanup
 	afterCleanup?(result: AttackResult): void; //the destroyed units are removed, before retreat or surrender
 	onRetreat?(unit: Unit, cell: Cell, mr: movementResults): void; //after the retreat's move
-	onSurrender?(unit: Unit, cell: Cell): void; //after the surrendered unit was removed
+	onSurrender?(cell: Cell, unit: Unit): void; //after the surrendered unit was removed
 	onVictory?(side: number): void; //a side won, the other has no units left
 }
 
@@ -74,7 +74,7 @@ export interface MoveResult {
 }
 
 export interface FinishMoveHooks extends AttackHooks {
-	onSurprised?(unit: Unit, cell: Cell): void; //before the surprise attack
+	onSurprised?(cell: Cell, unit: Unit): void; //before the surprise attack
 	attack?(attackingUnit: Unit, enemyUnit: Unit): AttackResult | null; //resolves the surprise attack, resolveAttack by default
 	onCapture?(unit: Unit): void;
 	onVictory?(side: number): void; //the side captured all its objectives
@@ -107,7 +107,7 @@ export interface ActionsAPI {
 	finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult;
 	finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult;
 	deployReinforcements(scenario: Scenario, turn: number, playerId: number,
-		onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null;
+		onDeployed?: (cell: Cell, unit: Unit) => void): DeployedReinforcement[] | null;
 	endTurn(scenario: Scenario, localSide: number): boolean;
 	checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null;
 }
@@ -188,11 +188,11 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 	const dDestroyed = d.oldstr - d.newstr >= d.oldstr;
 	if (aDestroyed) {
 		result.destroyed.push(a.unit);
-		if (h.onDestroyed) h.onDestroyed(a.unit, a.cell);
+		if (h.onDestroyed) h.onDestroyed(a.cell, a.unit);
 	}
 	if (dDestroyed) {
 		result.destroyed.push(d.unit);
-		if (h.onDestroyed) h.onDestroyed(d.unit, d.cell);
+		if (h.onDestroyed) h.onDestroyed(d.cell, d.unit);
 	}
 	if (aDestroyed || dDestroyed) //Cleanup dead units
 		map.updateUnitList();
@@ -200,7 +200,7 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 	if (h.afterCleanup) h.afterCleanup(result);
 
 	if (!dDestroyed && GameRules.shouldDefenderRetreat(a.unit, d.unit, d.oldstr)) {
-		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows, map.cols))) {
+		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows))) {
 			result.retreat = rpos;
 			result.retreatMove = map.retreatUnit(d.unit, rpos);
 			if (h.onRetreat) h.onRetreat(d.unit, rpos, result.retreatMove);
@@ -208,7 +208,7 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 			result.surrender = true;
 			d.unit.destroyed = true;
 			map.updateUnitList();
-			if (h.onSurrender) h.onSurrender(d.unit, d.cell);
+			if (h.onSurrender) h.onSurrender(d.cell, d.unit);
 		}
 	}
 
@@ -232,7 +232,7 @@ function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: bool
 
 	if (unit.isSurprised) {
 		const cell = mr.surpriseCell;
-		if (h.onSurprised) h.onSurprised(unit, cell);
+		if (h.onSurprised) h.onSurprised(cell, unit);
 		const target = map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
 		result.surprise = { cell: cell, target: target, attack: null };
 		if (target !== null)
@@ -250,7 +250,7 @@ function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: bool
 //Deploys the reinforcements of player playerId for this turn. Null when there are none, else the
 //deployed ones (the others stay for later)
 function deployReinforcements(scenario: Scenario, turn: number, playerId: number,
-	onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null {
+	onDeployed?: (cell: Cell, unit: Unit) => void): DeployedReinforcement[] | null {
 	const deployed: DeployedReinforcement[] = [];
 	const reinforcements = scenario.getReinforcements(turn, playerId);
 
@@ -264,7 +264,7 @@ function deployReinforcements(scenario: Scenario, turn: number, playerId: number
 			deployed.push({ unit: reinforcements[i].unit, cell: cell });
 			CombatLog.addReinforcement(reinforcements[i].unit);
 			scenario.removeReinforcement(reinforcements[i].turn, reinforcements[i].id);
-			if (onDeployed) onDeployed(reinforcements[i].unit, cell);
+			if (onDeployed) onDeployed(cell, reinforcements[i].unit);
 		}
 	}
 	return deployed;

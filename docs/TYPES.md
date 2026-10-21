@@ -5,8 +5,9 @@ proves it: the replays stay identical to openpanzer-src.
 
 ## Checks
 
-- `npm run check`: tsc with the base config, 0 errors.
-- `npm run check:strict`: the same with `noImplicitAny`, the typing measure, 0 errors.
+- `npm run check`: tsc on the game and the tests, 0 errors. `tsconfig.json` has `noImplicitAny`,
+  the unused-name, implicit-return and switch-fallthrough checks and `strictFunctionTypes`;
+  `strict` stays off until `strictNullChecks` gets its own pass.
 - `harness/replay.sh`: all 16 items identical.
 - `harness/ui-replay.sh [scripts...]`: the UI scripts that exercise the module (see `harness/ui/`;
   all of them for UI modules), all steps identical.

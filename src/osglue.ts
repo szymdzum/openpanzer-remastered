@@ -62,8 +62,8 @@ OSGlue.ios = class implements OSGlue {
 			window.location = "openpanzer://savetodisk/" + saveName as string & Location;
 		}
 
-		this.reportScore = function(score: number) {}
-		this.reportAchievement = function(campaignFile: string) {}
+		this.reportScore = function() {}
+		this.reportAchievement = function() {}
 
 		this.canvasErrorMsg = "<b>Couldn't create game surface.</b> <br/>This usually means that your device doesn't allow game surface to be created with dimensions over a certain limit (iPhone 3GS/iPod Touch 4).<br/><br/>You can play smaller scenarios like Huertgen Forest or Bizerte from New Scenario in Main Menu.";
 	}
@@ -98,8 +98,8 @@ OSGlue.generic = class implements OSGlue {
 			$("disksaveupdate").innerHTML = saveName;
 		}
 
-		this.reportScore = function(score: number) {}
-		this.reportAchievement = function(campaignFile: string) {}
+		this.reportScore = function() {}
+		this.reportAchievement = function() {}
 
 		this.canvasErrorMsg = "Couldn't load map image !";
 	}

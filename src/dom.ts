@@ -398,6 +398,14 @@ export function getStyleSheet(selector: string): CSSStyleDeclaration | undefined
 			}
 		}
 	}
+	return undefined; //no rule has this selector
+}
+
+//Sets an element's on<event> handler ("onclick", "onchange") to one that gets the element itself.
+//A handler reading its element through `this` can't be typed: the DOM may call it with any
+//GlobalEventHandlers as `this`. The handler's return value is kept (false cancels the default)
+export function setHandler<T extends HTMLElement>(el: T, event: "onclick" | "onchange", handler: (el: T) => unknown) {
+	el[event] = function() { return handler(el); };
 }
 
 //A css rule read as either an @import rule or a style rule

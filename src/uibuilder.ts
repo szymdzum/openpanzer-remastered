@@ -20,7 +20,7 @@ import { Equipment } from "./equipment";
 import {
 	$, addSelectOption, addTag, clearTag, defined, delTag, getCoordinates, getDesktopExitFunction,
 	getPosition, getStyleSheet, type GlyphButton, insertTag, insertTemplate, isVisible, makeHidden,
-	makeVisible, toggleButton, toggleCheckbox, type VendorStyled
+	makeVisible, setHandler, toggleButton, toggleCheckbox, type VendorStyled
 } from "./dom";
 import { tooltipColor, tooltipStyle } from "./aiscripted";
 import type { Unit } from "./unit";
@@ -210,7 +210,7 @@ UIBuilder.buildStartMenu = function() {
 		div.title = menubuttons[b][1];
 		div.className = "smMainButton";
 		div.textContent = menubuttons[b][1];
-		div.onclick = function(this: HTMLElement) { game.ui.startMenuButton(this.id); };
+		setHandler(div, "onclick", function(el: HTMLElement) { game.ui.startMenuButton(el.id); });
 	}
 
 	//Add new game buttons each in its own container
@@ -225,7 +225,7 @@ UIBuilder.buildStartMenu = function() {
 		div.className = "smMainButtonLight";
 		div.textContent = newgamebuttons[b][1];
 		div.style.margin = "0px auto";
-		div.onclick = function(this: HTMLElement) { game.ui.startMenuButton(this.id); };
+		setHandler(div, "onclick", function(el: HTMLElement) { game.ui.startMenuButton(el.id); });
 	}
 
 	$('smLogoText').innerHTML = "version " + VERSION;
@@ -254,15 +254,15 @@ UIBuilder.buildStartMenu = function() {
 		$('smCampDesc').innerHTML = help;
 	};
 
-	camSel.onchange = function(this: HTMLSelectElement) {
-		var v = this.options[this.selectedIndex].value as unknown as number; //the value string indexes the list
+	setHandler(camSel, "onchange", function(sel: HTMLSelectElement) {
+		var v = sel.options[sel.selectedIndex].value as unknown as number; //the value string indexes the list
 		$('smCampDesc').innerHTML = campaignlist[v].desc;
 		$('smCampCountry').innerHTML = "<b>Country</b><br/>" + Equipment.getCountryNameByEqp(campaignlist[v].flag, campaignlist[v].eqp);
 		$('smCampScenarios').innerHTML = "<b>Scenarios</b><br/>" + campaignlist[v].scenarios;
 		$('smCampPrestige').innerHTML = "<b>Start prestige</b><br/>" + campaignlist[v].prestige + "&nbsp;" + UIBuilder.currencyIcon;
 
 		($('smCamp') as UIBuilderCampaignMenu).selectedCampaign = v; //save index to campaign from campaignlist //TODO move to userSel
-	};
+	});
 	$('smCBackBut').onclick = function() {
 		makeHidden('smCamp');
 		makeVisible('smMain');
@@ -309,8 +309,8 @@ UIBuilder.buildStartMenu = function() {
 			scnOpt.text = "\u00a0\u00a0\u00a0\u00a0" + (scenariolist[i] as UIBuilderScenarioEntry)[1];
 		}
 	}
-	scnSel.onchange = function(this: HTMLSelectElement) {
-		var v = this.options[this.selectedIndex].value as unknown as number; //the value string indexes the list
+	setHandler(scnSel, "onchange", function(sel: HTMLSelectElement) {
+		var v = sel.options[sel.selectedIndex].value as unknown as number; //the value string indexes the list
 		$('smScenDesc').innerHTML = (scenariolist[v] as UIBuilderScenarioEntry)[2];
 
 		clearTag('smSide0');
@@ -349,14 +349,14 @@ UIBuilder.buildStartMenu = function() {
 				smAIBut.playerid = data[i]["id"];
 				smAIBut.className = "smallButton right";
 				smAIBut.style.marginRight = "5px";
-				smAIBut.onclick = function(this: UIBuilderAIButton) {
-					uiSettings.isAI[this.playerid] = uiSettings.isAI[this.playerid] ? 0 : 1;
-					toggleCheckbox(this);
-				};
+				setHandler(smAIBut, "onclick", function(el: UIBuilderAIButton) {
+					uiSettings.isAI[el.playerid] = uiSettings.isAI[el.playerid] ? 0 : 1;
+					toggleCheckbox(el);
+				});
 			}
 		}
 		($('smScen') as UIBuilderScenarioMenu).selectedScenario = v; //TODO move to userSel
-	};
+	});
 	$('smSBackBut').onclick = function() {
 		makeHidden('smScen');
 		makeVisible('smMain');
@@ -421,12 +421,12 @@ UIBuilder.buildStartMenu = function() {
 		div.id = settings[b][0];
 		div.className = "settingValue right";
 		div.innerHTML = uiSettings[settings[b][0]] ? "C" : "c";
-		div.onclick = function(this: HTMLElement) {
-			(uiSettings as unknown as UIBuilderSettingFlags)[this.id] = !(uiSettings as unknown as UIBuilderSettingFlags)[this.id];
-			toggleCheckbox(this);
-			if (this.id == "hdGraphics")
+		setHandler(div, "onclick", function(el: HTMLElement) {
+			(uiSettings as unknown as UIBuilderSettingFlags)[el.id] = !(uiSettings as unknown as UIBuilderSettingFlags)[el.id];
+			toggleCheckbox(el);
+			if (el.id == "hdGraphics")
 				($('smSettings') as UIBuilderSettingsWindow).needPageReload = true; //The renderer picks its images once
-			if (this.id == "useRetina") {
+			if (el.id == "useRetina") {
 				($('smSettings') as UIBuilderSettingsWindow).needPageReload = true;
 				//Suggest a matching interface scale (applied when the settings are closed)
 				if (window.devicePixelRatio >= 1) {
@@ -436,7 +436,7 @@ UIBuilder.buildStartMenu = function() {
 						($('uiscale') as UIBuilderNumberInput).value = 1;
 				}
 			}
-		};
+		});
 	}
 	$('smSetOkBut').onclick = function() {
 		makeHidden('smSettings');
@@ -480,7 +480,7 @@ UIBuilder.buildGameStateMenu = function() {
 		if (div.id == "diskload")
 			OSGlue.diskloadEvent(div, function() { UIBuilder.gameStateButton("diskload"); });
 		else
-			div.onclick = function(this: HTMLElement) { UIBuilder.gameStateButton(this.id); };
+			setHandler(div, "onclick", function(el: HTMLElement) { UIBuilder.gameStateButton(el.id); });
 
 		if (b % 2 == 1) {
 			div = addTag('smState', 'div');
@@ -604,7 +604,7 @@ UIBuilder.buildMainMenu = function() {
 			div.className += " smallButtonEndTurn";
 		div.style.marginTop = "3px";
 		div.innerHTML = menubuttons[b][2];
-		div.onclick = function(this: HTMLElement) { game.ui.mainMenuButton(this.id); };
+		setHandler(div, "onclick", function(el: HTMLElement) { game.ui.mainMenuButton(el.id); });
 		if (menubuttons[b][3])
 			(div as GlyphButton).hasSelectedGlyph = true;
 	}
@@ -671,12 +671,12 @@ UIBuilder.buildEquipmentWindow = function() {
 		div.id = "eqclass-" + b;
 		div.eqclass = b as unknown as number; //the key string, kept
 		div.innerHTML = UIBuilder.eqClassButtons[b][0];
-		div.onclick = function(this: UIBuilderClassButton) {
+		setHandler(div, "onclick", function(el: UIBuilderClassButton) {
 			($('eqUserSel') as UIBuilderUserSelection).userunit = -1; //Clear existing unit selections when changing class
 			($('eqUserSel') as UIBuilderUserSelection).equnit = -1;
 			($('eqUserSel') as UIBuilderUserSelection).eqtransport = -1;
-			game.ui.updateEquipmentWindow(this.eqclass);
-		};
+			game.ui.updateEquipmentWindow(el.eqclass);
+		});
 	}
 
 	//Bottom buttons
@@ -1042,11 +1042,11 @@ UIBuilder.gameSmallToolTip = function(text: string, x: number, y: number, color?
 	tt.style.display = "inline";
 	tt.innerHTML = text;
 	UIBuilder.smallToolTipList.push(id);
-	tt.onclick = function(this: HTMLElement) {
-		var i = UIBuilder.smallToolTipList.indexOf(this.id);
+	setHandler(tt, "onclick", function(el: HTMLElement) {
+		var i = UIBuilder.smallToolTipList.indexOf(el.id);
 		UIBuilder.smallToolTipList.splice(i, 1);
-		delTag(this);
-	};
+		delTag(el);
+	});
 };
 
 //Tooltip for UI elements, closed when clicked

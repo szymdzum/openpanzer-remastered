@@ -51,7 +51,6 @@ export interface EquipmentModule {
 	parseCountryEquipment(country: number, e: EquipmentCountryFile): boolean;
 	getCountryEquipmentByClass(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean): number[];
 	getCountryEquipmentByYearRange(startYear: number, endYear: number, country: number): number[];
-	addUnitsToEquipment(countryUnitHash: unknown): void;
 	isBridge(eqid: number): boolean;
 	ignoresEntrenchment(eqid: number): boolean;
 	isPurchasable(eqid: number): boolean;
@@ -187,11 +186,6 @@ Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: 
 	}
 
 	return eqList;
-}
-
-//TODO for the case where a campaign player buys units from a supporting country in a scenario
-Equipment.addUnitsToEquipment = function(countryUnitHash: unknown) {
-
 }
 
 Equipment.isBridge = function(eqid: number) {

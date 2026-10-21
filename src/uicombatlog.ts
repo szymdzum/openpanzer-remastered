@@ -20,7 +20,7 @@ import {
 import { CombatLog, type UnitEndTurnInfo } from "./combatlog";
 import { Equipment } from "./equipment";
 import {
-	$, addTag, clearTag, getPosition, insertTag, isVisible, makeHidden, makeVisible, toggleButton
+	$, addTag, clearTag, getPosition, insertTag, isVisible, makeHidden, makeVisible, setHandler, toggleButton
 } from "./dom";
 import type { Hex } from "./map";
 import { UIBuilder } from "./uibuilder";
@@ -32,9 +32,9 @@ export interface UICombatLogModule {
 	buildExtendButton(div: HTMLElement): void;
 	buildTurnInfo(div: HTMLElement): void;
 	buildCombatSummary(div: HTMLElement, map: Hex[][]): number;
-	buildResupplySummary(div: HTMLElement, map: Hex[][]): number;
-	buildReinforceSummary(div: HTMLElement, map: Hex[][]): number;
-	buildLeadersSummary(div: HTMLElement, map: Hex[][]): number;
+	buildResupplySummary(div: HTMLElement): number;
+	buildReinforceSummary(div: HTMLElement): number;
+	buildLeadersSummary(div: HTMLElement): number;
 	buildObjectiveSummary(div: HTMLElement, map: Hex[][]): number;
 	toggleCombatLog(forceShow?: boolean, isExtended?: boolean): void;
 }
@@ -59,9 +59,9 @@ UICombatLog.showCombatLog = function(isExtended: boolean) {
 	clearTag(div);
 	UICombatLog.buildCombatSummary(div, map);
 	UICombatLog.buildObjectiveSummary(div, map);
-	UICombatLog.buildResupplySummary(div, map);
-	UICombatLog.buildReinforceSummary(div, map);
-	UICombatLog.buildLeadersSummary(div, map);
+	UICombatLog.buildResupplySummary(div);
+	UICombatLog.buildReinforceSummary(div);
+	UICombatLog.buildLeadersSummary(div);
 	if (!isExtended)
 		UICombatLog.buildExtendButton(div);
 	UICombatLog.buildTurnInfo(div);
@@ -223,7 +223,7 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][]) {
 		//Clicking a line centers the map on the unit
 		line.row = info.pos.row;
 		line.col = info.pos.col;
-		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
+		setHandler(line, "onclick", function(el: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: el.row, col: el.col } as Cell); });
 
 		if (info.isCore)
 			insertTag(div, "hr", line.nextSibling);
@@ -243,7 +243,7 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][]) {
 }
 
 //One line per unit of the spotting side resupplied at the end of the turn
-UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][]) {
+UICombatLog.buildResupplySummary = function(div: HTMLElement) {
 	var count = 0;
 	var line: HTMLElement;
 
@@ -297,7 +297,7 @@ UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][]) {
 }
 
 //One line per reinforcement of the spotting side that arrived this turn
-UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) { //map unused
+UICombatLog.buildReinforceSummary = function(div: HTMLElement) {
 	var count = 0;
 	var line: UICombatLogLine;
 
@@ -333,7 +333,7 @@ UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) { /
 
 		line.row = info.pos.row;
 		line.col = info.pos.col;
-		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
+		setHandler(line, "onclick", function(el: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: el.row, col: el.col } as Cell); });
 		addTag(div, "hr");
 	}
 	if (count == 0) {
@@ -344,7 +344,7 @@ UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) { /
 }
 
 //One line per unit of the spotting side that received a leader this turn
-UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) { //map unused
+UICombatLog.buildLeadersSummary = function(div: HTMLElement) {
 	var count = 0;
 	var line: UICombatLogLine;
 
@@ -382,7 +382,7 @@ UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) { //m
 		line.row = info.pos.row;
 		line.col = info.pos.col;
 		infoBox.innerHTML = text;
-		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
+		setHandler(line, "onclick", function(el: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: el.row, col: el.col } as Cell); });
 		addTag(div, "hr");
 	}
 	if (count == 0) {
@@ -420,7 +420,7 @@ UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][]) {
 		line.innerHTML = text;
 		line.row = info.pos.row;
 		line.col = info.pos.col;
-		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
+		setHandler(line, "onclick", function(el: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: el.row, col: el.col } as Cell); });
 		addTag(div, "hr");
 	}
 	if (count == 0) {

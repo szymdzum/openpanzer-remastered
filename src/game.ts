@@ -54,7 +54,7 @@ export class Game {
 	declare endTurn: () => void;
 	declare setupGameState: () => void;
 	declare newScenario: (scenFile: string, scenIntro?: string) => void;
-	declare onScenarioLoadFinished: (scenIntro: string | null, isRestore: boolean) => false | void;
+	declare onScenarioLoadFinished: (scenIntro: string | null, isRestore: boolean) => void;
 	declare newCampaign: (campIndex: number, difficulty: number) => void;
 	declare onCampaignLoadFinished: () => void;
 	declare continueCampaign: (outcomeType: ScenarioOutcome, endType?: string) => void; //endType: an endGameType value
@@ -186,7 +186,7 @@ export class Game {
 			if (!this.scenario.isLoaded) {
 				UIBuilder.messageDynamic("Error", "Error Loading scenario " + this.scenario.file);
 				game.gameEnded = true;
-				return false;
+				return;
 			}
 
 			if (defined(scenIntro)) this.scenario.setDescription(scenIntro); //Set from campaign
@@ -302,7 +302,7 @@ export class Game {
 		//Deploys the reinforcements of player playerId for this turn, returns false if there are none
 		this.deployReinforcements = function(turn: number, playerId: number) {
 			const self = this;
-			const deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(unit: Unit, cell: Cell) {
+			const deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(cell: Cell) {
 				if (self.scenario.map.map[cell.row][cell.col].isSpotted(self.spotSide)) {
 					const side = self.scenario.map.getPlayer(playerId).side;
 					let isOwn = false;
