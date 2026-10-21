@@ -66,6 +66,8 @@ export async function runFixture(module: string, run: string, name: string)
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
 		c.apply(env, fixture.setup);
 	const actual = c.run(env);
+	if (process.env.UPDATE_CONTRACTS && process.env.CI)
+		throw new Error("UPDATE_CONTRACTS in CI: the contracts would pass by construction");
 	if (process.env.UPDATE_CONTRACTS)
 	{
 		writeFixture(module, name, { ...fixture, results: actual });

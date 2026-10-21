@@ -98,7 +98,7 @@ A refactor must leave both identical. A deliberate change shows exactly what it 
 The contract tests check the engine in seconds, without a browser: Vitest restores 13 game
 states recorded on the reference and replays the reference's calls on them.
 
-    npm test                     # 3 contracts on 13 states, about 8 seconds
+    npm test                     # 3 contracts on 15 states and the engine tests, about 9 seconds
     npm run test:coverage        # the same, with what they run of the engine (coverage/)
     npm run record <module>      # record a contract again on the reference
 

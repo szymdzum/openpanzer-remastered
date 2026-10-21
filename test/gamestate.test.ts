@@ -151,20 +151,20 @@ test.fails.each(fixtures("engine"))("GameState load keeps the experience and cos
 		.toEqual([saved.scenario.expPerSide, saved.scenario.unitsCostPerSide]);
 });
 
-//Not filed (REFACTOR.md, "a lossless save: stable ids"): Map.addUnit numbers the units again
+//#85: Map.addUnit numbers the units again
 //in hex order, so after a load a unit has another id. Fixtures before any purchase or
 //deployment have them in hex order already
 const renumbered = fixtures("engine").filter((f) => f.endsWith("-t2.json.gz"));
-test.fails.each(renumbered)("GameState load keeps the unit ids %s", async (name) => {
+test.fails.each(renumbered)("GameState load keeps the unit ids %s (#85)", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	const ids = (s: Json) => [...units(s)].map(([where, u]) => where + " #" + u.id);
 	expect(ids(again)).toEqual(ids(saved));
 });
 
-//Not filed: tempSpotted isn't saved (Unit.copy), and the spotting a load replays (setHex,
+//#84: tempSpotted isn't saved (Unit.copy), and the spotting a load replays (setHex,
 //GameRules.setSpotRange) marks every enemy unit in sight as tempSpotted. Whether a fixture shows
 //it depends on where its units stand: one test over all of them
-test.fails("GameState load keeps tempSpotted", async () => {
+test.fails("GameState load keeps tempSpotted (#84)", async () => {
 	const spotted = (s: Json) => [...units(s)].filter(([, u]) => u.tempSpotted).map(([where]) => where);
 	for (const name of fixtures("engine"))
 	{

@@ -16,7 +16,7 @@ transition lose data.
 | Check | Time | Catches |
 |---|---|---|
 | `npm run check` | seconds | types |
-| `npm test` | ~8 s | the contracts: 3 × 13 game states recorded on the reference |
+| `npm test` | ~9 s | the contracts: 3 × 15 game states recorded on the reference; the invariant, loader, save and harness-surface tests |
 | `npm run verify` | 3-4 min | the whole game in Chrome against openpanzer-src: 16 AI vs AI replays, 24 UI scripts, state, DOM and pixels |
 | CI (`ci.yml`) | ~30 s | check and test on every push |
 | Mutation testing (`mutation.yml`) | hours, on GitHub | whether the tests notice small changes, per module |
@@ -30,15 +30,15 @@ The contracts (README, Verification): `gamerules` (every rule), `unit` (every Un
 Leaders and Scenario, a hash of the whole state after each step, then the campaign functions and
 hashes of the saved game, the combat log and the equipment data).
 
-Coverage: 89.6% of statements over the 9 files in `coverage.include`, but 75.2% over all engine
-files. Covered only by verify: game.ts (15%), gamestate.ts (27%), scenarioloader.ts (1.4%),
-campaign.ts (1.2%), aiscripted.ts (9.4%), the UI. These are the files steps 1 and 3 rewrite.
+Coverage after step 0: 85.8% of statements over the 14 engine files (all but the UI modules),
+up from 75.2%. Still thin: campaign.ts (49%), game.ts (48%), gamestate.ts (47%), aiscripted.ts
+(35%), and the UI, covered only by verify.
 
 Rhythm: small steps; `check` and `test` after each, `verify` before each commit.
 
 ## The plan
 
-### 0. The safety net first (test/ only, no src/ changes)
+### 0. The safety net first (test/ only, no src/ changes) — done
 
 - **Align the engine contract with the game.** The driver (`test/contracts/engine.contract.js`)
   plays a different order than the game: the AI plans inside `Map.endTurn` (map.ts:1043),
