@@ -5,6 +5,8 @@
 // MUTATE=map (or gamerules, unit, ai, leaders, scenario) mutates one module, with its own report
 // and incremental file in reports/mutation/map/: CI runs each module on its own runner.
 const engine = ["gamerules", "unit", "map", "ai", "leaders", "scenario"];
+// GameMap's parts are mutated with the map
+const parts = { map: ["map", "visibility"] };
 const only = process.env.MUTATE;
 if (only && !engine.includes(only)) throw new Error("MUTATE: one of " + engine.join(", "));
 const out = "reports/mutation/" + (only || "all");
@@ -17,7 +19,7 @@ export default {
 		// test is related to a mutated file, and with related on none would run
 		related: false,
 	},
-	mutate: (only ? [only] : engine).map((m) => "src/" + m + ".ts"),
+	mutate: (only ? [only] : engine).flatMap((m) => parts[m] || [m]).map((m) => "src/" + m + ".ts"),
 	// game/ (300 MB) stays out of the sandbox: test/setup.ts reads it from OPENPANZER_GAME_DIR
 	ignorePatterns: ["game", "public", "harness/out", "docs", "coverage", "reports", "dist", "dist-*"],
 	coverageAnalysis: "perTest",
