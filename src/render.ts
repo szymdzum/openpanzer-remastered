@@ -145,7 +145,7 @@ export class Render {
 		//Animation Chain
 		var animationChain = new AnimationChain();
 
-		//Check if the canvases already exists in the curent document to prevent
+		//Check if the canvases already exists in the current document to prevent
 		//overlaying multiple rendering instances
 		//Map image as background
 		if ((cm = $('map')) === null) cm = addTag('game', 'canvas');
@@ -544,7 +544,7 @@ export class Render {
 			var vrow: number; //virtual graphical rows
 			var trow: number, tcol: number; //true map rows/cols
 
-			//If we're in tactical map scale the values coresponding to zoom level
+			//If we're in tactical map scale the values corresponding to zoom level
 			if (uiSettings.mapZoom) {
 				x = x / uiSettings.zoomLevel;
 				y = y / uiSettings.zoomLevel;
@@ -654,7 +654,7 @@ export class Render {
 		//The size of the canvases in css pixels (their width/height are in canvas pixels)
 		this.getMapSize = function() { return { width: mapW, height: mapH + 65 }; }
 
-		//Sets a new map for rendering. Only used to dinamically change the map being rendered
+		//Sets a new map for rendering. Only used to dynamically change the map being rendered
 		this.setNewMap = function(mapObj) {
 			map = mapObj;
 			drawnHexGrid = false;

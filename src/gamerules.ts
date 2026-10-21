@@ -88,7 +88,7 @@ export interface GameRulesModule {
 export var GameRules: GameRulesModule = (function(GameRules: GameRulesModule) { //Module start
 
 //returns a cell list with hexes that a unit can move to
-//Works by computing cost of ajacent hexes by range expanding from 0 to unit movpoints
+//Works by computing cost of adjacent hexes by range expanding from 0 to unit movpoints
 //cin is the cost of entering the current hex which is equal to  the cost of exiting from
 //the hex with a range smaller by 1 than the current hex
 //cout cost of exiting a hex which is cin + terrain movement cost
@@ -369,7 +369,7 @@ GameRules.getShortestPath = function(startCell, endCell, cellList) {
 
 		for (i = 0; i < pCells.length; i++) {
 			if (isAdjacent(minDistCell.row, minDistCell.col, pCells[i].row, pCells[i].col)) {
-				//Add terrain cost to calculations (can use +1 instead for direct but incorect paths)
+				//Add terrain cost to calculations (can use +1 instead for direct but incorrect paths)
 				if (pCells[i].dist == Infinity || (minDistCell.dist + minDistCell.cost) < pCells[i].dist) {
 					pCells[i].dist = minDistCell.dist + minDistCell.cost;
 					pCells[i].prev = minDistCell;
@@ -992,7 +992,7 @@ function canMoveInto(map: Hex[][], unit: Unit, cell: Cell): boolean {
 	return false;
 }
 
-//Checks if a unit can pass thru a hex ocupied by a friendly unit
+//Checks if a unit can pass thru a hex occupied by a friendly unit
 function canPassInto(map: Hex[][], unit: Unit, cell: Cell): boolean {
 	const hex = map[cell.row][cell.col];
 
@@ -1482,17 +1482,17 @@ GameRules.calculateUnitSellCost = function(unit) {
 	return ((GameRules.calculateUnitCosts(unit.eqid, transportid) / UPGRADE_PENALTY / 10) * unit.strength) >> 0;
 }
 
-//Returns aproximate cardinal directions x row, y col
+//Returns approximate cardinal directions x row, y col
 GameRules.getDirection = function(x1, y1, x2, y2) {
 	if (y1 & 1 && x1 == x2) x1++;
 	if (y2 & 1 && x1 == x2) x2++;
 
 	const dx = x1 - x2;
 	const dy = y1 - y2;
-	let delta = 0; //Gets added or substracted from a ordinal direction to get subdivisions
+	let delta = 0; //Gets added or subtracted from a ordinal direction to get subdivisions
 	let r = 1;
 
-	//Aproximate the 8 sub-ordinal directions
+	//Approximate the 8 sub-ordinal directions
 	if (dx != 0)
 		 r = Math.abs(dy / dx);
 
@@ -1571,7 +1571,7 @@ GameRules.rollDice = function(min, max) {
 	return Math.floor(Rng.random() * (max - min + 1)) + min;
 }
 
-//Checks if 2 coordonates are adjacent x row, y col
+//Checks if 2 coordinates are adjacent x row, y col
 function isAdjacent(x1: number, y1: number, x2: number, y2: number): boolean {
 	if ((x1 - 1 + (y1 % 2) == x2) && (y1 - 1 == y2)) return true;
 	if ((x1 + (y1 % 2) == x2) && (y1 - 1 == y2)) return true;

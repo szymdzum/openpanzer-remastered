@@ -518,7 +518,7 @@ Hex.prototype.getAttackableUnit = function(atkunit, airMode) {
 	return null;
 }
 
-//frees memory asociated with this object if possible
+//frees memory associated with this object if possible
 Hex.prototype.cleanup = function() {
 	if (this.unit) {
 		this.unit.cleanup();
@@ -816,7 +816,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 		const eV = this.sidesVictoryHexes[~side & 1];
 		const sV = this.sidesVictoryHexes[side];
 		let removed = 0;
-		//Side has ocuppied a victory hex that was marked as victory for it
+		//Side has occupied a victory hex that was marked as victory for it
 		for (let i = sV.length - 1; i >= 0; i--) {
 			if (sV[i].row == cell.row && sV[i].col == cell.col) {
 				sV.splice(i, 1);
@@ -1265,7 +1265,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	this.removeNonCampaignUnits = function(player) {
 		let i, h, update = false;
 		for (i = 0; i < unitList.length; i++) {
-			if (unitList[i].player.id == player.id && !unitList[i].isCore) { //Guard agains calls with deployed core units
+			if (unitList[i].player.id == player.id && !unitList[i].isCore) { //Guard against calls with deployed core units
 				h = unitList[i].getHex();
 				if (h && h.isDeployment == player.id) {
 					h.delUnit(unitList[i]); //Off the hex, its zone of control and spotting stay (#72)
@@ -1279,7 +1279,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 			this.updateUnitList();
 	}
 
-	//Returns true if last movement of a unit can be undoed
+	//Returns true if last movement of a unit can be undone
 	this.canUndoMove = function(unit) {
 		return lastMove.canUndo(unit);
 	}
@@ -1430,7 +1430,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 			this.victoryTurns.push(m.victoryTurns[i]);
 	}
 
-	//frees memory asociated with this object if possible
+	//frees memory associated with this object if possible
 	this.cleanup = function() {
 		for(let i = 0; i < this.rows; i++) {
 			for(let j = 0; j < this.cols; j++) {

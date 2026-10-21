@@ -132,7 +132,7 @@ export class Game {
 
 			//Check if game ended in defeat only for human players
 			if (Actions.endTurn(this.scenario, localPlayingSide)) {
-				//If in a compaign set the campaign outcome to lost and get next available scenario
+				//If in a campaign set the campaign outcome to lost and get next available scenario
 				if (this.campaign !== null)
 					this.continueCampaign("lose", endGameType.noTurnsLeft);
 				else //If single scenario game has ended

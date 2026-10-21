@@ -316,7 +316,7 @@ Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boole
 		//Replace or create a new transport
 		if (transportid > 0) this.setTransport(transportid);
 	} else {
-		//Remove the tranport if the new unit is no longer transportable
+		//Remove the transport if the new unit is no longer transportable
 		if (this.transport !== null) this.transport = null;
 	}
 
@@ -424,7 +424,7 @@ Unit.prototype.unitEndTurn = function() {
 	}
 }
 
-//frees memory asociated with this object if possible
+//frees memory associated with this object if possible
 Unit.prototype.cleanup = function() {
 	//TODO can't delete units since some of them are linked in coreUnits for campaign players
 }
