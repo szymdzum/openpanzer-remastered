@@ -113,7 +113,10 @@ A bug fixed on purpose changes a contract, and the reference still has the bug: 
 npm test` writes the remaster's results into the fixtures (the recorded states stay). Do it only in
 the commit that fixes the issue, and say in it what changed; a refactor never re-records.
 
-GitHub Actions runs the types and the contract tests on every push (`.github/workflows/ci.yml`).
+GitHub Actions runs the types (also `check:strict`) and the tests with coverage on every pull request
+and on main (`.github/workflows/ci.yml`); main takes changes only through a pull request with that
+check green. Each engine file has a coverage floor (`thresholds` in `vite.config.mts`): a change may
+raise it, not lower it.
 Mutation testing checks the tests themselves: Stryker changes the engine one small thing at a
 time and expects a contract to fail every time. It takes hours for the whole engine, so CI runs
 it every Sunday and on demand, one runner per module, the reports as the run's artifacts

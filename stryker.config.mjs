@@ -2,11 +2,12 @@
 // a condition to true...) and runs the contract tests on every mutant. A mutant the tests don't
 // notice is a gap in them, dead code or a change that changes nothing. Report in reports/mutation/.
 // The incremental file keeps the results: a later run only tests the mutants of changed code.
-// MUTATE=map (or gamerules, unit, ai, leaders, scenario) mutates one module, with its own report
+// MUTATE=map (or another name in the list below) mutates one module, with its own report
 // and incremental file in reports/mutation/map/: CI runs each module on its own runner.
-const engine = ["gamerules", "unit", "map", "ai", "leaders", "scenario"];
-// GameMap's parts are mutated with the map
-const parts = { map: ["map", "visibility", "board", "selection", "undo"] };
+const engine = ["gamerules", "unit", "map", "ai", "leaders", "scenario", "actions", "scenarioloader", "gamestate",
+	"campaign", "game", "equipment", "combatlog"];
+// GameMap's parts are mutated with the map, the engine's small seams with the actions
+const parts = { map: ["map", "visibility", "board", "selection", "undo"], actions: ["actions", "rng", "context"] };
 const only = process.env.MUTATE;
 if (only && !engine.includes(only)) throw new Error("MUTATE: one of " + engine.join(", "));
 const out = "reports/mutation/" + (only || "all");
