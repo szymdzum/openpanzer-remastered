@@ -18,9 +18,11 @@
  */
 
 import { type Cell, type combatResults, type movementResults, playerSide } from "./prototypes";
+import { CombatLog } from "./combatlog";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap } from "./map";
+import type { Scenario } from "./scenario";
 
 //One side of an attack, its strength before and after the attack (newstr is set by resolveAttack)
 export interface AttackSide
@@ -80,17 +82,28 @@ export interface FinishMoveHooks extends AttackHooks
 	onVictory?(side: number): void; //the side captured all its objectives
 }
 
+export interface DeployedReinforcement
+{
+	unit: Unit;
+	cell: Cell;
+}
+
 export interface ActionsAPI
 {
 	resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null;
 	finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult;
 	finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult;
+	deployReinforcements(scenario: Scenario, turn: number, playerId: number,
+		onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null;
+	endTurn(scenario: Scenario, localSide: number): boolean;
 }
 
 export var Actions: ActionsAPI = {
 	resolveAttack: resolveAttack,
 	finishAttack: finishAttack,
 	finishMove: finishMove,
+	deployReinforcements: deployReinforcements,
+	endTurn: endTurn,
 };
 
 //Support fire if the attacker wasn't surprised and doesn't overrun, then the attack unless the
@@ -233,4 +246,40 @@ function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: bool
 		h.onVictory(mr.isVictorySide);
 
 	return result;
+}
+
+//Deploys the reinforcements of player playerId for this turn. Null when there are none, else the
+//deployed ones (the others stay for later)
+function deployReinforcements(scenario: Scenario, turn: number, playerId: number,
+	onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null
+{
+	var deployed: DeployedReinforcement[] = [];
+	var reinforcements = scenario.getReinforcements(turn, playerId);
+
+	if (reinforcements.length <= 0)
+		return null;
+
+	for (var i = 0; i < reinforcements.length; i++)
+	{
+		var cell: Cell = null;
+		if ((cell = scenario.map.deployReinforcement(reinforcements[i].unit,
+			reinforcements[i].row, reinforcements[i].col)) !== null)
+		{
+			deployed.push({ unit: reinforcements[i].unit, cell: cell });
+			CombatLog.addReinforcement(reinforcements[i].unit);
+			scenario.removeReinforcement(reinforcements[i].turn, reinforcements[i].id);
+			if (onDeployed) onDeployed(reinforcements[i].unit, cell);
+		}
+	}
+	return deployed;
+}
+
+//Ends the current player's turn (the next AI player plans its turn in Map.endTurn). True when the
+//player who ended it lost at the turn limit, which is only checked for a local side (localSide
+//as Game's getLocalSide: -1 none, 0, 1, 2 both)
+function endTurn(scenario: Scenario, localSide: number): boolean
+{
+	var lastSide = scenario.map.currentPlayer.side;
+	scenario.endTurn();
+	return scenario.checkDefeat(lastSide, localSide);
 }

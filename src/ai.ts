@@ -147,7 +147,7 @@ export function AI(this: AI, player: Player, map: GameMap)
 			}
 		}
 		for (j = 0; j < coreUnits.length; j++); //empty loop, kept from the bundle
-		game.ui.handleReinforcementDeployment();
+		if (AI.onUnitsDeployed) AI.onUnitsDeployed();
 
 		allUnits = map.getUnits();
 		takenPositions = [];
@@ -665,3 +665,6 @@ export function AI(this: AI, player: Player, map: GameMap)
 	var unitClassLossCost = [0, 5, 5, 10, 10, 5, 10, 40, 20, 10, 5, 30, 30, 40, 15, 10, 10, 40, 40, 10, 10, 10];
 	var unitClassKillValue = [0, 50, 25, 30, 10, 10, 5, 150, 150, 10, 50, 100, 100, 150, 50, 50, 50, 100, 150, 50, 50, 50];
 }
+
+//Called after the AI deployed its units, before it plans: Game.init sets it to the UI's redraw
+AI.onUnitsDeployed = null as (() => void) | null;

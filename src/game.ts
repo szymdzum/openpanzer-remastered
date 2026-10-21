@@ -17,7 +17,6 @@ import {
 	uiSettings
 } from "./prototypes";
 import { GameState, type GameStateConstructor } from "./gamestate";
-import { CombatLog } from "./combatlog";
 import { defined } from "./dom";
 import { AI, type AIAction, type AIConstructor } from "./ai";
 import { AIScripted } from "./aiscripted";
@@ -29,6 +28,7 @@ import { Campaign, type CampaignScenario } from "./campaign";
 import { UIBuilder } from "./uibuilder";
 import { UI } from "./ui";
 import { OSGlue } from "./osglue";
+import { Actions } from "./actions";
 
 //Game keeps the campaign progress in its closure, its methods are assigned in the constructor.
 //It stays a function: "var game = new Game()" runs before the declaration, which a class
@@ -97,6 +97,7 @@ export function Game(this: Game)
 	//Restores the last saved game, or starts the default scenario if there is none
 	this.init = function()
 	{
+		AI.onUnitsDeployed = function() { game.ui.handleReinforcementDeployment(); };
 		this.state = new (GameState as unknown as GameStateConstructor)(this);
 		this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 			this.newScenario.bind(this, "failRestore"));
@@ -144,13 +145,10 @@ export function Game(this: Game)
 
 	this.endTurn = function()
 	{
-		var lastSide = this.scenario.map.currentPlayer.side;
-
 		this.waitUIAnimation = false;
-		this.scenario.endTurn();
 
 		//Check if game ended in defeat only for human players
-		if (this.scenario.checkDefeat(lastSide, localPlayingSide))
+		if (Actions.endTurn(this.scenario, localPlayingSide))
 		{
 			//If in a compaign set the campaign outcome to lost and get next available scenario
 			if (this.campaign !== null)
@@ -348,32 +346,22 @@ export function Game(this: Game)
 	//Deploys the reinforcements of player playerId for this turn, returns false if there are none
 	this.deployReinforcements = function(turn: number, playerId: number)
 	{
-		var deployed = false;
-		var reinforcements = this.scenario.getReinforcements(turn, playerId);
-
-		if (reinforcements.length <= 0)
-			return false;
-
-		for (var i = 0; i < reinforcements.length; i++)
+		var self = this;
+		var deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(unit: Unit, cell: Cell)
 		{
-			var cell: Cell = null;
-			if ((cell = this.scenario.map.deployReinforcement(reinforcements[i].unit,
-				reinforcements[i].row, reinforcements[i].col)) !== null)
+			if (self.scenario.map.map[cell.row][cell.col].isSpotted(self.spotSide))
 			{
-				deployed = true;
-				CombatLog.addReinforcement(reinforcements[i].unit);
-				this.scenario.removeReinforcement(reinforcements[i].turn, reinforcements[i].id);
-				if (this.scenario.map.map[cell.row][cell.col].isSpotted(this.spotSide))
-				{
-					var side = this.scenario.map.getPlayer(playerId).side;
-					var isOwn = false;
-					if (this.spotSide == side)
-						isOwn = true;
-					this.ui.showAlert(cell.row, cell.col, "Reinforced!", isOwn);
-				}
+				var side = self.scenario.map.getPlayer(playerId).side;
+				var isOwn = false;
+				if (self.spotSide == side)
+					isOwn = true;
+				self.ui.showAlert(cell.row, cell.col, "Reinforced!", isOwn);
 			}
-		}
-		if (deployed)
+		});
+
+		if (deployed === null)
+			return false;
+		if (deployed.length > 0)
 			game.ui.handleReinforcementDeployment();
 
 		return true; //also when none of them could be deployed
