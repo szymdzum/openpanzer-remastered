@@ -387,6 +387,16 @@ export var unitstyle =
 	playerText			: "white",
 	alliedPlayerText	: "#696969", //light brown
 	movedUnitText		: "#BDBDBD", //dark grey
+	axisPlate			: "#4f6b80", //the unit marker plates, from the design system's axis and allied
+	alliedPlate			: "#9c3b22",
+	plateText			: "#ffffff",
+	plateEdge			: "rgba(0, 0, 0, 0.75)",
+	coreEdge			: "#d9a441", //brass: core units' plate edge, experience bars and leader star
+	readyBack			: "rgba(20, 22, 15, 0.75)",
+	readyMark			: "#ffffff",
+	supplyLow			: "#f2c84b",
+	supplyCritical		: "#ff7a66",
+	supplyText			: "#1d170b",
 	terrainText			: "#333333",
 	terrainTextStroke	: "#f8e064"
 };

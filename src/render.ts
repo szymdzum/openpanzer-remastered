@@ -102,11 +102,7 @@ export class Render
 		var imgAttackCursor: HTMLImageElement = null;
 		var imgFlags: HTMLImageElement = null;
 		var imgMapBackground: HTMLImageElement = null;
-		var imgUnitFire: HTMLImageElement = null;
-		var imgUnitNoAmmo: HTMLImageElement = null;
 		var imgBridge: HTMLImageElement = null; //Drawn instead of a ground unit sitting on a bridge of its side
-		var imgLeaderAxis: HTMLImageElement = null;
-		var imgLeaderAllied: HTMLImageElement = null;
 
 		var dpr = hdScale(); //Canvas pixels per CSS pixel, all drawing stays in CSS pixels
 		var imgScale = new WeakMap<HTMLImageElement, number>(); //2 for an image loaded from its @2x file
@@ -663,26 +659,6 @@ export class Render
 				imgFlags = new Image();
 				imgFlags.src = "resources/ui/flags/" + Equipment.name + "/flags_med.png";
 			}
-			if (!imgUnitFire)
-			{
-				imgUnitFire = new Image();
-				imgUnitFire.src = "resources/ui/indicators/unit-fire.png";
-			}
-			if (!imgUnitNoAmmo)
-			{
-				imgUnitNoAmmo = new Image();
-				imgUnitNoAmmo.src = "resources/ui/indicators/unit-fire-no-ammo.png";
-			}
-			if (!imgLeaderAxis)
-			{
-				imgLeaderAxis = new Image();
-				imgLeaderAxis.src = "resources/ui/indicators/unit-leader-axis.png";
-			}
-			if (!imgLeaderAllied)
-			{
-				imgLeaderAllied = new Image();
-				imgLeaderAllied.src = "resources/ui/indicators/unit-leader-allied.png";
-			}
 			if (!imgBridge)
 			{
 				imgBridge = new Image();
@@ -962,80 +938,187 @@ export class Render
 			return true;
 		}
 
+		//The marker under a unit: the strength plate in the middle, what the unit can still do on its left
+		//(arrow: move, crosshair: fire), experience bars and the leader star on its right, and a supply tag
+		//under it only when fuel or ammo runs low. All in css pixels, sharp on high density screens
 		function drawHexUnit(c: RenderContext, x0: number, y0: number, unit: Unit, drawIndicators: boolean): void
 		{
 			if (!drawUnitSprite(c, x0, y0, unit)) return;
 			if (!drawIndicators || unit.strength < 1) return;
-			//TODO performance, consider caching glyphs digits and use drawImage/putImageData
-			//Currently fillText and fillRect doubles the rendering time
 
-			//Write unit strength in a box below unit
-			//Core units (and all units in scenario mode) use a different font and a bordered box
-			var isCore = true;
-			if (game.campaign !== null && !unit.isCore)
-				isCore = false;
-
-			if (isCore)
-				c.font = unitTextHeight + "px coreUnitFont, sans-serif";
-			else
-				c.font = unitTextHeight + "px unitInfo, sans-serif"; //normal units
-
-			var text = "" + unit.strength;
-			var tx = (x0 + h/2) >> 0;
-			var ty = y0 + 2 * r - (unitTextHeight + 4); //text size + spacing
-			var textOffset = 1;
 			var side = unit.player.side;
-			var boxWidth = 19;  // c.measureText(text).width + 2 too slow
-			if (unit.strength < 10)
-			{
-				boxWidth = 12;
-				textOffset = 2;
-			}
+			var own = side == game.spotSide; //the local player's side, readiness and supply are only shown for it
+			var cx = x0 + s/2; //hex centre
+			var py = y0 + 2 * r - 13; //plate top, where the strength box was
+			var ph = 11;
+			var text = "" + unit.strength;
+			var pw = text.length * 5 + 6;
+			var px = (cx - pw/2) >> 0;
 
-			if (side == 1)
-				c.fillStyle = unitstyle.alliedBox;
-			else
-				c.fillStyle = unitstyle.axisBox;
-			if (uiSettings.markEnemyUnits && side != game.spotSide)
+			var canMove = false, canFire = false, noAmmo = false;
+			if (own && side == map.currentPlayer.side && unit.player.id == map.currentPlayer.id)
+			{
+				canMove = !unit.hasMoved && GameRules.getUnitMoveRange(unit) > 0;
+				if (!unit.hasFired && GameRules.unitUsesAmmo(unit))
+				{
+					canFire = unit.getAmmo() > 0;
+					noAmmo = !canFire;
+				}
+			}
+			var done = own && unit.player.id == map.currentPlayer.id && !canMove && !canFire && !noAmmo;
+
+			c.save();
+			c.font = "bold 9px Arial, sans-serif";
+			c.textBaseline = "middle";
+			c.textAlign = "center";
+			if (done) c.globalAlpha = 0.45;
+
+			//Strength plate: side colour, pointed ends for the other side, brass top edge for core units
+			c.fillStyle = side == 1 ? unitstyle.alliedPlate : unitstyle.axisPlate;
+			if (uiSettings.markEnemyUnits && !own)
 				c.fillStyle = unitstyle.enemyBoxMarked;
-
-			if (isCore)
-			{
-				if (side == 1)
-					c.strokeStyle = unitstyle.alliedBorder;
-				else
-					c.strokeStyle = unitstyle.axisBorder;
-				c.lineWidth = 2;
-				c.strokeRect(tx, ty - 1, boxWidth, unitTextHeight + 4);
-			}
-			c.fillRect(tx, ty - 1, boxWidth, unitTextHeight + 4); //Add pixels above and below unit strength
-
-			if (unit.player.id != map.currentPlayer.id && unit.player.side == map.currentPlayer.side)
-				c.fillStyle = unitstyle.alliedPlayerText;
+			c.beginPath();
+			if (own)
+				c.rect(px, py, pw, ph);
 			else
-				c.fillStyle = unitstyle.playerText;
-
-			if (unit.hasMoved && unit.player.id == map.currentPlayer.id)
-				c.fillStyle = unitstyle.movedUnitText;
-
-			c.fillText(text, tx + textOffset, ty + 9);
-
-			//draw indicator for unit.hasFired, the no ammo indicator when it can't fire anymore
-			if (!unit.hasFired && GameRules.unitUsesAmmo(unit) && side == map.currentPlayer.side)
 			{
-				if (unit.getAmmo() > 0)
-					c.drawImage(imgUnitFire, x0 - 4, y0 + 2 * r - 12);
-				else
-					c.drawImage(imgUnitNoAmmo, x0 - 4, y0 + 2 * r - 12);
+				c.moveTo(px - 2, py + ph/2); c.lineTo(px + 2, py); c.lineTo(px + pw - 2, py);
+				c.lineTo(px + pw + 2, py + ph/2); c.lineTo(px + pw - 2, py + ph); c.lineTo(px + 2, py + ph);
+				c.closePath();
+			}
+			c.fill();
+			c.strokeStyle = unitstyle.plateEdge;
+			c.lineWidth = 1;
+			c.stroke();
+			if (own && game.campaign !== null && unit.isCore)
+			{
+				c.fillStyle = unitstyle.coreEdge;
+				c.fillRect(px, py, pw, 1.5);
+			}
+			c.fillStyle = unitstyle.plateText;
+			c.fillText(text, cx, py + ph/2 + 0.5);
+
+			//Readiness on the left: only what the unit can still do this turn
+			var marks = (canMove ? 1 : 0) + (canFire || noAmmo ? 1 : 0);
+			if (marks > 0)
+			{
+				var rw = marks * 8 + 2;
+				var rx = px - rw - 1;
+				c.fillStyle = unitstyle.readyBack;
+				c.fillRect(rx, py + 1, rw, ph - 2);
+				var mx = rx + 5;
+				if (canMove) { drawMoveMark(c, mx, py + ph/2); mx += 8; }
+				if (canFire || noAmmo) drawFireMark(c, mx, py + ph/2, noAmmo);
 			}
 
-			//draw leader indicator after the strength box
-			if (unit.leader != -1)
+			//Experience bars and the leader star on the right
+			var ex = px + pw + 2;
+			var bars = Math.min((unit.experience / 100) >> 0, 5);
+			if (bars > 0)
 			{
-				if (side == 1)
-					c.drawImage(imgLeaderAllied, tx + boxWidth + 1, y0 + 2 * r - 13);
+				c.fillStyle = unitstyle.readyBack;
+				c.fillRect(ex, py + ph - 1 - bars * 2.2, 7, bars * 2.2 + 1);
+				c.fillStyle = unitstyle.coreEdge;
+				for (var b = 0; b < bars; b++)
+					c.fillRect(ex + 1, py + ph - 2.4 - b * 2.2, 5, 1.4);
+				ex += 8;
+			}
+			if (unit.leader != -1)
+				drawLeaderStar(c, ex + 3.5, py + ph/2);
+
+			//Supply tags under the plate, only for a problem: fuel for less than two moves, two attacks or less
+			if (own)
+			{
+				var tags: [string, string][] = [];
+				if (GameRules.unitUsesFuel(unit))
+				{
+					var mp = unit.unitData().movpoints;
+					var fuel = unit.getFuel();
+					if (fuel < mp) tags.push(["fuel", unitstyle.supplyCritical]);
+					else if (fuel < 2 * mp) tags.push(["fuel", unitstyle.supplyLow]);
+				}
+				if (GameRules.unitUsesAmmo(unit) && unit.getAmmo() <= 2)
+					tags.push(["ammo" + unit.getAmmo(), unit.getAmmo() == 0 ? unitstyle.supplyCritical : unitstyle.supplyLow]);
+				drawSupplyTags(c, cx, py + ph + 1, tags);
+			}
+			c.restore();
+		}
+
+		//An arrow: the unit can still move
+		function drawMoveMark(c: RenderContext, x: number, y: number): void
+		{
+			c.strokeStyle = unitstyle.readyMark;
+			c.lineWidth = 1.3;
+			c.beginPath();
+			c.moveTo(x - 3, y); c.lineTo(x + 2.5, y);
+			c.moveTo(x, y - 2.5); c.lineTo(x + 2.8, y); c.lineTo(x, y + 2.5);
+			c.stroke();
+		}
+
+		//A crosshair: the unit can still fire. Crossed out in red when it has no ammo left
+		function drawFireMark(c: RenderContext, x: number, y: number, noAmmo: boolean): void
+		{
+			c.strokeStyle = noAmmo ? unitstyle.supplyCritical : unitstyle.readyMark;
+			c.lineWidth = 1;
+			c.beginPath();
+			c.arc(x, y, 2.2, 0, Math.PI * 2);
+			c.moveTo(x, y - 3.6); c.lineTo(x, y - 2.4); c.moveTo(x, y + 2.4); c.lineTo(x, y + 3.6);
+			c.moveTo(x - 3.6, y); c.lineTo(x - 2.4, y); c.moveTo(x + 2.4, y); c.lineTo(x + 3.6, y);
+			if (noAmmo) { c.moveTo(x - 3, y + 3); c.lineTo(x + 3, y - 3); }
+			c.stroke();
+		}
+
+		function drawLeaderStar(c: RenderContext, x: number, y: number): void
+		{
+			c.beginPath();
+			for (var i = 0; i < 10; i++)
+			{
+				var a = -Math.PI/2 + i * Math.PI/5;
+				var rr = (i & 1) ? 1.6 : 3.8;
+				c.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a));
+			}
+			c.closePath();
+			c.fillStyle = unitstyle.coreEdge;
+			c.fill();
+			c.strokeStyle = unitstyle.plateEdge;
+			c.lineWidth = 0.6;
+			c.stroke();
+		}
+
+		//Supply tags centred at x: a fuel drop, or a shell with the ammo left, on the warning colour
+		function drawSupplyTags(c: RenderContext, x: number, y: number, tags: [string, string][]): void
+		{
+			if (tags.length == 0) return;
+			var widths = tags.map(function(t) { return t[0] == "fuel" ? 8 : 12; });
+			var total = widths.reduce(function(a, w) { return a + w; }, 0) + (tags.length - 1) * 2;
+			var tx = (x - total/2) >> 0;
+			c.font = "bold 7px Arial, sans-serif";
+			for (var i = 0; i < tags.length; i++)
+			{
+				var w = widths[i];
+				c.fillStyle = tags[i][1];
+				c.fillRect(tx, y, w, 8);
+				c.strokeStyle = unitstyle.plateEdge;
+				c.lineWidth = 0.6;
+				c.strokeRect(tx, y, w, 8);
+				c.fillStyle = unitstyle.supplyText;
+				c.beginPath();
+				if (tags[i][0] == "fuel")
+				{
+					var dx = tx + 4;
+					c.moveTo(dx, y + 1.3);
+					c.bezierCurveTo(dx + 2.6, y + 4, dx + 2.6, y + 6.6, dx, y + 6.6);
+					c.bezierCurveTo(dx - 2.6, y + 6.6, dx - 2.6, y + 4, dx, y + 1.3);
+					c.fill();
+				}
 				else
-					c.drawImage(imgLeaderAxis, tx + boxWidth + 1, y0 + 2 * r - 13);
+				{
+					c.moveTo(tx + 2, y + 6.8); c.lineTo(tx + 2, y + 3); c.lineTo(tx + 3, y + 1.2);
+					c.lineTo(tx + 4, y + 3); c.lineTo(tx + 4, y + 6.8); c.closePath();
+					c.fill();
+					c.fillText(tags[i][0].slice(4), tx + 8.5, y + 4.4);
+				}
+				tx += w + 2;
 			}
 		}
 
