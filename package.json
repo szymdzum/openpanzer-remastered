@@ -16,7 +16,8 @@
 		"test:coverage": "vitest run --coverage",
 		"test:mutation": "TZ=Europe/Warsaw OPENPANZER_GAME_DIR=$PWD/game nice -n 10 stryker run",
 		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
-		"record": "test/contracts/record.sh"
+		"record": "test/contracts/record.sh",
+		"lint": "oxlint --type-aware --deny-warnings src test"
 	},
 	"devDependencies": {
 		"@stryker-mutator/core": "^10.0.0",
@@ -24,6 +25,8 @@
 		"@types/node": "^24.19.0",
 		"@vitest/coverage-v8": "^5.0.3",
 		"jsdom": "^30.1.1",
+		"oxlint": "^1.89.0",
+		"oxlint-tsgolint": "^7.0.2004",
 		"ts-blank-space": "^0.9.0",
 		"typescript": "^7.0.2",
 		"vite": "^8.3.1",
