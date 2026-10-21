@@ -28,6 +28,7 @@ import { engineContext } from "./context";
 import { Leaders } from "./leaders";
 import { HexCounters, MapVisibility } from "./visibility";
 import { MapBoard } from "./board";
+import { MapSelection } from "./selection";
 
 //Hex, Player and Map classes
 
@@ -683,15 +684,12 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.sidesVictoryHexes = [[], []]; //Victory hexes for each side
 	this.currentPlayer = null; //Which player is currently playing
 
-	//selected hexes for current unit move destinations: extendedCells from the move range, plain
-	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
-	var moveSelected: Cell[] = [];
-	var attackSelected: Cell[] = []; //selected hexes for current unit attack destinations
 	var playerList: Player[] = []; //players list
 	var visibility = new MapVisibility(this); //the hexes' zone of control and spotting counters
 	var board = new MapBoard(this, visibility); //the units: the list, their ids, placing and moving them
 	var unitList = board.units; //internal list of units
 	var unitImagesList = board.images; //a "hash" of unique unit images used for caching
+	var selection = new MapSelection(this); //the selected unit (this.currentUnit), the hexes it can move to and attack
 
 	this.allocMap = function()
 	{
@@ -807,15 +805,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	this.setCurrentUnit = function(unit) { this.currentUnit = unit; }
 
-	this.delCurrentUnit = function()
-	{
-		//A unit left in the middle of a disembark goes back to its carrier
-		if (this.currentUnit !== null && this.currentUnit.carrier < 0)
-			this.currentUnit.toggleEmbark();
-		this.currentUnit = null;
-		this.delMoveSel();
-		this.delAttackSel();
-	}
+	this.delCurrentUnit = function() { selection.clear(); }
 
 	//Returns the next (direction > 0) or previous unit of the same owner in the unit list,
 	//onlyNotMoved: also cycle thru units that haven't moved yet, otherwise unit is the only candidate
@@ -857,25 +847,8 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return unit;
 	}
 
-	this.delMoveSel = function()
-	{
-		for (var i = 0; i < moveSelected.length; i++)
-		{
-			var c = moveSelected[i];
-			this.map[c.row][c.col].isMoveSel = false;
-		}
-		moveSelected = [];
-	}
-
-	this.delAttackSel = function()
-	{
-		for (var i = 0; i < attackSelected.length; i++)
-		{
-			var c = attackSelected[i];
-			this.map[c.row][c.col].isAttackSel = false;
-		}
-		attackSelected = [];
-	}
+	this.delMoveSel = function() { selection.clearMove(); }
+	this.delAttackSel = function() { selection.clearAttack(); }
 
 	this.setHex = function(row, col, hex)
 	{
@@ -938,31 +911,9 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return false;
 	}
 
-	this.setMoveRange = function(unit)
-	{
-		this.delMoveSel();
-		var c = GameRules.getMoveRange(this, unit);
-
-		for (var i = 0; i < c.length; i++)
-		{
-			moveSelected.push(c[i]); //Push both canPass and canMove for the shortestPath function
-			if (c[i].canMove) this.map[c[i].row][c[i].col].isMoveSel = true; //Only allow canMove destination hexes on map
-		}
-	}
-
-	this.getCurrentMoveRange = function() { return moveSelected; }
-
-	this.setAttackRange = function(unit)
-	{
-		this.delAttackSel();
-		var c = GameRules.getUnitAttackCells(this.map, unit, this.rows, this.cols);
-
-		for (var i = 0; i < c.length; i++)
-		{
-			attackSelected.push(c[i]);
-			this.map[c[i].row][c[i].col].isAttackSel = true;
-		}
-	}
+	this.setMoveRange = function(unit) { selection.setMoveRange(unit); }
+	this.getCurrentMoveRange = function() { return selection.moveSelected; }
+	this.setAttackRange = function(unit) { selection.setAttackRange(unit); }
 
 	this.endTurn = function()
 	{
@@ -1198,7 +1149,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.retreatUnit = function(unit, cell)
 	{
 		var oldCurrentUnit = this.currentUnit;
-		moveSelected.push(cell); //Kept in the selection as before: the move's setMoveRange clears its flag
+		selection.addMoveCell(cell, false); //Kept in the selection as before: the move's setMoveRange clears its flag
 		var moveLeft = unit.moveLeft;
 		var hasMoved = unit.hasMoved;
 		var hasOverstrength = unit.hasOverstrength;
@@ -1309,10 +1260,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		this.delMoveSel();
 		this.delAttackSel();
 		for (var i = 0; i < c.length; i++)
-		{
-			moveSelected.push(c[i]);
-			this.map[c[i].row][c[i].col].isMoveSel = true;
-		}
+			selection.addMoveCell(c[i], true);
 
 		unit.toggleEmbark();
 
@@ -1405,34 +1353,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	// selects a new unit as the current unit
-	this.selectUnit = function(unit)
-	{
-		if (unit === null)
-			return false;
-
-		//Can't select units from other players
-		if (unit.player.id != this.currentPlayer.id)
-			return false;
-
-		this.delCurrentUnit();
-		this.delMoveSel();
-		this.delAttackSel();
-		this.setCurrentUnit(unit);
-
-		//Negative carrier: the unit is disembarking, show the disembark positions
-		if (unit.carrier < 0)
-		{
-			unit.carrier = -unit.carrier;
-			this.disembarkUnit(unit);
-		}
-
-		if (!unit.hasMoved && unit.carrier >= 0)
-			this.setMoveRange(unit);
-		if (!unit.hasFired)
-			this.setAttackRange(unit);
-
-		return true;
-	}
+	this.selectUnit = function(unit) { return selection.select(unit); }
 
 	//Builds a list of core units for a player. Only in campaign mode and only for the first scenario
 	//if the units are standing on a deployment hex.
