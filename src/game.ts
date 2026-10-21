@@ -62,10 +62,9 @@ export interface Game
 	cleanup(): void;
 }
 
-//Game, GameState, Scenario, Campaign, UI and AIScripted are constructor functions, not classes:
+//Game, GameState, Campaign, UI and AIScripted are constructor functions, not classes:
 //these give `new` on them a type (AIConstructor is ai.ts's)
 export interface GameConstructor { new (): Game; }
-export interface ScenarioConstructor { new (scenFile: string): Scenario; }
 export interface CampaignConstructor { new (campIndex: number, difficulty: number, onLoaded: () => void): Campaign; }
 export interface UIConstructor { new (game: Game): UI; }
 export interface AIScriptedConstructor { new (player: Player, map: GameMap): AIScripted; }
@@ -200,7 +199,7 @@ export function Game(this: Game)
 
 		this.cleanup();
 
-		this.scenario = new (Scenario as unknown as ScenarioConstructor)(scenFile);
+		this.scenario = new Scenario(scenFile);
 		this.scenario.load(this.onScenarioLoadFinished.bind(this, scenIntro, false));
 	}
 

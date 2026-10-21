@@ -19,7 +19,7 @@ import type { Unit } from "./unit";
 import { Player } from "./map";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
-import { type CampaignConstructor, type Game, game, type ScenarioConstructor } from "./game";
+import { type CampaignConstructor, type Game, game } from "./game";
 
 //The campaign progress kept in a save, see getCampaignSave
 export interface CampaignSave
@@ -382,7 +382,7 @@ export function GameState(this: GameState, Game: Game | null)
 	//Creates the scenario and loads the equipment of all players and supporting countries
 	function loadGameState(scenarioData: Scenario, playersData: Player[], campaignData: CampaignSave | null, onDone: () => void)
 	{
-		Game.scenario = new (Scenario as unknown as ScenarioConstructor)(scenarioData.file);
+		Game.scenario = new Scenario(scenarioData.file);
 		if (scenarioData.eqp)
 			Equipment.name = scenarioData.eqp;
 
