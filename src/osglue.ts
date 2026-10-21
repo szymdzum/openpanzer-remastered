@@ -16,8 +16,7 @@ import { $ } from "./dom";
 import { game } from "./game";
 
 //The platform glue instance the module returns
-export interface OSGlue
-{
+export interface OSGlue {
 	diskloadHTML: string;
 	diskloadEvent(element: HTMLElement, handler: (e: Event) => void): void;
 	diskload(onDone?: () => void, onFail?: () => void): void;
@@ -28,8 +27,7 @@ export interface OSGlue
 }
 
 //The namespace object the module function fills
-export interface OSGlueModule
-{
+export interface OSGlueModule {
 	ios: new () => OSGlue;
 	generic: new () => OSGlue;
 }
@@ -40,8 +38,7 @@ export var OSGlue: OSGlue = (function(OSGlue: OSGlueModule): OSGlue { //Module s
 
 //Native iOS/Android wrapper: disk operations go through the openpanzer:// url scheme
 //which the native application intercepts
-OSGlue.ios = class implements OSGlue
-{
+OSGlue.ios = class implements OSGlue {
 	declare diskloadHTML: string;
 	declare diskloadEvent: (element: HTMLElement, handler: (e: Event) => void) => void;
 	declare diskload: (onDone?: () => void, onFail?: () => void) => void;
@@ -50,22 +47,18 @@ OSGlue.ios = class implements OSGlue
 	declare reportAchievement: (campaignFile: string) => void;
 	declare canvasErrorMsg: string;
 
-	constructor()
-	{
+	constructor() {
 		this.diskloadHTML = "Load from Disk";
 
-		this.diskloadEvent = function(element: HTMLElement, handler: (e: Event) => void)
-		{
+		this.diskloadEvent = function(element: HTMLElement, handler: (e: Event) => void) {
 			element.addEventListener("click", handler, false);
 		}
 
-		this.diskload = function()
-		{
+		this.diskload = function() {
 			window.location = "openpanzer://loadfromdisk" as string & Location;
 		}
 
-		this.disksave = function(saveName: string)
-		{
+		this.disksave = function(saveName: string) {
 			window.location = "openpanzer://savetodisk/" + saveName as string & Location;
 		}
 
@@ -77,8 +70,7 @@ OSGlue.ios = class implements OSGlue
 }
 
 //Browser: load from a file input, save by downloading a data: url
-OSGlue.generic = class implements OSGlue
-{
+OSGlue.generic = class implements OSGlue {
 	declare diskloadHTML: string;
 	declare diskloadEvent: (element: HTMLElement, handler: (e: Event) => void) => void;
 	declare diskload: (onDone?: () => void, onFail?: () => void) => void;
@@ -87,23 +79,19 @@ OSGlue.generic = class implements OSGlue
 	declare reportAchievement: (campaignFile: string) => void;
 	declare canvasErrorMsg: string;
 
-	constructor()
-	{
+	constructor() {
 		this.diskloadHTML = "Load from Disk <input id='diskloadfile' type='file'/>";
 
-		this.diskloadEvent = function(element: HTMLElement, handler: (e: Event) => void)
-		{
+		this.diskloadEvent = function(element: HTMLElement, handler: (e: Event) => void) {
 			element.addEventListener("change", handler, false);
 		}
 
-		this.diskload = function(onDone?: () => void, onFail?: () => void)
-		{
+		this.diskload = function(onDone?: () => void, onFail?: () => void) {
 			game.state.restoreFromFile(($("diskloadfile") as HTMLInputElement).files[0], onDone, onFail);
 			($("diskloadfile") as HTMLInputElement).value = "";
 		}
 
-		this.disksave = function(saveName: string)
-		{
+		this.disksave = function(saveName: string) {
 			($("savedata") as HTMLAnchorElement).download = saveName;
 			($("savedata") as HTMLAnchorElement).href = "data:application/force-download," + encodeURIComponent(game.state.exportGameState());
 			$("savedata").click();

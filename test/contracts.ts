@@ -5,8 +5,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { vi } from "vitest";
 
-export interface ContractFixture
-{
+export interface ContractFixture {
 	file: string;
 	turns: number;
 	fuzzRounds: number;
@@ -18,26 +17,22 @@ export interface ContractFixture
 
 export const contractDir = (module: string) => path.join(__dirname, "contracts", module);
 
-export function fixtures(module: string): string[]
-{
+export function fixtures(module: string): string[] {
 	return fs.readdirSync(contractDir(module)).filter((f) => f.endsWith(".json.gz")).sort();
 }
 
-export function readFixture(module: string, name: string): ContractFixture
-{
+export function readFixture(module: string, name: string): ContractFixture {
 	return JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(contractDir(module), name))).toString("utf8"));
 }
 
 export type ContractEnv = Record<string, unknown>;
-export interface Contract
-{
+export interface Contract {
 	run: (env: ContractEnv) => ContractFixture["results"];
 	apply: ((env: ContractEnv, setup: string) => void) | null;
 }
 
 //The contract's functions: the file is a plain script shared with the recorder, after common.js
-export function contract(module: string, run: string): Contract
-{
+export function contract(module: string, run: string): Contract {
 	const read = (f: string) => fs.readFileSync(path.join(__dirname, "contracts", f), "utf8");
 	return new Function(read("common.js") + "\n" + read(module + ".contract.js") + "\nreturn { run: " + run
 		+ ", apply: typeof contractApply === 'function' ? contractApply : null };")() as Contract;
@@ -45,8 +40,7 @@ export function contract(module: string, run: string): Contract
 
 //Restores the fixture's state, builds the environment record.js builds on the reference from
 //this repo's modules (and extra, what a test adds), applies the contract's setup and runs it
-export async function runFixture(module: string, run: string, name: string, extra?: ContractEnv)
-{
+export async function runFixture(module: string, run: string, name: string, extra?: ContractEnv) {
 	const c = contract(module, run);
 	const fixture = readFixture(module, name);
 	const scenario = await restoreState(fixture.state);
@@ -69,8 +63,7 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const actual = c.run(env);
 	if (process.env.UPDATE_CONTRACTS && process.env.CI)
 		throw new Error("UPDATE_CONTRACTS in CI: the contracts would pass by construction");
-	if (process.env.UPDATE_CONTRACTS)
-	{
+	if (process.env.UPDATE_CONTRACTS) {
 		writeFixture(module, name, { ...fixture, results: actual });
 		return { expected: actual, actual };
 	}
@@ -81,8 +74,7 @@ export async function runFixture(module: string, run: string, name: string, extr
 //takes this repo's results instead, for a deliberate change record.sh can't record (the reference
 //still has the old behavior). Only a fixture whose results changed is written, the others keep
 //their bytes
-export function writeFixture(module: string, name: string, fixture: ContractFixture)
-{
+export function writeFixture(module: string, name: string, fixture: ContractFixture) {
 	const file = path.join(contractDir(module), name);
 	const json = JSON.stringify(fixture);
 	if (fs.existsSync(file) && zlib.gunzipSync(fs.readFileSync(file)).toString("utf8") === json)
@@ -94,8 +86,7 @@ export function writeFixture(module: string, name: string, fixture: ContractFixt
 //restored it: GameState.restoreFromString into the game, which builds no UI (setupGameState).
 //A campaign runs the game's setupGameState, as record.js does: it links the campaign player
 //(Game.getCampaignPlayer). Its UI calls go to a stub, its saves to jsdom's localStorage
-export async function restoreState(state: string)
-{
+export async function restoreState(state: string) {
 	vi.resetModules();
 	const { GameState } = await import("../src/gamestate");
 	const { game } = await import("../src/game");
@@ -103,8 +94,7 @@ export async function restoreState(state: string)
 	const setupGameState = game.setupGameState;
 	const loaded = new Promise<void>((resolve) => {
 		game.setupGameState = () => {
-			if (game.campaign)
-			{
+			if (game.campaign) {
 				game.state = new GameState(game);
 				game.ui = { setNewScenario() {} } as unknown as typeof game.ui;
 				setupGameState.call(game);
@@ -119,14 +109,12 @@ export async function restoreState(state: string)
 }
 
 //Mismatches, grouped by call name, the first few of each in full
-export function compareResults(expected: ContractFixture["results"], actual: ContractFixture["results"]): string | null
-{
+export function compareResults(expected: ContractFixture["results"], actual: ContractFixture["results"]): string | null {
 	if (expected.length !== actual.length)
 		return `${actual.length} calls instead of ${expected.length}` + firstDifference(expected, actual);
 	const byName = new Map<string, number>();
 	const examples: string[] = [];
-	for (let i = 0; i < expected.length; i++)
-	{
+	for (let i = 0; i < expected.length; i++) {
 		const [name, context, want] = expected[i], got = actual[i][2];
 		if (want === got) continue;
 		byName.set(name, (byName.get(name) || 0) + 1);
@@ -138,8 +126,7 @@ export function compareResults(expected: ContractFixture["results"], actual: Con
 }
 
 //The two serialized results around their first different character
-function around(want: string, got: string): string
-{
+function around(want: string, got: string): string {
 	let d = 0;
 	while (d < want.length && want[d] === got[d]) d++;
 	const from = Math.max(0, d - 150);
@@ -147,8 +134,7 @@ function around(want: string, got: string): string
 	return `    expected ${cut(want)}\n    actual   ${cut(got)}`;
 }
 
-function firstDifference(expected: ContractFixture["results"], actual: ContractFixture["results"]): string
-{
+function firstDifference(expected: ContractFixture["results"], actual: ContractFixture["results"]): string {
 	for (let i = 0; i < Math.min(expected.length, actual.length); i++)
 		if (expected[i][0] !== actual[i][0] || expected[i][1] !== actual[i][1])
 			return `, first different call #${i}: expected ${expected[i][0]} (${expected[i][1]}), actual ${actual[i][0]} (${actual[i][1]})`;

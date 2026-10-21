@@ -12,8 +12,7 @@ process.env.TZ = "Europe/Warsaw";
 //OPENPANZER_GAME_DIR: Stryker runs the tests in a copy of the repo without game/ (300 MB)
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
 
-class FileXMLHttpRequest
-{
+class FileXMLHttpRequest {
 	readyState = 0;
 	status = 0;
 	responseText = "";
@@ -25,24 +24,20 @@ class FileXMLHttpRequest
 	private url = "";
 	private async = true;
 
-	open(method: string, url: string, async?: boolean)
-	{
+	open(method: string, url: string, async?: boolean) {
 		this.url = new URL(url, document.baseURI).pathname.replace(/^\/game\//, "");
 		this.async = async !== false;
 	}
 
-	send()
-	{
+	send() {
 		const done = () => {
 			const file = path.join(GAME_DIR, decodeURIComponent(this.url));
-			if (fs.existsSync(file))
-			{
+			if (fs.existsSync(file)) {
 				this.status = 200;
 				this.responseText = fs.readFileSync(file, "utf8");
 				if (file.endsWith(".xml"))
 					this.responseXML = new DOMParser().parseFromString(this.responseText, "text/xml");
-			}
-			else
+			} else
 				this.status = 404;
 			this.readyState = 4;
 			this.onreadystatechange?.({ target: this });
@@ -64,8 +59,7 @@ for (const list of ["resources/scenarios/scenariolist.js", "resources/campaigns/
 	(0, eval)(fs.readFileSync(path.join(GAME_DIR, list), "utf8"));
 
 //The rest is for jsdom: a test in environment "node" (test/headless.test.ts) has no DOM
-if (typeof window !== "undefined")
-{
+if (typeof window !== "undefined") {
 	//No media in jsdom: the sound sprites load and play nothing
 	HTMLMediaElement.prototype.load = function() {};
 	HTMLMediaElement.prototype.play = function() { return Promise.resolve(); };

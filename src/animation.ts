@@ -17,14 +17,12 @@ import { soundData, type soundSprite } from "./aiscripted";
 
 //What runAnimation is given: called back with itself when the chain ends. A method so callers
 //can pass their own data type (method parameters are bivariant)
-export interface AnimationCBData
-{
+export interface AnimationCBData {
 	cbfunc(animationCBData: AnimationCBData): void;
 }
 
 //One sprite of an animation: the image holds the frames side by side, frames is the last frame index
-export interface AnimationSpriteFrame
-{
+export interface AnimationSpriteFrame {
 	image: HTMLImageElement;
 	width: number;
 	frames: number;
@@ -32,8 +30,7 @@ export interface AnimationSpriteFrame
 }
 
 //What SpriteAnimation animates (see Render.addAnimation)
-export interface SpriteAnimationOptions
-{
+export interface SpriteAnimationOptions {
 	ctx: CanvasRenderingContext2D;
 	x: number;
 	y: number;
@@ -43,40 +40,32 @@ export interface SpriteAnimationOptions
 
 //Runs a series of animations in order
 //A class with its closure body as the constructor: the methods are own properties, as the original
-export class AnimationChain
-{
+export class AnimationChain {
 	declare add: (o: SpriteAnimationOptions) => void;
 	declare clear: () => void;
 	declare start: (animationCBData: AnimationCBData | null) => void;
 
-	constructor()
-	{
+	constructor() {
 		var animationTasks: SpriteAnimation[] = [];
 		var i = 0;
 
-		this.add = function(o)
-		{
+		this.add = function(o) {
 			animationTasks.push(new SpriteAnimation(o));
 		}
 
-		this.clear = function()
-		{
+		this.clear = function() {
 			animationTasks = [];
 			i = 0;
 		}
 
-		this.start = function(animationCBData)
-		{
+		this.start = function(animationCBData) {
 			var obj = this; //save this pointer as it gets overwritten by window. context
 
-			if (i < animationTasks.length)
-			{
+			if (i < animationTasks.length) {
 				animationTasks[i].start();
 				setTimeout(function() { obj.start(animationCBData); }, animationTasks[i].getDuration() + 500); //chain delay
 				i++;
-			}
-			else
-			{
+			} else {
 				if (animationCBData !== null && typeof animationCBData !== "undefined")
 					animationCBData.cbfunc(animationCBData);
 				setTimeout(function() {	obj.clear(); }, 100);
@@ -88,18 +77,15 @@ export class AnimationChain
 
 //o = {ctx, x, y, rotate, sprite}
 //Animates a series of frames from image on ctx context at x,y position
-export class SpriteAnimation //Animation in the original, renamed: it replaced the DOM Animation
-{
+export class SpriteAnimation { //Animation in the original, renamed: it replaced the DOM Animation
 	declare delay: number;
 	declare start: () => void;
 	declare getDuration: () => number;
 
-	constructor(o: SpriteAnimationOptions)
-	{
+	constructor(o: SpriteAnimationOptions) {
 		//Erases the previous frame by drawing it again with destination-out instead of clearing
 		//its rectangle, so whatever else is on the canvas there survives
-		function animate()
-		{
+		function animate() {
 			if (useClearRect)
 				o.ctx.clearRect(o.x, o.y, o.sprite.width, o.sprite.image.height);
 			else
@@ -111,8 +97,7 @@ export class SpriteAnimation //Animation in the original, renamed: it replaced t
 			count++;
 		}
 
-		function drawFrame(o: SpriteAnimationOptions, frame: number, compositeOperation: GlobalCompositeOperation): void
-		{
+		function drawFrame(o: SpriteAnimationOptions, frame: number, compositeOperation: GlobalCompositeOperation): void {
 			if (frame < 0 || !o)
 				return;
 
@@ -132,30 +117,26 @@ export class SpriteAnimation //Animation in the original, renamed: it replaced t
 
 		this.delay = uiSettings.quickAnimation ? 50 : 150;
 
-		this.start = function()
-		{
+		this.start = function() {
 			o.sprite.sound.play(); //Play the associated sound
 			timer = setInterval(animate, this.delay);
 		}
 
-		this.getDuration = function()
-		{
+		this.getDuration = function() {
 			return this.delay * o.sprite.frames;
 		}
 	}
 }
 
 //A sprite sheet of an animation, frames side by side, each width pixels wide
-export interface AnimationFile
-{
+export interface AnimationFile {
 	path: string;
 	frames: number;
 	width: number;
 }
 
 //Sprite sheets of each animation, one is picked at random each time it plays
-export var animationFiles: { [name: string]: AnimationFile[] } =
-{
+export var animationFiles: { [name: string]: AnimationFile[] } = {
 	"explosion": [
 		{ path: "resources/animations/explosions.png", frames: 12, width: 120 },
 		{ path: "resources/animations/explosions2.png", frames: 12, width: 120 },
@@ -166,8 +147,7 @@ export var animationFiles: { [name: string]: AnimationFile[] } =
 };
 
 //List of all existing animations
-export var animationsData: { [name: string]: AnimationSpritePicker } =
-{
+export var animationsData: { [name: string]: AnimationSpritePicker } = {
 	//AnimationName: new animationSprite(spriteFiles, soundSpriteName)
 	"explosion": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.explosion, "explosion"),
 	"gun": new (animationSprite as unknown as AnimationSpriteConstructor)(animationFiles.gun, "gun"),
@@ -221,12 +201,10 @@ export interface AnimationSpriteConstructor { new (spriteFiles: AnimationFile[],
 //TODO preloading
 //Called with new but returns a function: each call of it returns one of the sprites
 //{image, width, frames, sound} at random
-export function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker
-{
+export function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: string): AnimationSpritePicker {
 	var sprites: AnimationSpriteFrame[] = [];
 
-	for (var i = 0; i < spriteFiles.length; i++)
-	{
+	for (var i = 0; i < spriteFiles.length; i++) {
 		var sprite = {} as AnimationSpriteFrame;
 		sprite.image = new Image();
 		sprite.image.src = spriteFiles[i].path;
@@ -239,8 +217,7 @@ export function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: s
 		sprites.push(sprite);
 	}
 
-	return function()
-	{
+	return function() {
 		var r = Math.floor(Math.random() * sprites.length);
 		return sprites[r];
 	}

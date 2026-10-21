@@ -19,14 +19,12 @@ const pageScripts = ["harness/lib/harness.js", "harness/lib/hooks.js", "harness/
 const code = (file: string) => read(file).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
 //The exports of the modules in src/main.ts's list, as ?harness exposes them: by name, without __
-async function exposed(): Promise<Map<string, unknown>>
-{
+async function exposed(): Promise<Map<string, unknown>> {
 	const names = new Map<string, unknown>();
 	const main = read("src/main.ts");
 	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/(\w+)";/gm)].map((m) => [m[1], m[2]]));
 	const listed = /const modules = \[([^\]]*)\]/.exec(main)![1].split(",").map((s) => s.trim());
-	for (const ns of listed)
-	{
+	for (const ns of listed) {
 		const module: Record<string, unknown> = await import(/* @vite-ignore */ path.join(root, "src", imports.get(ns)! + ".ts"));
 		for (const name of Object.keys(module))
 			if (!name.startsWith("__")) names.set(name, module[name]);
@@ -43,8 +41,7 @@ const harnessExports = [
 	"makeHidden", "makeVisible", "playerType", "terrainType", "uiSettings", "unitClass", "unitClassNames",
 ];
 
-function usedNames(candidates: Set<string>): Set<string>
-{
+function usedNames(candidates: Set<string>): Set<string> {
 	const used = new Set<string>();
 	for (const file of pageScripts)
 		for (const m of code(file).matchAll(/(?<![.\w$])[A-Za-z_$][\w$]*/g))
@@ -52,8 +49,7 @@ function usedNames(candidates: Set<string>): Set<string>
 	return used;
 }
 
-function members(pattern: RegExp): string[]
-{
+function members(pattern: RegExp): string[] {
 	const names = new Set<string>();
 	for (const file of pageScripts)
 		for (const m of code(file).matchAll(pattern)) names.add(m[1]);

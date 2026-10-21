@@ -15,16 +15,14 @@ import type { Cell } from "./prototypes";
 import type { GameMap } from "./map";
 import type { Unit } from "./unit";
 
-export class MapSelection
-{
+export class MapSelection {
 	declare map: GameMap;
 	//selected hexes for current unit move destinations: extendedCells from the move range, plain
 	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
 	declare moveSelected: Cell[];
 	declare attackSelected: Cell[]; //selected hexes for current unit attack destinations
 
-	constructor(map: GameMap)
-	{
+	constructor(map: GameMap) {
 		this.map = map;
 		this.moveSelected = [];
 		this.attackSelected = [];
@@ -32,8 +30,7 @@ export class MapSelection
 
 	//Selects unit as the current unit, with its move and attack range. Only units of the current
 	//player, returns whether it was selected
-	select(unit: Unit): boolean
-	{
+	select(unit: Unit): boolean {
 		if (unit === null)
 			return false;
 
@@ -47,8 +44,7 @@ export class MapSelection
 		this.map.currentUnit = unit;
 
 		//Negative carrier: the unit is disembarking, show the disembark positions
-		if (unit.carrier < 0)
-		{
+		if (unit.carrier < 0) {
 			unit.carrier = -unit.carrier;
 			this.map.disembarkUnit(unit);
 		}
@@ -62,8 +58,7 @@ export class MapSelection
 	}
 
 	//No unit selected, no hexes highlighted
-	clear()
-	{
+	clear() {
 		//A unit left in the middle of a disembark goes back to its carrier
 		if (this.map.currentUnit !== null && this.map.currentUnit.carrier < 0)
 			this.map.currentUnit.toggleEmbark();
@@ -72,20 +67,16 @@ export class MapSelection
 		this.clearAttack();
 	}
 
-	clearMove()
-	{
-		for (var i = 0; i < this.moveSelected.length; i++)
-		{
+	clearMove() {
+		for (var i = 0; i < this.moveSelected.length; i++) {
 			var c = this.moveSelected[i];
 			this.map.map[c.row][c.col].isMoveSel = false;
 		}
 		this.moveSelected = [];
 	}
 
-	clearAttack()
-	{
-		for (var i = 0; i < this.attackSelected.length; i++)
-		{
+	clearAttack() {
+		for (var i = 0; i < this.attackSelected.length; i++) {
 			var c = this.attackSelected[i];
 			this.map.map[c.row][c.col].isAttackSel = false;
 		}
@@ -93,32 +84,27 @@ export class MapSelection
 	}
 
 	//Adds a cell to the move cells, highlighted on the map if show
-	addMoveCell(cell: Cell, show: boolean)
-	{
+	addMoveCell(cell: Cell, show: boolean) {
 		this.moveSelected.push(cell);
 		if (show)
 			this.map.map[cell.row][cell.col].isMoveSel = true;
 	}
 
-	setMoveRange(unit: Unit)
-	{
+	setMoveRange(unit: Unit) {
 		this.clearMove();
 		var c = GameRules.getMoveRange(this.map, unit);
 
-		for (var i = 0; i < c.length; i++)
-		{
+		for (var i = 0; i < c.length; i++) {
 			this.moveSelected.push(c[i]); //Push both canPass and canMove for the shortestPath function
 			if (c[i].canMove) this.map.map[c[i].row][c[i].col].isMoveSel = true; //Only allow canMove destination hexes on map
 		}
 	}
 
-	setAttackRange(unit: Unit)
-	{
+	setAttackRange(unit: Unit) {
 		this.clearAttack();
 		var c = GameRules.getUnitAttackCells(this.map.map, unit, this.map.rows, this.map.cols);
 
-		for (var i = 0; i < c.length; i++)
-		{
+		for (var i = 0; i < c.length; i++) {
 			this.attackSelected.push(c[i]);
 			this.map.map[c[i].row][c[i].col].isAttackSel = true;
 		}

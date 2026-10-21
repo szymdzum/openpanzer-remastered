@@ -25,19 +25,16 @@ import { Leaders } from "./leaders";
 //size), then the equipment of the players countries. scen.onLoadFinished() is called at the
 //end, with scen.isLoaded telling if the scenario loaded.
 //A class with its closure body as the constructor: the methods are own properties, as the original
-export class ScenarioLoader
-{
+export class ScenarioLoader {
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;
 
-	constructor()
-	{
+	constructor() {
 		var scen: Scenario = null;
 
 		this.noCache = true; //add a timestamp to the scenario url so the browser doesn't cache it
 
-		this.loadScenario = function(scenarioObject: Scenario)
-		{
+		this.loadScenario = function(scenarioObject: Scenario) {
 			const xmlHttp = new XMLHttpRequest();
 			let url;
 
@@ -46,10 +43,8 @@ export class ScenarioLoader
 			if (this.noCache)
 				url += "?_=" + new Date().getTime();
 
-			xmlHttp.onload = function()
-			{
-				if (xmlHttp.readyState === 4)
-				{
+			xmlHttp.onload = function() {
+				if (xmlHttp.readyState === 4) {
 					if (xmlHttp.status === 200 || xmlHttp.status === 0)
 						parseScenario(xmlHttp.responseXML);
 					else
@@ -61,18 +56,15 @@ export class ScenarioLoader
 		}
 
 		// Private functions
-		function parseScenario(xmlData: Document)
-		{
+		function parseScenario(xmlData: Document) {
 			if (xmlData == null || !parseMapHeader(xmlData))
 				loadFailed();
 		}
 
 		//Inlined into parseScenario in the bundle
-		function parseMapHeader(xmlData: Document)
-		{
+		function parseMapHeader(xmlData: Document) {
 			const mapHeader = xmlData.getElementsByTagName("map")[0];
-			if (mapHeader)
-			{
+			if (mapHeader) {
 				//The 2.9 check for 0 < rows, cols < 99 is gone, the map image decides the size
 				const rows = +mapHeader.getAttribute("rows");
 				const cols = +mapHeader.getAttribute("cols");
@@ -84,8 +76,7 @@ export class ScenarioLoader
 
 				scen.map.rows = rows;
 				scen.map.cols = cols;
-				if (eqp)
-				{
+				if (eqp) {
 					scen.eqp = eqp;
 					Equipment.name = eqp;
 				}
@@ -115,21 +106,18 @@ export class ScenarioLoader
 			return false;
 		}
 
-		function loadFailed()
-		{
+		function loadFailed() {
 			scen.isLoaded = false;
 			scen.onLoadFinished();
 		}
 
 		//Called after each equipment file loaded, the last one loads the rest of the scenario
-		function equipmentLoaded(players: Player[], xmlData: Document)
-		{
+		function equipmentLoaded(players: Player[], xmlData: Document) {
 			if (--Equipment.equipmentToLoad)
 				return;
 
 			//Units need the equipment so players are added only now
-			for (let i = 0; i < players.length; i++)
-			{
+			for (let i = 0; i < players.length; i++) {
 				const p = new Player();
 				p.copy(players[i]);
 				scen.map.addPlayer(p);
@@ -142,17 +130,13 @@ export class ScenarioLoader
 		}
 
 		//Inlined into equipmentLoaded in the bundle
-		function loadReinforcements(xmlData: Document)
-		{
+		function loadReinforcements(xmlData: Document) {
 			const reinforceNodes = xmlData.getElementsByTagName("reinforce");
-			if (reinforceNodes)
-			{
-				for (let i = 0; i < reinforceNodes.length; i++)
-				{
+			if (reinforceNodes) {
+				for (let i = 0; i < reinforceNodes.length; i++) {
 					const turn = +reinforceNodes[i].getAttribute("turn");
 
-					for (let j = 0; j < reinforceNodes[i].childNodes.length; j++)
-					{
+					for (let j = 0; j < reinforceNodes[i].childNodes.length; j++) {
 						if (reinforceNodes[i].childNodes[j].nodeName != "at")
 							continue;
 
@@ -160,10 +144,8 @@ export class ScenarioLoader
 						const row = +atNode.getAttribute("row");
 						const col = +atNode.getAttribute("col");
 
-						for (let k = 0; k < atNode.childNodes.length; k++)
-						{
-							if (atNode.childNodes[k].nodeName == "unit")
-							{
+						for (let k = 0; k < atNode.childNodes.length; k++) {
+							if (atNode.childNodes[k].nodeName == "unit") {
 								const u = loadUnit(atNode.childNodes[k] as Element);
 								if (u !== null)
 									scen.addReinforcement(turn, row, col, u);
@@ -175,16 +157,13 @@ export class ScenarioLoader
 		}
 
 		//Inlined into equipmentLoaded in the bundle
-		function loadHexes(xmlData: Document)
-		{
+		function loadHexes(xmlData: Document) {
 			const hexNodes = xmlData.getElementsByTagName("hex");
-			if (hexNodes)
-			{
+			if (hexNodes) {
 				let hex = null;
 				let v = null;
 				let row, col;
-				for (let i = 0; i < hexNodes.length; i++)
-				{
+				for (let i = 0; i < hexNodes.length; i++) {
 					row = +hexNodes[i].getAttribute("row");
 					col = +hexNodes[i].getAttribute("col");
 					//Hexes outside of the map (cut by the map image size) are skipped
@@ -212,10 +191,8 @@ export class ScenarioLoader
 					if ((v = hexNodes[i].getAttribute("supply")) !== null && hex.isDeployment == -1)
 						hex.isDeployment = +v;
 
-					for (let j = 0; j < hexNodes[i].childNodes.length; j++)
-					{
-						if (hexNodes[i].childNodes[j].nodeName == "unit")
-						{
+					for (let j = 0; j < hexNodes[i].childNodes.length; j++) {
+						if (hexNodes[i].childNodes[j].nodeName == "unit") {
 							v = loadUnit(hexNodes[i].childNodes[j] as Element);
 							if (v !== null)
 								hex.setUnit(v);
@@ -227,12 +204,10 @@ export class ScenarioLoader
 		}
 
 		//The map size is computed from the map image, the scenario rows/cols are only an upper limit
-		function loadMapImage(xmlData: Document)
-		{
+		function loadMapImage(xmlData: Document) {
 			const img = new Image();
 			img.src = scen.map.terrainImage;
-			img.onload = function(event)
-			{
+			img.onload = function(event) {
 				let rows = scen.map.rows;
 				let cols = scen.map.cols;
 				let width = img.width;
@@ -242,8 +217,7 @@ export class ScenarioLoader
 				let isLastRowPartial = false;
 
 				//Hexes alternate 60 and 30 pixels of width
-				while (width >= 30)
-				{
+				while (width >= 30) {
 					if (imgCols % 2)
 						width -= 60;
 					else
@@ -254,18 +228,13 @@ export class ScenarioLoader
 
 				let fullRows = imgRows;
 				const rowFraction = imgRows - Math.floor(imgRows);
-				if (rowFraction >= 0.39 && rowFraction < 0.8)
-				{
+				if (rowFraction >= 0.39 && rowFraction < 0.8) {
 					isLastRowPartial = true;
 					fullRows = Math.ceil(imgRows);
-				}
-				else if (rowFraction >= 0.8)
-				{
+				} else if (rowFraction >= 0.8) {
 					isLastRowPartial = false;
 					fullRows = Math.ceil(imgRows);
-				}
-				else if (rowFraction < 0.39)
-				{
+				} else if (rowFraction < 0.39) {
 					isLastRowPartial = false;
 					fullRows = Math.floor(imgRows);
 				}
@@ -289,8 +258,7 @@ export class ScenarioLoader
 
 		//Inlined into loadMapImage in the bundle. Players are only parsed here, they are added
 		//to the map after the equipment loaded
-		function loadPlayers(xmlData: Document)
-		{
+		function loadPlayers(xmlData: Document) {
 			const playerNodes = xmlData.getElementsByTagName("player");
 			const players: Player[] = [];
 			let minPrestige = 0; //campaigns give a minimum prestige per turn
@@ -299,10 +267,8 @@ export class ScenarioLoader
 				minPrestige = Math.round(engineContext.campaign().startprestige
 					* difficultyModifiers[engineContext.campaign().difficulty].turnPrestige);
 
-			if (playerNodes)
-			{
-				for (let i = 0; i < playerNodes.length; i++)
-				{
+			if (playerNodes) {
+				for (let i = 0; i < playerNodes.length; i++) {
 					const p = new Player();
 					var v;
 					p.id = +playerNodes[i].getAttribute("id");
@@ -313,8 +279,7 @@ export class ScenarioLoader
 
 					//strings at first, converted below
 					p.prestigePerTurn = playerNodes[i].getAttribute("turnprestige").split(", ") as unknown as number[];
-					for (var j = 0; j < p.prestigePerTurn.length; j++)
-					{
+					for (var j = 0; j < p.prestigePerTurn.length; j++) {
 						v = +p.prestigePerTurn[j]; //convert to int
 						p.prestigePerTurn[j] = v;
 						if (v < minPrestige)
@@ -337,16 +302,14 @@ export class ScenarioLoader
 			return players;
 		}
 
-		function loadUnit(node: Element): Unit
-		{
+		function loadUnit(node: Element): Unit {
 			//create the unit object
 			const unitId = +node.getAttribute("id");
 			const playerId = +node.getAttribute("owner");
 			let u = null;
 			let v, side;
 
-			if (unitId >= 0 && playerId >= 0)
-			{
+			if (unitId >= 0 && playerId >= 0) {
 				u = new Unit(unitId);
 				u.owner = playerId >> 0;
 				if ((v = node.getAttribute("face")) !== null)
@@ -367,8 +330,7 @@ export class ScenarioLoader
 					u.leader = Leaders.generateLeader(u);
 
 				//Ground and air units costs and experience per side
-				if (!GameRules.isSea(u))
-				{
+				if (!GameRules.isSea(u)) {
 					side = scen.map.getPlayer(u.owner).side;
 					u.unitData(true); //unused
 					scen.unitsCostPerSide[side] += GameRules.calculateUnitCosts(u.eqid,

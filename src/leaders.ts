@@ -16,8 +16,7 @@ import type { Unit } from "./unit";
 import { Rng } from "./rng";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none
-export interface LeadersModule
-{
+export interface LeadersModule {
 	unitClassLeaders: { [uclass: number]: number[] };
 	description: [string, string][]; //[name, description] by leaderType
 	LEADER_CHANCE_THRESHOLD: number;
@@ -265,8 +264,7 @@ Leaders.description[leaderType.superiorManeuver] = [
 //Returns a random leader for the unit from its class leaders, -1 if the class has none
 //Bug kept: the roll range is length - 3, not length - 1, so it never picks the last two
 //leaders of the list and with only 2 leaders it can pick the class leader (index 0)
-Leaders.generateLeader = function(unit)
-{
+Leaders.generateLeader = function(unit) {
 	if (!unit) return -1;
 
 	const uclass = unit.unitData().uclass;
@@ -281,8 +279,7 @@ Leaders.generateLeader = function(unit)
 //Called after combat with the experience the unit gained: a unit at max experience always
 //gets a leader, otherwise only when it went up an experience level and wins the roll.
 //Returns the new leader or -1
-Leaders.generateLeaderWithChance = function(unit, expGained)
-{
+Leaders.generateLeaderWithChance = function(unit, expGained) {
 	if (!unit || unit.leader != -1) return -1;
 
 	const level = (unit.experience / 100) >> 0;
@@ -303,16 +300,14 @@ Leaders.generateLeaderWithChance = function(unit, expGained)
 }
 
 //The class leader of a unit that has a leader, -1 otherwise
-Leaders.getUnitClassLeader = function(unit)
-{
+Leaders.getUnitClassLeader = function(unit) {
 	if (unit && unit.leader != -1)
 		return Leaders.unitClassLeaders[unit.unitData().uclass][0];
 	return -1;
 }
 
 //Checks if the unit has the leader, either as its own leader or as its class leader
-Leaders.unitHasLeader = function(unit, leader)
-{
+Leaders.unitHasLeader = function(unit, leader) {
 	if (!unit || unit.leader == -1) return false;
 	if (unit.leader == leader) return true;
 
@@ -323,8 +318,7 @@ Leaders.unitHasLeader = function(unit, leader)
 }
 
 //Returns the [name, description] of the unit leader and of its class leader
-Leaders.getUnitLeaderDescriptions = function(unit)
-{
+Leaders.getUnitLeaderDescriptions = function(unit) {
 	if (!unit || unit.leader == -1) return [];
 
 	const descriptions: [string, string][] = [];

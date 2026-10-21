@@ -22,15 +22,13 @@ import { engineContext } from "./context";
 //Transport Object Constructor
 //A class so other modules can type `new Transport(...)`. Fields are `declare`d (they emit nothing),
 //the methods stay assigned to the prototype (enumerable, as the original), typed by the interface below
-export class Transport
-{
+export class Transport {
 	declare eqid: number;
 	declare ammo: number;
 	declare fuel: number;
 	declare icon: string;
 
-	constructor(equipmentID: number)
-	{
+	constructor(equipmentID: number) {
 		if (typeof Equipment.equipment[equipmentID] === "undefined")
 			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
 		else
@@ -41,15 +39,13 @@ export class Transport
 	}
 }
 
-export interface Transport
-{
+export interface Transport {
 	copy(t: Transport | null): void;
 	unitData(): EquipmentEntry;
 }
 
 //Transport Object Public Methods
-Transport.prototype.copy = function(t: Transport | null)
-{
+Transport.prototype.copy = function(t: Transport | null) {
 	if (t === null) return;
 	this.eqid = t.eqid;
 	this.ammo = t.ammo;
@@ -61,8 +57,7 @@ Transport.prototype.unitData = function(): EquipmentEntry { return Equipment.equ
 //A class so other modules can type `new Unit(...)`: the constructor body is the original one
 //(hex stays private to its closures), fields and privileged methods are `declare`d (they emit
 //nothing), the public methods stay assigned to the prototype, typed by the interface below
-export class Unit
-{
+export class Unit {
 	declare eqid: number;
 	declare id: number;
 	declare owner: number;
@@ -97,8 +92,7 @@ export class Unit
 	declare setHex: (h: Hex | null) => void;
 	declare getPos: () => Cell | null;
 
-	constructor(equipmentID: number)
-	{
+	constructor(equipmentID: number) {
 		//Public Properties
 		if (typeof Equipment.equipment[equipmentID] === "undefined")
 			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
@@ -134,16 +128,14 @@ export class Unit
 
 		//Privileged Methods that access private properties/methods
 		this.getHex = function() { return hex; }
-		this.setHex = function(h: Hex | null)
-		{
+		this.setHex = function(h: Hex | null) {
 			hex = h;
 			if (h !== null) // set unit as deployed (might be called from map.deployUnit)
 				this.isDeployed = true;
 			//We don't set isDeployed to false here only in setPlayerToHQ() when units are sent to HQ pool
 		}
 
-		this.getPos = function()
-		{
+		this.getPos = function() {
 			if (hex === null)
 				return null;
 			return hex.getPos();
@@ -154,8 +146,7 @@ export class Unit
 	}
 };
 
-export interface Unit
-{
+export interface Unit {
 	nodossier: boolean; //set by map.js: disbanded or removed, not a loss for the dossier
 	copy(u: Unit | null): void;
 	getEqid(forceUnit?: boolean): number;
@@ -182,8 +173,7 @@ export interface Unit
 }
 
 //Unit Object Public Methods
-Unit.prototype.copy = function(u: Unit | null)
-{
+Unit.prototype.copy = function(u: Unit | null) {
 	if (u === null) return;
 	if (typeof Equipment.equipment[u.eqid] === "undefined")
 		this.eqid = Object.keys(Equipment.equipment)[0];
@@ -215,16 +205,14 @@ Unit.prototype.copy = function(u: Unit | null)
 	//The player is taken from the current map by owner id, not from u.player
 	this.player = new Player();
 	this.player.copy(engineContext.scenario().map.getPlayer(this.owner));
-	if (u.transport !== null)
-	{
+	if (u.transport !== null) {
 		this.transport = new Transport(u.transport.eqid);
 		this.transport.copy(u.transport);
 	}
 }
 
 //Returns the equipment id of what the unit currently is: carrier, transport or the unit itself
-Unit.prototype.getEqid = function(forceUnit?: boolean): number
-{
+Unit.prototype.getEqid = function(forceUnit?: boolean): number {
 	if (this.carrier > 0 && !forceUnit) //Unit on carrier
 		return this.carrier;
 	if (this.isMounted && this.transport !== null && !forceUnit) //Unit on transport
@@ -232,14 +220,12 @@ Unit.prototype.getEqid = function(forceUnit?: boolean): number
 	return this.eqid; //Real Unit
 }
 
-Unit.prototype.unitData = function(forceUnit?: boolean): EquipmentEntry
-{
+Unit.prototype.unitData = function(forceUnit?: boolean): EquipmentEntry {
 	if (!defined(forceUnit)) forceUnit = false;
 	return Equipment.equipment[this.getEqid(forceUnit)];
 }
 
-Unit.prototype.getMovesLeft = function(): number
-{
+Unit.prototype.getMovesLeft = function(): number {
 	//On carrier always has movement of the carrier
 	if (this.carrier > 0)
 		return Equipment.equipment[this.carrier].movpoints;
@@ -252,44 +238,38 @@ Unit.prototype.getMovesLeft = function(): number
 	return this.moveLeft;
 }
 
-Unit.prototype.getAmmo = function(): number
-{
+Unit.prototype.getAmmo = function(): number {
 	if (this.isMounted && this.transport !== null)
 		return this.transport.ammo;
 	else
 		return this.ammo;
 }
 
-Unit.prototype.getFuel = function(): number
-{
+Unit.prototype.getFuel = function(): number {
 	if (this.isMounted && this.transport !== null)
 		return this.transport.fuel;
 	else
 		return this.fuel;
 }
 
-Unit.prototype.hit = function(losses: number)
-{
+Unit.prototype.hit = function(losses: number) {
 	this.strength -= losses;
 	this.hits++;
 	if (this.entrenchment > 0) this.entrenchment--;
 	if (this.strength <= 0) this.destroyed = true;
 }
 
-Unit.prototype.fire = function(isAttacking: boolean)
-{
+Unit.prototype.fire = function(isAttacking: boolean) {
 	//Unit is shown on map when fires even if it's on a non spotted hex (support fire)
 	this.tempSpotted = true;
 	this.ammo--; //TODO some transports can attack ?
-	if (isAttacking) //Support and Defence fire don't block this unit for attacking
-	{
+	if (isAttacking) { //Support and Defence fire don't block this unit for attacking
 		this.hasFired = true;
 		this.hasOverstrength = true;
 	}
 }
 
-Unit.prototype.move = function(cost: number)
-{
+Unit.prototype.move = function(cost: number) {
 	this.entrenchment = 0; //loses all entrenchment
 	let fuelUsed = 0;
 	if (cost >= 254) //Remove stopmov or noenter costs
@@ -297,22 +277,18 @@ Unit.prototype.move = function(cost: number)
 	else
 		fuelUsed = cost;
 
-	if (this.isMounted && this.transport !== null)
-	{
+	if (this.isMounted && this.transport !== null) {
 		this.hasFired = true; //can't fire after being moved in transport
 		if (GameRules.unitUsesFuel(this.transport))
 			this.transport.fuel -= fuelUsed;
 		this.moveLeft = 0;
-	}
-	else
-	{
+	} else {
 		if (GameRules.unitUsesFuel(this) && this.carrier == 0)
 			this.fuel -= fuelUsed;
 		this.moveLeft -= fuelUsed;
 	}
 	//Recon units can move multiple times
-	if (this.unitData().uclass != unitClass.recon || this.moveLeft <= 0)
-	{
+	if (this.unitData().uclass != unitClass.recon || this.moveLeft <= 0) {
 		this.hasMoved = true;
 		this.hasOverstrength = true;
 	}
@@ -320,8 +296,7 @@ Unit.prototype.move = function(cost: number)
 	if (this.carrier < 0) this.carrier = 0;
 }
 
-Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boolean
-{
+Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boolean {
 	// 0 or -1 means keep the current unit and upgrade the transport eventually
 	if (upgradeid <= 0)
 		upgradeid = this.eqid;
@@ -337,13 +312,10 @@ Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boole
 
 	this.eqid = upgradeid;
 
-	if (GameRules.isTransportable(this.eqid))
-	{
+	if (GameRules.isTransportable(this.eqid)) {
 		//Replace or create a new transport
 		if (transportid > 0) this.setTransport(transportid);
-	}
-	else
-	{
+	} else {
 		//Remove the tranport if the new unit is no longer transportable
 		if (this.transport !== null) this.transport = null;
 	}
@@ -358,28 +330,24 @@ Unit.prototype.upgrade = function(upgradeid: number, transportid: number): boole
 }
 
 //supply is a Supply object (see GameRules.getResupplyValue)
-Unit.prototype.resupply = function(supply: Supply)
-{
+Unit.prototype.resupply = function(supply: Supply) {
 	this.ammo += supply.ammo;
 	this.fuel += supply.fuel;
-	if (this.transport !== null)
-	{
+	if (this.transport !== null) {
 		this.transport.ammo += supply.transportAmmo;
 		this.transport.fuel += supply.transportFuel;
 	}
 	this.hasMoved = this.hasFired = this.hasResupplied = true;
 }
 
-Unit.prototype.reinforce = function(str: number, isOverstrength: boolean)
-{
+Unit.prototype.reinforce = function(str: number, isOverstrength: boolean) {
 	this.strength += str;
 	//hasRessuplied is a typo kept from the original, it sets a new property and not hasResupplied
 	this.hasMoved = this.hasFired = this.hasRessuplied = true;
 	if (isOverstrength) this.hasOverstrength = true;
 }
 
-Unit.prototype.setTransport = function(id: number)
-{
+Unit.prototype.setTransport = function(id: number) {
 	delete this.transport;
 	this.transport = new Transport(id);
 }
@@ -387,8 +355,7 @@ Unit.prototype.setTransport = function(id: number)
 Unit.prototype.mount = function() { this.isMounted = true; }
 Unit.prototype.unmount = function() { this.isMounted = false; }
 
-Unit.prototype.embark = function(type: number): boolean
-{
+Unit.prototype.embark = function(type: number): boolean {
 	const id = Equipment.getCountryEquipmentByClass(type, this.player.country + 1)[0]; //TODO Already found in map.addPlayer
 
 	if (!id || typeof id === "undefined")
@@ -399,8 +366,7 @@ Unit.prototype.embark = function(type: number): boolean
 	return true;
 }
 
-Unit.prototype.entrench = function(): boolean
-{
+Unit.prototype.entrench = function(): boolean {
 	let hex: Hex | null = null;
 	const uc = this.unitData().uclass;
 	let terrainEntrench = 0;
@@ -414,21 +380,17 @@ Unit.prototype.entrench = function(): boolean
 
 	terrainEntrench = terrainEntrenchment[hex.terrain];
 
-	if (this.entrenchment >= terrainEntrenchment[hex.terrain])
-	{
+	if (this.entrenchment >= terrainEntrenchment[hex.terrain]) {
 		let entrenchLevel = this.entrenchment - terrainEntrench;
 		let nextEntrenchLevel = 9 * entrenchLevel + 4;
 		this.entrenchTicks += +(this.experience/100) + (terrainEntrench + 1) * unitEntrenchRate[uc];
-		while(this.entrenchTicks >= nextEntrenchLevel && this.entrenchment < (terrainEntrench + 5))
-		{
+		while(this.entrenchTicks >= nextEntrenchLevel && this.entrenchment < (terrainEntrench + 5)) {
 			this.entrenchTicks -= nextEntrenchLevel;
 			this.entrenchment++;
 			entrenchLevel++;
 			nextEntrenchLevel = 9 * entrenchLevel + 4;
 		}
-	}
-	else
-	{
+	} else {
 		this.entrenchment = terrainEntrench;
 		this.entrenchTicks = 0;
 	}
@@ -440,26 +402,22 @@ Unit.prototype.entrench = function(): boolean
 Unit.prototype.toggleEmbark = function() { this.carrier = -this.carrier; }
 Unit.prototype.getIcon = function(): string { return this.unitData().icon; }
 
-Unit.prototype.refillAmmoFuel = function()
-{
+Unit.prototype.refillAmmoFuel = function() {
 	this.ammo = Equipment.equipment[this.eqid].ammo;
 	this.fuel = Equipment.equipment[this.eqid].fuel;
-	if (this.transport !== null && defined(Equipment.equipment[this.transport.eqid]))
-	{
+	if (this.transport !== null && defined(Equipment.equipment[this.transport.eqid])) {
 		this.transport.ammo = Equipment.equipment[this.transport.eqid].ammo;
 		this.transport.fuel = Equipment.equipment[this.transport.eqid].fuel;
 	}
 }
 
-Unit.prototype.unitEndTurn = function()
-{
+Unit.prototype.unitEndTurn = function() {
 	this.entrench();
 	this.moveLeft = Equipment.equipment[this.eqid].movpoints; //reset movement points don't use unitData() since it could be mounted
 	this.hasMoved = this.hasFired = this.hasResupplied = this.isSurprised = this.hasOverstrength = false;
 	this.hits = 0;
 	//Fortifications stay visible once seen, other units hide when their hex is no longer spotted
-	if (this.unitData().uclass !== unitClass.fortification)
-	{
+	if (this.unitData().uclass !== unitClass.fortification) {
 		const hex = this.getHex();
 		if (hex !== null && !hex.isSpotted(engineContext.spotSide()))
 			this.tempSpotted = false;
@@ -467,7 +425,6 @@ Unit.prototype.unitEndTurn = function()
 }
 
 //frees memory asociated with this object if possible
-Unit.prototype.cleanup = function()
-{
+Unit.prototype.cleanup = function() {
 	//TODO can't delete units since some of them are linked in coreUnits for campaign players
 }

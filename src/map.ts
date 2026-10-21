@@ -34,8 +34,7 @@ import { UndoSlot } from "./undo";
 //Hex, Player and Map classes
 
 //Campaign stats of a player, unit counts by unit class and scenario names by outcome
-export interface PlayerDossier
-{
+export interface PlayerDossier {
 	units?: {
 		lostaux?: { [uclass: number]: number };
 		lostcore?: { [uclass: number]: number };
@@ -45,8 +44,7 @@ export interface PlayerDossier
 }
 
 //Player Object Constructor
-export class Player
-{
+export class Player {
 	declare id: number;
 	declare side: number;
 	declare country: number;
@@ -66,8 +64,7 @@ export class Player
 	declare removeUndeployedCoreUnit: (index: number) => void;
 	declare setCoreUnitList: (list: Unit[]) => boolean;
 
-	constructor()
-	{
+	constructor() {
 	this.id = -1;
 	this.side = -1;
 	this.country = -1;
@@ -87,20 +84,17 @@ export class Player
 
 	//Privileged Methods that access private properties/methods
 	this.getCoreUnitList = function() { return coreUnitList; }
-	this.addCoreUnit = function(unit)
-	{
+	this.addCoreUnit = function(unit) {
 		if (!unit || typeof unit === "undefined")
 			return false;
 		unit.isCore = true;
 		coreUnitList.push(unit);
 		return true;
 	}
-	this.removeUndeployedCoreUnit = function(index)
-	{
+	this.removeUndeployedCoreUnit = function(index) {
 		coreUnitList.splice(index, 1);
 	}
-	this.setCoreUnitList = function(list)
-	{
+	this.setCoreUnitList = function(list) {
 		let i;
 		if (!list || list.length == 0)
 			return false;
@@ -115,8 +109,7 @@ export class Player
 	}
 }
 //Player Object Public Methods, assigned to the prototype so they stay enumerable
-export interface Player
-{
+export interface Player {
 	copy(p: Player, addScore?: boolean): void;
 	initDossier(): void;
 	copyDossier(p: Player): void;
@@ -139,8 +132,7 @@ export interface Player
 //Player Object Public Methods
 //addScore: only add the score of p to this player, used to carry the campaign player
 //between scenarios
-Player.prototype.copy = function(p: Player, addScore?: boolean)
-{
+Player.prototype.copy = function(p: Player, addScore?: boolean) {
 	let i;
 
 	if (p === null) return;
@@ -152,12 +144,9 @@ Player.prototype.copy = function(p: Player, addScore?: boolean)
 	this.playedTurn = p.playedTurn;
 	this.type = p.type;
 
-	if (addScore)
-	{
+	if (addScore) {
 		this.score += p.score;
-	}
-	else
-	{
+	} else {
 		this.score = p.score;
 		this.airTransports = p.airTransports;
 		this.navalTransports = p.navalTransports;
@@ -177,15 +166,13 @@ Player.prototype.copy = function(p: Player, addScore?: boolean)
 		this.copyDossier(p);
 }
 
-Player.prototype.initDossier = function()
-{
+Player.prototype.initDossier = function() {
 	this.dossier.units = {};
 	this.dossier.units.lostaux = {};
 	this.dossier.units.lostcore = {};
 	this.dossier.units.killed = {};
 
-	for (const c in unitClass)
-	{
+	for (const c in unitClass) {
 		const uclass = unitClass[c as keyof typeof unitClass];
 		this.dossier.units.lostaux[uclass] = 0;
 		this.dossier.units.lostcore[uclass] = 0;
@@ -197,12 +184,10 @@ Player.prototype.initDossier = function()
 		this.dossier.outcomes[o] = [];
 }
 
-Player.prototype.copyDossier = function(p)
-{
+Player.prototype.copyDossier = function(p) {
 	this.initDossier();
 
-	for (const c in unitClass)
-	{
+	for (const c in unitClass) {
 		const uclass = unitClass[c as keyof typeof unitClass];
 		this.dossier.units.lostaux[uclass] = p.dossier.units.lostaux[uclass];
 		this.dossier.units.lostcore[uclass] = p.dossier.units.lostcore[uclass];
@@ -218,8 +203,7 @@ Player.prototype.getCountryName = function() { return Equipment.getCountryName(t
 Player.prototype.getSideName = function() { return sideNames[this.side]; }
 
 //Get the undeployed units from core unit list
-Player.prototype.hasUndeployedUnits = function()
-{
+Player.prototype.hasUndeployedUnits = function() {
 	let i;
 	const cList = this.getCoreUnitList();
 	for (i = 0; i < cList.length; i++)
@@ -229,8 +213,7 @@ Player.prototype.hasUndeployedUnits = function()
 	return false;
 }
 
-Player.prototype.buyUnit = function(unitid, transportid)
-{
+Player.prototype.buyUnit = function(unitid, transportid) {
 	const cost = GameRules.calculateUnitCosts(unitid, transportid);
 
 	if (cost > this.prestige) return false;
@@ -242,8 +225,7 @@ Player.prototype.buyUnit = function(unitid, transportid)
 }
 
 //Adds a new unit to the core unit list without paying for it
-Player.prototype.acquireUnit = function(unitid, transportid)
-{
+Player.prototype.acquireUnit = function(unitid, transportid) {
 	const u = new Unit(unitid);
 
 	if (transportid > 0 && typeof transportid !== "undefined")
@@ -262,8 +244,7 @@ Player.prototype.acquireUnit = function(unitid, transportid)
 	return true;
 }
 
-Player.prototype.upgradeUnit = function(unit, upgradeid, transportid)
-{
+Player.prototype.upgradeUnit = function(unit, upgradeid, transportid) {
 	const cost = GameRules.calculateUpgradeCosts(unit, upgradeid, transportid);
 
 	if (cost > this.prestige)
@@ -276,8 +257,7 @@ Player.prototype.upgradeUnit = function(unit, upgradeid, transportid)
 	return true;
 }
 
-Player.prototype.sellUnit = function(unit)
-{
+Player.prototype.sellUnit = function(unit) {
 	if (!defined(unit))
 		return false;
 
@@ -287,15 +267,13 @@ Player.prototype.sellUnit = function(unit)
 	return true;
 }
 
-Player.prototype.resupplyUnit = function(unit, supply)
-{
+Player.prototype.resupplyUnit = function(unit, supply) {
 	this.updateScore(scoreGains.resupply);
 	unit.resupply(supply); //Supply doesn't cost prestige
 }
 
 //Returns the strength added, 0 if the player can't afford any
-Player.prototype.reinforceUnit = function(unit, strength, overstrength)
-{
+Player.prototype.reinforceUnit = function(unit, strength, overstrength) {
 	let penalty = 1;
 	if (overstrength)
 		penalty = OVERSTRENGTH_PENALTY;
@@ -316,8 +294,7 @@ Player.prototype.reinforceUnit = function(unit, strength, overstrength)
 }
 
 //Adds gain * count to the score, scaled by the campaign difficulty
-Player.prototype.updateScore = function(gain, count)
-{
+Player.prototype.updateScore = function(gain, count) {
 	if (count == null || typeof count === "undefined")
 		count = 1;
 
@@ -328,36 +305,30 @@ Player.prototype.updateScore = function(gain, count)
 	this.score += (gain * count * coef) >> 0;
 }
 
-Player.prototype.addDestroyedUnitToDossier = function(unit)
-{
+Player.prototype.addDestroyedUnitToDossier = function(unit) {
 	if (!this.dossier.hasOwnProperty("units"))
 		this.initDossier();
 
 	const uclass = unit.unitData(true).uclass;
 
-	if (this.id === unit.player.id)
-	{
+	if (this.id === unit.player.id) {
 		if (unit.isCore)
 			this.dossier.units.lostcore[uclass]++;
 		else
 			this.dossier.units.lostaux[uclass]++;
-	}
-	else
-	{
+	} else {
 		this.dossier.units.killed[uclass]++;
 	}
 }
 
-Player.prototype.addOutcomeToDossier = function(outcome, scenarioName)
-{
+Player.prototype.addOutcomeToDossier = function(outcome, scenarioName) {
 	if (!this.dossier.hasOwnProperty("outcomes"))
 		this.initDossier();
 
 	this.dossier.outcomes[outcome].push(scenarioName);
 }
 
-Player.prototype.endTurn = function(turn)
-{
+Player.prototype.endTurn = function(turn) {
 	this.playedTurn = turn;
 
 	//turn starts from 1, array index from 0. turn 1 or 0 array index will be applied when scen is loaded/game
@@ -369,8 +340,7 @@ Player.prototype.endTurn = function(turn)
 }
 
 //Reset player properties from previous scenario and resets/reinforce/resupply it's core unit status
-Player.prototype.setPlayerToHQ = function()
-{
+Player.prototype.setPlayerToHQ = function() {
 	let i, u;
 
 	this.supportCountries = [];
@@ -379,11 +349,9 @@ Player.prototype.setPlayerToHQ = function()
 	this.navalTransports = 0;
 
 	const cList = this.getCoreUnitList();
-	for (i = 0; i < cList.length; i++)
-	{
+	for (i = 0; i < cList.length; i++) {
 		u = cList[i];
-		if (u.destroyed) //remove if destroyed
-		{
+		if (u.destroyed) { //remove if destroyed
 			cList[i] = null;
 			cList.splice(i, 1);
 			i--;
@@ -405,14 +373,12 @@ Player.prototype.setPlayerToHQ = function()
 	}
 }
 
-Player.prototype.cleanup = function()
-{
+Player.prototype.cleanup = function() {
 	//TODO check savedPlayer in campaign mode
 }
 
 //Hex Object Constructor
-export class Hex
-{
+export class Hex {
 	declare unit: Unit;
 	declare airunit: Unit;
 	declare terrain: number; //terrainType
@@ -432,8 +398,7 @@ export class Hex
 	declare getPos: () => Cell;
 
 	//counters: the hex's spotting and zone of control counters, from the map's MapVisibility
-	constructor(row: number, col: number, counters?: HexCounters)
-	{
+	constructor(row: number, col: number, counters?: HexCounters) {
 	//Public Properties
 	this.unit = null; //pointer to the ground unit on this hex
 	this.airunit = null; //pointer to the air unit on this hex
@@ -451,8 +416,7 @@ export class Hex
 	//ZOC is spotted. This will allow movement on ZOC generated by units that aren't yet spotted.
 	//Privileged Methods that access private properties/methods
 	this.isZOC = function(side) { return MapVisibility.isSet(hexCounters.zoc, side); }
-	this.isSpotted = function(side)
-	{
+	this.isSpotted = function(side) {
 		if (uiSettings.noFOW) //Fog of war off, everything is spotted
 			return true;
 		return MapVisibility.isSet(hexCounters.spot, side);
@@ -467,8 +431,7 @@ export class Hex
 }
 
 //Hex Object Public Methods, assigned to the prototype: gamestate does for-in over a Hex
-export interface Hex
-{
+export interface Hex {
 	copy(hex: Hex): void;
 	getUnit(airMode?: boolean | number): Unit; //gamerules passes 0 and 1
 	setUnit(unit: Unit): void;
@@ -477,8 +440,7 @@ export interface Hex
 	cleanup(): void;
 }
 //Clone Hex object
-Hex.prototype.copy = function(hex)
-{
+Hex.prototype.copy = function(hex) {
 	if (hex === null) return;
 
 	this.terrain = hex.terrain;
@@ -494,10 +456,8 @@ Hex.prototype.copy = function(hex)
 }
 
 //Returns air or ground unit on a hex depending on UI airMode
-Hex.prototype.getUnit = function(airMode?: boolean | number)
-{
-	if (this.unit !== null && this.airunit !== null)
-	{
+Hex.prototype.getUnit = function(airMode?: boolean | number) {
+	if (this.unit !== null && this.airunit !== null) {
 		if (airMode)
 			return this.airunit;
 		else
@@ -512,8 +472,7 @@ Hex.prototype.getUnit = function(airMode?: boolean | number)
 	return null;
 }
 
-Hex.prototype.setUnit = function(unit)
-{
+Hex.prototype.setUnit = function(unit) {
 	//Will return if unit object is just a copy.
 	if (unit === null || typeof unit.setHex !== "function")
 		return;
@@ -524,8 +483,7 @@ Hex.prototype.setUnit = function(unit)
 		this.unit = unit;
 }
 
-Hex.prototype.delUnit = function(unit)
-{
+Hex.prototype.delUnit = function(unit) {
 	if (unit === null || typeof unit.setHex !== "function")
 		return;
 
@@ -540,14 +498,12 @@ Hex.prototype.delUnit = function(unit)
 }
 
 //Returns the unit from this hex that can be attacked by atkunit
-Hex.prototype.getAttackableUnit = function(atkunit, airMode)
-{
+Hex.prototype.getAttackableUnit = function(atkunit, airMode) {
 	const isSpotted = this.isSpotted(atkunit.player.side);
 	let checkedId = -1;
 	let u = this.getUnit(airMode);
 
-	if (u)
-	{
+	if (u) {
 		if ((isSpotted || u.tempSpotted) && GameRules.canInitiateAttack(atkunit, u))
 			return u;
 		checkedId = u.id;
@@ -563,17 +519,14 @@ Hex.prototype.getAttackableUnit = function(atkunit, airMode)
 }
 
 //frees memory asociated with this object if possible
-Hex.prototype.cleanup = function()
-{
-	if (this.unit)
-	{
+Hex.prototype.cleanup = function() {
+	if (this.unit) {
 		this.unit.cleanup();
 		delete(this.unit);
 		this.unit = null;
 	}
 
-	if (this.airunit)
-	{
+	if (this.airunit) {
 		this.airunit.cleanup();
 		delete(this.airunit);
 		this.airunit = null;
@@ -587,8 +540,7 @@ export interface CaptureResults { isWin: boolean; isCapture: boolean }
 //Unit icons by eqid, for preloading
 export interface UnitImagesList { [eqid: number]: string }
 //The last move of a unit, saved for undo
-export interface MapLastMove
-{
+export interface MapLastMove {
 	unit: Unit;
 	savedUnit: Unit;
 	oldOwner: number;
@@ -600,8 +552,7 @@ export interface MapLastMove
 }
 
 //Map Object Constructor
-export class GameMap //Map in the original, renamed: it replaced the built-in Map
-{
+export class GameMap { //Map in the original, renamed: it replaced the built-in Map
 	declare rows: number;
 	declare cols: number;
 	declare isLastRowPartial: boolean;
@@ -669,8 +620,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	declare static onPlayerTurn: (map: GameMap, player: Player) => void;
 
-	constructor()
-	{
+	constructor() {
 	this.rows = 0;
 	this.cols = 0;
 	this.isLastRowPartial = false; //last row/col hexes are only half drawn on the map image
@@ -691,15 +641,12 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	const unitImagesList = board.images; //a "hash" of unique unit images used for caching
 	const selection = new MapSelection(this); //the selected unit (this.currentUnit), the hexes it can move to and attack
 
-	this.allocMap = function()
-	{
+	this.allocMap = function() {
 		this.map = new Array(this.rows);
 		visibility.alloc(this.rows, this.cols);
-		for(let i = 0; i < this.rows; i++)
-		{
+		for(let i = 0; i < this.rows; i++) {
 			this.map[i] = new Array(this.cols);
-			for(let j = 0; j < this.cols; j++)
-			{
+			for(let j = 0; j < this.cols; j++) {
 				this.map[i][j] = new Hex(i, j, visibility.counters[i][j]);
 			}
 		}
@@ -709,13 +656,11 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.addUnit = function(unit) { board.add(unit); }
 
 	this.getUnits = function() { return unitList; }
-	this.getUnitById = function(id)
-	{
+	this.getUnitById = function(id) {
 		if (id < 0 || typeof id === "undefined")
 			return null;
 
-		for (let i = 0; i < unitList.length; i++)
-		{
+		for (let i = 0; i < unitList.length; i++) {
 			if (unitList[i] !== null && unitList[i].id == id)
 				return unitList[i];
 		}
@@ -723,16 +668,14 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 	this.getUnitImagesList = function() { return unitImagesList; }
 
-	this.hasAliveUnits = function(side)
-	{
+	this.hasAliveUnits = function(side) {
 		for (let i = 0; i < unitList.length; i++)
 			if (unitList[i].player.side == side && !unitList[i].destroyed)
 				return true;
 		return false;
 	}
 
-	this.removeAllSideUnits = function(side)
-	{
+	this.removeAllSideUnits = function(side) {
 		for (let i = 0; i < unitList.length; i++)
 			if (unitList[i].player.side == side)
 				unitList[i].destroyed = true;
@@ -741,8 +684,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	this.getPlayers = function() { return playerList; }
 
-	this.addPlayer = function(player)
-	{
+	this.addPlayer = function(player) {
 		if (!player)
 			return;
 
@@ -750,31 +692,27 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		if  (this.currentPlayer === null) this.currentPlayer = playerList[0];
 
 		//Check if player has available transports to add their images to the preloading list
-		if (player.airTransports > 0)
-		{
+		if (player.airTransports > 0) {
 			var id = Equipment.getCountryEquipmentByClass(unitClass.airTransport, player.country + 1)[0];
 			if (id && typeof id !== "undefined")
 				unitImagesList[id] = Equipment.equipment[id].icon;
 		}
 
-		if (player.navalTransports > 0)
-		{
+		if (player.navalTransports > 0) {
 			id = Equipment.getCountryEquipmentByClass(unitClass.navalTransport, player.country + 1)[0];
 			if (id && typeof id !== "undefined")
 				unitImagesList[id] = Equipment.equipment[id].icon;
 		}
 	}
 
-	this.getPlayer = function(id) //TODO/FIX: returns player @ index instead of checking the ID
-	{
+	this.getPlayer = function(id) { //TODO/FIX: returns player @ index instead of checking the ID
 		if (id < playerList.length)
 			return playerList[id];
 		else
 			return playerList[0];
 	}
 
-	this.getPlayersByCountry = function(country)
-	{
+	this.getPlayersByCountry = function(country) {
 		const c = [];
 		const p = this.getPlayers();
 		for (let i = 0; i < p.length; i++)
@@ -784,17 +722,13 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//returns and array of countries playing on a side including supporting countries for the side players
-	this.getCountriesBySide = function(side)
-	{
+	this.getCountriesBySide = function(side) {
 		const c = [];
 		const p = this.getPlayers();
-		for (let i = 0; i < p.length; i++)
-		{
-			if (p[i].side == side)
-			{
+		for (let i = 0; i < p.length; i++) {
+			if (p[i].side == side) {
 				c.push(p[i].country); //add player country
-				for (let j = 0; j < p[i].supportCountries.length; j++)
-				{
+				for (let j = 0; j < p[i].supportCountries.length; j++) {
 					if (p[i].supportCountries[j] > 0)
 						c.push(p[i].supportCountries[j] - 1) //add supporting country //TODO -1 fix indexes
 				}
@@ -809,33 +743,26 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	//Returns the next (direction > 0) or previous unit of the same owner in the unit list,
 	//onlyNotMoved: also cycle thru units that haven't moved yet, otherwise unit is the only candidate
-	this.getUnitNeighbor = function(unit, direction, onlyNotMoved)
-	{
+	this.getUnitNeighbor = function(unit, direction, onlyNotMoved) {
 		const count = unitList.length;
 		const id = unit.id;
 		const owner = unit.owner;
 		const list = [];
 		let pos = -1;
 
-		for (let i = 0; i < count; i++)
-		{
+		for (let i = 0; i < count; i++) {
 			const u = unitList[i];
-			if (u !== null && u.owner == owner)
-			{
-				if (u.id == id)
-				{
+			if (u !== null && u.owner == owner) {
+				if (u.id == id) {
 					list.push(u);
 					pos = list.length - 1;
-				}
-				else if (onlyNotMoved && !u.hasMoved)
-				{
+				} else if (onlyNotMoved && !u.hasMoved) {
 					list.push(u);
 				}
 			}
 		}
 
-		if (pos !== -1)
-		{
+		if (pos !== -1) {
 			let prev = pos - 1;
 			if (pos == 0)
 				prev = list.length - 1;
@@ -850,8 +777,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.delMoveSel = function() { selection.clearMove(); }
 	this.delAttackSel = function() { selection.clearAttack(); }
 
-	this.setHex = function(row, col, hex)
-	{
+	this.setHex = function(row, col, hex) {
 		if (hex && typeof hex !== "undefined")
 			this.map[row][col].copy(hex); //copy values from the hex argument
 		else
@@ -860,8 +786,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		//Add coords for each victory hex into list
 		let victorySide = hex.victorySide;
 
-		if (victorySide != -1)
-		{
+		if (victorySide != -1) {
 			//Check ownership. Some victory hexes for other side might be already captured (see salerno map)
 			if (hex.owner != -1 && (victorySide == this.getPlayer(hex.owner).side))
 				victorySide = ~ victorySide & 1; //Change to enemy side
@@ -869,11 +794,9 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			//Don't add the same hex twice
 			const pos = hex.getPos();
 			let found = false;
-			for (let i = 0; i < this.sidesVictoryHexes[victorySide].length; i++)
-			{
+			for (let i = 0; i < this.sidesVictoryHexes[victorySide].length; i++) {
 				const c = this.sidesVictoryHexes[victorySide][i];
-				if (c.row == pos.row && c.col == pos.col)
-				{
+				if (c.row == pos.row && c.col == pos.col) {
 					found = true;
 					break;
 				}
@@ -889,16 +812,13 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Add remove victory hexes from the lists
-	this.updateVictorySides = function(side, cell)
-	{
+	this.updateVictorySides = function(side, cell) {
 		const eV = this.sidesVictoryHexes[~side & 1];
 		const sV = this.sidesVictoryHexes[side];
 		let removed = 0;
 		//Side has ocuppied a victory hex that was marked as victory for it
-		for (let i = sV.length - 1; i >= 0; i--)
-		{
-			if (sV[i].row == cell.row && sV[i].col == cell.col)
-			{
+		for (let i = sV.length - 1; i >= 0; i--) {
+			if (sV[i].row == cell.row && sV[i].col == cell.col) {
 				sV.splice(i, 1);
 				removed++;
 			}
@@ -915,8 +835,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.getCurrentMoveRange = function() { return selection.moveSelected; }
 	this.setAttackRange = function(unit) { selection.setAttackRange(unit); }
 
-	this.endTurn = function()
-	{
+	this.endTurn = function() {
 		//TODO move to Game object where applicable
 		this.delMoveSel();
 		this.delAttackSel();
@@ -924,10 +843,8 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		lastMove.clear();
 		this.currentPlayer.endTurn(this.turn);
 		const p = this.getPlayers();
-		for (var i = 0; i < p.length; i++)
-		{
-			if (p[i].id == this.currentPlayer.id)
-			{
+		for (var i = 0; i < p.length; i++) {
+			if (p[i].id == this.currentPlayer.id) {
 				if ((i + 1) < p.length)
 					this.currentPlayer = p[i + 1];
 				else
@@ -935,19 +852,16 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 				break;
 			}
 		}
-		if (this.currentPlayer.id == 0)
-		{
+		if (this.currentPlayer.id == 0) {
 			this.turn++;
 			//Resets unit properties for a new turn
-			for (i = 0; i < unitList.length; i++)
-			{
+			for (i = 0; i < unitList.length; i++) {
 				if (unitList[i] === null)
 					continue;
 				if (unitList[i].isMounted)
 					this.unmountUnitHandler(unitList[i]);
 				const s = GameRules.getResupplyValue(this.map, unitList[i], true);
-				if (s.ammo > 0 || s.fuel > 0 || s.transportAmmo > 0 || s.transportFuel > 0)
-				{
+				if (s.ammo > 0 || s.fuel > 0 || s.transportAmmo > 0 || s.transportFuel > 0) {
 					unitList[i].resupply(s);
 					CombatLog.addResupply(unitList[i]);
 				}
@@ -958,8 +872,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//atkunit from srow, scol attacks defunit from drow, dcol
-	this.attackUnit = function(atkunit, defunit, supportFire, isOverrun)
-	{
+	this.attackUnit = function(atkunit, defunit, supportFire, isOverrun) {
 		if (atkunit === null || defunit === null)
 			return null;
 
@@ -983,8 +896,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			this.unmountUnitHandler(defunit);
 
 		//Overrun destroys the defender without return fire, attacker gets an extra move
-		if (isOverrun)
-		{
+		if (isOverrun) {
 			cr.kills = defunit.strength;
 			cr.isOverrun = true;
 			cr.defcanfire = false;
@@ -1001,8 +913,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 		defunit.hit(cr.kills);
 
-		if (cr.defcanfire && !supportFire)
-		{
+		if (cr.defcanfire && !supportFire) {
 			defunit.fire(false);
 			atkunit.hit(cr.losses);
 		}
@@ -1016,15 +927,13 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		defunit.player.updateScore(defunit.isCore ? scoreGains.casualtyCore : scoreGains.casualty, cr.kills);
 
 		let leader = Leaders.generateLeaderWithChance(atkunit, cr.atkExpGained);
-		if (leader != -1)
-		{
+		if (leader != -1) {
 			atkunit.leader = leader;
 			cr.atkLeaderGain = true;
 			CombatLog.addLeader(atkunit);
 		}
 		leader = Leaders.generateLeaderWithChance(defunit, cr.defExpGained);
-		if (leader != -1)
-		{
+		if (leader != -1) {
 			defunit.leader = leader;
 			cr.defLeaderGain = true;
 			CombatLog.addLeader(defunit);
@@ -1036,26 +945,21 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//TODO unit might still exist in player coreUnitList
-	this.updateUnitList = function()
-	{
-		for (let i = 0; i < unitList.length; i++)
-		{
-			if (unitList[i].destroyed)
-			{
+	this.updateUnitList = function() {
+		for (let i = 0; i < unitList.length; i++) {
+			if (unitList[i].destroyed) {
 				const pos = unitList[i].getPos();
 				if (pos)
 					board.remove(unitList[i], this.map[pos.row][pos.col]);
 				//Count the loss in the campaign player dossier unless the unit was disbanded or removed
-				if (engineContext.campaign() !== null)
-				{
+				if (engineContext.campaign() !== null) {
 					if (!(defined(unitList[i].nodossier) && unitList[i].nodossier != false))
 						engineContext.campaignPlayer().addDestroyedUnitToDossier(unitList[i]);
 				}
 				unitList.splice(i, 1);
 				i--;
 			}
-			if (unitList[i] === null)
-			{
+			if (unitList[i] === null) {
 				unitList.splice(i, 1);
 				i--;
 			}
@@ -1065,8 +969,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	// moves a unit to a new hex returns a movementResults object
 	// cells: the cells to find the path in (the move range the player was shown, the disembark hexes),
 	// by default the unit's move range on the current state (GameRules.pathTo)
-	this.moveUnit = function(unit, drow, dcol, cells)
-	{
+	this.moveUnit = function(unit, drow, dcol, cells) {
 		const s = unit.getPos();
 		const srcHex = this.map[s.row][s.col];
 		const side = unit.player.side;
@@ -1081,19 +984,15 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			return mr;
 
 		//Save unit properties for undoing move, only human players can undo
-		if (unit.player.type == playerType.humanLocal)
-		{
+		if (unit.player.type == playerType.humanLocal) {
 			lastMove.save(unit);
 		}
 
-		for (let i = 0; i < c.length; i++)
-		{
-			if (i > 0 && !GameRules.canPassInto(this.map, unit, c[i]))
-			{
+		for (let i = 0; i < c.length; i++) {
+			if (i > 0 && !GameRules.canPassInto(this.map, unit, c[i])) {
 				//These leaders avoid being surprised
 				if (!Leaders.unitHasLeader(unit, leaderType.battlefieldIntelligence)
-					&& !Leaders.unitHasLeader(unit, leaderType.skilledAssault))
-				{
+					&& !Leaders.unitHasLeader(unit, leaderType.skilledAssault)) {
 					unit.isSurprised = true;
 					mr.surpriseCell = c[i];
 				}
@@ -1101,8 +1000,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			}
 			//Movement is shown if the enemy can see it
 			if (unit.player.type == playerType.humanLocal || unit.player.type == playerType.aiScripted
-				|| this.map[c[i].row][c[i].col].isSpotted(enemySide))
-			{
+				|| this.map[c[i].row][c[i].col].isSpotted(enemySide)) {
 				mr.isVisible = true;
 				c[i].isVisible = true;
 			}
@@ -1114,8 +1012,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		const dstHex = this.map[lastCell.row][lastCell.col];
 
 		//Only certain units ending on their destination can capture objectives
-		if (lastCell.row == drow && lastCell.col == dcol && canCapture)
-		{
+		if (lastCell.row == drow && lastCell.col == dcol && canCapture) {
 			const cr = this.captureHex(dstHex, unit);
 			if (cr.isCapture)
 				mr.isCapture = true;
@@ -1143,8 +1040,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Moves a unit to cell after a lost combat without using its moves
-	this.retreatUnit = function(unit, cell)
-	{
+	this.retreatUnit = function(unit, cell) {
 		const oldCurrentUnit = this.currentUnit;
 		selection.addMoveCell(cell, false); //Kept in the selection as before: the move's setMoveRange clears its flag
 		const moveLeft = unit.moveLeft;
@@ -1160,8 +1056,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return mr;
 	}
 
-	this.resupplyUnit = function(unit)
-	{
+	this.resupplyUnit = function(unit) {
 		lastMove.unit = null; //Reset last move undo save
 		const s = GameRules.getResupplyValue(this.map, unit);
 		unit.player.resupplyUnit(unit, s);
@@ -1170,8 +1065,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return s;
 	}
 
-	this.reinforceUnit = function(unit, overstrength)
-	{
+	this.reinforceUnit = function(unit, overstrength) {
 		lastMove.unit = null; //Reset last move undo save
 		let str = GameRules.getReinforceValue(this.map, unit, overstrength);
 		const s = GameRules.getResupplyValue(this.map, unit);
@@ -1185,8 +1079,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return { strength: str, ammo: s.ammo, fuel: s.fuel };
 	}
 
-	this.mountUnit = function(unit)
-	{
+	this.mountUnit = function(unit) {
 		this.mountUnitHandler(unit);
 		this.delMoveSel();
 		this.delAttackSel();
@@ -1194,41 +1087,33 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Mounting changes the spotting range
-	this.mountUnitHandler = function(unit)
-	{
+	this.mountUnitHandler = function(unit) {
 		visibility.setSpotting(unit, false);
 		unit.mount();
 		visibility.setSpotting(unit, true);
 	}
 
-	this.unmountUnit = function(unit)
-	{
+	this.unmountUnit = function(unit) {
 		this.delMoveSel();
 		this.delAttackSel();
 		this.unmountUnitHandler(unit);
 		this.selectUnit(unit); //Select the unit again to have the move range adjusted
 	}
 
-	this.unmountUnitHandler = function(unit)
-	{
+	this.unmountUnitHandler = function(unit) {
 		visibility.setSpotting(unit, false);
 		unit.unmount();
 		visibility.setSpotting(unit, true);
 	}
 
-	this.embarkUnit = function(unit)
-	{
+	this.embarkUnit = function(unit) {
 		let embarked = false;
-		if (unit.carrier < 0) //Back on the carrier it was disembarking from
-		{
+		if (unit.carrier < 0) { //Back on the carrier it was disembarking from
 			unit.carrier = -unit.carrier;
 			embarked = true;
-		}
-		else
-		{
+		} else {
 			const et = GameRules.getEmbarkType(this.map, unit);
-			if (et > 0)
-			{
+			if (et > 0) {
 				if (!unit.embark(et))
 					return false;
 				if (et == unitClass.airTransport)
@@ -1238,8 +1123,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 				embarked = true;
 			}
 		}
-		if (embarked)
-		{
+		if (embarked) {
 			//Refresh selection for the new move/attack range
 			this.delMoveSel();
 			this.delAttackSel();
@@ -1248,8 +1132,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return embarked;
 	}
 
-	this.disembarkUnit = function(unit)
-	{
+	this.disembarkUnit = function(unit) {
 		const c = GameRules.getDisembarkPositions(this.map, unit);
 		if (c.length <= 0)
 			return false;
@@ -1264,8 +1147,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return true;
 	}
 
-	this.upgradeUnit = function(id, upgradeid, transportid)
-	{
+	this.upgradeUnit = function(id, upgradeid, transportid) {
 		let unit = null;
 		if ((unit = this.getUnitById(id)) == null)
 			return false;
@@ -1283,8 +1165,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Removes a deployed unit from the map and sells it
-	this.disbandUnit = function(id)
-	{
+	this.disbandUnit = function(id) {
 		let unit = null;
 		if ((unit = this.getUnitById(id)) == null)
 			return false;
@@ -1298,8 +1179,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return true;
 	}
 
-	this.deployPlayerUnit = function(player, deployid, row, col)
-	{
+	this.deployPlayerUnit = function(player, deployid, row, col) {
 		if (!player)
 			return false;
 
@@ -1328,16 +1208,14 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		return true;
 	}
 
-	this.deployNewUnitByEqId = function(eqid, row, col, owner)
-	{
+	this.deployNewUnitByEqId = function(eqid, row, col, owner) {
 		const u = new Unit(eqid);
 		u.owner = owner;
 		board.place(u, this.map[row][col]);
 	}
 
 	//Places a reinforcement unit at row, col or a free hex around it, returns the cell used or null
-	this.deployReinforcement = function(unit, row, col)
-	{
+	this.deployReinforcement = function(unit, row, col) {
 		if (!unit)
 			return null;
 
@@ -1354,13 +1232,10 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	//Builds a list of core units for a player. Only in campaign mode and only for the first scenario
 	//if the units are standing on a deployment hex.
-	this.buildCoreUnitList = function(player)
-	{
+	this.buildCoreUnitList = function(player) {
 		let i;
-		for (i = 0; i < unitList.length; i++)
-		{
-			if (unitList[i].player.id == player.id)
-			{
+		for (i = 0; i < unitList.length; i++) {
+			if (unitList[i].player.id == player.id) {
 				if (unitList[i].getHex().isDeployment == player.id)
 					player.addCoreUnit(unitList[i]);
 			}
@@ -1368,20 +1243,16 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Restore a core unit list from a localStorage load, coreUnits has unit properties but no methods
-	this.restoreCoreUnitList = function(player, coreUnits)
-	{
+	this.restoreCoreUnitList = function(player, coreUnits) {
 		let i, u;
 		//First look for units already deployed on map hexes and link them to core units if they are core
-		for (i = 0; i < unitList.length; i++)
-		{
+		for (i = 0; i < unitList.length; i++) {
 			if (unitList[i].isCore && unitList[i].isDeployed)
 				player.addCoreUnit(unitList[i]);
 		}
 
-		for (i = 0; i < coreUnits.length; i++)
-		{
-			if (!coreUnits[i].isDeployed) //Undeployed units must be recreated
-			{
+		for (i = 0; i < coreUnits.length; i++) {
+			if (!coreUnits[i].isDeployed) { //Undeployed units must be recreated
 				u = new Unit(coreUnits[i].eqid);
 				u.copy(coreUnits[i]); //Copy properties
 				player.addCoreUnit(u);
@@ -1391,16 +1262,12 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Remove units standing on deployment hexes in campaign mode for scenarios loaded after first scenario
-	this.removeNonCampaignUnits = function(player)
-	{
+	this.removeNonCampaignUnits = function(player) {
 		let i, h, update = false;
-		for (i = 0; i < unitList.length; i++)
-		{
-			if (unitList[i].player.id == player.id && !unitList[i].isCore) //Guard agains calls with deployed core units
-			{
+		for (i = 0; i < unitList.length; i++) {
+			if (unitList[i].player.id == player.id && !unitList[i].isCore) { //Guard agains calls with deployed core units
 				h = unitList[i].getHex();
-				if (h && h.isDeployment == player.id)
-				{
+				if (h && h.isDeployment == player.id) {
 					h.delUnit(unitList[i]); //Off the hex, its zone of control and spotting stay (#72)
 					unitList[i].destroyed = true;
 					unitList[i].nodossier = true;
@@ -1413,13 +1280,11 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Returns true if last movement of a unit can be undoed
-	this.canUndoMove = function(unit)
-	{
+	this.canUndoMove = function(unit) {
 		return lastMove.canUndo(unit);
 	}
 
-	this.undoLastMove = function()
-	{
+	this.undoLastMove = function() {
 		if (lastMove.unit == null)
 			return;
 		const unit = lastMove.unit;
@@ -1441,8 +1306,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		if (lastMove.oldFlag !== null)
 			srcHex.flag = lastMove.oldFlag;
 
-		if (lastMove.oldVictorySide !== null)
-		{
+		if (lastMove.oldVictorySide !== null) {
 			//remove from taken objectives
 			this.updateVictorySides(~currentPlayer.side & 1, srcHex.getPos());
 			srcHex.victorySide = lastMove.oldVictorySide;
@@ -1455,8 +1319,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 	//Captures a hex objective by unit, returns {isWin: capture results in a win for the player,
 	//isCapture: a flag or an objective was captured}
-	this.captureHex = function(hex, unit)
-	{
+	this.captureHex = function(hex, unit) {
 		const result = { isWin: false, isCapture: false };
 		let prestigeGain = 0;
 		let gainMultiplier = 1;
@@ -1478,21 +1341,18 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		if (Leaders.unitHasLeader(unit, leaderType.liberator))
 			gainMultiplier = 2;
 
-		if (hex.flag != -1) //Secondary Objective
-		{
+		if (hex.flag != -1) { //Secondary Objective
 			lastMove.oldFlag = hex.flag;
 			hex.flag = player.country;
 
-			if (hex.victorySide == -1) //Only if not a bigger objective
-			{
+			if (hex.victorySide == -1) { //Only if not a bigger objective
 				prestigeGain += prestigeGains.flagCapture * gainMultiplier;
 				scoreGain += scoreGains.flagCapture;
 				result.isCapture = true;
 			}
 		}
 
-		if (hex.victorySide != -1) //Primary Objective
-		{
+		if (hex.victorySide != -1) { //Primary Objective
 			lastMove.oldVictorySide = hex.victorySide;
 			hex.victorySide = ~player.side & 1; //set it as a victory objective for enemy side
 			if (this.updateVictorySides(player.side, hex.getPos()))
@@ -1512,13 +1372,10 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Returns the cells of the deployment hexes of the players on side
-	this.getDeployHexes = function(side)
-	{
+	this.getDeployHexes = function(side) {
 		const c = [];
-		for (let i = 0; i < this.rows; i++)
-		{
-			for (let j = 0; j < this.cols; j++)
-			{
+		for (let i = 0; i < this.rows; i++) {
+			for (let j = 0; j < this.cols; j++) {
 				const deployId = this.map[i][j].isDeployment;
 				if (deployId > -1 && this.getPlayer(deployId).side == side)
 					c.push(this.map[i][j].getPos());
@@ -1528,8 +1385,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//Clone object / "copy constructor"
-	this.copy = function(m)
-	{
+	this.copy = function(m) {
 		if (m === null) return;
 		this.rows = m.rows;
 		this.cols = m.cols;
@@ -1540,24 +1396,19 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 
 		this.allocMap();
 
-		for (let r = 0; r < m.rows; r++)
-		{
-			for (let c = 0; c < m.cols; c++)
-			{
+		for (let r = 0; r < m.rows; r++) {
+			for (let c = 0; c < m.cols; c++) {
 				const h = m.map[r][c];
 				const hex = this.map[r][c];
-				if (Object.keys(h).length !== 0) //Skip empty hexes
-				{
+				if (Object.keys(h).length !== 0) { //Skip empty hexes
 					hex.copy(h);
 
-					if (h.unit !== null)
-					{
+					if (h.unit !== null) {
 						var u = new Unit(h.unit.eqid);
 						u.copy(h.unit);
 						hex.setUnit(u);
 					}
-					if (h.airunit !== null)
-					{
+					if (h.airunit !== null) {
 						u = new Unit(h.airunit.eqid);
 						u.copy(h.airunit);
 						hex.setUnit(u);
@@ -1580,12 +1431,9 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	//frees memory asociated with this object if possible
-	this.cleanup = function()
-	{
-		for(let i = 0; i < this.rows; i++)
-		{
-			for(let j = 0; j < this.cols; j++)
-			{
+	this.cleanup = function() {
+		for(let i = 0; i < this.rows; i++) {
+			for(let j = 0; j < this.cols; j++) {
 				this.map[i][j].cleanup();
 				delete(this.map[i][j]);
 			}
@@ -1605,8 +1453,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 //turn's units were reset and before Game deploys that player's reinforcements. The default is what
 //endTurn did itself: an AI or scripted player plans its whole turn here (#94: its reinforcements
 //arrive after it planned). A headless game can drive the players its own way
-GameMap.onPlayerTurn = function(map: GameMap, player: Player)
-{
+GameMap.onPlayerTurn = function(map: GameMap, player: Player) {
 	if (player.type == playerType.aiLocal || player.type == playerType.aiScripted)
 		player.handler.buildActions();
 }

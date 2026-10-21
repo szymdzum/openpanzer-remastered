@@ -17,8 +17,7 @@ import { uiSettings } from "./prototypes";
 /* Looks like PCM Wav is supported on Chrome, Firefox, Safari, Opera */
 
 //Each sound has several variants, play() picks one at random
-export var soundData: { [name: string]: soundSprite } =
-{
+export var soundData: { [name: string]: soundSprite } = {
 	//move sounds
 	"track": new (soundSprite as unknown as soundSpriteConstructor)(["resources/sounds/move/track.wav", "resources/sounds/move/track2.mp3",
 		"resources/sounds/move/track3.mp3"]),
@@ -84,23 +83,19 @@ export var moveSoundByMoveMethod =
 ];
 
 //A sound with its variants, play() returns the play() promise or nothing when muted or missing
-export interface soundSprite
-{
+export interface soundSprite {
 	play(): Promise<void>;
 }
 //soundSprite is a constructor function (soundData above uses it before a class would exist)
 export interface soundSpriteConstructor { new (paths: string[]): soundSprite; }
 
 //paths is a list of variants of the same sound
-export function soundSprite(this: soundSprite, paths: string[])
-{
+export function soundSprite(this: soundSprite, paths: string[]) {
 	var sounds: HTMLAudioElement[] = [];
 
 	//Loads one variant, browsers without Audio() support just get no sound
-	function addSound(path: string): void
-	{
-		try
-		{
+	function addSound(path: string): void {
+		try {
 			const sound = new Audio(path);
 			sound.load();
 			sounds.push(sound);
@@ -110,14 +105,12 @@ export function soundSprite(this: soundSprite, paths: string[])
 	for (let i = 0; i < paths.length; i++)
 		addSound(paths[i]);
 
-	this.play = function(): Promise<void>
-	{
+	this.play = function(): Promise<void> {
 		let sound;
 		//The variant is picked (Math.random called) even when sounds are muted
 		sound = Math.floor(Math.random() * sounds.length);
 		sound = sounds[sound];
-		if (sound && !uiSettings.muteUnitSounds)
-		{
+		if (sound && !uiSettings.muteUnitSounds) {
 			//requires audio to be preloaded
 			try { sound.currentTime = 0; } catch(e) {}; //restart if already playing
 			return sound.play();

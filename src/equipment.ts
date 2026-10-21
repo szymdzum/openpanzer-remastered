@@ -16,28 +16,24 @@ import { unitClass, unitType } from "./prototypes";
 import { defined } from "./util";
 
 //The index lists of a country file: equipment ids by unit class
-export interface EquipmentIndexes
-{
+export interface EquipmentIndexes {
 	unitclass?: { [uclass: string]: number[] };
 }
 
 //A country equipment file as loaded, the units are value arrays in the parsehints order
-export interface EquipmentCountryFile
-{
+export interface EquipmentCountryFile {
 	indexes: EquipmentIndexes;
 	parsehints: (keyof EquipmentEntry)[];
 	units: { [eqid: string]: (number | string)[] };
 }
 
 //What addPlayersEquipment reads of a player (a Player, or the player data of a saved game)
-export interface EquipmentPlayerCountries
-{
+export interface EquipmentPlayerCountries {
 	country: number;
 	supportCountries: number[];
 }
 
-export interface EquipmentModule
-{
+export interface EquipmentModule {
 	equipment: { [eqid: string]: EquipmentEntry };
 	equipmentIndexes: { [country: string]: EquipmentIndexes };
 	equipmentPath: string;
@@ -94,18 +90,15 @@ const START_AIR_ATTACK_MASK	= 1 << 6;
 const ATTACK_AIR_MASK			= 1 << 15;
 const PURCHASABLE_MASK		= 1 << 18;
 
-Equipment.getCountryName = function(country: number)
-{
+Equipment.getCountryName = function(country: number) {
 	return Equipment.countryNames[Equipment.name][country];
 }
 
-Equipment.getCountryNameByEqp = function(country: number, eqpName: string)
-{
+Equipment.getCountryNameByEqp = function(country: number, eqpName: string) {
 	return Equipment.countryNames[eqpName][country];
 }
 
-Equipment.resetEquipment = function()
-{
+Equipment.resetEquipment = function() {
 	Equipment.equipment = {};
 	Equipment.equipmentIndexes = {};
 	Equipment.equipmentToLoadSet = {};
@@ -114,16 +107,13 @@ Equipment.resetEquipment = function()
 
 //Loads the equipment of the players countries and of their supporting countries
 //callback is called after each country file finished loading (see Equipment.equipmentToLoad)
-Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], callback: () => void)
-{
+Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], callback: () => void) {
 	Equipment.resetEquipment();
 	Equipment.equipmentToLoadSet[-1] = true; //country file 0, the generic equipment
-	for (let i = 0; i < players.length; i++)
-	{
+	for (let i = 0; i < players.length; i++) {
 		const p = players[i];
 		Equipment.equipmentToLoadSet[p.country] = true;
-		for (let j = 0; j < p.supportCountries.length; j++)
-		{
+		for (let j = 0; j < p.supportCountries.length; j++) {
 			const c = p.supportCountries[j];
 			if (c > 0)
 				Equipment.equipmentToLoadSet[c - 1] = true; //For supporting countries number is correctly saved in scenario
@@ -134,16 +124,13 @@ Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], ca
 		Equipment.addCountryEquipment(+country, callback);
 }
 
-Equipment.addCountryEquipment = function(country: number, callback: () => void)
-{
+Equipment.addCountryEquipment = function(country: number, callback: () => void) {
 	loadEquipment(country + 1, callback); //TODO fix indexes
 }
 
-Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile)
-{
+Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile) {
 	Equipment.equipmentIndexes[country] = e.indexes;
-	for (const u in e.units)
-	{
+	for (const u in e.units) {
 		//TODO Without this defined the retained size of each object is much bigger
 		//See: https://code.google.com/p/v8/issues/detail?id=2547
 		//A placeholder of zeros (also for the string fields, and without embark), filled below
@@ -171,12 +158,10 @@ Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryF
 //(getCountryEquipmentByKey of 2.9 inlined, without the early return: an index without
 //the unitclass key leaves the empty list, a class missing from it leaves undefined and sort throws)
 //The sort is done in place on the index list
-Equipment.getCountryEquipmentByClass = function(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean)
-{
+Equipment.getCountryEquipmentByClass = function(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean) {
 	let eqList: number[] = [];
 
-	if (typeof Equipment.equipmentIndexes[country] !== "undefined")
-	{
+	if (typeof Equipment.equipmentIndexes[country] !== "undefined") {
 		if (Equipment.equipmentIndexes[country].hasOwnProperty("unitclass"))
 			eqList = Equipment.equipmentIndexes[country]["unitclass"][uclass];
 
@@ -187,19 +172,16 @@ Equipment.getCountryEquipmentByClass = function(uclass: number, country: number,
 	return eqList;
 }
 
-Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: number, country: number)
-{
+Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: number, country: number) {
 	const eqList: number[] = [];
 	let u: EquipmentEntry, id: any = 0; //id is the for...in key, a string
 
 	if (typeof Equipment.equipmentIndexes[country] === "undefined") //TODO send load request ?
 		return eqList;
 
-	for (id in Equipment.equipment)
-	{
+	for (id in Equipment.equipment) {
 		u = Equipment.equipment[id];
-		if (u.country == country && u.yearavailable >= startYear && u.yearavailable <= endYear)
-		{
+		if (u.country == country && u.yearavailable >= startYear && u.yearavailable <= endYear) {
 			eqList.push(+id); //make it integer
 		}
 	}
@@ -208,13 +190,11 @@ Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: 
 }
 
 //TODO for the case where a campaign player buys units from a supporting country in a scenario
-Equipment.addUnitsToEquipment = function(countryUnitHash: unknown)
-{
+Equipment.addUnitsToEquipment = function(countryUnitHash: unknown) {
 
 }
 
-Equipment.isBridge = function(eqid: number)
-{
+Equipment.isBridge = function(eqid: number) {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
 
@@ -224,8 +204,7 @@ Equipment.isBridge = function(eqid: number)
 	return false;
 }
 
-Equipment.ignoresEntrenchment = function(eqid: number)
-{
+Equipment.ignoresEntrenchment = function(eqid: number) {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
 
@@ -235,8 +214,7 @@ Equipment.ignoresEntrenchment = function(eqid: number)
 	return false;
 }
 
-Equipment.isPurchasable = function(eqid: number)
-{
+Equipment.isPurchasable = function(eqid: number) {
 	if (typeof Equipment.equipment[eqid] === "undefined")
 		return false;
 
@@ -247,8 +225,7 @@ Equipment.isPurchasable = function(eqid: number)
 }
 
 //Can a unit of type eqid start an attack on a unit of type targetEqid
-Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: number)
-{
+Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: number) {
 	if (!defined(Equipment.equipment[eqid]) || !defined(Equipment.equipment[targetEqid]))
 		return false;
 
@@ -283,15 +260,12 @@ Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: numbe
 
 //Loads a country equipment file from the current equipment set, callback is called after
 //the request finished, also when it failed
-function loadEquipment(country: number, callback: () => void): void
-{
+function loadEquipment(country: number, callback: () => void): void {
 	const jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
 	const req = new XMLHttpRequest();
 
-	req.onload = function()
-	{
-		if (req.readyState === 4)
-		{
+	req.onload = function() {
+		if (req.readyState === 4) {
 			if (req.status === 200 || req.status === 0)
 				Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
 			callback();
@@ -301,8 +275,7 @@ function loadEquipment(country: number, callback: () => void): void
 	req.send(null);
 }
 
-function keySort(key: keyof EquipmentEntry, reverse: boolean)
-{
+function keySort(key: keyof EquipmentEntry, reverse: boolean) {
 	let order = 1; //ascending
 	if (reverse) order = -1; //descending
 

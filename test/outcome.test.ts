@@ -7,8 +7,7 @@ import type { Outcome } from "../src/actions";
 
 //The end of the game a drill recorded: its move's or attack's `outcome.ended` (the reference's
 //first victory), null when it didn't end; undefined when the drill made no move or attack
-function recordedEnd(name: string, result: string): { side: number; kind: string; outcome: string } | null | undefined
-{
+function recordedEnd(name: string, result: string): { side: number; kind: string; outcome: string } | null | undefined {
 	const [r] = JSON.parse(result);
 	const step = name == "capture drill" ? (Array.isArray(r) ? r[2] : null) : (Array.isArray(r) ? r[1] : null);
 	if (!step || typeof step !== "object" || !step.outcome) return undefined;
@@ -44,12 +43,10 @@ test.each(fixtures("engine"))("checkOutcome at the turn limit of %s", async (nam
 	const before = Actions.checkOutcome(scenario);
 	expect(before === null || before.kind == "elimination").toBe(true);
 	for (const turn of [m.maxTurns - 1, m.maxTurns])
-		for (const played of [turn - 1, turn])
-		{
+		for (const played of [turn - 1, turn]) {
 			m.turn = turn;
 			m.getPlayers().forEach((p) => { p.playedTurn = played; });
-			for (const side of [0, 1])
-			{
+			for (const side of [0, 1]) {
 				const defeat = scenario.checkDefeat(side, 2);
 				if (defeat) defeats++;
 				expect(Actions.checkOutcome(scenario, { endedSide: side }), `turn ${turn} played ${played} side ${side}`)

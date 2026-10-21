@@ -18,8 +18,7 @@ import type { Unit } from "./unit";
 import { Leaders } from "./leaders";
 
 //A unit's state saved by addCombatStart
-export interface CombatUnitState
-{
+export interface CombatUnitState {
 	id: number;
 	eqid: number;
 	side: number;
@@ -33,16 +32,14 @@ export interface CombatUnitState
 }
 
 //A combat started and not yet ended
-export interface CombatRound
-{
+export interface CombatRound {
 	attacker: CombatUnitState;
 	defender: CombatUnitState;
 	turn: number;
 }
 
 //A unit's combat totals for the turn
-export interface CombatUnitInfo
-{
+export interface CombatUnitInfo {
 	id: number;
 	eqid: number;
 	side: number;
@@ -65,8 +62,7 @@ export interface CombatUnitInfo
 }
 
 //A unit's state after a resupply
-export interface UnitEndTurnInfo
-{
+export interface UnitEndTurnInfo {
 	eqid: number;
 	side: number;
 	ammo: number;
@@ -78,8 +74,7 @@ export interface CombatLogReinforcement { eqid: number; pos: Cell; side: number 
 export interface CombatLogLeader { id: number; eqid: number; isCore: boolean; pos: Cell; leader: number; classLeader: number; side: number }
 export interface CombatLogObjective { pos: Cell; side: number }
 
-export interface CombatLogEntries
-{
+export interface CombatLogEntries {
 	combat: { [unitId: number]: CombatUnitInfo };
 	reinforce: CombatLogReinforcement[];
 	leaders: CombatLogLeader[];
@@ -87,8 +82,7 @@ export interface CombatLogEntries
 	objectives: CombatLogObjective[];
 }
 
-export interface CombatLogModule
-{
+export interface CombatLogModule {
 	log: CombatLogEntries;
 	combatRound: { [combatId: number]: CombatRound | {} };
 	uniqueID: number;
@@ -115,8 +109,7 @@ CombatLog.log.objectives = [];
 CombatLog.combatRound = {}; //combats started and not yet ended, by combat id
 CombatLog.uniqueID = 0;
 
-CombatLog.reset = function()
-{
+CombatLog.reset = function() {
 	CombatLog.log = {} as CombatLogEntries;
 	CombatLog.log.combat = {};
 	CombatLog.log.reinforce = [];
@@ -128,8 +121,7 @@ CombatLog.reset = function()
 }
 
 //Saves the state of both units before the combat, returns the combat id to pass to addCombatEnd
-CombatLog.addCombatStart = function(atkunit: Unit, defunit: Unit, turn: number): number
-{
+CombatLog.addCombatStart = function(atkunit: Unit, defunit: Unit, turn: number): number {
 	CombatLog.uniqueID++;
 	CombatLog.combatRound[CombatLog.uniqueID] = {
 		attacker: {
@@ -159,8 +151,7 @@ CombatLog.addCombatStart = function(atkunit: Unit, defunit: Unit, turn: number):
 }
 
 //Adds the result of a started combat to the attacker and defender totals
-CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number, supportFire: boolean): boolean
-{
+CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number, supportFire: boolean): boolean {
 	const c = CombatLog.combatRound[combatId] as CombatRound;
 	if (typeof c === "undefined")
 		return false;
@@ -170,13 +161,11 @@ CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number
 	let atkInfo = CombatLog.log.combat[atkId];
 	let defInfo = CombatLog.log.combat[defId];
 
-	if (!atkInfo || typeof atkInfo === "undefined")
-	{
+	if (!atkInfo || typeof atkInfo === "undefined") {
 		CombatLog.log.combat[atkId] = new CombatLog.combatUnitInfo();
 		atkInfo = CombatLog.log.combat[atkId];
 	}
-	if (!defInfo || typeof defInfo === "undefined")
-	{
+	if (!defInfo || typeof defInfo === "undefined") {
 		CombatLog.log.combat[defId] = new CombatLog.combatUnitInfo();
 		defInfo = CombatLog.log.combat[defId];
 	}
@@ -224,8 +213,7 @@ CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number
 	return true;
 }
 
-CombatLog.addReinforcement = function(unit: Unit): void
-{
+CombatLog.addReinforcement = function(unit: Unit): void {
 	if (typeof unit.player === "undefined" || unit.player === null)
 		return;
 
@@ -236,8 +224,7 @@ CombatLog.addReinforcement = function(unit: Unit): void
 	CombatLog.log.reinforce.push(r);
 }
 
-CombatLog.addLeader = function(unit: Unit): void
-{
+CombatLog.addLeader = function(unit: Unit): void {
 	if (typeof unit.player === "undefined" || unit.player === null)
 		return;
 
@@ -252,15 +239,13 @@ CombatLog.addLeader = function(unit: Unit): void
 	CombatLog.log.leaders.push(l);
 }
 
-CombatLog.addResupply = function(unit: Unit): void
-{
+CombatLog.addResupply = function(unit: Unit): void {
 	const id = unit.id;
 	if (!id || typeof id === "undefined" || typeof unit.player === "undefined" || unit.player === null)
 		return;
 
 	let info = CombatLog.log.resupply[id];
-	if (!info || typeof info === "undefined")
-	{
+	if (!info || typeof info === "undefined") {
 		CombatLog.log.resupply[id] = new CombatLog.unitEndTurnInfo();
 		info = CombatLog.log.resupply[id];
 	}
@@ -271,8 +256,7 @@ CombatLog.addResupply = function(unit: Unit): void
 	info.side = unit.player.side;
 }
 
-CombatLog.addObjectiveCapture = function(pos: Cell, side: number): void
-{
+CombatLog.addObjectiveCapture = function(pos: Cell, side: number): void {
 	const o = {} as CombatLogObjective;
 	o.pos = new Cell(pos.row, pos.col);
 	o.side = side;
@@ -280,8 +264,7 @@ CombatLog.addObjectiveCapture = function(pos: Cell, side: number): void
 }
 
 //A unit's combat totals for the turn
-CombatLog.combatUnitInfo = class implements CombatUnitInfo
-{
+CombatLog.combatUnitInfo = class implements CombatUnitInfo {
 	declare id: number;
 	declare eqid: number;
 	declare side: number;
@@ -302,8 +285,7 @@ CombatLog.combatUnitInfo = class implements CombatUnitInfo
 	declare isSupport?: boolean;
 	declare unitCombatList: number[];
 
-	constructor()
-	{
+	constructor() {
 		this.id = 0;
 		this.eqid = 0;
 		this.side = -1;
@@ -326,16 +308,14 @@ CombatLog.combatUnitInfo = class implements CombatUnitInfo
 }
 
 //A unit's state after a resupply
-CombatLog.unitEndTurnInfo = class implements UnitEndTurnInfo
-{
+CombatLog.unitEndTurnInfo = class implements UnitEndTurnInfo {
 	declare eqid: number;
 	declare side: number;
 	declare ammo: number;
 	declare fuel: number;
 	declare isCore: boolean;
 
-	constructor()
-	{
+	constructor() {
 		this.eqid = 0;
 		this.side = -1;
 		this.ammo = -1;

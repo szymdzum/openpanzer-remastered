@@ -27,8 +27,7 @@ import { UIBuilder } from "./uibuilder";
 import { game } from "./game";
 import { Leaders } from "./leaders";
 
-export interface UICombatLogModule
-{
+export interface UICombatLogModule {
 	showCombatLog(isExtended: boolean): void;
 	buildExtendButton(div: HTMLElement): void;
 	buildTurnInfo(div: HTMLElement): void;
@@ -47,15 +46,13 @@ export interface UICombatLogLine extends HTMLDivElement { row: number; col: numb
 export var UICombatLog: UICombatLogModule = (function(UICombatLog: UICombatLogModule) { //Module start
 
 //Highlights a number in the log text
-function logNumber(value: number | string): string
-{
+function logNumber(value: number | string): string {
 	return "<span class='combatLogNum'>" + value + "</span>";
 }
 
 //Builds and shows the combat log window. When not extended (shown at the start of the turn)
 //the window is at most 175px high and gets a button to show the full turn summary
-UICombatLog.showCombatLog = function(isExtended: boolean)
-{
+UICombatLog.showCombatLog = function(isExtended: boolean) {
 	var div = $("combatLog");
 	var map = game.scenario.map.map;
 
@@ -78,12 +75,9 @@ UICombatLog.showCombatLog = function(isExtended: boolean)
 	if (height > contentHeight)
 		height = contentHeight;
 
-	if (isExtended)
-	{
+	if (isExtended) {
 		div.style.height = height + "px";
-	}
-	else
-	{
+	} else {
 		if (height > 175)
 			height = 175;
 		div.style.height = height + "px";
@@ -92,8 +86,7 @@ UICombatLog.showCombatLog = function(isExtended: boolean)
 }
 
 //The "Show Turn Summary" button at the top of the short log, shows the full log
-UICombatLog.buildExtendButton = function(div: HTMLElement)
-{
+UICombatLog.buildExtendButton = function(div: HTMLElement) {
 	var button = insertTag(div, "div", div.firstChild);
 	button.className = "combatLogHeader";
 	button.style.paddingTop = "5px";
@@ -103,8 +96,7 @@ UICombatLog.buildExtendButton = function(div: HTMLElement)
 }
 
 //The header with the current player turn, scenario, objectives, score, prestige and weather
-UICombatLog.buildTurnInfo = function(div: HTMLElement)
-{
+UICombatLog.buildTurnInfo = function(div: HTMLElement) {
 	var mapObj = game.scenario.map;
 	var player = mapObj.currentPlayer;
 	var turnsLeft = 0;
@@ -140,13 +132,11 @@ UICombatLog.buildTurnInfo = function(div: HTMLElement)
 
 //One line per unit of the spotting side that fought this turn, core units first.
 //Returns the number of lines
-UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
-{
+UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][]) {
 	var count = 0;
 	var line: UICombatLogLine;
 
-	for (var id in CombatLog.log.combat)
-	{
+	for (var id in CombatLog.log.combat) {
 		var info = CombatLog.log.combat[id as unknown as number]; //the unit id key string
 		if (info.side != game.spotSide)
 			continue;
@@ -174,15 +164,12 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
 		else
 			addTag(unitBox, "img").src = eq.icon;
 
-		if (info.assaults >= info.defends || info.supports >= info.defends)
-		{
+		if (info.assaults >= info.defends || info.supports >= info.defends) {
 			if (info.supports >= info.assaults)
 				action = " provided fire support from ";
 			else
 				action = " while assaulting from ";
-		}
-		else
-		{
+		} else {
 			action = " while defending ";
 		}
 
@@ -198,8 +185,7 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
 		text += "Unit <b>" + UIBuilder.unitIDToOrdinal(info.id) + " " + eq.name + "</b>" + action + place
 			+ " <b>(" + info.pos.row + "," + info.pos.col + ")</b> ";
 
-		if (info.assaults > 0)
-		{
+		if (info.assaults > 0) {
 			assaultsText = " in " + info.assaults + " assaults";
 			defendsText = " and";
 		}
@@ -210,17 +196,13 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
 
 		if (info.kills > 0)
 			text += " inflicted " + logNumber(info.kills) + " casualties ";
-		if (info.losses != 0)
-		{
+		if (info.losses != 0) {
 			if (info.kills > 0)
 				text += "and ";
 			text += "lost " + logNumber("-" + info.losses) + " strength";
-			if (info.str > 0)
-			{
+			if (info.str > 0) {
 				text += " with " + logNumber(info.str) + " surviving ";
-			}
-			else
-			{
+			} else {
 				text += " being completely destroyed ";
 				infoBox.className = "combatLogInfoBoxRed";
 			}
@@ -253,8 +235,7 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
 	header.className = "combatLogHeader";
 	header.innerHTML = "Unit Combat Report";
 	insertTag(div, "hr", header.nextSibling);
-	if (count == 0)
-	{
+	if (count == 0) {
 		line = addTag(div, "div") as UICombatLogLine;
 		line.innerHTML = "All quiet on this front";
 	}
@@ -262,8 +243,7 @@ UICombatLog.buildCombatSummary = function(div: HTMLElement, map: Hex[][])
 }
 
 //One line per unit of the spotting side resupplied at the end of the turn
-UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][])
-{
+UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][]) {
 	var count = 0;
 	var line: HTMLElement;
 
@@ -272,8 +252,7 @@ UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][])
 	header.innerHTML = "Resupply Report";
 	insertTag(div, "hr", header.nextSibling);
 
-	for (var id in CombatLog.log.resupply)
-	{
+	for (var id in CombatLog.log.resupply) {
 		var info = CombatLog.log.resupply[id as unknown as number]; //the unit id key string
 		//unitEndTurnInfo has no entrench, undefined < 0 is false: never skipped for that, kept
 		if (info.side != game.spotSide || (info.ammo < 0 && info.fuel < 0 && (info as UnitEndTurnInfo & { entrench?: number }).entrench < 0))
@@ -302,8 +281,7 @@ UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][])
 		text += "Unit <b>" + UIBuilder.unitIDToOrdinal(id as unknown as number) + " " + eq.name + "</b>"; //the key string, converted there
 		if (info.ammo > 0)
 			text += " resupplied automatically with " + logNumber(info.ammo + "/" + eq.ammo) + " ammunition ";
-		if (info.fuel > 0 && eq.fuel > 0)
-		{
+		if (info.fuel > 0 && eq.fuel > 0) {
 			if (info.ammo > 0)
 				text += "and ";
 			text += logNumber(info.fuel + "/" + eq.fuel) + " fuel.";
@@ -311,8 +289,7 @@ UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][])
 		infoBox.innerHTML = text;
 		addTag(div, "hr");
 	}
-	if (count == 0)
-	{
+	if (count == 0) {
 		line = addTag(div, "div");
 		line.innerHTML = "No units had been provided with automatic resupply.";
 	}
@@ -320,8 +297,7 @@ UICombatLog.buildResupplySummary = function(div: HTMLElement, map: Hex[][])
 }
 
 //One line per reinforcement of the spotting side that arrived this turn
-UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) //map unused
-{
+UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) { //map unused
 	var count = 0;
 	var line: UICombatLogLine;
 
@@ -330,8 +306,7 @@ UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) //m
 	header.innerHTML = "Reinforcements Report";
 	insertTag(div, "hr", header.nextSibling);
 
-	for (var i = 0; i < CombatLog.log.reinforce.length; i++)
-	{
+	for (var i = 0; i < CombatLog.log.reinforce.length; i++) {
 		var info = CombatLog.log.reinforce[i];
 		if (info.side != game.spotSide)
 			continue;
@@ -361,8 +336,7 @@ UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) //m
 		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
 		addTag(div, "hr");
 	}
-	if (count == 0)
-	{
+	if (count == 0) {
 		line = addTag(div, "div") as UICombatLogLine;
 		line.innerHTML = "No reinforcements arrived.";
 	}
@@ -370,8 +344,7 @@ UICombatLog.buildReinforceSummary = function(div: HTMLElement, map: Hex[][]) //m
 }
 
 //One line per unit of the spotting side that received a leader this turn
-UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) //map unused
-{
+UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) { //map unused
 	var count = 0;
 	var line: UICombatLogLine;
 
@@ -380,8 +353,7 @@ UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) //map
 	header.innerHTML = "Unit Leaders Report";
 	insertTag(div, "hr", header.nextSibling);
 
-	for (var i = 0; i < CombatLog.log.leaders.length; i++)
-	{
+	for (var i = 0; i < CombatLog.log.leaders.length; i++) {
 		var info = CombatLog.log.leaders[i];
 		if (info.side != game.spotSide)
 			continue;
@@ -413,8 +385,7 @@ UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) //map
 		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
 		addTag(div, "hr");
 	}
-	if (count == 0)
-	{
+	if (count == 0) {
 		line = addTag(div, "div") as UICombatLogLine;
 		line.innerHTML = "No units received leaders";
 	}
@@ -422,8 +393,7 @@ UICombatLog.buildLeadersSummary = function(div: HTMLElement, map: Hex[][]) //map
 }
 
 //One line per objective captured or lost this turn, from the spotting side point of view
-UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][])
-{
+UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][]) {
 	var count = 0;
 	var line: UICombatLogLine;
 
@@ -432,8 +402,7 @@ UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][])
 	header.innerHTML = "Objectives Report";
 	insertTag(div, "hr", header.nextSibling);
 
-	for (var i = 0; i < CombatLog.log.objectives.length; i++)
-	{
+	for (var i = 0; i < CombatLog.log.objectives.length; i++) {
 		var info = CombatLog.log.objectives[i];
 		var text = "";
 		var hex = map[info.pos.row][info.pos.col];
@@ -454,8 +423,7 @@ UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][])
 		line.onclick = function(this: UICombatLogLine) { return game.ui.uiSetCellOnViewPort({ row: this.row, col: this.col } as Cell); };
 		addTag(div, "hr");
 	}
-	if (count == 0)
-	{
+	if (count == 0) {
 		line = addTag(div, "div") as UICombatLogLine;
 		line.innerHTML = "No objectives has been captured or lost";
 	}
@@ -464,18 +432,13 @@ UICombatLog.buildObjectiveSummary = function(div: HTMLElement, map: Hex[][])
 
 //Shows or hides the combat log, only for a human or scripted current player.
 //forceShow shows it even if already visible (rebuilds it), isExtended as in showCombatLog
-UICombatLog.toggleCombatLog = function(forceShow?: boolean, isExtended?: boolean)
-{
+UICombatLog.toggleCombatLog = function(forceShow?: boolean, isExtended?: boolean) {
 	var player = game.scenario.map.currentPlayer;
-	if (player.type == playerType.humanLocal || player.type == playerType.aiScripted)
-	{
-		if (forceShow || !isVisible("combatLog"))
-		{
+	if (player.type == playerType.humanLocal || player.type == playerType.aiScripted) {
+		if (forceShow || !isVisible("combatLog")) {
 			UICombatLog.showCombatLog(isExtended);
 			toggleButton($("combatLogButton"), true);
-		}
-		else
-		{
+		} else {
 			makeHidden("combatLog");
 			toggleButton($("combatLogButton"), false);
 		}

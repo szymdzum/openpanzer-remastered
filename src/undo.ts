@@ -13,8 +13,7 @@
 import { Unit } from "./unit";
 import type { MapLastMove } from "./map";
 
-export class UndoSlot implements MapLastMove
-{
+export class UndoSlot implements MapLastMove {
 	declare unit: Unit; //Current unit properties
 	declare savedUnit: Unit; //Old state unit properties (fuel, movesleft)
 	declare oldOwner: number; //If changed owner of the hex
@@ -23,8 +22,7 @@ export class UndoSlot implements MapLastMove
 	declare prestigeGain: number; //If player got any prestige
 	declare scoreGain: number; //If player got any score
 
-	constructor()
-	{
+	constructor() {
 		this.unit = null;
 		this.savedUnit = null;
 		this.oldOwner = null;
@@ -34,16 +32,14 @@ export class UndoSlot implements MapLastMove
 		this.scoreGain = 0;
 	}
 
-	clear()
-	{
+	clear() {
 		this.unit = this.savedUnit = null;
 		this.oldVictorySide = this.oldOwner = this.oldFlag = null;
 		this.prestigeGain = this.scoreGain = 0;
 	}
 
 	//Saves unit's properties and hex before it moves, clearing what the slot held
-	save(unit: Unit)
-	{
+	save(unit: Unit) {
 		this.clear();
 		this.savedUnit = new Unit(unit.eqid);
 		this.savedUnit.copy(unit);
@@ -51,8 +47,7 @@ export class UndoSlot implements MapLastMove
 	}
 
 	//Whether the last move was unit's and can be undone
-	canUndo(unit: Unit): boolean
-	{
+	canUndo(unit: Unit): boolean {
 		if (this.unit !== null && this.unit.id == unit.id)
 			return true;
 		return false;

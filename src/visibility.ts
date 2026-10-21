@@ -20,35 +20,29 @@ import type { GameMap } from "./map";
 import type { Unit } from "./unit";
 
 //The counters of one hex, by side
-export class HexCounters
-{
+export class HexCounters {
 	declare zoc: number[]; //Hex is in a unit zone of control from side 0 or 1
 	declare spot: number[]; //Hex is spotted by a unit from side 0 or 1
 
-	constructor()
-	{
+	constructor() {
 		this.zoc = [0, 0];
 		this.spot = [0, 0];
 	}
 }
 
-export class MapVisibility
-{
+export class MapVisibility {
 	declare map: GameMap;
 	declare counters: HexCounters[][];
 
-	constructor(map: GameMap)
-	{
+	constructor(map: GameMap) {
 		this.map = map;
 		this.counters = [];
 	}
 
 	//New counters, all 0, for a board of rows x cols (the hexes GameMap.allocMap makes next)
-	alloc(rows: number, cols: number)
-	{
+	alloc(rows: number, cols: number) {
 		this.counters = new Array(rows);
-		for (let i = 0; i < rows; i++)
-		{
+		for (let i = 0; i < rows; i++) {
 			this.counters[i] = new Array(cols);
 			for (let j = 0; j < cols; j++)
 				this.counters[i][j] = new HexCounters();
@@ -57,23 +51,19 @@ export class MapVisibility
 
 	//A unit's zone of control, then its spotting, on or off. Returns the enemy units it spotted
 	//for the first time (on), from GameRules.setSpotRange
-	setUnit(unit: Unit, on: boolean): number
-	{
+	setUnit(unit: Unit, on: boolean): number {
 		GameRules.setZOCRange(this.map.map, unit, on, this.map.rows, this.map.cols);
 		return GameRules.setSpotRange(this.map.map, unit, on, this.map.rows, this.map.cols);
 	}
 
 	//Only a unit's spotting, on or off (mounting changes the spotting range)
-	setSpotting(unit: Unit, on: boolean): number
-	{
+	setSpotting(unit: Unit, on: boolean): number {
 		return GameRules.setSpotRange(this.map.map, unit, on, this.map.rows, this.map.cols);
 	}
 
 	//Switches one side's counter on (+1) or off (-1), counters don't go below 0
-	static set(propList: number[], side: number, on: boolean)
-	{
-		if (side < propList.length)
-		{
+	static set(propList: number[], side: number, on: boolean) {
+		if (side < propList.length) {
 			if (on)
 				propList[side]++;
 			else if (propList[side] > 0)
@@ -82,8 +72,7 @@ export class MapVisibility
 	}
 
 	//Whether one side's counter is above 0
-	static isSet(propList: number[], side: number): boolean
-	{
+	static isSet(propList: number[], side: number): boolean {
 		if (side < propList.length && propList[side] > 0)
 			return true;
 		return false;

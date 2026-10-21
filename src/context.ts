@@ -16,8 +16,7 @@ import type { Player } from "./map";
 //needs them: Game sets a context that reads its own fields (game.ts), so a harness or a test
 //that assigns game.spotSide or game.campaign is seen as before. Without a game: no scenario,
 //no campaign, no side shown
-export interface EngineContext
-{
+export interface EngineContext {
 	scenario(): Scenario | null;
 	campaign(): Campaign | null;
 	campaignPlayer(): Player | null;
@@ -31,7 +30,6 @@ export var engineContext: EngineContext = {
 	spotSide: function() { return -1; }
 };
 
-export function setEngineContext(context: EngineContext): void
-{
+export function setEngineContext(context: EngineContext): void {
 	engineContext = context;
 }

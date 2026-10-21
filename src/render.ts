@@ -28,8 +28,7 @@ import { game } from "./game";
 import { OSGlue } from "./osglue";
 
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
-export interface MoveAnimationCBData
-{
+export interface MoveAnimationCBData {
 	unit: Unit;
 	moveResults: movementResults;
 	cbfunc(moveAnimationCBData: MoveAnimationCBData): void;
@@ -45,8 +44,7 @@ export type RenderContext = CanvasRenderingContext2D & {
 };
 
 //The map rows and cols of a zone, end excluded
-export interface ZoneRangeLimits
-{
+export interface ZoneRangeLimits {
 	srow: number;
 	scol: number;
 	erow: number;
@@ -55,8 +53,7 @@ export interface ZoneRangeLimits
 
 //Device pixels per CSS pixel the renderer draws at: 2 on high density screens when the
 //@2x images are on, 1 otherwise (and with useRetina, where the page already runs at device pixels)
-function hdScale(): number
-{
+function hdScale(): number {
 	if (!uiSettings.hdGraphics || uiSettings.useRetina)
 		return 1;
 	return (window.devicePixelRatio || 1) >= 1.5 ? 2 : 1;
@@ -65,8 +62,7 @@ function hdScale(): number
 //The @2x file of a map or unit image, generated into public/hd/ by scripts/upscale-assets.sh:
 //resources/maps/images/map_12.png -> /hd/maps/images/map_12.webp,
 //resources/units/images/pa909.png -> /hd/units/images/pa909.webp. null for any other image
-function hdPath(path: string): string | null
-{
+function hdPath(path: string): string | null {
 	if (path.indexOf("resources/maps/images/") == 0 || path.indexOf("resources/units/images/") == 0)
 		return "/hd/" + path.slice("resources/".length).replace(/\.png$/, ".webp");
 	return null;
@@ -76,8 +72,7 @@ function hdPath(path: string): string | null
 var maxCanvasPixels = 16777216;
 
 //A class with its closure body as the constructor: the methods are own properties, as the original
-export class Render
-{
+export class Render {
 	declare render: (orow?: number, ocol?: number, range?: number) => void;
 	declare drawCursor: (cell: Cell) => void;
 	declare drawHexByCell: (cell: Cell, style: HexStyle) => void;
@@ -94,8 +89,7 @@ export class Render
 	declare positionLayers: () => void;
 	declare getMapSize: () => { width: number; height: number };
 
-	constructor(mapObj: GameMap)
-	{
+	constructor(mapObj: GameMap) {
 		var map = mapObj;
 
 		var imgUnits: { [file: string]: HTMLImageElement } = {};
@@ -185,8 +179,7 @@ export class Render
 		//Renders the units/decals/hexgrid if orow,ocol and range are defined then it will
 		//only partially render the canvas around orow,ocol with range around this location
 		//Called without parameters it renders the whole map (range + 1 is NaN)
-		this.render = function(orow, ocol, range)
-		{
+		this.render = function(orow, ocol, range) {
 			var x0: number, y0: number;
 
 			//Since cellToScreen returns top left corner of a hex in range we need to increase the range with at least 1 hex
@@ -200,8 +193,7 @@ export class Render
 			var unit: Unit = null;
 			var drawHexGrid = false;
 
-			if (uiSettings.hexGrid != drawnHexGrid)
-			{
+			if (uiSettings.hexGrid != drawnHexGrid) {
 				drawnHexGrid = drawHexGrid = uiSettings.hexGrid;
 				cb.clearRect(0, 0, mapW, mapH + 65);
 			}
@@ -214,11 +206,9 @@ export class Render
 
 			c.clearRect(spos.x, spos.y, epos.x - spos.x, epos.y - spos.y);
 
-			for (var row = renderZone.srow; row < renderZone.erow; row++)
-			{
+			for (var row = renderZone.srow; row < renderZone.erow; row++) {
 				//we space the hexagons on each line next column being on the row below
-				for (var col = renderZone.scol; col < renderZone.ecol; col++)
-				{
+				for (var col = renderZone.scol; col < renderZone.ecol; col++) {
 					hex = map.map[row][col];
 
 					//flat-out hex layout //inline for performance gain
@@ -229,8 +219,7 @@ export class Render
 					x0 = col * (s + h) + h + renderOffsetX;
 
 					if ((current !== null) && (typeof current !== "undefined")
-						&& (row == current.row) && (col == current.col))
-					{
+						&& (row == current.row) && (col == current.col)) {
 						drawHex(c, x0, y0, hexstyle.currentstroke);
 						drawHex(c, x0, y0, hexstyle.current);
 					}
@@ -241,8 +230,7 @@ export class Render
 						drawHex(c, x0, y0, hexstyle.deploy);
 
 					//Strategic map: only flags, of the units and of the victory hexes
-					if (uiSettings.strategicZoom)
-					{
+					if (uiSettings.strategicZoom) {
 						var tx = (x0 + (s - h)/2 - flw/2) >> 0;
 						var ty = (y0 + r - flh - 2) >> 0;
 						var flag = -1;
@@ -251,47 +239,40 @@ export class Render
 
 						c.save();
 						//Only renders flag for air or ground units not both if they are spotted
-						if (hex.isSpotted(map.currentPlayer.side))
-						{
+						if (hex.isSpotted(map.currentPlayer.side)) {
 							if (uiSettings.airMode)
 								flagUnit = hex.airunit;
 							else
 								flagUnit = hex.unit;
 
-							if (flagUnit !== null)
-							{
+							if (flagUnit !== null) {
 								flag = flagUnit.player.country;
 								scale = 1.4;
 								if (flagUnit.hasMoved)
 									c.globalAlpha = 0.6;
 							}
 						}
-						if (hex.flag != -1 && hex.victorySide != -1)
-						{
+						if (hex.flag != -1 && hex.victorySide != -1) {
 							flag = hex.flag;
 							scale = 3;
 						}
 						//The context is only restored when a flag is drawn, the saved states pile up otherwise
-						if (flag != -1)
-						{
+						if (flag != -1) {
 							c.drawImage(imgFlags, flw * flag, 0, flw, flh, tx, ty, scale * s, scale * s/(flw/flh));
 							c.restore();
 						}
 						continue;
 					}
 
-					if (uiSettings.showHiddenVictoryHexes)
-					{
+					if (uiSettings.showHiddenVictoryHexes) {
 						//Victory hexes without a flag get the flag of their owner and a thicker box
 						var vtx = (x0 + s/2 - flw/2) >> 0;
 						var vty = (y0 + 2 * r - flh - 2) >> 0;
 						var boxWidth = 2;
 						var vflag = hex.flag;
 
-						if (hex.victorySide != -1)
-						{
-							if (vflag == -1 && hex.owner != -1)
-							{
+						if (hex.victorySide != -1) {
+							if (vflag == -1 && hex.owner != -1) {
 								vflag = map.getPlayer(hex.owner).country;
 								boxWidth = 6;
 							}
@@ -308,19 +289,15 @@ export class Render
 						}
 						if (vflag != -1)
 							c.drawImage(imgFlags, flw * vflag, 0, flw, flh, vtx, vty, flw, flh);
-					}
-					else
-					{
+					} else {
 						//Hex decals
-						if (hex.flag != -1)
-						{
+						if (hex.flag != -1) {
 							var dtx = (x0 + s/2 - flw/2) >> 0;
 							var dty = (y0 + 2 * r - flh - 2) >> 0;
 
 							c.drawImage(imgFlags, flw * hex.flag, 0, flw, flh, dtx, dty, flw, flh);
 
-							if (hex.victorySide != -1)
-							{
+							if (hex.victorySide != -1) {
 								c.beginPath();
 								c.lineWidth = 2;
 								c.strokeStyle = "rgba(139,0,0,1)";
@@ -343,8 +320,7 @@ export class Render
 					unit = hex.getUnit(!uiSettings.airMode);
 					if (unit !== null && !unit.hasAnimation
 							&& (hex.isSpotted(game.spotSide) || unit.tempSpotted
-									|| unit.player.side == game.spotSide))
-					{
+									|| unit.player.side == game.spotSide)) {
 						if (uiSettings.markOwnUnits && unit.player.id == map.currentPlayer.id)
 							drawHex(c, x0, y0, hexstyle.ownunit);
 						drawHexUnit(c, x0, y0, unit, false); //Unit below depending on airMode without strength box
@@ -353,8 +329,7 @@ export class Render
 					unit = hex.getUnit(uiSettings.airMode);
 					if (unit !== null && !unit.hasAnimation
 							&& (hex.isSpotted(game.spotSide) || unit.tempSpotted
-									|| unit.player.side == game.spotSide))
-					{
+									|| unit.player.side == game.spotSide)) {
 						if (uiSettings.airMode && hex.airunit !== null)
 							drawHex(c, x0, y0, hexstyle.airunit);
 						drawHexUnit(c, x0, y0, unit, true); //Unit above with strength box drawn
@@ -362,10 +337,8 @@ export class Render
 
 					//Only show deployment hexes not move/attack hexes on deploy mode
 					//Don't show move/attack hexes for non local players
-					if (!uiSettings.deployMode && map.currentPlayer.side == game.spotSide)
-					{
-						if (hex.isMoveSel)
-						{
+					if (!uiSettings.deployMode && map.currentPlayer.side == game.spotSide) {
+						if (hex.isMoveSel) {
 							if (hex.isSpotted(map.currentPlayer.side))
 								drawHex(c, x0, y0, hexstyle.movespotted);
 							else
@@ -376,8 +349,7 @@ export class Render
 							drawHex(c, x0, y0, hexstyle.attack);
 					}
 
-					if (uiSettings.hasTouch && hex.isAttackSel && map.currentUnit) //For touchScreens where we can't have mousecursors
-					{
+					if (uiSettings.hasTouch && hex.isAttackSel && map.currentUnit) { //For touchScreens where we can't have mousecursors
 						var localx = x0 - s/2;
 						var atkunit = map.currentUnit;
 						var defunit = hex.getAttackableUnit(atkunit, uiSettings.airMode);
@@ -389,8 +361,7 @@ export class Render
 		}
 
 		//Renders attack or transport move cursor
-		this.drawCursor = function(cell)
-		{
+		this.drawCursor = function(cell) {
 			var row = cell.row;
 			var col = cell.col;
 			var hex = map.map[row][col];
@@ -402,12 +373,10 @@ export class Render
 				redraw = true; //Redraw because a new unit has been selected
 
 			//Check if we should generate an ATTACK cursor
-			if (hex.isAttackSel && map.currentUnit !== null && !map.currentUnit.hasFired)
-			{
+			if (hex.isAttackSel && map.currentUnit !== null && !map.currentUnit.hasFired) {
 				//check cell if a cursor should be generated again
 				if ((redraw == true) || (lastCursorCell === null) || (lastCursorImage === null) ||
-					(lastCursorCell.row != row) || (lastCursorCell.col != col))
-				{
+					(lastCursorCell.row != row) || (lastCursorCell.col != col)) {
 					redraw = true; //Force css cursor assignment
 					var atkunit = map.currentUnit;
 					var defunit = hex.getAttackableUnit(atkunit, uiSettings.airMode);
@@ -417,35 +386,29 @@ export class Render
 				}
 				//only assign a new css cursor if needed (to reduce html element load)
 				if ((ca.style.cursor == 'default') || (ca.style.cursor == 'pointer')
-					|| (ca.style.cursor == 'auto') || (redraw == true))
-				{
+					|| (ca.style.cursor == 'auto') || (redraw == true)) {
 					//cursor data, hotspot x, hotspot y, fallback cursor image
 					ca.style.cursor = "url('" + lastCursorImage + "') " + curw/2 + " " + curh/2 +", auto";
 				}
-			}
-			else
-			{
+			} else {
 				//TODO PG2 default cursor
 				ca.style.cursor = 'default';
 			}
 		}
 
 		//Draws a hex with a style on the units canvas (used to mark the hexes in combat)
-		this.drawHexByCell = function(cell, style)
-		{
+		this.drawHexByCell = function(cell, style) {
 			var pos = cellToScreen(cell.row, cell.col, false);
 			drawHex(c, pos.x, pos.y, style);
 		}
 
 		//Runs all animations in order that they were added and then delete all animations
-		this.runAnimation = function(animationCBData)
-		{
+		this.runAnimation = function(animationCBData) {
 			animationChain.start(animationCBData);
 		}
 
 		//Adds an animation to the list
-		this.addAnimation = function(row, col, animationName, facing)
-		{
+		this.addAnimation = function(row, col, animationName, facing) {
 			if (! (animationName in animationsData))
 				return false;
 
@@ -466,8 +429,7 @@ export class Render
 		}
 
 		//TODO stop another running animation
-		this.moveAnimation = function(moveAnimationCBData)
-		{
+		this.moveAnimation = function(moveAnimationCBData) {
 			if (moveAnimationCBData.unit === null) return;
 			var ma = new MoveAnimation(moveAnimationCBData);
 			ma.movTimer = setInterval( function() { ma.start();}, ma.delay);
@@ -475,16 +437,14 @@ export class Render
 
 		//Animates the unit moving thru a list of cells
 		//A class with its closure body as the constructor, as Render
-		class MoveAnimation
-		{
+		class MoveAnimation {
 			declare movTimer: ReturnType<typeof setInterval>;
 			declare delay: number;
 			declare directDraw: (cPos: screenPos, unit: Unit) => void;
 			declare cssDraw: (cPos: screenPos, unit: Unit, needRedraw: boolean) => void;
 			declare start: () => void;
 
-			constructor(moveAnimationCBData: MoveAnimationCBData)
-			{
+			constructor(moveAnimationCBData: MoveAnimationCBData) {
 				var animSteps = 5;
 				var movIndex = 0;
 				var movStep = 0;
@@ -500,18 +460,15 @@ export class Render
 				this.delay = uiSettings.quickAnimation ? 5 : 30;
 
 				//Directly blits the unit to the animation canvas (slow on Android) //unused
-				this.directDraw = function(cPos, unit)
-				{
+				this.directDraw = function(cPos, unit) {
 					a.clearRect(cPos.x - 20, cPos.y - 20, 80, 70); //hex size + 20
 					cPos.x += xstep;
 					cPos.y += ystep;
 					drawHexUnit(a, cPos.x, cPos.y, unit, false);
 				}
 				//Blits unit image to a separate canvas and animates using css properties
-				this.cssDraw = function(cPos, unit, needRedraw)
-				{
-					if (needRedraw)
-					{
+				this.cssDraw = function(cPos, unit, needRedraw) {
+					if (needRedraw) {
 						ubb.clearRect(0, 0, ubb.canvas.width, ubb.canvas.height);
 						//Offset the sprite drawing on canvas otherwise it will be clipped
 						drawUnitSprite(ubb, -renderOffsetX, -renderOffsetY, unit);
@@ -520,17 +477,13 @@ export class Render
 					}
 					cPos.x += xstep;
 					cPos.y += ystep;
-					if (!uiSettings.use3D)
-					{
+					if (!uiSettings.use3D) {
 						cubb.style.top = cPos.y + renderOffsetY + "px";
 						cubb.style.left = cPos.x + renderOffsetX + "px";
-					}
-					else
-					{
+					} else {
 						var transform = "translate3d(" + 1*(cPos.x + renderOffsetX) + "px, " + 1*(cPos.y + renderOffsetY) + "px, 0)";
 
-						if (cubb.style.transition != "linear")
-						{
+						if (cubb.style.transition != "linear") {
 							cubb.style.MozTransition = "linear";
 							cubb.style.webkitTransition = "linear";
 							cubb.style.transition = "linear";
@@ -542,10 +495,8 @@ export class Render
 					}
 				}
 
-				this.start = function()
-				{
-					if (movIndex >= cellList.length - 1)
-					{
+				this.start = function() {
+					if (movIndex >= cellList.length - 1) {
 						movStep = 0;
 						movIndex = 0;
 						clearInterval(this.movTimer);
@@ -555,8 +506,7 @@ export class Render
 						return;
 					}
 
-					if (movStep == 0)
-					{
+					if (movStep == 0) {
 						cCell = cellList[movIndex];
 						dCell = cellList[movIndex + 1];
 
@@ -568,8 +518,7 @@ export class Render
 
 						actualFacing = GameRules.getDirection(cCell.row, cCell.col, dCell.row, dCell.col);
 
-						if (Math.abs(actualFacing - unit.facing) > 1)
-						{
+						if (Math.abs(actualFacing - unit.facing) > 1) {
 							unit.facing = actualFacing;
 							needRedraw = true;
 						}
@@ -582,8 +531,7 @@ export class Render
 					needRedraw = false;
 					movStep++;
 
-					if (movStep >= animSteps)
-					{
+					if (movStep >= animSteps) {
 						movIndex++;
 						movStep = 0;
 					}
@@ -592,20 +540,17 @@ export class Render
 		}
 
 		//Converts from screen x,y to row,col in map array
-		this.screenToCell = function(x, y)
-		{
+		this.screenToCell = function(x, y) {
 			var vrow: number; //virtual graphical rows
 			var trow: number, tcol: number; //true map rows/cols
 
 			//If we're in tactical map scale the values coresponding to zoom level
-			if (uiSettings.mapZoom)
-			{
+			if (uiSettings.mapZoom) {
 				x = x / uiSettings.zoomLevel;
 				y = y / uiSettings.zoomLevel;
 			}
 			//Strategic map is scaled down by css
-			if (uiSettings.strategicZoom)
-			{
+			if (uiSettings.strategicZoom) {
 				x = x * uiSettings.strategicZoomLevel;
 				y = y * uiSettings.strategicZoomLevel;
 			}
@@ -623,8 +568,7 @@ export class Render
 
 		//Returns the top corner position of a hex in screen coordinates relative to canvas
 		//if absolute is set canvas offsets are added to positions and the result is scaled by zoom level
-		function cellToScreen(row: number, col: number, absolute?: boolean): screenPos
-		{
+		function cellToScreen(row: number, col: number, absolute?: boolean): screenPos {
 			var x0: number, y0: number;
 
 			if (col & 1) // odd column
@@ -633,8 +577,7 @@ export class Render
 				y0 = row * 2 * r + renderOffsetY;
 			x0 = col * (s + h) + h + renderOffsetX;
 
-			if (absolute)
-			{
+			if (absolute) {
 				var vp = $('game');
 				x0 += canvasOffsetX - vp.clientLeft - vp.offsetLeft;
 				y0 += canvasOffsetY - vp.clientTop - vp.offsetTop;
@@ -647,28 +590,22 @@ export class Render
 		this.cellToScreen = function(row, col, absolute) { return cellToScreen(row, col, absolute); }
 
 		//Caches images, func a function to call upon cache completion
-		this.cacheImages = function(func)
-		{
-			if (!imgAttackCursor)
-			{
+		this.cacheImages = function(func) {
+			if (!imgAttackCursor) {
 				imgAttackCursor = new Image();
 				imgAttackCursor.src = "resources/ui/cursors/attack.png";
 			}
-			if (!imgFlags)
-			{
+			if (!imgFlags) {
 				imgFlags = new Image();
 				imgFlags.src = "resources/ui/flags/" + Equipment.name + "/flags_med.png";
 			}
-			if (!imgBridge)
-			{
+			if (!imgBridge) {
 				imgBridge = new Image();
 				loadImage(imgBridge, "resources/units/images/bridg.png");
 			}
-			if (!imgMapBackground)
-			{
+			if (!imgMapBackground) {
 				imgMapBackground = new Image();
-				imgMapBackground.onload = function()
-				{
+				imgMapBackground.onload = function() {
 					var k = imgScale.get(imgMapBackground) || 1;
 					mapW = imgMapBackground.width / k;
 					mapH = imgMapBackground.height / k;
@@ -702,8 +639,7 @@ export class Render
 					setupLayers();
 					func();
 				}
-				loadImage(imgMapBackground, map.terrainImage, function()
-				{
+				loadImage(imgMapBackground, map.terrainImage, function() {
 					UIBuilder.message("Error", OSGlue.canvasErrorMsg);
 				});
 			}
@@ -719,19 +655,16 @@ export class Render
 		this.getMapSize = function() { return { width: mapW, height: mapH + 65 }; }
 
 		//Sets a new map for rendering. Only used to dinamically change the map being rendered
-		this.setNewMap = function(mapObj)
-		{
+		this.setNewMap = function(mapObj) {
 			map = mapObj;
 			drawnHexGrid = false;
 			//Force reload of background image and flags
 			imgFlags = imgMapBackground = null;
 			//Cleanup no longer user unit images
 			var imgList = map.getUnitImagesList();
-			for (var i in imgUnits)
-			{
+			for (var i in imgUnits) {
 				//Looks up the Image object instead of its file name: always undefined, so the whole cache is cleared
-				if (typeof imgList[imgUnits[i] as unknown as number] === "undefined")
-				{
+				if (typeof imgList[imgUnits[i] as unknown as number] === "undefined") {
 					imgUnits[i] = null;
 					delete(imgUnits[i]);
 				}
@@ -743,8 +676,7 @@ export class Render
 
 		// "Private"
 		//Sets canvases position on screen and the size of the game area
-		function setupLayers(): void
-		{
+		function setupLayers(): void {
 			var fitsWidth = false;
 			var fitsHeight = false;
 			var hScrollHeight = 0; //Room for the horizontal scrollbar when the map is wider than the window
@@ -795,8 +727,7 @@ export class Render
 		//Generates an attack cursor on backbuffer canvas
 		function generateAttackCursor(atkunit: Unit, defunit: Unit, asDataURL: true): string;
 		function generateAttackCursor(atkunit: Unit, defunit: Unit, asDataURL: false): HTMLCanvasElement;
-		function generateAttackCursor(atkunit: Unit, defunit: Unit, asDataURL: boolean): string | HTMLCanvasElement
-		{
+		function generateAttackCursor(atkunit: Unit, defunit: Unit, asDataURL: boolean): string | HTMLCanvasElement {
 			var bbw = bb.canvas.width;
 			var bbh = bb.canvas.height;
 
@@ -838,18 +769,15 @@ export class Render
 
 		//Loads a game image, from its @2x file first when drawing at 2x. Without one (or when it fails to load)
 		//it falls back to the original file, so the hd folder can be missing or partly generated
-		function loadImage(img: HTMLImageElement, path: string, onerror?: () => void): void
-		{
+		function loadImage(img: HTMLImageElement, path: string, onerror?: () => void): void {
 			var hd = dpr > 1 ? hdPath(path) : null;
-			if (hd === null)
-			{
+			if (hd === null) {
 				if (onerror) img.onerror = onerror;
 				img.src = path;
 				return;
 			}
 			imgScale.set(img, 2);
-			img.onerror = function()
-			{
+			img.onerror = function() {
 				imgScale.set(img, 1);
 				img.onerror = onerror || null;
 				img.src = path;
@@ -860,23 +788,19 @@ export class Render
 		//imgList a list of image file names, func a function to call upon cache completion
 		//Units are saved from Luiz Guzman SHPTool to a 1x9 sprites bmp and
 		//converted to transparent png by convert.py
-		function cacheUnitImages(imgList: UnitImagesList, func: () => void): void
-		{
+		function cacheUnitImages(imgList: UnitImagesList, func: () => void): void {
 			var loaded = 0;
 			var toLoad = Object.keys(imgList).length; //Size of the "hash"
 			var hasNewImages = false;
 
-			for (var i in imgList)
-			{
-				if (typeof imgUnits[imgList[i]] !== "undefined")
-				{
+			for (var i in imgList) {
+				if (typeof imgUnits[imgList[i]] !== "undefined") {
 					loaded++;
 					continue;
 				}
 				hasNewImages = true;
 				imgUnits[imgList[i]] = new Image();
-				imgUnits[imgList[i]].onload = function()
-				{
+				imgUnits[imgList[i]].onload = function() {
 					loaded++;
 					if (loaded == toLoad)
 						if (func) func();
@@ -890,8 +814,7 @@ export class Render
 
 		//TODO performance render unit to a backbuffer and on main render function render
 		// units in order of their image id so we can save some translate/rotate operations
-		function drawUnitSprite(c: CanvasRenderingContext2D, x0: number, y0: number, unit: Unit): boolean
-		{
+		function drawUnitSprite(c: CanvasRenderingContext2D, x0: number, y0: number, unit: Unit): boolean {
 			if (unit === null)
 				return false;
 
@@ -917,14 +840,12 @@ export class Render
 			var ix0 = (x0 - imagew/2 + s/2) >> 0;
 			var iy0 = (y0 - imageh/2 + r - unitTextHeight) >> 0;
 			var facing = unit.facing;
-			if (facing > 8)
-			{
+			if (facing > 8) {
 				facing = 16 - facing;
 				mirror = true;
 			}
 			var imgidx = srcw * facing;
-			if (mirror)
-			{
+			if (mirror) {
 				var flip = ix0 + imagew/2;
 				c.save();
 				c.translate(flip, 0);
@@ -941,8 +862,7 @@ export class Render
 		//The marker under a unit: the strength plate in the middle, what the unit can still do on its left
 		//(arrow: move, crosshair: fire), experience bars and the leader star on its right, and a supply tag
 		//under it only when fuel or ammo runs low. All in css pixels, sharp on high density screens
-		function drawHexUnit(c: RenderContext, x0: number, y0: number, unit: Unit, drawIndicators: boolean): void
-		{
+		function drawHexUnit(c: RenderContext, x0: number, y0: number, unit: Unit, drawIndicators: boolean): void {
 			if (!drawUnitSprite(c, x0, y0, unit)) return;
 			if (!drawIndicators || unit.strength < 1) return;
 
@@ -956,11 +876,9 @@ export class Render
 			var px = (cx - pw/2) >> 0;
 
 			var canMove = false, canFire = false, noAmmo = false;
-			if (own && side == map.currentPlayer.side && unit.player.id == map.currentPlayer.id)
-			{
+			if (own && side == map.currentPlayer.side && unit.player.id == map.currentPlayer.id) {
 				canMove = !unit.hasMoved && GameRules.getUnitMoveRange(unit) > 0;
-				if (!unit.hasFired && GameRules.unitUsesAmmo(unit))
-				{
+				if (!unit.hasFired && GameRules.unitUsesAmmo(unit)) {
 					canFire = unit.getAmmo() > 0;
 					noAmmo = !canFire;
 				}
@@ -980,8 +898,7 @@ export class Render
 			c.beginPath();
 			if (own)
 				c.rect(px, py, pw, ph);
-			else
-			{
+			else {
 				c.moveTo(px - 2, py + ph/2); c.lineTo(px + 2, py); c.lineTo(px + pw - 2, py);
 				c.lineTo(px + pw + 2, py + ph/2); c.lineTo(px + pw - 2, py + ph); c.lineTo(px + 2, py + ph);
 				c.closePath();
@@ -990,8 +907,7 @@ export class Render
 			c.strokeStyle = unitstyle.plateEdge;
 			c.lineWidth = 1;
 			c.stroke();
-			if (own && game.campaign !== null && unit.isCore)
-			{
+			if (own && game.campaign !== null && unit.isCore) {
 				c.fillStyle = unitstyle.coreEdge;
 				c.fillRect(px, py, pw, 1.5);
 			}
@@ -1000,8 +916,7 @@ export class Render
 
 			//Readiness on the left: only what the unit can still do this turn
 			var marks = (canMove ? 1 : 0) + (canFire || noAmmo ? 1 : 0);
-			if (marks > 0)
-			{
+			if (marks > 0) {
 				var rw = marks * 8 + 2;
 				var rx = px - rw - 1;
 				c.fillStyle = unitstyle.readyBack;
@@ -1014,8 +929,7 @@ export class Render
 			//Experience bars and the leader star on the right
 			var ex = px + pw + 2;
 			var bars = Math.min((unit.experience / 100) >> 0, 5);
-			if (bars > 0)
-			{
+			if (bars > 0) {
 				c.fillStyle = unitstyle.readyBack;
 				c.fillRect(ex, py + ph - 1 - bars * 2.2, 7, bars * 2.2 + 1);
 				c.fillStyle = unitstyle.coreEdge;
@@ -1027,11 +941,9 @@ export class Render
 				drawLeaderStar(c, ex + 3.5, py + ph/2);
 
 			//Supply tags under the plate, only for a problem: fuel for less than two moves, two attacks or less
-			if (own)
-			{
+			if (own) {
 				var tags: [string, string][] = [];
-				if (GameRules.unitUsesFuel(unit))
-				{
+				if (GameRules.unitUsesFuel(unit)) {
 					var mp = unit.unitData().movpoints;
 					var fuel = unit.getFuel();
 					if (fuel < mp) tags.push(["fuel", unitstyle.supplyCritical]);
@@ -1045,8 +957,7 @@ export class Render
 		}
 
 		//An arrow: the unit can still move
-		function drawMoveMark(c: RenderContext, x: number, y: number): void
-		{
+		function drawMoveMark(c: RenderContext, x: number, y: number): void {
 			c.strokeStyle = unitstyle.readyMark;
 			c.lineWidth = 1.3;
 			c.beginPath();
@@ -1056,8 +967,7 @@ export class Render
 		}
 
 		//A crosshair: the unit can still fire. Crossed out in red when it has no ammo left
-		function drawFireMark(c: RenderContext, x: number, y: number, noAmmo: boolean): void
-		{
+		function drawFireMark(c: RenderContext, x: number, y: number, noAmmo: boolean): void {
 			c.strokeStyle = noAmmo ? unitstyle.supplyCritical : unitstyle.readyMark;
 			c.lineWidth = 1;
 			c.beginPath();
@@ -1068,11 +978,9 @@ export class Render
 			c.stroke();
 		}
 
-		function drawLeaderStar(c: RenderContext, x: number, y: number): void
-		{
+		function drawLeaderStar(c: RenderContext, x: number, y: number): void {
 			c.beginPath();
-			for (var i = 0; i < 10; i++)
-			{
+			for (var i = 0; i < 10; i++) {
 				var a = -Math.PI/2 + i * Math.PI/5;
 				var rr = (i & 1) ? 1.6 : 3.8;
 				c.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a));
@@ -1086,15 +994,13 @@ export class Render
 		}
 
 		//Supply tags centred at x: a fuel drop, or a shell with the ammo left, on the warning colour
-		function drawSupplyTags(c: RenderContext, x: number, y: number, tags: [string, string][]): void
-		{
+		function drawSupplyTags(c: RenderContext, x: number, y: number, tags: [string, string][]): void {
 			if (tags.length == 0) return;
 			var widths = tags.map(function(t) { return t[0] == "fuel" ? 8 : 12; });
 			var total = widths.reduce(function(a, w) { return a + w; }, 0) + (tags.length - 1) * 2;
 			var tx = (x - total/2) >> 0;
 			c.font = "bold 7px Arial, sans-serif";
-			for (var i = 0; i < tags.length; i++)
-			{
+			for (var i = 0; i < tags.length; i++) {
 				var w = widths[i];
 				c.fillStyle = tags[i][1];
 				c.fillRect(tx, y, w, 8);
@@ -1103,16 +1009,13 @@ export class Render
 				c.strokeRect(tx, y, w, 8);
 				c.fillStyle = unitstyle.supplyText;
 				c.beginPath();
-				if (tags[i][0] == "fuel")
-				{
+				if (tags[i][0] == "fuel") {
 					var dx = tx + 4;
 					c.moveTo(dx, y + 1.3);
 					c.bezierCurveTo(dx + 2.6, y + 4, dx + 2.6, y + 6.6, dx, y + 6.6);
 					c.bezierCurveTo(dx - 2.6, y + 6.6, dx - 2.6, y + 4, dx, y + 1.3);
 					c.fill();
-				}
-				else
-				{
+				} else {
 					c.moveTo(tx + 2, y + 6.8); c.lineTo(tx + 2, y + 3); c.lineTo(tx + 3, y + 1.2);
 					c.lineTo(tx + 4, y + 3); c.lineTo(tx + 4, y + 6.8); c.closePath();
 					c.fill();
@@ -1122,8 +1025,7 @@ export class Render
 			}
 		}
 
-		function drawHex(ctx: CanvasRenderingContext2D, x0: number, y0: number, style: HexStyle, terrain?: number): void
-		{
+		function drawHex(ctx: CanvasRenderingContext2D, x0: number, y0: number, style: HexStyle, terrain?: number): void {
 			ctx.beginPath();
 			ctx.moveTo(x0, y0);
 			ctx.lineTo(x0 + s, y0);
@@ -1131,27 +1033,22 @@ export class Render
 			ctx.lineTo(x0 + s, y0 + 2 * r);
 			ctx.lineTo(x0, y0 + 2 * r);
 			ctx.lineTo(x0 - h, y0 + r);
-			if (style.fillColor !== null)
-			{
+			if (style.fillColor !== null) {
 				ctx.fillStyle = style.fillColor;
 				ctx.fill();
 			}
 
 			ctx.closePath();
 
-			if (style.lineWidth > 0)
-			{
+			if (style.lineWidth > 0) {
 				ctx.lineWidth = style.lineWidth;
 				ctx.lineJoin = style.lineJoin;
 				ctx.strokeStyle = style.lineColor;
-				if (style.hasOwnProperty("shadowColor"))
-				{
+				if (style.hasOwnProperty("shadowColor")) {
 					ctx.shadowOffsetX = style.shadowOffsetX;
 					ctx.shadowOffsetY = style.shadowOffsetY;
 					ctx.shadowColor = style.shadowColor;
-				}
-				else
-				{
+				} else {
 					ctx.shadowOffsetX = null;
 					ctx.shadowOffsetY = null;
 					ctx.shadowColor = null;
@@ -1159,8 +1056,7 @@ export class Render
 				ctx.stroke();
 			}
 			var tx: number, ty: number;
-			if ((uiSettings.showGridTerrain && typeof terrain !== "undefined") && terrain != terrainType.Clear)
-			{
+			if ((uiSettings.showGridTerrain && typeof terrain !== "undefined") && terrain != terrainType.Clear) {
 				tx = (x0 + h + h/2 -2) >> 0;
 				ty = y0 + 2*r -24/2; //text size + spacing
 				ctx.font = "24px openpanzer, sans-serif"; //TODO use vm vh instead of px when mobile support it
@@ -1172,8 +1068,7 @@ export class Render
 				ctx.fillText(terrainencoding[terrain], tx, ty);
 			}
 			//Deployment hexes are marked with a Z glyph
-			if (style === hexstyle.deploy)
-			{
+			if (style === hexstyle.deploy) {
 				tx = (x0 + 4) >> 0;
 				ty = y0 + 2*r -24/2;
 				ctx.font = "24px openpanzer, sans-serif";
@@ -1184,8 +1079,7 @@ export class Render
 				ctx.fillText("Z", tx, ty);
 			}
 			//Move hexes get a ' glyph with the terrain grid
-			if (uiSettings.showGridTerrain && style === hexstyle.move)
-			{
+			if (uiSettings.showGridTerrain && style === hexstyle.move) {
 				ty = y0 + 2*r -24/2;
 				ctx.font = "26px openpanzer-menu, sans-serif";
 				ctx.strokeStyle = unitstyle.terrainText;
@@ -1195,15 +1089,13 @@ export class Render
 		}
 
 		//Returns min and max row,col for a range around a cell(row,col)
-		function getZoneRangeLimits(row: number, col: number, range: number): ZoneRangeLimits
-		{
+		function getZoneRangeLimits(row: number, col: number, range: number): ZoneRangeLimits {
 			var z = { srow: 0, scol: 0, erow: map.rows, ecol: map.cols };
 
 			if (row === null || col === null)
 				row = col = 0;
 
-			if (range !== null && range >= 0)
-			{
+			if (range !== null && range >= 0) {
 				z.srow = row - range;
 				z.scol = col - range;
 				z.erow = row + range;

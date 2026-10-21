@@ -15,8 +15,7 @@
 export let unitType = { none:-1, soft:0, hard:1, air:2, sea:3 };
 export let unitTypeNames = ["Soft", "Hard", "Air", "Sea"];
 
-export let unitClass =
-{
+export let unitClass = {
 	none: 0, infantry: 1, tank: 2, recon: 3, antiTank: 4, flak: 5, fortification: 6,
 	groundTransport: 7, artillery: 8, airDefence: 9, fighter: 10, tacticalBomber: 11,
 	levelBomber: 12, airTransport: 13, submarine: 14, destroyer: 15, battleship: 16,
@@ -36,21 +35,18 @@ export let unitEntrenchRate = [0, 3, 1, 2, 2, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0
 
 //Power of 2 bit masks. Hex with road value 136 means it has a road starting from mid of the hex
 //and going NW (128) and one starting from mid of the hex and going SE (8)
-export let roadType =
-{
+export let roadType = {
 	none:0, north:1, northeast: 2, eastunused: 4, southeast:8,
 	south: 16, southwest: 32, westunused: 64, northwest: 128
 };
 
 //Compass (used for unit facing) counter clockwise
-export let direction =
-{
+export let direction = {
 	S:0, SSE:1, SE:2, ESE:3, E:4, ENE:5, NE:6, NNE:7, N:8, NNW:9, NW:10, WNW:11,
 	W:12, WSW:13, SW:14, SSW:15
 };
 
-export let terrainType =
-{
+export let terrainType = {
 	Clear:0, City:1, Airfield:2, Forest:3, Bocage:4, Hill:5, Mountain:6, Sand:7,
 	Swamp:8, Ocean:9, River:10, Fortification:11, Port:12, Stream:13, Escarpment:14,
 	impassableRiver:15, Rough:16
@@ -83,8 +79,7 @@ export let sideNames =
 	"Allies"
 ];
 
-export let movMethod =
-{
+export let movMethod = {
 	tracked: 0, halfTracked: 1, wheeled: 2, leg: 3, towed: 4, air: 5,
 	deepnaval: 6, costal: 7, allTerrainTracked: 8, amphibious: 9, naval: 10,
 	allTerrainLeg: 11
@@ -96,8 +91,7 @@ export let movMethodNames =
 	"Costal", "All Terrain", "Amphibious", "Naval", "Mountain Leg"
 ];
 
-export let outcomeNames: { [outcome: string]: string } =
-{
+export let outcomeNames: { [outcome: string]: string } = {
 	"lose": "Defeat",
 	"victory": "Victory",
 	"tactical": "Tactical Victory",
@@ -186,8 +180,7 @@ export let directionToRadians =
 	7*Math.PI/6 //SSW
 ];
 
-export let playerType =
-{
+export let playerType = {
 	humanLocal: 0,
 	humanNetwork: 1,
 	aiLocal: 2,
@@ -195,8 +188,7 @@ export let playerType =
 	aiScripted: 4
 };
 
-export let actionType =
-{
+export let actionType = {
 	move: 0,
 	attack: 1,
 	resupply: 2,
@@ -213,15 +205,13 @@ export let actionType =
 };
 
 //Define prestige gains on different situations
-export let prestigeGains =
-{
+export let prestigeGains = {
 	flagCapture: 50,
 	objectiveCapture: 150
 };
 
 //Define score gains
-export let scoreGains =
-{
+export let scoreGains = {
 	coreUnit: -15, //initial score calculation number of core units * this score
 	normalUnit: -5, //initial score calculation number of non core units * this score
 	objectivePerTurn: +1000, //initial score calculation number of objectives to capture * this score / turns
@@ -236,14 +226,12 @@ export let scoreGains =
 };
 
 //A cloud save remembered in the settings (see UIBuilder), id is the cloud save id
-export interface CloudSave
-{
+export interface CloudSave {
 	name: string;
 	id: string;
 }
 
-export interface UISettings
-{
+export interface UISettings {
 	airMode: boolean;
 	strategicZoom: boolean;
 	strategicZoomLevel: number;
@@ -277,8 +265,7 @@ export interface UISettings
 }
 
 //Holds the settings for the game ui and renderer
-export let uiSettings: UISettings =
-{
+export let uiSettings: UISettings = {
 	airMode: false,			//flag used to select between overlapping ground/air units
 	strategicZoom: false,	//flag used to draw map in strategic zoom mode or not
 	strategicZoomLevel: 1,	//The strategic map zoom level
@@ -312,22 +299,19 @@ export let uiSettings: UISettings =
 };
 
 //What triggered end of the campaign/scenario
-export let endGameType =
-{
+export let endGameType = {
 	moveCapture: "moveCapture",			//Captured all objectives
 	noTurnsLeft: "noTurnsLeft",			//No more turns left
 	noEnemyLeft: "noEnemyLeft"			//All enemy units destroyed
 };
 
-export let endGameLossText: { [endType: string]: string } =
-{
+export let endGameLossText: { [endType: string]: string } = {
 	moveCapture: "Enemy has captured all your objectives !<br>",
 	noTurnsLeft: "You don't have any turns left !<br>",
 	noEnemyLeft: "All your units had been destroyed !<br>"
 };
 
-export let leaderType =
-{
+export let leaderType = {
 	//Class Leaders
 	mechanizedVeteran: 		1, 	//Air Defence unit may move and fire in the same turn.
 	tankKiller: 			2,	//Anti-Tank unit will not receive a penalty for movement into combat .
@@ -367,8 +351,7 @@ export let leaderType =
 
 export let difficultyType = { historical: 0, tactical: 1, operational: 2 };
 
-export interface DifficultyModifier
-{
+export interface DifficultyModifier {
 	startPrestige: number;
 	turnPrestige: number;
 	extraTurns: number;
@@ -376,8 +359,7 @@ export interface DifficultyModifier
 }
 
 //Prestige and turn modifiers for each difficultyType
-export let difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
-{
+export let difficultyModifiers: { [difficulty: number]: DifficultyModifier } = {
 	0: { startPrestige: 0, turnPrestige: 0, extraTurns: 1, scoreCoef: 1 },		//historical
 	1: { startPrestige: 0.2, turnPrestige: 0.1, extraTurns: 1.2, scoreCoef: 0.8 },	//tactical
 	2: { startPrestige: 0.5, turnPrestige: 0.25, extraTurns: 1.5, scoreCoef: 0.5 }	//operational
@@ -385,21 +367,18 @@ export let difficultyModifiers: { [difficulty: number]: DifficultyModifier } =
 
 //The constructors are classes so other modules can type `new Cell(...)`. Fields are `declare`d:
 //they emit nothing and the constructor bodies assign them as before
-export class Cell
-{
+export class Cell {
 	declare row: number;
 	declare col: number;
 
-	constructor(row: number, col: number)
-	{
+	constructor(row: number, col: number) {
 		this.row = row;
 		this.col = col;
 	}
 }
 //used for movement and attack range cells
 //extendedCell.prototype = new Cell() and Cell.call(this, row, col) of the original became extends/super
-export class extendedCell extends Cell
-{
+export class extendedCell extends Cell {
 	declare range: number;
 	declare cin: number;
 	declare cout: number;
@@ -407,8 +386,7 @@ export class extendedCell extends Cell
 	declare canMove: boolean;
 	declare canPass: boolean;
 
-	constructor(row: number, col: number)
-	{
+	constructor(row: number, col: number) {
 		super(row, col);
 		this.range = 0; //the range that this cell is from a selected cell
 		this.cin = 0;   //the cost to enter the cell
@@ -421,15 +399,13 @@ export class extendedCell extends Cell
 
 //used for shortest path calculations
 //pathCell.prototype = new Cell() and Cell.call(this, cell.row, cell.col) of the original became extends/super
-export class pathCell extends Cell
-{
+export class pathCell extends Cell {
 	declare cost: number;
 	declare prev: pathCell | null;
 	declare dist: number;
 	declare isVisible: boolean; //set by map.js moveUnit on the cells the enemy sees, render reads it
 
-	constructor(cell: Cell)
-	{
+	constructor(cell: Cell) {
 		super(cell.row, cell.col);
 		this.cost = 1;
 		this.prev = null;
@@ -437,16 +413,14 @@ export class pathCell extends Cell
 	}
 }
 
-export class movementResults
-{
+export class movementResults {
 	declare isVisible: boolean;
 	declare surpriseCell: Cell; //[] until a surprise contact sets it (see GameMap.moveUnit)
 	declare isVictorySide: number;
 	declare passedCells: Cell[];
 	declare isCapture: boolean;
 
-	constructor()
-	{
+	constructor() {
 		this.isVisible = false; //Move is at least partially visible on the player screen
 		this.surpriseCell = [] as unknown as Cell; //Where did the surprise contact took place
 		this.isVictorySide = -1; //Did it end in a scenario win for a side
@@ -455,8 +429,7 @@ export class movementResults
 	}
 }
 
-export class combatResults
-{
+export class combatResults {
 	declare kills: number;
 	declare losses: number;
 	declare atkSuppress: number;
@@ -469,8 +442,7 @@ export class combatResults
 	declare isOverrun: boolean;
 	declare isRugged: boolean;
 
-	constructor()
-	{
+	constructor() {
 		this.kills = 0;
 		this.losses = 0;
 		this.atkSuppress = 0;
@@ -485,15 +457,13 @@ export class combatResults
 	}
 }
 
-export class Supply
-{
+export class Supply {
 	declare ammo: number;
 	declare fuel: number;
 	declare transportAmmo: number;
 	declare transportFuel: number;
 
-	constructor(ammo: number, fuel: number, transportAmmo?: number, transportFuel?: number)
-	{
+	constructor(ammo: number, fuel: number, transportAmmo?: number, transportFuel?: number) {
 		this.ammo = ammo;
 		this.fuel = fuel;
 		this.transportAmmo = transportAmmo || 0;
@@ -501,35 +471,30 @@ export class Supply
 	}
 }
 
-export class mouseInfo
-{
+export class mouseInfo {
 	declare x: number;
 	declare y: number;
 	declare rclick: boolean;
 
-	constructor(x: number, y: number, rclick: boolean)
-	{
+	constructor(x: number, y: number, rclick: boolean) {
 		this.x = x;
 		this.y = y;
 		this.rclick = rclick;
 	}
 }
 
-export class screenPos
-{
+export class screenPos {
 	declare x: number;
 	declare y: number;
 
-	constructor(x: number, y: number)
-	{
+	constructor(x: number, y: number) {
 		this.x = x;
 		this.y = y;
 	}
 }
 
 //"3.2.14" -> "3.2"
-export function major_version(version: string): string
-{
+export function major_version(version: string): string {
 	return version.split(".").slice(0, 2).join(".");
 }
 

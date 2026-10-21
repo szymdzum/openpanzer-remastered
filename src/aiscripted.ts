@@ -24,8 +24,7 @@ export { type HexStyle, type HexStyleName, hexstyle, unitstyle, tooltipColor, to
 export { soundData, moveSoundByMoveMethod, soundSprite, type soundSpriteConstructor } from "./sound";
 
 //The tutorial units AIScripted picks from their starting positions
-export interface TutorialUnits
-{
+export interface TutorialUnits {
 	axis: { recon?: Unit; legioninf?: Unit; pz2a?: Unit; ssinf1?: Unit; ssinf2?: Unit; ssinf3?: Unit; arty?: Unit };
 	allies: { inf1?: Unit };
 }
@@ -35,32 +34,25 @@ export interface TutorialUnits
 //After turn 4 the players are handed over to the human and the normal AI.
 //player is the scripted player, map the scenario map with the tutorial units on it.
 //The constructor's body keeps the state in its closure and sets up the methods, as AI's does
-export class AIScripted
-{
+export class AIScripted {
 	declare buildActions: () => void;
 	declare getAction: () => AIAction;
 
-	constructor(player: Player, map: GameMap)
-	{
+	constructor(player: Player, map: GameMap) {
 		var actionList: AIAction[] = [];
 		var units: TutorialUnits = { axis: {}, allies: {} };
 
 		//Queues an action for game.js, param is the array of action parameters
-		function addAction(type: number, param: AIActionParam[])
-		{
+		function addAction(type: number, param: AIActionParam[]) {
 			actionList.push({ type: type, param: param });
 		}
 
 		//Queues the actions of the current turn for this player
-		function buildTurnActions(): void
-		{
+		function buildTurnActions(): void {
 			let u: Unit, e: Unit; //the units of turns 3 and 4, implicit globals in the bundle
-			switch (map.turn)
-			{
-				case 1:
-				{
-					if (player.side == playerSide.axis)
-					{
+			switch (map.turn) {
+				case 1: {
+					if (player.side == playerSide.axis) {
 						addAction(actionType.message, ["The objective of the game is to conquer all enemy positions marked by a golden frame and enemy flag. This is one of the positions. Moving one of your units into this position will capture this city and raise your flag over it.",
 							{ row: 8, col: 15 }]);
 						addAction(actionType.message, ["This is the second primary objective since it has your enemy flag (Republican Spain) and a golden frame around. Capturing primary objectives gives you a good amount of points called prestige which can be used to upgrade or buy new troops.",
@@ -103,18 +95,14 @@ export class AIScripted
 						addAction(actionType.move, [unit, { row: 7, col: 13 }]);
 						addAction(actionType.message, ["As we moved all our units and no the targets are in fire range, we should end turn <span class='smallButtonSubMenu'>t</span>which will start enemy turn. If we don't capture all primary objectives in the maximum number of turns (shown left of the top bar) the scenario will end in defeat.",
 							{ row: 7, col: 13 }]);
-					}
-					else
-					{
+					} else {
 						//The allied infantry in the city attacks the mounted SS infantry
 						addAction(actionType.attack, [units.allies.inf1, units.axis.ssinf1]);
 					}
 					break;
 				}
-				case 2:
-				{
-					if (player.side == playerSide.axis)
-					{
+				case 2: {
+					if (player.side == playerSide.axis) {
 						addAction(actionType.message, ["Notice how this infantry unit jumped out of transport when attacked, instead of staying in the vulnerable transport. Only infantry units will do this others will not dismount when attached. All units are dismounted at the start of your turn.",
 							{ row: 7, col: 15 }]);
 						addAction(actionType.message, ["This is an artillery unit, depending on it's fire range <span class='statsGlyph'>&gt;</span> it can fire on enemy positions from afar without suffering losses. Also each attack will soften enemy positions reducing their <span class='statsGlyph'>&quot;</span> entrenchment.",
@@ -156,10 +144,8 @@ export class AIScripted
 					}
 					break;
 				}
-				case 3:
-				{
-					if (player.side == playerSide.axis)
-					{
+				case 3: {
+					if (player.side == playerSide.axis) {
 						u = map.map[15][10].getUnit(false);
 						addAction(actionType.select, [u]);
 						addAction(actionType.message, ["You can reinforce this unit casualties by clicking on the <span class='smallButtonSubMenu'>#</span> button at the bottom of the screen. Reinforcements costs prestige and the amount is reduced by enemy units adjacent to your unit. After reinforce unit can no longer attack or move.",
@@ -193,10 +179,8 @@ export class AIScripted
 					}
 					break;
 				}
-				case 4:
-				{
-					if (player.side == playerSide.axis)
-					{
+				case 4: {
+					if (player.side == playerSide.axis) {
 						u = map.map[14][9].getUnit(false);
 						addAction(actionType.select, [u]);
 						addAction(actionType.message, ["Let's attack the weakest enemy unit on the front line. The attack cursor gives an estimate of your casualties on the left and enemy casualties on the right below the flags of the units involved in combat.",
@@ -236,16 +220,12 @@ export class AIScripted
 					}
 					break;
 				}
-				default:
-				{
+				default: {
 					//Tutorial over: side 0 goes to the human player, the other side to the normal AI
-					if (player.side == 0)
-					{
+					if (player.side == 0) {
 						player.handler = null;
 						player.type = playerType.humanLocal;
-					}
-					else
-					{
+					} else {
 						player.handler = new AI(player, game.scenario.map);
 						player.type = playerType.aiLocal;
 					}
@@ -266,14 +246,12 @@ export class AIScripted
 		buildTurnActions();
 
 		//Called by Map at the start of this player's turn
-		this.buildActions = function()
-		{
+		this.buildActions = function() {
 			buildTurnActions();
 		}
 
 		//Returns the next queued action and removes it from the list, null when there are none left
-		this.getAction = function()
-		{
+		this.getAction = function() {
 			if (actionList.length == 0) return null;
 			const action = actionList[0];
 			actionList.splice(0, 1);

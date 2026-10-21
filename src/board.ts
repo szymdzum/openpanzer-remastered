@@ -15,16 +15,14 @@ import type { GameMap, Hex, UnitImagesList } from "./map";
 import type { MapVisibility } from "./visibility";
 import type { Unit } from "./unit";
 
-export class MapBoard
-{
+export class MapBoard {
 	declare map: GameMap;
 	declare visibility: MapVisibility;
 	declare units: Unit[]; //internal list of units
 	declare images: UnitImagesList; //a "hash" of unique unit images used for caching
 	declare uniqueID: number; //gets assigned as unique unit ID and incremented after each unit is added
 
-	constructor(map: GameMap, visibility: MapVisibility)
-	{
+	constructor(map: GameMap, visibility: MapVisibility) {
 		this.map = map;
 		this.visibility = visibility;
 		this.units = [];
@@ -34,8 +32,7 @@ export class MapBoard
 
 	//Adds a unit already on its hex (Hex.setUnit) to the map: a new id, its icons, its player and
 	//flag, then its zone of control and spotting
-	add(unit: Unit)
-	{
+	add(unit: Unit) {
 		//Assign an unique id to the unit
 		unit.id = this.uniqueID;
 		this.uniqueID++;
@@ -61,16 +58,14 @@ export class MapBoard
 	}
 
 	//Puts a unit on hex and adds it to the map
-	place(unit: Unit, hex: Hex)
-	{
+	place(unit: Unit, hex: Hex) {
 		hex.setUnit(unit);
 		this.add(unit);
 	}
 
 	//Moves a unit from srcHex to dstHex: its zone of control and spotting off, the hexes, the facing
 	//if given, then on again. Returns the enemy units it spotted for the first time
-	relocate(unit: Unit, srcHex: Hex, dstHex: Hex, facing?: number): number
-	{
+	relocate(unit: Unit, srcHex: Hex, dstHex: Hex, facing?: number): number {
 		this.visibility.setUnit(unit, false); //remove old ZOC and spotting range
 		srcHex.delUnit(unit);
 		dstHex.setUnit(unit);
@@ -80,8 +75,7 @@ export class MapBoard
 	}
 
 	//Takes a unit off hex with its zone of control and spotting (it stays in the unit list)
-	remove(unit: Unit, hex: Hex)
-	{
+	remove(unit: Unit, hex: Hex) {
 		this.visibility.setUnit(unit, false); //remove old ZOC and spotting range
 		hex.delUnit(unit);
 	}

@@ -10,26 +10,22 @@ import { until } from "./lifecycle";
 type Json = any;
 
 //The export of the game the global game module holds now
-async function exportGame()
-{
+async function exportGame() {
 	const { GameState } = await import("../src/gamestate");
 	const { game } = await import("../src/game");
 	return new GameState(game).exportGameState();
 }
 
 //A save restored the way the contracts restore it (GameState.restoreFromString), exported again
-async function load(state: string)
-{
+async function load(state: string) {
 	await restoreState(state);
 	return exportGame();
 }
 
 //The fixture's save and that save loaded and saved again, parsed
 const loaded = new Map<string, Promise<{ saved: Json; again: Json }>>();
-function loadFixture(name: string)
-{
-	if (!loaded.has(name))
-	{
+function loadFixture(name: string) {
+	if (!loaded.has(name)) {
 		const state = readFixture("engine", name).state;
 		loaded.set(name, load(state).then((again) => ({ saved: JSON.parse(state), again: JSON.parse(again) })));
 	}
@@ -37,8 +33,7 @@ function loadFixture(name: string)
 }
 
 //Every unit of a save: on the hexes (ground and air) and in the reinforcements
-function* units(save: Json): Generator<[string, Json]>
-{
+function* units(save: Json): Generator<[string, Json]> {
 	const map = save.scenario.map;
 	for (let r = 0; r < map.rows; r++)
 		for (let c = 0; c < map.cols; c++)
@@ -55,12 +50,10 @@ function* units(save: Json): Generator<[string, Json]>
 //tempSpotted (set again by the spotting a load replays), the AI handlers (built again by
 //setupPlayers), the typo field hasRessuplied (only ever written) and the move and attack
 //selection
-function withoutLosses(save: Json): Json
-{
+function withoutLosses(save: Json): Json {
 	const s = structuredClone(save);
 	const scenario = s.scenario, map = scenario.map;
-	for (const [, u] of units(s))
-	{
+	for (const [, u] of units(s)) {
 		delete u.id;
 		delete u.tempSpotted;
 		delete u.hasRessuplied;
@@ -76,8 +69,7 @@ function withoutLosses(save: Json): Json
 			reinforcements.push({ ...x, turn: +x.turn, id: undefined });
 	scenario.reinforcements = reinforcements;
 	for (const row of map.map)
-		for (const hex of row)
-		{
+		for (const hex of row) {
 			delete hex.isMoveSel;
 			delete hex.isAttackSel;
 		}
@@ -165,8 +157,7 @@ test.fails.each(renumbered)("GameState load keeps the unit ids %s (#85)", async 
 //it depends on where its units stand: one test over all of them
 test.fails("GameState load keeps tempSpotted (#84)", async () => {
 	const spotted = (s: Json) => [...units(s)].filter(([, u]) => u.tempSpotted).map(([where]) => where);
-	for (const name of fixtures("engine"))
-	{
+	for (const name of fixtures("engine")) {
 		const { saved, again } = await loadFixture(name);
 		expect(spotted(again), name).toEqual(spotted(saved));
 	}

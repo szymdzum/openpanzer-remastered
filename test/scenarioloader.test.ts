@@ -21,8 +21,7 @@ test.each(freshFixtures("engine"))("ScenarioLoader contract %s", async (name) =>
 //the images where they are there
 test("Map image sizes match the images", () => {
 	const dir = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
-	for (const [file, [width, height]] of Object.entries(mapSizes))
-	{
+	for (const [file, [width, height]] of Object.entries(mapSizes)) {
 		const image = path.join(dir, file);
 		if (!fs.existsSync(image)) continue;
 		const b = fs.readFileSync(image);

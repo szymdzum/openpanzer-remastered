@@ -21,8 +21,7 @@ import { playerType, unitClass } from "../src/prototypes";
 const root = path.resolve(__dirname, "..");
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.join(root, "game");
 
-function mulberry32(seed: number): () => number
-{
+function mulberry32(seed: number): () => number {
 	return () => {
 		seed |= 0; seed = seed + 0x6D2B79F5 | 0;
 		let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
@@ -45,8 +44,7 @@ for (const file of [8, 20])
 		"resources/equipment/eqp-adlerkorps/equipment-country-" + file + ".json"), "utf8")) as EquipmentCountryFile);
 
 //A 12 x 12 clear map, a German side 0 against a Soviet side 1 (the AI), a victory hex for each
-function smallGame(): { map: GameMap; players: Player[] }
-{
+function smallGame(): { map: GameMap; players: Player[] } {
 	const map = new GameMap();
 	map.rows = map.cols = 12;
 	map.allocMap();
@@ -61,8 +59,7 @@ function smallGame(): { map: GameMap; players: Player[] }
 		[115, 0, 3, 3], [142, 0, 4, 4], [115, 0, 5, 3], [148, 0, 3, 5],
 		[504, 1, 7, 7], [511, 1, 8, 6], [504, 1, 7, 8], [498, 1, 9, 9],
 	];
-	for (const [eqid, owner, row, col] of units)
-	{
+	for (const [eqid, owner, row, col] of units) {
 		const u = new Unit(eqid);
 		u.owner = owner;
 		u.player = players[owner]; //addUnit sets it too, but a unit added earlier may spot this one
@@ -80,8 +77,7 @@ const describeActions = (actions: AIAction[]) => actions.map((a) => a.type + ":"
 	x instanceof Unit ? "unit#" + x.id : x && typeof x === "object" ? x.row + "," + x.col : String(x)).join(" "));
 
 //Plans the AI player's turn on a fresh small game, its actions as strings
-function planAI(options?: AIOptions): string[]
-{
+function planAI(options?: AIOptions): string[] {
 	const { map, players } = smallGame();
 	const ai = new AI(players[1], map, options);
 	ai.buildActions();

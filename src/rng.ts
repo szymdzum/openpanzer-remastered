@@ -11,16 +11,14 @@
 //replays and contracts are recorded with it). Without a source, Math.random is read at the call,
 //so a harness that replaces Math.random with a seeded one (harness/replay.js, record.js, the
 //contracts' check) still seeds the engine. A headless game can set a source of its own
-export interface RngModule
-{
+export interface RngModule {
 	source: (() => number) | null; //a number in [0, 1), null: Math.random
 	random(): number;
 }
 
 export var Rng: RngModule = {
 	source: null,
-	random: function()
-	{
+	random: function() {
 		return Rng.source !== null ? Rng.source() : Math.random();
 	}
 };

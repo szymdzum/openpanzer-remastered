@@ -29,8 +29,7 @@ import type { GameMap } from "./map";
 import type { Scenario, ScenarioOutcome } from "./scenario";
 
 //One side of an attack, its strength before and after the attack (newstr is set by resolveAttack)
-export interface AttackSide
-{
+export interface AttackSide {
 	unit: Unit;
 	cell: Cell;
 	oldstr: number;
@@ -38,8 +37,7 @@ export interface AttackSide
 	leaderGain: boolean;
 }
 
-export interface AttackResult
-{
+export interface AttackResult {
 	attacking: AttackSide;
 	defending: AttackSide;
 	cr: combatResults; //the attack's results, the estimate when the attack didn't take place
@@ -53,14 +51,12 @@ export interface AttackResult
 	victorySides: number[]; //the sides that won because the other one has no units left
 }
 
-export interface AttackHooks
-{
+export interface AttackHooks {
 	onSupportShot?(unit: Unit, cell: Cell): void; //after each support fire shot, the unit and its cell before it
 	onAttack?(result: AttackResult): void; //after the attack (not when it was stopped)
 }
 
-export interface FinishAttackHooks
-{
+export interface FinishAttackHooks {
 	onLosses?(result: AttackResult): void; //first, before anything is removed
 	onDestroyed?(unit: Unit, cell: Cell): void; //a unit destroyed by its losses (attacker first), before the cleanup
 	afterCleanup?(result: AttackResult): void; //the destroyed units are removed, before retreat or surrender
@@ -69,8 +65,7 @@ export interface FinishAttackHooks
 	onVictory?(side: number): void; //a side won, the other has no units left
 }
 
-export interface MoveResult
-{
+export interface MoveResult {
 	move: movementResults;
 	//The unit ran into a hidden enemy: the attack on it is resolved, its finishAttack is the caller's
 	surprise: { cell: Cell; target: Unit | null; attack: AttackResult | null } | null;
@@ -78,16 +73,14 @@ export interface MoveResult
 	victorySide: number; //-1, or the side that captured all its objectives
 }
 
-export interface FinishMoveHooks extends AttackHooks
-{
+export interface FinishMoveHooks extends AttackHooks {
 	onSurprised?(unit: Unit, cell: Cell): void; //before the surprise attack
 	attack?(attackingUnit: Unit, enemyUnit: Unit): AttackResult | null; //resolves the surprise attack, resolveAttack by default
 	onCapture?(unit: Unit): void;
 	onVictory?(side: number): void; //the side captured all its objectives
 }
 
-export interface DeployedReinforcement
-{
+export interface DeployedReinforcement {
 	unit: Unit;
 	cell: Cell;
 }
@@ -96,8 +89,7 @@ export interface DeployedReinforcement
 //(elimination), a side played its last turn (turnLimit)
 export type OutcomeKind = "capture" | "elimination" | "turnLimit";
 
-export interface Outcome
-{
+export interface Outcome {
 	kind: OutcomeKind;
 	winner: number; //the side that won, -1 at the turn limit (nobody wins it)
 	loser: number; //the side that lost
@@ -105,14 +97,12 @@ export interface Outcome
 }
 
 //What just happened, for the outcomes the state alone doesn't show
-export interface OutcomeContext
-{
+export interface OutcomeContext {
 	move?: MoveResult | null; //a move (or a retreat) just finished: its capture can win
 	endedSide?: number; //this side just ended its turn: the turn limit
 }
 
-export interface ActionsAPI
-{
+export interface ActionsAPI {
 	resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null;
 	finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult;
 	finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult;
@@ -133,16 +123,14 @@ export let Actions: ActionsAPI = {
 
 //Support fire if the attacker wasn't surprised and doesn't overrun, then the attack unless the
 //support fire destroyed the attacker or stopped the attack. Null when a unit isn't on the map
-function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null
-{
+function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null {
 	const h = hooks || {};
 	const cpos = attackingUnit.getPos();
 	const epos = enemyUnit.getPos();
 	if (!cpos || !epos)
 		return null;
 
-	const result: AttackResult =
-	{
+	const result: AttackResult = {
 		attacking: { unit: attackingUnit, cell: cpos, oldstr: attackingUnit.strength, newstr: 0, leaderGain: false },
 		defending: { unit: enemyUnit, cell: epos, oldstr: enemyUnit.strength, newstr: 0, leaderGain: false },
 		cr: null,
@@ -156,11 +144,9 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 	};
 
 	let cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
-	if (!attackingUnit.isSurprised && !cr.isOverrun)
-	{
+	if (!attackingUnit.isSurprised && !cr.isOverrun) {
 		let supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
-		for (const u in supportUnits)
-		{
+		for (const u in supportUnits) {
 			const sp = supportUnits[u].getPos();
 			if (attackingUnit.destroyed)
 				break;
@@ -171,8 +157,7 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 	}
 	//The support fire losses can stop the attack
 	result.attackStopped = GameRules.isLossOverRetreatThreshold(attackingUnit.strength, result.attacking.oldstr);
-	if (!attackingUnit.destroyed && !result.attackStopped)
-	{
+	if (!attackingUnit.destroyed && !result.attackStopped) {
 		cr = map.attackUnit(attackingUnit, enemyUnit, false, cr.isOverrun);
 		result.cr = cr;
 		result.attacking.leaderGain = cr.atkLeaderGain;
@@ -191,8 +176,7 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 //After the attack: the units destroyed by their losses are removed, the defender retreats on big
 //losses or surrenders when it has nowhere to go, a side without units left loses. Whether a unit
 //was destroyed is read from the strengths in result (the UI's callback can see them at 0)
-function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult
-{
+function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHooks): AttackResult {
 	const h = hooks || {};
 	const a = result.attacking;
 	const d = result.defending;
@@ -202,13 +186,11 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 
 	const aDestroyed = a.oldstr - a.newstr >= a.oldstr;
 	const dDestroyed = d.oldstr - d.newstr >= d.oldstr;
-	if (aDestroyed)
-	{
+	if (aDestroyed) {
 		result.destroyed.push(a.unit);
 		if (h.onDestroyed) h.onDestroyed(a.unit, a.cell);
 	}
-	if (dDestroyed)
-	{
+	if (dDestroyed) {
 		result.destroyed.push(d.unit);
 		if (h.onDestroyed) h.onDestroyed(d.unit, d.cell);
 	}
@@ -217,16 +199,12 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 
 	if (h.afterCleanup) h.afterCleanup(result);
 
-	if (!dDestroyed && GameRules.shouldDefenderRetreat(a.unit, d.unit, d.oldstr))
-	{
-		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows, map.cols)))
-		{
+	if (!dDestroyed && GameRules.shouldDefenderRetreat(a.unit, d.unit, d.oldstr)) {
+		if ((rpos = GameRules.getRetreatPosition(map.map, d.unit, map.rows, map.cols))) {
 			result.retreat = rpos;
 			result.retreatMove = map.retreatUnit(d.unit, rpos);
 			if (h.onRetreat) h.onRetreat(d.unit, rpos, result.retreatMove);
-		}
-		else
-		{
+		} else {
 			result.surrender = true;
 			d.unit.destroyed = true;
 			map.updateUnitList();
@@ -234,13 +212,11 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 		}
 	}
 
-	if (!map.hasAliveUnits(playerSide.axis))
-	{
+	if (!map.hasAliveUnits(playerSide.axis)) {
 		result.victorySides.push(playerSide.allies);
 		if (h.onVictory) h.onVictory(playerSide.allies);
 	}
-	if (!map.hasAliveUnits(playerSide.allies))
-	{
+	if (!map.hasAliveUnits(playerSide.allies)) {
 		result.victorySides.push(playerSide.axis);
 		if (h.onVictory) h.onVictory(playerSide.axis);
 	}
@@ -250,13 +226,11 @@ function finishAttack(map: GameMap, result: AttackResult, hooks?: FinishAttackHo
 
 //After a move: the surprise attack (the hidden enemy picked with airMode, as the UI's air mode
 //toggle picks it), the capture and the capture victory
-function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult
-{
+function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: boolean | number, hooks?: FinishMoveHooks): MoveResult {
 	const h = hooks || {};
 	const result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
 
-	if (unit.isSurprised)
-	{
+	if (unit.isSurprised) {
 		const cell = mr.surpriseCell;
 		if (h.onSurprised) h.onSurprised(unit, cell);
 		const target = map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
@@ -276,20 +250,17 @@ function finishMove(map: GameMap, unit: Unit, mr: movementResults, airMode: bool
 //Deploys the reinforcements of player playerId for this turn. Null when there are none, else the
 //deployed ones (the others stay for later)
 function deployReinforcements(scenario: Scenario, turn: number, playerId: number,
-	onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null
-{
+	onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null {
 	const deployed: DeployedReinforcement[] = [];
 	const reinforcements = scenario.getReinforcements(turn, playerId);
 
 	if (reinforcements.length <= 0)
 		return null;
 
-	for (let i = 0; i < reinforcements.length; i++)
-	{
+	for (let i = 0; i < reinforcements.length; i++) {
 		let cell: Cell = null;
 		if ((cell = scenario.map.deployReinforcement(reinforcements[i].unit,
-			reinforcements[i].row, reinforcements[i].col)) !== null)
-		{
+			reinforcements[i].row, reinforcements[i].col)) !== null) {
 			deployed.push({ unit: reinforcements[i].unit, cell: cell });
 			CombatLog.addReinforcement(reinforcements[i].unit);
 			scenario.removeReinforcement(reinforcements[i].turn, reinforcements[i].id);
@@ -302,8 +273,7 @@ function deployReinforcements(scenario: Scenario, turn: number, playerId: number
 //Ends the current player's turn (the next AI player plans its turn in Map.endTurn). True when the
 //player who ended it lost at the turn limit, which is only checked for a local side (localSide
 //as Game's getLocalSide: -1 none, 0, 1, 2 both)
-function endTurn(scenario: Scenario, localSide: number): boolean
-{
+function endTurn(scenario: Scenario, localSide: number): boolean {
 	const lastSide = scenario.map.currentPlayer.side;
 	scenario.endTurn();
 	return scenario.checkDefeat(lastSide, localSide);
@@ -319,8 +289,7 @@ function endTurn(scenario: Scenario, localSide: number): boolean
 //- turnLimit: last.endedSide played its last turn (Scenario.checkDefeat for any side; Game checks
 //  it only for a local side)
 //Null when the game goes on
-function checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null
-{
+function checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null {
 	const l = last || {};
 	const m = scenario.map;
 	let winner = -1;

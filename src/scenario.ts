@@ -26,8 +26,7 @@ import { Rng } from "./rng";
 export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 
 //A unit to deploy later, Scenario.reinforcements[turn]
-export interface Reinforcement
-{
+export interface Reinforcement {
 	row: number;
 	col: number;
 	unit: Unit;
@@ -36,8 +35,7 @@ export interface Reinforcement
 }
 
 //A class with its closure body as the constructor: the methods are own properties, as the original
-export class Scenario
-{
+export class Scenario {
 	declare static loader: ScenarioLoader;
 	declare static scenarioPath: string;
 	declare static getScenarioDataByFileName: (scenFile: string) => ScenarioListEntry;
@@ -75,8 +73,7 @@ export class Scenario
 	declare showStatistics: () => void;
 	declare copy: (s: Scenario) => void;
 
-	constructor(scenFile?: string)
-	{
+	constructor(scenFile?: string) {
 		this.name = "";
 		this.maxTurns = 0;
 		this.date = new Date();
@@ -96,28 +93,23 @@ export class Scenario
 		let description = "";
 		let loadCallback: () => void = null;
 
-		if (typeof scenFile !== "undefined")
-		{
+		if (typeof scenFile !== "undefined") {
 			const scenData = Scenario.getScenarioDataByFileName(scenFile);
-			if (scenData)
-			{
+			if (scenData) {
 				this.name = scenData[1];
 				description = scenData[2];
 			}
 		}
 
 		//Loads scenario data files, calls onFinished when done (through onLoadFinished)
-		this.load = function(onFinished: () => void)
-		{
+		this.load = function(onFinished: () => void) {
 			loadCallback = onFinished;
 			Scenario.loader.loadScenario(this);
 		}
 
 		//Called by the loader when the scenario finished loading (or failed to load)
-		this.onLoadFinished = function()
-		{
-			if (this.isLoaded)
-			{
+		this.onLoadFinished = function() {
+			if (this.isLoaded) {
 				this.setMoveTable();
 
 				//Initial score of each player: objectives worth per turn and the units it has
@@ -140,8 +132,7 @@ export class Scenario
 				loadCallback();
 		}
 
-		this.addReinforcement = function(turn: number, row: number, col: number, unit: Unit)
-		{
+		this.addReinforcement = function(turn: number, row: number, col: number, unit: Unit) {
 			if (this.reinforcements[turn] === null || typeof this.reinforcements[turn] === "undefined")
 				this.reinforcements[turn] = [];
 
@@ -150,11 +141,9 @@ export class Scenario
 		}
 
 		//Returns the reinforcements of a player up to and including turn
-		this.getReinforcements = function(turn: number, playerId: number)
-		{
+		this.getReinforcements = function(turn: number, playerId: number) {
 			const list: Reinforcement[] = [];
-			for (const t in this.reinforcements)
-			{
+			for (const t in this.reinforcements) {
 				if ((t as unknown as number) > turn) continue; //compares the turn key string as a number
 				if (this.reinforcements[t] === null || typeof this.reinforcements[t] === "undefined")
 					continue;
@@ -165,15 +154,12 @@ export class Scenario
 			return list;
 		}
 
-		this.removeReinforcement = function(turn: number, id: number)
-		{
+		this.removeReinforcement = function(turn: number, id: number) {
 			if (this.reinforcements[turn] === null || typeof this.reinforcements[turn] === "undefined")
 				return false;
 
-			for (let i = 0; i < this.reinforcements[turn].length; i++)
-			{
-				if (this.reinforcements[turn][i].id == id)
-				{
+			for (let i = 0; i < this.reinforcements[turn].length; i++) {
+				if (this.reinforcements[turn][i].id == id) {
 					this.reinforcements[turn].splice(i, 1);
 					return true;
 				}
@@ -182,18 +168,15 @@ export class Scenario
 		}
 
 		//Checks if local human player (not net/ai) has reached the map turn limit
-		this.checkDefeat = function(lastSide: number, localPlayingSide: number)
-		{
-			if (this.map.turn >= this.map.maxTurns && (lastSide == localPlayingSide || localPlayingSide == 2))
-			{
+		this.checkDefeat = function(lastSide: number, localPlayingSide: number) {
+			if (this.map.turn >= this.map.maxTurns && (lastSide == localPlayingSide || localPlayingSide == 2)) {
 				if (hasSidePlayedTurn(this.map.getPlayers(), lastSide, this.map.maxTurns))
 					return true;
 			}
 			return false;
 		}
 
-		this.checkVictory = function(): ScenarioOutcome
-		{
+		this.checkVictory = function(): ScenarioOutcome {
 			if (this.map.turn <= this.map.victoryTurns[0])
 				return "briliant";
 			if (this.map.turn <= this.map.victoryTurns[1])
@@ -207,12 +190,10 @@ export class Scenario
 		this.getDescription = function() { return description; }
 		this.setDescription = function(str: string) { description = str; }
 
-		this.endTurn = function()
-		{
+		this.endTurn = function() {
 			//increase the scenario date
 			this.dayTurn++;
-			if (this.dayTurn >= this.turnsPerDay)
-			{
+			if (this.dayTurn >= this.turnsPerDay) {
 				this.dayTurn = 0;
 				this.date.setDate(this.date.getDate() + 1); //increase 1 day
 			}
@@ -222,10 +203,8 @@ export class Scenario
 		}
 
 		//Sets the movement cost table for the scenario
-		this.setMoveTable = function()
-		{
-			switch (this.ground)
-			{
+		this.setMoveTable = function() {
+			switch (this.ground) {
 				case groundCondition.dry:
 					setMovTable(movTableDry);
 					break;
@@ -242,18 +221,15 @@ export class Scenario
 
 		//Returns the equipment ids of a country that can be awarded as prototypes:
 		//units that appear next year, only combat ground and air classes and not too cheap
-		this.getPrototypeUnitsAvailable = function(country: number)
-		{
+		this.getPrototypeUnitsAvailable = function(country: number) {
 			const year = this.date.getFullYear() + 1;
 			const list = Equipment.getCountryEquipmentByYearRange(year, year, country);
-			for (let i = 0; i < list.length; i++)
-			{
+			for (let i = 0; i < list.length; i++) {
 				const ud = Equipment.equipment[list[i]];
 				const uclass = ud.uclass;
 				if (((uclass < unitClass.tank || uclass > unitClass.antiTank)
 					&& (uclass < unitClass.artillery || uclass > unitClass.tacticalBomber))
-					|| ud.cost * CURRENCY_MULTIPLIER < PROTOTYPE_MIN_COST)
-				{
+					|| ud.cost * CURRENCY_MULTIPLIER < PROTOTYPE_MIN_COST) {
 					list.splice(i, 1);
 					i--;
 				}
@@ -261,32 +237,28 @@ export class Scenario
 			return list;
 		}
 
-		this.getRandomPrototype = function(country: number)
-		{
+		this.getRandomPrototype = function(country: number) {
 			const list = this.getPrototypeUnitsAvailable(country);
 			const index = (Rng.random() * list.length) >> 0;
 			return list[index];
 		}
 
 		//Start prestige for scenarios outside a campaign: the side with cheaper units gets the difference
-		this.getBalancedPrestige = function(side: number)
-		{
+		this.getBalancedPrestige = function(side: number) {
 			let prestige = SCENARIO_START_PRESTIGE + this.unitsCostPerSide[+!side] - this.unitsCostPerSide[side];
 			if (prestige < SCENARIO_START_PRESTIGE)
 				prestige = SCENARIO_START_PRESTIGE;
 			return prestige;
 		}
 
-		this.getSideUnitsAvgExp = function(side: number)
-		{
+		this.getSideUnitsAvgExp = function(side: number) {
 			return Math.round(this.expPerSide[side].exp / +this.expPerSide[side].count || 0);
 		}
 
 		this.showStatistics = function() {};
 
 		//Copy constructor
-		this.copy = function(s: Scenario)
-		{
+		this.copy = function(s: Scenario) {
 			//name already set in constructor
 			this.maxTurns = s.maxTurns;
 			this.date = new Date(s.date);
@@ -295,12 +267,9 @@ export class Scenario
 			this.ground = s.ground;
 			this.turnsPerDay = s.turnsPerDay;
 			this.eqp = s.eqp;
-			if (s.reinforcements)
-			{
-				for (const t in s.reinforcements)
-				{
-					for (let i = 0; i < s.reinforcements[t].length; i++)
-					{
+			if (s.reinforcements) {
+				for (const t in s.reinforcements) {
+					for (let i = 0; i < s.reinforcements[t].length; i++) {
 						const unit = new Unit(s.reinforcements[t][i].unit.eqid);
 						unit.copy(s.reinforcements[t][i].unit);
 						this.addReinforcement(t, s.reinforcements[t][i].row, s.reinforcements[t][i].col, unit);
@@ -315,10 +284,8 @@ export class Scenario
 		//Private methods
 		//Check if all players from a side have played certain turn
 		//(inlined by the compiler in the bundle)
-		function hasSidePlayedTurn(playerList: Player[], side: number, turn: number)
-		{
-			for (let i = 0; i < playerList.length; i++)
-			{
+		function hasSidePlayedTurn(playerList: Player[], side: number, turn: number) {
+			for (let i = 0; i < playerList.length; i++) {
 				if (playerList[i].side == side && playerList[i].playedTurn < turn)
 					return false;
 			}
@@ -332,8 +299,7 @@ Scenario.loader = new ScenarioLoader();
 Scenario.scenarioPath = "resources/scenarios/data/";
 
 //Lookup information about scenario in scenariolist, returns the scenariolist entry or null
-Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEntry
-{
+Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEntry {
 	for (let i = 0; i < scenariolist.length; i++)
 		if (scenariolist[i][0] == scenFile)
 			return scenariolist[i];

@@ -61,8 +61,7 @@ function contractUnitState(u) {
 			const t = {};
 			for (const tk of Object.keys(v).sort()) if (typeof v[tk] !== "function") t[tk] = v[tk];
 			o[k] = t;
-		}
-		else o[k] = v;
+		} else o[k] = v;
 	}
 	const p = u.getPos ? u.getPos() : null;
 	o.pos = p ? p.row + "," + p.col : null;
