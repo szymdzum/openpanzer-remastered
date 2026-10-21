@@ -222,7 +222,6 @@ export class AI
 					}
 				}
 			}
-			for (j = 0; j < coreUnits.length; j++); //empty loop, kept from the bundle
 			if (AI.onUnitsDeployed) AI.onUnitsDeployed();
 		}
 
@@ -328,10 +327,6 @@ export class AI
 			{
 				addAction(actionType.resupply, [ unit ]);
 				aiUnit.didResupplyReinforce = true;
-			}
-			else if (aiUnit.noAttack && aiUnit.noMove) //never true, the previous check already caught it
-			{
-				aiUnit.noResupply = true;
 			}
 		}
 
@@ -676,11 +671,9 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 			canOccupy = (hex.unit === null);
 			if (!canOccupy)
 			{
-				//(the null check is always false here, from an inlined helper)
 				canOccupy = isFreed || hex.unit.id == unit.id
-					|| (hex.unit === null ? true
-						: (typeof plan.enemyUnits[hex.unit.id] !== "undefined" && plan.enemyUnits[hex.unit.id] !== null
-							&& plan.enemyUnits[hex.unit.id].isKilled ? true : false));
+					|| (typeof plan.enemyUnits[hex.unit.id] !== "undefined" && plan.enemyUnits[hex.unit.id] !== null
+						&& plan.enemyUnits[hex.unit.id].isKilled ? true : false);
 			}
 		}
 		if (canOccupy)

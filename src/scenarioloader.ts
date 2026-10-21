@@ -153,8 +153,6 @@ export class ScenarioLoader
 				for (let i = 0; i < reinforceNodes.length; i++)
 				{
 					const turn = +reinforceNodes[i].getAttribute("turn");
-					if (turn === null) //never true, turn is a number here
-						continue;
 
 					for (let j = 0; j < reinforceNodes[i].childNodes.length; j++)
 					{
@@ -164,8 +162,6 @@ export class ScenarioLoader
 						const atNode = reinforceNodes[i].childNodes[j] as Element;
 						const row = +atNode.getAttribute("row");
 						const col = +atNode.getAttribute("col");
-						if (row == null || col == null) //never true, row and col are numbers
-							continue;
 
 						for (let k = 0; k < atNode.childNodes.length; k++)
 						{
