@@ -18,7 +18,7 @@ other unit. A weak unit hits weakly: strength 4 deals about 40% of what strength
 - Each roll other than a 1 or a 20 adds kF. 1 always misses, 20 always hits.
 - Hit threshold 15. It's 19 for artillery, level bombers, fortifications and ships firing at
   land: they hit less often, but nothing fires back at them from range.
-- The estimate (the AI's and a future odds preview) uses no dice:
+- The estimate (the AI's, the attack cursor's and a future odds preview) uses no dice:
   `kills = (5 * clamp(kF + 21 - threshold, 1, 19) * strength + 50) / 100`.
 
 **Which values fight.** Every unit has a target type: soft (infantry, trucks), hard (tanks),
@@ -29,7 +29,7 @@ or naval attack). Each side defends with ground defense (air defense against air
 
 | Situation | Effect |
 |-----------|--------|
-| Close combat: infantry attacks into city, forest, mountain, swamp... or a fortification | defender uses close defense; infantry defender makes the attacker use its close defense too, other defenders give the attacker +4 av |
+| Close combat: infantry attacks into a city, forest, mountain or fortification hex, or attacks a fortification (`isCloseCombatTerrain`) | defender uses close defense; infantry defender makes the attacker use its close defense too, other defenders give the attacker +4 av |
 | Defender in a city | defender +4 dv |
 | A side standing in a river or stream without a road | the other side +4 av and +4 dv |
 | Defender is artillery | attacker +3 dv |
@@ -61,7 +61,10 @@ protects your units the same way.
   fortifications) that lost `0.6 - (10 - strength) / 20` of its strength or more retreats to a
   free hex behind it. Weaker units retreat sooner. With no free hex it surrenders.
 - Overrun: a tank that destroys an adjacent defender with at most 1 loss and wasn't surprised
-  takes no return fire and gets an extra move (map.ts).
+  takes no return fire and gets an extra move (map.ts). It is decided by the estimate before the
+  dice (`calculateAttackResults(..., true)` in `uiUnitAttack`), so it can be predicted. The extra
+  move is +1 to the moves left: it only lets the tank move again if it had some left. The attack
+  doesn't count as the tank's fire, so it can attack again.
 - Experience: both sides gain it, more for kills against stronger or better-defended enemies.
   The cap is 500 (`UNIT_MAX_EXPERIENCE`).
 
@@ -74,10 +77,13 @@ protects your units the same way.
 - Moving out of the hex loses all of it. Every hit taken loses 1 level.
 - Some equipment ignores entrenchment (engineers). The infiltration tactics and street fighter
   leaders ignore it in cities, rough terrain and ports.
-- **Rugged defense** (`isRuggedDefense`): an adjacent attack on an entrenched defender can turn
-  into a rugged defense when its entrenchment, experience and class entrench rate are high
-  enough against the attacker's experience. The attacker then has no defense and half its
-  attack. This is where "why did I lose 6 points?" comes from.
+- **Rugged defense** (`isRuggedDefense`): an adjacent attack on a defender whose entrenchment is
+  intact turns into a rugged defense when its entrenchment, experience and class entrench rate
+  are high enough against the attacker's experience and class rate. It is a formula, not a roll:
+  `5 × (50 × dR / aR) × dRate × entrenchment / (50 × aRate) > 50`, with R = experience / 100 + 2
+  (+2 with tenacious defense) and rate = the class entrench rate + 1. So it can be predicted
+  before the attack. The attacker then has no defense and half its attack. This is where "why
+  did I lose 6 points?" comes from.
 
 So: bomb and shell first (no return fire, entrenchment and defense go down with every hit),
 then assault, then overrun with tanks.
@@ -87,8 +93,9 @@ then assault, then overrun with tanks.
 - Move cost per hex comes from the movement table of the unit's move method (tracked, wheeled,
   leg, towed, air, naval...) and the ground condition: dry, frozen or mud (`movTableDry`,
   `movTableFrozen`, `movTableMud`). Roads, and bridges for their owner's side, use the road cost.
-- **Zone of control**: every ground unit controls its 6 adjacent hexes. Entering a spotted hex
-  in the enemy's ZOC stops the move (`getMoveRange`). Air units have no ZOC.
+- **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
+  fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
+  move (`getMoveRange`): a hidden enemy's zone doesn't. Air units ignore ZOC.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends.
 - Recon can split its movement over several moves in a turn.
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
@@ -98,17 +105,22 @@ then assault, then overrun with tanks.
 ## Spotting
 
 Each unit spots its equipment's spot range around it (+2 elite recon veteran leader, +1
-skilled reconnaissance). A spotted hex stays visible for the rest of the turn. Units that fire
-are shown even on unspotted hexes.
+skilled reconnaissance). The spotting moves with the unit: the hexes it leaves are no longer
+spotted by it (`setSpotRange`, in `moveUnit`), so an enemy seen on the way can disappear again.
+Units newly spotted or that fire stay visible until the end of the round (`tempSpotted`), even
+on hexes no one spots.
 
 ## Supply and reinforcement
 
 Both need a unit that hasn't moved, attacked or already been supplied this turn
-(`getResupplyValue`, `getReinforceValue`, `canReinforce`).
+(`getResupplyValue`, `getReinforceValue`, `canReinforce`). Reinforcement checks it through
+`hasOverstrength`, which moving and attacking set: a recon unit between two of its moves can
+still reinforce.
 
 - Full amount in a city with no adjacent enemy. Outside a city /1.3, with 1-2 adjacent enemies
-  /1.5, with 3 or more /3. Air and naval units always get the full amount; air units reinforce
-  next to an airfield, naval units outside ports.
+  /1.5, with 3 or more /3. Resupply: air and naval units always get the full amount.
+  Reinforcement: only air units do, naval units are divided like ground units. Air units
+  reinforce next to an airfield, naval units outside ports.
 - At turn start, units in a city with no adjacent enemy are resupplied automatically.
 - Reinforcing costs prestige, by the unit's cost per strength point.
 - **Overstrength**: a unit at strength 10 with 100+ experience can reinforce over 10, one point
@@ -270,7 +282,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
 | Bad weather reduces spotting | Spot range only from equipment and leaders |
 | Recon ignores zone of control | ZOC stops every ground unit; recon only has split movement |
-| An attack preview shows the expected losses | No preview in the UI, the target hex is only marked red |
+| An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`generateAttackCursor`, render.ts; drawn on the hex on touch screens), without support fire, rugged defense or overrun |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
 | Units over 1000 experience always get a leader | Always at the cap (500) |
 | Retreat above 60% losses | 60% at strength 10, less for weaker units |
