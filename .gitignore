@@ -2,3 +2,4 @@ harness/out/
 node_modules/
 dist/
 dist-*/
+public/hd/

@@ -472,6 +472,7 @@ export function GameState(this: GameState, Game: Game | null)
 		uiSettings.markEnemyUnits = s.markEnemyUnits;
 		uiSettings.use3D = s.use3D;
 		uiSettings.useRetina = s.useRetina;
+		uiSettings.hdGraphics = s.hdGraphics !== false; //on unless turned off, also for settings saved before it existed
 		uiSettings.showGridTerrain = s.showGridTerrain;
 		uiSettings.muteUnitSounds = s.muteUnitSounds;
 		uiSettings.noFOW = s.noFOW;

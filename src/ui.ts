@@ -1665,8 +1665,9 @@ function uiShowDeploymentWindow()
 function uiToggleMapZoom()
 {
 	var vp = $("game");
-	var zoom = Math.min(window.innerWidth / (canvas.width * uiSettings.zoomLevel) * 100,
-		window.innerHeight / (canvas.height * uiSettings.zoomLevel) * 100) >> 0;
+	var size = R.getMapSize(); //css pixels, the canvases have more pixels on high density screens
+	var zoom = Math.min(window.innerWidth / (size.width * uiSettings.zoomLevel) * 100,
+		window.innerHeight / (size.height * uiSettings.zoomLevel) * 100) >> 0;
 	var transform: string;
 
 	if (uiSettings.strategicZoom)
@@ -1713,11 +1714,11 @@ function uiToggleMapZoom()
 function uiScaleMap(level: number)
 {
 	var zoom = (level * 100) >> 0;
-	var mapCanvas = $<HTMLCanvasElement>("map");
 	var vp = $("game");
 	var oldLevel = uiSettings.zoomLevel;
-	var w = mapCanvas.width;
-	var h = mapCanvas.height;
+	var size = R.getMapSize(); //css pixels, the canvases have more pixels on high density screens
+	var w = size.width;
+	var h = size.height;
 	var scrollLeft = vp.scrollLeft;
 	var scrollTop = vp.scrollTop;
 

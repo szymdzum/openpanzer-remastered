@@ -265,6 +265,7 @@ export interface UISettings
 	hasTouch: boolean;
 	use3D: boolean;
 	useRetina: boolean;
+	hdGraphics: boolean;
 	allowZoom: boolean;
 	isAI: number[];
 	shownEndTurnTip: boolean;
@@ -299,6 +300,7 @@ export var uiSettings: UISettings =
 	hasTouch: false,		//Set in UI if device has touch
 	use3D: false,			//use transform3d/translate3d functions for animations
 	useRetina: false,		//don't scale on retina displays devicePixelRatio > 1
+	hdGraphics: true,		//@2x map and unit images on high density screens (from public/hd/, needs a reload)
 	allowZoom: false,		//If user should be able to zoom in/out manually
 	isAI: [0, 0, 0, 0],		//which player is played by AI
 	shownEndTurnTip: false,	//if the end turn tip was already shown

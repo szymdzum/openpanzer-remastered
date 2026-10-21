@@ -53,6 +53,30 @@ export interface ZoneRangeLimits
 	ecol: number;
 }
 
+//Device pixels per CSS pixel the renderer draws at: 2 on high density screens when the
+//@2x images are on, 1 otherwise (and with useRetina, where the page already runs at device pixels)
+function hdScale(): number
+{
+	if (!uiSettings.hdGraphics || uiSettings.useRetina)
+		return 1;
+	return (window.devicePixelRatio || 1) >= 1.5 ? 2 : 1;
+}
+
+//The @2x file of a map or unit image, generated into public/hd/ by scripts/upscale-assets.sh:
+//resources/maps/images/map_12.png -> /hd/maps/images/map_12.webp,
+//resources/units/images/pa909.png -> /hd/units/images/pa909.png. null for any other image
+function hdPath(path: string): string | null
+{
+	if (path.indexOf("resources/maps/images/") == 0)
+		return "/hd/" + path.slice("resources/".length).replace(/\.png$/, ".webp");
+	if (path.indexOf("resources/units/images/") == 0)
+		return "/hd/" + path.slice("resources/".length);
+	return null;
+}
+
+//The biggest canvas Safari on iOS allows, in pixels
+var maxCanvasPixels = 16777216;
+
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class Render
 {
@@ -70,6 +94,7 @@ export class Render
 	declare getCursorCanvas: () => HTMLCanvasElement;
 	declare setNewMap: (mapObj: GameMap) => void;
 	declare positionLayers: () => void;
+	declare getMapSize: () => { width: number; height: number };
 
 	constructor(mapObj: GameMap)
 	{
@@ -84,6 +109,11 @@ export class Render
 		var imgBridge: HTMLImageElement = null; //Drawn instead of a ground unit sitting on a bridge of its side
 		var imgLeaderAxis: HTMLImageElement = null;
 		var imgLeaderAllied: HTMLImageElement = null;
+
+		var dpr = hdScale(); //Canvas pixels per CSS pixel, all drawing stays in CSS pixels
+		var imgScale = new WeakMap<HTMLImageElement, number>(); //2 for an image loaded from its @2x file
+		var mapW = 0; //Map image size in CSS pixels, whichever file it was loaded from
+		var mapH = 0;
 
 		var drawnHexGrid = false; //Force first time rendering of hex grid but prevent redraw if no changes
 		var lastCursorCell: Cell = null; //Last cell for which the cursor was built
@@ -153,7 +183,9 @@ export class Render
 		ubb = cubb.getContext('2d') as RenderContext;
 
 		cbb.width = cbb.height = 54; //Currently the size of the attack cursor
-		cubb.width = cubb.height = 120; //Currently the max size of a unit sprite //TODO compute this
+		cubb.width = cubb.height = 120 * dpr; //Currently the max size of a unit sprite //TODO compute this
+		cubb.style.width = cubb.style.height = "120px";
+		ubb.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 		//Renders the units/decals/hexgrid if orow,ocol and range are defined then it will
 		//only partially render the canvas around orow,ocol with range around this location
@@ -176,7 +208,7 @@ export class Render
 			if (uiSettings.hexGrid != drawnHexGrid)
 			{
 				drawnHexGrid = drawHexGrid = uiSettings.hexGrid;
-				cb.clearRect(0, 0, imgMapBackground.width, imgMapBackground.height + 65);
+				cb.clearRect(0, 0, mapW, mapH + 65);
 			}
 
 			if (map.currentUnit !== null)
@@ -655,20 +687,29 @@ export class Render
 			if (!imgBridge)
 			{
 				imgBridge = new Image();
-				imgBridge.src = "resources/units/images/bridg.png";
+				loadImage(imgBridge, "resources/units/images/bridg.png");
 			}
 			if (!imgMapBackground)
 			{
 				imgMapBackground = new Image();
-				imgMapBackground.src = map.terrainImage;
 				imgMapBackground.onload = function()
 				{
-					//Size the canvases to the map image, with 65px more height
-					cm.width = ch.width = ca.width = imgMapBackground.width;
-					cm.height = ch.height = ca.height = imgMapBackground.height + 65;
+					var k = imgScale.get(imgMapBackground) || 1;
+					mapW = imgMapBackground.width / k;
+					mapH = imgMapBackground.height / k;
+					//A map too big for a canvas at 2x (iOS) is drawn at 1x, the map image stays sharp as css background
+					if (mapW * dpr * (mapH + 65) * dpr > maxCanvasPixels)
+						dpr = 1;
+					//Size the canvases to the map image, with 65px more height, at dpr canvas pixels per css pixel
+					cm.width = ch.width = ca.width = mapW * dpr;
+					cm.height = ch.height = ca.height = (mapH + 65) * dpr;
 					cm.style.cssText = ch.style.cssText = ca.style.cssText = "";
-					cm.style.width = ch.style.width = ca.style.width = imgMapBackground.width + "px";
-					cm.style.height = ch.style.height = ca.style.height = imgMapBackground.height + 65 + "px";
+					cm.style.width = ch.style.width = ca.style.width = mapW + "px";
+					cm.style.height = ch.style.height = ca.style.height = mapH + 65 + "px";
+					//Resizing reset the contexts, drawing coordinates stay in css pixels
+					cb.setTransform(dpr, 0, 0, dpr, 0, 0);
+					c.setTransform(dpr, 0, 0, dpr, 0, 0);
+					a.setTransform(dpr, 0, 0, dpr, 0, 0);
 
 					cb.imageSmoothingEnabled = false;
 					cb.webkitImageSmoothingEnabled = false;
@@ -686,10 +727,10 @@ export class Render
 					setupLayers();
 					func();
 				}
-				imgMapBackground.onerror = function()
+				loadImage(imgMapBackground, map.terrainImage, function()
 				{
 					UIBuilder.message("Error", OSGlue.canvasErrorMsg);
-				}
+				});
 			}
 
 			cacheUnitImages(map.getUnitImagesList(), func);
@@ -699,6 +740,8 @@ export class Render
 		this.getHexesCanvas = function() { return ch; }
 		this.getMapCanvas = function() { return cm; }
 		this.getCursorCanvas = function() { return ca; }
+		//The size of the canvases in css pixels (their width/height are in canvas pixels)
+		this.getMapSize = function() { return { width: mapW, height: mapH + 65 }; }
 
 		//Sets a new map for rendering. Only used to dinamically change the map being rendered
 		this.setNewMap = function(mapObj)
@@ -732,7 +775,7 @@ export class Render
 			var hScrollHeight = 0; //Room for the horizontal scrollbar when the map is wider than the window
 			var vScrollWidth = 0; //Room for the vertical scrollbar when the map is higher than the window
 
-			canvasOffsetX = window.innerWidth/2 - imgMapBackground.width/2;
+			canvasOffsetX = window.innerWidth/2 - mapW/2;
 			if (canvasOffsetX < 0) { canvasOffsetX = 0;}
 
 			cm.style.cssText += "z-index: 0; position:absolute; left: 0px; top: 0px;";
@@ -742,16 +785,16 @@ export class Render
 			cubb.style.display = "none";
 			//Add map image as background
 			cm.style.cssText += "background-color: none; background-image:url('" + imgMapBackground.src + "');"
-					+ "background-size:" + imgMapBackground.width + "px " + imgMapBackground.height + "px;"
+					+ "background-size:" + mapW + "px " + mapH + "px;"
 					+ "background-repeat: no-repeat;"
 					+ "background-attachment: scroll;";
 
-			if (window.innerWidth >= imgMapBackground.width)
+			if (window.innerWidth >= mapW)
 				fitsWidth = true;
 			else
 				hScrollHeight = 10;
 
-			if (window.innerHeight >= imgMapBackground.height + canvasOffsetY)
+			if (window.innerHeight >= mapH + canvasOffsetY)
 				fitsHeight = true;
 			else
 				vScrollWidth = 30;
@@ -759,12 +802,12 @@ export class Render
 			//Size the container div to the map or to the browser window when the map is bigger
 			//The user will scroll the div instead of window
 			if (fitsWidth)
-				$('game').style.width = imgMapBackground.width + vScrollWidth + "px";
+				$('game').style.width = mapW + vScrollWidth + "px";
 			else
 				$('game').style.width = window.innerWidth + "px";
 
 			if (fitsHeight)
-				$('game').style.height = imgMapBackground.height + canvasOffsetY + hScrollHeight + "px";
+				$('game').style.height = mapH + canvasOffsetY + hScrollHeight + "px";
 			else
 				$('game').style.height = window.innerHeight - canvasOffsetY + "px";
 
@@ -818,6 +861,27 @@ export class Render
 			return copy;
 		}
 
+		//Loads a game image, from its @2x file first when drawing at 2x. Without one (or when it fails to load)
+		//it falls back to the original file, so the hd folder can be missing or partly generated
+		function loadImage(img: HTMLImageElement, path: string, onerror?: () => void): void
+		{
+			var hd = dpr > 1 ? hdPath(path) : null;
+			if (hd === null)
+			{
+				if (onerror) img.onerror = onerror;
+				img.src = path;
+				return;
+			}
+			imgScale.set(img, 2);
+			img.onerror = function()
+			{
+				imgScale.set(img, 1);
+				img.onerror = onerror || null;
+				img.src = path;
+			};
+			img.src = hd;
+		}
+
 		//imgList a list of image file names, func a function to call upon cache completion
 		//Units are saved from Luiz Guzman SHPTool to a 1x9 sprites bmp and
 		//converted to transparent png by convert.py
@@ -842,7 +906,7 @@ export class Render
 					if (loaded == toLoad)
 						if (func) func();
 				}
-				imgUnits[imgList[i]].src = imgList[i];
+				loadImage(imgUnits[imgList[i]], imgList[i]);
 			}
 			//All already cached
 			if (!hasNewImages)
@@ -870,8 +934,10 @@ export class Render
 			// Units have 15 possible orientations there are 9 sprites each ~80x50 in 1 row
 			// to get the rest of the orientations the sprite must be mirrored
 			var mirror = false;
-			var imagew = image.width/9; //Some images have bigger width
-			var imageh = image.height;
+			var k = imgScale.get(image) || 1; //A @2x image is drawn at half its pixel size
+			var srcw = image.width/9; //Some images have bigger width
+			var imagew = srcw/k;
+			var imageh = image.height/k;
 			//Offset the transparent regions of the unit sprite
 			var ix0 = (x0 - imagew/2 + s/2) >> 0;
 			var iy0 = (y0 - imageh/2 + r - unitTextHeight) >> 0;
@@ -881,7 +947,7 @@ export class Render
 				facing = 16 - facing;
 				mirror = true;
 			}
-			var imgidx = imagew * facing;
+			var imgidx = srcw * facing;
 			if (mirror)
 			{
 				var flip = ix0 + imagew/2;
@@ -890,7 +956,7 @@ export class Render
 				c.scale(-1,1);
 				c.translate(-flip,0);
 			}
-			c.drawImage(image, imgidx , 0, imagew, imageh, ix0, iy0, imagew, imageh);
+			c.drawImage(image, imgidx , 0, srcw, image.height, ix0, iy0, imagew, imageh);
 
 			if (mirror) c.restore();
 

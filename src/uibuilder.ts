@@ -194,7 +194,8 @@ UIBuilder.buildStartMenu = function()
 	//Settings with key in uiSettings and Title
 	var settings: [keyof UISettings, string][] = [["showGridTerrain", "Show terrain with Hex Grid"], ["quickAnimation", "Quick combat and move animations"],
 			["muteUnitSounds", "Mute unit combat sounds"], ["noFOW", "Disable Fog of War"],
-			["useRetina", "Zoom to full device resolution"], ["markOwnUnits", "Mark own units on map"],
+			["useRetina", "Zoom to full device resolution"], ["hdGraphics", "High resolution map and units"],
+			["markOwnUnits", "Mark own units on map"],
 			["markEnemyUnits", "Mark enemy strength in red"], ["showDetailInfoToolTips", "Show optional objectives tooltips"],
 			["showHiddenVictoryHexes", "Show hidden victory hexes"]];
 
@@ -454,6 +455,8 @@ UIBuilder.buildStartMenu = function()
 		{
 			(uiSettings as unknown as UIBuilderSettingFlags)[this.id] = !(uiSettings as unknown as UIBuilderSettingFlags)[this.id];
 			toggleCheckbox(this);
+			if (this.id == "hdGraphics")
+				($('smSettings') as UIBuilderSettingsWindow).needPageReload = true; //The renderer picks its images once
 			if (this.id == "useRetina")
 			{
 				($('smSettings') as UIBuilderSettingsWindow).needPageReload = true;
