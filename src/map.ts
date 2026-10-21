@@ -29,6 +29,7 @@ import { Leaders } from "./leaders";
 import { HexCounters, MapVisibility } from "./visibility";
 import { MapBoard } from "./board";
 import { MapSelection } from "./selection";
+import { UndoSlot } from "./undo";
 
 //Hex, Player and Map classes
 
@@ -1083,10 +1084,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		//Save unit properties for undoing move, only human players can undo
 		if (unit.player.type == playerType.humanLocal)
 		{
-			lastMove.clear();
-			lastMove.savedUnit = new Unit(unit.eqid);
-			lastMove.savedUnit.copy(unit);
-			lastMove.savedUnit.setHex(unit.getHex());
+			lastMove.save(unit);
 		}
 
 		for (var i = 0; i < c.length; i++)
@@ -1418,9 +1416,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	//Returns true if last movement of a unit can be undoed
 	this.canUndoMove = function(unit)
 	{
-		if (lastMove.unit !== null && lastMove.unit.id == unit.id)
-			return true;
-		return false;
+		return lastMove.canUndo(unit);
 	}
 
 	this.undoLastMove = function()
@@ -1608,22 +1604,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	//Private
 
 	//For saving changes made by last move of a unit
-	var lastMove: MapLastMove =
-	{
-		unit: null, 		//Current unit properties
-		savedUnit: null, 	//Old state unit properties (fuel, movesleft)
-		oldOwner: null,		//If changed owner of the hex
-		oldFlag: null,		//If changed a flag
-		oldVictorySide: null, 	//If an objective was captured
-		prestigeGain: 0,	//If player got any prestige
-		scoreGain: 0,		//If player got any score
-		clear: function()
-			{
-				this.unit = this.savedUnit = null;
-				this.oldVictorySide = this.oldOwner = this.oldFlag = null;
-				this.prestigeGain = this.scoreGain = 0;
-			}
-	};
+	var lastMove = new UndoSlot();
 
 	}
 } // end GameMap class
