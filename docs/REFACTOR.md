@@ -162,6 +162,17 @@ test today).
   Selection (owned by the UI), the undo journal. Moving the remaining `this.m = function`
   methods to the class body can be a mechanical first commit. Keep the data-field key order
   and the class names (`harness.js` maps `GameMap` to `Map`).
+
+  **Done**, one commit each, nothing re-recorded: `MapVisibility` (src/visibility.ts: the
+  hexes' counters, made by `allocMap` and handed to each Hex, the arithmetic, `setUnit` and
+  `setSpotting` for the 16 sites), `MapBoard` (src/board.ts: the unit list, ids and icons;
+  `add`, `place`, `relocate`, `remove`), `MapSelection` (src/selection.ts: the move and attack
+  cells, `select`, `clear`; `currentUnit` stays a GameMap field, `isMoveSel`/`isAttackSel` stay
+  on Hex) and `UndoSlot` (src/undo.ts). GameMap's methods keep their names and delegate. The
+  parts are closure variables of GameMap, not fields: a field would be saved and snapshot by
+  the harness (test/mapparts.test.ts pins the data fields). For the same reason the methods
+  stayed `this.m = function` closures: in the class body they couldn't reach that state. The
+  new files are in the coverage and mutated with `map`. #68, #72, #73, #74 stay.
 - **The lifecycle classes** (#30): Scenario, ScenarioLoader, Campaign, GameState, now with step
   0's tests. Keep the save keys and shapes. #27 goes with Campaign (nothing reads
   `campaign.isLoaded`, so the fix is identical).
