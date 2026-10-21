@@ -11,7 +11,8 @@ faithful source reconstruction in [openpanzer-src](../openpanzer-src). See ROADM
     npm run build        # dist/: the bundled game with its assets; npm run preview serves it
 
 - `src/` the game as TypeScript ES modules, `src/main.ts` is the entry
-- `game/` the 3.2.14 build with all the assets (the page has `<base href="/game/">`)
+- `game/` the 3.2.14 build with all the assets (the page has `<base href="/game/">`), images,
+  sounds and manuals in Git LFS (`git lfs install` before cloning)
 - `harness/` the comparison with the reference, `docs/TYPES.md` the typing rules,
   `docs/MECHANICS.md` how the game plays (rules, combat, AI), `docs/RESEARCH.md` what PG2 and
   other WW2 strategy games teach about design, `docs/design/` the current UI
