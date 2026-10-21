@@ -606,7 +606,6 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 			}
 		}
 		if (canOccupy) {
-			const isOwned = map.getPlayer(hex.owner).side == side; //unused
 			if (uclass == unitClass.artillery)
 				score += 50;
 			else if (uclass == unitClass.infantry)

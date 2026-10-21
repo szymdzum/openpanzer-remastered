@@ -84,7 +84,7 @@ export var moveSoundByMoveMethod =
 
 //A sound with its variants, play() returns the play() promise or nothing when muted or missing
 export interface soundSprite {
-	play(): Promise<void>;
+	play(): Promise<void> | undefined; //undefined when muted or there is no sound
 }
 //soundSprite is a constructor function (soundData above uses it before a class would exist)
 export interface soundSpriteConstructor { new (paths: string[]): soundSprite; }
@@ -105,7 +105,7 @@ export function soundSprite(this: soundSprite, paths: string[]) {
 	for (let i = 0; i < paths.length; i++)
 		addSound(paths[i]);
 
-	this.play = function(): Promise<void> {
+	this.play = function(): Promise<void> | undefined {
 		let sound;
 		//The variant is picked (Math.random called) even when sounds are muted
 		sound = Math.floor(Math.random() * sounds.length);
@@ -115,5 +115,6 @@ export function soundSprite(this: soundSprite, paths: string[]) {
 			try { sound.currentTime = 0; } catch(e) {}; //restart if already playing
 			return sound.play();
 		}
+		return undefined;
 	}
 }

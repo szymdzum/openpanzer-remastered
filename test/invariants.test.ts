@@ -152,7 +152,7 @@ function attack(w: World, a: Unit, d: Unit) {
 		if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
 	}
 	if (!dDestroyed && GR.shouldDefenderRetreat(a, d, dOld)) {
-		const r = GR.getRetreatPosition(m.map, d, m.rows, m.cols);
+		const r = GR.getRetreatPosition(m.map, d, m.rows);
 		if (r) m.retreatUnit(d, r);
 		else { d.destroyed = true; m.updateUnitList(); }
 	}

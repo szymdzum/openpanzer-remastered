@@ -618,7 +618,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare copy: (m: GameMap) => void;
 	declare cleanup: () => void;
 
-	declare static onPlayerTurn: (map: GameMap, player: Player) => void;
+	declare static onPlayerTurn: (player: Player, map: GameMap) => void;
 
 	constructor() {
 	this.rows = 0;
@@ -868,7 +868,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 				unitList[i].unitEndTurn();
 			}
 		}
-		GameMap.onPlayerTurn(this, this.currentPlayer);
+		GameMap.onPlayerTurn(this.currentPlayer, this);
 	}
 
 	//atkunit from srow, scol attacks defunit from drow, dcol
@@ -1453,7 +1453,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 //turn's units were reset and before Game deploys that player's reinforcements. The default is what
 //endTurn did itself: an AI or scripted player plans its whole turn here (#94: its reinforcements
 //arrive after it planned). A headless game can drive the players its own way
-GameMap.onPlayerTurn = function(map: GameMap, player: Player) {
+GameMap.onPlayerTurn = function(player: Player) {
 	if (player.type == playerType.aiLocal || player.type == playerType.aiScripted)
 		player.handler.buildActions();
 }

@@ -176,7 +176,7 @@ test("buildActions is startTurn then planTurn; the evaluator scores on the AI's 
 test("Map.endTurn hands the next player's turn to the turn driver", () => {
 	const { map, players } = smallGame();
 	const calls: [GameMap, Player][] = [];
-	GameMap.onPlayerTurn = (m, p) => { calls.push([m, p]); };
+	GameMap.onPlayerTurn = (p, m) => { calls.push([m, p]); };
 	map.endTurn();
 	expect(calls).toEqual([[map, players[1]]]);
 

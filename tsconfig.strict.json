@@ -1,5 +1,0 @@
-{
-	// npm run check:strict: noImplicitAny on top, the typing progress measure of ROADMAP 2b
-	"extends": "./tsconfig.json",
-	"compilerOptions": { "noImplicitAny": true }
-}

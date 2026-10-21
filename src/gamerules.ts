@@ -40,7 +40,7 @@ export interface GameRulesModule {
 	calculateAttackResults(atkunit: Unit, defunit: Unit, estimate: boolean): combatResults;
 	isLossOverRetreatThreshold(strength: number, oldStrength: number): boolean;
 	shouldDefenderRetreat(atkunit: Unit, defunit: Unit, oldStrength: number): boolean;
-	getRetreatPosition(map: Hex[][], unit: Unit, rows: number, cols: number): Cell | null;
+	getRetreatPosition(map: Hex[][], unit: Unit, rows: number): Cell | null;
 	isRuggedDefense(atkunit: Unit, defunit: Unit): boolean;
 	isEntrenchmentIntact(atkunit: Unit, defunit: Unit, terrain: number): boolean;
 	getResupplyValue(map: Hex[][], unit: Unit, isTurnStart?: boolean): Supply;
@@ -735,7 +735,7 @@ GameRules.shouldDefenderRetreat = function(atkunit, defunit, oldStrength) {
 }
 
 //Returns a free hex behind the unit (opposite to its facing) or any other free adjacent hex
-GameRules.getRetreatPosition = function(map, unit, rows, cols) {
+GameRules.getRetreatPosition = function(map, unit, rows) {
 	if (!unit) return null;
 
 	const ud = unit.unitData();
@@ -1517,12 +1517,8 @@ GameRules.getDirection = function(x1, y1, x2, y2) {
 		if (dy == 0)
 			return direction.S;
 	}
-	if (dx == 0) {
-		if (dy >= 0)
-			return direction.W;
-		if (dy < 0)
-			return direction.E;
-	}
+	//dx is 0
+	return dy >= 0 ? direction.W : direction.E;
 }
 
 //Returns the distance between 2 hexes x row, y col

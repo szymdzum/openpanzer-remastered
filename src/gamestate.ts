@@ -150,7 +150,7 @@ export class GameState {
 				if (!restoreFromJSON(this.result as string)) {
 					if (typeof onFail === "function")
 						onFail();
-					return false;
+					return;
 				}
 				if (typeof onDone === "function")
 					onDone();
@@ -177,12 +177,12 @@ export class GameState {
 						if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json")) {
 							inputElement.value = "";
 							inputElement.setAttribute("placeholder", "Cannot parse reply !");
-							return false;
+							return;
 						}
 						if (!restoreFromJSON(reply.files["openpanzer-save.json"].content)) {
 							inputElement.value = "";
 							inputElement.setAttribute("placeholder", "Cannot find game data in the save file");
-							return false;
+							return;
 						}
 						//The bundle has "delete reply;" here: no effect on a var, and a syntax error in a module
 						inputElement.value = gistId;
@@ -191,7 +191,7 @@ export class GameState {
 					} else {
 						inputElement.value = "";
 						inputElement.setAttribute("placeholder", "Cannot load game !");
-						return false;
+						return;
 					}
 				}
 			};
@@ -269,7 +269,7 @@ export class GameState {
 				if (object) {
 					const item: { [key: string]: unknown } = {};
 					item[key] = object;
-					chrome.storage.local.get(function(items: { [key: string]: unknown }) {}); //unused
+					chrome.storage.local.get(function() {}); //unused
 					chrome.storage.local.set(item);
 				}
 			} else {

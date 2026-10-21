@@ -25,6 +25,7 @@ class FileXMLHttpRequest {
 	private async = true;
 
 	open(method: string, url: string, async?: boolean) {
+		if (method !== "GET") throw new Error("the test XMLHttpRequest serves GET only, not " + method);
 		this.url = new URL(url, document.baseURI).pathname.replace(/^\/game\//, "");
 		this.async = async !== false;
 	}

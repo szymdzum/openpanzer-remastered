@@ -207,7 +207,7 @@ export class ScenarioLoader {
 		function loadMapImage(xmlData: Document) {
 			const img = new Image();
 			img.src = scen.map.terrainImage;
-			img.onload = function(event) {
+			img.onload = function() {
 				let rows = scen.map.rows;
 				let cols = scen.map.cols;
 				let width = img.width;

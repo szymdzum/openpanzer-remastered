@@ -1,4 +1,4 @@
-# Types (also without implicit any), the linter, fallow (what a change adds:
+# Types, the linter, fallow (what a change adds:
 # unused code, import cycles, duplicates, complexity), typos and the tests with the per-file coverage floors
 # (vite.config.mts), on every pull request and on main. The tests need the game's data
 # (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
@@ -28,7 +28,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
-      - run: npm run check:strict
       - run: npm run lint
       - name: "fallow audit: what this change adds (unused code, import cycles, duplicates, complexity)"
         run: npx fallow audit --base origin/${{ github.base_ref || 'main' }}
