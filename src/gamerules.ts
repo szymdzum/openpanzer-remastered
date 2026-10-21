@@ -100,29 +100,29 @@ export var GameRules: GameRulesModule = (function(GameRules: GameRulesModule) { 
 //with the new cost
 GameRules.getMoveRange = function(mapObj, unit)
 {
-	var r = 0;
-	var map = mapObj.map;
-	var rows = mapObj.rows;
-	var cols = mapObj.cols;
-	var hex = null;
-	var allowedCells = [];
+	let r = 0;
+	const map = mapObj.map;
+	const rows = mapObj.rows;
+	const cols = mapObj.cols;
+	let hex = null;
+	const allowedCells = [];
 
 	if (unit === null || unit.hasMoved) return [];
 
-	var p = unit.getPos();
-	var ud = unit.unitData();
-	var range = GameRules.getUnitMoveRange(unit);
-	var moveCost = movTable[ud.movmethod];
-	var side = unit.player.side;
-	var enemySide = ~side & 1;
-	var isTrain = GameRules.isTrain(unit);
+	const p = unit.getPos();
+	const ud = unit.unitData();
+	const range = GameRules.getUnitMoveRange(unit);
+	const moveCost = movTable[ud.movmethod];
+	const side = unit.player.side;
+	const enemySide = ~side & 1;
+	const isTrain = GameRules.isTrain(unit);
 
-	var c = getCellsInRange(p.row, p.col, range, rows, cols, true);
+	const c = getCellsInRange(p.row, p.col, range, rows, cols, true);
 
 	//Remove the partial hexes on the map edges
 	for (var i = c.length - 1; i >= 0; i--)
 	{
-		var isPartial = false;
+		let isPartial = false;
 		if (c[i].row == 0 && c[i].col % 2 == 0)
 			isPartial = true;
 		if (mapObj.isLastColPartial && c[i].col == cols - 1)
@@ -158,7 +158,7 @@ GameRules.getMoveRange = function(mapObj, unit)
 		{
 			if (c[i].range == r)
 			{
-				for (var j = 0; j < c.length; j++) //Look up adjacent cells for c[i]
+				for (let j = 0; j < c.length; j++) //Look up adjacent cells for c[i]
 				{
 					if (c[j].range < r) continue; //Not always true, there might be a path to reach a hex by turning back
 					if (isAdjacent(c[i].row, c[i].col, c[j].row, c[j].col))
@@ -209,8 +209,8 @@ GameRules.getMoveRange = function(mapObj, unit)
 //Return a unit maximum move range without considering terrain
 GameRules.getUnitMoveRange = function(unit)
 {
-	var range = unit.getMovesLeft();
-	var ud = unit.unitData();
+	let range = unit.getMovesLeft();
+	const ud = unit.unitData();
 
 	if (GameRules.unitUsesFuel(unit) && (unit.getFuel() < range))
 		range = unit.getFuel();
@@ -233,24 +233,24 @@ GameRules.getUnitMoveRange = function(unit)
 //Returns the map cells with units that can be attacked by a unit
 GameRules.getUnitAttackCells = function(map, unit, rows, cols)
 {
-	var allowedCells = [];
-	var target = null;
+	const allowedCells = [];
+	let target = null;
 
 	if (unit === null || unit.hasFired || unit.getAmmo() <= 0) return [];
-	var p = unit.getPos();
+	const p = unit.getPos();
 
 	//TODO weather ?
-	var range = GameRules.getUnitAttackRange(unit);
+	const range = GameRules.getUnitAttackRange(unit);
 
-	var cellList = getCellsInRange(p.row, p.col, range, rows, cols, false);
+	const cellList = getCellsInRange(p.row, p.col, range, rows, cols, false);
 
 	//can attack the target under/above for airdefense/airplane
 	cellList.push(new Cell(p.row, p.col));
 
-	for (var i = 0; i < cellList.length; i++)
+	for (let i = 0; i < cellList.length; i++)
 	{
-		var cell = cellList[i];
-		var hex = map[cell.row][cell.col];
+		const cell = cellList[i];
+		const hex = map[cell.row][cell.col];
 
 		if (hex.getAttackableUnit(unit, 0) !== null) //Can attack the ground unit on this hex?
 		{
@@ -286,7 +286,7 @@ GameRules.getUnitAttackRange = function(unit)
 {
 	if (!unit) return 0;
 
-	var range = unit.unitData().gunrange;
+	let range = unit.unitData().gunrange;
 	if (range == 0) range = 1;
 
 	if (Leaders.unitHasLeader(unit, leaderType.marksman))
@@ -300,15 +300,15 @@ GameRules.setZOCRange = function(map, unit, on, mrows, mcols)
 {
 	if (!unit || isAir(unit)) return;
 
-	var p = unit.getPos();
+	const p = unit.getPos();
 
 	if (!p) return;
 
-	var side = unit.player.side;
-	var r, c;
-	var adj = getAdjacent(p.row, p.col);
+	const side = unit.player.side;
+	let r, c;
+	const adj = getAdjacent(p.row, p.col);
 
-	for (var i in adj)
+	for (const i in adj)
 	{
 		r = adj[i].row;
 		c = adj[i].col;
@@ -324,26 +324,26 @@ GameRules.setSpotRange = function(map, unit, on, mrows, mcols)
 {
 	if (!unit) return 0;
 
-	var p = unit.getPos();
+	const p = unit.getPos();
 
 	if (!p) return;
 
-	var side = unit.player.side;
-	var range = GameRules.getUnitSpotRange(unit);
-	var r, c;
-	var newlySpottedUnits = 0;
-	var cells = getCellsInRange(p.row, p.col, range, mrows, mcols, false);
+	const side = unit.player.side;
+	const range = GameRules.getUnitSpotRange(unit);
+	let r, c;
+	let newlySpottedUnits = 0;
+	const cells = getCellsInRange(p.row, p.col, range, mrows, mcols, false);
 	//Add current unit cell too as spotted
 	cells.push(new Cell(p.row, p.col));
 
-	for (var i = 0; i < cells.length; i++)
+	for (let i = 0; i < cells.length; i++)
 	{
 		r = cells[i].row;
 		c = cells[i].col;
 		//Check for a previously hidden unit
 		if (on && !map[r][c].isSpotted(side))
 		{
-			var sUnit = map[r][c].getUnit(false);
+			const sUnit = map[r][c].getUnit(false);
 			if (sUnit && sUnit.player.side != side)
 			{
 				newlySpottedUnits++;
@@ -360,7 +360,7 @@ GameRules.getUnitSpotRange = function(unit)
 {
 	if (!unit) return 0;
 
-	var range = unit.unitData().spotrange;
+	let range = unit.unitData().spotrange;
 
 	if (Leaders.unitHasLeader(unit, leaderType.eliteReconVeteran))
 		range += 2;
@@ -372,14 +372,14 @@ GameRules.getUnitSpotRange = function(unit)
 
 GameRules.getShortestPath = function(startCell, endCell, cellList)
 {
-	var pCells = [];
-	var visitedCells = [];
-	var shortestPath = [];
-	var minDistCell = null;
-	var idx = 0;
+	const pCells = [];
+	const visitedCells = [];
+	const shortestPath = [];
+	let minDistCell = null;
+	let idx = 0;
 
 	//add starting cell
-	var psCell = new pathCell(startCell);
+	const psCell = new pathCell(startCell);
 	psCell.dist = 0;
 	psCell.prev = psCell;
 	pCells.push(psCell);
@@ -387,7 +387,7 @@ GameRules.getShortestPath = function(startCell, endCell, cellList)
 	//add the rest of cells as pathCells into list
 	for (var i = 0; i < cellList.length; i++)
 	{
-		var pc = new pathCell(cellList[i]);
+		const pc = new pathCell(cellList[i]);
 		pc.cost = cellList[i].cost;
 		pCells.push(pc);
 	}
@@ -422,7 +422,7 @@ GameRules.getShortestPath = function(startCell, endCell, cellList)
 
 		if (minDistCell.row == endCell.row && minDistCell.col == endCell.col)
 		{
-			var t = minDistCell;
+			let t = minDistCell;
 			while(true)
 			{
 				shortestPath.unshift(t); //add on top
@@ -456,20 +456,20 @@ GameRules.pathTo = function(mapObj, unit, cell)
 //estimate: compute the expected result instead of rolling dice
 GameRules.calculateCombatResults = function(atkunit, defunit, unitlist, withHiddenUnits, estimate)
 {
-	var supportUnits: Unit[] = [];
-	var realLosses = 0;
-	var realKills = 0;
-	var evalLosses = 0;
-	var evalKills = 0;
-	var side = atkunit.player.side;
-	var cr;
+	let supportUnits: Unit[] = [];
+	let realLosses = 0;
+	let realKills = 0;
+	let evalLosses = 0;
+	let evalKills = 0;
+	const side = atkunit.player.side;
+	let cr;
 
 	if (!atkunit.isSurprised)
 		supportUnits = GameRules.getSupportFireUnits(unitlist, atkunit, defunit);
 
-	for (var u in supportUnits)
+	for (const u in supportUnits)
 	{
-		var hex = supportUnits[u].getHex();
+		const hex = supportUnits[u].getHex();
 		cr = GameRules.calculateAttackResults(supportUnits[u], atkunit, estimate);
 		if (hex.isSpotted(side) || supportUnits[u].tempSpotted)
 		{
@@ -503,31 +503,31 @@ GameRules.calculateCombatResults = function(atkunit, defunit, unitlist, withHidd
 
 GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 {
-	var aPos = atkunit.getPos();
-	var dPos = defunit.getPos();
+	const aPos = atkunit.getPos();
+	const dPos = defunit.getPos();
 
-	var aData = atkunit.unitData();
-	var dData = defunit.unitData();
+	const aData = atkunit.unitData();
+	let dData = defunit.unitData();
 
-	var aType = aData.target;
-	var dType = dData.target;
+	const aType = aData.target;
+	const dType = dData.target;
 
-	var aHex = atkunit.getHex();
-	var dHex = defunit.getHex();
+	const aHex = atkunit.getHex();
+	const dHex = defunit.getHex();
 
-	var aExpBars = (atkunit.experience / 100) >> 0;
-	var dExpBars = (defunit.experience / 100) >> 0;
+	const aExpBars = (atkunit.experience / 100) >> 0;
+	const dExpBars = (defunit.experience / 100) >> 0;
 
-	var aav = 0; //Attacker attack value
-	var adv = 0; //Attacker defense value
-	var dav = 0; //Defender attack value
-	var ddv = 0; //Defender defense value
+	let aav = 0; //Attacker attack value
+	let adv = 0; //Attacker defense value
+	let dav = 0; //Defender attack value
+	let ddv = 0; //Defender defense value
 
-	var cr = new combatResults();
-	var d = GameRules.distance(aPos.row, aPos.col, dPos.row, dPos.col); //distance between units
+	const cr = new combatResults();
+	const d = GameRules.distance(aPos.row, aPos.col, dPos.row, dPos.col); //distance between units
 
-	var aTerrain = aHex.terrain;
-	var dTerrain = dHex.terrain;
+	let aTerrain = aHex.terrain;
+	let dTerrain = dHex.terrain;
 
 	if (isAir(atkunit)) aTerrain = terrainType.Clear;
 	if (isAir(defunit)) dTerrain = terrainType.Clear;
@@ -536,8 +536,8 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	if (defunit.isMounted && !defunit.isSurprised && defunit.unitData(true).uclass == unitClass.infantry)
 		dData = Equipment.equipment[defunit.eqid];
 
-	var dEntrenchIntact = GameRules.isEntrenchmentIntact(atkunit, defunit, dTerrain);
-	var aEntrenchIntact = GameRules.isEntrenchmentIntact(defunit, atkunit, aTerrain);
+	const dEntrenchIntact = GameRules.isEntrenchmentIntact(atkunit, defunit, dTerrain);
+	const aEntrenchIntact = GameRules.isEntrenchmentIntact(defunit, atkunit, aTerrain);
 
 	//Attacking unit type
 	switch(aType)
@@ -602,7 +602,7 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 
 	//Close Combat: infantry attacking in close terrain or a fortification, defender uses Close Defense
 	//except when it's infantry which makes attacker use CD
-	var isCloseCombat = (GameRules.isCloseCombatTerrain(dTerrain) || dData.uclass == unitClass.fortification)
+	const isCloseCombat = (GameRules.isCloseCombatTerrain(dTerrain) || dData.uclass == unitClass.fortification)
 		&& aData.uclass == unitClass.infantry;
 
 	if (isCloseCombat)
@@ -660,8 +660,8 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	}
 
 	//Entrenchment
-	var aEntrenchment = 0;
-	var dEntrenchment = 0;
+	let aEntrenchment = 0;
+	let dEntrenchment = 0;
 
 	if (aEntrenchIntact && !isCloseCombat)
 		aEntrenchment = atkunit.entrenchment;
@@ -692,7 +692,7 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	if (aData.uclass != unitClass.artillery && aData.uclass != unitClass.fortification
 		&& (aData.uclass < unitClass.submarine || aData.uclass > unitClass.lightCruiser))
 	{
-		var hitsPenalty = defunit.hits * 2;
+		const hitsPenalty = defunit.hits * 2;
 		if (ddv <= hitsPenalty)
 			ddv = 0;
 		else
@@ -700,7 +700,7 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	}
 
 	//Range defense modifier, AntiTank doesn't get it after moving
-	var noRangeDefMod = aData.uclass == unitClass.antiTank && atkunit.hasMoved
+	const noRangeDefMod = aData.uclass == unitClass.antiTank && atkunit.hasMoved
 		&& !Leaders.unitHasLeader(atkunit, leaderType.tankKiller);
 
 	if (isGround(atkunit) && isGround(defunit) && !isCloseCombat)
@@ -721,7 +721,7 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	//The 3.2.14 bundle assigns these two as implicit globals, kept as is
 	aInitiative = aData.initiative;
 	dInitiative = dData.initiative;
-	var initiativeDiff = aData.initiative - dData.initiative;
+	let initiativeDiff = aData.initiative - dData.initiative;
 
 	if (Leaders.unitHasLeader(atkunit, leaderType.firstStrike))
 		initiativeDiff = Math.abs(initiativeDiff);
@@ -767,16 +767,16 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 		cr.isOverrun = true;
 
 	//Experience
-	var bonusAD = (dav + 6 - adv);
+	let bonusAD = (dav + 6 - adv);
 	if (bonusAD < 1) bonusAD = 1;
 
-	var bonusDA = (aav + 6 - ddv);
+	let bonusDA = (aav + 6 - ddv);
 	if (bonusDA < 1) bonusDA = 1;
 
-	var bonusDD = (ddv + 6 - aav);
+	let bonusDD = (ddv + 6 - aav);
 	if (bonusDD < 1) bonusDD = 1;
 
-	var bonusAA = (adv + 6 - dav);
+	let bonusAA = (adv + 6 - dav);
 	if (bonusAA < 1) bonusAA = 1;
 
 	cr.atkExpGained = ((bonusAD * (defunit.strength / 10) + bonusDD) * cr.kills) >> 0;
@@ -807,7 +807,7 @@ GameRules.isLossOverRetreatThreshold = function(strength, oldStrength)
 
 GameRules.shouldDefenderRetreat = function(atkunit, defunit, oldStrength)
 {
-	var uc = atkunit.unitData().uclass;
+	const uc = atkunit.unitData().uclass;
 
 	if (!isGround(atkunit) || !isGround(defunit))
 		return false;
@@ -823,22 +823,22 @@ GameRules.getRetreatPosition = function(map, unit, rows, cols)
 {
 	if (!unit) return null;
 
-	var ud = unit.unitData();
-	var moveCost = movTable[ud.movmethod];
+	const ud = unit.unitData();
+	const moveCost = movTable[ud.movmethod];
 
 	if (ud.movpoints == 0) return null;
 
-	var p = unit.getPos();
-	var facing = Math.abs(unit.facing - 8);
-	var idx = GameRules.facingToAdjacentIndex(facing);
-	var adj = getAdjacent(p.row, p.col);
+	const p = unit.getPos();
+	const facing = Math.abs(unit.facing - 8);
+	const idx = GameRules.facingToAdjacentIndex(facing);
+	const adj = getAdjacent(p.row, p.col);
 
 	adj.unshift(adj[idx]); //Check the hex behind first
 
-	for (var h in adj)
+	for (const h in adj)
 	{
-		var r = adj[h].row;
-		var c = adj[h].col;
+		const r = adj[h].row;
+		const c = adj[h].col;
 
 		if (r == 0 && c % 2 == 0) continue; //partial hex
 		if (r == rows - 1 && c % 2 == 1) continue; //partial hex
@@ -853,16 +853,16 @@ GameRules.getRetreatPosition = function(map, unit, rows, cols)
 
 GameRules.isRuggedDefense = function(atkunit, defunit)
 {
-	var aRugged = ((atkunit.experience / 100) >> 0) + 2;
-	var dRugged = ((defunit.experience / 100) >> 0) + 2;
+	let aRugged = ((atkunit.experience / 100) >> 0) + 2;
+	let dRugged = ((defunit.experience / 100) >> 0) + 2;
 
 	if (Leaders.unitHasLeader(atkunit, leaderType.tenaciousDefense))
 		aRugged += 2;
 	if (Leaders.unitHasLeader(defunit, leaderType.tenaciousDefense))
 		dRugged += 2;
 
-	var aEntrenchRate = unitEntrenchRate[atkunit.unitData().uclass] + 1;
-	var dEntrenchRate = unitEntrenchRate[defunit.unitData().uclass] + 1;
+	const aEntrenchRate = unitEntrenchRate[atkunit.unitData().uclass] + 1;
+	const dEntrenchRate = unitEntrenchRate[defunit.unitData().uclass] + 1;
 
 	return ((5 * ((50 * dRugged) / aRugged) * dEntrenchRate * defunit.entrenchment) / (50 * aEntrenchRate)) > 50;
 }
@@ -886,10 +886,10 @@ GameRules.isEntrenchmentIntact = function(atkunit, defunit, terrain)
 
 function getCombatKills(atkval: number, defval: number, atkunit: Unit, defunit: Unit, estimate: boolean): number
 {
-	var atkclass = atkunit.unitData().uclass;
-	var kF = atkval - defval; //Kill fractions
-	var hitThreshold = 15; //minimum dice roll that kills a strength point
-	var kills = 0;
+	const atkclass = atkunit.unitData().uclass;
+	let kF = atkval - defval; //Kill fractions
+	let hitThreshold = 15; //minimum dice roll that kills a strength point
+	let kills = 0;
 
 	if (kF > 4) kF = 4 + (2 * kF - 8) / 5; //PG2 formula
 
@@ -911,9 +911,9 @@ function getCombatKills(atkval: number, defval: number, atkunit: Unit, defunit: 
 	}
 	else
 	{
-		for (var i = 0; i < atkunit.strength; i++)
+		for (let i = 0; i < atkunit.strength; i++)
 		{
-			var roll = GameRules.rollDice(1, 20);
+			let roll = GameRules.rollDice(1, 20);
 			if (roll > 1 && roll < 20) //1 always misses, 20 always hits
 				roll += kF;
 			if (roll >= hitThreshold)
@@ -935,16 +935,16 @@ GameRules.getResupplyValue = function(map, unit, isTurnStart)
 
 	if (!GameRules.canResupply(map, unit)) return new Supply(0, 0);
 	//get maximum resupply values
-	var ammo = unit.unitData(true).ammo - unit.ammo;
-	var fuel = unit.unitData(true).fuel - unit.fuel;
-	var terrain = unit.getHex().terrain;
+	let ammo = unit.unitData(true).ammo - unit.ammo;
+	let fuel = unit.unitData(true).fuel - unit.fuel;
+	const terrain = unit.getHex().terrain;
 
 	//Air and naval units get full resupply even if other units are adjacent
 	if (isAir(unit) || isSea(unit))
 		return new Supply(ammo, fuel);
 
-	var tAmmo = 0;
-	var tFuel = 0;
+	let tAmmo = 0;
+	let tFuel = 0;
 
 	if (unit.transport !== null)
 	{
@@ -952,13 +952,13 @@ GameRules.getResupplyValue = function(map, unit, isTurnStart)
 		tFuel = unit.transport.unitData().fuel - unit.transport.fuel;
 	}
 
-	var p = unit.getPos();
-	var adj = getAdjacent(p.row, p.col);
-	var enemy = 0;
-	for (var h in adj)
+	const p = unit.getPos();
+	const adj = getAdjacent(p.row, p.col);
+	let enemy = 0;
+	for (const h in adj)
 	{
-		var r = adj[h].row;
-		var c = adj[h].col;
+		const r = adj[h].row;
+		const c = adj[h].col;
 		if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
 			continue;
 		//Enemy around ? Check only for ground units
@@ -1006,7 +1006,7 @@ GameRules.getReinforceValue = function(map, unit, overstrength)
 	if (!defined(overstrength)) overstrength = false;
 
 	if (!GameRules.canReinforce(map, unit, overstrength)) return 0;
-	var strength = 10 - unit.strength;
+	let strength = 10 - unit.strength;
 
 	if (overstrength)
 		strength = 10 + Math.round(unit.experience / 100) - unit.strength;
@@ -1015,13 +1015,13 @@ GameRules.getReinforceValue = function(map, unit, overstrength)
 	if (isAir(unit))
 		return strength;
 
-	var p = unit.getPos();
-	var adj = getAdjacent(p.row, p.col);
-	var enemy = 0;
-	for (var h in adj)
+	const p = unit.getPos();
+	const adj = getAdjacent(p.row, p.col);
+	let enemy = 0;
+	for (const h in adj)
 	{
-		var r = adj[h].row;
-		var c = adj[h].col;
+		const r = adj[h].row;
+		const c = adj[h].col;
 		if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
 			continue;
 		//Enemy around ? Check only for ground units
@@ -1068,8 +1068,8 @@ GameRules.canInitiateAttack = function(unit, targetUnit)
 	if (unit === null || unit.destroyed || targetUnit === null || targetUnit.destroyed)
 		return false;
 
-	var eqid = unit.getEqid();
-	var targetEqid = targetUnit.getEqid();
+	const eqid = unit.getEqid();
+	const targetEqid = targetUnit.getEqid();
 
 	if (GameRules.isEnemy(unit, targetUnit) && !Equipment.canInitiateAttackOnUnitType(eqid, targetEqid))
 		return false;
@@ -1082,7 +1082,7 @@ GameRules.canFire = function(unit, targetUnit) { return canAttack(unit, targetUn
 //Checks if a given unit can move into a hex
 function canMoveInto(map: Hex[][], unit: Unit, cell: Cell): boolean
 {
-	var hex = map[cell.row][cell.col];
+	const hex = map[cell.row][cell.col];
 
 	if (isGround(unit) || isSea(unit))
 	{
@@ -1101,7 +1101,7 @@ function canMoveInto(map: Hex[][], unit: Unit, cell: Cell): boolean
 //Checks if a unit can pass thru a hex ocupied by a friendly unit
 function canPassInto(map: Hex[][], unit: Unit, cell: Cell): boolean
 {
-	var hex = map[cell.row][cell.col];
+	const hex = map[cell.row][cell.col];
 
 	if (isGround(unit) || isSea(unit))
 	{
@@ -1142,8 +1142,8 @@ GameRules.canResupply = function(map, unit)
 	if (unit.hasResupplied)
 		return false;
 
-	var needAmmo = unit.ammo < unit.unitData(true).ammo;
-	var needFuel = unit.fuel < unit.unitData(true).fuel;
+	let needAmmo = unit.ammo < unit.unitData(true).ammo;
+	let needFuel = unit.fuel < unit.unitData(true).fuel;
 
 	if (unit.transport !== null)
 	{
@@ -1188,7 +1188,7 @@ GameRules.canReinforce = function(map, unit, overstrength)
 			return false;
 	}
 
-	var ud = unit.unitData(true); //unused, kept from the bundle
+	const ud = unit.unitData(true); //unused, kept from the bundle
 
 	if (isGround(unit))
 		return true;
@@ -1205,7 +1205,7 @@ GameRules.canReinforce = function(map, unit, overstrength)
 //Air units and mounted artillery can't capture cities
 GameRules.canCapture = function(unit)
 {
-	var uc = unit.unitData().uclass;
+	const uc = unit.unitData().uclass;
 
 	if (isAir(unit))
 		return false;
@@ -1223,7 +1223,7 @@ GameRules.canEntrench = function(unit)
 	if (unit === null || unit.carrier != 0)
 		return false;
 
-	var uc = unit.unitData().uclass;
+	const uc = unit.unitData().uclass;
 
 	if (unitEntrenchRate[uc] > 0)
 		return true;
@@ -1243,17 +1243,17 @@ GameRules.isEnemy = function(unit, targetUnit)
 //Returns a list of units that can fire support when defunit is attacked by atkunit
 GameRules.getSupportFireUnits = function(unitList, atkunit, defunit)
 {
-	var pa = atkunit.getPos();
-	var pd = defunit.getPos();
+	const pa = atkunit.getPos();
+	const pd = defunit.getPos();
 
 	//No support fire if attack is from range
 	if (GameRules.distance(pa.row, pa.col, pd.row, pd.col) > 1)
 		return [];
 
-	var supportUnits = [];
-	var u = null;
+	const supportUnits = [];
+	let u = null;
 
-	for (var i in unitList)
+	for (const i in unitList)
 	{
 		u = unitList[i];
 		if (u.player.side != defunit.player.side)
@@ -1262,9 +1262,9 @@ GameRules.getSupportFireUnits = function(unitList, atkunit, defunit)
 		if (u.id == defunit.id)
 			continue;
 
-		var up = u.getPos();
-		var ud = u.unitData();
-		var range = ud.gunrange;
+		const up = u.getPos();
+		const ud = u.unitData();
+		let range = ud.gunrange;
 		if (range == 0)	range = 1;
 
 		if (GameRules.distance(up.row, up.col, pa.row, pa.col) > range)
@@ -1288,9 +1288,9 @@ GameRules.getSupportFireUnits = function(unitList, atkunit, defunit)
 
 GameRules.isInAttackRange = function(unit, targetUnit)
 {
-	var p = unit.getPos();
-	var tp = targetUnit.getPos();
-	var range = GameRules.getUnitAttackRange(unit);
+	const p = unit.getPos();
+	const tp = targetUnit.getPos();
+	const range = GameRules.getUnitAttackRange(unit);
 
 	if (!defined(p) || !defined(tp))
 		return false;
@@ -1303,8 +1303,8 @@ GameRules.isInAttackRange = function(unit, targetUnit)
 
 function isAirfieldAroundUnit(map: Hex[][], unit: Unit): boolean
 {
-	var p = unit.getPos();
-	var hex = map[p.row][p.col];
+	const p = unit.getPos();
+	const hex = map[p.row][p.col];
 
 	if (hex === null)
 		return false;
@@ -1315,12 +1315,12 @@ function isAirfieldAroundUnit(map: Hex[][], unit: Unit): boolean
 		return true;
 
 	//If not Check adjacent hexes
-	var adj = getAdjacent(p.row, p.col);
+	const adj = getAdjacent(p.row, p.col);
 
-	for (var h in adj)
+	for (const h in adj)
 	{
-		var r = adj[h].row;
-		var c = adj[h].col;
+		const r = adj[h].row;
+		const c = adj[h].col;
 
 		if (r < 0 || !defined(map[r]) || c < 0 || !defined(map[r][c]))
 			continue;
@@ -1335,9 +1335,9 @@ function isAirfieldAroundUnit(map: Hex[][], unit: Unit): boolean
 //Returns unitClass.none if it's NOT possible, unitClass.airTransport or unitClass.navalTransport
 GameRules.getEmbarkType = function(map, unit)
 {
-	var pos = unit.getPos();
-	var hex = map[pos.row][pos.col];
-	var ud = unit.unitData();
+	const pos = unit.getPos();
+	const hex = map[pos.row][pos.col];
+	const ud = unit.unitData();
 
 	if (hex.terrain == terrainType.Airfield && unit.player.airTransports > 0
 		&& ud.embark > embarkType.naval && hex.airunit === null)
@@ -1353,26 +1353,26 @@ GameRules.getEmbarkType = function(map, unit)
 //Returns a list of position for disembark
 GameRules.getDisembarkPositions = function(map, unit)
 {
-	var cellList = [];
-	var ud = unit.unitData();
+	const cellList = [];
+	const ud = unit.unitData();
 
 	//Can't disembark after move
 	if (!unit.hasMoved && (ud.uclass == unitClass.airTransport || ud.uclass == unitClass.navalTransport))
 	{
-		var p = unit.getPos();
-		var realMovMethod = Equipment.equipment[unit.eqid].movmethod;
-		var moveCost = movTable[realMovMethod];
-		var adj = getAdjacent(p.row, p.col);
+		const p = unit.getPos();
+		const realMovMethod = Equipment.equipment[unit.eqid].movmethod;
+		const moveCost = movTable[realMovMethod];
+		const adj = getAdjacent(p.row, p.col);
 
-		for (var h in adj)
+		for (const h in adj)
 		{
-			var r = adj[h].row;
-			var c = adj[h].col;
+			const r = adj[h].row;
+			const c = adj[h].col;
 
 			if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
 				continue;
 
-			var hex = map[r][c];
+			const hex = map[r][c];
 			//Only ground units can be transported
 			if (hex.unit === null && moveCost[hex.terrain] < 255)
 				cellList.push(adj[h]);
@@ -1385,23 +1385,23 @@ GameRules.getDisembarkPositions = function(map, unit)
 //Returns the first hex (row, col first, then adjacent) where a bought unit can be deployed
 GameRules.getReinforcementDeployPositions = function(map, unit, row, col)
 {
-	var ud = unit.unitData(); //unused, kept from the bundle
-	var moveCost = movTable[Equipment.equipment[unit.eqid].movmethod];
-	var cells = getAdjacent(row, col);
+	const ud = unit.unitData(); //unused, kept from the bundle
+	const moveCost = movTable[Equipment.equipment[unit.eqid].movmethod];
+	const cells = getAdjacent(row, col);
 
 	cells.unshift(new Cell(row, col));
 
-	for (var i in cells)
+	for (const i in cells)
 	{
-		var r = cells[i].row;
-		var c = cells[i].col;
+		const r = cells[i].row;
+		const c = cells[i].col;
 
 		if (!defined(map[r]) || !defined(map[r][c]))
 			continue;
 		if (r < 0 || c < 0)
 			continue;
 
-		var hex = map[r][c];
+		const hex = map[r][c];
 		if (canMoveInto(map, unit, cells[i]) && moveCost[hex.terrain] < 255)
 			return cells[i];
 	}
@@ -1418,7 +1418,7 @@ GameRules.canEmbark = function(map, unit)
 
 GameRules.canDisembark = function(map, unit)
 {
-	var l = GameRules.getDisembarkPositions(map, unit);
+	const l = GameRules.getDisembarkPositions(map, unit);
 	if (l.length > 0)
 		return true;
 	return false;
@@ -1455,7 +1455,7 @@ function isAir(unit: Unit | null): boolean
 	if (unit === null)
 		return false;
 
-	var ud = unit.unitData();
+	const ud = unit.unitData();
 	if (ud.movmethod == movMethod.air)
 		return true;
 
@@ -1468,7 +1468,7 @@ function isSea(unit: Unit | null): boolean
 	if (unit === null)
 		return false;
 
-	var ud = unit.unitData();
+	const ud = unit.unitData();
 	if (ud.uclass >= unitClass.submarine && ud.uclass <= unitClass.lightCruiser)
 		return true;
 
@@ -1481,7 +1481,7 @@ function isGround(unit: Unit | null): boolean
 	if (unit === null)
 		return false;
 
-	var ud = unit.unitData();
+	const ud = unit.unitData();
 	if (ud.uclass <= unitClass.airDefence)
 		return true;
 
@@ -1495,7 +1495,7 @@ GameRules.isTrain = function(unit)
 	if (unit === null)
 		return false;
 
-	var ud = unit.unitData();
+	const ud = unit.unitData();
 	if (isGround(unit) && ud.movmethod == movMethod.deepnaval)
 		return true;
 
@@ -1516,7 +1516,7 @@ GameRules.unitUsesFuel = function(unit)
 	if (unit.unitData().fuel == 0)
 		return false;
 
-	var m = unit.unitData().movmethod;
+	const m = unit.unitData().movmethod;
 	if ((m == movMethod.leg) ||
 		(m == movMethod.towed) ||
 		(m == movMethod.allTerrainLeg))
@@ -1572,7 +1572,7 @@ GameRules.unitLowAmmo = function(unit, threshold)
 
 GameRules.calculateUnitCosts = function(unitid, transportid)
 {
-	var cost = 0;
+	let cost = 0;
 
 	if (unitid > 0 && typeof unitid !== "undefined")
 		cost += Equipment.equipment[unitid].cost * CURRENCY_MULTIPLIER;
@@ -1590,9 +1590,9 @@ GameRules.calculateUpgradeCosts = function(unit, upgradeid, transportid)
 	if (unit === null)
 		return 0;
 
-	var ocost = 0;
-	var ncost = 0;
-	var tcost = 0;
+	let ocost = 0;
+	let ncost = 0;
+	let tcost = 0;
 
 	if (typeof upgradeid !== "undefined" && upgradeid > 0)
 	{
@@ -1642,7 +1642,7 @@ GameRules.calculateUnitSellCost = function(unit)
 	if (!defined(unit))
 		return -1;
 
-	var transportid = -1;
+	let transportid = -1;
 	if (defined(unit.transport))
 		transportid = unit.transport.eqid;
 
@@ -1655,10 +1655,10 @@ GameRules.getDirection = function(x1, y1, x2, y2)
 	if (y1 & 1 && x1 == x2) x1++;
 	if (y2 & 1 && x1 == x2) x2++;
 
-	var dx = x1 - x2;
-	var dy = y1 - y2;
-	var delta = 0; //Gets added or substracted from a ordinal direction to get subdivisions
-	var r = 1;
+	const dx = x1 - x2;
+	const dy = y1 - y2;
+	let delta = 0; //Gets added or substracted from a ordinal direction to get subdivisions
+	let r = 1;
 
 	//Aproximate the 8 sub-ordinal directions
 	if (dx != 0)
@@ -1699,7 +1699,7 @@ GameRules.getDirection = function(x1, y1, x2, y2)
 //Returns the distance between 2 hexes x row, y col
 GameRules.distance = function(x1, y1, x2, y2)
 {
-	var d = 0;
+	let d = 0;
 	//shift the entire hexgrid coords to be arranged diagonally
 	if (y1 % 2)	{ x1 = x1 * 2 + 1;	}
 	else { 	x1 = x1 * 2; }
@@ -1707,8 +1707,8 @@ GameRules.distance = function(x1, y1, x2, y2)
 	if (y2 % 2) { x2 = x2 * 2 + 1;	}
 	else { x2 = x2 * 2; }
 
-	var dx = Math.abs(x2-x1);
-	var dy = Math.abs(y2-y1);
+	const dx = Math.abs(x2-x1);
+	const dy = Math.abs(y2-y1);
 
 	if (dx > dy) { d = (((dx - dy)/2) + dy) >> 0; }
 	else { d = dy }
@@ -1760,7 +1760,7 @@ function isAdjacent(x1: number, y1: number, x2: number, y2: number): boolean
 //returns a list of adjacent cells of a row,col clockwise from N
 function getAdjacent(x1: number, y1: number): Cell[]
 {
-	var cellList: Cell[]=[];
+	const cellList: Cell[]=[];
 
 	cellList.push(new Cell(1 * x1 - 1, y1));
 	cellList.push(new Cell(x1 - 1 + (y1 % 2), y1 - 1));
@@ -1778,13 +1778,13 @@ function getCellsInRange(row: number, col: number, range: number, mrows: number,
 function getCellsInRange(row: number, col: number, range: number, mrows: number, mcols: number, extended: false): Cell[];
 function getCellsInRange(row: number, col: number, range: number, mrows: number, mcols: number, extended: boolean): Cell[]
 {
-	var cellList: Cell[] = [];
-	var cell = null;
+	const cellList: Cell[] = [];
+	let cell = null;
 
 	if ( range <= 0) return cellList;
 
-	var minRow = row - range;
-	var maxRow = row + range;
+	let minRow = row - range;
+	let maxRow = row + range;
 
 	//the column
 	for (var i = minRow; i <= maxRow; i++)
@@ -1802,7 +1802,7 @@ function getCellsInRange(row: number, col: number, range: number, mrows: number,
 		cellList.push(cell);
 	}
 	//the rows around
-	for (var colOff = 1; colOff <= range; colOff++)
+	for (let colOff = 1; colOff <= range; colOff++)
 	{
 		//rows have a ripple effect
 		if ((col + colOff) % 2 == 1)

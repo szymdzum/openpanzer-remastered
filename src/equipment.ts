@@ -89,13 +89,13 @@ Equipment.countryNames = {
 var asyncLoad = true;
 
 //The bit masks of the attr field, only the ones used here (see the 2.9 source for the full list)
-var IGNORE_ENTRENCH_MASK 	= 1 << 2; //bit 3 (skip 2 is unknown)
-var BRIDGE_MASK				= 1 << 3; //bit 4
-var START_SOFT_ATTACK_MASK	= 1 << 4;
-var START_HARD_ATTACK_MASK	= 1 << 5;
-var START_AIR_ATTACK_MASK	= 1 << 6;
-var ATTACK_AIR_MASK			= 1 << 15;
-var PURCHASABLE_MASK		= 1 << 18;
+const IGNORE_ENTRENCH_MASK 	= 1 << 2; //bit 3 (skip 2 is unknown)
+const BRIDGE_MASK				= 1 << 3; //bit 4
+const START_SOFT_ATTACK_MASK	= 1 << 4;
+const START_HARD_ATTACK_MASK	= 1 << 5;
+const START_AIR_ATTACK_MASK	= 1 << 6;
+const ATTACK_AIR_MASK			= 1 << 15;
+const PURCHASABLE_MASK		= 1 << 18;
 
 Equipment.getCountryName = function(country: number)
 {
@@ -121,19 +121,19 @@ Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], ca
 {
 	Equipment.resetEquipment();
 	Equipment.equipmentToLoadSet[-1] = true; //country file 0, the generic equipment
-	for (var i = 0; i < players.length; i++)
+	for (let i = 0; i < players.length; i++)
 	{
-		var p = players[i];
+		const p = players[i];
 		Equipment.equipmentToLoadSet[p.country] = true;
-		for (var j = 0; j < p.supportCountries.length; j++)
+		for (let j = 0; j < p.supportCountries.length; j++)
 		{
-			var c = p.supportCountries[j];
+			const c = p.supportCountries[j];
 			if (c > 0)
 				Equipment.equipmentToLoadSet[c - 1] = true; //For supporting countries number is correctly saved in scenario
 		}
 	}
 	Equipment.equipmentToLoad = Object.keys(Equipment.equipmentToLoadSet).length;
-	for (var country in Equipment.equipmentToLoadSet)
+	for (const country in Equipment.equipmentToLoadSet)
 		Equipment.addCountryEquipment(+country, callback);
 }
 
@@ -145,7 +145,7 @@ Equipment.addCountryEquipment = function(country: number, callback: () => void)
 Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile)
 {
 	Equipment.equipmentIndexes[country] = e.indexes;
-	for (var u in e.units)
+	for (const u in e.units)
 	{
 		//TODO Without this defined the retained size of each object is much bigger
 		//See: https://code.google.com/p/v8/issues/detail?id=2547
@@ -157,7 +157,7 @@ Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryF
 
 		(Equipment.equipment[u] as { __proto__?: object | null }).__proto__ = null;
 
-		for(var h = 0; h < e.parsehints.length; h++)
+		for(let h = 0; h < e.parsehints.length; h++)
 			(Equipment.equipment[u] as unknown as { [field: string]: number | string })[e.parsehints[h]] = e.units[u][h];
 
 		//TODO freeze object foreach Object.freeze(Equipment.equipment[u]) to prevent modifications
@@ -176,7 +176,7 @@ Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryF
 //The sort is done in place on the index list
 Equipment.getCountryEquipmentByClass = function(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean)
 {
-	var eqList: number[] = [];
+	let eqList: number[] = [];
 
 	if (typeof Equipment.equipmentIndexes[country] !== "undefined")
 	{
@@ -192,8 +192,8 @@ Equipment.getCountryEquipmentByClass = function(uclass: number, country: number,
 
 Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: number, country: number)
 {
-	var eqList: number[] = [];
-	var u: EquipmentEntry, id: any = 0; //id is the for...in key, a string
+	const eqList: number[] = [];
+	let u: EquipmentEntry, id: any = 0; //id is the for...in key, a string
 
 	if (typeof Equipment.equipmentIndexes[country] === "undefined") //TODO send load request ?
 		return eqList;
@@ -255,8 +255,8 @@ Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: numbe
 	if (!defined(Equipment.equipment[eqid]) || !defined(Equipment.equipment[targetEqid]))
 		return false;
 
-	var uclass = Equipment.equipment[eqid].uclass;
-	var targetType = Equipment.equipment[targetEqid].target;
+	const uclass = Equipment.equipment[eqid].uclass;
+	const targetType = Equipment.equipment[targetEqid].target;
 
 	//Only destroyers and tactical bombers can attack submarines
 	if (Equipment.equipment[targetEqid].uclass == unitClass.submarine
@@ -288,8 +288,8 @@ Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: numbe
 //the request finished, also when it failed
 function loadEquipment(country: number, callback: () => void): boolean
 {
-	var jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
-	var req = new XMLHttpRequest();
+	const jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
+	const req = new XMLHttpRequest();
 
 	if (asyncLoad)
 	{
@@ -311,7 +311,7 @@ function loadEquipment(country: number, callback: () => void): boolean
 
 function keySort(key: keyof EquipmentEntry, reverse: boolean)
 {
-	var order = 1; //ascending
+	let order = 1; //ascending
 	if (reverse) order = -1; //descending
 
 	return function(a: number, b: number) {

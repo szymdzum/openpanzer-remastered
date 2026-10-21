@@ -169,10 +169,10 @@ CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number
 	if (typeof c === "undefined")
 		return false;
 
-	var atkId = c.attacker.id;
-	var defId = c.defender.id;
-	var atkInfo = CombatLog.log.combat[atkId];
-	var defInfo = CombatLog.log.combat[defId];
+	const atkId = c.attacker.id;
+	const defId = c.defender.id;
+	let atkInfo = CombatLog.log.combat[atkId];
+	let defInfo = CombatLog.log.combat[defId];
 
 	if (!atkInfo || typeof atkInfo === "undefined")
 	{
@@ -233,7 +233,7 @@ CombatLog.addReinforcement = function(unit: Unit): void
 	if (typeof unit.player === "undefined" || unit.player === null)
 		return;
 
-	var r = {} as CombatLogReinforcement;
+	const r = {} as CombatLogReinforcement;
 	r.eqid = unit.eqid;
 	r.pos = unit.getPos();
 	r.side = unit.player.side;
@@ -245,7 +245,7 @@ CombatLog.addLeader = function(unit: Unit): void
 	if (typeof unit.player === "undefined" || unit.player === null)
 		return;
 
-	var l = {} as CombatLogLeader;
+	const l = {} as CombatLogLeader;
 	l.id = unit.id;
 	l.eqid = unit.eqid;
 	l.isCore = unit.isCore;
@@ -258,11 +258,11 @@ CombatLog.addLeader = function(unit: Unit): void
 
 CombatLog.addResupply = function(unit: Unit): void
 {
-	var id = unit.id;
+	const id = unit.id;
 	if (!id || typeof id === "undefined" || typeof unit.player === "undefined" || unit.player === null)
 		return;
 
-	var info = CombatLog.log.resupply[id];
+	let info = CombatLog.log.resupply[id];
 	if (!info || typeof info === "undefined")
 	{
 		CombatLog.log.resupply[id] = new CombatLog.unitEndTurnInfo();
@@ -277,7 +277,7 @@ CombatLog.addResupply = function(unit: Unit): void
 
 CombatLog.addObjectiveCapture = function(pos: Cell, side: number): void
 {
-	var o = {} as CombatLogObjective;
+	const o = {} as CombatLogObjective;
 	o.pos = new Cell(pos.row, pos.col);
 	o.side = side;
 	CombatLog.log.objectives.push(o);

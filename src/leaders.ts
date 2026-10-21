@@ -269,12 +269,12 @@ Leaders.generateLeader = function(unit)
 {
 	if (!unit) return -1;
 
-	var uclass = unit.unitData().uclass;
-	var count = Leaders.unitClassLeaders[uclass].length;
+	const uclass = unit.unitData().uclass;
+	const count = Leaders.unitClassLeaders[uclass].length;
 
 	if (count < 2) return -1;
 
-	var idx = Math.floor(Rng.random() * (count - 1 - 2)) + 1;
+	const idx = Math.floor(Rng.random() * (count - 1 - 2)) + 1;
 	return Leaders.unitClassLeaders[uclass][idx];
 }
 
@@ -285,10 +285,10 @@ Leaders.generateLeaderWithChance = function(unit, expGained)
 {
 	if (!unit || unit.leader != -1) return -1;
 
-	var level = (unit.experience / 100) >> 0;
-	var prevLevel = ((unit.experience - expGained) / 100) >> 0;
+	const level = (unit.experience / 100) >> 0;
+	const prevLevel = ((unit.experience - expGained) / 100) >> 0;
 	//rolled even when it isn't used
-	var roll = Math.floor(Rng.random() * (10 - level + 1)) + level;
+	const roll = Math.floor(Rng.random() * (10 - level + 1)) + level;
 
 	if (unit.experience >= UNIT_MAX_EXPERIENCE)
 		return Leaders.generateLeader(unit);
@@ -316,7 +316,7 @@ Leaders.unitHasLeader = function(unit, leader)
 	if (!unit || unit.leader == -1) return false;
 	if (unit.leader == leader) return true;
 
-	var classLeader = Leaders.getUnitClassLeader(unit);
+	const classLeader = Leaders.getUnitClassLeader(unit);
 	if (leader == classLeader)
 		return true;
 	return false;
@@ -327,8 +327,8 @@ Leaders.getUnitLeaderDescriptions = function(unit)
 {
 	if (!unit || unit.leader == -1) return [];
 
-	var descriptions: [string, string][] = [];
-	var classLeader = Leaders.getUnitClassLeader(unit);
+	const descriptions: [string, string][] = [];
+	const classLeader = Leaders.getUnitClassLeader(unit);
 
 	descriptions.push(Leaders.description[unit.leader]);
 	descriptions.push(Leaders.description[classLeader]);
