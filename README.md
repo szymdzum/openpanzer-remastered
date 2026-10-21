@@ -4,11 +4,6 @@
 
 Panzer General 2, in the browser, made better without being made different.
 
-Panzer General 2 (SSI, 1997) took the paperwork out of wargames and kept the fun: one unit per
-hex, a campaign from Poland 1939 to the gates of Moscow or Washington, and a core of units that
-grow from green recruits into veterans with leaders. You remember the name of the Tiger
-battalion that broke the line at Kursk. That attachment is the game.
-
 Nicu Pavel rebuilt it for the browser as [OpenPanzer](https://github.com/nicupavel/openpanzer)
 and then [Panzer Marshal](https://github.com/nicupavel/panzermarshal). This project takes
 Panzer Marshal 3.2.14, its last version, and carries it forward.
