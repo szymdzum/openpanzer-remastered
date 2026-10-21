@@ -20,7 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [gamerules, unit, map, ai, leaders, scenario]
+        module: [gamerules, unit, map, ai, leaders, scenario, actions, scenarioloader, gamestate, campaign, game,
+          equipment, combatlog]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
