@@ -14,6 +14,10 @@
  * animations' sprite and sound picks draw from the same Math.random as the dice, between the
  * support fire shots.
  *
+ * checkOutcome says whether the game is over, who won and why, for any side. The game itself still
+ * decides it where it did (the victory hooks, Game.endTurn's local-side defeat); the contract and
+ * a headless caller ask checkOutcome after each action.
+ *
  * No module-level `map` here: Map.attackUnit reads a global one (#28).
  */
 
@@ -22,7 +26,7 @@ import { CombatLog } from "./combatlog";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap } from "./map";
-import type { Scenario } from "./scenario";
+import type { Scenario, ScenarioOutcome } from "./scenario";
 
 //One side of an attack, its strength before and after the attack (newstr is set by resolveAttack)
 export interface AttackSide
@@ -88,6 +92,25 @@ export interface DeployedReinforcement
 	cell: Cell;
 }
 
+//How a game ended: a side took all its objectives (capture), a side has no units left
+//(elimination), a side played its last turn (turnLimit)
+export type OutcomeKind = "capture" | "elimination" | "turnLimit";
+
+export interface Outcome
+{
+	kind: OutcomeKind;
+	winner: number; //the side that won, -1 at the turn limit (nobody wins it)
+	loser: number; //the side that lost
+	rating: ScenarioOutcome; //the winner's Scenario.checkVictory() by the turn, "lose" at the turn limit
+}
+
+//What just happened, for the outcomes the state alone doesn't show
+export interface OutcomeContext
+{
+	move?: MoveResult | null; //a move (or a retreat) just finished: its capture can win
+	endedSide?: number; //this side just ended its turn: the turn limit
+}
+
 export interface ActionsAPI
 {
 	resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks?: AttackHooks): AttackResult | null;
@@ -96,6 +119,7 @@ export interface ActionsAPI
 	deployReinforcements(scenario: Scenario, turn: number, playerId: number,
 		onDeployed?: (unit: Unit, cell: Cell) => void): DeployedReinforcement[] | null;
 	endTurn(scenario: Scenario, localSide: number): boolean;
+	checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null;
 }
 
 export var Actions: ActionsAPI = {
@@ -104,6 +128,7 @@ export var Actions: ActionsAPI = {
 	finishMove: finishMove,
 	deployReinforcements: deployReinforcements,
 	endTurn: endTurn,
+	checkOutcome: checkOutcome,
 };
 
 //Support fire if the attacker wasn't surprised and doesn't overrun, then the attack unless the
@@ -282,4 +307,36 @@ function endTurn(scenario: Scenario, localSide: number): boolean
 	var lastSide = scenario.map.currentPlayer.side;
 	scenario.endTurn();
 	return scenario.checkDefeat(lastSide, localSide);
+}
+
+
+//Whether the game is over, who won and why, whichever side plays locally. Checked in this order:
+//- capture: the move in last took its side's last objective (Map.captureHex). Only the move can
+//  tell: a side that never had objectives has an empty list from the start, and a side that took
+//  back the ones it lost has the same list as before
+//- elimination: a side has no units left, axis first as finishAttack reports it (when both have
+//  none the allies win)
+//- turnLimit: last.endedSide played its last turn (Scenario.checkDefeat for any side; Game checks
+//  it only for a local side)
+//Null when the game goes on
+function checkOutcome(scenario: Scenario, last?: OutcomeContext): Outcome | null
+{
+	var l = last || {};
+	var m = scenario.map;
+	var winner = -1;
+
+	if (l.move && l.move.victorySide >= 0)
+		return { kind: "capture", winner: l.move.victorySide, loser: ~l.move.victorySide & 1, rating: scenario.checkVictory() };
+
+	if (!m.hasAliveUnits(playerSide.axis))
+		winner = playerSide.allies;
+	else if (!m.hasAliveUnits(playerSide.allies))
+		winner = playerSide.axis;
+	if (winner >= 0)
+		return { kind: "elimination", winner: winner, loser: ~winner & 1, rating: scenario.checkVictory() };
+
+	if (typeof l.endedSide === "number" && l.endedSide >= 0 && scenario.checkDefeat(l.endedSide, 2))
+		return { kind: "turnLimit", winner: -1, loser: l.endedSide, rating: "lose" };
+
+	return null;
 }

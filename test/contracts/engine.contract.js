@@ -27,8 +27,12 @@
 //
 // Here the attack (resolveAttack, finishAttack), the move's finish (finishMove) and the end of turn
 // are the game's own, src/actions.ts (env.Actions), with the driver's hooks where the UI has its
-// own (the selection refresh, the victories). On the reference, which has no actions.ts, the
-// driver runs its copy of the same sequence, so record.sh records the same results.
+// own (the selection refresh, the victories). The end of the game (`ended`) is then what
+// checkOutcome says after each attack's and move's finish and after a defeat at the turn limit;
+// the victories the hooks report are recorded as before. On the reference, which has no
+// actions.ts, the driver runs its copy of the same sequence and ends the game at the victories
+// themselves, so record.sh records the same results. env.outcomes, when a test passes an array,
+// gets [index of the step, checkOutcome's result] for every call (test/outcome.test.ts).
 //
 // Where the driver still differs from the game, and why:
 // - Synchronous. In the game an attack's second half runs when its animation ends. For an AI
@@ -149,8 +153,17 @@ function runEngineContract(env) {
 	let ended = null;
 	function win(side, kind) {
 		const outcome = sc.checkVictory();
-		if (!ended) ended = { side, kind, outcome };
+		if (!ended && !X) ended = { side, kind, outcome };
 		return [side, kind, outcome];
+	}
+	// With actions.ts the end comes from checkOutcome, asked after the finish whose hooks reported
+	// the victories (the turn limit's defeat names the side that lost)
+	function settle(last) {
+		const o = X.checkOutcome(sc, last);
+		if (env.outcomes) env.outcomes.push([out.length, o]);
+		if (o && !ended) ended = { side: o.kind == "turnLimit" ? o.loser : o.winner,
+			kind: o.kind == "turnLimit" ? "turn limit" : o.kind, outcome: o.rating };
+		return o;
 	}
 	// The victory checks after an action
 	const outcome = () => ({ victory: sc.checkVictory(), alive: [m.hasAliveUnits(0), m.hasAliveUnits(1)], ended });
@@ -201,6 +214,7 @@ function runEngineContract(env) {
 				afterCleanup() { refreshSelection(a, d); },
 				onVictory(side) { victory.push(win(side, "elimination")); },
 			});
+			settle();
 			const retreat = res.retreatMove ? { mr: res.retreatMove } : res.surrender ? "surrender" : null;
 			// The retreat's move animation ends after this
 			if (res.retreatMove) Object.assign(retreat, moveFinished(d, res.retreatMove), { unit: contractUnitState(d) });
@@ -239,6 +253,7 @@ function runEngineContract(env) {
 				attack(a, d) { pending = resolveAttack(a, d); return pending ? pending.res : null; },
 				onVictory(side) { victory = win(side, "capture"); },
 			});
+			settle({ move: res });
 			if (res.surprise) surprise = res.surprise.target ? (pending ? null : "no position") : "nothing to attack";
 			if (pending) surprise = finishAttack(pending);
 			return { surprise, victory };
@@ -651,7 +666,8 @@ function runEngineContract(env) {
 			}
 			let deployed = null, log = logHash(), selected = null;
 			if (defeat) {
-				if (!ended) ended = { side: lastSide, kind: "turn limit", outcome: "lose" };
+				if (X) settle({ endedSide: lastSide });
+				else if (!ended) ended = { side: lastSide, kind: "turn limit", outcome: "lose" };
 			} else {
 				setCurrentSide();
 				const turn = m.turn, id = m.currentPlayer.id;
