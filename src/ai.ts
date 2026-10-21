@@ -17,7 +17,7 @@ import {
 	unitClass
 } from "./prototypes";
 import { Equipment } from "./equipment";
-import { defined } from "./dom";
+import { defined } from "./util";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";

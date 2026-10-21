@@ -18,7 +18,7 @@ import {
 	unitClass, unitEntrenchRate, unitType, UPGRADE_PENALTY
 } from "./prototypes";
 import { Equipment } from "./equipment";
-import { defined } from "./dom";
+import { defined } from "./util";
 import type { Transport, Unit } from "./unit";
 import type { GameMap, Hex } from "./map";
 import { Leaders } from "./leaders";

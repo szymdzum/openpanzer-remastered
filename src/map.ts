@@ -19,7 +19,7 @@ import {
 } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import { Equipment } from "./equipment";
-import { defined } from "./dom";
+import { defined } from "./util";
 import type { AI } from "./ai";
 import type { AIScripted } from "./aiscripted";
 import { GameRules } from "./gamerules";

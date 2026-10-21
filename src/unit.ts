@@ -14,7 +14,7 @@
 
 import { type Cell, type Supply, terrainEntrenchment, unitClass, unitEntrenchRate } from "./prototypes";
 import { Equipment } from "./equipment";
-import { defined } from "./dom";
+import { defined } from "./util";
 import { GameRules } from "./gamerules";
 import { type Hex, Player } from "./map";
 import { game } from "./game";

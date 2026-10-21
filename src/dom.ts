@@ -14,6 +14,7 @@
 
 import { uiSettings } from "./prototypes";
 import { GameState } from "./gamestate";
+import { defined } from "./util";
 
 //An element with the vendor prefixed style properties the game still sets (Firefox's Moz*)
 export interface VendorCSSStyle extends CSSStyleDeclaration
@@ -30,11 +31,8 @@ export interface GlyphButton extends HTMLElement
 	hasSelectedGlyph?: boolean;
 }
 
-//True if v is neither undefined nor null
-export function defined<T>(v: T): v is NonNullable<T>
-{
-	return typeof v !== "undefined" && v !== null;
-}
+//defined() lives in util.ts, without the DOM, for the engine modules; the UI's imports keep it from here
+export { defined };
 
 // Get the element with ID id
 //The element type is the caller's: $<HTMLInputElement>("x").value, or inferred from the variable

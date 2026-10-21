@@ -13,7 +13,7 @@
  */
 
 import { unitClass, unitType } from "./prototypes";
-import { defined } from "./dom";
+import { defined } from "./util";
 
 //The index lists of a country file: equipment ids by unit class
 export interface EquipmentIndexes
