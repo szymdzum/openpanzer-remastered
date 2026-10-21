@@ -1,0 +1,13 @@
+# Git hooks (npm install sets them up through the prepare script): fast checks on what is being
+# committed, so a broken commit is caught before CI. `git commit --no-verify` skips them.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: types
+      glob: "*.{ts,mts}"
+      run: npm run -s check
+    - name: lint
+      glob: "{src,test}/**/*.{ts,js}"
+      run: npx oxlint --type-aware --deny-warnings {staged_files}
+    - name: typos
+      run: command -v typos >/dev/null && typos {staged_files} || true
