@@ -18,7 +18,7 @@ import {
 } from "./prototypes";
 import { Equipment } from "./equipment";
 import { $, addTag, type VendorStyled } from "./dom";
-import { type HexStyle, hexstyle, terrainencoding, unitstyle } from "./aiscripted";
+import { type HexStyle, hexstyle, terrainencoding, unitstyle } from "./style";
 import { type AnimationCBData, AnimationChain, animationsData } from "./animation";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";

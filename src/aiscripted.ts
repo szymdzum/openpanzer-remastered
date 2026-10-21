@@ -19,9 +19,6 @@ import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import { UIBuilder } from "./uibuilder";
 import { game } from "./session";
-//Last: they run right before this module's body, after the same modules as when they were part of it
-export { type HexStyle, type HexStyleName, hexstyle, unitstyle, tooltipColor, tooltipStyle, terrainencoding } from "./style";
-export { soundData, moveSoundByMoveMethod, soundSprite, type soundSpriteConstructor } from "./sound";
 
 //The tutorial units AIScripted picks from their starting positions
 export interface TutorialUnits {
