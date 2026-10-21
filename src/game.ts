@@ -166,7 +166,7 @@ export function Game(this: Game)
 		}
 	}
 
-	this.loop = window.setInterval(this.processTurn, 1000); //window.: the browser's, a number (the tests also see Node's)
+	this.loop = 0; //the turn loop's interval: src/main.ts starts it, not the module's loading
 
 	//Called by GameState after a game was restored from a save (local, file or cloud)
 	this.setupGameState = function()
@@ -552,5 +552,3 @@ export function gameStart()
 {
 	game.init();
 }
-
-window.addEventListener("load", gameStart);

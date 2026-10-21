@@ -47,6 +47,11 @@ dom.changeViewPort();
 Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuilder,
 	UICombatLog: uicombatlog.UICombatLog, game: game.game });
 
+//The turn loop, processTurn every second (window.: the browser's, a number), and the start on
+//window load. game.ts did both while loading; here, so that importing it starts nothing
+game.game.loop = window.setInterval(game.game.processTurn, 1000);
+window.addEventListener("load", game.gameStart);
+
 //?harness: every module's exports as globals, the way harness/ scripts and harness/lib/hooks.js
 //reach into the game. Read live; assigned through the module's __harnessSet, which the dev
 //server adds (vite.config.mts)
