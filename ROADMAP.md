@@ -21,13 +21,13 @@ it changed (and the reference traces of that step are then the new expected beha
 - [x] 2c. ES modules instead of globals, Vite dev server with reload on change, production
       build; the implicit globals became module variables; the harness runs the dev server
 - [ ] 2d. Constructor functions to classes where the load order allows it, which removes the
-      `new (X as unknown as XConstructor)` casts
+      `new (X as unknown as XConstructor)` casts (#30)
 
 ## 3. Quick visible wins
 
-- [ ] Sharp canvases on HiDPI/Retina screens (devicePixelRatio)
-- [ ] Combat odds preview before an attack (the engine already estimates the result)
-- [ ] Move path preview
+- [ ] Sharp canvases on HiDPI/Retina screens (devicePixelRatio) (#31)
+- [ ] Combat odds preview before an attack (the engine already estimates the result) (#7)
+- [ ] Move path preview (#32)
 
 ## 4. Fixes to the original
 
@@ -46,28 +46,43 @@ file specs):
 - [ ] Combat log entries get no turn: Map.attackUnit reads a global map (#28)
 - [ ] The attack end handler reads map.currentUnit after clearing it (#29)
 - [ ] Cloud saves on GitHub gists: off until the game has its own (the bundle's used its
-      author's token)
+      author's token) (#33)
 - [ ] Implicit globals of the bundle, now module variables (aInitiative, t, u, c, h, div);
-      Campaign's loader sets isLoaded on window instead of the campaign (#27)
+      Campaign's loader sets isLoaded on window instead of the campaign (#27, #34)
 
 ## 5. Comfort and guidance
 
-- [ ] Tooltips that explain combat: why an attack is good or bad, entrenchment, experience, initiative
-- [ ] Undo, better unit info, a better tutorial
-- [ ] A refreshed UI look that keeps the period feel
+- [ ] Tooltips that explain combat: why an attack is good or bad, entrenchment, experience, initiative (#35)
+- [ ] Undo, better unit info, a better tutorial (#36, #37, #38)
+- [ ] A refreshed UI look that keeps the period feel (#39)
 
 ## 6. Sound and music
 
-- [ ] Soundtrack: main theme (dark Prussian march), planning, battle, victory, defeat; per side
-- [ ] Missing sound effects: UI, end turn, capture, destroyed, surrender, buy, resupply, reinforcements
-- [ ] Ambient loops (war room, battlefield, weather), volume settings
+- [ ] Soundtrack: main theme (dark Prussian march), planning, battle, victory, defeat; per side (#40)
+- [ ] Missing sound effects: UI, end turn, capture, destroyed, surrender, buy, resupply, reinforcements (#41)
+- [ ] Ambient loops (war room, battlefield, weather), volume settings (#42)
 
 ## 7. Bigger things
 
 - [ ] Upscaled unit and map graphics (the assets have no license of their own: units from
-  OpenGeneral Icons, maps from PG2; fine for a free, non-commercial remaster, ask before app stores)
-- [ ] September 1939 campaign from the Polish side
-- [ ] LLM general: an AI player that plans with the engine's legal options and writes reports
-- [ ] AI arena: headless AI vs AI over many battles to measure AI changes
-- [ ] Scenario editor, maps from OpenStreetMap
-- [ ] PWA for offline play, desktop build (Tauri), own cloud saves
+  OpenGeneral Icons, maps from PG2; fine for a free, non-commercial remaster, ask before app stores) (#43)
+- [ ] September 1939 campaign from the Polish side (#44)
+- [ ] LLM general: an AI player that plans with the engine's legal options and writes reports (#45)
+- [ ] AI arena: headless AI vs AI over many battles to measure AI changes (#46)
+- [ ] Scenario editor, maps from OpenStreetMap (#47)
+- [ ] PWA for offline play, desktop build (Tauri), own cloud saves (#48)
+
+## 8. Gameplay
+
+The rules, from what the manual promises to what players always wished for, each discussed in
+its issue before any code ([docs/RESEARCH.md](docs/RESEARCH.md)). Order: the promises first.
+
+- [ ] Promised but missing: weather (#1), suppression (#2), leader abilities (#3), recon and
+      ZOC (#4), initiative and terrain (#14), the manual's numbers (#18)
+- [ ] AI: defend objectives (#5), withdraw and finish off (#6), easier levels feeding the AI
+      (#15), difficulty that changes the AI (#16), no peeking at hidden units (#17)
+- [ ] Readability: attack preview (#7), unit cycling and end turn (#8), who beats whom (#52)
+- [ ] Classic or remaster rules (#53), then: units fighting together (#9, #10), air superiority
+      (#11), supply lines (#12), snowballing (#13), optional turn limit (#49), recon and hidden
+      strength (#50)
+- [ ] Scenarios with more than one solution (#51)
