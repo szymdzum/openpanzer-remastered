@@ -1188,8 +1188,6 @@ GameRules.canReinforce = function(map, unit, overstrength)
 			return false;
 	}
 
-	const ud = unit.unitData(true); //unused, kept from the bundle
-
 	if (isGround(unit))
 		return true;
 	//Air Unit
@@ -1385,7 +1383,6 @@ GameRules.getDisembarkPositions = function(map, unit)
 //Returns the first hex (row, col first, then adjacent) where a bought unit can be deployed
 GameRules.getReinforcementDeployPositions = function(map, unit, row, col)
 {
-	const ud = unit.unitData(); //unused, kept from the bundle
 	const moveCost = movTable[Equipment.equipment[unit.eqid].movmethod];
 	const cells = getAdjacent(row, col);
 

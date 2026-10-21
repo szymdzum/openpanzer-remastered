@@ -85,9 +85,6 @@ Equipment.countryNames = {
 		"Allied Forces", "Captured Equipment", "Axis Forces", "Arab Countries"]
 };
 
-//The equipment files are always loaded asynchronously, the synchronous path in loadEquipment is dead code
-var asyncLoad = true;
-
 //The bit masks of the attr field, only the ones used here (see the 2.9 source for the full list)
 const IGNORE_ENTRENCH_MASK 	= 1 << 2; //bit 3 (skip 2 is unknown)
 const BRIDGE_MASK				= 1 << 3; //bit 4
@@ -286,27 +283,22 @@ Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: numbe
 
 //Loads a country equipment file from the current equipment set, callback is called after
 //the request finished, also when it failed
-function loadEquipment(country: number, callback: () => void): boolean
+function loadEquipment(country: number, callback: () => void): void
 {
 	const jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
 	const req = new XMLHttpRequest();
 
-	if (asyncLoad)
+	req.onload = function()
 	{
-		req.onload = function()
+		if (req.readyState === 4)
 		{
-			if (req.readyState === 4)
-			{
-				if (req.status === 200 || req.status === 0)
-					Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
-				callback();
-			}
+			if (req.status === 200 || req.status === 0)
+				Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
+			callback();
 		}
 	}
-	req.open("GET", jsonFile, asyncLoad);
+	req.open("GET", jsonFile, true);
 	req.send(null);
-	if (!asyncLoad && req.responseText !== null)
-		return Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
 }
 
 function keySort(key: keyof EquipmentEntry, reverse: boolean)
