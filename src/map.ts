@@ -666,7 +666,6 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	declare getDeployHexes: (side: number) => Cell[];
 	declare copy: (m: GameMap) => void;
 	declare cleanup: () => void;
-	declare dumpMap: () => void;
 
 	declare static onPlayerTurn: (map: GameMap, player: Player) => void;
 
@@ -1592,13 +1591,6 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 			}
 		}
 		this.map = null;
-	}
-
-	//The player and victory hexes logging is stripped from the bundle, only the loop is left
-	this.dumpMap = function()
-	{
-		for (let i = 0; i < playerList.length; i++)
-			;
 	}
 
 	//Private

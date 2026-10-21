@@ -545,6 +545,3 @@ export let DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js
 export let VERSION = "3.2.14";
 export let MAJOR_VERSION = major_version(VERSION);
 export let NATIVE_PLATFORM = "generic";
-//The bundle declares these two a second time (an exported name is declared once, so assigned here)
-NATIVE_PLATFORM = "generic";
-DEBUG_CAMPAIGN = false;
