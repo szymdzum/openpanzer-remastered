@@ -6,3 +6,5 @@ public/hd/
 coverage/
 reports/
 .stryker-tmp/
+.DS_Store
+.claude/worktrees/
