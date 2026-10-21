@@ -234,7 +234,7 @@ export function UI(this: UI, game: Game)
 					handleUnitAttack(map.currentUnit, row, col);
 				else
 					if (hex.isMoveSel) //Move unit over/under clickedUnit
-						uiUnitMove(map.currentUnit, row, col);
+						uiUnitMove(map.currentUnit, row, col, map.getCurrentMoveRange());
 					else
 						if (map.currentUnit === clickedUnit) //Click on the selected unit deselects it
 						{
@@ -253,7 +253,7 @@ export function UI(this: UI, game: Game)
 			else
 				//move to an empty allowed hex, currentUnit is checked for null after it's used
 				if (hex.isMoveSel && !map.currentUnit.hasMoved && map.currentUnit !== null)
-					uiUnitMove(map.currentUnit, row, col);
+					uiUnitMove(map.currentUnit, row, col, map.getCurrentMoveRange());
 				else //remove current selection
 				{
 					handleUnitDeselect();
@@ -439,7 +439,9 @@ function uiUnitSelect(unit: Unit | null)
 }
 
 //handle the move of a unit to row,col destination
-function uiUnitMove(unit: Unit, row: number, col: number)
+//cells: the shown move range the player clicked in (it can be the disembark hexes or older than the state),
+//without it the move finds its path in the unit's move range
+function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[])
 {
 	var mm = unit.unitData().movmethod;
 	if (GameRules.isTrain(unit))
@@ -447,7 +449,7 @@ function uiUnitMove(unit: Unit, row: number, col: number)
 	//Save render properties before moving
 	var r = getRenderRange(unit);
 	var oldpos = unit.getPos();
-	var mr = map.moveUnit(unit, row, col);
+	var mr = map.moveUnit(unit, row, col, cells);
 
 	var moveAnimationCBData: MoveAnimationCBData =
 	{

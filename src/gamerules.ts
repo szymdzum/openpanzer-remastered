@@ -37,6 +37,7 @@ export interface GameRulesModule
 	setSpotRange(map: Hex[][], unit: Unit, on: boolean, mrows: number, mcols: number): number;
 	getUnitSpotRange(unit: Unit): number;
 	getShortestPath(startCell: Cell, endCell: Cell, cellList: extendedCell[]): pathCell[];
+	pathTo(mapObj: GameMap, unit: Unit, cell: Cell): pathCell[];
 	calculateCombatResults(atkunit: Unit, defunit: Unit, unitlist: Unit[], withHiddenUnits: boolean,
 		estimate: boolean): combatResults;
 	calculateAttackResults(atkunit: Unit, defunit: Unit, estimate: boolean): combatResults;
@@ -440,6 +441,13 @@ GameRules.getShortestPath = function(startCell, endCell, cellList)
 	}
 
 	return [];
+}
+
+//The path a unit takes to cell inside its move range (the range setMoveRange shows), [] if there is none.
+//Pure: the same getMoveRange and getShortestPath as a selection followed by a move, nothing is changed
+GameRules.pathTo = function(mapObj, unit, cell)
+{
+	return GameRules.getShortestPath(unit.getPos(), cell, GameRules.getMoveRange(mapObj, unit));
 }
 
 //This function calculates the kill/losses for all units involved in combat

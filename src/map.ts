@@ -656,7 +656,7 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	declare endTurn: () => void;
 	declare attackUnit: (atkunit: Unit, defunit: Unit, supportFire: boolean, isOverrun?: boolean) => combatResults;
 	declare updateUnitList: () => void;
-	declare moveUnit: (unit: Unit, drow: number, dcol: number) => movementResults;
+	declare moveUnit: (unit: Unit, drow: number, dcol: number, cells?: Cell[]) => movementResults;
 	declare retreatUnit: (unit: Unit, cell: Cell) => movementResults;
 	declare resupplyUnit: (unit: Unit) => Supply;
 	declare reinforceUnit: (unit: Unit, overstrength: boolean) => ReinforceResults;
@@ -1154,7 +1154,9 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	}
 
 	// moves a unit to a new hex returns a movementResults object
-	this.moveUnit = function(unit, drow, dcol)
+	// cells: the cells to find the path in (the move range the player was shown, the disembark hexes),
+	// by default the unit's move range on the current state (GameRules.pathTo)
+	this.moveUnit = function(unit, drow, dcol, cells)
 	{
 		var s = unit.getPos();
 		var srcHex = this.map[s.row][s.col];
@@ -1163,7 +1165,8 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 		var mr = new movementResults();
 		var canCapture = GameRules.canCapture(unit);
 		var moveCost = 0;
-		var c = GameRules.getShortestPath(s, new Cell(drow, dcol), moveSelected as extendedCell[]);
+		var c = cells !== undefined ? GameRules.getShortestPath(s, new Cell(drow, dcol), cells as extendedCell[])
+			: GameRules.pathTo(this, unit, new Cell(drow, dcol));
 
 		if (!c || !c[0])
 			return mr;
@@ -1242,11 +1245,12 @@ export class GameMap //Map in the original, renamed: it replaced the built-in Ma
 	this.retreatUnit = function(unit, cell)
 	{
 		var oldCurrentUnit = this.currentUnit;
-		moveSelected.push(cell); //So the shortest path finds the retreat cell
+		moveSelected.push(cell); //Kept in the selection as before: the move's setMoveRange clears its flag
 		var moveLeft = unit.moveLeft;
 		var hasMoved = unit.hasMoved;
 		var hasOverstrength = unit.hasOverstrength;
-		var mr = this.moveUnit(unit, cell.row, cell.col);
+		//The retreat cell is adjacent: the path is the unit's hex and the cell, whatever else the selection held
+		var mr = this.moveUnit(unit, cell.row, cell.col, [cell]);
 		unit.moveLeft = moveLeft;
 		unit.hasMoved = hasMoved;
 		unit.hasOverstrength = hasOverstrength;

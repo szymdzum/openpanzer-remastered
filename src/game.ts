@@ -454,7 +454,7 @@ export function Game(this: Game)
 		{
 			case actionType.move:
 			{
-				game.scenario.map.setMoveRange(p[0] as Unit);
+				game.scenario.map.setMoveRange(p[0] as Unit); //The selection (hashed, saved), the move finds its own path
 				game.waitUIAnimation = true;
 				if (game.ui.uiUnitMove(p[0] as Unit, (p[1] as Cell).row, (p[1] as Cell).col))
 					game.ui.uiSetUnitOnViewPort(p[0] as Unit);
