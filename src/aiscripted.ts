@@ -66,7 +66,7 @@ export class AIScripted
 							{ row: 16, col: 8 }]);
 						addAction(actionType.message, ["This is an optional objective with your enemy flag. Although capturing these  objectives won't count towards victory is good to do so for extra prestige and troops experience. Also troops are better reinforced or resupplied in a city.",
 							{ row: 11, col: 22 }]);
-						var unit = units.axis.legioninf;
+						let unit = units.axis.legioninf;
 						addAction(actionType.select, [unit]);
 						addAction(actionType.message, ["This is one of your units and usually represent a historical battalion, the number below is battalion size, usually named strength. Since you are playing as Axis the number is on a grey box. Your enemies (Allied Side) will have this number box in green.",
 							{ row: 4, col: 2 }]);
@@ -118,8 +118,8 @@ export class AIScripted
 							{ row: 7, col: 15 }]);
 						addAction(actionType.message, ["This is an artillery unit, depending on it's fire range <span class='statsGlyph'>&gt;</span> it can fire on enemy positions from afar without suffering losses. Also each attack will soften enemy positions reducing their <span class='statsGlyph'>&quot;</span> entrenchment.",
 							{ row: 7, col: 13 }]);
-						var attacker = units.axis.arty;
-						var defender = units.allies.inf1;
+						let attacker = units.axis.arty;
+						const defender = units.allies.inf1;
 						addAction(actionType.attack, [attacker, defender]);
 						addAction(actionType.message, ["We inflicted losses to at least 1 company from the enemy battalion and reduced their entrenchment. Both attacker and defender received combat experience <span class='statsGlyph'>@</span> the later only a small amount since it hasn't inflicted any casualties.",
 							{ row: 8, col: 15 }]);
@@ -276,7 +276,7 @@ export class AIScripted
 		this.getAction = function()
 		{
 			if (actionList.length == 0) return null;
-			var action = actionList[0];
+			const action = actionList[0];
 			actionList.splice(0, 1);
 			return action;
 		}
@@ -496,18 +496,18 @@ export function soundSprite(this: soundSprite, paths: string[])
 	{
 		try
 		{
-			var sound = new Audio(path);
+			const sound = new Audio(path);
 			sound.load();
 			sounds.push(sound);
 		} catch (e) {}
 	}
 
-	for (var i = 0; i < paths.length; i++)
+	for (let i = 0; i < paths.length; i++)
 		addSound(paths[i]);
 
 	this.play = function(): Promise<void>
 	{
-		var sound;
+		let sound;
 		//The variant is picked (Math.random called) even when sounds are muted
 		sound = Math.floor(Math.random() * sounds.length);
 		sound = sounds[sound];

@@ -59,7 +59,7 @@ export class Campaign
 
 	constructor(campIndex: number, difficulty: number, onLoaded: () => void)
 	{
-		var campaignInfo = campaignlist[campIndex];
+		const campaignInfo = campaignlist[campIndex];
 
 		this.startprestige = (campaignInfo.prestige +
 			difficultyModifiers[difficulty].startPrestige * campaignInfo.prestige) >> 0;
@@ -86,8 +86,8 @@ export class Campaign
 		//Lookup scenario name in the campaignData and set currentScenario
 		this.setScenarioByName = function(scenarioName: string)
 		{
-			var i;
-			var hasPath = scenarioName.lastIndexOf('/');
+			let i;
+			const hasPath = scenarioName.lastIndexOf('/');
 			//strip path
 			if (hasPath > -1)
 				scenarioName = scenarioName.substring(hasPath + 1);
@@ -111,7 +111,7 @@ export class Campaign
 
 		this.loadNextScenario = function(outcomeType: ScenarioOutcome)
 		{
-			var o = getOutcome(outcomeType);
+			const o = getOutcome(outcomeType);
 			if (o.goto < campaignData.length)
 			{
 				currentScenario = o.goto;
@@ -123,29 +123,29 @@ export class Campaign
 
 		this.getOutcomePrestige = function(outcomeType: ScenarioOutcome)
 		{
-			var o = getOutcome(outcomeType);
+			const o = getOutcome(outcomeType);
 			return o.prestige;
 		}
 
 		this.getOutcomeText = function(outcomeType: ScenarioOutcome)
 		{
-			var o = getOutcome(outcomeType);
+			const o = getOutcome(outcomeType);
 			return o.text || "Continue to the next phase.";
 		}
 
 		this.getCampaignFlow = function()
 		{
-			var flowText = "";
-			var l = "<br/>";
-			var t = "&nbsp;&nbsp;&nbsp;&nbsp;";
+			let flowText = "";
+			const l = "<br/>";
+			const t = "&nbsp;&nbsp;&nbsp;&nbsp;";
 
-			for (var i = 0; i < campaignData.length; i++)
+			for (let i = 0; i < campaignData.length; i++)
 			{
-				var currentScenName = this.getScenarioNameFromId(i);
-				var lScenName = this.getScenarioNameFromId(campaignData[i].outcome["lose"].goto);
-				var tScenName = this.getScenarioNameFromId(campaignData[i].outcome["tactical"].goto);
-				var vScenName = this.getScenarioNameFromId(campaignData[i].outcome["victory"].goto);
-				var bScenName = this.getScenarioNameFromId(campaignData[i].outcome["briliant"].goto);
+				const currentScenName = this.getScenarioNameFromId(i);
+				const lScenName = this.getScenarioNameFromId(campaignData[i].outcome["lose"].goto);
+				const tScenName = this.getScenarioNameFromId(campaignData[i].outcome["tactical"].goto);
+				const vScenName = this.getScenarioNameFromId(campaignData[i].outcome["victory"].goto);
+				const bScenName = this.getScenarioNameFromId(campaignData[i].outcome["briliant"].goto);
 
 				if (tScenName == vScenName && vScenName == bScenName)
 				{
@@ -187,8 +187,8 @@ export class Campaign
 			if (jsonFile == null || typeof jsonFile === "undefined")
 				return null;
 
-			var req = new XMLHttpRequest();
-			var onSuccess = function()
+			const req = new XMLHttpRequest();
+			const onSuccess = function()
 			{
 				campaignData = JSON.parse(req.responseText);
 				//Bug kept from the bundle: called as a plain function, so this was the
@@ -218,7 +218,7 @@ export class Campaign
 //class: a class isn't hoisted like the constructor function was
 Campaign.findCampaignByFile = function(file: string)
 {
-	for (var i = 0; i < campaignlist.length; i++)
+	for (let i = 0; i < campaignlist.length; i++)
 		if (campaignlist[i].file === file)
 			return i;
 	return -1;

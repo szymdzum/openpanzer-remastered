@@ -163,7 +163,7 @@ export class AI
 
 	constructor(player: Player, map: GameMap, options?: AIOptions)
 	{
-		var config = options && options.config ? options.config : aiDefaultConfig;
+		const config = options && options.config ? options.config : aiDefaultConfig;
 		var rng = options && options.rng ? options.rng : Rng.random;
 		var allUnits: Unit[] = [];
 		var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do
@@ -183,21 +183,21 @@ export class AI
 		//(AI.onUnitsDeployed). The prestige left for reinforcements is taken before buying (#21)
 		function startTurn(): void
 		{
-			var i, j;
+			let i, j;
 			prestigeLeft = player.prestige;
-			var prestige = player.prestige;
+			let prestige = player.prestige;
 
 			//Buy new units with the prestige over the reserve, part of it for air units
 			if (!(prestige <= prestigeReserve))
 			{
 				prestige = prestige - prestigeReserve;
-				var airPrestige = prestige * airPrestigeRatio;
+				let airPrestige = prestige * airPrestigeRatio;
 				if (airPrestige < 300)
 					airPrestige = 0;
 				prestige = prestige - airPrestige;
-				var airPurchase = buyUnits(airPrestige, airPurchaseClasses);
-				var groundPurchase = buyUnits(prestige, groundPurchaseClasses);
-				var eqList = airPurchase.units;
+				const airPurchase = buyUnits(airPrestige, airPurchaseClasses);
+				const groundPurchase = buyUnits(prestige, groundPurchaseClasses);
+				let eqList = airPurchase.units;
 				for (i = eqList.length - 1; i >= 0; i--)
 					player.buyUnit(eqList[i]);
 				airPurchase.units = [];
@@ -208,8 +208,8 @@ export class AI
 			}
 
 			//Deploy the undeployed core units on the deployment hexes
-			var coreUnits = player.getCoreUnitList();
-			var deployHexes = map.getDeployHexes(player.side);
+			const coreUnits = player.getCoreUnitList();
+			const deployHexes = map.getDeployHexes(player.side);
 			//h is not declared: an implicit global, kept as in the bundle
 			for (h = 0; h < deployHexes.length; h++)
 			{
@@ -217,7 +217,7 @@ export class AI
 				{
 					if (!coreUnits[j].isDeployed)
 					{
-						var cell = deployHexes[h];
+						const cell = deployHexes[h];
 						map.deployPlayerUnit(player, j, cell.row, cell.col);
 					}
 				}
@@ -229,7 +229,7 @@ export class AI
 		//Plans the turn: the actions getAction hands out, unit by unit
 		function planTurn(): void
 		{
-			var i;
+			let i;
 			allUnits = map.getUnits();
 			plan.takenPositions = [];
 			plan.freedPositions = [];
@@ -252,7 +252,7 @@ export class AI
 			}
 
 			//Each unit gets another pass until it can't do anything else
-			var aiUnit: AIUnit = null;
+			let aiUnit: AIUnit = null;
 			while (aiUnits.length > 0)
 			{
 				aiUnit = aiUnits[0];
@@ -275,7 +275,7 @@ export class AI
 		{
 			if (actionsQueue.length == 0)
 				return null;
-			var action = actionsQueue[0];
+			const action = actionsQueue[0];
 			actionsQueue.splice(0, 1);
 			return action;
 		}
@@ -288,7 +288,7 @@ export class AI
 		//Reinforces a weak unit or one that can't move or attack anymore, if there is prestige left
 		function reinforceUnit(aiUnit: AIUnit): boolean
 		{
-			var unit = aiUnit.unit;
+			const unit = aiUnit.unit;
 			if (!GameRules.canReinforce(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack
 				|| aiUnit.didMove || unit.unitData().uclass == unitClass.fortification || prestigeLeft <= 0)
 			{
@@ -297,9 +297,9 @@ export class AI
 			}
 			if ((aiUnit.noAttack && aiUnit.noMove) || unit.strength < minReinforceStrength)
 			{
-				var costPerStrength = GameRules.calculateUnitCostPerStrength(unit);
-				var reinforceValue = GameRules.getReinforceValue(map.map, unit);
-				var strength = (prestigeLeft / costPerStrength) >> 0;
+				const costPerStrength = GameRules.calculateUnitCostPerStrength(unit);
+				const reinforceValue = GameRules.getReinforceValue(map.map, unit);
+				let strength = (prestigeLeft / costPerStrength) >> 0;
 				if (strength > reinforceValue)
 					strength = reinforceValue;
 				if (reinforceValue > 0 && strength > 0)
@@ -318,7 +318,7 @@ export class AI
 		//(inlined into buildActions in the bundle)
 		function resupplyUnit(aiUnit: AIUnit): void
 		{
-			var unit = aiUnit.unit;
+			const unit = aiUnit.unit;
 			if (!GameRules.canResupply(map.map, unit) || aiUnit.didResupplyReinforce || aiUnit.didAttack || aiUnit.didMove)
 			{
 				aiUnit.noResupply = true;
@@ -338,33 +338,33 @@ export class AI
 		//Moves the unit to the best scored cell in its move range, if better than where it stands
 		function moveUnit(aiUnit: AIUnit): boolean
 		{
-			var unit = aiUnit.unit;
+			const unit = aiUnit.unit;
 			if (aiUnit.didMove || aiUnit.didResupplyReinforce || !unit)
 			{
 				aiUnit.noMove = true;
 				return false;
 			}
-			var moveCells = GameRules.getMoveRange(map, unit);
+			const moveCells = GameRules.getMoveRange(map, unit);
 			if (!moveCells || moveCells.length == 0)
 			{
 				aiUnit.noMove = true;
 				return false;
 			}
-			var pos: Cell & { canMove?: boolean } = unit.getPos();
+			const pos: Cell & { canMove?: boolean } = unit.getPos();
 			pos.canMove = true;
-			var bestScore = evaluator.getCellScore(unit, pos);
-			var objective: AIObjectiveScore;
+			let bestScore = evaluator.getCellScore(unit, pos);
+			let objective: AIObjectiveScore;
 			if (GameRules.isGround(unit))
 			{
 				objective = evaluator.getObjectiveScore(pos);
 				bestScore = bestScore + objective.score;
 			}
 			bestScore = bestScore + unit.entrenchment * entrenchmentScore;
-			var attackScore = evaluator.getAttackPotential(unit, pos);
+			let attackScore = evaluator.getAttackPotential(unit, pos);
 			bestScore = bestScore + attackScore;
-			var bestCell: Cell = null;
-			var score = 0;
-			for (var i = 0; i < moveCells.length; i++)
+			let bestCell: Cell = null;
+			let score = 0;
+			for (let i = 0; i < moveCells.length; i++)
 			{
 				objective = evaluator.getObjectiveScore(moveCells[i]);
 				if (GameRules.isAir(unit))
@@ -385,9 +385,9 @@ export class AI
 			if (bestCell !== null)
 			{
 				//Mark the destination taken and the old position free (inlined in the bundle)
-				var dest = bestCell;
-				var oldPos = unit.getPos();
-				var index: number;
+				const dest = bestCell;
+				const oldPos = unit.getPos();
+				let index: number;
 				plan.takenPositions.push(dest);
 				if ((index = evaluator.findFreedPosition(dest)) >= 0)
 					plan.freedPositions.splice(index, 1);
@@ -406,19 +406,19 @@ export class AI
 		//(inlined into buildActions in the bundle)
 		function attackUnit(aiUnit: AIUnit): void
 		{
-			var unit = aiUnit.unit;
+			const unit = aiUnit.unit;
 			if (unit.hasFired || aiUnit.didAttack || aiUnit.didResupplyReinforce)
 			{
 				aiUnit.noAttack = true;
 				return;
 			}
-			var target: Unit = null;
-			var result = {} as AIAttackScore;
-			var unitHex = unit.getHex();
-			var attackHex = unitHex;
+			let target: Unit = null;
+			let result = {} as AIAttackScore;
+			const unitHex = unit.getHex();
+			let attackHex = unitHex;
 			//An attack must score more than these losses
-			var bestScore = -(attackLossesThreshold * unitClassLossCost[unit.unitData().uclass]);
-			var bestKills = 0;
+			let bestScore = -(attackLossesThreshold * unitClassLossCost[unit.unitData().uclass]);
+			let bestKills = 0;
 			if (aiUnit.didMove && aiUnit.newPosition !== null)
 			{
 				attackHex = map.map[aiUnit.newPosition.row][aiUnit.newPosition.col];
@@ -427,15 +427,15 @@ export class AI
 			//Less eager to attack from a victory hex
 			if (attackHex.victorySide != -1)
 				bestScore -= 50;
-			var cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
-			for (var i = 0; i < cells.length; i++)
+			const cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
+			for (let i = 0; i < cells.length; i++)
 			{
 				result = evaluator.getAttackScore(unit, cells[i], false);
 				if (result.score > bestScore)
 				{
 					bestScore = result.score;
 					bestKills = result.kills;
-					var targetHex = map.map[cells[i].row][cells[i].col];
+					const targetHex = map.map[cells[i].row][cells[i].col];
 					target = targetHex.getAttackableUnit(unit, false);
 				}
 			}
@@ -445,7 +445,7 @@ export class AI
 			if (target)
 			{
 				//Record the expected losses of the target (inlined in the bundle)
-				var enemy = target;
+				const enemy = target;
 				if (enemy)
 				{
 					if (typeof plan.enemyUnits[enemy.id] === "undefined")
@@ -469,10 +469,10 @@ export class AI
 		//until prestige runs out or a whole cycle ends on a class with nothing to buy
 		function buyUnits(prestige: number, classList: number[]): { prestige: number; units: number[] }
 		{
-			var units: number[] = [];
-			var country = player.country + 1;
-			var classIndex = 0;
-			var noneFound = false;
+			const units: number[] = [];
+			const country = player.country + 1;
+			let classIndex = 0;
+			let noneFound = false;
 			while (prestige > 0)
 			{
 				if (classIndex > classList.length - 1)
@@ -481,10 +481,10 @@ export class AI
 						break;
 					classIndex = 0;
 				}
-				var eqList = Equipment.getCountryEquipmentByClass(classList[classIndex], country);
-				for (var i = eqList.length - 1; i >= 0; i--)
+				const eqList = Equipment.getCountryEquipmentByClass(classList[classIndex], country);
+				for (let i = eqList.length - 1; i >= 0; i--)
 				{
-					var cost = GameRules.calculateUnitCosts(eqList[i]);
+					const cost = GameRules.calculateUnitCosts(eqList[i]);
 					if (cost > prestige || cost > maxUnitCost || cost < minUnitCost
 						|| Equipment.equipment[eqList[i]].movmethod == movMethod.deepnaval
 						|| Equipment.equipment[eqList[i]].yearavailable > engineContext.scenario().date.getFullYear())
@@ -492,7 +492,7 @@ export class AI
 				}
 				if (eqList.length > 0)
 				{
-					var eqid = eqList[randomInt(rng, 0, eqList.length - 1)];
+					const eqid = eqList[randomInt(rng, 0, eqList.length - 1)];
 					prestige -= GameRules.calculateUnitCosts(eqid);
 					units.push(eqid);
 					noneFound = false;
@@ -558,15 +558,15 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 	//too many losses count as their score or 0 instead of the bad attack score
 	function getAttackScore(unit: Unit, cell: Cell, isPotential: boolean): AIAttackScore
 	{
-		var score = 0;
-		var kills = 0;
-		var target = map.map[cell.row][cell.col].getAttackableUnit(unit, false);
-		var targetHex = target.getHex(); //throws before the target check below, kept from the bundle
+		let score = 0;
+		let kills = 0;
+		const target = map.map[cell.row][cell.col].getAttackableUnit(unit, false);
+		const targetHex = target.getHex(); //throws before the target check below, kept from the bundle
 		if (target && GameRules.canInitiateAttack(unit, target))
 		{
 			if (typeof plan.enemyUnits[target.id] !== "undefined" && plan.enemyUnits[target.id] !== null)
 			{
-				var enemy = plan.enemyUnits[target.id];
+				const enemy = plan.enemyUnits[target.id];
 				if (enemy.isKilled)
 				{
 					if (isPotential)
@@ -577,7 +577,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 				if (enemy.isAttacked)
 					score += 100;
 			}
-			var cr = GameRules.calculateCombatResults(unit, target, map.getUnits(), true, true);
+			const cr = GameRules.calculateCombatResults(unit, target, map.getUnits(), true, true);
 			score = score + (cr.kills * unitClassKillValue[target.unitData().uclass]
 				- cr.losses * unitClassLossCost[unit.unitData().uclass]);
 			kills = cr.kills;
@@ -598,12 +598,12 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 	//Returns the sum of the attack scores unit would have if standing on cell
 	function getAttackPotential(unit: Unit, cell: Cell): number
 	{
-		var result: number | AIAttackScore = 0; //holds the attack scores, starts as a number
-		var score = 0;
-		var unitHex = unit.getHex();
+		let result: number | AIAttackScore = 0; //holds the attack scores, starts as a number
+		let score = 0;
+		const unitHex = unit.getHex();
 		unit.setHex(map.map[cell.row][cell.col]);
-		var cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
-		for (var i = 0; i < cells.length; i++)
+		const cells = GameRules.getUnitAttackCells(map.map, unit, map.rows, map.cols);
+		for (let i = 0; i < cells.length; i++)
 		{
 			result = getAttackScore(unit, cells[i], true);
 			score += result.score;
@@ -615,16 +615,16 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 	//Returns the score of unit standing on cell: terrain, objectives and neighbours
 	function getCellScore(unit: Unit, cell: Cell & { canMove?: boolean }): number
 	{
-		var score = 0;
-		var unitHex = unit.getHex();
-		var uclass = unit.unitData().uclass;
-		var side = unit.player.side;
-		var enemySide = ~side & 1;
-		var isFreed = false;
-		var i;
+		let score = 0;
+		const unitHex = unit.getHex();
+		const uclass = unit.unitData().uclass;
+		const side = unit.player.side;
+		const enemySide = ~side & 1;
+		let isFreed = false;
+		let i;
 
 		//Another unit was ordered to move there
-		var takenIndex = -1;
+		let takenIndex = -1;
 		for (i = 0; i < plan.takenPositions.length; i++)
 		{
 			if (plan.takenPositions[i].row == cell.row && plan.takenPositions[i].col == cell.col)
@@ -640,12 +640,12 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 		if (!cell.canMove && !isFreed)
 			return -5000;
 
-		var hex = map.map[cell.row][cell.col];
+		const hex = map.map[cell.row][cell.col];
 		if (!hex.isSpotted(enemySide))
 			score -= 40;
 		if (!hex.isSpotted(side))
 			score += 30;
-		var deployment = hex.isDeployment;
+		const deployment = hex.isDeployment;
 		if (hex.victorySide == -1 && deployment > -1 && deployment == player.id)
 			score -= 100;
 		if (uclass == unitClass.fighter || uclass == unitClass.tacticalBomber || uclass == unitClass.levelBomber)
@@ -670,7 +670,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 			score += 50;
 
 		//A victory hex that is free, freed, ours or held by a unit expected to be killed
-		var canOccupy = (hex.victorySide != -1);
+		let canOccupy = (hex.victorySide != -1);
 		if (canOccupy)
 		{
 			canOccupy = (hex.unit === null);
@@ -685,7 +685,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 		}
 		if (canOccupy)
 		{
-			var isOwned = map.getPlayer(hex.owner).side == side; //unused
+			const isOwned = map.getPlayer(hex.owner).side == side; //unused
 			if (uclass == unitClass.artillery)
 				score += 50;
 			else if (uclass == unitClass.infantry)
@@ -696,13 +696,13 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 				score += 300;
 		}
 
-		var adjacent = GameRules.getAdjacent(cell.row, cell.col);
+		const adjacent = GameRules.getAdjacent(cell.row, cell.col);
 		for (i = 0; i < adjacent.length; i++)
 		{
 			if (adjacent[i].row < 0 || adjacent[i].col < 0 || adjacent[i].row >= map.rows - 1 || adjacent[i].col >= map.cols - 1)
 				continue;
-			var adjHex = map.map[adjacent[i].row][adjacent[i].col];
-			var adjUnit = adjHex.getUnit();
+			const adjHex = map.map[adjacent[i].row][adjacent[i].col];
+			const adjUnit = adjHex.getUnit();
 			if (adjUnit && adjUnit.id !== unit.id)
 			{
 				//Friendly neighbour that stays there, artillery support counts more
@@ -722,7 +722,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 			}
 			if (adjHex.victorySide != -1)
 			{
-				var isOwnedAdj = map.getPlayer(adjHex.owner).side == side;
+				const isOwnedAdj = map.getPlayer(adjHex.owner).side == side;
 				if (uclass == unitClass.artillery || uclass == unitClass.flak)
 					score += 50;
 				else if (uclass == unitClass.infantry)
@@ -738,13 +738,13 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 	//toCapture false scores against the objectives to defend (no caller passes it)
 	function getObjectiveScore(cell: Cell, toCapture?: boolean): AIObjectiveScore
 	{
-		var list = plan.objectives;
+		let list = plan.objectives;
 		if (defined(toCapture) && !toCapture)
 			list = plan.defendObjectives;
-		var result: AIObjectiveScore = { cell: null, score: 0 };
-		for (var i = 0; i < list.length; i++)
+		const result: AIObjectiveScore = { cell: null, score: 0 };
+		for (let i = 0; i < list.length; i++)
 		{
-			var d = GameRules.distance(cell.row, cell.col, list[i].row, list[i].col);
+			let d = GameRules.distance(cell.row, cell.col, list[i].row, list[i].col);
 			if (d > 0)
 			{
 				d = objectiveScore / d;
@@ -766,7 +766,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 	//Returns the index of cell in plan.freedPositions or -1
 	function findFreedPosition(cell: Cell): number
 	{
-		for (var i = 0; i < plan.freedPositions.length; i++)
+		for (let i = 0; i < plan.freedPositions.length; i++)
 			if (plan.freedPositions[i].row == cell.row && plan.freedPositions[i].col == cell.col)
 				return i;
 		return -1;

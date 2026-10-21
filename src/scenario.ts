@@ -96,12 +96,12 @@ export class Scenario
 		this.isLoaded = false;
 		this.eqp = "eqp-adlerkorps"; //equipment set used by the scenario
 
-		var description = "";
-		var loadCallback: () => void = null;
+		let description = "";
+		let loadCallback: () => void = null;
 
 		if (typeof scenFile !== "undefined")
 		{
-			var scenData = Scenario.getScenarioDataByFileName(scenFile);
+			const scenData = Scenario.getScenarioDataByFileName(scenFile);
 			if (scenData)
 			{
 				this.name = scenData[1];
@@ -124,15 +124,15 @@ export class Scenario
 				this.setMoveTable();
 
 				//Initial score of each player: objectives worth per turn and the units it has
-				var map = this.map;
-				var scores: { [playerId: string]: number } = {};
-				var players = map.getPlayers();
-				var i;
+				const map = this.map;
+				const scores: { [playerId: string]: number } = {};
+				const players = map.getPlayers();
+				let i;
 				for (i = 0; i < players.length; i++)
 					scores[players[i].id] = ((map.sidesVictoryHexes[players[i].side].length *
 						scoreGains.objectivePerTurn) / map.maxTurns) >> 0;
 
-				var units = map.getUnits();
+				const units = map.getUnits();
 				for (i = 0; i < units.length; i++)
 					scores[units[i].player.id] += units[i].isCore ? scoreGains.coreUnit : scoreGains.normalUnit;
 
@@ -155,13 +155,13 @@ export class Scenario
 		//Returns the reinforcements of a player up to and including turn
 		this.getReinforcements = function(turn: number, playerId: number)
 		{
-			var list: Reinforcement[] = [];
-			for (var t in this.reinforcements)
+			const list: Reinforcement[] = [];
+			for (const t in this.reinforcements)
 			{
 				if ((t as unknown as number) > turn) continue; //compares the turn key string as a number
 				if (this.reinforcements[t] === null || typeof this.reinforcements[t] === "undefined")
 					continue;
-				for (var i = 0; i < this.reinforcements[t].length; i++)
+				for (let i = 0; i < this.reinforcements[t].length; i++)
 					if (this.reinforcements[t][i].unit.owner == playerId)
 						list.push(this.reinforcements[t][i]);
 			}
@@ -173,7 +173,7 @@ export class Scenario
 			if (this.reinforcements[turn] === null || typeof this.reinforcements[turn] === "undefined")
 				return false;
 
-			for (var i = 0; i < this.reinforcements[turn].length; i++)
+			for (let i = 0; i < this.reinforcements[turn].length; i++)
 			{
 				if (this.reinforcements[turn][i].id == id)
 				{
@@ -247,12 +247,12 @@ export class Scenario
 		//units that appear next year, only combat ground and air classes and not too cheap
 		this.getPrototypeUnitsAvailable = function(country: number)
 		{
-			var year = this.date.getFullYear() + 1;
-			var list = Equipment.getCountryEquipmentByYearRange(year, year, country);
-			for (var i = 0; i < list.length; i++)
+			const year = this.date.getFullYear() + 1;
+			const list = Equipment.getCountryEquipmentByYearRange(year, year, country);
+			for (let i = 0; i < list.length; i++)
 			{
-				var ud = Equipment.equipment[list[i]];
-				var uclass = ud.uclass;
+				const ud = Equipment.equipment[list[i]];
+				const uclass = ud.uclass;
 				if (((uclass < unitClass.tank || uclass > unitClass.antiTank)
 					&& (uclass < unitClass.artillery || uclass > unitClass.tacticalBomber))
 					|| ud.cost * CURRENCY_MULTIPLIER < PROTOTYPE_MIN_COST)
@@ -266,15 +266,15 @@ export class Scenario
 
 		this.getRandomPrototype = function(country: number)
 		{
-			var list = this.getPrototypeUnitsAvailable(country);
-			var index = (Rng.random() * list.length) >> 0;
+			const list = this.getPrototypeUnitsAvailable(country);
+			const index = (Rng.random() * list.length) >> 0;
 			return list[index];
 		}
 
 		//Start prestige for scenarios outside a campaign: the side with cheaper units gets the difference
 		this.getBalancedPrestige = function(side: number)
 		{
-			var prestige = SCENARIO_START_PRESTIGE + this.unitsCostPerSide[+!side] - this.unitsCostPerSide[side];
+			let prestige = SCENARIO_START_PRESTIGE + this.unitsCostPerSide[+!side] - this.unitsCostPerSide[side];
 			if (prestige < SCENARIO_START_PRESTIGE)
 				prestige = SCENARIO_START_PRESTIGE;
 			return prestige;
@@ -303,9 +303,9 @@ export class Scenario
 				//t is an implicit global in the bundle, kept as is
 				for (t in s.reinforcements)
 				{
-					for (var i = 0; i < s.reinforcements[t].length; i++)
+					for (let i = 0; i < s.reinforcements[t].length; i++)
 					{
-						var unit = new Unit(s.reinforcements[t][i].unit.eqid);
+						const unit = new Unit(s.reinforcements[t][i].unit.eqid);
 						unit.copy(s.reinforcements[t][i].unit);
 						this.addReinforcement(t, s.reinforcements[t][i].row, s.reinforcements[t][i].col, unit);
 					}
@@ -321,7 +321,7 @@ export class Scenario
 		//(inlined by the compiler in the bundle)
 		function hasSidePlayedTurn(playerList: Player[], side: number, turn: number)
 		{
-			for (var i = 0; i < playerList.length; i++)
+			for (let i = 0; i < playerList.length; i++)
 			{
 				if (playerList[i].side == side && playerList[i].playedTurn < turn)
 					return false;
@@ -338,7 +338,7 @@ Scenario.scenarioPath = "resources/scenarios/data/";
 //Lookup information about scenario in scenariolist, returns the scenariolist entry or null
 Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEntry
 {
-	for (var i = 0; i < scenariolist.length; i++)
+	for (let i = 0; i < scenariolist.length; i++)
 		if (scenariolist[i][0] == scenFile)
 			return scenariolist[i];
 	return null;

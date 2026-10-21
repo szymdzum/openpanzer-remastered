@@ -89,19 +89,19 @@ export class GameState
 		//callback(error, gistId) is called when the request completes
 		this.saveToCloud = function(inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void)
 		{
-			var saveData = this.exportGameState();
+			const saveData = this.exportGameState();
 			//The bundle embeds the author's GitHub token here ("ghp_" + pieces with whitespace
 			//stripped out), used to create and update the gists. Not copied into the source
-			var token = "";
+			const token = "";
 			//Uses the global game, not the Game this GameState was created with
-			var gist: { description: string; public: boolean; files: { [fileName: string]: { content?: string } } } =
+			const gist: { description: string; public: boolean; files: { [fileName: string]: { content?: string } } } =
 			{
 				description: game.scenario.name + "-" + game.scenario.map.turn,
 				public: true,
 				files: {},
 			};
-			var overwrite = true;
-			var gistId = inputElement.value;
+			let overwrite = true;
+			const gistId = inputElement.value;
 
 			if (gistId == "" || typeof gistId === "undefined")
 				overwrite = false;
@@ -109,7 +109,7 @@ export class GameState
 			gist.files["openpanzer-save.json"] = {};
 			gist.files["openpanzer-save.json"].content = saveData;
 
-			var xhr = new XMLHttpRequest();
+			const xhr = new XMLHttpRequest();
 			if (overwrite)
 			{
 				inputElement.value = "Overwriting cloud save " + gistId + " ...";
@@ -129,7 +129,7 @@ export class GameState
 				{
 					if ((this.status >= 200 && this.status < 300) || this.status == 304)
 					{
-						var reply: GistReply = JSON.parse(this.responseText);
+						const reply: GistReply = JSON.parse(this.responseText);
 						if (!reply)
 							return callback("Bad response from server");
 						inputElement.value = reply.id;
@@ -163,7 +163,7 @@ export class GameState
 		//Restores a game from a file exported with exportGameState()
 		this.restoreFromFile = function(file: Blob, onDone?: () => void, onFail?: () => void)
 		{
-			var reader = new FileReader();
+			const reader = new FileReader();
 			reader.onloadend = function()
 			{
 				if (!restoreFromJSON(this.result as string))
@@ -182,14 +182,14 @@ export class GameState
 		//Restores a game from a GitHub gist whose id is in inputElement
 		this.restoreFromCloud = function(inputElement: HTMLInputElement, onDone?: () => void)
 		{
-			var gistId = inputElement.value;
+			const gistId = inputElement.value;
 			if (gistId == "" || typeof gistId === "undefined")
 			{
 				inputElement.setAttribute("placeholder", "No ID specified");
 				return false;
 			}
 
-			var xhr = new XMLHttpRequest();
+			const xhr = new XMLHttpRequest();
 			inputElement.value = "Loading ...";
 			xhr.open("GET", "https://api.github.com/gists/" + gistId, true);
 			xhr.onreadystatechange = function()
@@ -198,7 +198,7 @@ export class GameState
 				{
 					if ((this.status >= 200 && this.status < 300) || this.status == 304)
 					{
-						var reply: GistReply = JSON.parse(this.responseText);
+						const reply: GistReply = JSON.parse(this.responseText);
 						if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json"))
 						{
 							inputElement.value = "";
@@ -256,9 +256,9 @@ export class GameState
 		//Returns the game (scenario, players, campaign) as a JSON string
 		this.exportGameState = function()
 		{
-			var state = {} as GameStateExport;
+			const state = {} as GameStateExport;
 			//A hex with these values holds nothing worth saving and is written as {}
-			var emptyHex: { [p: string]: unknown } =
+			const emptyHex: { [p: string]: unknown } =
 			{
 				unit: null,
 				airunit: null,
@@ -286,8 +286,8 @@ export class GameState
 				//terrain is checked twice in the bundle
 				if (value && value.hasOwnProperty("terrain") && value.hasOwnProperty("terrain"))
 				{
-					var isEmpty = true;
-					for (var p in emptyHex)
+					let isEmpty = true;
+					for (const p in emptyHex)
 					{
 						if (!value.hasOwnProperty(p) || value[p] !== emptyHex[p])
 						{
@@ -309,7 +309,7 @@ export class GameState
 			{
 				if (object)
 				{
-					var item: { [key: string]: unknown } = {};
+					const item: { [key: string]: unknown } = {};
 					item[key] = object;
 					chrome.storage.local.get(function(items: { [key: string]: unknown }) {}); //unused
 					chrome.storage.local.set(item);
@@ -326,7 +326,7 @@ export class GameState
 		//Reads one item and hands it to onItemRestored, which acts once itemCount items are in
 		function restoreItem(key: string, onDone: (() => void) | null, onFail: () => void, itemCount: number)
 		{
-			var object: string = null;
+			let object: string = null;
 
 			if (isChromeApp())
 			{
@@ -358,7 +358,7 @@ export class GameState
 		//Restores a game from a JSON string, returns false if it doesn't hold a scenario
 		function restoreFromJSON(saveData: string)
 		{
-			var state: GameStateExport = null;
+			let state: GameStateExport = null;
 			try
 			{
 				state = JSON.parse(saveData);
@@ -392,9 +392,9 @@ export class GameState
 			if (--Equipment.equipmentToLoad)
 				return;
 
-			for (var i = 0; i < playersData.length; i++)
+			for (let i = 0; i < playersData.length; i++)
 			{
-				var player = new Player();
+				const player = new Player();
 				player.copy(playersData[i]);
 				Game.scenario.map.addPlayer(player);
 			}
@@ -405,7 +405,7 @@ export class GameState
 			//Restore campaign state
 			if (defined(campaignData))
 			{
-				var campaignId = campaignData.id;
+				let campaignId = campaignData.id;
 				//Campaigns are found by file when the save has it, the id is the fallback
 				if (campaignData.hasOwnProperty("file"))
 				{
@@ -425,9 +425,9 @@ export class GameState
 		//Called when the campaign has loaded
 		function restoreCampaign(campaignData: CampaignSave, onDone: () => void)
 		{
-			var map = Game.scenario.map;
+			const map = Game.scenario.map;
 			Game.campaign.setScenarioById(campaignData.scenario);
-			var player = map.getPlayersByCountry(campaignData.country)[0]; //Get first player of a country
+			const player = map.getPlayersByCountry(campaignData.country)[0]; //Get first player of a country
 			map.restoreCoreUnitList(player, campaignData.coreUnits);
 			onDone();
 		}
@@ -442,10 +442,10 @@ export class GameState
 
 			if (Object.keys(restoredItems).length == itemCount)
 			{
-				var s: Scenario = restoredItems[saveName.scenario];
-				var p: Player[] = restoredItems[saveName.players];
-				var c: CampaignSave | null = restoredItems[saveName.campaign];
-				var settings: UISettings = restoredItems[saveName.settings];
+				const s: Scenario = restoredItems[saveName.scenario];
+				const p: Player[] = restoredItems[saveName.players];
+				const c: CampaignSave | null = restoredItems[saveName.campaign];
+				const settings: UISettings = restoredItems[saveName.settings];
 
 				//Need to restore the settings since some players might be assigned to AI
 				if (settings !== undefined && settings)
@@ -494,7 +494,7 @@ export class GameState
 		//Returns the campaign state to save, null when not playing a campaign
 		function getCampaignSave(): CampaignSave | null
 		{
-			var campaignSave: CampaignSave | null = null;
+			let campaignSave: CampaignSave | null = null;
 
 			if (Game.campaign !== null)
 			{

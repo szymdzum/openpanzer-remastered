@@ -41,8 +41,8 @@ export class ScenarioLoader
 
 		this.loadScenario = function(scenarioObject: Scenario)
 		{
-			var xmlHttp = new XMLHttpRequest();
-			var url;
+			const xmlHttp = new XMLHttpRequest();
+			let url;
 
 			scen = scenarioObject;
 			url = Scenario.scenarioPath + scen.file;
@@ -73,14 +73,14 @@ export class ScenarioLoader
 		//Inlined into parseScenario in the bundle
 		function parseMapHeader(xmlData: Document)
 		{
-			var mapHeader = xmlData.getElementsByTagName("map")[0];
+			const mapHeader = xmlData.getElementsByTagName("map")[0];
 			if (mapHeader)
 			{
 				//The 2.9 check for 0 < rows, cols < 99 is gone, the map image decides the size
-				var rows = +mapHeader.getAttribute("rows");
-				var cols = +mapHeader.getAttribute("cols");
-				var eqp = mapHeader.getAttribute("eqp");
-				var turnsModifier = 1;
+				const rows = +mapHeader.getAttribute("rows");
+				const cols = +mapHeader.getAttribute("cols");
+				const eqp = mapHeader.getAttribute("eqp");
+				let turnsModifier = 1;
 
 				if (engineContext.campaign())
 					turnsModifier = difficultyModifiers[engineContext.campaign().difficulty].extraTurns;
@@ -95,7 +95,7 @@ export class ScenarioLoader
 				//strings at first, converted below
 				scen.map.victoryTurns = mapHeader.getAttribute("turns").split(", ") as unknown as number[];
 
-				for (var i = 0; i < scen.map.victoryTurns.length; i++)
+				for (let i = 0; i < scen.map.victoryTurns.length; i++)
 					scen.map.victoryTurns[i] = +scen.map.victoryTurns[i] //convert to int
 
 				scen.map.victoryTurns[2] = Math.round(scen.map.victoryTurns[2] * turnsModifier);
@@ -131,9 +131,9 @@ export class ScenarioLoader
 				return;
 
 			//Units need the equipment so players are added only now
-			for (var i = 0; i < players.length; i++)
+			for (let i = 0; i < players.length; i++)
 			{
-				var p = new Player();
+				const p = new Player();
 				p.copy(players[i]);
 				scen.map.addPlayer(p);
 			}
@@ -147,27 +147,27 @@ export class ScenarioLoader
 		//Inlined into equipmentLoaded in the bundle
 		function loadReinforcements(xmlData: Document)
 		{
-			var reinforceNodes = xmlData.getElementsByTagName("reinforce");
+			const reinforceNodes = xmlData.getElementsByTagName("reinforce");
 			if (reinforceNodes)
 			{
-				for (var i = 0; i < reinforceNodes.length; i++)
+				for (let i = 0; i < reinforceNodes.length; i++)
 				{
-					var turn = +reinforceNodes[i].getAttribute("turn");
+					const turn = +reinforceNodes[i].getAttribute("turn");
 					if (turn === null) //never true, turn is a number here
 						continue;
 
-					for (var j = 0; j < reinforceNodes[i].childNodes.length; j++)
+					for (let j = 0; j < reinforceNodes[i].childNodes.length; j++)
 					{
 						if (reinforceNodes[i].childNodes[j].nodeName != "at")
 							continue;
 
-						var atNode = reinforceNodes[i].childNodes[j] as Element;
-						var row = +atNode.getAttribute("row");
-						var col = +atNode.getAttribute("col");
+						const atNode = reinforceNodes[i].childNodes[j] as Element;
+						const row = +atNode.getAttribute("row");
+						const col = +atNode.getAttribute("col");
 						if (row == null || col == null) //never true, row and col are numbers
 							continue;
 
-						for (var k = 0; k < atNode.childNodes.length; k++)
+						for (let k = 0; k < atNode.childNodes.length; k++)
 						{
 							if (atNode.childNodes[k].nodeName == "unit")
 							{
@@ -185,13 +185,13 @@ export class ScenarioLoader
 		//Inlined into equipmentLoaded in the bundle
 		function loadHexes(xmlData: Document)
 		{
-			var hexNodes = xmlData.getElementsByTagName("hex");
+			const hexNodes = xmlData.getElementsByTagName("hex");
 			if (hexNodes)
 			{
-				var hex = null;
-				var v = null;
-				var row, col;
-				for (var i = 0; i < hexNodes.length; i++)
+				let hex = null;
+				let v = null;
+				let row, col;
+				for (let i = 0; i < hexNodes.length; i++)
 				{
 					row = +hexNodes[i].getAttribute("row");
 					col = +hexNodes[i].getAttribute("col");
@@ -220,7 +220,7 @@ export class ScenarioLoader
 					if ((v = hexNodes[i].getAttribute("supply")) !== null && hex.isDeployment == -1)
 						hex.isDeployment = +v;
 
-					for (var j = 0; j < hexNodes[i].childNodes.length; j++)
+					for (let j = 0; j < hexNodes[i].childNodes.length; j++)
 					{
 						if (hexNodes[i].childNodes[j].nodeName == "unit")
 						{
@@ -237,17 +237,17 @@ export class ScenarioLoader
 		//The map size is computed from the map image, the scenario rows/cols are only an upper limit
 		function loadMapImage(xmlData: Document)
 		{
-			var img = new Image();
+			const img = new Image();
 			img.src = scen.map.terrainImage;
 			img.onload = function(event)
 			{
-				var rows = scen.map.rows;
-				var cols = scen.map.cols;
-				var width = img.width;
-				var imgCols = 1;
-				var imgRows = img.height / 50; //hex height
-				var isLastColPartial = false;
-				var isLastRowPartial = false;
+				let rows = scen.map.rows;
+				let cols = scen.map.cols;
+				let width = img.width;
+				let imgCols = 1;
+				const imgRows = img.height / 50; //hex height
+				let isLastColPartial = false;
+				let isLastRowPartial = false;
 
 				//Hexes alternate 60 and 30 pixels of width
 				while (width >= 30)
@@ -260,8 +260,8 @@ export class ScenarioLoader
 				}
 				isLastColPartial = width < 0;
 
-				var fullRows = imgRows;
-				var rowFraction = imgRows - Math.floor(imgRows);
+				let fullRows = imgRows;
+				const rowFraction = imgRows - Math.floor(imgRows);
 				if (rowFraction >= 0.39 && rowFraction < 0.8)
 				{
 					isLastRowPartial = true;
@@ -289,7 +289,7 @@ export class ScenarioLoader
 				scen.map.isLastRowPartial = isLastRowPartial;
 				scen.map.allocMap();
 
-				var players = loadPlayers(xmlData);
+				const players = loadPlayers(xmlData);
 				Equipment.addPlayersEquipment(players, equipmentLoaded.bind(null, players, xmlData));
 			}
 			img.onerror = loadFailed;
@@ -299,9 +299,9 @@ export class ScenarioLoader
 		//to the map after the equipment loaded
 		function loadPlayers(xmlData: Document)
 		{
-			var playerNodes = xmlData.getElementsByTagName("player");
-			var players: Player[] = [];
-			var minPrestige = 0; //campaigns give a minimum prestige per turn
+			const playerNodes = xmlData.getElementsByTagName("player");
+			const players: Player[] = [];
+			let minPrestige = 0; //campaigns give a minimum prestige per turn
 
 			if (engineContext.campaign())
 				minPrestige = Math.round(engineContext.campaign().startprestige
@@ -309,9 +309,9 @@ export class ScenarioLoader
 
 			if (playerNodes)
 			{
-				for (var i = 0; i < playerNodes.length; i++)
+				for (let i = 0; i < playerNodes.length; i++)
 				{
-					var p = new Player();
+					const p = new Player();
 					var v;
 					p.id = +playerNodes[i].getAttribute("id");
 					p.side = +playerNodes[i].getAttribute("side");
@@ -348,10 +348,10 @@ export class ScenarioLoader
 		function loadUnit(node: Element): Unit
 		{
 			//create the unit object
-			var unitId = +node.getAttribute("id");
-			var playerId = +node.getAttribute("owner");
-			var u = null;
-			var v, side;
+			const unitId = +node.getAttribute("id");
+			const playerId = +node.getAttribute("owner");
+			let u = null;
+			let v, side;
 
 			if (unitId >= 0 && playerId >= 0)
 			{

@@ -80,14 +80,14 @@ export class Game
 		this.spotSide = -1; //currently visible side on map
 		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window //TODO change to event
 
-		var localPlayingSide = -1; //Which player side plays locally on this computer
+		let localPlayingSide = -1; //Which player side plays locally on this computer
 		var campaignPlayer: Player = null; //Player that plays campaign locally
 		var savedPlayer: Player = null; //Saved copy of the campaign player used between campaign scenarios
-		var needScenarioLoad = false; //If a new scenario should be loaded during campaign progress
-		var scenData: CampaignScenario = null; //campaign scenario data passed for delayed load during campaign progress
-		var shouldRemoveNonCampaignUnits = false; //If we should remove scenario only units from campaign scenarios
-		var shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
-		var isCampaignStart = false; //First scenario of a campaign: set prestige, dossier and core units
+		let needScenarioLoad = false; //If a new scenario should be loaded during campaign progress
+		let scenData: CampaignScenario = null; //campaign scenario data passed for delayed load during campaign progress
+		let shouldRemoveNonCampaignUnits = false; //If we should remove scenario only units from campaign scenarios
+		let shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
+		let isCampaignStart = false; //First scenario of a campaign: set prestige, dossier and core units
 
 		//Restores the last saved game, or starts the default scenario if there is none
 		this.init = function()
@@ -109,7 +109,7 @@ export class Game
 			}
 			else
 			{
-				var player = game.scenario.map.currentPlayer;
+				const player = game.scenario.map.currentPlayer;
 				//No current player also goes on to process AI actions
 				if (!player || player.type == playerType.aiLocal || player.type == playerType.aiScripted)
 				{
@@ -123,7 +123,7 @@ export class Game
 
 		this.processAIActions = function()
 		{
-			var action = this.scenario.map.currentPlayer.handler.getAction();
+			const action = this.scenario.map.currentPlayer.handler.getAction();
 
 			if (!processAction(this, action))
 			{
@@ -188,7 +188,7 @@ export class Game
 		{
 			if (scenFile === "failRestore")
 			{
-				for (var i = 0; i < uiSettings.isAI.length; i++)
+				for (let i = 0; i < uiSettings.isAI.length; i++)
 					uiSettings.isAI[i] = Game.defaultScenarioAI[i];
 				scenFile = Game.defaultScenario;
 			}
@@ -212,7 +212,7 @@ export class Game
 			if (defined(scenIntro)) this.scenario.setDescription(scenIntro); //Set from campaign
 
 			setupPlayers(this);
-			var players = this.scenario.map.getPlayers();
+			const players = this.scenario.map.getPlayers();
 			localPlayingSide = getLocalSide(players);
 			this.setCurrentSide();
 
@@ -232,7 +232,7 @@ export class Game
 					this.scenario.map.removeNonCampaignUnits(campaignPlayer);
 				if (shouldAwardPrototype)
 				{
-					var protoId = this.scenario.getRandomPrototype(campaignPlayer.country + 1);
+					const protoId = this.scenario.getRandomPrototype(campaignPlayer.country + 1);
 					if (typeof protoId !== "undefined" && protoId > 0)
 					{
 						campaignPlayer.acquireUnit(protoId, 0);
@@ -248,9 +248,9 @@ export class Game
 				//New single scenarios balance players prestige, the tutorial keeps its own
 				if (!isRestore && this.scenario.file !== "tutorial.xml")
 				{
-					for (var i = 0; i < players.length; i++)
+					for (let i = 0; i < players.length; i++)
 					{
-						var p = players[i];
+						const p = players[i];
 						p.prestige = this.scenario.getBalancedPrestige(p.side);
 					}
 				}
@@ -281,7 +281,7 @@ export class Game
 			isCampaignStart = true;
 
 			//Start the first scenario
-			var scenData = this.campaign.getCurrentScenario(); //local, shadows the delayed load scenData
+			const scenData = this.campaign.getCurrentScenario(); //local, shadows the delayed load scenData
 			this.newScenario(scenData.scenario, scenData.intro);
 		}
 
@@ -300,7 +300,7 @@ export class Game
 			shouldRemoveNonCampaignUnits = true;
 			isCampaignStart = false;
 
-			var outcomeText = this.campaign.getOutcomeText(outcomeType);
+			let outcomeText = this.campaign.getOutcomeText(outcomeType);
 			scenData = this.campaign.loadNextScenario(outcomeType);
 			if (scenData == null)
 			{
@@ -341,13 +341,13 @@ export class Game
 		//Deploys the reinforcements of player playerId for this turn, returns false if there are none
 		this.deployReinforcements = function(turn: number, playerId: number)
 		{
-			var self = this;
-			var deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(unit: Unit, cell: Cell)
+			const self = this;
+			const deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(unit: Unit, cell: Cell)
 			{
 				if (self.scenario.map.map[cell.row][cell.col].isSpotted(self.spotSide))
 				{
-					var side = self.scenario.map.getPlayer(playerId).side;
-					var isOwn = false;
+					const side = self.scenario.map.getPlayer(playerId).side;
+					let isOwn = false;
 					if (self.spotSide == side)
 						isOwn = true;
 					self.ui.showAlert(cell.row, cell.col, "Reinforced!", isOwn);
@@ -380,8 +380,8 @@ export class Game
 		//Set AI, Network or campaign for players. Local player is the default value
 		function setupPlayers(game: Game)
 		{
-			var i;
-			var players = game.scenario.map.getPlayers();
+			let i;
+			const players = game.scenario.map.getPlayers();
 
 			if (players === null)
 				return false;
@@ -431,7 +431,7 @@ export class Game
 		function processAction(game: Game, action: AIAction)
 		{
 			if (!action) return false;
-			var p = action.param;
+			const p = action.param;
 			if (!p) return false;
 			switch(action.type)
 			{
@@ -521,9 +521,9 @@ export class Game
 		//are playing on local computer (hotseat mode). Scripted AI sides count as local
 		function getLocalSide(playerList: Player[])
 		{
-			var nrSides = 1;
-			var localSide = -1;
-			for (var i = 0; i < playerList.length; i++)
+			let nrSides = 1;
+			let localSide = -1;
+			for (let i = 0; i < playerList.length; i++)
 			{
 				if (playerList[i].type == playerType.humanLocal || playerList[i].type == playerType.aiScripted)
 				{
