@@ -16,7 +16,7 @@ import { type Cell, type Supply, terrainEntrenchment, unitClass, unitEntrenchRat
 import { Equipment } from "./equipment";
 import { defined } from "./util";
 import { GameRules } from "./gamerules";
-import { type Hex, Player } from "./map";
+import type { Hex, Player } from "./map";
 import { engineContext } from "./context";
 
 //Transport Object Constructor
@@ -202,9 +202,9 @@ Unit.prototype.copy = function(u: Unit | null) {
 	this.entrenchment = u.entrenchment;
 	this.entrenchTicks = u.entrenchTicks;
 	this.leader = u.leader;
-	//The player is taken from the current map by owner id, not from u.player
-	this.player = new Player();
-	this.player.copy(engineContext.scenario().map.getPlayer(this.owner));
+	//The player is the current map's player of that owner, not a copy of it: a copy took the
+	//prestige, score and transports the unit spends or earns away from the real player (#68)
+	this.player = engineContext.scenario().map.getPlayer(this.owner);
 	if (u.transport !== null) {
 		this.transport = new Transport(u.transport.eqid);
 		this.transport.copy(u.transport);
