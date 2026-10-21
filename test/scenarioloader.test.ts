@@ -1,0 +1,35 @@
+//Scenario and ScenarioLoader against the reference: the state of every "-t0" engine fixture is
+//the reference's export right after Game.newScenario (test/contracts/record.js). Loading the same
+//XML here, with Math.random seeded the same way, must export the same game
+import fs from "node:fs";
+import path from "node:path";
+import { expect, test } from "vitest";
+import { readFixture } from "./contracts";
+import { freshFixtures, freshGame, mapSizes, newScenario } from "./lifecycle";
+
+//No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
+test.each(freshFixtures("engine"))("ScenarioLoader contract %s", async (name) => {
+	const fixture = readFixture("engine", name);
+	const game = await freshGame();
+	await newScenario(game, fixture.file);
+	const actual = game.state.exportGameState();
+	expect(JSON.parse(actual), "a different scenario than the reference loaded").toEqual(JSON.parse(fixture.state));
+	expect(actual, "same data, different key order").toBe(fixture.state);
+});
+
+//test/mapsizes.json stands in for the map images (Git LFS, not checked out in CI): it must match
+//the images where they are there
+test("Map image sizes match the images", () => {
+	const dir = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
+	for (const [file, [width, height]] of Object.entries(mapSizes))
+	{
+		const image = path.join(dir, file);
+		if (!fs.existsSync(image)) continue;
+		const b = fs.readFileSync(image);
+		if (b.toString("latin1", 1, 4) !== "PNG") continue; //a Git LFS pointer
+		expect([b.readUInt32BE(16), b.readUInt32BE(20)], file).toEqual([width, height]);
+	}
+	const images = fs.existsSync(path.join(dir, "resources/maps/images"))
+		? fs.readdirSync(path.join(dir, "resources/maps/images")).filter((f) => f.endsWith(".png")).length : 0;
+	expect(Object.keys(mapSizes).length, "every map image listed").toBe(images || Object.keys(mapSizes).length);
+});
