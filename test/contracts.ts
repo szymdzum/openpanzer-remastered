@@ -58,9 +58,10 @@ export async function runFixture(module: string, run: string, name: string)
 	const { GameState } = await import("../src/gamestate");
 	const { CombatLog } = await import("../src/combatlog");
 	const { game } = await import("../src/game");
+	const { Actions } = await import("../src/actions");
 	const { terrainType, leaderType, actionType, playerType, unitClass } = await import("../src/prototypes");
 	const env: ContractEnv = { GameRules, Equipment, Unit, AI, AIScripted, GameState, CombatLog, game, terrainType,
-		leaderType, actionType, playerType, unitClass, scenario, map: scenario.map, fuzzRounds: fixture.fuzzRounds };
+		leaderType, actionType, playerType, unitClass, scenario, map: scenario.map, fuzzRounds: fixture.fuzzRounds, Actions };
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)

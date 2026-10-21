@@ -25,6 +25,11 @@
 //   removed, the selection refreshed, retreat or surrender, then the elimination victory (a side
 //   without units loses). A victory or a defeat ends the game: no more actions and turns
 //
+// Here the attack (resolveAttack, finishAttack), the move's finish (finishMove) and the end of turn
+// are the game's own, src/actions.ts (env.Actions), with the driver's hooks where the UI has its
+// own (the selection refresh, the victories). On the reference, which has no actions.ts, the
+// driver runs its copy of the same sequence, so record.sh records the same results.
+//
 // Where the driver still differs from the game, and why:
 // - Synchronous. In the game an attack's second half runs when its animation ends. For an AI
 //   attack the AI waits for it (waitUIAnimation), the same order as here. A surprise attack's
@@ -66,6 +71,10 @@ function contractApply(env, captured) {
 function runEngineContract(env) {
 	const GR = env.GameRules, m = env.map, A = env.actionType, CL = env.CombatLog, PT = env.playerType;
 	const sc = env.scenario, game = env.game, UC = env.unitClass;
+	// The game's src/actions.ts: the attack, the move's finish and the end of turn run through it.
+	// The reference has none (record.sh runs this driver there), it runs the copy of the sequence
+	// below: the same calls in the same order, so both record the same results
+	const X = env.Actions;
 	const out = [];
 	const check = contractRecorder(out);
 	// The combat log holds what was played before the export: start empty on both sides
@@ -148,6 +157,13 @@ function runEngineContract(env) {
 
 	// ui.js uiUnitAttack without animations and alerts: support fire, the attack or attack stopped
 	function resolveAttack(a, d) {
+		if (X) {
+			const res = X.resolveAttack(m, a, d);
+			if (!res) return null;
+			return { a, d, aOld: res.attacking.oldstr, dOld: res.defending.oldstr, aNew: res.attacking.newstr,
+				dNew: res.defending.newstr, cr: res.cr, support: res.support.map((s) => s.id), stopped: res.attackStopped,
+				attacker: contractUnitState(a), defender: contractUnitState(d), res };
+		}
 		if (!a.getPos() || !d.getPos()) return null;
 		const aOld = a.strength, dOld = d.strength;
 		let cr = GR.calculateAttackResults(a, d, true);
@@ -166,17 +182,34 @@ function runEngineContract(env) {
 			attacker: contractUnitState(a), defender: contractUnitState(d) };
 	}
 
-	// ui.js uiAttackAnimationFinished without animations and alerts
-	function finishAttack(r) {
-		const a = r.a, d = r.d;
-		const aDestroyed = r.aOld - r.aNew >= r.aOld, dDestroyed = r.dOld - r.dNew >= r.dOld;
-		if (aDestroyed || dDestroyed) m.updateUnitList();
+	// The selection refresh after an attack, which stays in the UI
+	function refreshSelection(a, d) {
 		if (m.currentUnit) {
 			if (a.destroyed && m.currentUnit.id == a.id) m.delCurrentUnit();
 			else m.selectUnit(m.currentUnit);
 			// (the UI reads currentUnit here even after deleting it, #29: the driver checks it)
 			if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
 		}
+	}
+
+	// ui.js uiAttackAnimationFinished without animations and alerts
+	function finishAttack(r) {
+		const a = r.a, d = r.d;
+		if (X) {
+			const victory = [];
+			const res = X.finishAttack(m, r.res, {
+				afterCleanup() { refreshSelection(a, d); },
+				onVictory(side) { victory.push(win(side, "elimination")); },
+			});
+			const retreat = res.retreatMove ? { mr: res.retreatMove } : res.surrender ? "surrender" : null;
+			// The retreat's move animation ends after this
+			if (res.retreatMove) Object.assign(retreat, moveFinished(d, res.retreatMove), { unit: contractUnitState(d) });
+			return { cr: r.cr, support: r.support, stopped: r.stopped, attacker: r.attacker, defender: r.defender,
+				retreat, victory, outcome: outcome() };
+		}
+		const aDestroyed = r.aOld - r.aNew >= r.aOld, dDestroyed = r.dOld - r.dNew >= r.dOld;
+		if (aDestroyed || dDestroyed) m.updateUnitList();
+		refreshSelection(a, d);
 		let retreat = null, retreatMove = null;
 		if (!dDestroyed && GR.shouldDefenderRetreat(a, d, r.dOld)) {
 			const c = GR.getRetreatPosition(m.map, d, m.rows, m.cols);
@@ -201,6 +234,15 @@ function runEngineContract(env) {
 	// capture victory
 	function moveFinished(u, mr) {
 		let surprise = null, pending = null, victory = null;
+		if (X) {
+			const res = X.finishMove(m, u, mr, false, {
+				attack(a, d) { pending = resolveAttack(a, d); return pending ? pending.res : null; },
+				onVictory(side) { victory = win(side, "capture"); },
+			});
+			if (res.surprise) surprise = res.surprise.target ? (pending ? null : "no position") : "nothing to attack";
+			if (pending) surprise = finishAttack(pending);
+			return { surprise, victory };
+		}
 		if (u.isSurprised && mr.surpriseCell) {
 			const e = m.map[mr.surpriseCell.row][mr.surpriseCell.col].getAttackableUnit(u, false);
 			pending = e ? resolveAttack(u, e) : null;
@@ -601,8 +643,12 @@ function runEngineContract(env) {
 	function endTurn(player, ctx) {
 		check("endTurn", ctx, () => {
 			const lastSide = player.side, human = player.type == PT.humanLocal;
-			sc.endTurn(); // Map.endTurn: the next AI player plans its turn here
-			const defeat = sc.checkDefeat(lastSide, localSide);
+			let defeat;
+			if (X) defeat = X.endTurn(sc, localSide); // Map.endTurn: the next AI player plans its turn here
+			else {
+				sc.endTurn();
+				defeat = sc.checkDefeat(lastSide, localSide);
+			}
 			let deployed = null, log = logHash(), selected = null;
 			if (defeat) {
 				if (!ended) ended = { side: lastSide, kind: "turn limit", outcome: "lose" };
