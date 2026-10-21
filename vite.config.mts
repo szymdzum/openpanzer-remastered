@@ -57,11 +57,14 @@ export default defineConfig({
 		setupFiles: ["test/setup.ts"],
 		include: ["test/**/*.test.ts"],
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
-		//npm run test:coverage: what the contracts run of the engine (coverage/index.html)
+		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
+		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
+		//and the entry (main)
 		coverage: {
 			provider: "v8",
-			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/leaders.ts",
-				"src/scenario.ts", "src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts"],
+			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
+				"src/leaders.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
+				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts"],
 			reporter: ["text", "html", "json-summary"],
 		},
 	},
