@@ -24,9 +24,6 @@ import type { GameMap, Hex } from "./map";
 import { Leaders } from "./leaders";
 import { Rng } from "./rng";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (assigned by calculateAttackResults)
-var aInitiative: number, dInitiative: number;
-
 //The GameRules module API. map is the hex grid of a GameMap (GameMap.map), rows/cols its size
 export interface GameRulesModule
 {
@@ -718,9 +715,6 @@ GameRules.calculateAttackResults = function(atkunit, defunit, estimate)
 	}
 
 	//TODO Initiative (evaluate initiative based on class, terrain initiative)
-	//The 3.2.14 bundle assigns these two as implicit globals, kept as is
-	aInitiative = aData.initiative;
-	dInitiative = dData.initiative;
 	let initiativeDiff = aData.initiative - dData.initiative;
 
 	if (Leaders.unitHasLeader(atkunit, leaderType.firstStrike))

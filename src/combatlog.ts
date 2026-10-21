@@ -17,9 +17,6 @@ import { Cell } from "./prototypes";
 import type { Unit } from "./unit";
 import { Leaders } from "./leaders";
 
-//Undeclared in the bundle (implicit globals): module variables here, same lifetime (addCombatEnd)
-var c: any;
-
 //A unit's state saved by addCombatStart
 export interface CombatUnitState
 {
@@ -164,8 +161,7 @@ CombatLog.addCombatStart = function(atkunit: Unit, defunit: Unit, turn: number):
 //Adds the result of a started combat to the attacker and defender totals
 CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number, supportFire: boolean): boolean
 {
-	//Implicit global "c" in the bundle, kept
-	c = CombatLog.combatRound[combatId] as CombatRound;
+	const c = CombatLog.combatRound[combatId] as CombatRound;
 	if (typeof c === "undefined")
 		return false;
 
