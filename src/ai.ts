@@ -22,6 +22,7 @@ import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import { game } from "./game";
+import { Rng } from "./rng";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (buildActions)
 var h: any;
@@ -600,7 +601,7 @@ export function AI(this: AI, player: Player, map: GameMap)
 	//Random integer between min and max inclusive
 	function random(min: number, max: number): number
 	{
-		return Math.floor(Math.random() * (max - min + 1) + min);
+		return Math.floor(Rng.random() * (max - min + 1) + min);
 	}
 
 	//Picks random affordable units of the classes in classList, cycling through the list,

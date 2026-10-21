@@ -13,6 +13,7 @@
 
 import { leaderType, UNIT_MAX_EXPERIENCE, unitClass } from "./prototypes";
 import type { Unit } from "./unit";
+import { Rng } from "./rng";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none
 export interface LeadersModule
@@ -273,7 +274,7 @@ Leaders.generateLeader = function(unit)
 
 	if (count < 2) return -1;
 
-	var idx = Math.floor(Math.random() * (count - 1 - 2)) + 1;
+	var idx = Math.floor(Rng.random() * (count - 1 - 2)) + 1;
 	return Leaders.unitClassLeaders[uclass][idx];
 }
 
@@ -287,7 +288,7 @@ Leaders.generateLeaderWithChance = function(unit, expGained)
 	var level = (unit.experience / 100) >> 0;
 	var prevLevel = ((unit.experience - expGained) / 100) >> 0;
 	//rolled even when it isn't used
-	var roll = Math.floor(Math.random() * (10 - level + 1)) + level;
+	var roll = Math.floor(Rng.random() * (10 - level + 1)) + level;
 
 	if (unit.experience >= UNIT_MAX_EXPERIENCE)
 		return Leaders.generateLeader(unit);

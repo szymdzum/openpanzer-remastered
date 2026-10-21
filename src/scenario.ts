@@ -20,6 +20,7 @@ import { Equipment } from "./equipment";
 import { Unit } from "./unit";
 import { GameMap, type Player } from "./map";
 import { ScenarioLoader } from "./scenarioloader";
+import { Rng } from "./rng";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (copy)
 var t: any;
@@ -266,7 +267,7 @@ export class Scenario
 		this.getRandomPrototype = function(country: number)
 		{
 			var list = this.getPrototypeUnitsAvailable(country);
-			var index = (Math.random() * list.length) >> 0;
+			var index = (Rng.random() * list.length) >> 0;
 			return list[index];
 		}
 

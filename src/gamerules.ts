@@ -22,6 +22,7 @@ import { defined } from "./dom";
 import type { Transport, Unit } from "./unit";
 import type { GameMap, Hex } from "./map";
 import { Leaders } from "./leaders";
+import { Rng } from "./rng";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (assigned by calculateAttackResults)
 var aInitiative: number, dInitiative: number;
@@ -1741,7 +1742,7 @@ GameRules.rollDice = function(min, max)
 {
 	min = Math.ceil(min);
 	max = Math.floor(max);
-	return Math.floor(Math.random() * (max - min + 1)) + min;
+	return Math.floor(Rng.random() * (max - min + 1)) + min;
 }
 
 //Checks if 2 coordonates are adjacent x row, y col
