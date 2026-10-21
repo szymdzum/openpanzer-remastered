@@ -31,21 +31,24 @@ it changed (and the reference traces of that step are then the new expected beha
 
 ## 4. Fixes to the original
 
-One change at a time, with the replay difference as its evidence. Candidates from the
-reconstruction notes, to check against the PG2 rules (Luis Guzman's PG2 file specs):
+One change at a time, with the replay difference as its evidence; each bug is a GitHub issue.
+Candidates from the reconstruction notes, to check against the PG2 rules (Luis Guzman's PG2
+file specs):
 
-- [ ] Ships resupply and reinforce only outside ports (inverted check)
-- [ ] Unit.reinforce sets `hasRessuplied` (typo), so a unit can reinforce and resupply in one turn
-- [ ] AI spends prestige twice (reinforcement budget set before purchases)
-- [ ] AI permanently prunes the shared equipment lists when buying
-- [ ] Mud movement table: towed cost 21 for Fortification
-- [ ] Combat log scenario info button hides the log
-- [ ] "No Ammo" and "No Fuel" tooltips share an id
-- [ ] Unit info writes gunrange 1 into the equipment data
+- [ ] Ships resupply and reinforce only outside ports (inverted check) (#19)
+- [ ] Unit.reinforce sets `hasRessuplied` (typo), so a unit can reinforce and resupply in one turn (#20)
+- [ ] AI spends prestige twice (reinforcement budget set before purchases) (#21)
+- [ ] AI permanently prunes the shared equipment lists when buying (#22)
+- [ ] Mud movement table: towed cost 21 for Fortification (#23)
+- [ ] Combat log scenario info button hides the log (#24)
+- [ ] "No Ammo" and "No Fuel" tooltips share an id (#25)
+- [ ] Unit info writes gunrange 1 into the equipment data (#26)
+- [ ] Combat log entries get no turn: Map.attackUnit reads a global map (#28)
+- [ ] The attack end handler reads map.currentUnit after clearing it (#29)
 - [ ] Cloud saves on GitHub gists: off until the game has its own (the bundle's used its
       author's token)
 - [ ] Implicit globals of the bundle, now module variables (aInitiative, t, u, c, h, div);
-      Campaign's loader sets isLoaded on window instead of the campaign
+      Campaign's loader sets isLoaded on window instead of the campaign (#27)
 
 ## 5. Comfort and guidance
 
@@ -61,7 +64,8 @@ reconstruction notes, to check against the PG2 rules (Luis Guzman's PG2 file spe
 
 ## 7. Bigger things
 
-- [ ] Upscaled unit and map graphics (personal use: the assets come from PG2 and OpenGeneral)
+- [ ] Upscaled unit and map graphics (the assets have no license of their own: units from
+  OpenGeneral Icons, maps from PG2; fine for a free, non-commercial remaster, ask before app stores)
 - [ ] September 1939 campaign from the Polish side
 - [ ] LLM general: an AI player that plans with the engine's legal options and writes reports
 - [ ] AI arena: headless AI vs AI over many battles to measure AI changes
