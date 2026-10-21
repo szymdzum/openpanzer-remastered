@@ -19,7 +19,7 @@ import {
 import { Equipment } from "./equipment";
 import { Unit } from "./unit";
 import { GameMap, type Player } from "./map";
-import { ScenarioLoader, type ScenarioLoaderConstructor } from "./scenarioloader";
+import { ScenarioLoader } from "./scenarioloader";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (copy)
 var t: any;
@@ -331,7 +331,7 @@ export class Scenario
 }
 
 //After the class: a class isn't hoisted like the constructor function was
-Scenario.loader = new (ScenarioLoader as unknown as ScenarioLoaderConstructor)();
+Scenario.loader = new ScenarioLoader();
 Scenario.scenarioPath = "resources/scenarios/data/";
 
 //Lookup information about scenario in scenariolist, returns the scenariolist entry or null
