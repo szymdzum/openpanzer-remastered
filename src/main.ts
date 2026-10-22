@@ -42,6 +42,7 @@ const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripte
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import
 //any of them
+new gamestate.GameState(null).restoreSettings(); //To restore only settings
 dom.changeViewPort();
 
 //The combat log's HTML has inline onclick handlers, they run in the global scope

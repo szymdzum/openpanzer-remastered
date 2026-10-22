@@ -18,7 +18,7 @@ import { AI, type AIAction, type AIActionParam } from "./ai";
 import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import { UIBuilder } from "./uibuilder";
-import { game } from "./game";
+import { game } from "./session";
 //Last: they run right before this module's body, after the same modules as when they were part of it
 export { type HexStyle, type HexStyleName, hexstyle, unitstyle, tooltipColor, tooltipStyle, terrainencoding } from "./style";
 export { soundData, moveSoundByMoveMethod, soundSprite, type soundSpriteConstructor } from "./sound";

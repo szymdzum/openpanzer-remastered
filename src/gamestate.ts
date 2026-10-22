@@ -19,7 +19,8 @@ import type { Unit } from "./unit";
 import { Player } from "./map";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
-import { type Game, game } from "./game";
+import type { Game } from "./game";
+import { game } from "./session";
 
 //The campaign progress kept in a save, see getCampaignSave
 export interface CampaignSave {

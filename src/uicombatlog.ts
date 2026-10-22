@@ -24,7 +24,7 @@ import {
 } from "./dom";
 import type { Hex } from "./map";
 import { UIBuilder } from "./uibuilder";
-import { game } from "./game";
+import { game } from "./session";
 import { Leaders } from "./leaders";
 
 export interface UICombatLogModule {

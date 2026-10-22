@@ -13,7 +13,6 @@
  */
 
 import { uiSettings } from "./prototypes";
-import { GameState } from "./gamestate";
 import { defined } from "./util";
 
 //An element with the vendor prefixed style properties the game still sets (Firefox's Moz*)
@@ -440,8 +439,6 @@ export function changeViewPort(): void {
 	var deviceWidth = "width=device-width, "; //Device width viewport statement. For iPhone 5 FS it won't be applied
 	var ratio = window.devicePixelRatio || 1;
 	var metaTags = document.getElementsByTagName("meta");
-
-	new GameState(null).restoreSettings(); //To restore only settings
 
 	for (i = 0; i < metaTags.length; i++)
 			if (metaTags[i].name == "viewport")

@@ -509,4 +509,7 @@ export let DEBUG_CAMPAIGN = false; //If victory choices buttons should be shown 
 export let DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js)
 export let VERSION = "3.2.14";
 export let MAJOR_VERSION = major_version(VERSION);
+//The scenario a first start (and the UI's "new game" fallback) plays: Game.defaultScenario
+export const DEFAULT_SCENARIO = "tutorial.xml";
+
 export let NATIVE_PLATFORM = "generic";

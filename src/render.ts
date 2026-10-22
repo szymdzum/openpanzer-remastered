@@ -24,7 +24,7 @@ import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { GameMap, Hex, UnitImagesList } from "./map";
 import { UIBuilder } from "./uibuilder";
-import { game } from "./game";
+import { game } from "./session";
 import { OSGlue } from "./osglue";
 
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
