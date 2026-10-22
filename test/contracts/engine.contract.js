@@ -1,7 +1,7 @@
 // The engine contract: the AI plays every player of a game state for a few turns through Map,
 // Unit, GameRules, Leaders, Scenario and Game, with random legal actions of every kind mixed in
 // and drills for the rarer paths, and every step records its result and a hash of the whole state
-// after it. Then the campaign functions, and hashes of the saved game, the combat log and the
+// after it (toData's state and what the screen shows beside it, see stateString). Then the campaign functions, and hashes of the saved game, the combat log and the
 // equipment data. Same recording and testing as the GameRules contract (see
 // gamerules.contract.js). Uses contractRecorder, contractUnitState and contractHash from common.js.
 //
@@ -127,7 +127,24 @@ function runEngineContract(env) {
 
 	const reinforcementCount = () => Object.keys(sc.reinforcements)
 		.reduce((n, t) => n + (sc.reinforcements[t] ? sc.reinforcements[t].length : 0), 0);
+	// What the state leaves out (docs/STATE.md D6, D10) and the contract still compares: the
+	// selection, the spotting and zone of control counters (set or not, as a hex tells them) and
+	// the side shown
+	function view() {
+		let hexes = "";
+		for (let r = 0; r < m.rows; r++)
+			for (let c = 0; c < m.cols; c++) {
+				const h = m.map[r][c];
+				hexes += [h.isMoveSel ? 1 : 0, h.isAttackSel ? 1 : 0, +h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(",") + ";";
+			}
+		return [m.currentUnit ? m.currentUnit.id : null, game.spotSide, hexes];
+	}
+	// The game's state as src/state.ts's toData reads it (#127), and the view. On the reference,
+	// which has no toData, the walk of the objects the contract compared before: record.sh still
+	// records the states there, but a newly recorded fixture's hashes are of that walk, so it takes
+	// this repo's results with UPDATE_CONTRACTS=1 in the commit that records it
 	function stateString() {
+		if (env.toData) return JSON.stringify(env.toData(sc, game).state) + "\n" + JSON.stringify(view());
 		const units = m.getUnits().map((u) => JSON.stringify(contractUnitState(u)));
 		const ps = m.getPlayers().map((p) => {
 			const o = {};
