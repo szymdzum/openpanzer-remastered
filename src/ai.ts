@@ -418,7 +418,7 @@ export class AI {
 						break;
 					classIndex = 0;
 				}
-				const eqList = Equipment.getCountryEquipmentByClass(classList[classIndex], country);
+				const eqList = countryEquipmentOfClass(classList[classIndex], country);
 				for (let i = eqList.length - 1; i >= 0; i--) {
 					const cost = GameRules.calculateUnitCosts(eqList[i]);
 					if (cost > prestige || cost > maxUnitCost || cost < minUnitCost
@@ -459,6 +459,13 @@ export class AI {
 //as in Map.setHex (#100)
 function isOwnedBySide(map: GameMap, hex: Hex, side: number): boolean {
 	return hex.owner != -1 && map.getPlayer(hex.owner).side == side;
+}
+
+//The equipment list of the class for the country (the index's own, buyUnits removes from it, #22).
+//A country with no equipment of the class has no list for it: an empty one, nothing to buy and no
+//draw, as for a class with nothing affordable (#101)
+function countryEquipmentOfClass(uclass: number, country: number): number[] {
+	return Equipment.getCountryEquipmentByClass(uclass, country) ?? [];
 }
 
 //Random integer between min and max inclusive, from rng's number in [0, 1)
