@@ -12,8 +12,9 @@
  *
  * fromData builds the old engine's objects from it: the scenario, the map and its hexes, the
  * players, the units in their order and with their ids (D1, D2), the core lists, the undo slot,
- * the equipment lists, and the campaign's progress when given the game. It doesn't load anything:
- * the equipment of the players' countries is loaded already, and so is the campaign.
+ * the equipment lists, the game's and the AI's random streams (D8), and the campaign's progress
+ * when given the game. It doesn't load anything: the equipment of the players' countries is loaded
+ * already, and so is the campaign.
  *
  * What the old engine has and the state doesn't, on purpose: the selection (D6), the players'
  * handlers (picked from their type, D6), the spotting and zone of control counters (derived, D10:
@@ -28,6 +29,7 @@ import { Equipment, type EquipmentIndexes } from "./equipment";
 import { Transport, Unit } from "./unit";
 import { type GameMap, Player, type PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
+import { Rng } from "./rng";
 import type { Campaign } from "./campaign";
 
 export type UnitId = number;
@@ -64,7 +66,7 @@ export interface GameState {
 	turn: TurnState;
 	objectives: [Position[], Position[]];	//each side's victory hexes still to take, in their order (D7)
 	reinforcements: ReinforcementState[];	//by turn, each turn's in their order
-	rng: RngStreams | null;		//null until the game and the AI draw from seeded streams (#126 fills it)
+	rng: RngStreams | null;		//null while the game stream reads Math.random (a test seeds that)
 	campaign: CampaignState | null;
 	equipment: EquipmentState;
 }
@@ -276,11 +278,17 @@ export function toData(scenario: Scenario, host?: CampaignHost | null): SavedGam
 		turn: { turn: m.turn, currentPlayer: m.currentPlayer ? m.currentPlayer.id : -1, undoable: undoState(m) },
 		objectives: [m.sidesVictoryHexes[0].map(position), m.sidesVictoryHexes[1].map(position)],
 		reinforcements: reinforcements(scenario),
-		rng: null,
+		rng: rngStreams(),
 		campaign: host && host.campaign ? campaignState(host.campaign, host.getCampaignProgress()) : null,
 		equipment: { indexes: structuredClone(Equipment.equipmentIndexes) },
 	};
 	return { data, state };
+}
+
+//Where the game's and the AI's streams are (D8): the cosmetic stream isn't state. Null while the
+//game stream isn't seeded: it reads Math.random then (src/rng.ts), whose position nobody can read
+function rngStreams(): RngStreams | null {
+	return Rng.game.state === null || Rng.ai.state === null ? null : { game: Rng.game.state, ai: Rng.ai.state };
 }
 
 function position(c: Position): Position {
@@ -398,6 +406,10 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null): Scenario
 	if (state.turn.undoable !== null)
 		restoreUndo(m, state.turn.undoable);
 
+	if (state.rng !== null) {
+		Rng.game.state = state.rng.game;
+		Rng.ai.state = state.rng.ai;
+	}
 	if (host)
 		restoreCampaign(host, state.campaign, scenario);
 	scenario.isLoaded = true;

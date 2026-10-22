@@ -78,8 +78,9 @@ export var aiDefaultConfig: AIConfig = {
 };
 
 //What an AI can be given besides its player and map: its random numbers in [0, 1) (default
-//Rng.random, the engine's stream, read at each draw) and its settings (default aiDefaultConfig).
-//Nothing else: an AI is a player's handler, and the saved game keeps the player's own fields
+//Rng.aiRandom, the AI's own stream, not the dice's, read at each draw) and its settings (default
+//aiDefaultConfig). Nothing else: an AI is a player's handler, and the saved game keeps the player's
+//own fields
 export interface AIOptions {
 	rng?: () => number;
 	config?: AIConfig;
@@ -152,7 +153,7 @@ export class AI {
 
 	constructor(player: Player, map: GameMap, options?: AIOptions) {
 		const config = options && options.config ? options.config : aiDefaultConfig;
-		var rng = options && options.rng ? options.rng : Rng.random;
+		var rng = options && options.rng ? options.rng : Rng.aiRandom;
 		var allUnits: Unit[] = [];
 		var aiUnits: AIUnit[] = []; //AIUnit list of the units still having something to do
 		var actionsQueue: AIAction[] = [];

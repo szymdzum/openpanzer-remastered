@@ -1,6 +1,6 @@
-//The random streams (src/rng.ts, #126): the game stream (the dice, the leaders, the AI) and the
-//cosmetic one (the UI's sprite and sound picks), each a mulberry32 whose state is one number, so an
-//animation or a sound no longer moves the dice
+//The random streams (src/rng.ts, #126): the game stream (the dice, the leaders), the AI's and the
+//cosmetic one (the UI's sprite and sound picks), each a mulberry32 whose state is one number, so the
+//AI's choices, an animation or a sound no longer move the dice
 import { afterEach, expect, test } from "vitest";
 import { nextRandom, Rng } from "../src/rng";
 import { animationSprite } from "../src/animation";
@@ -8,11 +8,12 @@ import { soundData } from "../src/sound";
 import { uiSettings } from "../src/prototypes";
 import { mulberry32 } from "./lifecycle";
 
-const realRandom = Math.random, startState = { game: Rng.game.state, cosmetic: Rng.cosmetic.state };
+const realRandom = Math.random, startState = { game: Rng.game.state, ai: Rng.ai.state, cosmetic: Rng.cosmetic.state };
 afterEach(() => {
 	Math.random = realRandom;
 	Rng.source = null;
 	Rng.game.state = startState.game;
+	Rng.ai.state = startState.ai;
 	Rng.cosmetic.state = startState.cosmetic;
 });
 
@@ -48,6 +49,17 @@ test("The game stream reads Math.random at the call until it is seeded, the sour
 	expect(Rng.game.state).toBe(0);
 });
 
+//The harness seeds Math.random and calls Rng.seed with the same number: the game stream then rolls
+//what Math.random would have, the dice the original game rolls with that seed
+test("Rng.seed seeds the game stream with the seed as it is, the numbers Math.random's mulberry32 draws", () => {
+	Math.random = () => { throw new Error("Math.random drawn"); };
+	Rng.seed(31);
+	expect(Rng.game.state).toBe(31);
+	expect(draws(Rng.random, 10)).toEqual(draws(mulberry32(31), 10));
+	Rng.seed(-1);
+	expect(Rng.game.state).toBe(0xffffffff);
+});
+
 test("The cosmetic stream is seeded at load and by Rng.seed, never from Math.random", () => {
 	expect(Rng.cosmetic.state).not.toBeNull();
 	Math.random = () => { throw new Error("Math.random drawn"); };
@@ -57,6 +69,18 @@ test("The cosmetic stream is seeded at load and by Rng.seed, never from Math.ran
 	expect(draws(Rng.cosmeticRandom, 10)).toEqual(first);
 	//Salted: the same seed doesn't give the cosmetic stream Math.random's numbers
 	expect(first).not.toEqual(draws(mulberry32(1), 10));
+});
+
+test("The AI stream is seeded at load and by Rng.seed, apart from the cosmetic one and Math.random", () => {
+	expect(Rng.ai.state).not.toBeNull();
+	Math.random = () => { throw new Error("Math.random drawn"); };
+	Rng.seed(1);
+	const ai = draws(Rng.aiRandom, 10);
+	Rng.seed(1);
+	expect(draws(Rng.aiRandom, 10)).toEqual(ai);
+	Rng.seed(1);
+	expect(draws(Rng.cosmeticRandom, 10)).not.toEqual(ai);
+	expect(draws(mulberry32(1), 10)).not.toEqual(ai);
 });
 
 //The animations' sprite picks and the sound variants ran between the support fire shots on the

@@ -152,7 +152,11 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 - **`UndoState`**: the unit, the unit as it was before the move (`UnitState`, where it stood), and
   what the capture changed (old owner, flag and objective side, `null` when unchanged, the prestige
   and score gained). `UndoSlot` with no unit is `null`: the rest of the slot is never read then.
-- **`RngState`** is a number; `rng` stays `null` until the streams of #126 exist.
+- **`RngState`** is a number, the position of the game's and the AI's streams (`src/rng.ts`):
+  fromData sets both back. `rng` is `null` while the game stream isn't seeded and reads
+  `Math.random` (a test that seeds `Math.random`, as the contracts were recorded): its position
+  can't be read then. The game seeds its streams when it starts (`src/main.ts`), the harness
+  with `Rng.seed`.
 - **`expPerSide`** keeps the experience total and the unit count of each side: the average a
   bought unit gets divides them.
 - **`victoryTurns`** is the scenario's list as loaded (`number[]`).

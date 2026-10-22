@@ -45,8 +45,9 @@ const __ui = { steps: [], errors: [] };
 // With no save the game loads the tutorial at start, let that finish first
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(window.__uiReplay.seed || 1);
-// The streams that aren't Math.random (src/rng.ts: the UI's sprite and sound picks) from the same
-// seed, where the game has them (not the original)
+// The game's streams (src/rng.ts: the dice, the AI's, the UI's sprite and sound picks) from the same
+// seed, where the game has them (the original draws all from Math.random): the game stream draws
+// what this Math.random would
 if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(window.__uiReplay.seed || 1);
 
 // RENDER_LOG=1: records the renderer's render(...) calls per step, to find a redraw difference
