@@ -28,6 +28,9 @@ ROLLERS_D = (1.46, 2.39, 3.41, 4.43)
 SPROCKET = (0.56, 0.66, 0.36)       # d, z, r
 IDLER = (5.45, 0.55, 0.30)
 SKIRT_Y, SKIRT_Z, SKIRT_D = 1.62, (0.60, 1.68), (0.95, 5.45)
+# A sprite needs the gun and the antenna thicker than real, or they break up at 80x50: the old
+# strips draw them as a clear line. render.py sets this for the pixel strips.
+THICKEN = {"gun": 1.0, "antenna": 1.0}
 TURRET_SKIRT_Y, TURRET_SKIRT_D = 1.33, (2.05, 4.85)
 
 
@@ -172,7 +175,7 @@ def hull(m):
 	parts.append(box("hatch_r", (4.45, 5.25), (-0.85, -0.10), (ENGINE_Z - 0.02, ENGINE_Z + 0.03), m["paint"]))
 	parts.append(cylinder("muffler", 0.12, 0.80, (5.70, -0.40, 1.19), "y", m["rust"], 14))
 	parts.append(cylinder("aux_muffler", 0.06, 0.45, (5.80, 0.45, 1.02), "y", m["rust"], 10))
-	parts.append(cylinder("antenna", 0.012, 1.2, (5.30, -1.0, ENGINE_Z + 0.6), "z", m["black"], 6))
+	parts.append(cylinder("antenna", 0.012 * THICKEN["antenna"], 1.2, (5.30, -1.0, ENGINE_Z + 0.6), "z", m["black"], 6))
 	return parts
 
 
@@ -197,8 +200,8 @@ def turret(m):
 	parts.append(cylinder("gun_collar", 0.15, 0.40, (1.75, o, GUN_Z), "x", m["paint"], 16))
 	parts.append(cylinder("gun_sleeve", 0.11, 0.50, (1.30, o, GUN_Z), "x", m["paint"], 16))
 	barrel = 1.05 - (MUZZLE_D + 0.32)
-	parts.append(cylinder("gun", 0.068, barrel, (1.05 - barrel / 2, o, GUN_Z), "x", m["paint"], 14))
-	parts.append(cylinder("muzzle_brake", 0.13, 0.32, (MUZZLE_D + 0.16, o, GUN_Z), "x", m["paint"], 16))
+	parts.append(cylinder("gun", 0.068 * THICKEN["gun"], barrel, (1.05 - barrel / 2, o, GUN_Z), "x", m["paint"], 14))
+	parts.append(cylinder("muzzle_brake", 0.13 * max(1, THICKEN["gun"] * 0.8), 0.32, (MUZZLE_D + 0.16, o, GUN_Z), "x", m["paint"], 16))
 	parts.append(cylinder("coax", 0.025, 0.25, (1.85, o + 0.25, GUN_Z + 0.05), "x", m["black"], 8))
 	return parts
 
@@ -251,14 +254,14 @@ def running_gear(m):
 		yc = s * TRACK_Y
 		parts.append(track_band(f"track_{s}", outer, yc - TRACK_W / 2, yc + TRACK_W / 2, m["track"]))
 		for i, d in enumerate(WHEELS_D):
-			parts.append(cylinder(f"wheel_{s}_{i}", WHEEL_R, TRACK_W * 0.9, (d, yc, WHEEL_R + 0.075), "y", m["paint"], 18))
+			parts.append(cylinder(f"wheel_{s}_{i}", WHEEL_R, TRACK_W * 0.9, (d, yc, WHEEL_R + 0.075), "y", m["running"], 18))
 			parts.append(cylinder(f"tyre_{s}_{i}", WHEEL_R + 0.005, TRACK_W * 0.86, (d, yc, WHEEL_R + 0.075), "y", m["rubber"], 18))
-			parts.append(cylinder(f"hub_{s}_{i}", 0.09, TRACK_W * 0.96, (d, yc, WHEEL_R + 0.075), "y", m["paint"], 10))
+			parts.append(cylinder(f"hub_{s}_{i}", 0.09, TRACK_W * 0.96, (d, yc, WHEEL_R + 0.075), "y", m["running"], 10))
 		for i, d in enumerate(ROLLERS_D):
-			parts.append(cylinder(f"roller_{s}_{i}", 0.11, 0.18, (d, s * (TRACK_Y + 0.05), 0.92), "y", m["paint"], 12))
-		parts.append(cylinder(f"sprocket_{s}", SPROCKET[2], TRACK_W + 0.04, (SPROCKET[0], yc, SPROCKET[1]), "y", m["paint"], 20))
-		parts.append(cylinder(f"sprocket_hub_{s}", 0.16, TRACK_W + 0.14, (SPROCKET[0], yc, SPROCKET[1]), "y", m["paint"], 12))
-		parts.append(cylinder(f"idler_{s}", IDLER[2], TRACK_W + 0.04, (IDLER[0], yc, IDLER[1]), "y", m["paint"], 20))
+			parts.append(cylinder(f"roller_{s}_{i}", 0.11, 0.18, (d, s * (TRACK_Y + 0.05), 0.92), "y", m["running"], 12))
+		parts.append(cylinder(f"sprocket_{s}", SPROCKET[2], TRACK_W + 0.04, (SPROCKET[0], yc, SPROCKET[1]), "y", m["running"], 20))
+		parts.append(cylinder(f"sprocket_hub_{s}", 0.16, TRACK_W + 0.14, (SPROCKET[0], yc, SPROCKET[1]), "y", m["running"], 12))
+		parts.append(cylinder(f"idler_{s}", IDLER[2], TRACK_W + 0.04, (IDLER[0], yc, IDLER[1]), "y", m["running"], 20))
 	return parts
 
 
