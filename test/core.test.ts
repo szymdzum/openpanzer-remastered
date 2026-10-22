@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, type extendedCell, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, type extendedCell, leaderType, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -173,6 +173,14 @@ test("A move onto an enemy flag takes it, and the undo gives it back", () => {
 	expect(undone.world.state.players[0]).toMatchObject({ prestige: 0, score: 0 });
 	expect(unitById(undone.world, 0)).toEqual(unitById(w, 0));
 	expect(undone.world.state.turn.undoable).toBeNull();
+});
+
+test("A liberator takes a flag for twice the prestige, the score as any unit", () => {
+	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, leader: leaderType.liberator }] });
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 1)], { owner: 1, flag: 15, victorySide: -1 });
+	const moved = played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
+	expect(moved.world.state.players[0]).toMatchObject({ prestige: 100, score: 50 });
+	expect(moved.world.state.turn.undoable).toMatchObject({ prestigeGain: 100, scoreGain: 50 });
 });
 
 //The step's world and events; a refusal throws
