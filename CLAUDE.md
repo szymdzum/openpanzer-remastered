@@ -37,6 +37,11 @@ canvas pixels on purpose.
   evidence; check `gh issue list --state all` first. It is not fixed on the side.
 - **A deliberate fix** is its own commit naming the issue; it re-records the contracts with
   `UPDATE_CONTRACTS=1 npm test` and says what changed. Never run UPDATE_CONTRACTS otherwise.
+- **Tests say what is right.** The contracts pin the original, bugs included, and a red contract
+  only says a result changed. So every deliberate fix comes with a unit test named after the
+  correct behavior and the issue (test/undo.test.ts for #68), checked to fail without the fix; new
+  mechanics are written test-first, small rule tests on a hand-built map (`smallGame()` in
+  test/headless.test.ts).
 - **Kept bugs are kept**: many are pinned by `test.fails` tests named after their issue. A fix
   flips its test.
 - The order of `Math.random` draws is behavior: the UI's sprite and sound picks share the stream
