@@ -5,6 +5,7 @@
 import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 import { until } from "./lifecycle";
+import { units, withoutLosses } from "./saves";
 
 //Saves are parsed JSON, walked freely
 type Json = any;
@@ -30,52 +31,6 @@ function loadFixture(name: string) {
 		loaded.set(name, load(state).then((again) => ({ saved: JSON.parse(state), again: JSON.parse(again) })));
 	}
 	return loaded.get(name);
-}
-
-//Every unit of a save: on the hexes (ground and air) and in the reinforcements
-function* units(save: Json): Generator<[string, Json]> {
-	const map = save.scenario.map;
-	for (let r = 0; r < map.rows; r++)
-		for (let c = 0; c < map.cols; c++)
-			for (const k of ["unit", "airunit"])
-				if (map.map[r][c][k]) yield [r + "," + c + " " + k, map.map[r][c][k]];
-	for (const t of Object.keys(save.scenario.reinforcements))
-		for (const [i, x] of save.scenario.reinforcements[t].entries())
-			yield ["reinforcement " + t + "/" + i, x.unit];
-}
-
-//A save without what a load is known to lose or rebuild, the rest must survive a load:
-//dayTurn and the reinforcement list's turn keys and ids (#55), the partial map edges (#54),
-//the units' experience and cost per side (#83), unit ids (renumbered in hex order) and
-//tempSpotted (set again by the spotting a load replays), the AI handlers (built again by
-//setupPlayers), the typo field hasRessuplied (only ever written) and the move and attack
-//selection
-function withoutLosses(save: Json): Json {
-	const s = structuredClone(save);
-	const scenario = s.scenario, map = scenario.map;
-	for (const [, u] of units(s)) {
-		delete u.id;
-		delete u.tempSpotted;
-		delete u.hasRessuplied;
-	}
-	delete scenario.dayTurn;
-	delete scenario.expPerSide;
-	delete scenario.unitsCostPerSide;
-	delete map.isLastRowPartial;
-	delete map.isLastColPartial;
-	const reinforcements: Json[] = [];
-	for (const t of Object.keys(scenario.reinforcements).sort((a, b) => +a - +b))
-		for (const x of scenario.reinforcements[t])
-			reinforcements.push({ ...x, turn: +x.turn, id: undefined });
-	scenario.reinforcements = reinforcements;
-	for (const row of map.map)
-		for (const hex of row) {
-			delete hex.isMoveSel;
-			delete hex.isAttackSel;
-		}
-	for (const p of [...s.players, map.currentPlayer])
-		if (p) delete p.handler;
-	return s;
 }
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one

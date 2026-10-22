@@ -4,130 +4,12 @@
 //played them for 2 turns. The known ways the engine breaks them are drills below, marked test.fails
 //with their issue: fixing a bug flips its test, a new failure is a new defect.
 import { expect, test } from "vitest";
-import { fixtures, readFixture, restoreState } from "./contracts";
+import { fixtures } from "./contracts";
+import { cellName, hexName, load, unitName, violations, type World } from "./invariants";
+import { mulberry32 } from "./lifecycle";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
-
-//Mulberry32, the contracts' seeded random (contractRandom in test/contracts/common.js)
-function seededRandom(a: number) {
-	return function() {
-		a |= 0; a = a + 0x6D2B79F5 | 0;
-		let t = Math.imul(a ^ a >>> 15, 1 | a);
-		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-		return ((t ^ t >>> 14) >>> 0) / 4294967296;
-	};
-}
-
-//The modules of the restored state (restoreState resets them for every fixture)
-async function load(name: string) {
-	const fixture = readFixture("engine", name);
-	const scenario = await restoreState(fixture.state);
-	const { GameRules } = await import("../src/gamerules");
-	const { Leaders } = await import("../src/leaders");
-	const { CombatLog } = await import("../src/combatlog");
-	const { Equipment } = await import("../src/equipment");
-	const { AI } = await import("../src/ai");
-	const { game } = await import("../src/game");
-	const prototypes = await import("../src/prototypes");
-	if (fixture.spotSide !== undefined)
-		game.spotSide = fixture.spotSide;
-	//The engine calls into the UI in one place: the AI after deploying its purchases
-	(game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {} };
-	const m = scenario.map;
-	//Map.endTurn asks an AI player's handler for actions: the driver builds them itself
-	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
-	return { scenario, m, GameRules, Leaders, CombatLog, Equipment, AI, game, ...prototypes };
-}
-type World = Awaited<ReturnType<typeof load>>;
-
-const unitName = (u: Unit) => "unit#" + u.id;
-const cellName = (c: Cell) => c.row + "," + c.col;
-const hexName = (h: Hex | null) => h ? cellName(h.getPos()) : "no hex";
-
-//A hex's counter: the counters are private, a hex only says whether one is above 0. Counted by
-//switching it off until it reads 0, then on again as many times
-function counter(isSet: () => boolean, set: (on: boolean) => void): number {
-	let n = 0;
-	while (isSet() && n < 1000) { set(false); n++; }
-	for (let i = 0; i < n; i++) set(true);
-	return n;
-}
-
-//Every unit's zone of control and spotting put on an empty board with the game's own per-unit
-//functions: a board hex counts what the game adds, and claims to be spotted already, so
-//setSpotRange marks no unit as newly spotted
-function recompute(w: World) {
-	const { m, GameRules } = w;
-	const board: { zoc: number[]; spot: number[] }[][] = [];
-	const shadow: Hex[][] = [];
-	for (let r = 0; r < m.rows; r++) {
-		board.push([]);
-		shadow.push([]);
-		for (let c = 0; c < m.cols; c++) {
-			const b = { zoc: [0, 0], spot: [0, 0] };
-			board[r].push(b);
-			shadow[r].push({
-				setZOC: (side: number, on: boolean) => { if (on) b.zoc[side]++; },
-				setSpotted: (side: number, on: boolean) => { if (on) b.spot[side]++; },
-				isSpotted: () => true,
-				getUnit: (): Unit | null => null,
-			} as unknown as Hex);
-		}
-	}
-	for (const u of m.getUnits()) {
-		if (!u.getPos()) continue;
-		GameRules.setZOCRange(shadow, u, true, m.rows, m.cols);
-		GameRules.setSpotRange(shadow, u, true, m.rows, m.cols);
-	}
-	return board;
-}
-
-//What doesn't hold, a few of each kind. Units in offMap aren't checked for being on their hex
-function violations(w: World, offMap: Set<Unit> = new Set()): string[] {
-	const { m, uiSettings } = w;
-	if (uiSettings.noFOW) return ["fog of war is off: the spotting counters can't be read"];
-	const out: string[] = [];
-	const kinds: Record<string, number> = {};
-	const add = (kind: string, text: string) => {
-		kinds[kind] = (kinds[kind] || 0) + 1;
-		if (kinds[kind] <= 3) out.push(text);
-	};
-	const units = m.getUnits();
-	const ids = new Set<number>();
-	for (const u of units) {
-		if (ids.has(u.id)) add("id", unitName(u) + " twice in the unit list");
-		ids.add(u.id);
-		if (u.player !== m.getPlayer(u.owner))
-			add("player", unitName(u) + " has a player that isn't the map's player#" + u.owner);
-		const h = u.getHex();
-		if (h && h.unit !== u && h.airunit !== u && !offMap.has(u))
-			add("unit hex", unitName(u) + " is on " + hexName(h) + ", which holds "
-				+ [h.unit, h.airunit].map((x) => x ? unitName(x) : "nothing").join(" and "));
-		if (u.destroyed) add("destroyed", unitName(u) + " is destroyed and still in the unit list");
-	}
-	const board = recompute(w);
-	for (let r = 0; r < m.rows; r++)
-		for (let c = 0; c < m.cols; c++) {
-			const h = m.map[r][c];
-			for (const [slot, u] of [["unit", h.unit], ["airunit", h.airunit]] as const) {
-				if (!u) continue;
-				if (u.getHex() !== h) add("hex unit", cellName(h.getPos()) + "." + slot + " is " + unitName(u) + ", which is on " + hexName(u.getHex()));
-				if (!units.includes(u)) add("hex unit", cellName(h.getPos()) + "." + slot + " is " + unitName(u) + ", not in the unit list");
-			}
-			for (const side of [0, 1]) {
-				const zoc = counter(() => h.isZOC(side), (on) => h.setZOC(side, on));
-				if (zoc !== board[r][c].zoc[side])
-					add("zoc", `${r},${c} zone of control of side ${side}: ${zoc} instead of ${board[r][c].zoc[side]}`);
-				const spot = counter(() => h.isSpotted(side), (on) => h.setSpotted(side, on));
-				if (spot !== board[r][c].spot[side])
-					add("spot", `${r},${c} spotting of side ${side}: ${spot} instead of ${board[r][c].spot[side]}`);
-			}
-		}
-	for (const [kind, n] of Object.entries(kinds))
-		if (n > 3) out.push(`(${n - 3} more ${kind})`);
-	return out;
-}
 
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
 //ui.ts uiUnitAttack and uiAttackAnimationFinished, without animations and alerts
@@ -175,7 +57,7 @@ function move(w: World, u: Unit, cell: Cell) {
 function playAI(w: World, check: (step: string, overwritten: Unit[]) => boolean) {
 	const { m, scenario, CombatLog, actionType: A } = w;
 	const realRandom = Math.random;
-	Math.random = seededRandom(31);
+	Math.random = mulberry32(31); //the contracts' seeded random (contractRandom in test/contracts/common.js)
 	try {
 		const steps = 2 * m.getPlayers().length;
 		for (let t = 0; t < steps; t++) {
