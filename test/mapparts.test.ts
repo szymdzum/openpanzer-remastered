@@ -1,6 +1,8 @@
 //GameMap's parts (MapVisibility, MapBoard, MapSelection, UndoSlot) stay out of the saved game: the
 //map's and the hexes' own data fields, in the order they are saved, are the ones the game always
-//had. And a hex's counters keep their arithmetic: off with nothing on stays at 0
+//had. And a hex's counters keep their arithmetic: off with nothing on stays at 0. The harness and
+//the engine contract compare toData (src/state.ts) since #127, not these fields; the save is still
+//the JSON of the objects until #128, so their fields and order stay pinned here until then
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 

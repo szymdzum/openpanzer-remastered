@@ -32,9 +32,9 @@ item_file() { printf %s "$1" | tr -c 'A-Za-z0-9.-' '-'; }
 if [ "${1:-}" = "--job" ]; then
 	item=$2
 	export BDG_SESSION=$(session_name "$BDG_SESSION" "$item")
-	setup="window.__replay = { items: [$(node -e 'console.log(JSON.stringify(process.argv[1]))' "$item")], turns: $TURNS, seed: $SEED ${FULL_FROM:+, fullFrom: $FULL_FROM} }"
+	setup="window.__replay = { items: [$(node -e 'console.log(JSON.stringify(process.argv[1]))' "$item")], turns: $TURNS, seed: $SEED ${FULL_FROM:+, fullFrom: $FULL_FROM} }; window.__stateSnapshot = \"$STATE_SNAPSHOT\""
 	files=(harness/lib/harness.js harness/replay.js)
-	KEY=$( (reference_version; printf '%s|%s|%s|%s\n' "$item" "$TURNS" "$SEED" "${FULL_FROM:-}"; cat "${files[@]}" harness/lib/hooks.js harness/lib/page.sh) | shasum | cut -c1-16)
+	KEY=$( (reference_version; printf '%s|%s|%s|%s|%s\n' "$item" "$TURNS" "$SEED" "${FULL_FROM:-}" "$STATE_SNAPSHOT"; cat "${files[@]}" harness/lib/hooks.js harness/lib/page.sh) | shasum | cut -c1-16)
 	BASELINE=harness/out/baseline/replay-$(item_file "$item")-$KEY.json
 	if [ ! -s "$BASELINE" ]; then
 		echo "reference: $item"
@@ -64,7 +64,7 @@ mkdir -p "$OUT" harness/out/baseline
 start_reference
 serve_vite "$PORT"
 
-echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once"
+echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once, state snapshot: $STATE_SNAPSHOT"
 run_jobs "$0" "${ITEMS[@]}" >"$OUT/jobs.log" || { cat "$OUT/jobs.log"; echo "a job failed, logs in $OUT"; }
 
 # One trace per side, in the order of the items (a missing variant trace counts as a difference)
