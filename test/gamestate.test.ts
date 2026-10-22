@@ -197,8 +197,9 @@ async function aiBoughtUnit() {
 	return { saved, again: await load(JSON.stringify(saved)), at: row + "," + col + " " + eqid, ai: ai.id };
 }
 
-//#150: the load gives the campaign player every core unit on the map, the AI's bought ones too
-test.fails("GameState load keeps the AI's bought units the AI's (#150)", async () => {
+//#150: the load gave the campaign player every core unit on the map, the AI's bought ones too: they
+//stay the AI's
+test("GameState load keeps the AI's bought units the AI's (#150)", async () => {
 	const { saved, again, at, ai } = await aiBoughtUnit();
 	expect(coreLists(saved)[ai]).toContain(at);
 	expect(coreLists(again).filter((_, i) => i !== ai).flat()).not.toContain(at);
