@@ -1,31 +1,29 @@
-//Property-based tests (fast-check): random sequences of player actions on the recorded engine
-//fixtures, and what must hold after every step whatever the sequence. When a property breaks,
-//fast-check shrinks the sequence to the shortest one that still breaks it and prints it with its
-//seed and path: FC_SEED=<seed> FC_PATH=<path> npx vitest run test/properties.test.ts replays it,
-//FC_RUNS=500 plays more sequences than CI does (CI plays the same ones every time), FC_STATS=1
-//prints how often each kind of step found a unit to play it.
+//Property-based tests (fast-check): random sequences of player commands on the recorded engine
+//fixtures, played through the command layer (src/commands.ts, Commands.execute) as the game sends
+//them, and what must hold after every step whatever the sequence. When a property breaks,
+//fast-check shrinks the sequence to the shortest one that still breaks it and prints the commands
+//it played with its seed and path: FC_SEED=<seed> FC_PATH=<path> npx vitest run
+//test/properties.test.ts replays it, FC_RUNS=500 plays more sequences than CI does (CI plays the
+//same ones every time), FC_STATS=1 prints how often each kind of step found a unit to play it.
 //
-//A sequence is plain data: a fixture, a seed for Math.random (the dice, the leaders) and steps of
-//{ kind, unit, pick }. A step picks among what the engine itself offers the player whose turn it
-//is: unit indexes the player's units that can do the kind, pick the unit's options (the cells of
-//its move range, the units it can attack...), both modulo their number. Every sequence is legal,
-//and a shrunk one keeps its meaning.
-//
-//The steps are today's engine calls, the ones the engine contract makes
-//(test/contracts/engine.contract.js) and the game makes through src/actions.ts. When #119 lands,
-//a step becomes a Command ({ type: "move", unit, to }...) picked from the legal ones the same
-//way, `play` becomes execute(game, command), and a property checks that run never fails once
-//check has passed.
+//A sequence is plain data: a fixture, a seed for Math.random (the dice, the leaders) and steps.
+//A step is either a pick { kind, unit, pick } or a Command. A pick chooses among the commands the
+//engine itself offers the player whose turn it is (its move ranges, attack cells and rules): unit
+//indexes the player's units that have a command of the kind, pick the unit's commands of it, both
+//modulo their number. Every pick is legal, and a shrunk sequence keeps its meaning. A Command step
+//is any command at all, its ids and cells drawn from the fixture's: most are refused, some allowed
+//where the rules have no say, which is what the check/run drift properties look at.
 import { isDeepStrictEqual } from "node:util";
 import fc from "fast-check";
 import { afterAll, test } from "vitest";
 import { fixtures, restoreState } from "./contracts";
-import { cellName, counter, load, unitName, violations, type World } from "./invariants";
+import { cellName, counter, load, violations, type World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackResult, OutcomeContext } from "../src/actions";
+import type { AttackResult, FinishAttackHooks, OutcomeContext } from "../src/actions";
+import type { Command, Refusal } from "../src/commands";
 
 //CI plays the same sequences every run; FC_SEED, FC_PATH and FC_RUNS replay or widen a run
 const SEED = process.env.FC_SEED ? Number(process.env.FC_SEED) : 125;
@@ -51,27 +49,95 @@ async function breaks<T>(property: fc.IAsyncProperty<T>, numRuns: number, known:
 const kinds = ["move", "capture", "attack", "resupply", "reinforce", "reinforce over", "mount", "unmount", "embark", "disembark",
 	"upgrade", "disband", "undo", "estimate", "end turn"] as const;
 type Kind = typeof kinds[number];
-interface Step { kind: Kind; unit: number; pick: number }
+interface Pick { kind: Kind; unit: number; pick: number }
+type Step = Pick | Command;
 interface Sequence { fixture: string; seed: number; steps: Step[] }
 
-//Sequences of the kinds given with their weights (how often each comes up)
-function sequences(weights: Partial<Record<Kind, number>>, maxLength: number): fc.Arbitrary<Sequence> {
+//The attack preview (render.ts, without the hidden units, and the AI's, with them): no command, a
+//step the estimate property plays beside them
+interface Estimate { type: "estimate"; unit: number; target: number; hidden: boolean }
+type Played = Command | Estimate;
+
+//Picks of the kinds given with their weights (how often each comes up)
+function picks(weights: Partial<Record<Kind, number>>): fc.Arbitrary<Pick> {
 	const kind = fc.oneof(...Object.entries(weights).map(([k, weight]) => ({ arbitrary: fc.constant(k as Kind), weight })));
-	const step = fc.record({ kind, unit: fc.nat(63), pick: fc.nat(63) });
-	return fc.record({ fixture: fc.constantFrom(...fixtures("engine")), seed: fc.integer(), steps: fc.array(step, { maxLength, size: "max" }) });
+	return fc.record({ kind, unit: fc.nat(63), pick: fc.nat(63) });
+}
+
+function sequences(weights: Partial<Record<Kind, number>>, maxLength: number): fc.Arbitrary<Sequence> {
+	return fc.record({ fixture: fc.constantFrom(...fixtures("engine")), seed: fc.integer(),
+		steps: fc.array(picks(weights), { maxLength, size: "max" }) });
+}
+
+//What a fixture's commands can name: its units' ids (and ids of units not there), its map's size
+//(a cell can be off it by one), its players' core unit lists, its equipment
+interface Pool { units: number[]; rows: number; cols: number; core: number; equipment: number[] }
+async function poolOf(fixture: string): Promise<Pool> {
+	const w = await load(fixture);
+	const ids = w.m.getUnits().map((u) => u.id);
+	const next = w.m.getBoard().uniqueID;
+	return { units: [...ids, next, next + 1, next + 2, -1, 9999], rows: w.m.rows, cols: w.m.cols,
+		core: Math.max(...w.m.getPlayers().map((pl) => pl.getCoreUnitList().length)),
+		equipment: Object.keys(w.Equipment.equipment).map(Number) };
+}
+
+//Any command, named by the fixture's ids and cells
+function anyCommand(pool: Pool): fc.Arbitrary<Command> {
+	const unit = fc.constantFrom(...pool.units);
+	const to = fc.record({ row: fc.integer({ min: -1, max: pool.rows }), col: fc.integer({ min: -1, max: pool.cols }) });
+	const index = fc.nat(pool.core + 1);
+	const eqid = fc.oneof({ arbitrary: fc.constantFrom(...pool.equipment), weight: 4 }, fc.constantFrom(-1, 0, 99999));
+	const transport = fc.oneof(fc.constantFrom(-1, 0), fc.constantFrom(...pool.equipment));
+	const of = <T extends string>(type: T) => fc.constant(type);
+	return fc.oneof(
+		fc.record({ type: of("move"), unit, to }),
+		fc.record({ type: of("attack"), unit, target: unit }),
+		...(["resupply", "mount", "unmount", "embark", "disembark", "undo", "disband"] as const)
+			.map((type) => fc.record({ type: of(type), unit })),
+		fc.record({ type: of("reinforce"), unit, overstrength: fc.boolean() }),
+		fc.record({ type: of("deploy"), index, to }),
+		fc.record({ type: of("buy"), eqid, transport }),
+		fc.record({ type: of("upgrade"), unit, eqid, transport }),
+		fc.record({ type: of("upgradeUndeployed"), index, eqid, transport }),
+		fc.record({ type: of("sell"), index }),
+		fc.record({ type: of("endTurn") }),
+	);
+}
+
+//Each fixture's pool, read once
+let pools: Promise<Map<string, Pool>> | null = null;
+async function readPools(): Promise<Map<string, Pool>> {
+	const all = new Map<string, Pool>();
+	for (const f of fixtures("engine")) all.set(f, await poolOf(f));
+	return all;
+}
+
+//Sequences of picks of the kinds given, and among them any commands (one step in three)
+async function sequencesWithCommands(weights: Partial<Record<Kind, number>>, maxLength: number): Promise<fc.Arbitrary<Sequence>> {
+	if (pools === null) pools = readPools();
+	const all = await pools;
+	return fc.constantFrom(...all.keys()).chain((fixture) => fc.record({ fixture: fc.constant(fixture), seed: fc.integer(),
+		steps: fc.array(fc.oneof({ arbitrary: picks(weights) as fc.Arbitrary<Step>, weight: 2 },
+			{ arbitrary: anyCommand(all.get(fixture) as Pool), weight: 1 }), { maxLength, size: "max" }) }));
 }
 
 //The game the steps play: every player human and local (hotseat), as the undo needs (Map.moveUnit
-//keeps the undo for a human player only); log says what each step did
-async function start(fixture: string) {
+//keeps the undo for a human player only); log lists the commands played
+async function start(fixture: string, seed: number) {
 	const w = await load(fixture);
 	const { Actions } = await import("../src/actions");
 	const { GameState } = await import("../src/gamestate");
+	const { toData } = await import("../src/state");
 	//(a campaign's other players stay AI: Game.setupPlayers makes them AI again on every load)
 	for (const p of w.m.getPlayers())
 		if (!w.game.campaign || p.country === w.game.campaign.country) p.type = w.playerType.humanLocal;
 	w.game.spotSide = w.m.currentPlayer.side; //Game.setCurrentSide in hotseat
-	return { w, Actions, GameState, log: [] as string[], ended: false, beforeMove: null as { unit: Unit; state: State } | null };
+	//The AI's and the UI's streams from the sequence's seed; the game stream stays unseeded, it
+	//reads Math.random, which run seeds (and the estimate property counts)
+	w.Rng.ai.state = (seed ^ 0x61692121) >>> 0;
+	w.Rng.cosmetic.state = (seed ^ 0x636f736d) >>> 0;
+	const data = () => JSON.stringify(toData(w.scenario, w.game));
+	return { w, Actions, GameState, data, log: [] as string[], ended: false, beforeMove: null as { unit: number; state: State } | null };
 }
 type Play = Awaited<ReturnType<typeof start>>;
 
@@ -80,11 +146,11 @@ function settle(p: Play, last?: OutcomeContext) {
 	if (p.Actions.checkOutcome(p.w.scenario, last)) p.ended = true;
 }
 
-//ui.ts uiAttackAnimationFinished without animations: the selection refresh, a retreat's own move
-//finished after the elimination check
-function finishAttack(p: Play, res: AttackResult) {
+//ui.ts uiAttackAnimationFinished without animations: the attack command's finish with the
+//selection refresh, a retreat's own move finished after the elimination check
+function finishAttack(p: Play, res: AttackResult, finish: (hooks?: FinishAttackHooks) => AttackResult) {
 	const m = p.w.m, a = res.attacking.unit, d = res.defending.unit;
-	p.Actions.finishAttack(m, res, {
+	finish({
 		afterCleanup() {
 			if (!m.currentUnit) return;
 			if (a.destroyed && m.currentUnit.id === a.id) m.delCurrentUnit();
@@ -93,14 +159,40 @@ function finishAttack(p: Play, res: AttackResult) {
 		},
 	});
 	settle(p);
-	if (res.retreatMove) moved(p, d, res.retreatMove);
+	if (res.retreatMove) retreated(p, d, res.retreatMove);
 }
 
-//ui.ts uiMoveAnimationFinished: the capture victory, then the surprise attack's second half
-function moved(p: Play, u: Unit, mr: movementResults) {
-	const r = p.Actions.finishMove(p.w.m, u, mr, false);
-	settle(p, { move: r });
-	if (r.surprise && r.surprise.attack) finishAttack(p, r.surprise.attack);
+//ui.ts uiMoveAnimationFinished for a retreat (no command: Actions.finishMove), then the capture victory
+function retreated(p: Play, u: Unit, mr: movementResults) {
+	settle(p, { move: p.Actions.finishMove(p.w.m, u, mr, false) });
+}
+
+//The attack command as ui.ts uiUnitAttack sends it, its finish called at once (the animation's end)
+function attack(p: Play, cmd: Command & { type: "attack" }) {
+	return p.w.Commands.execute(p.w.scenario, cmd, {
+		animate(res, finish) { if (res) finishAttack(p, res, finish); },
+	});
+}
+
+//The move command as ui.ts uiUnitMove sends it, finished as uiMoveAnimationFinished: the capture
+//victory, then the surprise attack (an attack command, as ui.ts sends it) finished last
+function move(p: Play, cmd: Command & { type: "move" }) {
+	const { Commands, scenario } = p.w;
+	return Commands.execute(scenario, cmd, {
+		animate(_mr, finish) {
+			const surprise: { result: AttackResult | null; finish?: (hooks?: FinishAttackHooks) => AttackResult } = { result: null };
+			const r = finish(false, {
+				attack(a, d) {
+					Commands.execute(scenario, { type: "attack", unit: a.id, target: d.id }, {
+						animate(res, fin) { surprise.result = res; surprise.finish = fin; },
+					});
+					return surprise.result;
+				},
+			});
+			settle(p, { move: r });
+			if (surprise.result && surprise.finish) finishAttack(p, surprise.result, surprise.finish);
+		},
+	});
 }
 
 //ui.ts uiUnitSelect
@@ -155,7 +247,7 @@ function difference(want: string, got: string): string {
 	return "\n    before " + cut(want) + "\n    after  " + cut(got);
 }
 
-//The units of the player whose turn it is that can do something, and what they can do it to
+//What the engine offers the unit: the units it can attack, the cells it can move to
 function attackTargets(w: World, u: Unit): Unit[] {
 	const { m, GameRules: GR } = w;
 	const targets: Unit[] = [];
@@ -171,141 +263,187 @@ const moveCells = (w: World, u: Unit) => w.GameRules.getMoveRange(w.m, u).filter
 const captureCells = (w: World, u: Unit) => !w.GameRules.canCapture(u) ? []
 	: moveCells(w, u).filter((c) => w.m.sidesVictoryHexes[u.player.side].some((o) => o.row === c.row && o.col === c.col));
 //Equipment of the unit's class from its player's countries, or from any country when none of
-//theirs is loaded (as the engine contract picks them)
+//theirs is loaded (as the engine contract picks them), that the player can afford
 function upgrades(w: World, u: Unit): number[] {
-	const { Equipment } = w;
+	const { Equipment, GameRules: GR } = w;
 	const countries = [u.player.country, ...(u.player.supportCountries || [])];
 	const uclass = u.unitData().uclass;
 	const same = Object.keys(Equipment.equipment).map(Number).filter((id) => id !== u.eqid && Equipment.equipment[id].uclass === uclass);
 	const own = same.filter((id) => countries.includes(Equipment.equipment[id].country));
-	return own.length ? own : same;
+	return (own.length ? own : same).filter((id) => GR.calculateUpgradeCosts(u, id, -1) <= u.player.prestige);
 }
 
-//What the steps check in the middle of a step: the undo (but what it ignores), the estimate
-interface Checks { undo?: Ignore; estimate?: boolean }
-
-//A step of a kind, by unit u: pick is the step's own, previous the state before the move just
-//played (for the undo)
-interface StepContext { p: Play; u: Unit; pick: number; checks: Checks; previous: Play["beforeMove"] }
-//A kind of step: how many options a unit has (0: it can't do it), and the step, which returns
-//what it did and what the undo and estimate checks found in the middle of it
-interface StepKind {
-	options(w: World, u: Unit): number;
-	play(c: StepContext): StepResult;
-}
-interface StepResult { done: string; problems: string[] }
-
-//A kind without options: whether the unit can, and what it does
-function action(can: (w: World, u: Unit) => boolean, act: (w: World, u: Unit) => void): StepKind {
-	return { options: (w, u) => +can(w, u), play: ({ p, u }) => { act(p.w, u); return { done: "", problems: [] }; } };
-}
-
-//A move to one of cells (ui.ts uiUnitSelect, then uiUnitMove), the state before it kept for the undo
-function moveTo(cells: (w: World, u: Unit) => Cell[]): StepKind {
-	return {
-		options: (w, u) => cells(w, u).length,
-		play: ({ p, u, pick, checks }) => {
-			const all = cells(p.w, u), cell = all[pick % all.length];
-			select(p, u);
-			p.beforeMove = checks.undo ? { unit: u, state: stateOf(p.w, checks.undo) } : null;
-			moved(p, u, p.w.m.moveUnit(u, cell.row, cell.col));
-			return { done: " to " + cellName(cell), problems: [] };
-		},
-	};
-}
-
-//The attack preview (render.ts, without the hidden units) and the AI's (with them): no draw from
-//the random stream, no change
-function estimate({ p, u, pick, checks }: StepContext): StepResult {
-	const { m, GameRules: GR } = p.w;
-	const targets = attackTargets(p.w, u);
-	const d = targets[pick % targets.length], withHidden = Math.floor(pick / targets.length) % 2 === 1;
-	const done = " on " + unitName(d) + (withHidden ? " with the hidden units" : "");
-	if (!checks.estimate) return { done, problems: [] };
-	const before = stateOf(p.w), random = Math.random;
-	let draws = 0;
-	Math.random = () => { draws++; return random(); };
-	try { GR.calculateCombatResults(u, d, m.getUnits(), withHidden, true); }
-	finally { Math.random = random; }
-	const problems = changes(before, stateOf(p.w)).map((c) => "the estimate changed the " + c);
-	if (draws) problems.unshift("the estimate drew " + draws + " random numbers");
-	return { done, problems };
-}
-
-const stepKinds: Record<Exclude<Kind, "end turn">, StepKind> = {
+//A kind of pick: the unit's commands of the kind the engine offers (none: it can't)
+type Offer = (w: World, u: Unit) => Played[];
+//One command when the rule allows it
+const when = (rule: (w: World, u: Unit) => boolean, cmd: (u: Unit) => Command): Offer => (w, u) => rule(w, u) ? [cmd(u)] : [];
+const moveTo = (cells: (w: World, u: Unit) => Cell[]): Offer =>
+	(w, u) => cells(w, u).map((c): Command => ({ type: "move", unit: u.id, to: { row: c.row, col: c.col } }));
+const offers: Record<Exclude<Kind, "end turn">, Offer> = {
 	"move": moveTo(moveCells),
 	"capture": moveTo(captureCells),
-	"attack": {
-		options: (w, u) => attackTargets(w, u).length,
-		play: ({ p, u, pick }) => {
-			const targets = attackTargets(p.w, u), d = targets[pick % targets.length];
-			select(p, u);
-			const res = p.Actions.resolveAttack(p.w.m, u, d);
-			if (res) finishAttack(p, res);
-			return { done: " " + unitName(d), problems: [] };
-		},
-	},
-	"estimate": { options: (w, u) => attackTargets(w, u).length, play: estimate },
-	"resupply": action((w, u) => w.GameRules.canResupply(w.m.map, u), (w, u) => w.m.resupplyUnit(u)),
-	"reinforce": action((w, u) => w.GameRules.canReinforce(w.m.map, u), (w, u) => w.m.reinforceUnit(u, false)),
-	"reinforce over": action((w, u) => w.GameRules.canReinforce(w.m.map, u, true), (w, u) => w.m.reinforceUnit(u, true)),
-	"mount": action((w, u) => w.GameRules.canMount(u), (w, u) => w.m.mountUnit(u)),
-	"unmount": action((w, u) => w.GameRules.canUnmount(u), (w, u) => w.m.unmountUnit(u)),
-	"embark": action((w, u) => w.GameRules.canEmbark(w.m.map, u), (w, u) => w.m.embarkUnit(u)),
-	"disembark": action((w, u) => w.GameRules.canDisembark(w.m.map, u), (w, u) => w.m.disembarkUnit(u)),
-	"upgrade": {
-		options: (w, u) => upgrades(w, u).length,
-		play: ({ p, u, pick }) => {
-			const options = upgrades(p.w, u), to = options[pick % options.length];
-			u.player.prestige = Math.max(u.player.prestige, 1e6); //what it costs isn't the point
-			p.w.m.upgradeUnit(u.id, to, -1);
-			return { done: " to " + to, problems: [] };
-		},
-	},
-	"disband": action((w) => w.m.getUnits().filter((x) => x.player.id === w.m.currentPlayer.id).length > 1,
-		(w, u) => w.m.disbandUnit(u.id)),
-	"undo": {
-		options: (w, u) => +w.m.canUndoMove(u),
-		play: ({ p, u, checks, previous }) => {
-			p.w.m.undoLastMove();
-			//Right after the move: everything as it was before it
-			const problems = checks.undo && previous && previous.unit === u
-				? changes(previous.state, stateOf(p.w, checks.undo)).map((c) => "the undo didn't restore the " + c) : [];
-			return { done: "", problems };
-		},
-	},
+	"attack": (w, u) => attackTargets(w, u).map((d): Command => ({ type: "attack", unit: u.id, target: d.id })),
+	"estimate": (w, u) => [false, true].flatMap((hidden) =>
+		attackTargets(w, u).map((d): Estimate => ({ type: "estimate", unit: u.id, target: d.id, hidden }))),
+	"resupply": when((w, u) => w.GameRules.canResupply(w.m.map, u), (u) => ({ type: "resupply", unit: u.id })),
+	"reinforce": when((w, u) => w.GameRules.canReinforce(w.m.map, u), (u) => ({ type: "reinforce", unit: u.id })),
+	"reinforce over": when((w, u) => w.GameRules.canReinforce(w.m.map, u, true),
+		(u) => ({ type: "reinforce", unit: u.id, overstrength: true })),
+	"mount": when((w, u) => w.GameRules.canMount(u), (u) => ({ type: "mount", unit: u.id })),
+	"unmount": when((w, u) => w.GameRules.canUnmount(u), (u) => ({ type: "unmount", unit: u.id })),
+	"embark": when((w, u) => w.GameRules.canEmbark(w.m.map, u), (u) => ({ type: "embark", unit: u.id })),
+	"disembark": when((w, u) => w.GameRules.canDisembark(w.m.map, u), (u) => ({ type: "disembark", unit: u.id })),
+	"upgrade": (w, u) => upgrades(w, u).map((eqid): Command => ({ type: "upgrade", unit: u.id, eqid, transport: -1 })),
+	"disband": when((w) => w.m.getUnits().filter((x) => x.player.id === w.m.currentPlayer.id).length > 1,
+		(u) => ({ type: "disband", unit: u.id })),
+	"undo": when((w, u) => w.m.canUndoMove(u), (u) => ({ type: "undo", unit: u.id })),
 };
 
-//game.ts endTurn and the end turn button: Scenario.endTurn, the defeat at the turn limit, the
+//The command a pick stands for: one of the commands of its kind a unit of the player whose turn it
+//is has. Null when none has one
+function commandOf(p: Play, s: Pick): Played | null {
+	if (s.kind === "end turn") return { type: "endTurn" };
+	const offer = offers[s.kind], m = p.w.m;
+	let commands: Played[] = [];
+	const units = m.getUnits().filter((u) => u.player.id === m.currentPlayer.id && !u.destroyed && u.getPos()
+		&& offer(p.w, u).length > 0);
+	if (units.length) commands = offer(p.w, units[s.unit % units.length]);
+	return commands.length ? commands[s.pick % commands.length] : null;
+}
+
+//What the steps check: the undo right after a move (but what it ignores), the estimate, the
+//invariants after every step, and the commands' check against their run: drift, run never throws
+//once check has passed; refused, a refused command changes nothing
+interface Checks { undo?: Ignore; estimate?: boolean; invariants?: boolean; drift?: boolean; refused?: boolean }
+
+//What f returns and how many numbers it drew from Math.random (the game stream, unseeded)
+function counted<T>(f: () => T): { value: T; draws: number } {
+	const random = Math.random;
+	let draws = 0;
+	Math.random = () => { draws++; return random(); };
+	try { return { value: f(), draws }; }
+	finally { Math.random = random; }
+}
+
+//The estimate (GameRules.calculateCombatResults): no draw from the random stream, no change
+function estimate(p: Play, e: Estimate, checks: Checks): string[] {
+	if (!checks.estimate) return [];
+	const { m, GameRules: GR } = p.w;
+	const before = stateOf(p.w);
+	const { draws } = counted(() => GR.calculateCombatResults(m.getUnitById(e.unit), m.getUnitById(e.target), m.getUnits(), e.hidden, true));
+	const problems = changes(before, stateOf(p.w)).map((c) => "the estimate changed the " + c);
+	if (draws) problems.unshift("the estimate drew " + draws + " random numbers");
+	return problems;
+}
+
+//game.ts endTurn and the end turn button: the endTurn command, the defeat at the turn limit, the
 //next side shown, its reinforcements, the combat log reset
-function endTurn(p: Play): StepResult {
+function endTurn(p: Play) {
 	const { w } = p, m = w.m, last = m.currentPlayer.side;
-	if (p.Actions.endTurn(w.scenario, 2)) settle(p, { endedSide: last });
+	const r = w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: 2 });
+	if (r.ok && r.result) settle(p, { endedSide: last });
 	else {
 		w.game.spotSide = m.currentPlayer.side;
 		p.Actions.deployReinforcements(w.scenario, m.turn, m.currentPlayer.id);
 		w.CombatLog.reset();
 	}
-	return { done: "end turn, now turn " + m.turn + " player#" + m.currentPlayer.id, problems: [] };
+	return r;
 }
 
-//Plays one step, returns what it did (null: no unit of the player could do it) and what the undo
-//and estimate checks found
+//The refusal's reason, null when the command ran
+const refusalOf = (r: { ok: true } | { ok: false; refusal: Refusal }) => "refusal" in r ? r.refusal.reason : null;
+
+//A command as a button or a program sends it: finished at once (no animation), the end of turn as
+//game.ts plays it. The refusal's reason, if refused
+function sendAtOnce(p: Play, cmd: Command): string | null {
+	if (cmd.type === "endTurn") return refusalOf(endTurn(p));
+	const r = p.w.Commands.execute(p.w.scenario, cmd);
+	settle(p);
+	return refusalOf(r);
+}
+
+//ui.ts selects the unit that moves or attacks first; the state before a move is kept for the undo
+function selectFor(p: Play, cmd: Command, checks: Checks) {
+	const u = cmd.type === "move" || cmd.type === "attack" ? p.w.m.getUnitById(cmd.unit) : null;
+	if (!u) return;
+	select(p, u);
+	if (cmd.type === "move") p.beforeMove = checks.undo ? { unit: u.id, state: stateOf(p.w, checks.undo) } : null;
+}
+
+//A command a pick chose, sent as the game sends it. The refusal's reason, if refused
+function send(p: Play, cmd: Command, checks: Checks): string | null {
+	selectFor(p, cmd, checks);
+	if (cmd.type === "move") return refusalOf(move(p, cmd));
+	if (cmd.type === "attack") return refusalOf(attack(p, cmd));
+	return sendAtOnce(p, cmd);
+}
+
+const errorText = (e: unknown) => e instanceof Error ? e.stack || e.message : JSON.stringify(e);
+
+//A command no pick chose, as a program sends it (no selection, no animation), checked against its
+//run: check changes nothing, then the command is played. Null problems: the run threw after check
+//allowed it without drift checked, the sequence ends there (the state is half changed)
+function sendChecked(p: Play, cmd: Command, checks: Checks): StepResult {
+	const before = checks.refused ? p.data() : "";
+	const refusal = p.w.Commands.check(p.w.scenario, cmd);
+	if (checks.refused && p.data() !== before)
+		return { played: cmd, refusal: null, problems: ["check changed the game:" + difference(before, p.data())] };
+	return refusal ? sendRefused(p, cmd, refusal.reason, checks, before) : sendAllowed(p, cmd, checks);
+}
+
+//With drift, a command check allowed whose run throws
+function sendAllowed(p: Play, cmd: Command, checks: Checks): StepResult {
+	try {
+		sendAtOnce(p, cmd);
+		return { played: cmd, refusal: null, problems: [] };
+	} catch (e) {
+		return { played: cmd, refusal: null, problems: checks.drift ? ["run threw after check allowed it: " + errorText(e)] : null };
+	}
+}
+
+//With refused, a refused command that execute didn't refuse the same way, that changed the game's
+//data or drew a random number
+function sendRefused(p: Play, cmd: Command, reason: string, checks: Checks, before: string): StepResult {
+	let sent: { value: string | null; draws: number };
+	try { sent = counted(() => sendAtOnce(p, cmd)); }
+	catch (e) { return { played: cmd, refusal: reason, problems: ["execute threw on a refused command: " + errorText(e)] }; }
+	if (!checks.refused) return { played: cmd, refusal: reason, problems: [] };
+	const problems: string[] = [];
+	if (sent.value !== reason) problems.push("execute didn't refuse as check did: " + sent.value + ", check: " + reason);
+	if (p.data() !== before) problems.push("the refused command changed the game:" + difference(before, p.data()));
+	if (sent.draws) problems.push("the refused command drew " + sent.draws + " random numbers");
+	return { played: cmd, refusal: reason, problems };
+}
+
+//Plays one step, returns what it played (null: no unit of the player had a command of the pick's
+//kind), the refusal if it was refused and what the undo, estimate and command checks found. Null
+//problems: the step ends the sequence
+interface StepResult { played: Played; refusal: string | null; problems: string[] | null }
 function play(p: Play, s: Step, checks: Checks): StepResult | null {
 	const previous = p.beforeMove;
 	p.beforeMove = null;
-	if (s.kind === "end turn") return endTurn(p);
-	const kind = stepKinds[s.kind], m = p.w.m;
-	const units = m.getUnits().filter((u) => u.player.id === m.currentPlayer.id && !u.destroyed && u.getPos() && kind.options(p.w, u) > 0);
-	if (!units.length) return null;
-	const u = units[s.unit % units.length];
-	const r = kind.play({ p, u, pick: s.pick, checks, previous });
-	return { done: s.kind + " " + unitName(u) + r.done, problems: r.problems };
+	if (!("kind" in s)) return sendChecked(p, s, checks);
+	const cmd = commandOf(p, s);
+	if (!cmd) return null;
+	if (cmd.type === "estimate") return { played: cmd, refusal: null, problems: estimate(p, cmd, checks) };
+	const refusal = send(p, cmd, checks);
+	return { played: cmd, refusal, problems: cmd.type === "undo" ? undone(p, cmd.unit, checks, previous) : [] };
 }
 
-//FC_STATS: how often each kind of step was played, "(none)" when no unit could
+//Right after the unit's move, the undo restores everything as it was before it
+function undone(p: Play, unit: number, checks: Checks, previous: Play["beforeMove"]): string[] {
+	if (!checks.undo || !previous || previous.unit !== unit) return [];
+	return changes(previous.state, stateOf(p.w, checks.undo)).map((c) => "the undo didn't restore the " + c);
+}
+
+//FC_STATS: how often each kind of step was played, "(none)" when no unit could, "(refused)" when
+//the command was
 const stats: Record<string, number> = {};
 afterAll(() => { if (process.env.FC_STATS) console.warn(JSON.stringify(stats)); });
+function count(s: Step, r: StepResult | null) {
+	const name = ("kind" in s ? s.kind : "command " + s.type) + (!r ? " (none)" : r.refusal === null ? "" : " (refused)");
+	stats[name] = (stats[name] || 0) + 1;
+}
 
 //A recon leader won in a fight widens the unit's spotting, its counters stay (#73): what to look
 //at before a step to tell after it
@@ -315,40 +453,43 @@ function reconLeaders(w: World): () => boolean {
 }
 
 //Plays the steps until one breaks a check (what it broke) or the game ends
-function playSteps(p: Play, steps: Step[], opts: Checks & { invariants?: boolean }): string[] {
+function playSteps(p: Play, steps: Step[], checks: Checks): string[] {
 	for (const s of steps) {
 		if (p.ended) break;
-		const problems = playChecked(p, s, opts);
+		const problems = playChecked(p, s, checks);
 		if (problems === null) break;
 		if (problems.length) return problems;
 	}
 	return [];
 }
 
-//Plays a step and checks it: what broke, null for the known break of #73, which ends the sequence
-function playChecked(p: Play, s: Step, opts: Checks & { invariants?: boolean }): string[] | null {
+//Plays a step and checks it: what broke, null when the sequence ends there (the known break of
+//#73, a run that threw)
+function playChecked(p: Play, s: Step, checks: Checks): string[] | null {
 	const newLeader = reconLeaders(p.w);
-	const r = play(p, s, opts);
-	const counted = s.kind + (r ? "" : " (none)");
-	stats[counted] = (stats[counted] || 0) + 1;
+	const r = play(p, s, checks);
+	count(s, r);
 	if (!r) return [];
-	p.log.push("turn " + p.w.m.turn + " player#" + p.w.m.currentPlayer.id + ": " + r.done);
-	if (!opts.invariants) return r.problems;
+	p.log.push("turn " + p.w.m.turn + " player#" + p.w.m.currentPlayer.id + ": " + JSON.stringify(r.played)
+		+ (r.refusal === null ? "" : " refused: " + r.refusal));
+	if (!r.problems || !checks.invariants) return r.problems;
 	return newLeader() ? null : [...r.problems, ...violations(p.w)];
 }
 
 //Plays the sequence, Math.random seeded with its seed, then after (what it found at the end); a
-//broken check throws, with the steps played
-async function run(seq: Sequence, opts: Checks & { invariants?: boolean }, after?: (p: Play) => Promise<string[]>) {
-	const p = await start(seq.fixture);
+//broken check throws, with the commands played. The sequence prints as them too (fast-check's
+//counterexample)
+async function run(seq: Sequence, checks: Checks, after?: (p: Play) => Promise<string[]>) {
+	const p = await start(seq.fixture, seq.seed);
+	const played = () => seq.fixture + ", seed " + seq.seed + ", " + p.log.length + " steps:\n  " + p.log.join("\n  ");
+	Object.assign(seq, { [fc.toStringMethod]: played });
 	const random = Math.random;
 	Math.random = mulberry32(seq.seed);
 	let problems: string[];
-	try { problems = playSteps(p, seq.steps, opts); }
+	try { problems = playSteps(p, seq.steps, checks); }
 	finally { Math.random = random; }
 	if (!problems.length && after) problems = await after(p);
-	if (problems.length)
-		throw new Error(seq.fixture + ", " + p.log.length + " steps:\n  " + p.log.join("\n  ") + "\n" + problems.join("\n"));
+	if (problems.length) throw new Error(played() + "\n" + problems.join("\n"));
 }
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
@@ -387,6 +528,21 @@ test.fails("Property: an undo right after a move restores the objectives' order 
 test("Property: the attack estimate draws nothing from the random stream and changes nothing", async () => {
 	await holds(fc.asyncProperty(sequences({ "estimate": 3, "move": 2, "attack": 2, "end turn": 1 }, 20),
 		(seq) => run(seq, { estimate: true })), 30);
+});
+
+//Any command among the player's: the ones the rules don't stop (a unit of the other player, a
+//resupply the button wouldn't offer...), the ones check refuses
+const anyActions = { ...playerActions, "embark": 1, "disembark": 1, "upgrade": 1 };
+
+//The check/run drift guard (docs/REFACTOR.md, step 4): check passes only what run can play
+test("Property: execute never throws once check has allowed a command", async () => {
+	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { drift: true })), 25);
+});
+
+//check is pure, and a refused command neither changes the game's data (src/state.ts toData) nor
+//draws a random number
+test("Property: a refused command changes nothing", async () => {
+	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { refused: true })), 25);
 });
 
 //The save of a game played on, loaded back. The game saves after Scenario.endTurn (game.ts
