@@ -202,16 +202,17 @@ and builds the game with fromData.
   after the highest. A save whose unit ids aren't unique (stale ids, #64) has them numbered again
   in hex order, as its load always did. A save without an equipment set (older than 3.x) keeps the
   game's set, as before.
-- **Lost on load until fixed.** The load first did what the old load did, so the format changed
-  nothing else; each loss is fixed in its own commit, naming its issue. Fixed: whose turn (#71; a
-  game loaded on an AI's turn has the AI plan the turn again, its plan isn't state, D6), the partial
+- **What the old load lost.** The load first did what the old load did, so the format changed
+  nothing else; each loss was fixed in its own commit, naming its issue: whose turn (#71; a game
+  loaded on an AI's turn has the AI plan the turn again, its plan isn't state, D6), the partial
   edges (#54), the time of day (#55), the experience and cost per side (#83), tempSpotted (#84), the
   unit ids and order (#85), the AI's core units kept out of the campaign player's list (#150), the
   campaign player's core list in its order, with its destroyed units (#142), every player's core
   list, the units bought and not deployed outside a campaign and the AI's (#149), and of #128 itself
-  the scenario's description, the undo of the last move, the game's and the AI's random streams and
-  the equipment lists. Still lost, of #128: the campaign's progress. The reinforcement part of #55
-  is no loss in this format: the list has numeric turns and no ids.
+  the scenario's description, the undo of the last move, the game's and the AI's random streams, the
+  equipment lists and the campaign's progress (a game started from a save doesn't apply it again:
+  the save was made after). The reinforcement part of #55 is no loss in this format: the list has
+  numeric turns and no ids.
 
 ## Decisions
 

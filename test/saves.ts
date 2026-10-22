@@ -5,12 +5,10 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 
 export type Save = SaveFile;
 
-//A save without what a load is known to lose or rebuild, the rest must survive a load: the
-//campaign's progress (#128)
+//A save without what a load is known to lose: nothing since #128, the whole save survives a load
+//(the save property of test/properties.test.ts compares through this)
 export function withoutLosses(save: SaveFile): unknown {
-	const { data, state } = structuredClone(save);
-	if (state.campaign) delete state.campaign.progress;
-	return { data, state };
+	return structuredClone(save);
 }
 
 //A save without what an imported save never stored (src/savegame.ts UnknownPart): an imported save
