@@ -5,8 +5,8 @@ engine and proven against it, layer by layer. This page says how it is laid out;
 works on is docs/STATE.md's.
 
     state = plain data (GameState, docs/STATE.md)
-    queries(world, ...) -> answers		layer 1, #133: this page
-    step(state, command) -> { state', events }	layer 2, #134
+    queries(world, ...) -> answers		layer 1, #133
+    step(world, command) -> { world', events }	layer 2, #134 (world'.state is state')
 
 Nothing in the running game uses the core until the switch (#137): verify stays identical.
 
@@ -43,6 +43,11 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `combat.ts` | the attack and combat results as named steps with a record of what each contributed (#118) |
 | `supply.ts` | resupply and reinforcement: whether, and how much |
 | `costs.ts` | unit, upgrade and sell costs |
+| `step.ts` | `step` and `check`, the handlers' registry |
+| `draft.ts` | the state a step changes, copied on write, and its primitives: place, remove a unit with its sight, the score, the dossier |
+| `events.ts` | the events a step emits (types) |
+| `moves.ts` | what selecting a unit does to it |
+| `commands/` | the handlers, `check` and `run` of each command type (`supply.ts`, `transport.ts`, `units.ts`: deploy, buy, upgrade, disband, sell) |
 
 The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` of `src/rng.ts`
 and types: no UI module, no mutable object of the old engine (the linter checks it).
@@ -78,6 +83,43 @@ they are. The record is extra output: the numbers and the draws are the same wit
 `rng` null is the estimate: it draws nothing. Otherwise the dice come from the stream given (the
 game's, `state.rng.game`, D8) in today's order: support fire first, each unit's dice one by one.
 
+## Commands (#134)
+
+`step(world, command)` checks the command, then plays it: `{ ok: true, world, events }` or
+`{ ok: false, refusal }`. The commands are src/commands.ts's `Command` values, the old engine's
+(ids and cells, plain data); `check(world, command)` alone says whether one is allowed, or why not,
+and changes nothing. Each type has a handler in `commands/` (`check` and `run`), in a registry
+typed by a mapped type. So far: resupply, reinforce, mount, unmount, embark, disembark, deploy,
+buy, upgrade (on the map and off it), disband and sell. The move, the attack and the undo come next
+(#134), the end of turn with the next layer (#135): they are refused until then.
+
+**The world given stays as it was.** `run` plays on a draft (`draft.ts`): the step copies the
+state's lists when it starts (a few thousand pointers, and the sight's four counts) and an object of
+the state (a unit, a hex, a player) the first time it writes to it. The world returned shares the
+rest with the one given: a step costs what it changes, not the size of the state, and the caller
+keeps every state it had (the undo's, the preview's, the AI's look ahead). The differential tests
+freeze the state given to every step.
+
+**Sight.** The draft keeps the sight up to date where the old engine switched its counters: a unit's
+off before it leaves or changes, on after, marking the enemy units its side didn't see as seen
+(`tempSpotted`) where `setSpotRange` did (a mount, a deploy). Where the old engine forgot to switch
+them (#73: an embark, a disembark, an upgrade) the draft switches them without marking: the core's
+sight always equals `computeSight` of its state (D10).
+
+**Events.** Plain data in the order things happened, enough for the combat log and for a view to
+animate after the step (`events.ts`): `spotted`, `resupplied`, `reinforced`, `mounted`,
+`unmounted`, `embarked`, `disembarked`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold` so
+far; the move's and the attack's are typed already.
+
+**What the old engine does and the core does too:** a command doesn't check whose unit it plays
+(#147), a resupply, a reinforcement, an upgrade or a disband clears the undo, a mount or unmount
+selects the unit (a unit leaving its carrier gets back on it unless it can land), a unit bought
+outside a campaign gets the other side's average experience.
+
+**Not reproduced: the selection (D6).** Selecting another unit puts a unit in the middle of a
+disembark back on its carrier (`MapSelection.clear`): the core has no selection, so a program's
+command plays as with nothing selected.
+
 ## The proof
 
 - **The gamerules contract on both engines** (test/core-contract.test.ts): the recorded calls of
@@ -98,6 +140,20 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
 
   CI plays 12 sequences (about 100,000 compared answers); `FC_RUNS=120` played 120 (over a million,
   12 states with drift) with no difference.
+- **The commands against the old engine** (test/core-steps.test.ts, fast-check): random command
+  sequences on the engine fixtures, the legal ones the old engine offers and any command at all,
+  each played through `Commands.execute` and through `step`, the core playing on from its own
+  state. After every command: the same answer (and `check`'s), the same toData as JSON (the save's
+  key order, the random streams' positions), the core's sight equal to `computeSight` and to the
+  old counters, the old engine's hooks and the core's events telling the same story, and the state
+  given to the step unchanged (frozen). What the core doesn't play yet (the move, the attack, the
+  undo, the end of turn) the old engine plays and the core takes its state. Where the old counters
+  drift (#73) with the same state after, they are made again from the units and the sequence goes
+  on; drift that changed the command's result stops it.
+  - the engine contract's own commands, each also stepped on the core from toData of the state
+    before it.
+  - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
+    deploy.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, and the path search against the old engine's on maps full
   of equal paths.

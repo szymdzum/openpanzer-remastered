@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, type extendedCell, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, type extendedCell, movTableDry, movTableMud, scoreGains, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -14,6 +14,7 @@ import { classicRules, moveCosts } from "../src/core/rules";
 import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
+import { step, type Stepped } from "../src/core/step";
 import type { Contribution } from "../src/core/types";
 import { handWorld } from "./coreworld";
 
@@ -126,6 +127,27 @@ test("Column 0 is out of every other column's range (#69)", () => {
 	expect(isSpotted(w, hexIndex(w, 3, 0), 0)).toBe(false);
 	expect(attackCells(w, unitById(w, 0))).toEqual([]);
 });
+
+//The commands (src/core/step.ts, #134): that they play as the old engine's is test/core-steps.test.ts's
+
+test("A step leaves the world it was given as it was; what isn't in the core yet is refused", () => {
+	const w = forestFight();
+	const before = JSON.stringify(w.state);
+	const r = played(step(w, { type: "resupply", unit: 0 }));
+	expect(JSON.stringify(w.state)).toBe(before);
+	expect(r.events).toEqual([{ type: "resupplied", unit: 0, supply: { ammo: 0, fuel: 0, transportAmmo: 0, transportFuel: 0 } }]);
+	expect(unitById(r.world, 0)).toMatchObject({ hasMoved: true, hasFired: true, hasResupplied: true });
+	expect(unitById(w, 0)).toMatchObject({ hasMoved: false, hasFired: false, hasResupplied: false });
+	expect(r.world.state.players[0].score).toBe(w.state.players[0].score + scoreGains.resupply);
+	expect(step(w, { type: "endTurn" })).toEqual({ ok: false, refusal: { reason: "the end of turn isn't in the core yet (#135)" } });
+	expect(step(w, { type: "resupply", unit: 7 })).toEqual({ ok: false, refusal: { reason: "no such unit" } });
+});
+
+//The step's world and events; a refusal throws
+function played(r: Stepped): Extract<Stepped, { ok: true }> {
+	if ("refusal" in r) throw new Error(r.refusal.reason);
+	return r;
+}
 
 test("Property: the path search with its heap finds the old engine's paths, ties broken the same", async () => {
 	const { GameRules } = await import("../src/gamerules");

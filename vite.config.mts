@@ -59,14 +59,14 @@ export default defineConfig({
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
 		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
-		//and the entry (main), and of the new core (src/core/)
+		//and the entry (main), and of the new core (src/core/ and its commands)
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/core/*.ts"],
-			exclude: ["src/core/types.ts"], //types only
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/core/*.ts", "src/core/commands/*.ts"],
+			exclude: ["src/core/types.ts", "src/core/events.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -99,14 +99,21 @@ export default defineConfig({
 				"src/core/combat.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
 				"src/core/costs.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
 				"src/core/create.ts": { statements: 75, branches: 100, functions: 50, lines: 75 },
+				"src/core/draft.ts": { statements: 75, branches: 68, functions: 80, lines: 81 },
 				"src/core/equipment.ts": { statements: 88, branches: 84, functions: 80, lines: 90 },
 				"src/core/geometry.ts": { statements: 98, branches: 97, functions: 90, lines: 97 },
 				"src/core/movement.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
+				"src/core/moves.ts": { statements: 33, branches: 50, functions: 25, lines: 40 },
 				"src/core/rules.ts": { statements: 80, branches: 100, functions: 50, lines: 80 },
 				"src/core/sight.ts": { statements: 94, branches: 94, functions: 85, lines: 96 },
+				"src/core/step.ts": { statements: 94, branches: 100, functions: 71, lines: 92 },
 				"src/core/supply.ts": { statements: 97, branches: 97, functions: 90, lines: 98 },
 				"src/core/units.ts": { statements: 96, branches: 100, functions: 94, lines: 96 },
 				"src/core/world.ts": { statements: 97, branches: 98, functions: 94, lines: 96 },
+				"src/core/commands/common.ts": { statements: 87, branches: 85, functions: 85, lines: 92 },
+				"src/core/commands/supply.ts": { statements: 97, branches: 100, functions: 83, lines: 97 },
+				"src/core/commands/transport.ts": { statements: 97, branches: 85, functions: 93, lines: 97 },
+				"src/core/commands/units.ts": { statements: 88, branches: 77, functions: 95, lines: 96 },
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 			},
 		},
