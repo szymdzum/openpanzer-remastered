@@ -29,6 +29,7 @@ import { UIBuilder } from "./uibuilder";
 import { UI } from "./ui";
 import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
+import { Commands } from "./commands";
 import { setEngineContext } from "./context";
 import { game, setGame } from "./session";
 
@@ -132,7 +133,8 @@ export class Game {
 			this.waitUIAnimation = false;
 
 			//Check if game ended in defeat only for human players
-			if (Actions.endTurn(this.scenario, localPlayingSide)) {
+			const ended = Commands.execute(this.scenario, { type: "endTurn" }, { localSide: localPlayingSide });
+			if (ended.ok && ended.result) {
 				//If in a campaign set the campaign outcome to lost and get next available scenario
 				if (this.campaign !== null)
 					this.continueCampaign("lose", endGameType.noTurnsLeft);
@@ -370,7 +372,14 @@ export class Game {
 			return true;
 		}
 
-		//Plays an AI action on the UI, returns false when the AI turn should end
+		//An AI action's unit as a command's: the scripted tutorial can queue no unit (#80), which the
+		//command refuses where the engine threw
+		function unitId(unit: Unit | null) {
+			return unit ? unit.id : -1;
+		}
+
+		//Plays an AI action on the UI as the player's commands (the move and the attack through the UI's
+		//uiUnitMove and uiUnitAttack, animated), returns false when the AI turn should end
 		function processAction(game: Game, action: AIAction) {
 			if (!action) return false;
 			const p = action.param;
@@ -395,19 +404,19 @@ export class Game {
 					break;
 				}
 				case actionType.resupply: {
-					game.scenario.map.resupplyUnit(p[0] as Unit);
+					Commands.execute(game.scenario, { type: "resupply", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.reinforce: {
-					game.scenario.map.reinforceUnit(p[0] as Unit, false);
+					Commands.execute(game.scenario, { type: "reinforce", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.mount: {
-					game.scenario.map.mountUnit(p[0] as Unit);
+					Commands.execute(game.scenario, { type: "mount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.umount: {
-					game.scenario.map.unmountUnit(p[0] as Unit);
+					Commands.execute(game.scenario, { type: "unmount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.upgrade: {

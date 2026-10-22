@@ -79,7 +79,7 @@ export default defineConfig({
 				"src/commands.ts": { statements: 97, branches: 92, functions: 98, lines: 97 },
 				"src/context.ts": { statements: 42, branches: 100, functions: 83, lines: 42 },
 				"src/equipment.ts": { statements: 84, branches: 71, functions: 68, lines: 85 },
-				"src/game.ts": { statements: 55, branches: 40, functions: 62, lines: 56 },
+				"src/game.ts": { statements: 73, branches: 58, functions: 73, lines: 75 },
 				"src/gamerules.ts": { statements: 98, branches: 97, functions: 98, lines: 98 },
 				"src/gamestate.ts": { statements: 47, branches: 42, functions: 56, lines: 47 },
 				"src/leaders.ts": { statements: 90, branches: 81, functions: 71, lines: 91 },

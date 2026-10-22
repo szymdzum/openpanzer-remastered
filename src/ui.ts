@@ -14,8 +14,8 @@
 
 import {
 	type Cell, CURRENCY_MULTIPLIER, DEFAULT_SCENARIO, endGameType, groundConditionNames, groundFontEncoding, mouseInfo,
-	type movementResults, movMethod, movMethodNames, NATIVE_PLATFORM, outcomeNames,
-	playerType, roadType, sideNames, type Supply, terrainNames, terrainType, uiSettings,
+	movementResults, movMethod, movMethodNames, NATIVE_PLATFORM, outcomeNames,
+	playerType, roadType, sideNames, Supply, terrainNames, terrainType, uiSettings,
 	unitClass, unitClassNames, unitTypeNames, weatherConditionNames, weatherFontEncoding
 } from "./prototypes";
 import { CombatLog } from "./combatlog";
@@ -36,7 +36,8 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { Actions, type AttackResult } from "./actions";
+import { Actions, type AttackResult, type FinishAttackHooks, type FinishMoveHooks, type MoveResult } from "./actions";
+import { type AttackCommandHooks, type CommandType, Commands, type Executed, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
 //bundle: game.ts types `new UI(game)` through its UIConstructor
@@ -338,11 +339,17 @@ function handleKeyboard(e: KeyboardEvent) {
 //handle unit deployment
 function handleUnitDeployment(row: number, col: number) {
 	var deployUnit = $<EqUserSelElement>("eqUserSel").deployunit;
-	if (map.deployPlayerUnit(map.currentPlayer, deployUnit, row, col)) {
+	if (resultOf(Commands.execute(game.scenario, { type: "deploy", index: deployUnit, to: { row: row, col: col } }), false)) {
 		R.cacheImages(function() { R.render(row, col, 1); });
 		handleUnitDeselect();
 		updateEquipmentWindow($<EqUserSelElement>("eqUserSel").eqclass);
 	}
+}
+
+//A command's result, or refused when the command was refused: what the engine call it replaced
+//returned when it did nothing
+function resultOf<T extends CommandType>(done: Executed<T>, refused: ResultOf<T>): ResultOf<T> {
+	return done.ok ? done.result : refused;
 }
 
 //Deselects a previously selected unit. Can't have row,col as params since user can click or rightclick
@@ -394,7 +401,8 @@ function uiUnitSelect(unit: Unit | null) {
 	return true;
 }
 
-//handle the move of a unit to row,col destination
+//handle the move of a unit to row,col destination: the move command, animated, finished when the
+//animation ends. True when the player sees it move
 //cells: the shown move range the player clicked in (it can be the disembark hexes or older than the state),
 //without it the move finds its path in the unit's move range
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
@@ -404,30 +412,40 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	//Save render properties before moving
 	var r = getRenderRange(unit);
 	var oldpos = unit.getPos();
-	var mr = map.moveUnit(unit, row, col, cells);
+	var animated = false;
 
-	var moveAnimationCBData: MoveAnimationCBData = {
-		unit: unit,
-		moveResults: mr,
-		cbfunc: uiMoveAnimationFinished
-	};
+	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells }, {
+		animate: function(mr: movementResults, finish: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult) {
+			var moveAnimationCBData: MoveAnimationCBData = {
+				unit: unit,
+				moveResults: mr,
+				cbfunc: function(data: MoveAnimationCBData) { uiMoveAnimationFinished(data, finish); }
+			};
 
-	//No animation for moves the player can't see
-	if (!mr.isVisible) {
-		uiMoveAnimationFinished(moveAnimationCBData);
-		return false;
-	}
+			//No animation for moves the player can't see
+			if (!mr.isVisible) {
+				uiMoveAnimationFinished(moveAnimationCBData, finish);
+				return;
+			}
 
-	soundData[moveSoundByMoveMethod[mm]].play();
-	unit.hasAnimation = true; //signal render that unit is going to be move animated
-	R.moveAnimation(moveAnimationCBData);
-	R.render(oldpos.row, oldpos.col, r);
+			soundData[moveSoundByMoveMethod[mm]].play();
+			unit.hasAnimation = true; //signal render that unit is going to be move animated
+			R.moveAnimation(moveAnimationCBData);
+			R.render(oldpos.row, oldpos.col, r);
+			animated = true;
+		}
+	});
 
-	return true;
+	//No path there: the unit stays, finished as the engine's empty move
+	if (!moved.ok)
+		uiMoveAnimationFinished({ unit: unit, moveResults: new movementResults(), cbfunc: uiMoveAnimationFinished });
+
+	return animated;
 }
 
-//Called when move animation finishes
-function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData) {
+//Called when move animation finishes. finish: the move command's, Actions.finishMove for a retreat
+function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
+	finish?: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult) {
 	var mr = moveAnimationCBData.moveResults;
 	var unit = moveAnimationCBData.unit;
 	var r = getRenderRange(unit);
@@ -435,8 +453,10 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData) {
 
 	R.render(p.row, p.col, r);
 
+	if (!finish)
+		finish = function(airMode: boolean | number, hooks?: FinishMoveHooks) { return Actions.finishMove(map, unit, mr, airMode, hooks); };
 	//The surprise attack's target is picked by uiSettings.airMode (#77)
-	Actions.finishMove(map, unit, mr, uiSettings.airMode, {
+	finish(uiSettings.airMode, {
 		onSurprised: function(cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
 		attack: uiUnitAttack, //its finish runs when its animation ends
 		onCapture: function(u: Unit) { uiShowAlert(p.row, p.col, "Captured", u.player.side == game.spotSide || game.spotSide == 2); },
@@ -480,24 +500,27 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number) {
 	return false;
 }
 
-//handle attack performed by attacking unit on the unit it attacks, the combat itself is Actions.resolveAttack's.
-//Null when a unit isn't on the map
+//handle attack performed by attacking unit on the unit it attacks: the attack command, the combat itself is
+//Actions.resolveAttack's. Null when it can't attack it (a unit isn't on the map)
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
+	return resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
+		uiAttackHooks(attackingUnit, enemyUnit)), null);
+}
+
+//The attack command's hooks: the info on the status bar, the hits animated as the combat goes (their
+//sprite picks draw from Math.random between the dice), then the render and the animation, which
+//finishes the attack when it ends
+function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks {
 	var renderRange = 7; //biggest attack range including support fire
 	var cpos = attackingUnit.getPos();
 	var epos = enemyUnit.getPos();
-	if (!cpos || !epos)
-		return null; //No attacking or defending unit, skipping attack
-
-	var row = epos.row;
-	var col = epos.col;
 	var cclass = attackingUnit.unitData().uclass;
 	var eclass = enemyUnit.unitData().uclass;
 
-	UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar
-
-	//The animations are added as the combat goes: their sprite picks draw from Math.random between the dice
-	var result = Actions.resolveAttack(map, attackingUnit, enemyUnit, {
+	return {
+		onStart: function() {
+			UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar
+		},
 		onSupportShot: function(unit: Unit, sp: Cell) {
 			R.addAnimation(sp.row, sp.col, attackAnimationByClass[unit.unitData().uclass], unit.facing); //Hits by supporting units
 		},
@@ -513,30 +536,32 @@ function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
 			R.addAnimation(cpos.row, cpos.col, attackAnimationByClass[cclass], attackingUnit.facing);
 
 			if (!enemyUnit.destroyed && cr.defcanfire)
-				R.addAnimation(row, col, attackAnimationByClass[eclass], enemyUnit.facing); //Hits to the unit being attacked
+				R.addAnimation(epos.row, epos.col, attackAnimationByClass[eclass], enemyUnit.facing); //Hits to the unit being attacked
+		},
+		animate: function(result: AttackResult, finish: (hooks?: FinishAttackHooks) => AttackResult) {
+			//Render so new unit facings are shown correctly
+			R.render(cpos.row, cpos.col, renderRange);
+			//Show the AI combats on map
+			if (uiSettings.markCombatUnits && map.currentPlayer.type == playerType.aiLocal) {
+				R.drawHexByCell(cpos, hexstyle.combat);
+				R.drawHexByCell(epos, hexstyle.combat);
+			}
+			var animationCBData: UIAttackAnimationData = { result: result,
+				cbfunc: function(data: UIAttackAnimationData) { uiAttackAnimationFinished(data, finish); } };
+			//An empty animation chain (a carrier or naval transport attack without support fire) calls back
+			//at once, before the bundle set the new strengths: the finish then sees both units at 0 (kept)
+			var newstr = [result.attacking.newstr, result.defending.newstr];
+			result.attacking.newstr = result.defending.newstr = 0;
+			R.runAnimation(animationCBData);
+			result.attacking.newstr = newstr[0];
+			result.defending.newstr = newstr[1];
 		}
-	});
-
-	//Render so new unit facings are shown correctly
-	R.render(cpos.row, cpos.col, renderRange);
-	//Show the AI combats on map
-	if (uiSettings.markCombatUnits && map.currentPlayer.type == playerType.aiLocal) {
-		R.drawHexByCell(cpos, hexstyle.combat);
-		R.drawHexByCell(epos, hexstyle.combat);
-	}
-	var animationCBData: UIAttackAnimationData = { result: result, cbfunc: uiAttackAnimationFinished };
-	//An empty animation chain (a carrier or naval transport attack without support fire) calls back
-	//at once, before the bundle set the new strengths: the finish then sees both units at 0 (kept)
-	var newstr = [result.attacking.newstr, result.defending.newstr];
-	result.attacking.newstr = result.defending.newstr = 0;
-	R.runAnimation(animationCBData);
-	result.attacking.newstr = newstr[0];
-	result.defending.newstr = newstr[1];
-	return result;
+	};
 }
 
-//Called when attack animation finishes, the rest of the combat is Actions.finishAttack's
-function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData) {
+//Called when attack animation finishes, the rest of the combat is the attack command's finish
+//(Actions.finishAttack)
+function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finish: (hooks?: FinishAttackHooks) => AttackResult) {
 	var tmp: number, moveAnimationCBData: MoveAnimationCBData;
 
 	var result = animationCBData.result;
@@ -544,7 +569,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData) {
 	var d = result.defending;
 	var renderRange = GameRules.getUnitAttackRange(a.unit);
 
-	Actions.finishAttack(map, result, {
+	finish({
 		onLosses: function() {
 			var aloss = a.oldstr - a.newstr;
 			if (aloss > 0 && aloss < a.oldstr)
@@ -903,25 +928,22 @@ function unitContextButton(action: string, unit: Unit) {
 
 	switch (action) {
 		case "mount": { //Can get a bigger range on mount
-			if (unit.isMounted)
-				map.unmountUnit(unit);
-			else
-				map.mountUnit(unit);
+			Commands.execute(game.scenario, { type: unit.isMounted ? "unmount" : "mount", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
 		case "embark": {
 			if (unit.carrier > 0) {
-				map.disembarkUnit(unit);
+				Commands.execute(game.scenario, { type: "disembark", unit: unit.id });
 				refreshRender = true;
 			} else {
-				if (map.embarkUnit(unit))
+				if (resultOf(Commands.execute(game.scenario, { type: "embark", unit: unit.id }), false))
 					refreshRender = true;
 			}
 			break;
 		}
 		case "resupply": { //same location same range
-			ret = map.resupplyUnit(unit);
+			ret = resultOf(Commands.execute(game.scenario, { type: "resupply", unit: unit.id }), new Supply(0, 0));
 			pos = unit.getPos();
 			text = "";
 			if (ret.ammo > 0) text += "+" + ret.ammo + " ammo ";
@@ -936,7 +958,8 @@ function unitContextButton(action: string, unit: Unit) {
 		case "reinforce": { //same location same range
 			overstrength = (action == "overstrength");
 			//the result takes the render range variable, the old range is lost
-			r = map.reinforceUnit(unit, overstrength);
+			r = resultOf(Commands.execute(game.scenario, { type: "reinforce", unit: unit.id, overstrength: overstrength }),
+				{ strength: 0, ammo: 0, fuel: 0 });
 			pos = unit.getPos();
 			text = "";
 			if (r.strength > 0) text = "+" + r.strength + " units ";
@@ -949,7 +972,7 @@ function unitContextButton(action: string, unit: Unit) {
 			break;
 		}
 		case "undo": { //new location different range
-			map.undoLastMove();
+			Commands.execute(game.scenario, { type: "undo", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
@@ -1818,7 +1841,7 @@ function uiScaleMap(level: number) {
 				if (typeof eqTransport === "undefined" || (eqTransport as number | string) == "")
 					eqTransport = -1;
 
-				map.currentPlayer.buyUnit(eqUnit, eqTransport);
+				Commands.execute(game.scenario, { type: "buy", eqid: eqUnit, transport: eqTransport });
 				updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 				break;
 			}
@@ -1835,10 +1858,11 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Upgrade an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (p.upgradeUnit(u, eqUnit, eqTransport))
+					if (resultOf(Commands.execute(game.scenario, { type: "upgradeUndeployed", index: deployId, eqid: eqUnit,
+						transport: eqTransport }), false))
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
 				} else { //Upgrade a unit already on map
-					if (map.upgradeUnit(unitId, eqUnit, eqTransport)) {
+					if (resultOf(Commands.execute(game.scenario, { type: "upgrade", unit: unitId, eqid: eqUnit, transport: eqTransport }), false)) {
 						R.cacheImages(function() { R.render(); }); //Need to cache new image
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 					}
@@ -1854,12 +1878,10 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Sell an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (p.sellUnit(u)) {
-						p.removeUndeployedCoreUnit(deployId);
+					if (resultOf(Commands.execute(game.scenario, { type: "sell", index: deployId }), false))
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
-					}
 				} else { //Disband a unit on map
-					if (map.disbandUnit(unitId)) {
+					if (resultOf(Commands.execute(game.scenario, { type: "disband", unit: unitId }), false)) {
 						R.cacheImages(function() { R.render(); });
 						$<EqUserSelElement>("eqUserSel").userunit = -1;
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
