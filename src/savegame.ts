@@ -100,12 +100,10 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 }
 
 //What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the experience and cost per side (#83) are lost, the units are put on
-//the map hex by hex (#84, #85), the undo is gone and the core lists are rebuilt (#142, #149, #150)
+//fixed in its own commit: the units are put on the map hex by hex (#84, #85), the undo is gone
+//and the core lists are rebuilt (#142, #149, #150)
 function todaysLoad(scenario: Scenario, state: GameState) {
 	const m = scenario.map;
-	scenario.expPerSide = [{ exp: 0, count: 0 }, { exp: 0, count: 0 }];
-	scenario.unitsCostPerSide = [0, 0];
 	m.getUndoSlot().clear();
 	placeHexByHex(m);
 	emptyCoreLists(scenario, state.campaign === null ? null : m.getPlayersByCountry(state.campaign.country)[0]);

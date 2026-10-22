@@ -99,10 +99,11 @@ function firstBreak(w: World): string | null {
 	return found;
 }
 
-//Fixtures where the AI's 2 turns break an invariant through a known bug. None since the AI draws
-//from its own stream (#126): ruscam09-t2 reached #73 (a recon leader from support fire) on the
-//dice the AI's draws used to shift; #73 stays pinned by its drills below
-const knownBreaks: Record<string, string> = {};
+//Fixtures where the AI's 2 turns break an invariant through a known bug. ruscam09-t2 reached #73
+//(a recon leader from support fire) on the dice the AI's draws used to shift, until the AI drew
+//from its own stream (#126). ruscam09-t0 reaches it since a load keeps the experience per side
+//(#83): unit#7 wins a leader that widens its spotting in an attack of turn 2
+const knownBreaks: Record<string, string> = { "ruscam09-t0.json.gz": "#73" };
 
 for (const name of fixtures("engine"))
 	test(`Invariants hold on ${name} as restored`, async () => {
