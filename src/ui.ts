@@ -508,7 +508,7 @@ function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
 }
 
 //The attack command's hooks: the info on the status bar, the hits animated as the combat goes (their
-//sprite picks draw from Math.random between the dice), then the render and the animation, which
+//sprite picks draw from the cosmetic stream, not the dice's), then the render and the animation, which
 //finishes the attack when it ends
 function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks {
 	var renderRange = 7; //biggest attack range including support fire

@@ -14,6 +14,8 @@ const args = window.__record;
 
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(1);
+// The game's other random streams (src/rng.ts) where it has them: the reference doesn't
+if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(1);
 const old = game.scenario;
 if (args.file.startsWith("campaign:")) {
 	if (args.turns) throw new Error(args.file + ": a campaign is recorded at turn 0, its player is human");

@@ -1,4 +1,4 @@
-// Replay test: plays scenarios AI vs AI with a seeded Math.random and a virtual clock,
+// Replay test: plays scenarios AI vs AI with a seeded Math.random (and Rng.seed) and a virtual clock,
 // recording hashes of the game state and the DOM before every AI action, the full state,
 // DOM and canvas pixels at every turn end, and a save/restore round trip. Two runs (pure
 // bundle vs bundle + src modules) must produce identical traces; harness/diff-traces.js
@@ -43,7 +43,11 @@ function makeAllAI(trace) {
 async function play(item) {
 	const trace = { item, loaded: false, actions: [], turns: [], restore: null, errors: [] };
 	const errorsBefore = window.__replayErrors.length;
-	Math.random = mulberry32((args.seed || 1) ^ parseInt(cyrb53(item).slice(0, 6), 36));
+	const seed = (args.seed || 1) ^ parseInt(cyrb53(item).slice(0, 6), 36);
+	Math.random = mulberry32(seed);
+	// The streams that aren't Math.random (src/rng.ts: the UI's sprite and sound picks) from the same
+	// seed, where the game has them (not the original)
+	if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(seed);
 	// "scripted:<file>" keeps the scenario's scripted players (AIScripted), others become AI
 	const scripted = item.startsWith("scripted:");
 	const file = scripted ? item.slice(9) : item;

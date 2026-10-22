@@ -17,8 +17,8 @@
  *   the UI's context button can be older than the unit's state)
  * - the move and the attack end later in the UI, when their animation ends: run hands the finish
  *   to the caller's animate hook, without one it finishes at once. The attack's hooks fire where
- *   they fire today, between the support fire shots: the UI's sprite and sound picks draw from the
- *   dice's Math.random
+ *   they fired, between the support fire shots; the UI's sprite and sound picks draw from the
+ *   cosmetic stream (Rng.cosmeticRandom), so they don't move the dice
  *
  * One module for all the handlers: each is a few lines over the engine's own functions, and the
  * flat src/ keeps the load order and the harness's module list simple. They get their own files

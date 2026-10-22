@@ -13,6 +13,7 @@
  */
 
 import { uiSettings } from "./prototypes";
+import { Rng } from "./rng";
 
 /* Looks like PCM Wav is supported on Chrome, Firefox, Safari, Opera */
 
@@ -107,8 +108,8 @@ export function soundSprite(this: soundSprite, paths: string[]) {
 
 	this.play = function(): Promise<void> | undefined {
 		let sound;
-		//The variant is picked (Math.random called) even when sounds are muted
-		sound = Math.floor(Math.random() * sounds.length);
+		//The variant is picked (a cosmetic draw) even when sounds are muted
+		sound = Math.floor(Rng.cosmeticRandom() * sounds.length);
 		sound = sounds[sound];
 		if (sound && !uiSettings.muteUnitSounds) {
 			//requires audio to be preloaded
