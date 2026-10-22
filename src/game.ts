@@ -202,21 +202,7 @@ export class Game {
 			needScenarioLoad = this.gameEnded = false;
 
 			if (this.campaign !== null) {
-				if (isCampaignStart) { //Only for first scenario
-					campaignPlayer.prestige = this.campaign.startprestige;
-					campaignPlayer.initDossier();
-					this.scenario.map.buildCoreUnitList(campaignPlayer);
-				}
-				if (shouldRemoveNonCampaignUnits)
-					this.scenario.map.removeNonCampaignUnits(campaignPlayer);
-				if (shouldAwardPrototype) {
-					const protoId = this.scenario.getRandomPrototype(campaignPlayer.country + 1);
-					if (typeof protoId !== "undefined" && protoId > 0) {
-						campaignPlayer.acquireUnit(protoId, 0);
-						shouldAwardPrototype = false;
-						UIBuilder.showPrototypeAwardMessage(protoId);
-					}
-				}
+				startCampaignScenario(this);
 			} else {
 				this.scenario.showStatistics();
 				//New single scenarios balance players prestige, the tutorial keeps its own
@@ -465,6 +451,27 @@ export class Game {
 				}
 			}
 			return true;
+		}
+
+		//A campaign's scenario loaded: the first one sets the campaign player's prestige, dossier and
+		//core units, a later one removes the scenario's own units on the deployment hexes, and a
+		//brilliant victory before awards a prototype unit
+		function startCampaignScenario(game: Game) {
+			if (isCampaignStart) { //Only for first scenario
+				campaignPlayer.prestige = game.campaign.startprestige;
+				campaignPlayer.initDossier();
+				game.scenario.map.buildCoreUnitList(campaignPlayer);
+			}
+			if (shouldRemoveNonCampaignUnits)
+				game.scenario.map.removeNonCampaignUnits(campaignPlayer);
+			if (shouldAwardPrototype) {
+				const protoId = game.scenario.getRandomPrototype(campaignPlayer.country + 1);
+				if (typeof protoId !== "undefined" && protoId > 0) {
+					campaignPlayer.acquireUnit(protoId, 0);
+					shouldAwardPrototype = false;
+					UIBuilder.showPrototypeAwardMessage(protoId);
+				}
+			}
 		}
 
 		//Returns which sides are played by players on this computer
