@@ -44,8 +44,10 @@ canvas pixels on purpose.
   test/headless.test.ts).
 - **Kept bugs are kept**: many are pinned by `test.fails` tests named after their issue. A fix
   flips its test.
-- The order of `Math.random` draws is behavior: the UI's sprite and sound picks share the stream
-  with the dice and the AI.
+- The order of the draws within each random stream (`src/rng.ts`) is behavior: the game stream
+  (`Rng.random`: the dice, the leaders, the prototypes, the AI) and the cosmetic stream
+  (`Rng.cosmeticRandom`: the UI's sprite and sound picks, which don't move the dice). Never draw
+  a UI pick from the game stream.
 - The harness reaches into the game: `?harness` exposes every module's exports as globals and
   patches module objects (`GameRules`, `Leaders`...), `harness/lib/harness.js` snapshots the game
   at every step through `toData` (`src/state.ts`, docs/STATE.md), or by walking the objects' own

@@ -85,8 +85,9 @@ surrender, selection refresh, elimination victory), `uiUnitMove` and `uiMoveAnim
      animation callback as now; the contract and a headless AI call both back to back.
    - **Synchronous hooks for the UI** (`onSupportShot`, `onAttack`), fired exactly where
      `R.addAnimation` is called today. The sprite pick (animation.ts:244) and the sound
-     variant (aiscripted.ts:510) draw from the same `Math.random` as the dice, between the
-     support shots: animating after the whole combat would change the dice and the replays.
+     variant (aiscripted.ts:510) drew from the same `Math.random` as the dice, between the
+     support shots: animating after the whole combat would have changed the dice and the
+     replays (until #126 gave them the cosmetic stream).
    - **Keep the timing.** In the surprise path the AI acts before the attack's finish phase
      (ui.ts:488, 496: `waitUIAnimation` is cleared at once). Keep the `waitUIAnimation` writes
      where they are. Closing that race is a later, deliberate commit.
@@ -188,7 +189,8 @@ nothing re-recorded, verify as before step 2):
 - **`src/rng.ts`**: `Rng.random()` is `Rng.source()` when set, otherwise `Math.random()` read at
   the call, so the harness's and record.js's seeded `Math.random` still seeds the engine.
   `GameRules.rollDice`, both leader rolls, `getRandomPrototype` and the AI draw through it, one
-  call per former `Math.random()`. The UI's sprite, sound and menu picks keep `Math.random`.
+  call per former `Math.random()`. The UI's sprite, sound and menu picks kept `Math.random` (#126
+  moved them to the cosmetic stream).
 - **`defined()`** is in `src/util.ts`; dom.ts imports and re-exports it for the UI. `isChromeApp`
   stays in dom.ts (only gamestate.ts uses it).
 - **game.ts loads without side effects**: `main.ts` starts `game.loop` and adds the load listener;
@@ -375,8 +377,8 @@ once `check` has passed, so the two can't drift apart. The view sees the state t
 `GameView`, a read-only type, so a write from the UI doesn't compile.
 
 In stage A the commands sit on the current engine, so two things still hold there:
-- The attack's `run` fires its hooks where they fire today, because the UI's picks share the
-  dice's stream.
+- The attack's `run` fires its hooks where they fire today: until stage B (#126) the UI's picks
+  shared the dice's stream.
 - New state goes in closures, not fields.
 
 After B, the attack splits into a pure `resolve` and an `apply`, and the state is free to take
