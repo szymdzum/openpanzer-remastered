@@ -38,3 +38,30 @@ test("a hex counter doesn't go below 0", async () => {
 	expect(h.isSpotted(0)).toBe(false);
 	uiSettings.noFOW = noFOW;
 });
+
+test("the selection takes only a unit of the current player", async () => {
+	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
+	const m = scenario.map;
+	const own = m.getUnits().find((u) => u.player.id === m.currentPlayer.id)!;
+	const other = m.getUnits().find((u) => u.player.id !== m.currentPlayer.id)!;
+	expect(m.selectUnit(null)).toBe(false);
+	expect(m.selectUnit(other)).toBe(false);
+	expect(m.currentUnit).not.toBe(other);
+	expect(m.selectUnit(own)).toBe(true);
+	expect(m.currentUnit).toBe(own);
+});
+
+test("copying no player changes nothing", async () => {
+	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
+	const p = scenario.map.getPlayers()[0];
+	const before = JSON.stringify(p);
+	expect(p.copy(null)).toBeUndefined();
+	expect(JSON.stringify(p)).toBe(before);
+});
+
+test("looking up a unit id that isn't on the map gives null", async () => {
+	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
+	expect(scenario.map.getUnitById(-1)).toBeNull();
+	expect(scenario.map.getUnitById(1e6)).toBeNull();
+	expect(scenario.map.getPlayers()[0].addCoreUnit(null)).toBe(false);
+});
