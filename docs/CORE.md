@@ -45,6 +45,8 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `combat.ts` | the attack and combat results as named steps with a record of what each contributed (#118) |
 | `supply.ts` | resupply and reinforcement: whether, and how much |
 | `costs.ts` | unit, upgrade and sell costs |
+| `newgame.ts` | a game's data and state from a scenario file, as the old loader and Game start it |
+| `scenariofile.ts` | a scenario XML document read as plain data, for `newGame` |
 | `turn.ts` | a unit's end of turn (entrenchment, #75's hiding), the reinforcements arriving, the turn limit, the victory rating and the outcome |
 | `step.ts` | `step` and `check`, the handlers' registry |
 | `draft.ts` | the state a step changes, copied on write, and its primitives: place, relocate, remove a unit with its sight, the score, the dossier |
@@ -183,6 +185,29 @@ rating is Scenario.checkVictory's, by the turn.
 reinforcements, per end of turn (2026-10-22, a loaded laptop): old engine 27-116 µs, core 12-97 µs
 (1.1-2.3x faster; every unit is copied once in a new round).
 
+## A new game (#135)
+
+`newGame(setup)` (newgame.ts) is ScenarioLoader and Game.newScenario together: `{ data, state }` from
+a scenario file read as plain data (`ScenarioFile`, by scenariofile.ts's `readScenarioFile` from the
+parsed XML document), the map image's size, the equipment of the countries `equipmentCountries`
+names with their lists by unit class as their files have them (keyed by file, the country + 1),
+the AI asked for (`uiSettings.isAI`), the random streams and the campaign. The files are read by
+the caller: the core turns what they hold into the state, in the old loader's order:
+- the map's size from the image, cut to the file's; the victory turns (a campaign's difficulty adds
+  to the last), the date, the turns a day (twice the file's);
+- the players: a campaign gives each turn at least a share of its starting prestige;
+- the reinforcements, then the hexes in the file's order. Each unit with a leader draws it from the
+  game stream as it comes (#78 kept); a ground or air unit counts in its side's cost and experience.
+  A hex's units go to their slots (a later one over an earlier, #74), the hex becomes an objective of
+  the side that has to take it, and its units enter the map on a draft: ids as they come, the ground
+  unit first, and a unit marks the enemy units its side is the first to see (`tempSpotted`, as
+  MapBoard.add does);
+- the scores (the objectives worth per turn, less the units), the AI's players, and outside a
+  campaign each side's starting prestige: what its units are short of the other's, at least 2000
+  (not the tutorial).
+
+The start of a campaign's scenario (its player's prestige and core units) is the campaign's, next.
+
 ## The proof
 
 - **The gamerules contract on both engines** (test/core-contract.test.ts): the recorded calls of
@@ -225,6 +250,10 @@ reinforcements, per end of turn (2026-10-22, a loaded laptop): old engine 27-116
     side 1 or none (#75): the new rounds, the reinforcements, the defeat of the side shown.
   - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
     deploy; a campaign's kills and losses in the dossier.
+- **A new game against the old loader** (test/core-newgame.test.ts): a scenario file started by
+  Game.newScenario and by `newGame` from the same file and the equipment's own files, the streams
+  seeded: the same toData as JSON. CI starts every eighth file of the scenario list (51 of its 403 entries) and some
+  against the AI and the scripted tutorial; `CORE_ALL_SCENARIOS=1` starts them all (17 s): no difference.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
   undo, a new round, #75's hiding, the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.

@@ -16,6 +16,7 @@ import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
 import { step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
+import { mapSize } from "../src/core/newgame";
 import type { Contribution } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { handWorld } from "./coreworld";
@@ -258,6 +259,11 @@ test("Reinforcements arrive at their player's turn start, on the next free hex w
 	expect(unitById(r.world, 2)).toMatchObject({ owner: 1, row: 8, col: 9, flag: 16 });
 	expect(r.world.state.reinforcements).toEqual([due[1], due[2]]);		//(the last has no hex it can stand on)
 	expect(arriveReinforcements(w).world).toBe(w);		//player 0 has none
+});
+
+test("The map's size comes from its image: hexes 60 and 30 pixels wide in turn, 50 high, a half row partial", () => {
+	expect(mapSize(0, 0, 150, 125)).toEqual({ rows: 3, cols: 4, lastRowPartial: true, lastColPartial: false });
+	expect(mapSize(2, 10, 140, 110)).toEqual({ rows: 2, cols: 4, lastRowPartial: false, lastColPartial: true });	//the file's 2 rows
 });
 
 //The step's world and events; a refusal throws
