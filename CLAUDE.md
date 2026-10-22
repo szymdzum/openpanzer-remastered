@@ -20,7 +20,7 @@ game plays.
 | `npm run check`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
 | `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, fallow audit, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
 | `npm test` (`npm run test:coverage` in CI, with per-file coverage floors) | ~9 s | after every small step |
-| `npm run verify` | 3-4 min, up to 6 Chromes | on GitHub: every pull request that touches `src/`, `harness/` or `game/` runs it against its base branch (`verify.yml`). Locally only to debug a difference |
+| `npm run verify` | 3-4 min, up to 6 Chromes | on GitHub: a required check on every pull request, run against its base branch when it touches `src/`, `harness/` or `game/` (`verify.yml`). Locally only to debug a difference |
 
 Locally, compare with main: `BASELINE_REF=origin/main npm run verify`. One verify at a time on
 the machine (the laptop overheats): take the lock first, `until mkdir /tmp/openpanzer-chrome.lock 2>/dev/null; do sleep 15; done`, remove it
@@ -47,9 +47,10 @@ canvas pixels on purpose.
 - The order of `Math.random` draws is behavior: the UI's sprite and sound picks share the stream
   with the dice and the AI.
 - The harness reaches into the game: `?harness` exposes every module's exports as globals and
-  patches module objects (`GameRules`, `Leaders`...), `harness/lib/harness.js` snapshots the own
-  data properties of game objects at every step. Renaming an export, adding a data field to a
-  game object or a class name change shows up there. `test/harness-surface.test.ts` lists the
+  patches module objects (`GameRules`, `Leaders`...), `harness/lib/harness.js` snapshots the game
+  at every step through `toData` (`src/state.ts`, docs/STATE.md), or by walking the objects' own
+  data properties against a baseline without it (the original game). Renaming an export the
+  harness uses shows up there. `test/harness-surface.test.ts` lists the
   names the harness uses.
 - Erasable TypeScript only (no enum, namespace values, parameter properties). Key order of data
   fields is part of the saved game. Classes aren't hoisted: mind the load order in `src/main.ts`.
@@ -73,14 +74,15 @@ canvas pixels on purpose.
 
 ## Git
 
-- main takes changes only through a pull request with the CI check `test` green; rebase merge.
-  A branch per piece of work.
+- main takes changes only through a pull request with the checks `test` and `verify` green;
+  rebase merge. A branch per piece of work. A difference in verify fails it: a refactor must
+  come out identical; a deliberate change passes once the owner has read its differences and
+  added the label `behavior-change` (Claude may add it when the differences are exactly the
+  ones the change intends, and says so in the pull request).
 - Work fast locally, let CI do the heavy checks: the hooks and `npm test` before a commit, then
   push the branch and open the pull request right away (no need to ask), with
   `gh pr merge --auto --rebase` so it merges itself once the required checks are green. Keep
-  working on the next branch meanwhile. Read the Verify job's summary before relying on a merge
-  that touches `src/` until Verify is a required check. Run verify locally only to debug a
-  difference CI showed.
+  working on the next branch meanwhile. Run verify locally only to debug a difference CI showed.
 - Commit messages: an imperative subject, a short plain-English body saying what changed and
   what verify showed. No AI attribution, no Co-Authored-By.
 - Parallel agents: a git worktree each, outside the repo (`../openpanzer-wt/<name>`), with

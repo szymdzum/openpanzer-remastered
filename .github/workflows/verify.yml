@@ -3,11 +3,17 @@
 # (BASELINE_REF, harness/lib/reference.sh), not with the original game: main differs from the
 # original on purpose (the unit markers). A refactor must come out identical; a deliberate change
 # shows what it changed in the run's summary and artifacts.
+#
+# verify is a required check on main. It runs on every pull request so a docs-only change isn't
+# left waiting for it: without changes to the game or the harness it passes at once. A
+# difference fails it, unless the pull request carries the label behavior-change, which the
+# owner adds after reading the differences of a deliberate change: then it passes and the
+# summary still lists every difference.
 name: Verify
 
 on:
   pull_request:
-    paths: ["src/**", "harness/**", "reference/**", "game/**", "index.html", "public/**", "vite.config.mts", "package.json", "package-lock.json", ".github/workflows/verify.yml"]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 # The contracts and the scenario dates were recorded in this time zone (test/setup.ts)
@@ -22,34 +28,55 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the base branch is checked out next to this one
+      - name: Does the change touch the game or the harness?
+        id: changes
+        run: |
+          base=origin/${{ github.base_ref || 'main' }}
+          if [ "${{ github.event_name }}" != "pull_request" ] || git diff --name-only "$base"...HEAD \
+            | grep -qE '^(src|harness|reference|game|public)/|^index\.html$|^vite\.config\.mts$|^package(-lock)?\.json$|^\.github/workflows/verify\.yml$'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "No change to the game or the harness: nothing to verify." >> "$GITHUB_STEP_SUMMARY"
+          fi
       # The game's images and sounds are in Git LFS (about 300 MB): cached, so the LFS bandwidth
       # quota is spent once per change of the assets, not on every run
       - name: List the LFS objects
+        if: steps.changes.outputs.code == 'true'
         run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
       - uses: actions/cache@v6
+        if: steps.changes.outputs.code == 'true'
         with:
           path: .git/lfs
           key: lfs-${{ hashFiles('.lfs-ids') }}
           restore-keys: lfs-
       - run: git lfs pull
+        if: steps.changes.outputs.code == 'true'
       - uses: actions/setup-node@v7
+        if: steps.changes.outputs.code == 'true'
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+        if: steps.changes.outputs.code == 'true'
       - run: npm install --global browser-debugger-cli@0.21.0
+        if: steps.changes.outputs.code == 'true'
       # The base branch's traces, kept between runs (the file names carry the base commit)
       - uses: actions/cache@v6
+        if: steps.changes.outputs.code == 'true'
         with:
           path: harness/out/baseline
           key: verify-baseline-${{ github.event.pull_request.base.sha || github.sha }}-${{ hashFiles('harness/**') }}
           restore-keys: verify-baseline-
       - name: Verify against the base branch
+        id: verify
+        if: steps.changes.outputs.code == 'true'
+        continue-on-error: true
         run: |
           set -o pipefail
           BASELINE_REF=origin/${{ github.base_ref || 'main' }} JOBS=3 npm run verify 2>&1 | tee "$RUNNER_TEMP/verify.log"
       - name: Summary
-        if: always()
+        if: always() && steps.changes.outputs.code == 'true'
         run: |
           {
             echo "### verify against ${{ github.base_ref || 'main' }}"
@@ -58,7 +85,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: steps.verify.outcome == 'failure'
         with:
           name: verify-traces
           path: |
@@ -66,3 +93,13 @@ jobs:
             harness/out/ui-*/
             ${{ runner.temp }}/verify.log
           retention-days: 7
+      # A difference fails the check, unless the owner accepted it with the label behavior-change
+      - name: Differences accepted?
+        if: steps.verify.outcome == 'failure'
+        run: |
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'behavior-change') }}" = "true" ]; then
+            echo "Differences accepted with the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "verify found differences: read the summary; a deliberate change needs the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
