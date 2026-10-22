@@ -6,10 +6,164 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { changeUnit, playerAt } from "./draft";
-import { disembarkPositions } from "./movement";
-import type { Draft, UnitId } from "./types";
-import { unitById } from "./world";
+import { leaderType, playerType, prestigeGains, scoreGains, unitClass } from "../prototypes";
+import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer, writeUnit } from "./draft";
+import type { PathStep } from "./events";
+import { directionTo } from "./geometry";
+import { canPassInto, disembarkPositions, pathTo, shortestPath } from "./movement";
+import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState } from "./types";
+import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
+import { hexIndex, isSpotted, unitById, unitData } from "./world";
+
+//What a move came to: the hex a hidden enemy stopped it before (null: none), and whether its
+//capture took its side's last objective
+export interface MoveOutcome {
+	surprise: Position | null;
+	win: boolean;
+}
+
+//Map.moveUnit: unit id to the hex along the cheapest path in cells (the cells the player was shown;
+//by default its move range now). It stops before a hidden enemy (surprised, unless a leader sees it
+//coming), takes the hex at the end of the path, pays the path's cost, faces where it went and
+//spots. A human player's unit can take it back when it spotted nothing new and wasn't surprised
+//(D5). A retreat is such a move too
+export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { row: number; col: number; cost: number }[] | null,
+	retreat = false): MoveOutcome {
+	const start = unitById(d, id);
+	const path = cells !== null ? shortestPath(start, to, cells) : pathTo(d, start, to);
+	if (path.length === 0) return { surprise: null, win: false };
+	const human = playerAt(d, start.owner).type === playerType.humanLocal;
+	const undo: UndoState | null = human ? newUndo(start) : null;
+	const capturer = canCapture(d, start);
+	const walked = walk(d, start, path);
+	const last = walked.passed[walked.passed.length - 1];
+	emit(d, retreat ? { type: "retreated", unit: id, from: { row: start.row, col: start.col }, to: { row: last.row, col: last.col } }
+		: { type: "moved", unit: id, path: walked.passed, cost: walked.cost, visible: walked.passed.some((c) => c.visible) });
+
+	const win = last.row === to.row && last.col === to.col && capturer ? capture(d, id, last, undo) : false;
+	payMove(d, writeUnit(d, id), walked.cost);
+	const spotted = relocate(d, id, last, (u) => { u.facing = directionTo(start.row, start.col, last.row, last.col); });
+	if (walked.surprise !== null) emit(d, { type: "surprised", unit: id, at: walked.surprise });
+	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && human ? undo : null;
+	return { surprise: walked.surprise, win };
+}
+
+//The unit along its path until a hex it can't pass (an enemy it didn't see): the hexes passed, what
+//they cost, where it was surprised. The move shows where the enemy sees it (a human's and the
+//scripted opponent's always)
+function walk(d: Draft, u: UnitState, path: PathCell[]): { passed: PathStep[]; cost: number; surprise: Position | null } {
+	const player = playerAt(d, u.owner);
+	const seen = player.type === playerType.humanLocal || player.type === playerType.aiScripted;
+	const passed: PathStep[] = [];
+	let cost = 0, surprise: Position | null = null;
+	for (let i = 0; i < path.length; i++) {
+		const c = path[i];
+		if (i > 0 && !canPassInto(d, u, c)) {
+			surprise = surprised(d, u, c);
+			break;
+		}
+		passed.push({ row: c.row, col: c.col, visible: seen || isSpotted(d, hexIndex(d, c.row, c.col), ~player.side & 1) });
+		cost += c.cost;
+	}
+	//(NaN from a path whose cells have no cost: a retreat)
+	return { passed, cost: !cost || cost < 0 ? 0 : cost, surprise };
+}
+
+//A unit stopped by an enemy it didn't see is surprised, unless its leader sees the enemy coming
+function surprised(d: Draft, u: UnitState, at: Position): Position | null {
+	if (hasLeader(d, u, leaderType.battlefieldIntelligence) || hasLeader(d, u, leaderType.skilledAssault)) return null;
+	writeUnit(d, u.id).isSurprised = true;
+	return { row: at.row, col: at.col };
+}
+
+//The undo of a move about to start (UndoSlot.save): the unit as it is, but tempSpotted, which the
+//saved copy doesn't take (Unit.copy)
+function newUndo(u: UnitState): UndoState {
+	return { unit: u.id, before: { ...u, transport: u.transport === null ? null : { ...u.transport }, tempSpotted: false },
+		oldOwner: null, oldFlag: null, oldVictorySide: null, prestigeGain: 0, scoreGain: 0 };
+}
+
+//Unit.move: no entrenchment left, the fuel and points (a transport uses all of them and can't fire
+//after), a recon unit with points left can move again; a unit leaving its carrier is off it for good
+function payMove(d: Draft, u: UnitState, cost: number) {
+	u.entrenchment = 0;
+	//(a cost of 254 or more stops the move there: what is left of it is the fuel)
+	burn(d, u, cost >= 254 ? (cost / 254 + cost % 254) >> 0 : cost);
+	if (unitData(d, u).uclass !== unitClass.recon || u.moveLeft <= 0) {
+		u.hasMoved = true;
+		u.hasOverstrength = true;
+	}
+	if (u.carrier < 0) u.carrier = 0;
+}
+
+//The fuel and points a move uses: a transport's fuel and all its points (it can't fire after), or
+//the unit's own (no fuel on a carrier)
+function burn(d: Draft, u: UnitState, used: number) {
+	if (u.isMounted && u.transport !== null) {
+		u.hasFired = true;
+		if (usesFuel(d.equipment[u.transport.eqid])) u.transport.fuel -= used;
+		u.moveLeft = 0;
+	} else {
+		if (unitUsesFuel(d, u) && u.carrier === 0) u.fuel -= used;
+		u.moveLeft -= used;
+	}
+}
+
+//Map.captureHex: a hex with an owner or a flag not of the unit's side becomes its player's, a flag
+//(not an objective) and an objective give prestige (twice with a liberator) and score, an objective
+//leaves the side's list. What changed goes in undo. Whether the side has no objective left
+function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): boolean {
+	const hex = hexIndex(d, at.row, at.col), h = d.state.map.hexes[hex], u = unitById(d, id);
+	const player = playerAt(d, u.owner);
+	if (!canTake(d, hex, player.side)) return false;
+	const flag = h.flag !== -1 && h.victorySide === -1, objective = h.victorySide !== -1;
+	const old = undoFields(h);
+	const w = writeHex(d, hex);
+	w.owner = player.id;
+	if (w.flag !== -1) w.flag = player.country;
+	if (objective) w.victorySide = ~player.side & 1; //now the enemy's to take back
+	const win = objective && updateVictorySides(d, player.side, at);
+	const taken = gains(flag, objective, hasLeader(d, u, leaderType.liberator) ? 2 : 1);
+	if (undo !== null) Object.assign(undo, old, { prestigeGain: taken.prestige, scoreGain: taken.score });
+	writePlayer(d, player.id).prestige += taken.prestige;
+	addScore(d, player.id, taken.score);
+	emit(d, { type: "captured", unit: id, at: { row: at.row, col: at.col }, flag, objective, ...taken, win });
+	return win;
+}
+
+//What a capture changes of a hex, for the undo: its owner, its flag and objective when it has them
+function undoFields(h: HexState): Pick<UndoState, "oldOwner" | "oldFlag" | "oldVictorySide"> {
+	return { oldOwner: h.owner, oldFlag: h.flag !== -1 ? h.flag : null, oldVictorySide: h.victorySide !== -1 ? h.victorySide : null };
+}
+
+//A hex side can take: it has an owner or a flag, and isn't side's already
+function canTake(d: Draft, hex: number, side: number): boolean {
+	const h = d.state.map.hexes[hex];
+	if (h.owner === -1) return h.flag !== -1;
+	return playerAt(d, h.owner).side !== side;
+}
+
+//What taking a flag or an objective gives
+function gains(flag: boolean, objective: boolean, times: number): { prestige: number; score: number } {
+	return {
+		prestige: (flag ? prestigeGains.flagCapture * times : 0) + (objective ? prestigeGains.objectiveCapture * times : 0),
+		score: (flag ? scoreGains.flagCapture : 0) + (objective ? scoreGains.objectiveCapture : 0),
+	};
+}
+
+//Map.updateVictorySides: the hex leaves side's objectives and joins the other side's, at the end of
+//its list (#141 on an undo). Whether side has none left
+export function updateVictorySides(d: Draft, side: number, cell: Position): boolean {
+	const own = writeObjectives(d, side);
+	let removed = 0;
+	for (let i = own.length - 1; i >= 0; i--)
+		if (own[i].row === cell.row && own[i].col === cell.col) {
+			own.splice(i, 1);
+			removed++;
+		}
+	if (removed > 0) writeObjectives(d, ~side & 1).push({ row: cell.row, col: cell.col });
+	return own.length === 0;
+}
 
 //What selecting a unit of the player whose turn it is does to it (MapSelection.select), which the
 //old engine's mount, unmount and undo do last: a unit leaving its carrier gets back on it unless it

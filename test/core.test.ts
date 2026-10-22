@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, type extendedCell, movTableDry, movTableMud, scoreGains, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, type extendedCell, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -81,12 +81,14 @@ test("A surprised attacker loses its defense and half its attack", () => {
 	expect(record.filter((r) => r.name === "surprised").map((r) => [r.field, r.before, r.after])).toEqual([["adv", 13, 0], ["aav", 4, 2]]);
 });
 
-test("The ruleset holds the movement tables by ground and the class leaders", () => {
+test("The ruleset holds the movement tables by ground and the leaders of each class", () => {
 	expect(moveCosts(classicRules, 0, 0)).toBe(movTableDry[0]);
 	expect(moveCosts(classicRules, 2, 4)).toBe(movTableMud[4]);
 	expect(moveCosts(classicRules, 7, 0)).toBe(movTableDry[0]); //an unknown ground moves as dry
-	for (let c = 0; c <= unitClass.lightCruiser; c++)
+	for (let c = 0; c <= unitClass.lightCruiser; c++) {
 		expect(classicRules.classLeaders[c], "class " + c).toBe(Leaders.unitClassLeaders[c][0] ?? -1);
+		expect(classicRules.leaders[c], "class " + c).toEqual(Leaders.unitClassLeaders[c]);
+	}
 });
 
 test("A tank's move range stops at an enemy's zone of control, and its path pays one point more (#70)", () => {
@@ -130,23 +132,58 @@ test("Column 0 is out of every other column's range (#69)", () => {
 
 //The commands (src/core/step.ts, #134): that they play as the old engine's is test/core-steps.test.ts's
 
-test("A step leaves the world it was given as it was; what isn't in the core yet is refused", () => {
+test("A step leaves the world it was given as it was; the end of turn isn't the core's yet (#135)", () => {
 	const w = forestFight();
 	const before = JSON.stringify(w.state);
-	const r = played(step(w, { type: "resupply", unit: 0 }));
+	const r = step(w, { type: "move", unit: 0, to: { row: 4, col: 2 } });
+	expect(r.ok).toBe(true);
 	expect(JSON.stringify(w.state)).toBe(before);
-	expect(r.events).toEqual([{ type: "resupplied", unit: 0, supply: { ammo: 0, fuel: 0, transportAmmo: 0, transportFuel: 0 } }]);
-	expect(unitById(r.world, 0)).toMatchObject({ hasMoved: true, hasFired: true, hasResupplied: true });
-	expect(unitById(w, 0)).toMatchObject({ hasMoved: false, hasFired: false, hasResupplied: false });
-	expect(r.world.state.players[0].score).toBe(w.state.players[0].score + scoreGains.resupply);
+	expect(r.ok && unitById(r.world, 0)).toMatchObject({ row: 4, col: 2 });
+	expect(unitById(w, 0)).toMatchObject({ row: 2, col: 2 });
 	expect(step(w, { type: "endTurn" })).toEqual({ ok: false, refusal: { reason: "the end of turn isn't in the core yet (#135)" } });
 	expect(step(w, { type: "resupply", unit: 7 })).toEqual({ ok: false, refusal: { reason: "no such unit" } });
+});
+
+test("An attack draws the attacker's dice, the defender's, then a leader roll for each, even with no level gained", () => {
+	const w = withRng(forestFight(), 12345);
+	const r = played(step(w, { type: "attack", unit: 0, target: 1 }));
+	const expected = { state: 12345 };
+	for (let i = 0; i < 10 + 10 + 2; i++) nextRandom(expected);
+	expect(r.world.state.rng).toEqual({ game: expected.state, ai: 7 });
+	const fight = r.events.find((e) => e.type === "fight");
+	expect(fight).toMatchObject({ support: false, attacker: { unit: 0, before: { strength: 10, ammo: unitById(w, 0).ammo } },
+		defender: { unit: 1, before: { strength: 10, entrenchment: 2 } } });
+	if (fight.type !== "fight") return;
+	expect(fight.record.map((c) => c.name)).toContain("entrenchment");
+	expect(unitById(r.world, 1).strength).toBe(10 - fight.result.kills);
+	expect(unitById(r.world, 0)).toMatchObject({ hasFired: true, ammo: fight.attacker.before.ammo - 1, tempSpotted: true });
+});
+
+test("A move onto an enemy flag takes it, and the undo gives it back", () => {
+	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }] });
+	const flag = { owner: 1, flag: 15, victorySide: -1 };
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 1)], flag);
+	const moved = played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
+	expect(moved.events.map((e) => e.type)).toEqual(["moved", "captured"]);
+	expect(moved.world.state.map.hexes[hexIndex(w, 5, 1)]).toMatchObject({ owner: 0, flag: 7 });
+	expect(moved.world.state.players[0]).toMatchObject({ prestige: 50, score: 50 });
+	expect(moved.world.state.turn.undoable).toMatchObject({ unit: 0, oldOwner: 1, oldFlag: 15, prestigeGain: 50, scoreGain: 50 });
+	const undone = played(step(moved.world, { type: "undo", unit: 0 }));
+	expect(undone.world.state.map.hexes[hexIndex(w, 5, 1)]).toMatchObject(flag);
+	expect(undone.world.state.players[0]).toMatchObject({ prestige: 0, score: 0 });
+	expect(unitById(undone.world, 0)).toEqual(unitById(w, 0));
+	expect(undone.world.state.turn.undoable).toBeNull();
 });
 
 //The step's world and events; a refusal throws
 function played(r: Stepped): Extract<Stepped, { ok: true }> {
 	if ("refusal" in r) throw new Error(r.refusal.reason);
 	return r;
+}
+
+//The world with its game stream at seed (the AI's at 7)
+function withRng<W extends { state: object }>(w: W, seed: number): W {
+	return { ...w, state: { ...w.state, rng: { game: seed, ai: 7 } } };
 }
 
 test("Property: the path search with its heap finds the old engine's paths, ties broken the same", async () => {
@@ -170,4 +207,16 @@ test("The half hexes of the edges: the first row's even columns, a partial last 
 	expect(isPartialEdge(4, 9, 10, 10, false, false)).toBe(false);
 	expect(isPartialEdge(9, 3, 10, 10, true, false)).toBe(true);
 	expect(isPartialEdge(9, 4, 10, 10, true, false)).toBe(false);
+});
+
+test("A unit bought outside a campaign gets the other side's average experience, none when that side had no unit", () => {
+	const w = handWorld({ rows: 4, cols: 4, units: [] });
+	w.state.players[0].prestige = 10000;
+	const bought = (exp: number, count: number) => {
+		w.state.scenario.expPerSide = [{ exp: 0, count: 0 }, { exp, count }];
+		const p = played(step(w, { type: "buy", eqid: PZ_IIA, transport: -1 })).world.state.players[0];
+		return (p.core[0] as { reserve: { experience: number } }).reserve.experience;
+	};
+	expect(bought(250, 2)).toBe(125);
+	expect(bought(0, 0)).toBe(0); //(0 / 0 is NaN)
 });

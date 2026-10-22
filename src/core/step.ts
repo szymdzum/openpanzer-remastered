@@ -14,8 +14,10 @@
 import type { Command, CommandOf, CommandType, Refusal } from "../commands";
 import { beginDraft, finishDraft } from "./draft";
 import type { GameEvent } from "./events";
+import { attack, move } from "./commands/move";
 import { reinforce, resupply } from "./commands/supply";
 import { disembark, embark, mount, unmount } from "./commands/transport";
+import { undo } from "./commands/undo";
 import { buy, deploy, disband, sell, upgrade, upgradeUndeployed } from "./commands/units";
 import type { CommandHandler, World } from "./types";
 
@@ -23,9 +25,6 @@ import type { CommandHandler, World } from "./types";
 function later<C extends Command>(reason: string): CommandHandler<C> {
 	return { check: () => ({ reason }), run() {} };
 }
-const move = later<CommandOf<"move">>("the move isn't in the core yet (#134)");
-const attack = later<CommandOf<"attack">>("the attack isn't in the core yet (#134)");
-const undo = later<CommandOf<"undo">>("the undo isn't in the core yet (#134)");
 const endTurn = later<CommandOf<"endTurn">>("the end of turn isn't in the core yet (#135)");
 
 //The handlers by command type, typed by a mapped type: a type without its handler, or a misspelled

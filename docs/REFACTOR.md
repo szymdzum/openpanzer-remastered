@@ -433,11 +433,10 @@ through test/coreadapter.ts): every recorded call of the 15 fixtures agrees.
 **How #134 goes (stage C2).** docs/CORE.md, "Commands": `step(world, command)` and `check` on the
 core, a handler per command type in `src/core/commands/`, the same `Command` values as the old
 engine's. The step plays on a draft copied on write, so the world given stays as it was; it returns
-the world after and the events. Differential tests play random command sequences on both engines
-and compare toData, the sight and the events after every command; the engine contract's own
-commands are stepped on the core too. The move, the attack (resolve and apply per shot, the draws
-in today's order) and the undo come in their own pull request; the end of turn is the next layer's
-(#135).
+the world after and the events. The attack is resolve and apply per shot, the draws in today's
+order. Differential tests play random command sequences on both engines and compare toData, the
+sight and the events after every command; the engine contract's own commands are stepped on the
+core too. The end of turn is the next layer's (#135).
 
 ### Not worth it now
 

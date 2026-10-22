@@ -18,8 +18,7 @@
 //program sends them: nothing selected (the selection is the UI's, D6; MapSelection.select and
 //clear put a unit leaving its carrier back on it).
 //
-//Then the purchases in a row, and the engine contract's own commands. The move, the attack and the
-//undo aren't the core's yet: the old engine plays them and the core takes its state.
+//Then the purchases in a row, a campaign's dossier, and the engine contract's own commands.
 //
 //FC_SEED=<seed> FC_PATH=<path> replays a failure, FC_RUNS=<n> plays more sequences, FC_STATS=1
 //prints what was played, resynced and masked
@@ -251,10 +250,6 @@ function playBoth(p: Play, cmd: Command): string | null {
 	const old = oldExecute(w, cmd, story);
 	if (old === null) return STOP;
 	const core = coreStep(p.core, cmd);
-	if (notYet(core)) {
-		p.core = coreOf(w, p.data);
-		return null;
-	}
 	if (!old.ok || !core.ok) return refusals(old, core, check(p.core, cmd));
 	return compareStates(p, cmd, core.world, core.events, story);
 }
@@ -284,12 +279,6 @@ function masked(p: Play, cmd: Command, core: CoreWorld, same: boolean): string |
 
 function count(what: string) {
 	stats[what] = (stats[what] || 0) + 1;
-}
-
-//A command the core doesn't play yet (the move, the attack, the undo): the old engine plays it and
-//the core takes its state
-function notYet(r: Stepped): boolean {
-	return "refusal" in r && r.refusal.reason.includes("isn't in the core yet");
 }
 
 //The core's step on the world frozen: the state it was given must stay as it was
@@ -406,6 +395,52 @@ test("Buying, deploying, upgrading, selling and disbanding play the same on both
 	after.forEach((n, i) => expect(n - before[i]).toBeGreaterThan(2));
 });
 
+//Losses in a campaign count in the campaign player's dossier, and its difficulty scales the score:
+//the one campaign fixture's armies are apart at its start, so a campaign unit and two enemies are
+//put next to each other (fromData of the state edited), at strength 1 the units to be destroyed.
+//The campaign unit attacks one (a kill), the other attacks it (a loss)
+test("A campaign's kills and losses count in the dossier on both engines", async () => {
+	let destroyed = 0, counted = 0;
+	for (let seed = 1; seed <= 6; seed++) {
+		const p = await start({ fixture: "campaign-3-1-t0.json.gz", seed, steps: [] });
+		const { fromData } = await import("../src/state");
+		const saved = p.data();
+		const [own, a, b] = facingUnits(saved.state);
+		const scenario = fromData(saved, p.w.game);
+		p.w.game.scenario = scenario;
+		Object.assign(p.w, { scenario, m: scenario.map });
+		p.core = coreOf(p.w, p.data);
+		for (const cmd of [{ type: "attack", unit: own, target: a }, { type: "attack", unit: b, target: own }] as Command[]) {
+			expect(playBoth(p, cmd), JSON.stringify(cmd)).toBeNull();
+			destroyed += p.core.index.has(cmd.type === "attack" ? cmd.target : -1) ? 0 : 1;
+		}
+		const units = p.core.state.players[0].dossier.units;
+		counted += [units.killed, units.lostcore, units.lostaux].reduce((n, c) => n + Object.values(c).reduce((x, y) => x + y, 0), 0);
+	}
+	expect(destroyed).toBeGreaterThan(2);
+	expect(counted).toBeGreaterThan(2);
+});
+
+//Edits a state: the first ground unit of player 0 (the campaign's) with a free hex on each side, an
+//enemy ground unit put on each, the first at strength 1; the campaign unit at strength 1 too. Their ids
+function facingUnits(state: ReturnType<typeof ToData>["state"]): [number, number, number] {
+	const at = (r: number, c: number) => state.map.hexes[r * state.map.cols + c];
+	const free = (r: number, c: number) => r >= 0 && c >= 0 && r < state.map.rows && c < state.map.cols && at(r, c).unit === null
+		&& at(r, c).air === null;
+	const own = state.units.find((u) => u.owner === 0 && u.row >= 0 && at(u.row, u.col).unit === u.id
+		&& free(u.row - 1, u.col) && free(u.row + 1, u.col));
+	const enemies = state.units.filter((u) => u.owner === 1 && u.row >= 0 && at(u.row, u.col).unit === u.id);
+	const put = (u: typeof own, r: number, c: number, strength: number) => {
+		at(u.row, u.col).unit = null;
+		Object.assign(u, { row: r, col: c, strength });
+		at(r, c).unit = u.id;
+	};
+	put(enemies[0], own.row - 1, own.col, 1);
+	put(enemies[1], own.row + 1, own.col, 10);
+	own.strength = 1;
+	return [own.id, enemies[0].id, enemies[1].id];
+}
+
 //The engine contract's commands (the AI's and its random player actions, test/contracts/engine.contract.js),
 //each also stepped on the core from toData of the state before it: the same answer and the same
 //state after. The old engine's counters are made again from its units where they drifted (#72, #73);
@@ -422,7 +457,7 @@ test("The engine contract's commands, each on the core from the state before it,
 		}) }));
 	if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(seen) + "\n");
 	expect(problems).toEqual([]);
-	expect(seen.compared).toBeGreaterThan(500);
+	expect(seen.compared).toBeGreaterThan(2000);
 }, 300_000);
 
 //Commands.execute of the contract's modules, which also steps the core from the state before the
@@ -448,16 +483,10 @@ function shadowCommands(env: ContractEnv, tell: (cmd: Command, problem: string |
 			if (driftAfter) resync(old);
 			const want = JSON.stringify(toData(scenario, game).state);
 			const got = JSON.stringify("world" in core ? core.world.state : before.state);
-			tell(cmd, notCompared(core, want !== got, driftAfter || leaving) ? null : compared(r, core, want, got));
+			tell(cmd, want !== got && (driftAfter || leaving) ? null : compared(r, core, want, got));
 			return r;
 		},
 	};
-}
-
-//A command the core doesn't play yet, or one whose states differ where the counters drifted or the
-//selection changed a unit
-function notCompared(core: Stepped, differ: boolean, unreliable: boolean): boolean {
-	return notYet(core) || (differ && unreliable);
 }
 
 //What differs between the old engine's command and the core's step: the answer, then the state
