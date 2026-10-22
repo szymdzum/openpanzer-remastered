@@ -30,6 +30,7 @@ import { afterAll, expect, test } from "vitest";
 import { type ContractEnv, fixtures, runFixture } from "./contracts";
 import { countersEqual, drifted, load, resync } from "./invariants";
 import { difference } from "./aigames";
+import { commandOf, freeDeployHexes, sameClass, type Sequence, sequences } from "./commandgen";
 import { createWorld } from "../src/core/create";
 import { computeSight } from "../src/core/sight";
 import { begin, check, resume, step, type Stepped } from "../src/core/step";
@@ -46,24 +47,13 @@ type CoreWorld = ReturnType<typeof createWorld>;
 const SEED = process.env.FC_SEED ? Number(process.env.FC_SEED) : 134;
 const RUNS = process.env.FC_RUNS ? Number(process.env.FC_RUNS) : 0;
 
-const kinds = { move: 8, capture: 2, attack: 6, resupply: 1, reinforce: 1, overstrength: 1, mount: 1, unmount: 1, embark: 1,
-	disembark: 1, upgrade: 1, undo: 3, disband: 1, buy: 1, deploy: 1, upgradeUndeployed: 1, sell: 1, endTurn: 2, any: 4 };
-type Kind = keyof typeof kinds;
-interface Pick { kind: Kind; unit: number; pick: number; any: number }
-interface Sequence { fixture: string; seed: number; steps: Pick[] }
-
-const sequences: fc.Arbitrary<Sequence> = fc.record({
-	fixture: fc.constantFrom(...fixtures("engine")),
-	seed: fc.integer(),
-	steps: fc.array(fc.record({
-		kind: fc.oneof(...Object.entries(kinds).map(([k, weight]) => ({ arbitrary: fc.constant(k as Kind), weight }))),
-		unit: fc.nat(63), pick: fc.nat(1023), any: fc.nat(1 << 20),
-	}), { maxLength: 40, size: "max" }),
-});
 
 //The game: every player human (as the undo needs), but a campaign's other players (Game makes them
 //AI on every load); the game stream seeded, so the dice have a position in the state
-async function start(seq: Sequence) {
+//keep: the core plays on the old engine's counters with their arithmetic (World.keepDrift), as the
+//running game does until the counters go (#137): its sight must be the old counters after every command,
+//drift included, and nothing is masked
+async function start(seq: Sequence, keep = false) {
 	const w = await load(seq.fixture);
 	const { toData } = await import("../src/state");
 	const { Actions } = await import("../src/actions");
@@ -72,100 +62,26 @@ async function start(seq: Sequence) {
 	w.game.spotSide = w.m.currentPlayer.side;
 	w.Rng.game.state = seq.seed >>> 0;
 	const data = () => toData(w.scenario, w.game);
-	return { w, Actions, data, core: coreOf(w, data), log: [] as string[] };
+	return { w, Actions, data, keep, core: coreOf(w, data, keep), log: [] as string[] };
 }
 type Play = Awaited<ReturnType<typeof start>>;
 
-function coreOf(w: World, data: () => ReturnType<typeof ToData>): CoreWorld {
-	return createWorld(data(), w.Equipment.equipment, { spotSide: w.game.spotSide });
+function coreOf(w: World, data: () => ReturnType<typeof ToData>, keep = false): CoreWorld {
+	return createWorld(data(), w.Equipment.equipment, { spotSide: w.game.spotSide, sight: keep ? oldCounters(w) : undefined,
+		keepDrift: keep });
 }
 
-//The commands of a kind the engine offers the current player's unit u (none: it has none)
-type Offer = (w: World, u: Unit) => Command[];
-const one = (rule: (w: World, u: Unit) => boolean, cmd: (u: Unit) => Command): Offer => (w, u) => rule(w, u) ? [cmd(u)] : [];
-const moves = (w: World, u: Unit) => w.GameRules.getMoveRange(w.m, u).filter((c) => c.canMove);
-const unitOffers: Partial<Record<Kind, Offer>> = {
-	move: (w, u) => moves(w, u).map((c) => ({ type: "move", unit: u.id, to: { row: c.row, col: c.col } })),
-	capture: (w, u) => moves(w, u).filter((c) => enemyHex(w, u, c))
-		.map((c) => ({ type: "move", unit: u.id, to: { row: c.row, col: c.col } })),
-	attack: ({ m, GameRules: GR }, u) => GR.getUnitAttackCells(m.map, u, m.rows, m.cols)
-		.flatMap((c) => [false, true].map((air) => m.map[c.row][c.col].getAttackableUnit(u, air)))
-		.filter((t, i, all) => t && all.indexOf(t) === i).map((t) => ({ type: "attack", unit: u.id, target: t.id })),
-	resupply: one((w, u) => w.GameRules.canResupply(w.m.map, u), (u) => ({ type: "resupply", unit: u.id })),
-	reinforce: one((w, u) => w.GameRules.canReinforce(w.m.map, u), (u) => ({ type: "reinforce", unit: u.id })),
-	overstrength: one((w, u) => w.GameRules.canReinforce(w.m.map, u, true), (u) => ({ type: "reinforce", unit: u.id, overstrength: true })),
-	mount: one((w, u) => w.GameRules.canMount(u), (u) => ({ type: "mount", unit: u.id })),
-	unmount: one((w, u) => w.GameRules.canUnmount(u), (u) => ({ type: "unmount", unit: u.id })),
-	embark: one((w, u) => w.GameRules.canEmbark(w.m.map, u), (u) => ({ type: "embark", unit: u.id })),
-	disembark: one((w, u) => w.GameRules.canDisembark(w.m.map, u), (u) => ({ type: "disembark", unit: u.id })),
-	upgrade: (w, u) => sameClass(w, u.eqid).map((eqid) => ({ type: "upgrade", unit: u.id, eqid, transport: -1 })),
-	undo: one((w, u) => w.m.canUndoMove(u), (u) => ({ type: "undo", unit: u.id })),
-	disband: one(() => true, (u) => ({ type: "disband", unit: u.id })),
-};
-
-//A hex with a flag or an owner, not of u's side
-function enemyHex(w: World, u: Unit, c: { row: number; col: number }): boolean {
-	const h = w.m.map[c.row][c.col];
-	if (h.owner === -1) return h.flag !== -1;
-	return w.m.getPlayer(h.owner).side !== u.player.side;
-}
-
-//Other equipment of the class of eqid
-function sameClass(w: World, eqid: number): number[] {
-	const all = w.Equipment.equipment, uclass = all[eqid].uclass;
-	return Object.keys(all).map(Number).filter((id) => id !== eqid && all[id].uclass === uclass);
-}
-
-//The current player's commands on its core list and purchases
-const playerOffers: Partial<Record<Kind, (w: World) => Command[]>> = {
-	buy: (w) => Object.keys(w.Equipment.equipment).map(Number)
-		.filter((eqid) => w.Equipment.equipment[eqid].country === w.m.currentPlayer.country)
-		.map((eqid) => ({ type: "buy", eqid, transport: -1 })),
-	deploy: (w) => {
-		const list = w.m.currentPlayer.getCoreUnitList(), hexes = freeDeployHexes(w);
-		return list.flatMap((u, index) => u.isDeployed ? [] : hexes.map((to) => ({ type: "deploy", index, to: { row: to.row, col: to.col } })));
-	},
-	upgradeUndeployed: (w) => w.m.currentPlayer.getCoreUnitList()
-		.flatMap((u, index) => sameClass(w, u.eqid).map((eqid) => ({ type: "upgradeUndeployed", index, eqid, transport: 0 }))),
-	sell: (w) => w.m.currentPlayer.getCoreUnitList().map((_u, index) => ({ type: "sell", index })),
-};
-
-//The current player's side's deployment hexes with no unit
-function freeDeployHexes(w: World) {
-	return w.m.getDeployHexes(w.m.currentPlayer.side).filter((c) => !w.m.map[c.row][c.col].unit && !w.m.map[c.row][c.col].airunit);
-}
-
-//Any command at all from the pick's numbers, its ids and cells near the fixture's: most are refused,
-//some allowed where the rules have no say
-function anyCommand(w: World, n: number): Command {
-	const ids = w.m.getUnits().map((u) => u.id);
-	const unit = [...ids, -1, w.m.getBoard().uniqueID][n % (ids.length + 2)];
-	const to = { row: (n >> 3) % (w.m.rows + 2) - 1, col: (n >> 7) % (w.m.cols + 2) - 1 };
-	const eqids = Object.keys(w.Equipment.equipment).map(Number);
-	const eqid = [...eqids, 0, -1, 99999][(n >> 5) % (eqids.length + 3)];
-	const index = (n >> 9) % 4;
-	const types: Command[] = [{ type: "move", unit, to }, { type: "attack", unit, target: ids[(n >> 4) % ids.length] },
-		{ type: "resupply", unit }, { type: "reinforce", unit, overstrength: (n & 8) > 0 }, { type: "mount", unit },
-		{ type: "unmount", unit }, { type: "embark", unit }, { type: "disembark", unit }, { type: "undo", unit },
-		{ type: "deploy", index, to }, { type: "buy", eqid, transport: n & 16 ? -1 : eqid }, { type: "upgrade", unit, eqid, transport: -1 },
-		{ type: "upgradeUndeployed", index, eqid, transport: 0 }, { type: "disband", unit }, { type: "sell", index }];
-	return types[(n >> 11) % types.length];
-}
-
-//The command a pick stands for, null when the player has none of its kind
-function commandOf(w: World, s: Pick): Command | null {
-	if (s.kind === "endTurn") return { type: "endTurn" };
-	if (s.kind === "any") return anyCommand(w, s.any);
-	const own = playerOffers[s.kind];
-	if (own) {
-		const list = own(w);
-		return list.length ? list[s.pick % list.length] : null;
-	}
-	const offer = unitOffers[s.kind], m = w.m;
-	const units = m.getUnits().filter((u) => u.player.id === m.currentPlayer.id && u.getPos() && offer(w, u).length);
-	if (!units.length) return null;
-	const list = offer(w, units[s.unit % units.length]);
-	return list[s.pick % list.length];
+//The old engine's counters as the core's sight, count for count
+function oldCounters(w: World): CoreWorld["sight"] {
+	const counters = w.m.getBoard().visibility.counters, n = w.m.rows * w.m.cols;
+	const sight = { spot: [new Uint16Array(n), new Uint16Array(n)], zoc: [new Uint16Array(n), new Uint16Array(n)] } as CoreWorld["sight"];
+	for (let r = 0; r < w.m.rows; r++)
+		for (let c = 0; c < w.m.cols; c++)
+			for (const side of [0, 1]) {
+				sight.spot[side][r * w.m.cols + c] = counters[r][c].spot[side];
+				sight.zoc[side][r * w.m.cols + c] = counters[r][c].zoc[side];
+			}
+	return sight;
 }
 
 //What the old engine's hooks saw, as text
@@ -234,12 +150,19 @@ function compareStates(p: Play, cmd: Command, core: CoreWorld, events: GameEvent
 	const { w } = p;
 	const want = JSON.stringify(p.data().state), got = JSON.stringify(core.state);
 	const sightOk = countersEqual(w, (side, i) => core.sight.spot[side][i], (side, i) => core.sight.zoc[side][i]);
-	if ((want !== got || !sightOk) && drifted(w)) return masked(p, cmd, core, want === got);
+	if ((want !== got || !sightOk) && !p.keep && drifted(w)) return masked(p, cmd, core, want === got);
 	p.core = core;
 	for (const e of events) count("event " + e.type);
-	const problems = [want !== got ? "toData:" + difference(want, got) : "", sightProblem(core, sightOk),
+	const problems = [want !== got ? "toData:" + difference(want, got) : "", keptSightProblem(p, core, sightOk),
 		storyProblem(story, coreStory(events))].filter((x) => x !== "");
 	return problems.length ? problems.join("\n") : null;
+}
+
+//The core's sight: on the old counters (keep), those counters, drift included; else sightProblem's
+function keptSightProblem(p: Play, core: CoreWorld, sightOk: boolean): string {
+	if (!p.keep) return sightProblem(core, sightOk);
+	if (drifted(p.w)) count("drifted, kept");
+	return sightOk ? "" : "the core's sight isn't the old counters";
 }
 
 //The old engine's counters drifted (#72, #73): with the same state, it goes on with the counters its
@@ -377,8 +300,8 @@ function outcomeProblem(p: Play, ended?: number): string | null {
 	return null;
 }
 
-async function run(seq: Sequence): Promise<void> {
-	const p = await start(seq);
+async function run(seq: Sequence, keep = false): Promise<void> {
+	const p = await start(seq, keep);
 	stats.sequences++;
 	const played = () => seq.fixture + ", seed " + seq.seed + ":\n  " + p.log.join("\n  ");
 	Object.assign(seq, { [fc.toStringMethod]: played });
@@ -397,10 +320,17 @@ async function run(seq: Sequence): Promise<void> {
 }
 
 test("Property: the core's commands play as the old engine's, state, sight and events (counter drift: #72, #73)", async () => {
-	await fc.assert(fc.asyncProperty(sequences, run), { seed: SEED, path: process.env.FC_PATH, numRuns: RUNS || 20 });
+	await fc.assert(fc.asyncProperty(sequences, (seq) => run(seq)), { seed: SEED, path: process.env.FC_PATH, numRuns: RUNS || 20 });
 	expect(stats.commands).toBeGreaterThan(0);
 }, RUNS ? RUNS * 5000 : 120_000);
 
+
+test("Property: on the old counters with their arithmetic, the core's sight stays the old counters, drift included (#72, #73)", async () => {
+	const before = stats.commands;
+	await fc.assert(fc.asyncProperty(sequences, (seq) => run(seq, true)), { seed: SEED + 1, path: process.env.FC_PATH, numRuns: RUNS || 20 });
+	expect(stats.commands).toBeGreaterThan(before);
+	expect(stats["drifted, kept"]).toBeGreaterThan(0);
+}, RUNS ? RUNS * 5000 : 120_000);
 
 //Every fixture's turns ended one after the other past its turn limit, the screen showing one side as
 //against the AI (the side that hides units in the end of turn, #75) or none (AI against AI), both

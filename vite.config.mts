@@ -65,7 +65,7 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/core/*.ts", "src/core/commands/*.ts"],
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/core/*.ts", "src/core/commands/*.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -102,7 +102,7 @@ export default defineConfig({
 				"src/core/combat.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
 				"src/core/costs.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
 				"src/core/create.ts": { statements: 75, branches: 100, functions: 50, lines: 75 },
-				"src/core/draft.ts": { statements: 90, branches: 87, functions: 89, lines: 93 },
+				"src/core/draft.ts": { statements: 97, branches: 91, functions: 96, lines: 99 },
 				"src/core/equipment.ts": { statements: 88, branches: 84, functions: 80, lines: 90 },
 				"src/core/fight.ts": { statements: 99, branches: 100, functions: 95, lines: 99 },
 				"src/core/geometry.ts": { statements: 98, branches: 97, functions: 90, lines: 97 },
@@ -126,6 +126,7 @@ export default defineConfig({
 				"src/core/commands/turn.ts": { statements: 97, branches: 100, functions: 85, lines: 97 },
 				"src/core/commands/units.ts": { statements: 88, branches: 77, functions: 95, lines: 96 },
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
+				"src/mirror.ts": { statements: 90, branches: 79, functions: 97, lines: 93 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 			},
 		},

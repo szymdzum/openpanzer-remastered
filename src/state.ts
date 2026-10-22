@@ -439,6 +439,13 @@ function newPlayer(s: PlayerState): Player {
 function newUnit(s: OffMapUnit, id: UnitId): Unit {
 	const u = new Unit(s.eqid);
 	u.id = id;
+	setUnitFields(u, s);
+	return u;
+}
+
+//A unit's fields but its eqid, id and position to the state's (its transport made again when it is
+//another one): of a new unit, or of one the game holds (src/mirror.ts)
+export function setUnitFields(u: Unit, s: OffMapUnit) {
 	u.owner = s.owner;
 	u.hasMoved = s.hasMoved;
 	u.hasFired = s.hasFired;
@@ -451,8 +458,10 @@ function newUnit(s: OffMapUnit, id: UnitId): Unit {
 	u.strength = s.strength;
 	u.facing = s.facing;
 	u.flag = s.flag;
-	if (s.transport !== null) {
-		u.transport = new Transport(s.transport.eqid);
+	if (s.transport === null) {
+		u.transport = null;
+	} else {
+		if (u.transport === null || u.transport.eqid !== s.transport.eqid) u.transport = new Transport(s.transport.eqid);
 		u.transport.copy(s.transport as Transport);
 	}
 	u.carrier = s.carrier;
@@ -464,7 +473,6 @@ function newUnit(s: OffMapUnit, id: UnitId): Unit {
 	u.entrenchment = s.entrenchment;
 	u.entrenchTicks = s.entrenchTicks;
 	u.leader = s.leader;
-	return u;
 }
 
 //The units in their order with their ids, through the map's own placing (MapBoard.place gives a
@@ -515,7 +523,7 @@ function coreUnit(m: GameMap, c: CoreUnit): Unit {
 
 //The undo slot as UndoSlot.save and the capture left it: the unit before the move on the hex it
 //left, then what the capture changed
-function restoreUndo(m: GameMap, s: UndoState) {
+export function restoreUndo(m: GameMap, s: UndoState) {
 	const slot = m.getUndoSlot();
 	slot.clear();
 	const saved = newUnit(s.before, s.before.id);

@@ -34,16 +34,35 @@ const stats: Record<string, number> = {};
 const count = (what: string, n = 1) => { stats[what] = (stats[what] || 0) + n; };
 afterAll(() => { if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(stats) + "\n"); });
 
-//The core's session from the old game's state now: the AI plays every player the old AI plays
-function sessionOf(g: OldGame, loaded: boolean): Session {
-	const w = createWorld(g.toData(g.game.scenario, g.game), g.Equipment.equipment, { spotSide: g.game.spotSide, noFOW: g.uiSettings.noFOW });
+//The core's session from the old game's state now: the AI plays every player the old AI plays. keep:
+//on the old engine's counters with their arithmetic (World.keepDrift), as the running game until #137
+//removes them
+function sessionOf(g: OldGame, loaded: boolean, keep = false): Session {
+	const w = createWorld(g.toData(g.game.scenario, g.game), g.Equipment.equipment, { spotSide: g.game.spotSide, noFOW: g.uiSettings.noFOW,
+		sight: keep ? oldCounters(g) : undefined, keepDrift: keep });
 	return startSession(w, (type, player) => type === g.playerType.aiLocal ? aiController(player)
 		: type === g.playerType.aiScripted ? tutorialController(player) : null, { loaded, localSide: g.localSide });
 }
 
+//The old engine's counters as the core's sight, count for count
+function oldCounters(g: OldGame): World["sight"] {
+	const counters = g.m.getBoard().visibility.counters, n = g.m.rows * g.m.cols;
+	const sight: World["sight"] = { spot: [new Uint16Array(n), new Uint16Array(n)], zoc: [new Uint16Array(n), new Uint16Array(n)] };
+	counters.forEach((row, r) => row.forEach((h, c) => [0, 1].forEach((side) => {
+		sight.spot[side][r * g.m.cols + c] = h.spot[side];
+		sight.zoc[side][r * g.m.cols + c] = h.zoc[side];
+	})));
+	return sight;
+}
+
 //The core's sight: computeSight's of its state, and the old engine's counters unless they drifted from
-//its units during the advance (#72, #73: then they are made again)
+//its units during the advance (#72, #73: then they are made again). On the old counters (keepDrift),
+//always the old counters
 function sightProblem(g: OldGame, w: World): string {
+	if (w.keepDrift) {
+		if (drifted(g)) count("drifted, kept");
+		return countersEqual(g, (side, i) => w.sight.spot[side][i], (side, i) => w.sight.zoc[side][i]) ? "" : "the core's sight isn't the old counters";
+	}
 	const fresh = computeSight(w);
 	if (![0, 1].every((s) => fresh.spot[s].join() === w.sight.spot[s].join() && fresh.zoc[s].join() === w.sight.zoc[s].join()))
 		return "the core's sight isn't computeSight's";
@@ -114,6 +133,13 @@ test.each(fixtures("engine"))("The core's AI plays %s as the old AI, turn by tur
 	playBoth(name, g, s, name.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS);
 });
 
+test.each(fixtures("engine"))("On the old counters with their arithmetic, the core's AI plays %s as the old AI, drift included", async (name) => {
+	const g = await startFixture(name, 11);
+	const s = sessionOf(g, true, true);
+	planLoadedTurn(g);
+	playBoth(name, g, s, name.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS);
+});
+
 //harness/replay.sh's items: three scenarios of the issues, the first campaign's first scenario, every
 //40th scenario of the list, a later campaign's, and the tutorial with its scripted players
 const replayItems = ["drpzop01.xml", "drstu02.xml", "dr9fr03.xml", "campaign:0",
@@ -138,7 +164,7 @@ test.each([3, 4, 5])("The core's tutorial plays from turn %i as the old one", as
 
 afterAll(() => {
 	//(not a test of its own: the counts are the sum of the games above, whichever ran)
-	if (stats.games === fixtures("engine").length + replayItems.length + 3) {
+	if (stats.games === 2 * fixtures("engine").length + replayItems.length + 3) {
 		expect(stats.commands).toBeGreaterThan(500);
 		expect(stats["turn start commands"]).toBeGreaterThan(10);
 	}

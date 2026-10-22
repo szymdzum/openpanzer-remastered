@@ -467,6 +467,24 @@ is a controller too (src/core/tutorial.ts): AIScripted's script as data, its UI 
 (a message, a selection, the main menu), #80 and #81 kept, played in lockstep with the old one from
 its start, from its later turns and in the engine contract.
 
+**How #137 goes (stage C5).** The design is on the issue: the old objects (GameMap, Hex, Unit,
+Player) stay as a two-way mirror of the core's world while the old UI and the harness read and write
+them, and the game runs on the session.
+- The core's checkpoints (#190): `begin` and `resume` play a move up to the end of its animation and an
+  attack up to the end of its shots and its cleanup, as the old UI showed them; the surprise attack's
+  air mode (#77) and the finish that skips the retreat (an attack with nothing to animate) are inputs.
+  The session's `nextOrder`, `play`, `playOn` and `endTurn` with its save point are a screen's entries.
+- The mirror (src/mirror.ts): `applyData` updates the objects in place to the world's state, by unit id
+  (a deployed core unit keeps its object); `worldOf` makes the world again from toData of the objects,
+  so what the harness and the UI write into them keeps its effect; `mirrorDifference` compares the two.
+  test/mirror.test.ts plays every engine fixture's round as the AI and random commands a person sends,
+  checkpoint by checkpoint, and checks after each piece: the same toData, the same counters, every unit
+  the object it was, the world made again the same. Until the counters go, the world's sight is the old
+  counters with their arithmetic (`keepDrift`, docs/CORE.md): the drift of #72 and #73 shows up in
+  verify's UI scripts, so the game keeps it until the last step, and core-steps and core-ai play the
+  core on the drifting counters too (900 drifted states in 300 sequences, 175 in the AI's games: always
+  the old counters).
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action
