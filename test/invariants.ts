@@ -47,7 +47,7 @@ export function counter(isSet: () => boolean, set: (on: boolean) => void): numbe
 //Every unit's zone of control and spotting put on an empty board with the game's own per-unit
 //functions: a board hex counts what the game adds, and claims to be spotted already, so
 //setSpotRange marks no unit as newly spotted
-function recompute(w: World) {
+export function recompute(w: World) {
 	const { m, GameRules } = w;
 	const board: { zoc: number[]; spot: number[] }[][] = [];
 	const shadow: Hex[][] = [];
