@@ -85,9 +85,7 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 	//Today's load leaves the equipment lists and the random streams as they are (#128)
 	state.equipment = { indexes: Equipment.equipmentIndexes };
 	state.rng = null;
-	const scenario = fromData({ data, state });
-	todaysLoad(scenario);
-	return scenario;
+	return fromData({ data, state });
 }
 
 //The campaign's part of a save, once host's campaign is loaded: its scenario and Game's progress
@@ -96,12 +94,6 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 	//Today's load leaves Game's campaign progress as it is (#128)
 	c.progress = host.getCampaignProgress();
 	campaignFromData(host, c, scenario);
-}
-
-//What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the undo is gone
-function todaysLoad(scenario: Scenario) {
-	scenario.map.getUndoSlot().clear();
 }
 
 //The format before: GameState.exportGameState wrote the JSON of the game's objects, the scenario
