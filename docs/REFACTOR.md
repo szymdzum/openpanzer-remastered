@@ -424,6 +424,12 @@ game)` and `fromData({ data, state }, game)` on the old engine.
 - The save is still the JSON of the objects until #128: test/mapparts.test.ts keeps the fields and
   their order pinned for it.
 
+**How #133 goes (stage C1).** docs/CORE.md has the layout: `src/core/`, plain functions of a
+`World` (the data, the state, the equipment, the `Ruleset`, and the unit index and the sight
+derived beside the state). The ruleset (#116) holds the movement tables by ground condition and the
+combat steps (#118). The gamerules contract runs on the core too (test/core-contract.test.ts,
+through test/coreadapter.ts): every recorded call of the 15 fixtures agrees.
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action
