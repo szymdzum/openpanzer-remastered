@@ -10,18 +10,24 @@
  * and compared with a deep equal. The harness and the engine contract compare it (#127); it will be
  * the save (#128) and the new core's state (#129).
  *
+ * fromData builds the old engine's objects from it: the scenario, the map and its hexes, the
+ * players, the units in their order and with their ids (D1, D2), the core lists, the undo slot,
+ * the equipment lists, and the campaign's progress when given the game. It doesn't load anything:
+ * the equipment of the players' countries is loaded already, and so is the campaign.
+ *
  * What the old engine has and the state doesn't, on purpose: the selection (D6), the players'
- * handlers (picked from their type, D6), the spotting and zone of control counters (derived, D10,
- * with the drift of #72 and #73), the unit icons, a
+ * handlers (picked from their type, D6), the spotting and zone of control counters (derived, D10:
+ * fromData counts them again from the units, the drift of #72 and #73 is lost), the unit icons, a
  * reserve or reinforcement unit's stale id (D1), a destroyed unit still in the unit list (only
  * between an attack and the updateUnitList after it) and the fields only ever written
  * (hasRessuplied, nodossier, hasAnimation).
  */
 
+import { Cell } from "./prototypes";
 import { Equipment, type EquipmentIndexes } from "./equipment";
-import type { Unit } from "./unit";
-import type { GameMap, Player, PlayerDossier } from "./map";
-import type { Scenario } from "./scenario";
+import { Transport, Unit } from "./unit";
+import { type GameMap, Player, type PlayerDossier } from "./map";
+import { Scenario } from "./scenario";
 import type { Campaign } from "./campaign";
 
 export type UnitId = number;
@@ -221,11 +227,12 @@ export interface EquipmentState {
 	indexes: { [country: string]: EquipmentIndexes };
 }
 
-//What toData reads of the game beside its scenario (Game): the campaign and its progress in
-//Game's closure
+//What toData and fromData read and set of the game beside its scenario (Game): the campaign and
+//its progress in Game's closure. setCampaignProgress also links the scenario's campaign player
 export interface CampaignHost {
 	campaign: Campaign | null;
 	getCampaignProgress(): CampaignProgress;
+	setCampaignProgress(progress: CampaignProgress, scenario: Scenario): void;
 }
 
 export interface SavedGame {
@@ -328,4 +335,194 @@ function reinforcements(scenario: Scenario): ReinforcementState[] {
 function campaignState(c: Campaign, progress: CampaignProgress): CampaignState {
 	return { id: c.id, file: c.file, scenario: c.getCampaignData().indexOf(c.getCurrentScenario()), country: c.country,
 		difficulty: c.difficulty, startPrestige: c.startprestige, progress: { ...progress } };
+}
+
+//A new running scenario from saved data: the objects GameState's load would make, with what the
+//load loses kept (the ids, the order, the core lists, the undo slot...). Sets the equipment lists
+//and the movement table (global), and with host the campaign's scenario and Game's progress: the
+//equipment and the campaign are loaded already
+export function fromData(saved: SavedGame, host?: CampaignHost | null): Scenario {
+	const { data, state } = saved;
+	const s = state.scenario;
+	const scenario = new Scenario(s.file);
+	scenario.name = data.name;
+	scenario.setDescription(data.description);
+	scenario.maxTurns = s.maxTurns;
+	scenario.date = new Date(s.date);
+	scenario.atmosferic = s.atmospheric;
+	scenario.latitude = s.latitude;
+	scenario.ground = s.ground;
+	scenario.turnsPerDay = s.turnsPerDay;
+	scenario.dayTurn = s.dayTurn;
+	scenario.expPerSide = [{ ...s.expPerSide[0] }, { ...s.expPerSide[1] }];
+	scenario.unitsCostPerSide = [s.unitsCostPerSide[0], s.unitsCostPerSide[1]];
+	scenario.eqp = data.equipment;
+	Equipment.equipmentIndexes = structuredClone(state.equipment.indexes);
+
+	const m = scenario.map;
+	m.rows = state.map.rows;
+	m.cols = state.map.cols;
+	m.isLastRowPartial = state.map.lastRowPartial;
+	m.isLastColPartial = state.map.lastColPartial;
+	m.terrainImage = data.image;
+	m.victoryTurns = s.victoryTurns.slice();
+	m.maxTurns = s.maxTurns;
+	m.turn = state.turn.turn;
+	m.allocMap();
+	for (let r = 0; r < m.rows; r++)
+		for (let c = 0; c < m.cols; c++) {
+			const h = m.map[r][c], d = data.hexes[r * m.cols + c], x = state.map.hexes[r * m.cols + c];
+			h.terrain = d.terrain;
+			h.road = d.road;
+			h.owner = x.owner;
+			h.flag = x.flag;
+			h.isDeployment = d.deployment;
+			h.victorySide = x.victorySide;
+			h.name = d.name;
+		}
+	m.sidesVictoryHexes = [state.objectives[0].map((c) => new Cell(c.row, c.col)), state.objectives[1].map((c) => new Cell(c.row, c.col))];
+
+	const players = state.players.map((p) => newPlayer(p));
+	for (const p of players)
+		m.addPlayer(p);
+	if (state.turn.currentPlayer >= 0)
+		m.currentPlayer = m.getPlayer(state.turn.currentPlayer);
+
+	placeUnits(m, state);
+	state.players.forEach((p, i) => players[i].setCoreUnitList(p.core.map((c) => coreUnit(m, c))));
+	for (const r of state.reinforcements)
+		scenario.addReinforcement(r.turn, r.row, r.col, newUnit(r.unit, -1));
+	if (state.turn.undoable !== null)
+		restoreUndo(m, state.turn.undoable);
+
+	if (host)
+		restoreCampaign(host, state.campaign, scenario);
+	scenario.isLoaded = true;
+	scenario.setMoveTable();
+	return scenario;
+}
+
+function newPlayer(s: PlayerState): Player {
+	const p = new Player();
+	p.id = s.id;
+	p.side = s.side;
+	p.country = s.country;
+	p.prestige = s.prestige;
+	p.score = s.score;
+	p.dossier = structuredClone(s.dossier);
+	p.playedTurn = s.playedTurn;
+	p.type = s.type;
+	p.airTransports = s.airTransports;
+	p.navalTransports = s.navalTransports;
+	p.supportCountries = s.supportCountries.slice();
+	p.prestigePerTurn = s.prestigePerTurn.slice();
+	return p;
+}
+
+//A unit's objects from its state, with id (the unit list's own, or -1 off the map)
+function newUnit(s: OffMapUnit, id: UnitId): Unit {
+	const u = new Unit(s.eqid);
+	u.id = id;
+	u.owner = s.owner;
+	u.hasMoved = s.hasMoved;
+	u.hasFired = s.hasFired;
+	u.hasResupplied = s.hasResupplied;
+	u.hasOverstrength = s.hasOverstrength;
+	u.isMounted = s.isMounted;
+	u.isSurprised = s.isSurprised;
+	u.isCore = s.isCore;
+	u.tempSpotted = s.tempSpotted;
+	u.strength = s.strength;
+	u.facing = s.facing;
+	u.flag = s.flag;
+	if (s.transport !== null) {
+		u.transport = new Transport(s.transport.eqid);
+		u.transport.copy(s.transport as Transport);
+	}
+	u.carrier = s.carrier;
+	u.moveLeft = s.moveLeft;
+	u.ammo = s.ammo;
+	u.fuel = s.fuel;
+	u.hits = s.hits;
+	u.experience = s.experience;
+	u.entrenchment = s.entrenchment;
+	u.entrenchTicks = s.entrenchTicks;
+	u.leader = s.leader;
+	return u;
+}
+
+//The units in their order with their ids, through the map's own placing (MapBoard.place gives a
+//unit the board's next id: set to the unit's first), its player, its zone of control and spotting
+//on. Then the hexes' units as the state has them (a unit placed on an occupied hex, #74, leaves
+//both units on it and the hex holding one), the fields placing changed (the flag, the spotted
+//units' tempSpotted) back, and the next id
+function placeUnits(m: GameMap, state: GameState) {
+	const board = m.getBoard();
+	for (const s of state.units) {
+		const u = newUnit(s, s.id);
+		board.uniqueID = s.id;
+		if (s.row >= 0)
+			board.place(u, m.map[s.row][s.col]);
+		else
+			board.add(u);
+	}
+	const byId = unitsById(m);
+	for (let r = 0; r < m.rows; r++)
+		for (let c = 0; c < m.cols; c++) {
+			const x = state.map.hexes[r * m.cols + c];
+			m.map[r][c].unit = x.unit === null ? null : byId.get(x.unit);
+			m.map[r][c].airunit = x.air === null ? null : byId.get(x.air);
+		}
+	state.units.forEach((s, i) => {
+		const u = m.getUnits()[i];
+		u.flag = s.flag;
+		u.tempSpotted = s.tempSpotted;
+	});
+	board.uniqueID = state.nextUnitId;
+}
+
+function unitsById(m: GameMap): Map<UnitId, Unit> {
+	return new Map(m.getUnits().map((u) => [u.id, u]));
+}
+
+//A core list entry: the map's unit, or a unit off the map (a lost one was deployed when destroyed)
+function coreUnit(m: GameMap, c: CoreUnit): Unit {
+	if ("onMap" in c)
+		return unitsById(m).get(c.onMap);
+	const lost = "lost" in c;
+	const u = newUnit(lost ? c.lost : c.reserve, -1);
+	u.player = m.getPlayer(u.owner);
+	u.isDeployed = lost;
+	u.destroyed = lost;
+	return u;
+}
+
+//The undo slot as UndoSlot.save and the capture left it: the unit before the move on the hex it
+//left, then what the capture changed
+function restoreUndo(m: GameMap, s: UndoState) {
+	const slot = m.getUndoSlot();
+	slot.clear();
+	const saved = newUnit(s.before, s.before.id);
+	saved.player = m.getPlayer(saved.owner);
+	saved.setHex(s.before.row >= 0 ? m.map[s.before.row][s.before.col] : null);
+	slot.savedUnit = saved;
+	slot.unit = unitsById(m).get(s.unit);
+	slot.oldOwner = s.oldOwner;
+	slot.oldFlag = s.oldFlag;
+	slot.oldVictorySide = s.oldVictorySide;
+	slot.prestigeGain = s.prestigeGain;
+	slot.scoreGain = s.scoreGain;
+}
+
+//The campaign must be the one loaded: fromData doesn't load it (Campaign loads asynchronously)
+function restoreCampaign(host: CampaignHost, c: CampaignState | null, scenario: Scenario) {
+	if (c === null) {
+		if (host.campaign !== null)
+			throw new Error("fromData: a state without a campaign, the game plays one");
+		return;
+	}
+	if (host.campaign === null || host.campaign.id !== c.id)
+		throw new Error("fromData: load campaign " + c.id + " (" + c.file + ") first");
+	host.campaign.setScenarioById(c.scenario);
+	host.setCampaignProgress({ ...c.progress }, scenario);
 }
