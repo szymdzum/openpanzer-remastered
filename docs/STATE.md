@@ -135,7 +135,8 @@ The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are s
 
 ## On the old engine (#127)
 
-`src/state.ts` has the types and `toData(scenario, game)`; `fromData` follows. What
+`src/state.ts` has the types, `toData(scenario, game)` and `fromData({ data, state }, game)`, which
+builds the old engine's objects again (the equipment and the campaign loaded already). What
 #127 spelled out, and where the old engine made the sketch above more precise:
 
 - **`ScenarioData`**: the scenario's name and description, the equipment set, the map image, and
@@ -163,7 +164,7 @@ The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are s
   AI removed. The purchase window sorts them in place, and the order decides what the AI buys and
   which transport a unit embarks on.
 - **Left out on purpose:** the selection and the handlers (D6), the spotting and zone of control
-  counters (D10, with the drift of #72 and #73), the unit icons, an
+  counters (D10: fromData counts them again, the drift of #72 and #73 is lost), the unit icons, an
   off-map unit's stale id (D1), a destroyed unit still in the list (only between an attack and the
   `updateUnitList` after it), and the fields only ever written (`hasRessuplied`, `nodossier`,
   `hasAnimation`).

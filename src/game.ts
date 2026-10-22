@@ -63,6 +63,7 @@ export class Game {
 	declare continueCampaign: (outcomeType: ScenarioOutcome, endType?: string) => void; //endType: an endGameType value
 	declare getCampaignPlayer: () => Player | null;
 	declare getCampaignProgress: () => CampaignProgress;
+	declare setCampaignProgress: (progress: CampaignProgress, scenario: Scenario) => void;
 	declare setCurrentSide: () => void;
 	declare deployReinforcements: (turn: number, playerId: number) => boolean;
 	declare cleanup: () => void;
@@ -301,6 +302,17 @@ export class Game {
 		this.getCampaignProgress = function() {
 			return { isStart: isCampaignStart, removeNonCampaignUnits: shouldRemoveNonCampaignUnits,
 				awardPrototype: shouldAwardPrototype };
+		}
+		//And back, for a scenario restored from the state: its campaign player is the last player of
+		//the campaign's country, as setupPlayers links it
+		this.setCampaignProgress = function(progress: CampaignProgress, scenario: Scenario) {
+			isCampaignStart = progress.isStart;
+			shouldRemoveNonCampaignUnits = progress.removeNonCampaignUnits;
+			shouldAwardPrototype = progress.awardPrototype;
+			const players = scenario.map.getPlayers();
+			for (let i = 0; i < players.length; i++)
+				if (this.campaign !== null && players[i].country == this.campaign.country)
+					campaignPlayer = players[i];
 		}
 
 		this.setCurrentSide = function() {
