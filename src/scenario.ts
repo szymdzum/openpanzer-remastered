@@ -30,7 +30,7 @@ export interface Reinforcement {
 	row: number;
 	col: number;
 	unit: Unit;
-	turn: number; //after a copy the turn key string of the copied scenario
+	turn: number;
 	id: number;   //1 based position in its turn list when added
 }
 
@@ -71,7 +71,6 @@ export class Scenario {
 	declare getBalancedPrestige: (side: number) => number;
 	declare getSideUnitsAvgExp: (side: number) => number;
 	declare showStatistics: () => void;
-	declare copy: (s: Scenario) => void;
 
 	constructor(scenFile?: string) {
 		this.name = "";
@@ -256,30 +255,6 @@ export class Scenario {
 		}
 
 		this.showStatistics = function() {};
-
-		//Copy constructor
-		this.copy = function(s: Scenario) {
-			//name already set in constructor
-			this.maxTurns = s.maxTurns;
-			this.date = new Date(s.date);
-			this.atmosferic = s.atmosferic;
-			this.latitude = s.latitude;
-			this.ground = s.ground;
-			this.turnsPerDay = s.turnsPerDay;
-			this.eqp = s.eqp;
-			if (s.reinforcements) {
-				for (const t in s.reinforcements) {
-					for (let i = 0; i < s.reinforcements[t].length; i++) {
-						const unit = new Unit(s.reinforcements[t][i].unit.eqid);
-						unit.copy(s.reinforcements[t][i].unit);
-						this.addReinforcement(t, s.reinforcements[t][i].row, s.reinforcements[t][i].col, unit);
-					}
-				}
-			}
-			this.map.copy(s.map);
-			this.file = s.file;
-			this.setMoveTable();
-		}
 
 		//Private methods
 		//Check if all players from a side have played certain turn

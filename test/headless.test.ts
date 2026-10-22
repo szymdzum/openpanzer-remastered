@@ -68,7 +68,7 @@ test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => 
 		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm))
 			if (!i[1]) visit(i[2]);
 	};
-	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "actions", "commands", "leaders", "rng", "context", "state"]) visit(m);
+	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "actions", "commands", "leaders", "rng", "context", "state", "savegame"]) visit(m);
 	const ui = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "aiscripted", "osglue", "main"];
 	expect([...reached].filter((m) => ui.includes(m))).toEqual([]);
 });

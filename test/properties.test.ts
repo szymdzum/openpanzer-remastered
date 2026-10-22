@@ -558,14 +558,12 @@ async function reloaded(p: Play): Promise<[Save, Save] | null> {
 	return [JSON.parse(saved), JSON.parse(new GameState(game).exportGameState())];
 }
 
-//Slower (a load per sequence): fewer sequences. #71: a load gives the turn to the first player
+//Slower (a load per sequence): fewer sequences
 test("Property: a save keeps the game after a player's actions, but for the known losses", async () => {
 	await holds(fc.asyncProperty(sequences(playerActions, 25), (seq) => run(seq, {}, async (p) => {
 		const saves = await reloaded(p);
 		if (!saves) return [];
 		const [saved, again] = saves;
-		delete saved.scenario.map.currentPlayer;
-		delete again.scenario.map.currentPlayer;
 		const want = withoutLosses(saved), got = withoutLosses(again);
 		return isDeepStrictEqual(want, got) ? [] : ["the load changed the save:" + difference(JSON.stringify(want), JSON.stringify(got))];
 	})), 15);

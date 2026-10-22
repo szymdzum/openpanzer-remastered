@@ -14,31 +14,12 @@
 
 import { MAJOR_VERSION, type UISettings, uiSettings } from "./prototypes";
 import { Equipment } from "./equipment";
-import { defined, isChromeApp } from "./dom";
-import type { Unit } from "./unit";
-import { Player } from "./map";
+import { isChromeApp } from "./dom";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
 import type { Game } from "./game";
 import { game } from "./session";
-
-//The campaign progress kept in a save, see getCampaignSave
-export interface CampaignSave {
-	id: number;
-	file: string;
-	scenario: number;
-	country: number;
-	difficulty: number;
-	coreUnits: Unit[];
-}
-
-//A game as exportGameState writes it (and the scenario and players items of a local save):
-//the JSON of the objects, read back into new ones with their copy()
-export interface GameStateExport {
-	scenario: Scenario;
-	players: Player[];
-	campaign: CampaignSave | null;
-}
+import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./savegame";
 
 //What saveToCloud and restoreFromCloud read from the GitHub gists API
 export interface GistReply {
@@ -56,13 +37,15 @@ export class GameState {
 	declare restoreFromFile: (file: Blob, onDone?: () => void, onFail?: () => void) => boolean;
 	declare restoreFromCloud: (inputElement: HTMLInputElement, onDone?: () => void) => boolean;
 	declare clear: () => void;
-	declare saveCampaign: () => void;
 	declare saveSettings: () => void;
 	declare restoreSettings: () => void;
 	declare exportGameState: () => string;
 
 	constructor(Game: Game | null) {
+		//The game is one item (src/savegame.ts); a local save of the format before is three, the
+		//scenario, its players and the campaign's progress, read when there's no game item
 		var saveName = {
+			game: 'openpanzer-game-'+MAJOR_VERSION,
 			scenario:'openpanzer-scenario-'+MAJOR_VERSION,
 			players: 'openpanzer-players-'+MAJOR_VERSION,
 			settings:'openpanzer-settings-'+MAJOR_VERSION,
@@ -73,9 +56,9 @@ export class GameState {
 		//keeps the items for the lifetime of this GameState: restore() works once per instance
 		var restoredItems: { [key: string]: any } = {};
 
+		//The game with its campaign's progress
 		this.save = function() {
-			saveItem(saveName.scenario, Game.scenario);
-			saveItem(saveName.players, Game.scenario.map.getPlayers());
+			saveItem(saveName.game, writeSave(Game.scenario, Game));
 		}
 
 		//Saves the game as a public gist on GitHub. inputElement holds the gist id to overwrite,
@@ -129,14 +112,15 @@ export class GameState {
 			xhr.send(JSON.stringify(gist));
 		}
 
-		//Restores settings, scenario, players and campaign. The items are read one by one
-		//(asynchronously in a Chrome app) and the game is rebuilt when all 4 are in.
+		//Restores the settings and the game, or a game of the format before. The items are read one by
+		//one (asynchronously in a Chrome app) and the game is rebuilt when all 5 are in.
 		//onDone is called when the scenario has been restored, onFail when there is no saved game
 		this.restore = function(onDone: () => void, onFail: () => void) {
-			restoreItem(saveName.settings, onDone, onFail, 4);
-			restoreItem(saveName.scenario, onDone, onFail, 4);
-			restoreItem(saveName.players, onDone, onFail, 4);
-			restoreItem(saveName.campaign, onDone, onFail, 4);
+			restoreItem(saveName.settings, onDone, onFail, 5);
+			restoreItem(saveName.game, onDone, onFail, 5);
+			restoreItem(saveName.scenario, onDone, onFail, 5);
+			restoreItem(saveName.players, onDone, onFail, 5);
+			restoreItem(saveName.campaign, onDone, onFail, 5);
 		}
 
 		//Restores a game from an exportGameState() string, returns false if it can't be parsed
@@ -201,15 +185,10 @@ export class GameState {
 		}
 
 		this.clear = function() {
+			deleteItem(saveName.game);
 			deleteItem(saveName.scenario);
 			deleteItem(saveName.players);
 			deleteItem(saveName.campaign);
-		}
-
-		//Save campaign settings
-		this.saveCampaign = function() {
-			//saveItem skips null, so without a campaign the previous campaign save stays
-			saveItem(saveName.campaign, getCampaignSave());
 		}
 
 		//Saves only the user settings
@@ -221,47 +200,9 @@ export class GameState {
 			restoreItem(saveName.settings, null, function() {}, 1);
 		}
 
-		//Returns the game (scenario, players, campaign) as a JSON string
+		//Returns the game (src/savegame.ts) as a JSON string
 		this.exportGameState = function() {
-			const state = {} as GameStateExport;
-			//A hex with these values holds nothing worth saving and is written as {}
-			const emptyHex: { [p: string]: unknown } = {
-				unit: null,
-				airunit: null,
-				terrain: 0,
-				road: 0,
-				owner: -1,
-				flag: -1,
-				isDeployment: -1,
-				victorySide: -1,
-				name: "",
-				isMoveSel: false,
-				isAttackSel: false,
-			};
-
-			state.scenario = Game.scenario;
-			state.players = Game.scenario.map.getPlayers();
-			state.campaign = getCampaignSave();
-
-			return JSON.stringify(state, function(key, value) {
-				//Drop the player reference of units (objects with an eqid)
-				if (key === "player" && this.hasOwnProperty("eqid"))
-					return undefined;
-
-				//terrain is checked twice in the bundle
-				if (value && value.hasOwnProperty("terrain") && value.hasOwnProperty("terrain")) {
-					let isEmpty = true;
-					for (const p in emptyHex) {
-						if (!value.hasOwnProperty(p) || value[p] !== emptyHex[p]) {
-							isEmpty = false;
-							break;
-						}
-					}
-					if (isEmpty)
-						return {};
-				}
-				return value;
-			});
+			return JSON.stringify(writeSave(Game.scenario, Game));
 		}
 
 		//Private functions
@@ -306,69 +247,48 @@ export class GameState {
 				localStorage.removeItem(key);
 		}
 
-		//Restores a game from a JSON string, returns false if it doesn't hold a scenario
+		//Restores a game from a JSON string, returns false if it isn't a save
 		function restoreFromJSON(saveData: string) {
-			let state: GameStateExport = null;
-			try {
-				state = JSON.parse(saveData);
-			} catch (e) {
-				return false;
-			}
-
-			if (!state || !state.hasOwnProperty("scenario"))
+			const read = readSave(saveData);
+			if (read === null)
 				return false;
 
 			Game.cleanup();
-			loadGameState(state.scenario, state.players, state.campaign, Game.setupGameState.bind(Game));
+			loadGameState(read, Game.setupGameState.bind(Game));
 			return true;
 		}
 
 		//Creates the scenario and loads the equipment of all players and supporting countries
-		function loadGameState(scenarioData: Scenario, playersData: Player[], campaignData: CampaignSave | null, onDone: () => void) {
-			Game.scenario = new Scenario(scenarioData.file);
-			if (scenarioData.eqp)
-				Equipment.name = scenarioData.eqp;
+		function loadGameState(read: ReadSave, onDone: () => void) {
+			const { data, state } = read.save;
+			Game.scenario = new Scenario(state.scenario.file);
+			if (data.equipment)
+				Equipment.name = data.equipment;
 
-			Equipment.addPlayersEquipment(playersData, onEquipmentLoaded.bind(null, scenarioData, playersData, campaignData, onDone));
+			Equipment.addPlayersEquipment(state.players, onEquipmentLoaded.bind(null, read, onDone));
 		}
 
 		//Called once for each equipment file, the game is rebuilt after the last one
-		function onEquipmentLoaded(scenarioData: Scenario, playersData: Player[], campaignData: CampaignSave | null, onDone: () => void) {
+		function onEquipmentLoaded(read: ReadSave, onDone: () => void) {
 			if (--Equipment.equipmentToLoad)
 				return;
 
-			for (let i = 0; i < playersData.length; i++) {
-				const player = new Player();
-				player.copy(playersData[i]);
-				Game.scenario.map.addPlayer(player);
-			}
+			Game.scenario = scenarioFromSave(read);
 
-			Game.scenario.copy(scenarioData);
-			Game.scenario.isLoaded = true;
-
-			//Restore campaign state
-			if (defined(campaignData)) {
-				let campaignId = campaignData.id;
-				//Campaigns are found by file when the save has it, the id is the fallback
-				if (campaignData.hasOwnProperty("file")) {
-					campaignId = Campaign.findCampaignByFile(campaignData.file);
-					if (campaignId < 0)
-						campaignId = campaignData.id;
-				}
-				Game.campaign = new Campaign(campaignId, campaignData.difficulty || 0, restoreCampaign.bind(null, campaignData, onDone));
+			//Restore campaign state: campaigns are found by file, the id is the fallback
+			const c = read.save.state.campaign;
+			if (c !== null) {
+				let campaignId = Campaign.findCampaignByFile(c.file);
+				if (campaignId < 0)
+					campaignId = c.id;
+				Game.campaign = new Campaign(campaignId, c.difficulty, function() {
+					campaignFromSave(read, Game, Game.scenario);
+					onDone();
+				});
 			} else {
 				Game.campaign = null;
 				onDone();
 			}
-		}
-
-		//Called when the campaign has loaded
-		function restoreCampaign(campaignData: CampaignSave, onDone: () => void) {
-			const map = Game.scenario.map;
-			Game.campaign.setScenarioById(campaignData.scenario);
-			const player = map.getPlayersByCountry(campaignData.country)[0]; //Get first player of a country
-			map.restoreCoreUnitList(player, campaignData.coreUnits);
-			onDone();
 		}
 
 		//Stores a restored item, when all itemCount items are in restores the settings then the game
@@ -379,9 +299,6 @@ export class GameState {
 				restoredItems[key] = object;
 
 			if (Object.keys(restoredItems).length == itemCount) {
-				const s: Scenario = restoredItems[saveName.scenario];
-				const p: Player[] = restoredItems[saveName.players];
-				const c: CampaignSave | null = restoredItems[saveName.campaign];
 				const settings: UISettings = restoredItems[saveName.settings];
 
 				//Need to restore the settings since some players might be assigned to AI
@@ -391,8 +308,14 @@ export class GameState {
 					applySettings(settings);
 				}
 
-				if (s !== undefined && p !== undefined && s !== null && p !== null && s.file)
-					return loadGameState(s, p, c, onDone);
+				//The game, or the items of the format before
+				const read = readSaveObject(restoredItems[saveName.game]) || readSaveObject({
+					scenario: restoredItems[saveName.scenario],
+					players: restoredItems[saveName.players],
+					campaign: restoredItems[saveName.campaign] || null,
+				});
+				if (read !== null)
+					return loadGameState(read, onDone);
 
 				return onFail();
 			}
@@ -424,24 +347,6 @@ export class GameState {
 			//Restore player AI settings
 			for (var i = 0; i < s.isAI.length; i++)
 				uiSettings.isAI[i] = s.isAI[i];
-		}
-
-		//Returns the campaign state to save, null when not playing a campaign
-		function getCampaignSave(): CampaignSave | null {
-			let campaignSave: CampaignSave | null = null;
-
-			if (Game.campaign !== null) {
-				campaignSave = {
-					id: Game.campaign.id,
-					file: Game.campaign.file,
-					scenario: Game.campaign.getCurrentScenario().id,
-					country: Game.campaign.country,
-					difficulty: Game.campaign.difficulty,
-					coreUnits: Game.getCampaignPlayer().getCoreUnitList(),
-				};
-			}
-
-			return campaignSave;
 		}
 	}
 }

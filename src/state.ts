@@ -44,7 +44,7 @@ export interface Position {
 export interface ScenarioData {
 	name: string;
 	description: string;
-	equipment: string;		//the equipment set (Scenario.eqp)
+	equipment: string;		//the equipment set (Scenario.eqp); absent when imported from a save without it
 	image: string;			//the map image (GameMap.terrainImage)
 	hexes: HexData[];		//flat, index row * cols + col (the size is the state's, MapState)
 }
@@ -295,7 +295,8 @@ function position(c: Position): Position {
 	return { row: c.row, col: c.col };
 }
 
-function offMapUnit(u: Unit): OffMapUnit {
+//A unit's fields but its id and position: of a Unit, or of a unit in a save of the format before
+export function offMapUnit(u: OffMapUnit): OffMapUnit {
 	return {
 		eqid: u.eqid, owner: u.owner,
 		transport: u.transport ? { eqid: u.transport.eqid, ammo: u.transport.ammo, fuel: u.transport.fuel } : null,
@@ -411,7 +412,7 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null): Scenario
 		Rng.ai.state = state.rng.ai;
 	}
 	if (host)
-		restoreCampaign(host, state.campaign, scenario);
+		campaignFromData(host, state.campaign, scenario);
 	scenario.isLoaded = true;
 	scenario.setMoveTable();
 	return scenario;
@@ -529,8 +530,10 @@ function restoreUndo(m: GameMap, s: UndoState) {
 	slot.scoreGain = s.scoreGain;
 }
 
-//The campaign must be the one loaded: fromData doesn't load it (Campaign loads asynchronously)
-function restoreCampaign(host: CampaignHost, c: CampaignState | null, scenario: Scenario) {
+//The campaign's scenario and Game's progress: the campaign must be the one loaded, fromData doesn't
+//load it (Campaign loads asynchronously). A load sets the scenario first and this once the campaign
+//is in (src/savegame.ts)
+export function campaignFromData(host: CampaignHost, c: CampaignState | null, scenario: Scenario) {
 	if (c === null) {
 		if (host.campaign !== null)
 			throw new Error("fromData: a state without a campaign, the game plays one");

@@ -421,8 +421,8 @@ game)` and `fromData({ data, state }, game)` on the old engine.
 - The harness snapshot takes toData when the baseline has it (`STATE_SNAPSHOT`, set by
   harness/lib/reference.sh for both pages), else the walk of the objects: the original (reference/)
   has no toData, so against it both sides still walk.
-- The save is still the JSON of the objects until #128: test/mapparts.test.ts keeps the fields and
-  their order pinned for it.
+- The save is toData's state since #128 (docs/STATE.md, "The save"): the objects' fields and their
+  order are no longer part of it.
 
 **How #133 goes (stage C1).** docs/CORE.md has the layout: `src/core/`, plain functions of a
 `World` (the data, the state, the equipment, the `Ruleset`, and the unit index and the sight

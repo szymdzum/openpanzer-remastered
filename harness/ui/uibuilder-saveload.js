@@ -34,6 +34,16 @@ function loadFile(text) {
 	input.files = dt.files;
 	input.dispatchEvent(new Event("change", { bubbles: true }));
 }
+// A save of the format before #128 as the game wrote it (GameState.exportGameState then): the JSON
+// of the scenario, its players and the campaign's progress, the units without their player. Built
+// here so the step loads the same old save on a page that writes the new format
+function oldSave() {
+	const c = game.campaign;
+	const campaign = c && { id: c.id, file: c.file, scenario: c.getCurrentScenario().id, country: c.country,
+		difficulty: c.difficulty, coreUnits: game.getCampaignPlayer().getCoreUnitList() };
+	return JSON.stringify({ scenario: game.scenario, players: game.scenario.map.getPlayers(), campaign },
+		function(k, v) { return k === "player" && Object.prototype.hasOwnProperty.call(this, "eqid") ? undefined : v; });
+}
 const cloudEntry = (i) => $("cloudid_lastsaves").children[i];
 const cloudId = (v) => { $("cloudid").value = v; };
 
@@ -94,7 +104,7 @@ const steps = [
 		try { click("#disksave"); } finally { window.Date = RealDate; HTMLAnchorElement.prototype.click = realClick; }
 	}],
 	["load an old campaign save (no equipment set, no dossier) from disk", async () => {
-		const old = JSON.parse(game.state.exportGameState(), (k, v) => (k === "dossier" ? undefined : v));
+		const old = JSON.parse(oldSave(), (k, v) => (k === "dossier" ? undefined : v));
 		delete old.scenario.eqp;
 		const before = game.scenario;
 		loadFile(JSON.stringify(old));

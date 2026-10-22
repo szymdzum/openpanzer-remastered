@@ -432,29 +432,12 @@ export class Hex {
 
 //Hex Object Public Methods, assigned to the prototype: gamestate does for-in over a Hex
 export interface Hex {
-	copy(hex: Hex): void;
 	getUnit(airMode?: boolean | number): Unit; //gamerules passes 0 and 1
 	setUnit(unit: Unit): void;
 	delUnit(unit: Unit): void;
 	getAttackableUnit(atkunit: Unit, airMode: boolean | number): Unit;
 	cleanup(): void;
 }
-//Clone Hex object
-Hex.prototype.copy = function(hex) {
-	if (hex === null) return;
-
-	this.terrain = hex.terrain;
-	this.road = hex.road;
-	this.owner = hex.owner;
-	this.flag = hex.flag;
-	this.isDeployment = hex.isDeployment;
-	this.victorySide = hex.victorySide;
-	this.name = hex.name;
-	//Set units and their correct links to the new object
-	this.setUnit(hex.unit);
-	this.setUnit(hex.airunit);
-}
-
 //Returns air or ground unit on a hex depending on UI airMode
 Hex.prototype.getUnit = function(airMode?: boolean | number) {
 	if (this.unit !== null && this.airunit !== null) {
@@ -565,7 +548,6 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare currentUnit: Unit;
 	declare sidesVictoryHexes: Cell[][];
 	declare currentPlayer: Player;
-	declare name: string; //only set by copy()
 
 	declare allocMap: () => void;
 	declare addUnit: (unit: Unit) => void;
@@ -586,7 +568,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare getUnitNeighbor: (unit: Unit, direction: number, onlyNotMoved: boolean) => Unit;
 	declare delMoveSel: () => void;
 	declare delAttackSel: () => void;
-	declare setHex: (row: number, col: number, hex?: Hex) => void;
+	declare setHex: (row: number, col: number) => void;
 	declare updateVictorySides: (side: number, cell: Cell) => boolean;
 	declare setMoveRange: (unit: Unit) => void;
 	declare getCurrentMoveRange: () => Cell[];
@@ -617,7 +599,6 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare undoLastMove: () => void;
 	declare captureHex: (hex: Hex, unit: Unit) => CaptureResults;
 	declare getDeployHexes: (side: number) => Cell[];
-	declare copy: (m: GameMap) => void;
 	declare cleanup: () => void;
 
 	declare static onPlayerTurn: (player: Player, map: GameMap) => void;
@@ -782,11 +763,8 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	this.delMoveSel = function() { selection.clearMove(); }
 	this.delAttackSel = function() { selection.clearAttack(); }
 
-	this.setHex = function(row, col, hex) {
-		if (hex && typeof hex !== "undefined")
-			this.map[row][col].copy(hex); //copy values from the hex argument
-		else
-			hex = this.map[row][col]; //in-place
+	this.setHex = function(row, col) {
+		const hex = this.map[row][col];
 
 		//Add coords for each victory hex into list
 		let victorySide = hex.victorySide;
@@ -1385,52 +1363,6 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 			}
 		}
 		return c;
-	}
-
-	//Clone object / "copy constructor"
-	this.copy = function(m) {
-		if (m === null) return;
-		this.rows = m.rows;
-		this.cols = m.cols;
-		this.terrainImage = m.terrainImage;
-		this.name = m.name;
-		this.turn = m.turn;
-		this.maxTurns = m.maxTurns;
-
-		this.allocMap();
-
-		for (let r = 0; r < m.rows; r++) {
-			for (let c = 0; c < m.cols; c++) {
-				const h = m.map[r][c];
-				const hex = this.map[r][c];
-				if (Object.keys(h).length !== 0) { //Skip empty hexes
-					hex.copy(h);
-
-					if (h.unit !== null) {
-						var u = new Unit(h.unit.eqid);
-						u.copy(h.unit);
-						hex.setUnit(u);
-					}
-					if (h.airunit !== null) {
-						u = new Unit(h.airunit.eqid);
-						u.copy(h.airunit);
-						hex.setUnit(u);
-					}
-				}
-				this.setHex(r, c);
-			}
-		}
-		//Update sideVictoryHexes with values from the in-progress game not
-		//the default ones set by setHex()
-		this.sidesVictoryHexes = [[],[]];
-		for (var i = 0; i < m.sidesVictoryHexes[0].length; i++)
-			this.sidesVictoryHexes[0].push(m.sidesVictoryHexes[0][i]);
-		for (i = 0; i < m.sidesVictoryHexes[1].length; i++)
-			this.sidesVictoryHexes[1].push(m.sidesVictoryHexes[1][i]);
-
-		//Copy victoryTurns
-		for (i = 0; i < m.victoryTurns.length; i++)
-			this.victoryTurns.push(m.victoryTurns[i]);
 	}
 
 	//frees memory associated with this object if possible
