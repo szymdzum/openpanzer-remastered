@@ -141,10 +141,100 @@ Practical points:
 - Rights: the maps and sprites are SSI/Ubisoft art inherited through Panzer Marshal. An upscale
   is still derived from that art. New renders of our own or CC models are cleaner.
 
+## Pilot: the Panzer IV H (October 2026)
+
+The first unit made from scratch: the Pz IV H, whose old strip is
+`game/resources/units/images/pa131.png`. The scripts are in `art/units/`, the pictures below in
+`docs/assets-pilot/`.
+
+![The old strips (top) and the new ones (bottom) at 2x on map_0](assets-pilot/on-map.png)
+
+### How it was made
+
+- **The model is a script, not modelling by hand** (`art/units/panzer_iv.py`): boxes, prisms and
+  cylinders placed by real measurements. The first try, built from the overall dimensions only
+  (length, width, height), looked like a box, not a Panzer IV: the proportions inside the outline
+  are what make the vehicle.
+- **The measurements come from a drawing.** `File:Panzer_IV_G.svg` on Wikimedia Commons (public
+  domain, `art/units/reference/`) scaled to the real 5.89 m hull, 269 px a metre; the heights,
+  the sprocket, the idler, the eight road wheels in four bogies, the four return rollers and the
+  three steps of the gun were read off its outline. What the G lacks came from photographs of the
+  H (Bundesarchiv Bild 101I-298-1759-25, the Thun and El Goloso museum tanks): the six hull
+  Schürzen on their rail, the turret Schürzen open in front and wrapped round the stowage bin,
+  the longer L/48 gun with its muzzle brake, spare track links on the nose.
+- **The model is checked against the drawing**: `render.py side` renders the side at the
+  drawing's scale and lays it over it. The outlines overlap 90%; what differs is the H's skirts
+  and gun.
+
+![The model's side over the drawing: grey both, red the model only, blue the drawing only](assets-pilot/side-vs-drawing.png)
+
+- **The camera matches the old sprites**: `render.py fit` renders the outline at a range of
+  camera angles and scales and compares it with the old strip's. Best: orthographic, 22.5 degrees
+  above the ground. Frame i faces S turned i × 22.5 degrees towards E.
+
+![The model, smooth render](assets-pilot/model.png)
+
+### What a smooth render taught us
+
+A plain render, anti-aliased and softly lit, does not look better than the old sprite: it blends
+into the painted map, and the old one has a charm of its own (hard pixels, strong contrast, a
+dark rim, a black shadow). Real 1944 colours (Dunkelgelb with green and brown stripes) make it
+worse: yellow on the yellow-brown maps, and a fine camouflage turns to noise at 80×50.
+
+So the sprite is made the PG2 way (`render.py pixel`): rendered 8 times larger, then cut down to
+the sprite's pixels without smoothing, every pixel set to the nearest colour of the **old strip's
+own palette**, the edge of the silhouette darkened, the shadow solid black. The camouflage is the
+old one too: Panzergrau with broad dark bands. It gives the 1x strip (80×50 a frame) and the @2x
+one.
+
+![Old (top) and new (bottom) 1x strips, scaled up 3 times](assets-pilot/compare.png)
+
+### The old sprites are squatter than the real tank
+
+With true proportions the new tank came out narrower and taller than the old one. Measured
+outlines without the shadow, 1x pixels:
+
+| Frame | Old | True scale (7.2 px/m) | Chosen (7.6 px/m, height × 0.9) |
+|---|---|---|---|
+| 0, front | 28 × 28 | 24 × 26 | 26 × 26 |
+| 2, three-quarter | 43 × 27 | 44 × 28 | 46 × 28 |
+| 4, side | 56 × 23 | 51 × 24 | 54 × 23 |
+| 8, rear | 25 × 25 | 24 × 31 | 26 × 31 |
+
+The old strip is not one consistent projection: 56 px long from the side but 43 px across at 45
+degrees, where a true projection of that length and width would be about 59. The photographs of
+the scale models were probably taken close up, with perspective, so each angle is squeezed
+differently. A geometric render can't match every frame; the chosen scale keeps the new tank the
+size of the old units on the map: front and side 1-2 px smaller, the diagonals 1-3 px larger. The
+rear view stays taller (the gun shows above the turret from behind, and the antenna).
+
+### What's left
+
+- The gun breaks up in places at 1x: it is thinner than a pixel. The old strips draw the gun and
+  the antenna as a clear line; the sprite may need them thicker than real.
+- The old sprites have more contrast between the roof and the sides and a darker running gear.
+- The camouflage bands are still more regular than the old ones.
+- Not seen in the game yet: the next step is the strip as `public/hd/units/images/pa131.webp`,
+  the @2x file the renderer already loads (`src/render.ts`, `hdPath`). `scripts/upscale-assets.sh`
+  makes these files for every unit and map today (hqx for units, Real-ESRGAN for maps).
+- The widths (turret, superstructure) come from photographs and general data, not a top view;
+  *Panzer Tracts 4-3* has one.
+
+### Cost
+
+Blender is free (GPL; what it renders is ours). One pixel strip takes about 4 minutes on the
+laptop's GPU (Cycles, Metal), the drawing check seconds. Writing the model took most of the time:
+research first (drawing, photographs, the variant's features), then the script, then the check
+against the drawing. The helpers (`box`, `side_prism`, `plan_prism`, the track, the skirts, the
+markings) carry over to the next vehicles.
+
+`art/units/render.py scene` saves a `.blend` with the model, the game's camera and the light, to
+look round in the Blender app (numpad 0 looks through the game's camera).
+
 ## Plan
 
-1. Unit pilot: a Spring: 1944 tank (the Jagdpanzer IV, say), the Blender script, a `@2x` strip,
-   shown in the game next to the old sprites. Measure how long one unit takes.
+1. Unit pilot: done for the Panzer IV H (above), modelled from a drawing rather than taken from
+   Spring: 1944. Left: the strip in the game, the fixes listed above.
 2. Map pilot: one map through Real-ESRGAN with the "anti-plastic" pass, compared 1:1, the grid
    check.
 3. After the pilots, before going on: a style guide (camera angle, light, outline, palette,
