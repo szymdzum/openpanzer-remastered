@@ -424,6 +424,24 @@ game)` and `fromData({ data, state }, game)` on the old engine.
 - The save is toData's state since #128 (docs/STATE.md, "The save"): the objects' fields and their
   order are no longer part of it.
 
+**How #128 was done (stage B).** `src/savegame.ts`: the save is `{ version: 1, data, state }`,
+written by every save path (one local item instead of three, the file export, the cloud) and read
+back through fromData; the scenario file isn't read on load. The saves of the format before (the
+JSON of the objects, and the three local items) are imported: what they had is kept, what they
+never stored is listed as unknown and keeps the game's own (docs/STATE.md, "The save").
+- First the format alone (#164): the load did what the old one did, so the contracts changed only
+  in the saved game's text, and verify only in the save link's data. Then each loss in its own
+  commit, a `test.fails` flipped and a mask taken off `withoutLosses` each: #71, #54, #55, #83
+  (#170), #84, #85 (#174), #150, #142, #149 (#178), and the rest of the state #128 itself named
+  (the description, the undo, the random streams, the equipment lists, the campaign's progress).
+  Now the save property of test/properties.test.ts compares the whole save.
+- The engine contract was re-recorded by #54, #55, #83, #84 and #85 (the reference's saves had
+  those fields, the old load dropped them), the gamerules contract by #54, #84 and #85, the unit
+  contract by #85. Verify's differences were the fields each fix keeps, in uibuilder-saveload and
+  the replays' save/restore round trip.
+- A game loaded on an AI's turn has the AI plan the turn again (#71: its plan isn't state), and a
+  game started from a save doesn't apply the campaign's progress to the loaded scenario again.
+
 **How #133 goes (stage C1).** docs/CORE.md has the layout: `src/core/`, plain functions of a
 `World` (the data, the state, the equipment, the `Ruleset`, and the unit index and the sight
 derived beside the state). The ruleset (#116) holds the movement tables by ground condition and the
@@ -471,7 +489,8 @@ invariant tests:
 5. A guard on the move's destination, the AI stacking (#74).
 6. Close the surprise and input race (#58).
 7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126).
-8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128).
+8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128). Done, with #142, #149
+   and #150.
 9. The campaign load as a state machine with a load token (#64, #61).
 10. A remaster ruleset next to the classic one (step 4, #133), so the mechanics gaps
     (#1-#4, #14, #18) don't re-record the classic contracts (#53).
