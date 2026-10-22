@@ -209,9 +209,9 @@ and builds the game with fromData.
   unit ids and order (#85), the AI's core units kept out of the campaign player's list (#150), the
   campaign player's core list in its order, with its destroyed units (#142), every player's core
   list, the units bought and not deployed outside a campaign and the AI's (#149), and of #128 itself
-  the scenario's description, the undo of the last move and the game's and the AI's random streams.
-  Still lost, of #128: the equipment lists and the campaign's progress. The reinforcement part of
-  #55 is no loss in this format: the list has numeric turns and no ids.
+  the scenario's description, the undo of the last move, the game's and the AI's random streams and
+  the equipment lists. Still lost, of #128: the campaign's progress. The reinforcement part of #55
+  is no loss in this format: the list has numeric turns and no ids.
 
 ## Decisions
 
