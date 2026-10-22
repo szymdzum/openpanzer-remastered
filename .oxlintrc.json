@@ -41,6 +41,7 @@
 				"src/ai.ts",
 				"src/board.ts",
 				"src/combatlog.ts",
+				"src/commands.ts",
 				"src/context.ts",
 				"src/equipment.ts",
 				"src/gamerules.ts",

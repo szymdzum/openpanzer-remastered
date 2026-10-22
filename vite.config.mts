@@ -64,7 +64,7 @@ export default defineConfig({
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
-				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/rng.ts",
+				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
 				"src/context.ts", "src/util.ts"],
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -76,6 +76,7 @@ export default defineConfig({
 				"src/board.ts": { statements: 96, branches: 100, functions: 83, lines: 96 },
 				"src/campaign.ts": { statements: 49, branches: 30, functions: 43, lines: 49 },
 				"src/combatlog.ts": { statements: 96, branches: 81, functions: 90, lines: 96 },
+				"src/commands.ts": { statements: 97, branches: 92, functions: 98, lines: 97 },
 				"src/context.ts": { statements: 42, branches: 100, functions: 83, lines: 42 },
 				"src/equipment.ts": { statements: 84, branches: 71, functions: 68, lines: 85 },
 				"src/game.ts": { statements: 55, branches: 40, functions: 62, lines: 56 },
