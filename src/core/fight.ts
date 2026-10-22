@@ -192,21 +192,22 @@ export function resolveAttack(d: Draft, attacker: UnitId, defender: UnitId): Att
 }
 
 //Actions.finishAttack is cleanUpAttack, then endAttack: a screen shows the state in between. First the
-//destroyed units off the map, the attacker first (the unit list's cleanup after the attack). The
-//attacker as it was, for the retreat's rule (it reads what the attacker is, even destroyed)
+//destroyed units off the map (the unit list's cleanup after the attack): the attacker, the defender,
+//then any other the screen's animations left (an attack finished later, #58). The attacker as it was,
+//for the retreat's rule (it reads what the attacker is, even destroyed)
 export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 	const atk = unitById(d, start.attacker), def = unitById(d, start.defender);
-	if (atk.strength <= 0) destroy(d, atk);
-	if (def.strength <= 0) destroy(d, def);
+	for (const u of [atk, def, ...d.state.units.filter((x) => x !== atk && x !== def)])
+		if (u !== null && u.strength <= 0) destroy(d, u);
 	return atk;
 }
 
 //After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
 //no unit left loses (#92: when both have none, both win). retreat false: no retreat (the old UI's finish
 //of an attack with no animation to play read both units' strengths as 0, kept)
-export function endAttack(d: Draft, start: AttackStart, atk: UnitState, retreat: boolean) {
+export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null, retreat: boolean) {
 	const def = unitById(d, start.defender);
-	if (retreat && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
+	if (retreat && atk !== null && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
 		const to = retreatPosition(d, def);
 		if (to !== null) {
 			retreatTo(d, def.id, to);

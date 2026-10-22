@@ -158,6 +158,9 @@ test("Map.endTurn hands the next player's turn to the turn driver", () => {
 });
 
 test("The engine reads the game through the context, at the moment it needs it", () => {
+	//Without a game: no scenario, no campaign, no side shown, no host for the state
+	expect([defaultContext.scenario(), defaultContext.campaign(), defaultContext.campaignPlayer(), defaultContext.spotSide(),
+		defaultContext.host()]).toEqual([null, null, null, -1, null]);
 	const { map, players } = smallGame();
 	let spotSide = 0;
 	let campaignReads = 0;
@@ -166,6 +169,7 @@ test("The engine reads the game through the context, at the moment it needs it",
 		campaign: () => { campaignReads++; return null; },
 		campaignPlayer: () => null,
 		spotSide: () => spotSide,
+		host: () => null,
 	};
 	setEngineContext(context);
 

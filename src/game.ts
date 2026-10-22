@@ -30,6 +30,7 @@ import { UI } from "./ui";
 import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
 import { Commands } from "./commands";
+import { CorePlay } from "./coreplay";
 import { setEngineContext } from "./context";
 import { game, setGame } from "./session";
 import type { CampaignProgress } from "./state";
@@ -407,19 +408,19 @@ export class Game {
 					break;
 				}
 				case actionType.resupply: {
-					Commands.execute(game.scenario, { type: "resupply", unit: unitId(p[0] as Unit) });
+					CorePlay.execute(game.scenario, { type: "resupply", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.reinforce: {
-					Commands.execute(game.scenario, { type: "reinforce", unit: unitId(p[0] as Unit) });
+					CorePlay.execute(game.scenario, { type: "reinforce", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.mount: {
-					Commands.execute(game.scenario, { type: "mount", unit: unitId(p[0] as Unit) });
+					CorePlay.execute(game.scenario, { type: "mount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.umount: {
-					Commands.execute(game.scenario, { type: "unmount", unit: unitId(p[0] as Unit) });
+					CorePlay.execute(game.scenario, { type: "unmount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.upgrade: {
@@ -527,7 +528,8 @@ setEngineContext({
 	scenario: function() { return game.scenario; },
 	campaign: function() { return game.campaign; },
 	campaignPlayer: function() { return game.getCampaignPlayer(); },
-	spotSide: function() { return game.spotSide; }
+	spotSide: function() { return game.spotSide; },
+	host: function() { return game; }
 });
 
 export function gameStart() {

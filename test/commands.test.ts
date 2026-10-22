@@ -27,7 +27,7 @@ const defaultContext = engineContext, defaultTurnDriver = GameMap.onPlayerTurn;
 function setup(units = smallGameUnits) {
 	scenario = new Scenario();
 	({ map, players } = smallGame(scenario.map, units));
-	const context: EngineContext = { scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0 };
+	const context: EngineContext = { scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, host: () => null };
 	setEngineContext(context);
 	(globalThis as { map?: GameMap }).map = map; //Map.attackUnit reads a global map (#28)
 }

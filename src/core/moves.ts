@@ -37,8 +37,9 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { r
 	const capturer = canCapture(d, start);
 	const walked = walk(d, start, path);
 	const last = walked.passed[walked.passed.length - 1];
-	emit(d, retreat ? { type: "retreated", unit: id, from: { row: start.row, col: start.col }, to: { row: last.row, col: last.col } }
-		: { type: "moved", unit: id, path: walked.passed, cost: walked.cost, visible: walked.passed.some((c) => c.visible) });
+	const visible = walked.passed.some((c) => c.visible);
+	emit(d, retreat ? { type: "retreated", unit: id, from: { row: start.row, col: start.col }, to: { row: last.row, col: last.col },
+		path: walked.passed, visible } : { type: "moved", unit: id, path: walked.passed, cost: walked.cost, visible });
 
 	const win = last.row === to.row && last.col === to.col && capturer ? capture(d, id, last, undo) : false;
 	payMove(d, writeUnit(d, id), walked.cost);

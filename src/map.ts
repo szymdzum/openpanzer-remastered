@@ -556,6 +556,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare getUnitImagesList: () => UnitImagesList;
 	declare getBoard: () => MapBoard;
 	declare getUndoSlot: () => UndoSlot;
+	declare getSelection: () => MapSelection;
 	declare hasAliveUnits: (side: number) => boolean;
 	declare removeAllSideUnits: (side: number) => void;
 	declare getPlayers: () => Player[];
@@ -653,6 +654,8 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	//The unit list with its next id, and the undo slot: src/state.ts reads and restores them
 	this.getBoard = function() { return board; }
 	this.getUndoSlot = function() { return lastMove; }
+	//The selection's hexes, which the game's commands on the core show as the old commands did (src/coreplay.ts)
+	this.getSelection = function() { return selection; }
 
 	this.hasAliveUnits = function(side) {
 		for (let i = 0; i < unitList.length; i++)

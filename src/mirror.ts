@@ -166,11 +166,10 @@ function applyUnits(m: GameMap, w: World): Map<number, Unit> {
 	const units = new Map<number, Unit>();
 	for (const s of w.state.units) {
 		const u = before.get(s.id) || deployed.get(s.id) || new Unit(s.eqid);
-		const was = before.has(s.id) ? shown(u) : null;
 		applyUnit(m, u, s, w.destroyed.has(s.id) || s.strength <= 0);
 		units.set(s.id, u);
 		all.set(s.id, u);
-		cacheImages(m.getBoard().images, u, was);
+		if (!before.has(s.id)) cacheImages(m.getBoard().images, u);
 	}
 	for (const u of list)
 		if (!units.has(u.id)) {
@@ -182,23 +181,12 @@ function applyUnits(m: GameMap, w: World): Map<number, Unit> {
 	return units;
 }
 
-//What a unit's icons are of: its equipment and its transport's
-function shown(u: Unit): [number, number] {
-	return [u.eqid, u.transport === null ? 0 : u.transport.eqid];
-}
-
-//The icons of the image cache a unit adds: put on the map (was null: MapBoard.add, the unit's, its
-//transport's and its carrier's), or upgraded there (GameMap.upgradeUnit: the unit's eqid gets what it
-//shows now, its transport's when mounted)
-function cacheImages(images: { [eqid: number]: string }, u: Unit, was: [number, number] | null) {
-	if (was === null) {
-		images[u.eqid] = Equipment.equipment[u.eqid].icon;
-		if (u.transport !== null) images[u.transport.eqid] = u.transport.icon;
-		if (u.carrier > 0) images[u.carrier] = Equipment.equipment[u.carrier].icon;
-	} else if (was[0] !== u.eqid || (u.transport !== null && was[1] !== u.transport.eqid)) {
-		images[u.eqid] = u.getIcon();
-		if (u.transport !== null) images[u.transport.eqid] = u.transport.icon;
-	}
+//The icons of a unit put on the map, for the image cache (MapBoard.add): the unit's, its transport's,
+//its carrier's
+function cacheImages(images: { [eqid: number]: string }, u: Unit) {
+	images[u.eqid] = Equipment.equipment[u.eqid].icon;
+	if (u.transport !== null) images[u.transport.eqid] = u.transport.icon;
+	if (u.carrier > 0) images[u.carrier] = Equipment.equipment[u.carrier].icon;
 }
 
 //The objects of the core units that are on the map now and weren't (deployed): the same object, as
