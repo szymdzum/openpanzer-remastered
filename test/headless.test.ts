@@ -11,11 +11,11 @@ import { type EngineContext, engineContext, setEngineContext } from "../src/cont
 import { GameRules } from "../src/gamerules";
 import { GameMap, Player } from "../src/map";
 import { Unit } from "../src/unit";
-import { AI, type AIAction, type AIOptions, type AIPlan, aiDefaultConfig, createAIEvaluator } from "../src/ai";
+import { AI, type AIAction, type AIOptions, type AIPlan, createAIEvaluator } from "../src/ai";
 import { Scenario } from "../src/scenario";
 import { Actions } from "../src/actions";
 import { Commands } from "../src/commands";
-import { unitClass } from "../src/prototypes";
+import { aiDefaultConfig, unitClass } from "../src/prototypes";
 import { smallGame } from "./smallgame";
 
 const root = path.resolve(__dirname, "..");

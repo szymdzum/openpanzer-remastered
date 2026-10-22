@@ -204,6 +204,52 @@ export let actionType = {
 	viewport: 12
 };
 
+//The AI's settings: what it buys, when it reinforces and resupplies, how it scores
+export interface AIConfig {
+	minReinforceStrength: number; //reinforce below this strength even if the unit can still act
+	minAmmo: number; //resupply below this ammo
+	minFuel: number; //resupply below this fuel
+	objectiveScore: number; //divided by the distance to the nearest objective
+	attackLossesThreshold: number; //times the unit class loss cost, the score an attack must beat
+	entrenchmentScore: number; //per entrenchment level, for staying in place
+	minStrengthLossRatio: number; //minimum strength / expected losses to attack
+	badAttackScore: number;
+	unspottedFactor: number; //attacks on targets on unspotted hexes
+	randomFactor: number[]; //a score is multiplied by one of these, picked at random
+	prestigeReserve: number; //prestige not spent on buying units
+	airPrestigeRatio: number; //of the prestige over the reserve, for air units
+	maxUnitCost: number;
+	minUnitCost: number;
+	airPurchaseClasses: number[];
+	groundPurchaseClasses: number[];
+	//By unit class: the cost of losing strength and the value of killing strength
+	unitClassLossCost: number[];
+	unitClassKillValue: number[];
+}
+
+//The settings of the bundle's AI (src/ai.ts and the new core's, src/core/ai.ts)
+export let aiDefaultConfig: AIConfig = {
+	minReinforceStrength: 4,
+	minAmmo: 2,
+	minFuel: 5,
+	objectiveScore: 4000,
+	attackLossesThreshold: 4,
+	entrenchmentScore: 50,
+	minStrengthLossRatio: 2.5,
+	badAttackScore: -1000,
+	unspottedFactor: 0.3,
+	randomFactor: [0.8, 0.85, 0.9, 0.95, 1, 1.1, 1.15, 1.2],
+	prestigeReserve: 1000,
+	airPrestigeRatio: 0.3,
+	maxUnitCost: 900,
+	minUnitCost: 120,
+	airPurchaseClasses: [unitClass.fighter, unitClass.tacticalBomber],
+	groundPurchaseClasses: [unitClass.infantry, unitClass.infantry, unitClass.artillery, unitClass.antiTank,
+		unitClass.tank, unitClass.infantry, unitClass.tank],
+	unitClassLossCost: [0, 5, 5, 10, 10, 5, 10, 40, 20, 10, 5, 30, 30, 40, 15, 10, 10, 40, 40, 10, 10, 10],
+	unitClassKillValue: [0, 50, 25, 30, 10, 10, 5, 150, 150, 10, 50, 100, 100, 150, 50, 50, 50, 100, 150, 50, 50, 50]
+};
+
 //Define prestige gains on different situations
 export let prestigeGains = {
 	flagCapture: 50,

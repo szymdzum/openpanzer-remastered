@@ -4,10 +4,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { AI, type AIPlan, aiDefaultConfig, createAIEvaluator } from "../src/ai";
+import { AI, type AIPlan, createAIEvaluator } from "../src/ai";
 import { engineContext, setEngineContext } from "../src/context";
 import { Equipment, type EquipmentCountryFile } from "../src/equipment";
-import { unitClass } from "../src/prototypes";
+import { aiDefaultConfig, unitClass } from "../src/prototypes";
 import type { Scenario } from "../src/scenario";
 import { freshGame, mulberry32, startState } from "./lifecycle";
 import { smallGame } from "./smallgame";
