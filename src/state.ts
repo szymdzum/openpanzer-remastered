@@ -332,8 +332,11 @@ function reinforcements(scenario: Scenario): ReinforcementState[] {
 	return list;
 }
 
+//A campaign whose data is still loading (Game.newCampaign, before its first scenario) has no
+//scenario yet: -1
 function campaignState(c: Campaign, progress: CampaignProgress): CampaignState {
-	return { id: c.id, file: c.file, scenario: c.getCampaignData().indexOf(c.getCurrentScenario()), country: c.country,
+	const data = c.getCampaignData();
+	return { id: c.id, file: c.file, scenario: data ? data.indexOf(c.getCurrentScenario()) : -1, country: c.country,
 		difficulty: c.difficulty, startPrestige: c.startprestige, progress: { ...progress } };
 }
 
