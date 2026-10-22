@@ -31,18 +31,23 @@ export type ViewEvent =
 export type Order = { command: Command } | { view: ViewEvent };
 
 //What a controller did to the world outside the orders: the world after (its commands stepped, its
-//stream moved on), the commands it played, in order, and what they and it told
+//stream moved on), the commands it played, in order, and what they and it told. handOver: it gave its
+//player away (the tutorial at its end), to whoever the player's type in the world now says
 export interface Played {
 	world: World;
 	commands: Command[];
 	events: GameEvent[];
 	view: ViewEvent[];
+	handOver?: boolean;
 }
 
 //The session calls, in the old game's order (Game and Map.endTurn): join when the players are set up
 //(Game.setupPlayers), then at each of its player's turns startTurn (Map.endTurn's turn driver: the
 //AI's purchases and deployment, the tutorial's script), plan (still before the reinforcements arrive,
-//#94; a game loaded on its turn plans again, #71), then next until it answers null, which ends the turn
+//#94; a game loaded on its turn plans again, #71), then next until it answers null, which ends the turn.
+//A hand-over at startTurn gives the player a new controller at once (none for a person); at join the
+//session keeps the controller all the same, as Game.setupPlayers set the handler after the scripted
+//one's constructor had handed it over
 export interface Controller {
 	readonly player: number;
 	join(w: World): Played;

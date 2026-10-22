@@ -4,6 +4,7 @@
 //the AI and the tutorial as controllers (test/core-ai.test.ts)
 import { freshGame, mulberry32, startState } from "./lifecycle";
 import { readFixture, restoreState } from "./contracts";
+import { resync } from "./invariants";
 import type { AIAction } from "../src/ai";
 import type { Unit } from "../src/unit";
 import type { Command } from "../src/commands";
@@ -14,6 +15,7 @@ import type { SessionEnd } from "../src/core/session";
 async function modules() {
 	const { game } = await import("../src/game");
 	const { AI } = await import("../src/ai");
+	const { AIScripted } = await import("../src/aiscripted");
 	const { Commands } = await import("../src/commands");
 	const { Actions } = await import("../src/actions");
 	const { UIBuilder } = await import("../src/uibuilder");
@@ -23,7 +25,7 @@ async function modules() {
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");
-	return { game, AI, Commands, Actions, UIBuilder, GameRules, GameMap, Equipment, Rng, toData, ...prototypes };
+	return { game, AI, AIScripted, Commands, Actions, UIBuilder, GameRules, GameMap, Equipment, Rng, toData, ...prototypes };
 }
 type Modules = Awaited<ReturnType<typeof modules>>;
 
@@ -38,7 +40,7 @@ export interface OldGame extends Modules {
 //what the next player's turn start did (the commands its calls amount to) and the state then
 export type OldAdvance =
 	| { kind: "order"; order: Order; refusal: string | null }
-	| { kind: "endTurn"; started: Command[]; startedState: string | null }
+	| { kind: "endTurn"; started: Command[]; startedState: string | null; view: ViewEvent[] }
 	| { kind: "ended" };
 
 //Game's getLocalSide: the sides of the human and the scripted players, 2 when both
@@ -64,20 +66,60 @@ export async function startItem(item: string, seed: number): Promise<OldGame> {
 	return setUp(o, localSideOf(o), false);
 }
 
-//An engine fixture restored as a save is loaded: every player the AI, none on the screen. The AI whose
+//Where the tutorial's turns 1 and 2 meant its units to be when turn 3 starts, and turn 3 when turn 4
+//starts, by unit id: a new game never gets there (the turn-2 freeze, #80). The allied infantry in the
+//city is gone by then
+const TUTORIAL_PLACES: Record<number, [number, number, number][]> = {
+	3: [[3, 15, 10], [2, 7, 15], [6, 8, 14], [5, 9, 14], [0, 7, 9], [1, 7, 13], [7, 8, 15]],
+	4: [[3, 15, 10], [2, 14, 11], [6, 14, 9], [5, 14, 8], [0, 11, 9], [1, 13, 13], [7, 12, 12]],
+};
+const TUTORIAL_CITY_DEFENDER = 4;
+
+//The tutorial started as from turn turn, as a game loaded on that turn, its units where its script
+//meant them to be (turns 3 and 4): its scripted players are made again (makeScriptedPlayers), which
+//queues that turn's actions
+export async function startTutorialAt(turn: number, seed: number): Promise<OldGame> {
+	const g = await startItem("scripted:tutorial.xml", seed);
+	g.m.turn = turn;
+	const places = TUTORIAL_PLACES[turn];
+	if (places === undefined) return g;
+	g.m.getUnitById(TUTORIAL_CITY_DEFENDER).destroyed = true;
+	g.m.updateUnitList();
+	for (const [id, row, col] of places) {
+		const u = g.m.getUnitById(id), p = u.getPos();
+		g.m.map[p.row][p.col].delUnit(u);
+		g.m.map[row][col].setUnit(u);
+	}
+	resync(g);
+	return g;
+}
+
+//Game.setupPlayers on a load: a scripted player gets its handler, made after its constructor ran (a
+//constructor that handed the player over past turn 4 is overridden). What they asked of the screen
+export function makeScriptedPlayers(g: OldGame): ViewEvent[] {
+	for (const p of g.m.getPlayers())
+		if (p.type === g.playerType.aiScripted) p.handler = new g.AIScripted(p, g.m);
+	return g.view.splice(0);
+}
+
+//An engine fixture restored as a save is loaded: every player the AI but the scripted ones (the
+//tutorial's, which queue their turn when they are made), the screen showing the local side. The AI whose
 //turn it is plans it again (planLoadedTurn, #71)
 export async function startFixture(name: string, seed: number): Promise<OldGame> {
 	await restoreState(readFixture("engine", name).state);
 	const o = await modules();
 	Math.random = mulberry32(seed);
 	o.Rng.seed(seed);
-	for (const p of o.game.scenario.map.getPlayers()) p.type = o.playerType.aiLocal;
-	return setUp(o, -1, true);
+	const m = o.game.scenario.map;
+	for (const p of m.getPlayers()) if (p.type !== o.playerType.aiScripted) p.type = o.playerType.aiLocal;
+	const g = setUp(o, localSideOf(o), true);
+	for (const p of m.getPlayers()) if (p.type === o.playerType.aiScripted) p.handler = new o.AIScripted(p, m);
+	return g;
 }
 
 //Game's startLoadedTurn: the AI whose turn it is plans it
 export function planLoadedTurn(g: OldGame) {
-	(g.m.currentPlayer.handler as InstanceType<OldGame["AI"]>).planTurn();
+	if (g.m.currentPlayer.type === g.playerType.aiLocal) (g.m.currentPlayer.handler as InstanceType<OldGame["AI"]>).planTurn();
 }
 
 //The players the AI plays get its handler (the scripted ones keep theirs), the screen shows the local
@@ -193,13 +235,14 @@ function endTurn(g: OldGame): OldAdvance {
 	} finally {
 		g.GameMap.onPlayerTurn = onPlayerTurn;
 	}
+	const view = g.view.splice(0);
 	if (defeat) {
 		g.ended = { kind: "turnLimit", side };
-		return { kind: "endTurn", started, startedState };
+		return { kind: "endTurn", started, startedState, view };
 	}
 	g.game.spotSide = shownSide(g);
 	g.game.deployReinforcements(g.m.turn, g.m.currentPlayer.id);
-	return { kind: "endTurn", started, startedState };
+	return { kind: "endTurn", started, startedState, view };
 }
 
 //The AI's purchases and deployment as the commands they amount to (Player.buyUnit with no transport,
