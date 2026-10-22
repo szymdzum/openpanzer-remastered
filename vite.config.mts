@@ -59,13 +59,14 @@ export default defineConfig({
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
 		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
-		//and the entry (main)
+		//and the entry (main), and of the new core (src/core/)
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts"],
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/core/*.ts"],
+			exclude: ["src/core/types.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -94,6 +95,18 @@ export default defineConfig({
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 87, lines: 95 },
 				"src/state.ts": { statements: 98, branches: 88, functions: 96, lines: 98 },
+				"src/core/attack.ts": { statements: 96, branches: 97, functions: 90, lines: 97 },
+				"src/core/combat.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
+				"src/core/costs.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
+				"src/core/create.ts": { statements: 75, branches: 100, functions: 50, lines: 75 },
+				"src/core/equipment.ts": { statements: 88, branches: 84, functions: 80, lines: 90 },
+				"src/core/geometry.ts": { statements: 98, branches: 93, functions: 88, lines: 97 },
+				"src/core/movement.ts": { statements: 98, branches: 98, functions: 96, lines: 98 },
+				"src/core/rules.ts": { statements: 80, branches: 100, functions: 50, lines: 80 },
+				"src/core/sight.ts": { statements: 94, branches: 94, functions: 85, lines: 96 },
+				"src/core/supply.ts": { statements: 97, branches: 97, functions: 90, lines: 98 },
+				"src/core/units.ts": { statements: 96, branches: 100, functions: 94, lines: 96 },
+				"src/core/world.ts": { statements: 97, branches: 98, functions: 94, lines: 96 },
 			},
 		},
 	},

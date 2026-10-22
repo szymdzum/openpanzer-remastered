@@ -2,7 +2,8 @@
 // Every rule is an error. "overrides" lists, per rule, the files that broke it when it was
 // turned on: new files get every rule, and a file leaves a list once it is clean (the lists may
 // only shrink). The first override keeps the engine modules from importing UI modules or
-// game.ts (the engine reads the game through src/context.ts).
+// game.ts (the engine reads the game through src/context.ts), the second the new core
+// (src/core/) from importing the old engine.
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	"plugins": [
@@ -81,6 +82,29 @@
 								],
 								"allowTypeImports": true,
 								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md)"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"src/core/*.ts"
+			],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"../*",
+									"!../prototypes",
+									"!../rng"
+								],
+								"allowTypeImports": true,
+								"message": "The new core imports only the tables of src/prototypes.ts, src/rng.ts and types: not the old engine (docs/CORE.md)"
 							}
 						]
 					}
