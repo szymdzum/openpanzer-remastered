@@ -31,6 +31,10 @@ from a bug before the rules change ([docs/RESEARCH.md](docs/RESEARCH.md)).
 
 A campaign never breaks. Players' reports from the Panzer Marshal pages are mostly here.
 
+The rule fixes here wait for the new engine core (docs/REFACTOR.md step 4): the gameplay is
+frozen while it is built, so no fix is done twice. The save fixes come first (#128), and so do
+the AI crashes (#100, #101).
+
 - [ ] The harness checks the classes of bugs players report: a campaign scenario starts like
       the same scenario alone (#64), every side of every scenario can deploy and buy (#60)
 - [ ] Campaign and save bugs: Magyar Massacre (#61), 100 Regiments (#65), half hexes and time
