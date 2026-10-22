@@ -183,6 +183,15 @@ test("fromData gives the game its campaign progress and campaign player", async 
 		.toThrow(/load campaign -1/);
 });
 
+//The harness reads the state at any moment: a campaign just started still loads its data
+test("toData of a game whose campaign is still loading has no campaign scenario yet", async () => {
+	const r = await restored("drpzop01-t0.json.gz");
+	const { Campaign } = await import("../src/campaign");
+	const campaign = new Campaign(0, 0, () => {});
+	const saved = r.toData(r.scenario, { campaign, getCampaignProgress: () => r.game.getCampaignProgress(), setCampaignProgress() {} });
+	expect(saved.state.campaign).toMatchObject({ id: 0, scenario: -1 });
+});
+
 //#72: removeNonCampaignUnits takes units off without their zone of control and spotting. fromData
 //counts the counters again from the units (D10), so the phantom ones are gone: the old engine's
 //counters aren't reproduced. A fix of #72 flips this
