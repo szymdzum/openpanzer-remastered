@@ -8,8 +8,8 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * Reconstructed from the Panzer Marshal 3.2.14 bundle, where it followed the styles (aiscripted.ts
- * re-exports it); names and comments carried over from the openpanzer 2.9 sound.js.
+ * Reconstructed from the Panzer Marshal 3.2.14 bundle, where it followed the styles; names and
+ * comments carried over from the openpanzer 2.9 sound.js.
  */
 
 import { uiSettings } from "./prototypes";

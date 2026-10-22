@@ -144,6 +144,7 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 	};
 
 	let cr = GameRules.calculateAttackResults(attackingUnit, enemyUnit, true);
+	result.cr = cr;
 	if (!attackingUnit.isSurprised && !cr.isOverrun) {
 		let supportUnits = GameRules.getSupportFireUnits(map.getUnits(), attackingUnit, enemyUnit);
 		for (const u in supportUnits) {
@@ -164,7 +165,6 @@ function resolveAttack(map: GameMap, attackingUnit: Unit, enemyUnit: Unit, hooks
 		result.defending.leaderGain = cr.defLeaderGain;
 		if (h.onAttack) h.onAttack(result);
 	}
-	result.cr = cr;
 	if (result.attackStopped)
 		attackingUnit.hasFired = true;
 

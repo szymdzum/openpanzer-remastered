@@ -10,7 +10,7 @@
  *
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, no 2.9 counterpart: names come
  * from the code and its callers. The style and sound parts that follow it in the bundle
- * are in style.ts and sound.ts, re-exported here for the modules that import them from here.
+ * are in style.ts and sound.ts.
  */
 
 import { actionType, playerSide, playerType } from "./prototypes";

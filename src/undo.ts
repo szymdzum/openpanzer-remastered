@@ -6,8 +6,7 @@
  *
  * One move: GameMap.moveUnit saves the unit before it moves, captureHex what the move captured,
  * and the move can be undone if it spotted no new unit and wasn't surprised. Any other action
- * resets it. Undoing copies the saved unit back (Unit.copy), which gives the unit a copy of its
- * player instead of the map's player (#68).
+ * resets it. Undoing copies the saved unit back (Unit.copy), which keeps the map's own player (#68).
  */
 
 import { Unit } from "./unit";

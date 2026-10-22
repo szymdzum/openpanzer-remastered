@@ -19,6 +19,13 @@ import { GameRules } from "./gamerules";
 import type { Hex, Player } from "./map";
 import { engineContext } from "./context";
 
+//An equipment id the equipment list knows, else its first key (a string key, kept)
+function knownEqid(eqid: number): number {
+	if (typeof Equipment.equipment[eqid] === "undefined")
+		return Object.keys(Equipment.equipment)[0] as unknown as number;
+	return eqid;
+}
+
 //Transport Object Constructor
 //A class so other modules can type `new Transport(...)`. Fields are `declare`d (they emit nothing),
 //the methods stay assigned to the prototype (enumerable, as the original), typed by the interface below
@@ -29,10 +36,7 @@ export class Transport {
 	declare icon: string;
 
 	constructor(equipmentID: number) {
-		if (typeof Equipment.equipment[equipmentID] === "undefined")
-			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
-		else
-			this.eqid = equipmentID;
+		this.eqid = knownEqid(equipmentID);
 		this.ammo = Equipment.equipment[this.eqid].ammo;
 		this.fuel = Equipment.equipment[this.eqid].fuel;
 		this.icon = Equipment.equipment[this.eqid].icon; //This is only used when building image cache list in map.js
@@ -94,10 +98,7 @@ export class Unit {
 
 	constructor(equipmentID: number) {
 		//Public Properties
-		if (typeof Equipment.equipment[equipmentID] === "undefined")
-			this.eqid = Object.keys(Equipment.equipment)[0] as unknown as number; //a string key, kept
-		else
-			this.eqid = equipmentID;
+		this.eqid = knownEqid(equipmentID);
 		this.id = -1;
 		this.owner = -1;
 		this.hasMoved = false;
@@ -175,10 +176,7 @@ export interface Unit {
 //Unit Object Public Methods
 Unit.prototype.copy = function(u: Unit | null) {
 	if (u === null) return;
-	if (typeof Equipment.equipment[u.eqid] === "undefined")
-		this.eqid = Object.keys(Equipment.equipment)[0];
-	else
-		this.eqid = u.eqid;
+	this.eqid = knownEqid(u.eqid);
 	this.id = u.id;
 	this.owner = u.owner;
 	this.hasMoved = u.hasMoved;
@@ -380,7 +378,7 @@ Unit.prototype.entrench = function(): boolean {
 
 	terrainEntrench = terrainEntrenchment[hex.terrain];
 
-	if (this.entrenchment >= terrainEntrenchment[hex.terrain]) {
+	if (this.entrenchment >= terrainEntrench) {
 		let entrenchLevel = this.entrenchment - terrainEntrench;
 		let nextEntrenchLevel = 9 * entrenchLevel + 4;
 		this.entrenchTicks += +(this.experience/100) + (terrainEntrench + 1) * unitEntrenchRate[uc];

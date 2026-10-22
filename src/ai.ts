@@ -182,14 +182,10 @@ export class AI {
 				prestige = prestige - airPrestige;
 				const airPurchase = buyUnits(airPrestige, airPurchaseClasses);
 				const groundPurchase = buyUnits(prestige, groundPurchaseClasses);
-				let eqList = airPurchase.units;
-				for (i = eqList.length - 1; i >= 0; i--)
-					player.buyUnit(eqList[i]);
-				airPurchase.units = [];
-				eqList = groundPurchase.units;
-				for (i = eqList.length - 1; i >= 0; i--)
-					player.buyUnit(eqList[i]);
-				groundPurchase.units = [];
+				for (i = airPurchase.units.length - 1; i >= 0; i--)
+					player.buyUnit(airPurchase.units[i]);
+				for (i = groundPurchase.units.length - 1; i >= 0; i--)
+					player.buyUnit(groundPurchase.units[i]);
 			}
 
 			//Deploy the undeployed core units on the deployment hexes
@@ -395,15 +391,12 @@ export class AI {
 
 			if (target) {
 				//Record the expected losses of the target (inlined in the bundle)
-				const enemy = target;
-				if (enemy) {
-					if (typeof plan.enemyUnits[enemy.id] === "undefined")
-						plan.enemyUnits[enemy.id] = new EnemyUnit(enemy);
-					plan.enemyUnits[enemy.id].isAttacked = true;
-					plan.enemyUnits[enemy.id].losses += bestKills;
-					if (plan.enemyUnits[enemy.id].losses > enemy.strength)
-						plan.enemyUnits[enemy.id].isKilled = true;
-				}
+				if (typeof plan.enemyUnits[target.id] === "undefined")
+					plan.enemyUnits[target.id] = new EnemyUnit(target);
+				plan.enemyUnits[target.id].isAttacked = true;
+				plan.enemyUnits[target.id].losses += bestKills;
+				if (plan.enemyUnits[target.id].losses > target.strength)
+					plan.enemyUnits[target.id].isKilled = true;
 				addAction(actionType.attack, [ unit, target ]);
 				//noResupplyReinforce is not an AIUnit property (a typo for noResupply?), kept from the bundle
 				aiUnit.didAttack = aiUnit.noResupplyReinforce = true;

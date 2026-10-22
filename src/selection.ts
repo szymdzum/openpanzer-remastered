@@ -39,8 +39,6 @@ export class MapSelection {
 			return false;
 
 		this.clear();
-		this.clearMove();
-		this.clearAttack();
 		this.map.currentUnit = unit;
 
 		//Negative carrier: the unit is disembarking, show the disembark positions
@@ -94,10 +92,9 @@ export class MapSelection {
 		this.clearMove();
 		var c = GameRules.getMoveRange(this.map, unit);
 
-		for (var i = 0; i < c.length; i++) {
-			this.moveSelected.push(c[i]); //Push both canPass and canMove for the shortestPath function
-			if (c[i].canMove) this.map.map[c[i].row][c[i].col].isMoveSel = true; //Only allow canMove destination hexes on map
-		}
+		//Both canPass and canMove cells for the shortest path, only canMove ones shown on the map
+		for (var i = 0; i < c.length; i++)
+			this.addMoveCell(c[i], c[i].canMove);
 	}
 
 	setAttackRange(unit: Unit) {

@@ -43,7 +43,7 @@ import { Actions, type AttackResult } from "./actions";
 export interface UI {
 	handleReinforcementDeployment(): void;
 	uiUnitSelect(unit: Unit | null): boolean;
-	uiUnitMove(unit: Unit, row: number, col: number): boolean;
+	uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]): boolean;
 	uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit): boolean;
 	showAlert(row: number, col: number, text: string | number, positive?: boolean): void;
 	showGameToolTip(text: string, row: number, col: number): void;
