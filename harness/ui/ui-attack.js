@@ -80,7 +80,8 @@ const steps = [
 		setupDuel(inf, def);
 		const p = inf.getPos(), f = freeAround(p.row, p.col).find((c) => GameRules.distance(c.row, c.col, def.getPos().row, def.getPos().col) > 1);
 		teleport(art, f.row, f.col);
-		inf.strength = 3;
+		// a veteran artillery: with less experience its shot misses on this seed and the attack goes on
+		inf.strength = 3; art.experience = 350;
 		attackClick(inf, def);
 		await finish();
 		{ const al = alerts(); check(al.indexOf("Attack Stopped") >= 0, "Attack Stopped alert in " + al); }
@@ -128,7 +129,7 @@ const steps = [
 	["attack a weak infantry with nowhere to go: surrender", async () => {
 		const atk = U(40), def = U(72);
 		setupDuel(atk, def);
-		def.strength = 10; def.entrenchment = 0; atk.strength = 15; atk.experience = 500;
+		def.strength = 8; def.entrenchment = 0; atk.strength = 15; atk.experience = 500;
 		const d = def.getPos(), blocked = freeAround(d.row, d.col);
 		const terrains = blocked.map((c) => M().map[c.row][c.col].terrain);
 		blocked.forEach((c) => { M().map[c.row][c.col].terrain = terrainType.Ocean; });
