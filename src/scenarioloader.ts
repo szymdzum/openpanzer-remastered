@@ -17,9 +17,12 @@ import { Equipment } from "./equipment";
 import { GameRules } from "./gamerules";
 import { Unit } from "./unit";
 import { Player } from "./map";
-import { Scenario } from "./scenario";
+import type { Scenario } from "./scenario";
 import { engineContext } from "./context";
 import { Leaders } from "./leaders";
+
+//Where the scenario files are, relative to the page (Scenario.scenarioPath is the same string)
+export const scenarioPath = "resources/scenarios/data/";
 
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries. scen.onLoadFinished() is called at the
@@ -39,7 +42,7 @@ export class ScenarioLoader {
 			let url;
 
 			scen = scenarioObject;
-			url = Scenario.scenarioPath + scen.file;
+			url = scenarioPath + scen.file;
 			if (this.noCache)
 				url += "?_=" + new Date().getTime();
 

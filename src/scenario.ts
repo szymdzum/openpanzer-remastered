@@ -19,7 +19,7 @@ import {
 import { Equipment } from "./equipment";
 import { Unit } from "./unit";
 import { GameMap, type Player } from "./map";
-import { ScenarioLoader } from "./scenarioloader";
+import { ScenarioLoader, scenarioPath } from "./scenarioloader";
 import { Rng } from "./rng";
 
 //The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
@@ -296,7 +296,7 @@ export class Scenario {
 
 //After the class: a class isn't hoisted like the constructor function was
 Scenario.loader = new ScenarioLoader();
-Scenario.scenarioPath = "resources/scenarios/data/";
+Scenario.scenarioPath = scenarioPath;
 
 //Lookup information about scenario in scenariolist, returns the scenariolist entry or null
 Scenario.getScenarioDataByFileName = function(scenFile: string): ScenarioListEntry {
