@@ -65,7 +65,7 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts"],
+				"src/context.ts", "src/util.ts", "src/state.ts"],
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -93,6 +93,7 @@ export default defineConfig({
 				"src/unit.ts": { statements: 97, branches: 93, functions: 93, lines: 98 },
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 87, lines: 95 },
+				"src/state.ts": { statements: 96, branches: 83, functions: 90, lines: 96 },
 			},
 		},
 	},

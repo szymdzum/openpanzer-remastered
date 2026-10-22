@@ -32,6 +32,7 @@ import { Actions } from "./actions";
 import { Commands } from "./commands";
 import { setEngineContext } from "./context";
 import { game, setGame } from "./session";
+import type { CampaignProgress } from "./state";
 
 //UI is a constructor function, not a class: this gives `new` on it a type
 export interface UIConstructor { new (game: Game): UI; }
@@ -61,6 +62,7 @@ export class Game {
 	declare onCampaignLoadFinished: () => void;
 	declare continueCampaign: (outcomeType: ScenarioOutcome, endType?: string) => void; //endType: an endGameType value
 	declare getCampaignPlayer: () => Player | null;
+	declare getCampaignProgress: () => CampaignProgress;
 	declare setCurrentSide: () => void;
 	declare deployReinforcements: (turn: number, playerId: number) => boolean;
 	declare cleanup: () => void;
@@ -293,6 +295,12 @@ export class Game {
 				return campaignPlayer;
 
 			return null;
+		}
+
+		//The campaign's progress between scenarios, for the state (src/state.ts)
+		this.getCampaignProgress = function() {
+			return { isStart: isCampaignStart, removeNonCampaignUnits: shouldRemoveNonCampaignUnits,
+				awardPrototype: shouldAwardPrototype };
 		}
 
 		this.setCurrentSide = function() {

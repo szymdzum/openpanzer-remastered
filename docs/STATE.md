@@ -130,10 +130,43 @@ interface Reinforcement {
 }
 ```
 
-The campaign part (`CampaignState`: id, file, scenario index, difficulty, starting prestige and
-the flags Game keeps in its closure between scenarios: whether to award a prototype, whether
-non-campaign units are removed, whether it's the campaign start) and `Dossier`,
-`EquipmentState`, `UndoState`, `RngState` are spelled out in #127.
+The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are spelled out in
+#127, below.
+
+## On the old engine (#127)
+
+`src/state.ts` has the types and `toData(scenario, game)`; `fromData` follows. What
+#127 spelled out, and where the old engine made the sketch above more precise:
+
+- **`ScenarioData`**: the scenario's name and description, the equipment set, the map image, and
+  per hex the terrain, the roads, the name and the deployment player.
+- **`CampaignState`**: the campaign's index in the campaign list and its data file, the index of
+  the scenario played, the campaign player's country, the difficulty, the starting prestige, and
+  `progress`, the three flags Game keeps in its closure between scenarios (`isStart`,
+  `removeNonCampaignUnits`, `awardPrototype`). Game's other closure variables aren't state: the
+  local side follows from the player types, the saved campaign player is overwritten before it is
+  read, and the scenario load waiting for the player's click happens between scenarios.
+- **`Dossier`** is the player's dossier as it is: the units lost (core, auxiliary) and killed by
+  unit class, the scenario names by outcome; empty until the first campaign scenario sets it up.
+- **`UndoState`**: the unit, the unit as it was before the move (`UnitState`, where it stood), and
+  what the capture changed (old owner, flag and objective side, `null` when unchanged, the prestige
+  and score gained). `UndoSlot` with no unit is `null`: the rest of the slot is never read then.
+- **`RngState`** is a number; `rng` stays `null` until the streams of #126 exist.
+- **`expPerSide`** keeps the experience total and the unit count of each side: the average a
+  bought unit gets divides them.
+- **`victoryTurns`** is the scenario's list as loaded (`number[]`).
+- **A unit in the list on no hex** has row and col -1: `Player.setPlayerToHQ` leaves its units in
+  the map's list.
+- **`CoreUnit`** has a third case, `{ lost: OffMapUnit }`: a core unit destroyed on the map stays
+  in the list until the player goes to HQ.
+- **D9, revised:** `EquipmentState` holds the lists by country and unit class, not only what the
+  AI removed. The purchase window sorts them in place, and the order decides what the AI buys and
+  which transport a unit embarks on.
+- **Left out on purpose:** the selection and the handlers (D6), the spotting and zone of control
+  counters (D10, with the drift of #72 and #73), the unit icons, an
+  off-map unit's stale id (D1), a destroyed unit still in the list (only between an attack and the
+  `updateUnitList` after it), and the fields only ever written (`hasRessuplied`, `nodossier`,
+  `hasAnimation`).
 
 ## Decisions
 
