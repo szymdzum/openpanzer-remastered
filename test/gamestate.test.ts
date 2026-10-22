@@ -171,10 +171,10 @@ function coreLists(s: SaveFile) {
 		: "lost" in c ? "lost " + c.lost.eqid : "reserve " + c.reserve.eqid));
 }
 
-//#142: the load rebuilds the campaign player's core list from the map, in hex order, and drops its
-//destroyed units: the campaign fixture with its first core unit disbanded (it stays in the list
-//until the player goes to HQ), saved and loaded
-test.fails("GameState load keeps the campaign's core list (#142)", async () => {
+//#142: the load keeps the campaign player's core list as it was, where it rebuilt it from the map
+//in hex order and dropped its destroyed units: the campaign fixture with its first core unit
+//disbanded (it stays in the list until the player goes to HQ), saved and loaded
+test("GameState load keeps the campaign's core list (#142)", async () => {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
 	const { game } = await import("../src/game");
 	scenario.map.disbandUnit(game.getCampaignPlayer().getCoreUnitList()[0].id);

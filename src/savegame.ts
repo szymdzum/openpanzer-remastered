@@ -17,7 +17,6 @@
 import { Equipment } from "./equipment";
 import type { Player, PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
-import type { Unit } from "./unit";
 import {
 	campaignFromData, type CampaignHost, type CampaignState, type CoreUnit, fromData, type GameState, type HexState, type OffMapUnit,
 	offMapUnit, type PlayerState, type Position, type ReinforcementState, type ScenarioData, type ScenarioState, toData, type UnitState
@@ -96,40 +95,22 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 	//Today's load leaves Game's campaign progress as it is (#128)
 	c.progress = host.getCampaignProgress();
 	campaignFromData(host, c, scenario);
-	rebuildCoreList(scenario, c.country);
 }
 
 //What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the undo is gone and the core lists are rebuilt (#142, #149)
+//fixed in its own commit: the undo is gone and the other players' core lists (#149)
 function todaysLoad(scenario: Scenario, state: GameState) {
 	const m = scenario.map;
 	m.getUndoSlot().clear();
 	emptyCoreLists(scenario, state.campaign === null ? null : m.getPlayersByCountry(state.campaign.country)[0]);
 }
 
-//#149: the load starts every player without core units. A campaign's player (the first of its
-//country) gets its list back once the campaign is loaded: its units waiting to be deployed until then
-const waitingReserves = new WeakMap<Scenario, Unit[]>();
-
+//#149: the load starts every player but the campaign's (the first of its country) without core
+//units
 function emptyCoreLists(scenario: Scenario, campaignPlayer: Player | null) {
-	if (campaignPlayer)
-		waitingReserves.set(scenario, campaignPlayer.getCoreUnitList().filter((u) => !u.isDeployed));
 	for (const p of scenario.map.getPlayers())
-		p.getCoreUnitList().length = 0;
-}
-
-//#142: the campaign player's list rebuilt: its core units on the map in the unit list's order,
-//then its own not deployed; its destroyed ones are gone. The AI's core units (it buys them) stay
-//out of it (#150)
-function rebuildCoreList(scenario: Scenario, country: number) {
-	const m = scenario.map, player = m.getPlayersByCountry(country)[0];
-	if (!player)
-		return;
-	for (const u of m.getUnits())
-		if (u.isCore && u.isDeployed && u.owner === player.id)
-			player.addCoreUnit(u);
-	for (const u of waitingReserves.get(scenario) || [])
-		player.addCoreUnit(u);
+		if (p !== campaignPlayer)
+			p.getCoreUnitList().length = 0;
 }
 
 //The format before: GameState.exportGameState wrote the JSON of the game's objects, the scenario
