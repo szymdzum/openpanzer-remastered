@@ -205,7 +205,7 @@ export class Game {
 			needScenarioLoad = this.gameEnded = false;
 
 			if (this.campaign !== null) {
-				startCampaignScenario(this);
+				startCampaignScenario(this, isRestore);
 			} else {
 				this.scenario.showStatistics();
 				//New single scenarios balance players prestige, the tutorial keeps its own
@@ -458,8 +458,11 @@ export class Game {
 
 		//A campaign's scenario loaded: the first one sets the campaign player's prestige, dossier and
 		//core units, a later one removes the scenario's own units on the deployment hexes, and a
-		//brilliant victory before awards a prototype unit
-		function startCampaignScenario(game: Game) {
+		//brilliant victory before awards a prototype unit. Not a restored one: the save was made after
+		//(its progress is the save's, #128), a prototype still to award waits for the next scenario
+		function startCampaignScenario(game: Game, isRestore: boolean) {
+			if (isRestore)
+				return;
 			if (isCampaignStart) { //Only for first scenario
 				campaignPlayer.prestige = game.campaign.startprestige;
 				campaignPlayer.initDossier();

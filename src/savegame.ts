@@ -90,8 +90,8 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 //The campaign's part of a save, once host's campaign is loaded: its scenario and Game's progress
 export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: Scenario) {
 	const c = { ...read.save.state.campaign, id: host.campaign.id };
-	//Today's load leaves Game's campaign progress as it is (#128)
-	c.progress = host.getCampaignProgress();
+	if (read.unknown.includes("campaignProgress"))
+		c.progress = host.getCampaignProgress();
 	campaignFromData(host, c, scenario);
 }
 

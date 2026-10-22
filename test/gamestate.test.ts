@@ -243,6 +243,22 @@ test("GameState load keeps the equipment lists (#128)", async () => {
 	expect(after.equipmentIndexes[country].unitclass[uclass]).toEqual(lists[uclass]);
 });
 
+//#128: a campaign's progress between its scenarios is the save's (Game keeps it in its closure),
+//and the game started from the save (Game.init, onScenarioLoadFinished) doesn't apply it again: the
+//first scenario's prestige, dossier and core list, the removal of the scenario's own units and the
+//prototype award were the save's already
+test("GameState load keeps a campaign's progress and doesn't apply it again (#128)", async () => {
+	localStorage.clear();
+	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
+	const { GameState } = await import("../src/gamestate");
+	const { game } = await import("../src/game");
+	game.setCampaignProgress({ isStart: true, removeNonCampaignUnits: true, awardPrototype: true }, scenario);
+	game.state = new GameState(game);
+	game.state.save();
+	const saved = JSON.parse(await exportGame()) as SaveFile;
+	expect(await startup()).toEqual(saved);
+});
+
 //The campaign fixture with a unit of the AI bought and deployed, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
