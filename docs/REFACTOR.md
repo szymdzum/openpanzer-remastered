@@ -296,6 +296,7 @@ The steps, each an issue with its evidence:
 | Players | P1. One command entry, `execute(game, command)`, for every player action | #119 | |
 | Players | P2. A `GameSession` instead of `engineContext`, `session.game` and the static slots | #120 | R1 |
 | Players | P3. One controller interface; AIScripted without the UI | #121 | P2 |
+| Both | Property-based tests (fast-check): invariants over random action sequences | #125 | |
 
 R1 and P1 first, in parallel (they touch different files); then R2 and P2; then R3 and P3.
 R1 and P2 both touch context.ts, hence the order. The deliberate changes below build on them:
