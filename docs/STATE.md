@@ -207,10 +207,11 @@ and builds the game with fromData.
   game loaded on an AI's turn has the AI plan the turn again, its plan isn't state, D6), the partial
   edges (#54), the time of day (#55), the experience and cost per side (#83), tempSpotted (#84), the
   unit ids and order (#85), the AI's core units kept out of the campaign player's list (#150), the
-  campaign player's core list in its order, with its destroyed units (#142). Still lost: the other
-  players' core lists (#149), and of #128 itself the undo, the random streams, the equipment lists,
-  the campaign's progress and the scenario's description. The reinforcement part of #55 is no loss
-  in this format: the list has numeric turns and no ids.
+  campaign player's core list in its order, with its destroyed units (#142), every player's core
+  list, the units bought and not deployed outside a campaign and the AI's (#149). Still lost, of
+  #128 itself: the undo, the random streams, the equipment lists, the campaign's progress and the
+  scenario's description. The reinforcement part of #55 is no loss in this format: the list has
+  numeric turns and no ids.
 
 ## Decisions
 

@@ -205,8 +205,9 @@ test("GameState load keeps the AI's bought units the AI's (#150)", async () => {
 	expect(coreLists(again).filter((_, i) => i !== ai).flat()).not.toContain(at);
 });
 
-//#149: a unit bought and not deployed outside a campaign is in no saved list a load reads
-test.fails("GameState load keeps the units bought outside a campaign (#149)", async () => {
+//#149: a unit bought and not deployed outside a campaign was in no saved list a load read: the load
+//keeps every player's core list
+test("GameState load keeps the units bought outside a campaign (#149)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
 	const p = scenario.map.getPlayers()[0];
 	p.acquireUnit(scenario.map.getUnits().find((u) => u.player === p).eqid, 0);
