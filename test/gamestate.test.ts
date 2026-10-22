@@ -213,6 +213,20 @@ test("GameState load keeps the undo of the last move (#128)", async () => {
 	expect([u.getPos().row, u.getPos().col]).toEqual([saved.state.turn.undoable.before.row, saved.state.turn.undoable.before.col]);
 });
 
+//#128: a loaded game rolls the dice and plays the AI the saved one would have (docs/STATE.md D8): the
+//game's and the AI's streams are where the save left them, the cosmetic one isn't the save's
+test("GameState load puts the random streams where the save left them (#128)", async () => {
+	await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
+	const { Rng } = await import("../src/rng");
+	Rng.seed(11);
+	const save = await exportGame();
+	const draws = (rng: typeof Rng) => [rng.random(), rng.random(), rng.aiRandom(), rng.aiRandom()];
+	const want = draws(Rng);
+	await restoreState(save);
+	const { Rng: after } = await import("../src/rng");
+	expect(draws(after)).toEqual(want);
+});
+
 //The campaign fixture with a unit of the AI bought and deployed, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);

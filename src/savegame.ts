@@ -82,9 +82,8 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 	const unknown = (part: UnknownPart) => read.unknown.includes(part);
 	if (unknown("description"))
 		data.description = new Scenario(state.scenario.file).getDescription();
-	//Today's load leaves the equipment lists and the random streams as they are (#128)
+	//Today's load leaves the equipment lists as they are (#128)
 	state.equipment = { indexes: Equipment.equipmentIndexes };
-	state.rng = null;
 	return fromData({ data, state });
 }
 
