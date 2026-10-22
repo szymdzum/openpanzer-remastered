@@ -53,7 +53,7 @@ test("The AI's resupply, reinforce and mount go through the commands, a missing 
 	u.ammo = 0;
 	play(A.resupply, [u]);
 	expect([u.ammo > 0, u.hasResupplied]).toEqual([true, true]);
-	//Refused: it has resupplied this turn, nothing changes
+	//Again: nothing to add, played anyway as the engine plays it (#147)
 	const ammo = u.ammo;
 	play(A.resupply, [u]);
 	expect(u.ammo).toBe(ammo);

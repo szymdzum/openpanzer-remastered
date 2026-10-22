@@ -11,10 +11,10 @@
  *
  * The handlers sit on the current engine, so they keep its order of things:
  * - check refuses only what the engine wouldn't do anyway (a move with no path, an upgrade the
- *   player can't afford) or what the game never offers (a resupply GameRules.canResupply refuses,
- *   the button isn't shown and the AI doesn't plan it). What the engine does on its own with no
- *   rule to stop it stays allowed: an attack by a unit that has fired (the AI's attack after a
- *   surprise attack), a unit of another player
+ *   player can't afford) or what the game never offers. What the engine does with no rule to stop
+ *   it stays allowed: an attack by a unit that has fired (the AI's attack after a surprise
+ *   attack), a unit of another player, a resupply, reinforcement or mount the rules refuse (#147:
+ *   the UI's context button can be older than the unit's state)
  * - the move and the attack end later in the UI, when their animation ends: run hands the finish
  *   to the caller's animate hook, without one it finishes at once. The attack's hooks fire where
  *   they fire today, between the support fire shots: the UI's sprite and sound picks draw from the
@@ -137,12 +137,12 @@ function unitOf(map: GameMap, id: number): Unit | null {
 	return map.getUnitById(id);
 }
 
-//A unit on the map that passes rule, or the refusal
-function unitCheck(map: GameMap, id: number, rule: (u: Unit) => boolean, reason: string): Refusal | null {
+//A unit on the map that passes rule (if given), or the refusal
+function unitCheck(map: GameMap, id: number, rule?: (u: Unit) => boolean, reason?: string): Refusal | null {
 	const unit = unitOf(map, id);
 	if (unit === null)
 		return refuse("no such unit");
-	return rule(unit) ? null : refuse(reason);
+	return !rule || rule(unit) ? null : refuse(reason);
 }
 
 function isOnMap(map: GameMap, cell: Cell): boolean {
@@ -247,10 +247,11 @@ const attack: Handler<CommandOf<"attack">> = {
 	}
 };
 
+//Not GameRules.canResupply, canReinforce, canMount, canUnmount (the buttons' rules): the engine
+//plays these on any unit and changes it, the score too (#147)
 const resupply: Handler<CommandOf<"resupply">> = {
 	check: function(scenario, cmd) {
-		const map = scenario.map;
-		return unitCheck(map, cmd.unit, function(u) { return GameRules.canResupply(map.map, u); }, "can't resupply");
+		return unitCheck(scenario.map, cmd.unit);
 	},
 	run: function(scenario, cmd) {
 		return scenario.map.resupplyUnit(unitOf(scenario.map, cmd.unit));
@@ -259,9 +260,7 @@ const resupply: Handler<CommandOf<"resupply">> = {
 
 const reinforce: Handler<CommandOf<"reinforce">> = {
 	check: function(scenario, cmd) {
-		const map = scenario.map;
-		return unitCheck(map, cmd.unit, function(u) { return GameRules.canReinforce(map.map, u, cmd.overstrength === true); },
-			"can't reinforce");
+		return unitCheck(scenario.map, cmd.unit);
 	},
 	run: function(scenario, cmd) {
 		return scenario.map.reinforceUnit(unitOf(scenario.map, cmd.unit), cmd.overstrength === true);
@@ -270,7 +269,7 @@ const reinforce: Handler<CommandOf<"reinforce">> = {
 
 const mount: Handler<CommandOf<"mount">> = {
 	check: function(scenario, cmd) {
-		return unitCheck(scenario.map, cmd.unit, function(u) { return GameRules.canMount(u); }, "can't mount");
+		return unitCheck(scenario.map, cmd.unit);
 	},
 	run: function(scenario, cmd) {
 		scenario.map.mountUnit(unitOf(scenario.map, cmd.unit));
@@ -280,7 +279,7 @@ const mount: Handler<CommandOf<"mount">> = {
 
 const unmount: Handler<CommandOf<"unmount">> = {
 	check: function(scenario, cmd) {
-		return unitCheck(scenario.map, cmd.unit, function(u) { return GameRules.canUnmount(u); }, "can't unmount");
+		return unitCheck(scenario.map, cmd.unit);
 	},
 	run: function(scenario, cmd) {
 		scenario.map.unmountUnit(unitOf(scenario.map, cmd.unit));
@@ -392,7 +391,7 @@ const upgradeUndeployed: Handler<CommandOf<"upgradeUndeployed">> = {
 
 const disband: Handler<CommandOf<"disband">> = {
 	check: function(scenario, cmd) {
-		return unitCheck(scenario.map, cmd.unit, function() { return true; }, "");
+		return unitCheck(scenario.map, cmd.unit);
 	},
 	run: function(scenario, cmd) {
 		return scenario.map.disbandUnit(cmd.unit);
