@@ -1,23 +1,11 @@
-//GameMap's parts (MapVisibility, MapBoard, MapSelection, UndoSlot) stay out of the saved game: the
-//map's and the hexes' own data fields, in the order they are saved, are the ones the game always
-//had. And a hex's counters keep their arithmetic: off with nothing on stays at 0. The harness and
-//the engine contract compare toData (src/state.ts) since #127, not these fields; the save is still
-//the JSON of the objects until #128, so their fields and order stay pinned here until then
+//GameMap's parts (MapVisibility, MapBoard, MapSelection, UndoSlot): a hex's counters keep their
+//arithmetic, off with nothing on stays at 0, and the edges of the selection and the lookups. (The
+//map's and the hexes' own data fields were pinned here while the save was the JSON of the objects;
+//since #128 it is toData's state, src/savegame.ts)
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 
-const dataKeys = (o: object) => Object.keys(o).filter((k) => typeof (o as Record<string, unknown>)[k] !== "function");
-
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
-test.each(fixtures("engine"))("the map and hex data fields of %s", async (name) => {
-	const scenario = await restoreState(readFixture("engine", name).state);
-	const m = scenario.map;
-	expect(dataKeys(m)).toEqual(["rows", "cols", "isLastRowPartial", "isLastColPartial", "map", "terrainImage",
-		"victoryTurns", "maxTurns", "turn", "currentUnit", "sidesVictoryHexes", "currentPlayer", "name"]);
-	expect(dataKeys(m.map[0][0])).toEqual(["unit", "airunit", "terrain", "road", "owner", "flag", "isDeployment",
-		"victorySide", "name", "isMoveSel", "isAttackSel"]);
-});
-
 test("a hex counter doesn't go below 0", async () => {
 	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
 	const { uiSettings } = await import("../src/prototypes");

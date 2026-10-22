@@ -50,6 +50,7 @@
 				"src/map.ts",
 				"src/prototypes.ts",
 				"src/rng.ts",
+				"src/savegame.ts",
 				"src/scenario.ts",
 				"src/scenarioloader.ts",
 				"src/selection.ts",

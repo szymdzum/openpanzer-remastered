@@ -173,6 +173,44 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
   `updateUnitList` after it), and the fields only ever written (`hasRessuplied`, `nodossier`,
   `hasAnimation`).
 
+## The save (#128)
+
+`src/savegame.ts` writes and reads the save: `{ version: 1, data: ScenarioData, state: GameState }`,
+toData's output with the format's version first (D3, D11). Every save path writes it: the local
+save (one item, `openpanzer-game-<major version>`, where the format before had three: the scenario,
+its players and the campaign's progress), which the game writes at the end of a turn and when a
+scenario starts or is loaded, the file export and the cloud save. The settings stay an item of
+their own. A load reads the save, loads the equipment of the players' countries and the campaign,
+and builds the game with fromData.
+
+- **Self-contained.** The load reads no scenario file: the scenario's name and description, the map
+  image and the per-hex terrain, roads, names and deployment players are `ScenarioData`; the date,
+  weather, turns and victory turns are `ScenarioState`; the reinforcements, the units and the core
+  lists are the state. The equipment isn't embedded: like the map image it is the game's, picked by
+  the set's name (`ScenarioData.equipment`) and the players' countries. The data of the units a
+  save uses would be needed only if an equipment file changed under a save; the remaster's fixes so
+  far are to scenario files.
+- **The format before** (the `GameStateExport` of gamestate.ts: the JSON of the scenario, the
+  players and the campaign's progress, or the three local items) is imported: `importSave` keeps
+  what that save had (the units with their ids, in the order of their ids, which is the order they
+  were placed; whose turn, the time of day, the partial edges, the experience per side,
+  tempSpotted, the campaign player's core list as it was, its destroyed units included) and lists
+  what it never stored as unknown (`UnknownPart`). The load keeps the game's own there, as loading
+  such a save always did: the description from the scenario list, the equipment lists as loaded,
+  the random streams where they are, Game's campaign progress, the campaign's starting prestige;
+  no undo, no core units for the players who don't play the campaign. The next unit id is the one
+  after the highest. A save whose unit ids aren't unique (stale ids, #64) has them numbered again
+  in hex order, as its load always did. A save without an equipment set (older than 3.x) keeps the
+  game's set, as before.
+- **Lost on load until fixed.** The load first did what the old load did, so the format changed
+  nothing else; each loss is fixed in its own commit, naming its issue. Still lost: whose turn
+  (#71), the partial edges (#54), the time of day (#55), the experience and cost per side (#83),
+  tempSpotted (#84), the unit ids and order (#85), the campaign player's core list (rebuilt from
+  the map with the AI's core units, #142, #150), the other players' core lists (#149), and of #128
+  itself the undo, the random streams, the equipment lists, the campaign's progress and the
+  scenario's description. The reinforcement part of #55 is no loss in this format: the list has
+  numeric turns and no ids.
+
 ## Decisions
 
 **D1. Unit ids: given when a unit enters the map, never changed.** Today `MapBoard.add` numbers

@@ -144,9 +144,7 @@ export class Game {
 				else //If single scenario game has ended
 					this.gameEnded = true;
 			} else {
-				this.state.save();
-				if (this.campaign !== null) //Save campaign to remove deployed units from saved list
-					game.state.saveCampaign();
+				this.state.save(); //with the campaign's progress
 
 				//Set the new visible side on map
 				this.setCurrentSide();
@@ -165,9 +163,6 @@ export class Game {
 
 			this.gameStarted = true;
 			needScenarioLoad = this.gameEnded = false;
-
-			if (this.campaign !== null)
-				this.state.saveCampaign();
 
 			this.state.save();
 			this.ui.setNewScenario();
@@ -222,7 +217,6 @@ export class Game {
 						UIBuilder.showPrototypeAwardMessage(protoId);
 					}
 				}
-				this.state.saveCampaign(); //Save progression between scenario loading delays in campaign
 			} else {
 				this.scenario.showStatistics();
 				//New single scenarios balance players prestige, the tutorial keeps its own
