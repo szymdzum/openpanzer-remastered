@@ -20,7 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import panzer_iv  # noqa: E402
 
 FRAME_W, FRAME_H = 80, 50
-CENTRE = (39.0, 31.5)  # where the original strips put the middle of the vehicle, in 1x pixels
+SUN_TILT = 32  # degrees from straight down
+CENTRE = (39.0, 29.5)  # where the middle of the vehicle goes, in 1x pixels: its tracks end where the old strips' do
 
 
 def reset():
@@ -94,8 +95,8 @@ def stripe_material(colours):
 	wave.wave_type = "BANDS"
 	wave.bands_direction = "DIAGONAL"
 	wave.inputs["Scale"].default_value = 0.3
-	wave.inputs["Distortion"].default_value = 4
-	wave.inputs["Detail"].default_value = 1
+	wave.inputs["Distortion"].default_value = 7
+	wave.inputs["Detail"].default_value = 2
 	ramp = nt.nodes.new("ShaderNodeValToRGB")
 	ramp.color_ramp.interpolation = "CONSTANT"
 	els = ramp.color_ramp.elements
@@ -113,6 +114,7 @@ def materials(palette="grey"):
 	return {
 		"paint": stripe_material(PALETTES[palette]) if palette == "grey" else camo_material(PALETTES[palette]),
 		"track": node_material("track", (0.035, 0.03, 0.028)),
+		"running": node_material("running", (0.07, 0.07, 0.065)),  # the wheels in the shade under the skirts
 		"rubber": node_material("rubber", (0.02, 0.02, 0.02)),
 		"rust": node_material("rust", (0.12, 0.05, 0.025)),
 		"black": node_material("black", (0.01, 0.01, 0.01)),
@@ -154,7 +156,7 @@ def lights():
 	sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
 	sun.data.energy = 5
 	sun.data.angle = math.radians(2)
-	sun.rotation_euler = (math.radians(32), 0, math.radians(-35))  # from the upper left, behind the viewer
+	sun.rotation_euler = (math.radians(SUN_TILT), 0, math.radians(-35))  # from the upper left, behind the viewer
 	bpy.context.collection.objects.link(sun)
 	world = bpy.data.worlds.new("world")
 	world.use_nodes = True
@@ -220,28 +222,28 @@ def pack(frames, out, scale):
 	img.save()
 
 
-def fit(reference, elevs=range(0, 50, 5), scales=np.arange(7.0, 10.01, 0.5)):
+def fit(reference, elevs=range(0, 50, 5), scales=np.arange(7.0, 10.01, 0.5), squashes=(1.0,)):
 	ref = load_rgba(reference)
 	# The vehicle without its black shadow
 	ref_mask = (ref[..., 3] > 0.5) & (ref[..., :3].max(axis=2) > 0.02)
 	tmp = tempfile.mkdtemp()
 	results = []
-	for elev in elevs:
-		for pxm in scales:
-			reset()
-			root = build()
-			camera(elev, pxm, 1)
-			sc = bpy.context.scene
-			sc.render.engine = "BLENDER_WORKBENCH"
-			sc.display.shading.light = "FLAT"
-			render_frames(root, lambda i: os.path.join(tmp, f"m{i}.png"))
-			ious = []
-			for i in range(9):
-				m = load_rgba(os.path.join(tmp, f"m{i}.png"))[..., 3] > 0.5
-				r = ref_mask[:, i * FRAME_W:(i + 1) * FRAME_W]
-				ious.append((m & r).sum() / max((m | r).sum(), 1))
-			results.append((float(np.mean(ious)), elev, float(pxm), [round(float(x), 2) for x in ious]))
-			print(f"elev {elev:4.1f} px/m {pxm:4.1f} iou {np.mean(ious):.3f}", flush=True)
+	for elev, pxm, squash in ((e, p, q) for e in elevs for p in scales for q in squashes):
+		reset()
+		root = build()
+		root.scale = (1, 1, squash)
+		camera(elev, pxm, 1)
+		sc = bpy.context.scene
+		sc.render.engine = "BLENDER_WORKBENCH"
+		sc.display.shading.light = "FLAT"
+		render_frames(root, lambda i: os.path.join(tmp, f"m{i}.png"))
+		ious = []
+		for i in range(9):
+			m = load_rgba(os.path.join(tmp, f"m{i}.png"))[..., 3] > 0.5
+			r = ref_mask[:, i * FRAME_W:(i + 1) * FRAME_W]
+			ious.append((m & r).sum() / max((m | r).sum(), 1))
+		results.append((float(np.mean(ious)), float(elev), float(pxm), float(squash), [round(float(x), 2) for x in ious]))
+		print(f"elev {elev:4.1f} px/m {pxm:4.1f} squash {squash:4.2f} iou {np.mean(ious):.3f}", flush=True)
 	results.sort(reverse=True)
 	print("BEST", results[:5])
 
@@ -374,12 +376,15 @@ def pixelate(tank, shadowed, palette, f):
 	return out
 
 
-def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.9, render_scale=8):
+def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.85, render_scale=8):
 	# Render big, then pixelate to the 1x strip and to the @2x strip, in the old strip's colours
 	ref = load_rgba(reference)
 	opaque = ref[..., 3] > 0.5
 	palette = np.unique(np.round(ref[opaque][:, :3] * 255), axis=0) / 255
 	reset()
+	global SUN_TILT
+	SUN_TILT = 25  # a high sun: a bright roof over darker sides, as on the old sprites
+	panzer_iv.THICKEN.update(gun=1.6, antenna=5)
 	root = build()
 	# The PG2 sprites are squatter than the real vehicle: wider and longer for their height
 	root.scale = (1, 1, squash)
@@ -435,9 +440,10 @@ elif args[0] == "side":
 elif args[0] == "view":
 	view(os.path.abspath(args[1]), float(args[2]), float(args[3]))
 elif args[0] == "fit":
-	if len(args) > 2:  # a finer search: fit REF ELEV0 ELEV1 ELEVSTEP PXM0 PXM1 PXMSTEP
-		a = [float(x) for x in args[2:8]]
-		fit(os.path.abspath(args[1]), np.arange(a[0], a[1] + 1e-6, a[2]), np.arange(a[3], a[4] + 1e-6, a[5]))
+	if len(args) > 2:  # a finer search: fit REF ELEV0 ELEV1 ELEVSTEP PXM0 PXM1 PXMSTEP [SQ0 SQ1 SQSTEP]
+		a = [float(x) for x in args[2:]]
+		sq = np.arange(a[6], a[7] + 1e-6, a[8]) if len(a) >= 9 else (1.0,)
+		fit(os.path.abspath(args[1]), np.arange(a[0], a[1] + 1e-6, a[2]), np.arange(a[3], a[4] + 1e-6, a[5]), sq)
 	else:
 		fit(os.path.abspath(args[1]))
 else:

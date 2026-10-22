@@ -194,31 +194,70 @@ one.
 With true proportions the new tank came out narrower and taller than the old one. Measured
 outlines without the shadow, 1x pixels:
 
-| Frame | Old | True scale (7.2 px/m) | Chosen (7.6 px/m, height × 0.9) |
-|---|---|---|---|
-| 0, front | 28 × 28 | 24 × 26 | 26 × 26 |
-| 2, three-quarter | 43 × 27 | 44 × 28 | 46 × 28 |
-| 4, side | 56 × 23 | 51 × 24 | 54 × 23 |
-| 8, rear | 25 × 25 | 24 × 31 | 26 × 31 |
+| Frame | Old | True scale (7.2 px/m) | First fix (7.6 px/m, height × 0.9) | Final (7.6 px/m, height × 0.85) |
+|---|---|---|---|---|
+| 0, front | 28 × 28 | 24 × 26 | 26 × 26 | 26 × 29 |
+| 2, three-quarter | 43 × 27 | 44 × 28 | 46 × 28 | 46 × 28 |
+| 4, side | 56 × 23 | 51 × 24 | 54 × 23 | 54 × 22 |
+| 8, rear | 25 × 25 | 24 × 31 | 26 × 31 | 26 × 31 |
 
 The old strip is not one consistent projection: 56 px long from the side but 43 px across at 45
 degrees, where a true projection of that length and width would be about 59. The photographs of
 the scale models were probably taken close up, with perspective, so each angle is squeezed
 differently. A geometric render can't match every frame; the chosen scale keeps the new tank the
-size of the old units on the map: front and side 1-2 px smaller, the diagonals 1-3 px larger. The
-rear view stays taller (the gun shows above the turret from behind, and the antenna).
+size of the old units on the map: front and side 1-2 px smaller, the diagonals 1-3 px larger, the
+area of every frame within 5% of the old one. The rear view stays taller (the gun shows above the
+turret from behind). The front grew 3 px with the thicker antenna.
+
+The model keeps its real measurements: only the projection is scaled (`render.py pixel`:
+`pxm`, `squash`), as SSI's camera did.
+
+### Sitting on the ground
+
+Even at the old size the new tank looked taller, "not sitting on the ground" like the old one.
+Two measurable reasons:
+
+- **Where the mass is.** From the side the old sprite is widest at 70% of its height, down at the
+  long hull and the tracks; the first renders were widest at 26%, up at the turret skirts and the
+  gun. A tank that is heaviest at the bottom reads as standing on the ground. The stronger squash
+  (0.85) and the darker running gear move the weight down.
+- **Where it stands in the frame.** The new tracks ended 2 px lower than the old ones (y 43-46
+  against 41-44 in the 80×50 frame), so on a hex it stood differently from every other unit. The
+  camera now puts the vehicle's middle 2 px higher (`CENTRE`), and the tracks end where the old
+  strips' do.
+
+### Fixes for the sprite
+
+- The gun and the antenna are drawn thicker than real in the pixel strips (`THICKEN` in
+  `panzer_iv.py`: the gun 1.6 times, the antenna 5 times): at real size the gun is thinner than a
+  pixel and breaks up, the old strips draw both as a clear line.
+- A higher sun (25 degrees from straight down): a bright roof over darker sides, as on the old
+  sprites. The road wheels, sprocket, idler and return rollers are a dark grey of their own, in
+  the shade under the skirts.
+- The camouflage bands are more irregular (more distortion in the wave).
+
+### Seen in the game
+
+The game already loads a sharper file for each unit on high density screens (`src/render.ts`,
+`hdPath`): `resources/units/images/pa131.png` is drawn from `/hd/units/images/pa131.webp` when it
+exists. So the new strip goes in without touching the game:
+
+    cwebp -lossless out@2x.png -o public/hd/units/images/pa131.webp
+
+`npm run dev`, then on a screen of 1.5x or more: New Game, Scenarios, **Zitadelle** (not
+"Operation Zitadelle"): six Pz IVH stand in the German column on the road to Belgorod, on hexes
+(20,6), (20,12), (21,15), (25,23), (28,23), (28,33). Hovering one shows "Unit: Pz IVH". It works:
+the tank shows, selects and moves like any other unit. `public/hd/` is not in Git (it holds the
+generated files of `scripts/upscale-assets.sh`), so the strip only shows where it was copied.
 
 ### What's left
 
-- The gun breaks up in places at 1x: it is thinner than a pixel. The old strips draw the gun and
-  the antenna as a clear line; the sprite may need them thicker than real.
-- The old sprites have more contrast between the roof and the sides and a darker running gear.
-- The camouflage bands are still more regular than the old ones.
-- Not seen in the game yet: the next step is the strip as `public/hd/units/images/pa131.webp`,
-  the @2x file the renderer already loads (`src/render.ts`, `hdPath`). `scripts/upscale-assets.sh`
-  makes these files for every unit and map today (hqx for units, Real-ESRGAN for maps).
+- A way to ship the new strips: `public/hd/` is generated and ignored, so a made strip needs its
+  own place in the repo and a step that copies it there (after `upscale-assets.sh`, which skips
+  files that exist).
 - The widths (turret, superstructure) come from photographs and general data, not a top view;
   *Panzer Tracts 4-3* has one.
+- The camouflage is the old grey; Dunkelgelb (`PALETTE=dunkelgelb`) blends into the yellow maps.
 
 ### Cost
 
@@ -234,7 +273,8 @@ look round in the Blender app (numpad 0 looks through the game's camera).
 ## Plan
 
 1. Unit pilot: done for the Panzer IV H (above), modelled from a drawing rather than taken from
-   Spring: 1944. Left: the strip in the game, the fixes listed above.
+   Spring: 1944, and seen in the game. Next: a way to ship the strips, then the other Panzer IV
+   variants (F2, G, J), which share most of the parts.
 2. Map pilot: one map through Real-ESRGAN with the "anti-plastic" pass, compared 1:1, the grid
    check.
 3. After the pilots, before going on: a style guide (camera angle, light, outline, palette,
