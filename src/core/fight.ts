@@ -79,7 +79,7 @@ function leaderRoll(w: World, u: UnitState, eqid: number, expGained: number, rng
 
 //A leader of the class (Leaders.generateLeader): kept bug #78, the roll's range is the list less 3,
 //so the last two never come up and a class of 2 can roll its class leader
-function newLeader(w: World, uclass: number, rng: RngStream): number {
+export function newLeader(w: World, uclass: number, rng: RngStream): number {
 	const list = w.rules.leaders[uclass];
 	if (list.length < 2) return -1;
 	return list[Math.floor(nextRandom(rng) * (list.length - 1 - 2)) + 1];
