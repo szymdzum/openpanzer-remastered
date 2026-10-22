@@ -51,7 +51,15 @@ and types: no UI module, no mutable object of the old engine (the linter checks 
 included (#69, #70, #87, #88, #90, #95, #19, #23...): they are fixed after the switch, in the core.
 
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
-only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table.
+only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table
+(the old engine compares every pair of cells). `BENCH=1 npx vitest run test/core-bench.test.ts`
+measures them against the old engine on the 15 engine fixtures (2026-10-22, on a loaded laptop):
+
+| Per call | Old engine | Core |
+|---|---|---|
+| Move range of a unit that can move | 26-64 µs | 16-35 µs (1.1-2.3x faster) |
+| Combat estimate with the hidden units (the AI's) | 3-9 µs | 2-11 µs (about even) |
+| A world from `toData` (toData included) | | 0.06-0.28 ms |
 
 ## Combat as steps (#118)
 
@@ -73,9 +81,16 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
   - The spotting and zone of control the queries read are the old engine's own counters there: the
     contract's fuzz changes the units under counters that stay (as #73 does). `computeSight` is
     checked against the counters separately, on the states where they don't drift.
-- **Differential property tests** (test/core-differential.test.ts, fast-check): random reachable
-  states (random commands on the engine fixtures), then every query of the core on `toData` of the
-  state against the old engine's answer. Sight against a recomputation; the drift of #72 and #73
-  masked by name.
+- **Differential property tests** (test/core-differential.test.ts, fast-check): random legal
+  commands played on the engine fixtures through `Commands.execute`, then on the state reached:
+  - the core's sight equals the old engine's recomputation from its units, hex by hex, counts
+    included. Where the old counters drift from it (#72, #73), the state is masked by name: its
+    queries read the counters;
+  - the contract's whole battery (every unit, every unit pair, the dice) answers the same on both
+    engines, the core reading only `toData` and its own sight where nothing drifts;
+  - attacks from a seeded game stream: the same results, the stream left at the same place.
+
+  CI plays 12 sequences (about 100,000 compared answers); `FC_RUNS=120` played 120 (over a million,
+  12 states with drift) with no difference.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest.

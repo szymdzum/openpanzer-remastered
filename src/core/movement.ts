@@ -124,22 +124,23 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	const slot = scratch(w);
 	for (let i = 0; i < c.length; i++) slot[c[i].row * cols + c[i].col] = i + 1;
 
-	const s: StepRules = { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range };
+	const s: StepRules = { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range,
+		groundOrSea: isGround(w, u) || isSea(w, u) };
 	const near: number[] = [];
 	try {
 		for (let r = 0; r <= range; r++)
-			for (const from of c) {
-				if (from.range !== r) continue;
-				neighbours(w, from, slot, near);
-				for (const j of near) {
-					const to = c[j];
-					if (to.range < r) continue; //(not always right: a path can turn back)
-					step(w, u, from, to, s);
-				}
-			}
+			for (const from of c)
+				if (from.range === r) expandFrom(w, c, from, slot, near, s);
 	} finally {
 		for (const cell of c) slot[cell.row * cols + cell.col] = 0;
 	}
+}
+
+//The steps from a cell to its neighbours as far or farther (not always right: a path can turn back)
+function expandFrom(w: World, c: MoveCell[], from: MoveCell, slot: Int32Array, near: number[], s: StepRules) {
+	neighbours(w, from, slot, near);
+	for (const j of near)
+		if (c[j].range >= from.range) step(w, from, c[j], s);
 }
 
 interface StepRules {
@@ -148,23 +149,26 @@ interface StepRules {
 	side: number;
 	enemySide: number;
 	range: number;
+	groundOrSea: boolean;	//(not air: an air unit's range has no costs)
 }
 
-//What entering to from from costs, and whether u can stop on it or pass through
-function step(w: World, u: UnitState, from: MoveCell, to: MoveCell, s: StepRules) {
+//What entering to from from costs, and whether the unit can stop on it or pass through
+function step(w: World, from: MoveCell, to: MoveCell, s: StepRules) {
 	const hex = hexIndex(w, to.row, to.col);
-	const visible = seen(w, hex, s.side, groundUnitAt(w, hex));
+	const other = groundUnitAt(w, hex);
+	const visible = seen(w, hex, s.side, other);
 	to.cost = enterCost(w, hex, s);
 	if (visible && to.cost < STOP && isZOC(w, hex, s.enemySide))
 		to.cost = STOP;
 	relax(from, to);
-	if (to.cout <= s.range || (to.cost <= STOP && to.cin <= s.range)) reach(w, u, to, visible);
+	if (to.cout <= s.range || (to.cost <= STOP && to.cin <= s.range)) reach(w, to, other, visible, s);
 }
 
-//A hex in reach: u passes through it if friendly units let it, stops on it unless it sees it taken
-function reach(w: World, u: UnitState, to: MoveCell, visible: boolean) {
-	if (canPassInto(w, u, to)) to.canPass = true;
-	if (!visible || canMoveInto(w, u, to)) to.canMove = true;
+//A hex in reach (canPassInto, canMoveInto of a unit that isn't air): the unit passes through it
+//empty or held by its side, stops on it empty or unless it sees it taken
+function reach(w: World, to: MoveCell, other: UnitState | null, visible: boolean, s: StepRules) {
+	if (s.groundOrSea && (other === null || sideOf(w, other) === s.side)) to.canPass = true;
+	if (!visible || (s.groundOrSea && other === null)) to.canMove = true;
 }
 
 //The terrain's cost, or the road's: trains can't use roads, bridges are roads for their side

@@ -32,6 +32,7 @@ export interface OldEngine {
 	Equipment: EquipmentModule;
 	toData: typeof ToData;
 	game: RngStream; //Rng.game: the dice draw from the old engine's own game stream
+	computedSight?: boolean; //the core's own sight instead of the old counters (where they don't drift)
 }
 
 //The spotting and zone of control the old engine's counters say (whether each is above 0), for the
@@ -74,7 +75,8 @@ export function coreGameRules(old: OldEngine): GameRulesModule {
 	//setSpotRange), all of it taken again when one of the units a call asks about isn't what the
 	//world has: the contract changes the units only between its rounds, all of them (its fuzz)
 	function w(...asked: Unit[]): World {
-		if (world !== null && countersChanged) world = { ...world, sight: oldSight(old.scenario) };
+		//(the core's own sight follows the units, not the counters)
+		if (world !== null && countersChanged && !old.computedSight) world = { ...world, sight: oldSight(old.scenario) };
 		countersChanged = false;
 		if (world !== null && asked.every((u) => {
 			const s = unitById(world, u.id);
@@ -82,9 +84,10 @@ export function coreGameRules(old: OldEngine): GameRulesModule {
 		}))
 			return world;
 		const destroyed = new Set(m.getUnits().filter((u) => u.destroyed).map((u) => u.id));
-		world = createWorld(old.toData(old.scenario), old.Equipment.equipment, { destroyed, sight: oldSight(old.scenario) });
+		world = createWorld(old.toData(old.scenario), old.Equipment.equipment, { destroyed, sight: sight() });
 		return world;
 	}
+	const sight = () => old.computedSight ? undefined : oldSight(old.scenario);
 
 	//The core's unit for an old one; a unit that isn't on a hex (as the contract's off map unit) stands nowhere
 	function unit(x: World, u: Unit): UnitState {
