@@ -12,7 +12,7 @@ import type { GameState, ScenarioData, UnitId, UnitState } from "../state";
 import type { GameEvent } from "./events";
 
 export type {
-	CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ScenarioData, UnitId, UnitState
+	CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ScenarioData, UndoState, UnitId, UnitState
 } from "../state";
 
 //The equipment by eqid, as loaded (Equipment.equipment): read-only
@@ -51,6 +51,8 @@ export interface Ruleset {
 	//per terrainType and the road last. 254 stops the move (the hex can be entered), 255 can't
 	//be entered
 	movement: number[][][];
+	//The leaders each unit class can get (leaderType), by unitClass: the first is the class leader
+	leaders: number[][];
 	//The class leader of each unit class (a leaderType, -1 for none): every unit with a leader
 	//has its class's too
 	classLeaders: number[];

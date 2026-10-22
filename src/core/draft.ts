@@ -80,6 +80,16 @@ export function writePlayer(d: Draft, id: number): PlayerState {
 	return c;
 }
 
+//A side's objectives, to change
+export function writeObjectives(d: Draft, side: number): Position[] {
+	const list = d.state.objectives[side];
+	if (d.copied.has(list)) return list;
+	const c = list.map((o) => ({ row: o.row, col: o.col }));
+	d.state.objectives[side] = c;
+	d.copied.add(c);
+	return c;
+}
+
 //The player of an id as Map.getPlayer finds it: by index, the first player past the end
 export function playerAt(w: World, id: number): PlayerState {
 	const players = w.state.players;
@@ -151,6 +161,19 @@ function countCells(d: Draft, counts: [Uint16Array, Uint16Array], u: UnitState, 
 	const side = sideOf(d, u);
 	if (side > 1) return;
 	for (const c of cells) counts[side][c.row * d.state.map.cols + c.col] += by;
+}
+
+//Moves a unit to a hex (MapBoard.relocate): its sight off, the hexes, change (the facing, the undo's
+//fields), its sight on. The enemy units it spotted for the first time
+export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitState) => void): UnitId[] {
+	const u = writeUnit(d, id);
+	sightOff(d, u);
+	leaveHex(d, u.row * d.state.map.cols + u.col, id);
+	change(u);
+	u.row = to.row;
+	u.col = to.col;
+	enterHex(d, to.row * d.state.map.cols + to.col, u);
+	return sightOn(d, u);
 }
 
 //Changes a unit where the old engine left its counters as they were (#73: an embark, an upgrade, a

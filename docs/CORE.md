@@ -21,7 +21,7 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `equipment` | the equipment table by eqid (`EquipmentEntry`) | loaded once, read-only |
 | `rules` | the `Ruleset` | `classicRules`: today's game |
 | `noFOW` | the fog of war off: every hex is spotted | an option, not state (D6) |
-| `destroyed` | units an attack destroyed whose removal hasn't run yet | empty between steps |
+| `destroyed` | units an attack destroyed whose removal hasn't run yet | empty: only the contract's adapter sets it (the step removes a unit where the old engine did) |
 | `index` | unit id -> its index in `state.units` (D2) | derived, built with the world |
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
 
@@ -44,10 +44,11 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `supply.ts` | resupply and reinforcement: whether, and how much |
 | `costs.ts` | unit, upgrade and sell costs |
 | `step.ts` | `step` and `check`, the handlers' registry |
-| `draft.ts` | the state a step changes, copied on write, and its primitives: place, remove a unit with its sight, the score, the dossier |
+| `draft.ts` | the state a step changes, copied on write, and its primitives: place, relocate, remove a unit with its sight, the score, the dossier |
 | `events.ts` | the events a step emits (types) |
-| `moves.ts` | what selecting a unit does to it |
-| `commands/` | the handlers, `check` and `run` of each command type (`supply.ts`, `transport.ts`, `units.ts`: deploy, buy, upgrade, disband, sell) |
+| `fight.ts` | an attack: each shot resolved then applied, the attack's finish (destroyed, retreat, surrender, elimination), the surprise attack |
+| `moves.ts` | a move: the path walked, the surprise, the capture, the fuel and points, the undo it leaves |
+| `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell) |
 
 The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` of `src/rng.ts`
 and types: no UI module, no mutable object of the old engine (the linter checks it).
@@ -66,7 +67,16 @@ measures them against the old engine on the 15 engine fixtures (2026-10-22, on a
 | Combat estimate with the hidden units (the AI's) | 3-9 µs | 2-11 µs (about even) |
 | A world from `toData` (toData included) | | 0.06-0.28 ms |
 
-The path search was a move's main cost (the old engine's compares every open hex at each turn,
+The step (`BENCH=1`, 2026-10-22, on a loaded laptop): each of the current player's units moving to
+the first hex of its range, or attacking the first unit it can, in a row, against `Commands.execute`
+(which also builds the UI's move and attack hexes):
+
+| Per command | Old engine | Core |
+|---|---|---|
+| Move | 300-2500 µs | 80-475 µs (3-7x faster) |
+| Attack | 40-220 µs | 18-127 µs (2-3x faster) |
+
+The path search was the cost of a move (the old engine's compares every open hex at each turn,
 O(n²) over an air unit's 700 hexes): the core's takes the next hex from a heap ordered by distance
 then by place in the list (the later first, the old engine's tie-break), and finds the neighbours
 through a table by hex. A property checks it against the old engine's on small maps full of equal
@@ -89,32 +99,47 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
 `{ ok: false, refusal }`. The commands are src/commands.ts's `Command` values, the old engine's
 (ids and cells, plain data); `check(world, command)` alone says whether one is allowed, or why not,
 and changes nothing. Each type has a handler in `commands/` (`check` and `run`), in a registry
-typed by a mapped type. So far: resupply, reinforce, mount, unmount, embark, disembark, deploy,
-buy, upgrade (on the map and off it), disband and sell. The move, the attack and the undo come next
-(#134), the end of turn with the next layer (#135): they are refused until then.
+typed by a mapped type; the end of turn is refused until the next layer (#135).
 
 **The world given stays as it was.** `run` plays on a draft (`draft.ts`): the step copies the
 state's lists when it starts (a few thousand pointers, and the sight's four counts) and an object of
-the state (a unit, a hex, a player) the first time it writes to it. The world returned shares the
-rest with the one given: a step costs what it changes, not the size of the state, and the caller
-keeps every state it had (the undo's, the preview's, the AI's look ahead). The differential tests
-freeze the state given to every step.
+the state (a unit, a hex, a player, an objective list) the first time it writes to it. The world
+returned shares the rest with the one given: a step costs what it changes, not the size of the state,
+and the caller keeps every state it had (the undo's, the preview's, the AI's look ahead). The
+differential tests freeze the state given to every step.
 
 **Sight.** The draft keeps the sight up to date where the old engine switched its counters: a unit's
 off before it leaves or changes, on after, marking the enemy units its side didn't see as seen
-(`tempSpotted`) where `setSpotRange` did (a mount, a deploy). Where the old engine forgot to switch
-them (#73: an embark, a disembark, an upgrade) the draft switches them without marking: the core's
-sight always equals `computeSight` of its state (D10).
+(`tempSpotted`) where `setSpotRange` did. Where the old engine forgot to switch them (#73: an embark,
+a disembark, an upgrade, a leader that sees farther) the draft switches them without marking: the
+core's sight always equals `computeSight` of its state (D10).
 
 **Events.** Plain data in the order things happened, enough for the combat log and for a view to
-animate after the step (`events.ts`): `spotted`, `resupplied`, `reinforced`, `mounted`,
-`unmounted`, `embarked`, `disembarked`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold` so
-far; the move's and the attack's are typed already.
+animate after the step: `moved` (the path, each hex seen by the enemy or not, the cost), `surprised`,
+`spotted`, `captured` (flag, objective, prestige, score, win), `victory` (capture, elimination),
+`fight` (a support shot or the attack: both units before and after, the dice's result and the
+combat steps' record, #118), `attackStopped`, `dismounted`, `leader`, `destroyed`, `retreated`,
+`surrendered`, `resupplied`, `reinforced`, `mounted`, `unmounted`, `embarked`, `disembarked`,
+`undone`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold`.
 
-**What the old engine does and the core does too:** a command doesn't check whose unit it plays
-(#147), a resupply, a reinforcement, an upgrade or a disband clears the undo, a mount or unmount
-selects the unit (a unit leaving its carrier gets back on it unless it can land), a unit bought
-outside a campaign gets the other side's average experience.
+**The attack** (`fight.ts`) is the old engine's sequence: the estimate (no draw) decides an overrun,
+the support fire shots one by one unless the attacker is surprised or overruns, the attack unless
+the attacker is destroyed or its losses stopped it, then the finish (the destroyed units off the map,
+the attacker first; retreat or surrender; a side with no unit left loses, both when both, #92).
+Each shot is `resolveFight`, which reads the state and draws from the game stream (the attacker's
+dice, the defender's, then the attacker's leader roll and the defender's: `generateLeaderWithChance`
+draws even when no level was gained), then `applyFight`, which changes it. The preview (#7) can
+resolve on a copy of the stream.
+
+**Undo (D5).** The state keeps `turn.undoable` exactly as the old engine's slot decides it: a human
+player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
+reinforcement, an upgrade or a disband, set by a retreat of a human player's unit too (#171). The undo
+plays the old single slot back, #140 and #141 included; the states before are the caller's.
+
+**What the old engine does and the core does too:** a retreat is a move (fuel, capture, undo), a
+command doesn't check whose unit it moves (#147), a mount, unmount or undo selects the unit (a unit
+leaving its carrier gets back on it unless it can land), a campaign's losses count in the campaign
+player's dossier (the last player of its country) and its difficulty scales the score.
 
 **Not reproduced: the selection (D6).** Selecting another unit puts a unit in the middle of a
 disembark back on its carrier (`MapSelection.clear`): the core has no selection, so a program's
@@ -141,19 +166,21 @@ command plays as with nothing selected.
   CI plays 12 sequences (about 100,000 compared answers); `FC_RUNS=120` played 120 (over a million,
   12 states with drift) with no difference.
 - **The commands against the old engine** (test/core-steps.test.ts, fast-check): random command
-  sequences on the engine fixtures, the legal ones the old engine offers and any command at all,
-  each played through `Commands.execute` and through `step`, the core playing on from its own
-  state. After every command: the same answer (and `check`'s), the same toData as JSON (the save's
-  key order, the random streams' positions), the core's sight equal to `computeSight` and to the
-  old counters, the old engine's hooks and the core's events telling the same story, and the state
-  given to the step unchanged (frozen). What the core doesn't play yet (the move, the attack, the
-  undo, the end of turn) the old engine plays and the core takes its state. Where the old counters
-  drift (#73) with the same state after, they are made again from the units and the sequence goes
-  on; drift that changed the command's result stops it.
-  - the engine contract's own commands, each also stepped on the core from toData of the state
-    before it.
+  sequences on the engine fixtures, the legal ones the old engine offers and any command at all
+  (one in eight), each played through `Commands.execute` and through `step`, the core playing on
+  from its own state. After every command: the same answer (and `check`'s), the same toData as JSON
+  (the save's key order, the random streams' positions), the core's sight equal to `computeSight`
+  and to the old counters, the old engine's hooks and the core's events telling the same story, and
+  the state given to the step unchanged (frozen). The end of turn is the old engine's, the core
+  takes its state. Where the old counters drift (#73) with the same state after, they are made
+  again from the units and the sequence goes on; drift that changed the command's result stops the
+  sequence. CI plays 20 sequences (about 220 commands); `FC_RUNS=1000` played 11,000 commands with
+  no difference, 300 resyncs and no state masked.
+  - the engine contract's own commands (the AI's and the random actions of the 15 fixtures, about
+    3,000), each also stepped on the core from toData of the state before it: no difference; 7
+    masked where a selected unit left its disembark (D6).
   - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
-    deploy.
+    deploy; a campaign's kills and losses in the dossier.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
-  of a Pz IIA against a 7TP in a forest, and the path search against the old engine's on maps full
-  of equal paths.
+  of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
+  undo, and the path search against the old engine's on maps full of equal paths.
