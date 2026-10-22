@@ -9,8 +9,10 @@
 //  retreats, surrenders, victories, surprises, captures) and the core's events;
 //- the core never changed the state it was given (it is frozen).
 //
-//The core plays on from its own state: the old engine is only the oracle. The end of turn isn't the
-//core's yet (#135): the old engine plays it and the core takes its state again. Masked, by issue:
+//The core plays on from its own state: the old engine is only the oracle. The end of turn plays as the
+//game plays it (#135): the command, the side shown set, then the reinforcements, with the outcome
+//compared after every command. The AI's turn start isn't the core's yet (#136): no player plans
+//(test/invariants.ts load). Masked, by issue:
 //the old engine's counters drift from its units (#73: an embark, a disembark, an upgrade, a leader
 //that sees farther; #72), the core's sight is computed from them. With the same state after the
 //command, the old engine's counters are made again from its units and the sequence goes on; with
@@ -30,6 +32,7 @@ import { load, recompute } from "./invariants";
 import { createWorld } from "../src/core/create";
 import { computeSight } from "../src/core/sight";
 import { check, step, type Stepped } from "../src/core/step";
+import { arriveReinforcements, outcome } from "../src/core/turn";
 import type { GameEvent } from "../src/core/events";
 import type { Unit } from "../src/unit";
 import type { AttackCommandHooks, Command, Commands, MoveCommandHooks, Refusal } from "../src/commands";
@@ -73,7 +76,7 @@ async function start(seq: Sequence) {
 type Play = Awaited<ReturnType<typeof start>>;
 
 function coreOf(w: World, data: () => ReturnType<typeof ToData>): CoreWorld {
-	return createWorld(data(), w.Equipment.equipment);
+	return createWorld(data(), w.Equipment.equipment, { spotSide: w.game.spotSide });
 }
 
 //The commands of a kind the engine offers the current player's unit u (none: it has none)
@@ -328,16 +331,60 @@ function difference(want: string, got: string): string {
 	return "\n    old  " + cut(want) + "\n    core " + cut(got);
 }
 
-//The end of turn as game.ts plays it, on the old engine; the core takes its state. Whether the game ended
-function endTurn(p: Play): boolean {
+//The end of turn as game.ts plays it on both: the command, the turn limit's defeat, the side shown,
+//then the reinforcements. Hotseat (every side shown in its turn) unless shown, the one side that plays
+//on the screen. Null when the game goes on, STOP when it ended, or what differs
+function endTurn(p: Play, shown = 2): string | null {
+	const problem = endTurnCommand(p, shown);
+	if (problem !== null) return problem;
 	const { w } = p;
+	w.game.spotSide = shown === 2 ? w.m.currentPlayer.side : shown;
+	p.core = { ...p.core, spotSide: w.game.spotSide };
+	return reinforcements(p);
+}
+
+//The end of turn command on both, the turn limit's defeat for the side shown and the outcome
+function endTurnCommand(p: Play, shown: number): string | null {
+	const { w } = p, ended = w.m.currentPlayer.side;
 	w.m.currentUnit = null;
-	const r = w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: 2 });
-	if (r.ok && r.result) return true;
-	w.game.spotSide = w.m.currentPlayer.side;
-	p.Actions.deployReinforcements(w.scenario, w.m.turn, w.m.currentPlayer.id);
-	p.core = coreOf(w, p.data);
-	return false;
+	const old = w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: shown });
+	const core = coreStep(p.core, { type: "endTurn" });
+	if (!old.ok || !core.ok) return refusals(old, core, check(p.core, { type: "endTurn" }));
+	const problem = compareStates(p, { type: "endTurn" }, core.world, core.events, [])
+		|| shownLimitProblem(old.result, core.events, ended, shown) || outcomeProblem(p, ended);
+	return problem === null && old.result ? STOP : problem;
+}
+
+//The core's end of turn says the side that ended played its last turn
+function reachedLimit(events: GameEvent[], ended: number): boolean {
+	return events.some((e) => e.type === "turnLimit" && e.side === ended);
+}
+
+//The old engine's defeat at the turn limit, only for the side shown (or both, 2), and the core's turnLimit
+function shownLimitProblem(defeat: boolean, events: GameEvent[], ended: number, shown: number): string | null {
+	const limit = reachedLimit(events, ended) && (shown === 2 || shown === ended);
+	if (limit) count("turn limit");
+	return defeat !== limit ? `turn limit: old ${defeat}, core ${limit}` : null;
+}
+
+//The current player's reinforcements, Actions.deployReinforcements on the old engine, then the core's
+function reinforcements(p: Play): string | null {
+	const { w } = p;
+	const story: string[] = [];
+	p.Actions.deployReinforcements(w.scenario, w.m.turn, w.m.currentPlayer.id, (c) => story.push(`arrived ${c.row},${c.col}`));
+	freeze(p.core.state);
+	const arrived = arriveReinforcements(p.core);
+	const arrivals = arrived.events.flatMap((e) => e.type === "arrived" ? [`arrived ${e.at.row},${e.at.col}`] : []);
+	return compareStates(p, { type: "endTurn" }, arrived.world, arrived.events, []) || storyProblem(story, arrivals) || null;
+}
+
+//checkOutcome on the old engine and the core's outcome, ended: the side that just ended its turn
+function outcomeProblem(p: Play, ended?: number): string | null {
+	const want = JSON.stringify(p.Actions.checkOutcome(p.w.scenario, { endedSide: ended }));
+	const got = JSON.stringify(outcome(p.core, { endedSide: ended }));
+	if (want !== got) return `outcome: old ${want}, core ${got}`;
+	if (got !== "null") count("outcome " + JSON.parse(got).kind);
+	return null;
 }
 
 async function run(seq: Sequence): Promise<void> {
@@ -349,11 +396,7 @@ async function run(seq: Sequence): Promise<void> {
 		const cmd = commandOf(p.w, s);
 		if (cmd === null) continue;
 		p.log.push("turn " + p.w.m.turn + " player#" + p.w.m.currentPlayer.id + ": " + JSON.stringify(cmd));
-		if (cmd.type === "endTurn") {
-			if (endTurn(p)) break;
-			continue;
-		}
-		const problem = playBoth(p, cmd);
+		const problem = cmd.type === "endTurn" ? endTurn(p) : playBoth(p, cmd) || outcomeProblem(p);
 		if (problem === STOP) break;
 		if (problem !== null) throw new Error(played() + "\n" + problem);
 		if (p.Actions.checkOutcome(p.w.scenario)) {
@@ -368,6 +411,30 @@ test("Property: the core's commands play as the old engine's, state, sight and e
 	expect(stats.commands).toBeGreaterThan(0);
 }, RUNS ? RUNS * 5000 : 120_000);
 
+
+//Every fixture's turns ended one after the other past its turn limit, the screen showing one side as
+//against the AI (the side that hides units in the end of turn, #75) or none (AI against AI), both
+//engines: the units' end of turn, the new rounds, the time of day, the reinforcements and the defeat
+//at the turn limit of the side shown
+test("The turns end the same on both engines up to the turn limit, whichever side the screen shows", async () => {
+	let limits = 0;
+	for (const fixture of fixtures("engine"))
+		for (const shown of [0, 1, -1]) {
+			const p = await start({ fixture, seed: 1, steps: [] });
+			const { w } = p;
+			w.m.maxTurns = w.m.turn + 1;
+			w.game.spotSide = shown;
+			p.core = coreOf(w, p.data);
+			for (let i = 0; i < 3 * w.m.getPlayers().length; i++) {
+				const before = stats["turn limit"] || 0;
+				const problem = endTurn(p, shown);
+				limits += (stats["turn limit"] || 0) - before;
+				if (problem === STOP) break;
+				expect(problem, fixture + " shown " + shown + " end of turn " + i).toBeNull();
+			}
+		}
+	expect(limits).toBeGreaterThan(5);
+}, 120_000);
 
 //The purchases in a row on every fixture where the player whose turn it is can deploy, with prestige
 //to spare: buy a unit with a transport and one without, upgrade one off the map, deploy it, upgrade
@@ -443,21 +510,29 @@ function facingUnits(state: ReturnType<typeof ToData>["state"]): [number, number
 
 //The engine contract's commands (the AI's and its random player actions, test/contracts/engine.contract.js),
 //each also stepped on the core from toData of the state before it: the same answer and the same
-//state after. The old engine's counters are made again from its units where they drifted (#72, #73);
+//state after. The end of turn is compared where the next player's turn starts (GameMap.onPlayerTurn,
+//before an AI player buys and plans: #136), and the reinforcements Game deploys after it on their own. The old engine's counters are made again from its units where they drifted (#72, #73);
 //a command during which they drifted isn't compared when the states differ, nor one that deselected
 //a unit in the middle of a disembark
 test("The engine contract's commands, each on the core from the state before it, play as on the old engine", async () => {
-	const seen = { compared: 0, skipped: 0 };
+	const seen = { compared: 0, skipped: 0, endTurns: 0, reinforcements: 0, arrived: 0 };
 	const problems: string[] = [];
 	for (const name of fixtures("engine"))
 		await runFixture("engine", "runEngineContract", name, (env) => ({ Commands: shadowCommands(env, (cmd, problem) => {
 			if (problem === null) seen.skipped++;
 			else seen.compared++;
+			if (cmd.type === "endTurn" && problem !== null) seen.endTurns++;
 			if (problem) problems.push(name + " " + JSON.stringify(cmd) + ": " + problem);
+		}), ...shadowReinforcements(env, (problem, arrived) => {
+			seen.reinforcements++;
+			seen.arrived += arrived;
+			if (problem) problems.push(name + " reinforcements: " + problem);
 		}) }));
 	if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(seen) + "\n");
 	expect(problems).toEqual([]);
 	expect(seen.compared).toBeGreaterThan(2000);
+	expect(seen.endTurns).toBeGreaterThan(50);
+	expect(seen.arrived).toBeGreaterThan(20);
 }, 300_000);
 
 //Commands.execute of the contract's modules, which also steps the core from the state before the
@@ -470,7 +545,7 @@ function shadowCommands(env: ContractEnv, tell: (cmd: Command, problem: string |
 	return {
 		check: (scenario, cmd) => real.check(scenario, cmd),
 		execute(scenario, cmd, hooks) {
-			if (cmd.type === "endTurn") return real.execute(scenario, cmd, hooks);
+			if (cmd.type === "endTurn") return shadowEndTurn(env, () => real.execute(scenario, cmd, hooks), tell);
 			//(the old engine plays on with the counters its units make: the core's sight)
 			if (drifted(old)) resync(old);
 			//(a unit selected in the middle of a disembark goes back on its carrier when the command
@@ -487,6 +562,66 @@ function shadowCommands(env: ContractEnv, tell: (cmd: Command, problem: string |
 			return r;
 		},
 	};
+}
+
+//The contract's end of turn, also stepped on the core from toData of the state before it, compared with
+//the old engine's state where the next player's turn starts (an AI player then buys and plans, #136)
+function shadowEndTurn<R extends { ok: boolean }>(env: ContractEnv, play: () => R, tell: (cmd: Command, problem: string | null) => void): R {
+	const toData = env.toData as typeof ToData, game = env.game as World["game"], m = env.map as World["m"];
+	const old = { m, GameRules: env.GameRules } as World;
+	if (drifted(old)) resync(old);
+	const before = toData(env.scenario as World["scenario"], game), ended = m.currentPlayer.side;
+	const core = step(createWorld(before, (env.Equipment as World["Equipment"]).equipment, { spotSide: game.spotSide }),
+		{ type: "endTurn" });
+	let want = "", driftAfter = false;
+	const r = atTurnStart(m, () => {
+		driftAfter = drifted(old);
+		want = JSON.stringify(toData(env.scenario as World["scenario"], game).state);
+	}, play);
+	const got = core.ok ? JSON.stringify(core.world.state) : "";
+	tell({ type: "endTurn" }, want !== got && driftAfter ? null : compared(r, core, want, got) || limitProblem(r, core, ended));
+	return r;
+}
+
+//The old engine's defeat at the turn limit (the side shown's) is a turnLimit of the core's (any side's)
+function limitProblem(old: { ok: boolean }, core: Stepped, ended: number): string {
+	const defeat = "result" in old && old.result === true;
+	return defeat && !(core.ok && reachedLimit(core.events, ended)) ? "turn limit" : "";
+}
+
+//Plays play with f called where the next player's turn starts (GameMap.onPlayerTurn), before it
+function atTurnStart<R>(m: World["m"], f: () => void, play: () => R): R {
+	const GameMap = m.constructor as typeof m.constructor & { onPlayerTurn: (...a: unknown[]) => void };
+	const onPlayerTurn = GameMap.onPlayerTurn;
+	GameMap.onPlayerTurn = (...a: unknown[]) => {
+		f();
+		onPlayerTurn(...a);
+	};
+	try {
+		return play();
+	} finally {
+		GameMap.onPlayerTurn = onPlayerTurn;
+	}
+}
+
+//Game.deployReinforcements of the contract's game, which also lets the core's reinforcements arrive
+//from toData of the state before it: the same state after
+function shadowReinforcements(env: ContractEnv, tell: (problem: string, arrived: number) => void): ContractEnv {
+	const toData = env.toData as typeof ToData, game = env.game as World["game"];
+	const old = { m: env.map, GameRules: env.GameRules } as World;
+	const deploy = game.deployReinforcements;
+	game.deployReinforcements = function(turn: number, id: number) {
+		if (drifted(old)) resync(old);
+		const before = toData(env.scenario as World["scenario"], game);
+		const core = arriveReinforcements(createWorld(before, (env.Equipment as World["Equipment"]).equipment,
+			{ spotSide: game.spotSide }));
+		const r = deploy.call(game, turn, id);
+		const want = JSON.stringify(toData(env.scenario as World["scenario"], game).state);
+		const got = JSON.stringify(core.world.state);
+		tell(want !== got && !drifted(old) ? "toData:" + difference(want, got) : "", core.events.filter((e) => e.type === "arrived").length);
+		return r;
+	};
+	return {};
 }
 
 //What differs between the old engine's command and the core's step: the answer, then the state

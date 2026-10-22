@@ -15,7 +15,9 @@ import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
 import { step, type Stepped } from "../src/core/step";
+import { arriveReinforcements, outcome } from "../src/core/turn";
 import type { Contribution } from "../src/core/types";
+import type { Command } from "../src/commands";
 import { handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273;
@@ -132,7 +134,7 @@ test("Column 0 is out of every other column's range (#69)", () => {
 
 //The commands (src/core/step.ts, #134): that they play as the old engine's is test/core-steps.test.ts's
 
-test("A step leaves the world it was given as it was; the end of turn isn't the core's yet (#135)", () => {
+test("A step leaves the world it was given as it was", () => {
 	const w = forestFight();
 	const before = JSON.stringify(w.state);
 	const r = step(w, { type: "move", unit: 0, to: { row: 4, col: 2 } });
@@ -140,8 +142,8 @@ test("A step leaves the world it was given as it was; the end of turn isn't the 
 	expect(JSON.stringify(w.state)).toBe(before);
 	expect(r.ok && unitById(r.world, 0)).toMatchObject({ row: 4, col: 2 });
 	expect(unitById(w, 0)).toMatchObject({ row: 2, col: 2 });
-	expect(step(w, { type: "endTurn" })).toEqual({ ok: false, refusal: { reason: "the end of turn isn't in the core yet (#135)" } });
 	expect(step(w, { type: "resupply", unit: 7 })).toEqual({ ok: false, refusal: { reason: "no such unit" } });
+	expect(step(w, { type: "fly" } as unknown as Command)).toEqual({ ok: false, refusal: { reason: "no such command" } });
 });
 
 test("An attack draws the attacker's dice, the defender's, then a leader roll for each, even with no level gained", () => {
@@ -181,6 +183,81 @@ test("A liberator takes a flag for twice the prestige, the score as any unit", (
 	const moved = played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
 	expect(moved.world.state.players[0]).toMatchObject({ prestige: 100, score: 50 });
 	expect(moved.world.state.turn.undoable).toMatchObject({ prestigeGain: 100, scoreGain: 50 });
+});
+
+//An SS infantry leaving its Ju-52 on an airfield: selecting it (as a mount does last) puts it back on
+//the carrier when no neighbour lets it land (MapSelection.select), and leaves it landing otherwise
+test("A unit leaving its carrier gets back on it when selected, unless it can still land", () => {
+	const SS_INFANTRY = 108, JU52 = 176;
+	for (const [around, carrier] of [[terrainType.Clear, -JU52], [terrainType.Ocean, JU52]]) {
+		const w = handWorld({ rows: 5, cols: 5, terrain: (r, c) => r === 2 && c === 2 ? terrainType.Airfield : around,
+			units: [{ eqid: SS_INFANTRY, owner: 0, row: 2, col: 2, carrier: -JU52 }] });
+		expect(unitById(played(step(w, { type: "mount", unit: 0 })).world, 0).carrier, "around: " + around).toBe(carrier);
+	}
+});
+
+//The turn (src/core/turn.ts, #135)
+
+//A Pz IIA (side 0) and a 7TP in a forest (side 1) far apart, both seen by the other side after firing
+function farApart(spotSide: number) {
+	const ocean = (r: number, c: number) => r <= 1 && c >= 10;
+	return handWorld({ rows: 12, cols: 12, terrain: (r, c) => r === 9 && c === 9 ? terrainType.Forest : ocean(r, c) ? terrainType.Ocean : terrainType.Clear, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 1, col: 1, tempSpotted: true, hasMoved: true, hasFired: true, moveLeft: 0 },
+		{ eqid: TP7, owner: 1, row: 9, col: 9, tempSpotted: true },
+	] }, undefined, { spotSide });
+}
+
+test("The turn passes to the next player; once both played, a new round: points back, entrenchment, the day goes on", () => {
+	const w = farApart(0);
+	const first = played(step(w, { type: "endTurn" }));
+	expect(first.world.state.turn).toEqual({ turn: 1, currentPlayer: 1, undoable: null });
+	expect(first.events.map((e) => e.type)).toEqual(["turnEnded", "turnStarted"]);
+	expect(unitById(first.world, 0)).toMatchObject({ hasMoved: true, moveLeft: 0 });
+	const second = played(step(first.world, { type: "endTurn" }));
+	expect(second.world.state.turn).toMatchObject({ turn: 2, currentPlayer: 0 });
+	expect(second.world.state.scenario).toMatchObject({ dayTurn: 0, date: "1939-09-02T00:00:00.000Z" });	//2 turns a day
+	expect(unitById(second.world, 0)).toMatchObject({ hasMoved: false, hasFired: false, moveLeft: w.equipment[PZ_IIA].movpoints });
+	expect(unitById(second.world, 1)).toMatchObject({ entrenchment: 2, entrenchTicks: 0 });		//a forest's at once
+	expect(second.world.state.players.map((p) => [p.playedTurn, p.score])).toEqual([[1, -10], [1, -10]]);
+});
+
+test("A unit seen after firing hides again at the round's end unless it is the side the screen shows (kept #75)", () => {
+	for (const [spotSide, seen] of [[0, [true, false]], [1, [false, true]], [-1, [false, false]]] as const) {
+		const ended = played(step(played(step(farApart(spotSide), { type: "endTurn" })).world, { type: "endTurn" })).world;
+		expect([unitById(ended, 0).tempSpotted, unitById(ended, 1).tempSpotted], "screen shows " + spotSide).toEqual(seen);
+	}
+});
+
+test("The side that ended its last turn reaches the turn limit: it lost", () => {
+	const w = farApart(0);
+	const last = { ...w, state: { ...w.state, scenario: { ...w.state.scenario, maxTurns: 1 } } };
+	expect(outcome(last)).toBeNull();
+	const ended = played(step(last, { type: "endTurn" }));
+	expect(ended.events[ended.events.length - 1]).toEqual({ type: "turnLimit", side: 0 });
+	expect(outcome(ended.world, { endedSide: 0 })).toEqual({ kind: "turnLimit", winner: -1, loser: 0, rating: "lose" });
+	expect(outcome(ended.world, { endedSide: 1 })).toBeNull();	//side 1 still has turn 1 to play
+});
+
+test("A capture of the last objective wins, rated by the turn it was taken on; a side with no unit loses", () => {
+	const w = farApart(0);
+	const at = (turn: number) => ({ ...w, state: { ...w.state, turn: { ...w.state.turn, turn },
+		scenario: { ...w.state.scenario, victoryTurns: [2, 4, 6] } } });
+	expect([1, 3, 5, 7].map((turn) => outcome(at(turn), { victorySide: 1 }).rating)).toEqual(["briliant", "victory", "tactical", "lose"]);
+	expect(outcome(at(3), { victorySide: 1 })).toMatchObject({ kind: "capture", winner: 1, loser: 0 });
+	const alone = { ...w, state: { ...w.state, units: [w.state.units[1]] } };
+	expect(outcome(alone)).toMatchObject({ kind: "elimination", winner: 1, loser: 0 });
+});
+
+test("Reinforcements arrive at their player's turn start, on the next free hex when theirs is taken; the others wait", () => {
+	const w = farApart(0);
+	const { id: _id, row: _row, col: _col, ...pz } = unitById(w, 0);
+	const unit = { ...pz, owner: 1, tempSpotted: false };
+	const due = [{ turn: 1, row: 9, col: 9, unit }, { turn: 2, row: 5, col: 5, unit }, { turn: 1, row: 0, col: 11, unit }];
+	const r = arriveReinforcements({ ...w, state: { ...w.state, reinforcements: due, turn: { ...w.state.turn, currentPlayer: 1 } } });
+	expect(r.events).toEqual([{ type: "arrived", unit: 2, at: { row: 8, col: 9 } }]);
+	expect(unitById(r.world, 2)).toMatchObject({ owner: 1, row: 8, col: 9, flag: 16 });
+	expect(r.world.state.reinforcements).toEqual([due[1], due[2]]);		//(the last has no hex it can stand on)
+	expect(arriveReinforcements(w).world).toBe(w);		//player 0 has none
 });
 
 //The step's world and events; a refusal throws

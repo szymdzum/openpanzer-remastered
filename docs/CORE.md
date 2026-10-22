@@ -7,6 +7,7 @@ works on is docs/STATE.md's.
     state = plain data (GameState, docs/STATE.md)
     queries(world, ...) -> answers		layer 1, #133
     step(world, command) -> { world', events }	layer 2, #134 (world'.state is state')
+    the end of turn, the reinforcements, the outcome	layer 3, #135
 
 Nothing in the running game uses the core until the switch (#137): verify stays identical.
 
@@ -21,6 +22,7 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `equipment` | the equipment table by eqid (`EquipmentEntry`) | loaded once, read-only |
 | `rules` | the `Ruleset` | `classicRules`: today's game |
 | `noFOW` | the fog of war off: every hex is spotted | an option, not state (D6) |
+| `spotSide` | the side the screen shows (-1 none): the end of turn hides the units it doesn't see (kept #75) | an input, not state (D6) |
 | `destroyed` | units an attack destroyed whose removal hasn't run yet | empty: only the contract's adapter sets it (the step removes a unit where the old engine did) |
 | `index` | unit id -> its index in `state.units` (D2) | derived, built with the world |
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
@@ -43,12 +45,13 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `combat.ts` | the attack and combat results as named steps with a record of what each contributed (#118) |
 | `supply.ts` | resupply and reinforcement: whether, and how much |
 | `costs.ts` | unit, upgrade and sell costs |
+| `turn.ts` | a unit's end of turn (entrenchment, #75's hiding), the reinforcements arriving, the turn limit, the victory rating and the outcome |
 | `step.ts` | `step` and `check`, the handlers' registry |
 | `draft.ts` | the state a step changes, copied on write, and its primitives: place, relocate, remove a unit with its sight, the score, the dossier |
 | `events.ts` | the events a step emits (types) |
 | `fight.ts` | an attack: each shot resolved then applied, the attack's finish (destroyed, retreat, surrender, elimination), the surprise attack |
 | `moves.ts` | a move: the path walked, the surprise, the capture, the fuel and points, the undo it leaves |
-| `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell) |
+| `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell; `turn.ts`: the end of turn) |
 
 The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` of `src/rng.ts`
 and types: no UI module, no mutable object of the old engine (the linter checks it).
@@ -99,7 +102,8 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
 `{ ok: false, refusal }`. The commands are src/commands.ts's `Command` values, the old engine's
 (ids and cells, plain data); `check(world, command)` alone says whether one is allowed, or why not,
 and changes nothing. Each type has a handler in `commands/` (`check` and `run`), in a registry
-typed by a mapped type; the end of turn is refused until the next layer (#135).
+typed by a mapped type: every command of the old engine, the end of turn included (#135). A type
+that isn't a command is refused ("no such command"): a remote game checks what it is sent.
 
 **The world given stays as it was.** `run` plays on a draft (`draft.ts`): the step copies the
 state's lists when it starts (a few thousand pointers, and the sight's four counts) and an object of
@@ -120,7 +124,8 @@ animate after the step: `moved` (the path, each hex seen by the enemy or not, th
 `fight` (a support shot or the attack: both units before and after, the dice's result and the
 combat steps' record, #118), `attackStopped`, `dismounted`, `leader`, `destroyed`, `retreated`,
 `surrendered`, `resupplied`, `reinforced`, `mounted`, `unmounted`, `embarked`, `disembarked`,
-`undone`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold`.
+`undone`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold`; the turn's `turnEnded`,
+`turnStarted`, `turnLimit` and `arrived` (below).
 
 **The attack** (`fight.ts`) is the old engine's sequence: the estimate (no draw) decides an overrun,
 the support fire shots one by one unless the attacker is surprised or overruns, the attack unless
@@ -144,6 +149,39 @@ player's dossier (the last player of its country) and its difficulty scales the 
 **Not reproduced: the selection (D6).** Selecting another unit puts a unit in the middle of a
 disembark back on its carrier (`MapSelection.clear`): the core has no selection, so a program's
 command plays as with nothing selected.
+
+## The turn (#135)
+
+`step(world, { type: "endTurn" })` is Actions.endTurn without the AI: the time of day (a day later
+after the day's last turn, the date counted in local time as the old engine counts it), the player's
+end of turn (the turn played, the prestige the scenario gives for the next turn, the score), the
+undo gone, the next player by id. When the first player is next, a new round: the turn counter, and
+each unit in the list's order gets off its transport (spotting again, marking what it sees), takes
+the turn start's resupply (in a city with no enemy around; #95 kept) and ends its turn
+(`unitEndTurn`: entrenchment, its points and flags back, and hidden again unless the side the screen
+shows sees it, #75 kept). Events: `turnEnded` (the prestige), `unmounted`, `resupplied`,
+`turnStarted` (turn, date, time of day), and `turnLimit` when the side that ended has played its
+last turn. The game ends there only for a side that plays on this screen (Game's local side): that
+is the session's to decide, as the side shown is. The ground and the weather don't change during a
+scenario; the move costs follow `state.scenario.ground` through the ruleset's tables.
+
+**The reinforcements are a step of their own:** `arriveReinforcements(world)` (turn.ts) places the
+current player's reinforcements due by this turn, by turn then as listed, each on its hex or the
+first neighbour it can stand on (`arrived`, then what it spots); those with no room wait. The old
+game plays, in order: the end of turn, the next AI player's turn start and plan (inside
+Map.endTurn), the save, the side shown, then the reinforcements. Kept: the AI plans before its
+reinforcements arrive (#94), the save is written before them (#93). The session (C4, C5) plays the
+two with the controller's turn start in between. No command stands for the arrival: no player
+sends it.
+
+`outcome(world, last?)` is Actions.checkOutcome: a capture that took the side's last objective
+(`last.victorySide`, the move's `victory` event), a side with no unit on the map (#115 kept: units
+waiting to deploy don't count; axis first), the ended side's turn limit (`last.endedSide`). The
+rating is Scenario.checkVictory's, by the turn.
+
+`BENCH=1` (test/core-bench.test.ts), two rounds of turns ended on each engine fixture, each with its
+reinforcements, per end of turn (2026-10-22, a loaded laptop): old engine 27-116 µs, core 12-97 µs
+(1.1-2.3x faster; every unit is copied once in a new round).
 
 ## The proof
 
@@ -171,16 +209,22 @@ command plays as with nothing selected.
   from its own state. After every command: the same answer (and `check`'s), the same toData as JSON
   (the save's key order, the random streams' positions), the core's sight equal to `computeSight`
   and to the old counters, the old engine's hooks and the core's events telling the same story, and
-  the state given to the step unchanged (frozen). The end of turn is the old engine's, the core
-  takes its state. Where the old counters drift (#73) with the same state after, they are made
+  the state given to the step unchanged (frozen). The end of turn plays on both as the game plays
+  it, hotseat: the command, the side shown, then the reinforcements, with `outcome` against
+  checkOutcome after every command; no player plans (the AI is #136). Where the old counters drift (#73) with the same state after, they are made
   again from the units and the sequence goes on; drift that changed the command's result stops the
-  sequence. CI plays 20 sequences (about 220 commands); `FC_RUNS=1000` played 11,000 commands with
-  no difference, 300 resyncs and no state masked.
+  sequence. CI plays 20 sequences (about 220 commands); `FC_RUNS=1000` played 11,948 commands, 921
+  of them ends of turn (388 reinforcements arrived), with no difference, 333 resyncs and no state
+  masked.
   - the engine contract's own commands (the AI's and the random actions of the 15 fixtures, about
     3,000), each also stepped on the core from toData of the state before it: no difference; 7
-    masked where a selected unit left its disembark (D6).
+    masked where a selected unit left its disembark (D6). Its 60 ends of turn too, compared where the
+    next player's turn starts (`GameMap.onPlayerTurn`, before an AI player buys and plans), whichever
+    side the fixture shows, and the reinforcements Game deploys after them (42 arrive) on their own.
+  - every fixture's turns ended past a turn limit set to the next turn, the screen showing side 0,
+    side 1 or none (#75): the new rounds, the reinforcements, the defeat of the side shown.
   - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
     deploy; a campaign's kills and losses in the dossier.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
-  undo, and the path search against the old engine's on maps full of equal paths.
+  undo, a new round, #75's hiding, the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.

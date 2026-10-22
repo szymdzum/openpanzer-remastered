@@ -18,8 +18,13 @@ import { playerAt, unitCheck } from "./common";
 //Player.resupplyUnit and Unit.resupply: the score, the ammo and fuel (its transport's too), and the
 //unit is done for the turn. Resupply costs no prestige
 function resupplyUnit(d: Draft, id: UnitId, s: Supply) {
+	addScore(d, playerAt(d, d.state.units[d.index.get(id)].owner).id, scoreGains.resupply);
+	refill(d, id, s);
+}
+
+//Unit.resupply: the ammo and fuel (its transport's too), and the unit is done for the turn
+export function refill(d: Draft, id: UnitId, s: Supply) {
 	const u = writeUnit(d, id);
-	addScore(d, playerAt(d, u.owner).id, scoreGains.resupply);
 	u.ammo += s.ammo;
 	u.fuel += s.fuel;
 	if (u.transport !== null) {

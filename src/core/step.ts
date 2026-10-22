@@ -17,15 +17,10 @@ import type { GameEvent } from "./events";
 import { attack, move } from "./commands/move";
 import { reinforce, resupply } from "./commands/supply";
 import { disembark, embark, mount, unmount } from "./commands/transport";
+import { endTurn } from "./commands/turn";
 import { undo } from "./commands/undo";
 import { buy, deploy, disband, sell, upgrade, upgradeUndeployed } from "./commands/units";
 import type { CommandHandler, World } from "./types";
-
-//A command the core doesn't play yet: refused, with the layer it comes with
-function later<C extends Command>(reason: string): CommandHandler<C> {
-	return { check: () => ({ reason }), run() {} };
-}
-const endTurn = later<CommandOf<"endTurn">>("the end of turn isn't in the core yet (#135)");
 
 //The handlers by command type, typed by a mapped type: a type without its handler, or a misspelled
 //one, doesn't compile
@@ -34,13 +29,17 @@ const handlers: { [T in CommandType]: CommandHandler<CommandOf<T>> } = {
 	disband, sell, endTurn,
 };
 
-//(the registry's type can't name the handler of a type only known at the call)
-const handlerFor = <C extends Command>(cmd: C) => handlers[cmd.type] as unknown as CommandHandler<C>;
+//(the registry's type can't name the handler of a type only known at the call). Undefined for a type
+//that isn't a command
+const handlerFor = <C extends Command>(cmd: C) => handlers[cmd.type] as unknown as CommandHandler<C> | undefined;
 
 //Whether cmd is allowed in w, or why not, in words a player understands. Changes nothing: the UI
 //greys a button with it, the AI lists the legal moves, a remote game checks the other side's command
+//(which may not be a command at all)
 export function check(w: World, cmd: Command): Refusal | null {
-	return handlerFor(cmd).check(w, cmd);
+	const handler = handlerFor(cmd);
+	if (handler === undefined) return { reason: "no such command" };
+	return handler.check(w, cmd);
 }
 
 export type Stepped = { ok: true; world: World; events: GameEvent[] } | { ok: false; refusal: Refusal };
@@ -50,6 +49,6 @@ export function step(w: World, cmd: Command): Stepped {
 	const refusal = check(w, cmd);
 	if (refusal !== null) return { ok: false, refusal };
 	const d = beginDraft(w);
-	handlerFor(cmd).run(d, cmd);
+	handlerFor(cmd)!.run(d, cmd);
 	return { ok: true, world: finishDraft(d), events: d.events };
 }

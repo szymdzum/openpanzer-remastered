@@ -74,4 +74,13 @@ export type GameEvent =
 	//unit: on the map, or index: a core unit of the player off it
 	| { type: "upgraded"; unit: UnitId | null; index: number | null; eqid: number; transport: number; cost: number }
 	| { type: "disbanded"; unit: UnitId; prestige: number }
-	| { type: "sold"; index: number; prestige: number };
+	| { type: "sold"; index: number; prestige: number }
+	//The player ended its turn: the prestige the scenario gives it for the next one
+	| { type: "turnEnded"; player: number; prestige: number }
+	//The player's turn starts: the turn, the date and the time of day (the turn in the day)
+	| { type: "turnStarted"; player: number; turn: number; date: string; dayTurn: number }
+	//The side that ended its turn has played its last: it lost (the game ends it for a side that
+	//plays on this screen)
+	| { type: "turnLimit"; side: number }
+	//A scenario's reinforcement arrived on the map
+	| { type: "arrived"; unit: UnitId; at: Position };

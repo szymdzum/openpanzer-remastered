@@ -14,6 +14,7 @@ import { emptySight, unitIndex } from "./world";
 export interface WorldOptions {
 	rules?: Ruleset;		//classicRules
 	noFOW?: boolean;
+	spotSide?: number;		//-1, no side
 	destroyed?: ReadonlySet<UnitId>;
 	sight?: Sight;			//given instead of computed (a test reads the old engine's counters)
 }
@@ -23,6 +24,7 @@ export function createWorld(saved: { data: ScenarioData; state: GameState }, equ
 	const { data, state } = saved;
 	const w: World = {
 		data, state, equipment, rules: options.rules || classicRules, noFOW: !!options.noFOW,
+		spotSide: options.spotSide === undefined ? -1 : options.spotSide,
 		destroyed: options.destroyed || new Set(), index: unitIndex(state),
 		sight: options.sight || emptySight(state.map.rows * state.map.cols), scratch: null,
 	};
