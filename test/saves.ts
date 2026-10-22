@@ -5,10 +5,9 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 
 export type Save = SaveFile;
 
-//A save without what a load is known to lose or rebuild, the rest must survive a load: tempSpotted
-//(set again by the spotting a load replays, #84), the unit ids and the units' order (numbered
-//again in hex order, #85: the units sorted, the hexes' and the core lists' references to them
-//dropped), the core lists (rebuilt for the campaign player only, in hex order and without the
+//A save without what a load is known to lose or rebuild, the rest must survive a load: the unit
+//ids and the units' order (numbered again in hex order, #85: the units sorted, the hexes' and the
+//core lists' references to them dropped), the core lists (rebuilt for the campaign player only, in hex order and without the
 //destroyed units, with the AI's core units: #142, #149, #150), the undo, the random streams, the
 //equipment lists, the campaign's progress and the scenario's description (#128)
 export function withoutLosses(save: SaveFile): unknown {
@@ -26,7 +25,6 @@ export function withoutLosses(save: SaveFile): unknown {
 	for (const p of state.players) delete p.core;
 	const units = state.units.map((u) => {
 		delete u.id;
-		delete u.tempSpotted;
 		return JSON.stringify(u);
 	}).sort();
 	return { data, state: { ...state, units } };
