@@ -24,7 +24,7 @@ export function firstOfClass(w: World, uclass: number, country: number): number 
 }
 
 //The transport's spotting range is the unit's while mounted (Map.mountUnitHandler)
-function setMounted(d: Draft, id: UnitId, mounted: boolean) {
+export function setMounted(d: Draft, id: UnitId, mounted: boolean) {
 	const u = writeUnit(d, id);
 	spotOff(d, u);
 	u.isMounted = mounted;

@@ -1,7 +1,7 @@
 //How fast the new core answers the AI's hot queries against the old engine (docs/CORE.md): the move
 //range of every unit that can move and the combat estimate of every unit on what it can attack, on each engine
 //fixture, and what building the world from toData costs; and how fast its step plays a move and an
-//attack against the old engine's command. Off unless BENCH=1 (timings on a shared machine aren't a
+//attack against the old engine's command, and an end of turn with its reinforcements. Off unless BENCH=1 (timings on a shared machine aren't a
 //test): BENCH=1 npx vitest run test/core-bench.test.ts prints the tables
 import fs from "node:fs";
 import { test } from "vitest";
@@ -12,6 +12,7 @@ import { moveRange } from "../src/core/movement";
 import { combatResult } from "../src/core/combat";
 import { unitById } from "../src/core/world";
 import { step } from "../src/core/step";
+import { arriveReinforcements } from "../src/core/turn";
 import type { Command } from "../src/commands";
 import type { Unit } from "../src/unit";
 
@@ -105,6 +106,39 @@ test.runIf(!!process.env.BENCH)("Benchmark: the core's step against the old engi
 		const [mo, mc] = moves.length ? await timeCommands(name, moves) : [0, 0];
 		const [ao, ac] = attacks.length ? await timeCommands(name, attacks) : [0, 0];
 		rows.push(`${name} | ${moves.length}: ${mo.toFixed(0)} / ${mc.toFixed(0)} | ${attacks.length}: ${ao.toFixed(0)} / ${ac.toFixed(0)}`);
+	}
+	fs.writeSync(2, rows.join("\n") + "\n");
+}, 600_000);
+
+//Two rounds of turns ended on each fixture, each with the reinforcements that arrive: the old engine's
+//command and Actions.deployReinforcements (the fixture loaded again before each round, not timed; no
+//player plans) against the core's step and arriveReinforcements, per end of turn in µs, best of 5
+test.runIf(!!process.env.BENCH)("Benchmark: the core's end of turn against the old engine's", async () => {
+	const rows: string[] = ["fixture, units | end of turn old/core µs"];
+	for (const name of fixtures("engine")) {
+		let old = Infinity, core = Infinity, units = 0, n = 0;
+		for (let round = 0; round < 5; round++) {
+			const w = await load(name);
+			const { toData } = await import("../src/state");
+			const { Actions } = await import("../src/actions");
+			let world = createWorld(toData(w.scenario, w.game), w.Equipment.equipment, { spotSide: 0 });
+			units = world.state.units.length;
+			n = 2 * world.state.players.length;
+			let t = performance.now();
+			for (let i = 0; i < n; i++) {
+				const r = step(world, { type: "endTurn" });
+				if (r.ok) world = arriveReinforcements(r.world).world;
+			}
+			core = Math.min(core, performance.now() - t);
+			w.game.spotSide = 0;
+			t = performance.now();
+			for (let i = 0; i < n; i++) {
+				w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: -1 });
+				Actions.deployReinforcements(w.scenario, w.m.turn, w.m.currentPlayer.id);
+			}
+			old = Math.min(old, performance.now() - t);
+		}
+		rows.push(`${name} ${units} | ${(old * 1000 / n).toFixed(0)} / ${(core * 1000 / n).toFixed(0)}`);
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);

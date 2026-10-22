@@ -42,7 +42,7 @@ export function beginDraft(w: World): Draft {
 export function finishDraft(d: Draft): World {
 	const s = d.state;
 	const state: GameState = s.rng === null ? s : { ...s, rng: { game: d.rng.state, ai: s.rng.ai } };
-	return { data: d.data, state, equipment: d.equipment, rules: d.rules, noFOW: d.noFOW, destroyed: d.destroyed,
+	return { data: d.data, state, equipment: d.equipment, rules: d.rules, noFOW: d.noFOW, spotSide: d.spotSide, destroyed: d.destroyed,
 		index: d.index, sight: d.sight, scratch: d.scratch };
 }
 
