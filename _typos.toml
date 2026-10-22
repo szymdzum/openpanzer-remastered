@@ -6,6 +6,7 @@ nd = "nd"             # local names (row/col deltas) in ui.ts and uibuilder.ts
 iy = "iy"             # render.ts coordinates
 ba = "ba"             # harness/diff-traces.js: baseline arrays
 PN = "PN"
+ligh = "ligh"         # it22ligh.xml, a scenario file the tests load
 
 [files]
 extend-exclude = ["game/", "reference/", "public/", "dist/", "dist-*/", "coverage/", "reports/", "harness/out/", "test/contracts/**/*.gz", "test/mapsizes.json", "package-lock.json", "*.svg", "docs/design/"]

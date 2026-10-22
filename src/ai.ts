@@ -20,7 +20,7 @@ import { Equipment } from "./equipment";
 import { defined } from "./util";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
-import type { GameMap, Player } from "./map";
+import type { GameMap, Hex, Player } from "./map";
 import { engineContext } from "./context";
 import { Rng } from "./rng";
 
@@ -455,6 +455,12 @@ export class AI {
 	}
 }
 
+//Whether a player of side owns hex. A victory hex with no owner (-1, no player) is nobody's,
+//as in Map.setHex (#100)
+function isOwnedBySide(map: GameMap, hex: Hex, side: number): boolean {
+	return hex.owner != -1 && map.getPlayer(hex.owner).side == side;
+}
+
 //Random integer between min and max inclusive, from rng's number in [0, 1)
 function randomInt(rng: () => number, min: number, max: number): number {
 	return Math.floor(rng() * (max - min + 1) + min);
@@ -629,7 +635,7 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 				}
 			}
 			if (adjHex.victorySide != -1) {
-				const isOwnedAdj = map.getPlayer(adjHex.owner).side == side;
+				const isOwnedAdj = isOwnedBySide(map, adjHex, side);
 				if (uclass == unitClass.artillery || uclass == unitClass.flak)
 					score += 50;
 				else if (uclass == unitClass.infantry)
