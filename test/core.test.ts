@@ -2,15 +2,16 @@
 //The new core's rules on hand-built situations (docs/CORE.md, #133): each test reads like the rule
 //it tests. That the core answers as the old engine does is test/core-contract.test.ts's and
 //test/core-differential.test.ts's
+import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, type extendedCell, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
-import { moveRange, pathTo } from "../src/core/movement";
+import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
 import { classicRules, moveCosts } from "../src/core/rules";
-import { cellsInRange, distance } from "../src/core/geometry";
+import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
 import type { Contribution } from "../src/core/types";
@@ -124,4 +125,27 @@ test("Column 0 is out of every other column's range (#69)", () => {
 	expect(spotCells(w, unitById(w, 0)).some((c) => c.col === 0)).toBe(false);
 	expect(isSpotted(w, hexIndex(w, 3, 0), 0)).toBe(false);
 	expect(attackCells(w, unitById(w, 0))).toEqual([]);
+});
+
+test("Property: the path search with its heap finds the old engine's paths, ties broken the same", async () => {
+	const { GameRules } = await import("../src/gamerules");
+	const grid: Cell[] = [];
+	for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) grid.push({ row: r, col: c } as Cell);
+	const cell = fc.constantFrom(...grid);
+	//most of a small map in any order, mostly of cost 1: many paths as cheap as each other
+	const cells = fc.shuffledSubarray(grid, { minLength: 20 }).chain((list) => fc.tuple(...list.map((c) =>
+		fc.constantFrom(1, 1, 1, 2, 254).map((cost) => ({ row: c.row, col: c.col, cost })))));
+	fc.assert(fc.property(cell, cell, cells, (start, end, list) => {
+		const old = GameRules.getShortestPath(start, end, list as extendedCell[]);
+		expect(shortestPath(start, end, list)).toEqual(old.map((p) => ({ row: p.row, col: p.col, cost: p.cost, dist: p.dist })));
+	}), { seed: 134, numRuns: 2000 });
+});
+
+test("The half hexes of the edges: the first row's even columns, a partial last column and last row's odd columns", () => {
+	expect(isPartialEdge(0, 2, 10, 10, false, false)).toBe(true);
+	expect(isPartialEdge(0, 3, 10, 10, false, false)).toBe(false);
+	expect(isPartialEdge(4, 9, 10, 10, false, true)).toBe(true);
+	expect(isPartialEdge(4, 9, 10, 10, false, false)).toBe(false);
+	expect(isPartialEdge(9, 3, 10, 10, true, false)).toBe(true);
+	expect(isPartialEdge(9, 4, 10, 10, true, false)).toBe(false);
 });

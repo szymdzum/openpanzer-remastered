@@ -8,7 +8,7 @@
 
 import { embarkType, leaderType, movMethod, roadType, terrainType, unitClass } from "../prototypes";
 import { isBridge } from "./equipment";
-import { adjacent, cellsInRange, distance, facingToAdjacentIndex, isAdjacent, isPartialEdge } from "./geometry";
+import { adjacent, cellsInRange, distance, facingToAdjacentIndex, isPartialEdge, neighbourCol, neighbourRow } from "./geometry";
 import { moveCosts } from "./rules";
 import type { MoveCell, PathCell, Position, UnitState, World } from "./types";
 import { hasLeader, isAir, isGround, isSea, isTrain, unitUsesFuel } from "./units";
@@ -21,9 +21,6 @@ const ROAD = 17;
 //Costs from this one up stop the move (254) or can't be entered (255)
 const STOP = 254;
 const NO_ENTRY = 255;
-//The neighbours of geometry.ts's adjacent(), as offsets: an odd column's side neighbours are a row lower
-const NEAR_COL = [0, -1, -1, 0, 1, 1];
-const NEAR_ROW = [-1, -1, 0, 1, 0, -1];
 
 //The movement costs of what the unit currently is (eqid: of that equipment instead)
 function costsOf(w: World, movmethod: number): number[] {
@@ -200,10 +197,8 @@ function scratch(w: World): Int32Array {
 function neighbours(w: World, from: MoveCell, slot: Int32Array, out: number[]) {
 	out.length = 0;
 	const { rows, cols } = w.state.map;
-	const odd = from.col % 2;
 	for (let n = 0; n < 6; n++) { //adjacent()'s six, without making them
-		const col = from.col + NEAR_COL[n];
-		const row = from.row + NEAR_ROW[n] + (NEAR_COL[n] === 0 ? 0 : odd);
+		const col = neighbourCol(from.col, n), row = neighbourRow(from.row, from.col, n);
 		if (row >= 0 && row < rows && col >= 0 && col < cols && slot[row * cols + col] > 0)
 			insertSorted(out, slot[row * cols + col] - 1);
 	}
@@ -219,46 +214,128 @@ function insertSorted(list: number[], n: number) {
 	list[k] = n;
 }
 
-//A cell of the path search: the cost of entering it, the cheapest cost found to reach it, and from where
+//A cell of the path search: its place in the list, the cost of entering it, the cheapest cost found
+//to reach it, and from where; open until the search has taken it
 interface PathNode {
+	index: number;
 	row: number;
 	col: number;
 	cost: number;
 	dist: number;
 	prev: PathNode | null;
+	open: boolean;
 }
 
 //The cheapest path from start to end through cells (GameRules.getShortestPath), start included,
 //[] when there is none. Each cell costs what entering it costs; the start keeps cost 1 (kept bug
-//#70: a move pays one point more than its range shows). Of cells as near, the last in the list is
-//taken first: the path's tie-breaks are the old engine's
+//#70: a move pays one point more than its range shows). The path's tie-breaks are the old
+//engine's: of cells as near, it takes the last in the list first. The old engine compares every
+//open cell at each turn; here a heap ordered by distance, then by place in the list (the later
+//first), gives the same cell, and a table by hex the neighbours to update (in any order: each is
+//updated from the same cell)
 export function shortestPath(start: Position, end: Position, cells: readonly { row: number; col: number; cost: number }[]): PathCell[] {
-	const first: PathNode = { row: start.row, col: start.col, cost: 1, dist: 0, prev: null };
+	const first: PathNode = { index: 0, row: start.row, col: start.col, cost: 1, dist: 0, prev: null, open: true };
 	first.prev = first;
-	const open: PathNode[] = [first];
-	for (const c of cells) open.push({ row: c.row, col: c.col, cost: c.cost, dist: Infinity, prev: null });
+	const byHex = new Map<number, PathNode[]>();
+	addNode(byHex, first);
+	cells.forEach((c, i) => addNode(byHex, { index: i + 1, row: c.row, col: c.col, cost: c.cost, dist: Infinity, prev: null, open: true }));
 
-	while (open.length > 0) {
-		const idx = nearest(open);
-		const near = open[idx];
-		if (near.dist === Infinity) return [];
-		for (const n of open)
-			if (isAdjacent(near.row, near.col, n.row, n.col) && (n.dist === Infinity || near.dist + near.cost < n.dist)) {
-				n.dist = near.dist + near.cost;
-				n.prev = near;
-			}
+	const heap = new NodeHeap();
+	heap.push(first, 0);
+	for (let near = heap.pop(); near !== null; near = heap.pop()) {
+		for (let k = 0; k < 6; k++) //adjacent()'s six
+			reachFrom(near, byHex.get(hexKey(neighbourRow(near.row, near.col, k), neighbourCol(near.col, k))), heap);
 		if (near.row === end.row && near.col === end.col) return backtrack(near, start);
-		open.splice(idx, 1);
+		near.open = false;
 	}
 	return [];
 }
 
-//The index of the nearest node, the last of equally near ones; 0 when none is reached
-function nearest(open: PathNode[]): number {
-	let idx = 0;
-	for (let i = 1; i < open.length; i++)
-		if (open[i].dist !== Infinity && open[i].dist <= open[idx].dist) idx = i;
-	return idx;
+function addNode(byHex: Map<number, PathNode[]>, n: PathNode) {
+	const list = byHex.get(hexKey(n.row, n.col));
+	if (list === undefined) byHex.set(hexKey(n.row, n.col), [n]);
+	else list.push(n);
+}
+
+//The open nodes of a neighbouring hex reached through near, when that is the first way or cheaper
+function reachFrom(near: PathNode, nodes: PathNode[] | undefined, heap: NodeHeap) {
+	if (nodes === undefined) return;
+	for (const n of nodes)
+		if (n.open && (n.dist === Infinity || near.dist + near.cost < n.dist)) {
+			n.dist = near.dist + near.cost;
+			n.prev = near;
+			heap.push(n, n.dist);
+		}
+}
+
+//A hex's key in the path search's table (any cell a command gives: off the map too)
+function hexKey(row: number, col: number): number {
+	return row * 65536 + col;
+}
+
+//The open nodes reached, nearest first and of equally near ones the later in the list. A node is
+//pushed again when it gets nearer: the entries it left behind are skipped (taken, or another distance)
+class NodeHeap {
+	declare nodes: PathNode[];
+	declare dists: number[];
+
+	constructor() {
+		this.nodes = [];
+		this.dists = [];
+	}
+
+	push(n: PathNode, dist: number) {
+		let i = this.nodes.length;
+		this.nodes.push(n);
+		this.dists.push(dist);
+		while (i > 0) {
+			const parent = (i - 1) >> 1;
+			if (!this.before(i, parent)) break;
+			this.swap(i, parent);
+			i = parent;
+		}
+	}
+
+	//The nearest open node, null when there is none
+	pop(): PathNode | null {
+		while (this.nodes.length > 0) {
+			const n = this.nodes[0], dist = this.dists[0];
+			const lastNode = this.nodes.pop(), lastDist = this.dists.pop();
+			if (this.nodes.length > 0) {
+				this.nodes[0] = lastNode;
+				this.dists[0] = lastDist;
+				this.sink(0);
+			}
+			if (n.open && n.dist === dist) return n;
+		}
+		return null;
+	}
+
+	private sink(i: number) {
+		for (;;) {
+			const l = 2 * i + 1, r = l + 1;
+			let top = i;
+			if (l < this.nodes.length && this.before(l, top)) top = l;
+			if (r < this.nodes.length && this.before(r, top)) top = r;
+			if (top === i) return;
+			this.swap(i, top);
+			i = top;
+		}
+	}
+
+	//Whether entry a comes out before entry b: nearer, or as near and later in the list
+	private before(a: number, b: number): boolean {
+		if (this.dists[a] !== this.dists[b]) return this.dists[a] < this.dists[b];
+		return this.nodes[a].index > this.nodes[b].index;
+	}
+
+	private swap(a: number, b: number) {
+		const n = this.nodes[a], d = this.dists[a];
+		this.nodes[a] = this.nodes[b];
+		this.dists[a] = this.dists[b];
+		this.nodes[b] = n;
+		this.dists[b] = d;
+	}
 }
 
 //The path to node, back to the start
