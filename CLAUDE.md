@@ -56,6 +56,8 @@ canvas pixels on purpose.
 - Engine modules (`actions`, `gamerules`, `map` and its parts, `unit`, `ai`, `scenario`...) don't
   import UI modules (`ui`, `uibuilder`, `render`, `animation`, `dom`) or `game`: they read the
   game through `src/context.ts`. The linter and `test/headless.test.ts` check it.
+- `src/` has no unused code and no import cycles; CI runs `fallow dead-code` on the whole tree.
+  Keep it that way: the UI reads the running game through `src/session.ts`, not `game.ts`.
 - `npm run fallow` (fallow audit against main) fails on what a change adds: an unused file, a new
   import cycle (they decide the load order), duplicated code, an overly complex function. Inherited
   findings don't count; `npm run fallow:report` shows them all.

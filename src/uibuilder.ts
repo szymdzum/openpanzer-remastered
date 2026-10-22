@@ -27,7 +27,6 @@ import type { Unit } from "./unit";
 import type { PlayerDossier } from "./map";
 import type { ScenarioOutcome } from "./scenario";
 import { Campaign } from "./campaign";
-import { UICombatLog } from "./uicombatlog";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
 
@@ -609,9 +608,8 @@ UIBuilder.buildMainMenu = function() {
 			(div as GlyphButton).hasSelectedGlyph = true;
 	}
 
-	//Make the status bar clickable and show the combat log
+	//The status bar and the combat log button open the combat log (ui.ts sets their handler)
 	($('combatLogButton') as GlyphButton).hasSelectedGlyph = true;
-	$('statusbar').onclick = $('combatLogButton').onclick = function() { UICombatLog.toggleCombatLog(false, true); };
 	$('statusBarButton').onclick = function() { game.ui.toggleUnitsAndEquipmentWindow(false); };
 	$('unitsBarButton').onclick = function() {
 		makeHidden('unitsBarButton');
