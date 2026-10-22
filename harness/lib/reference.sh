@@ -6,7 +6,8 @@
 #   harness/out/base-<commit> and run on its own Vite. Any difference is a change against that
 #   commit: what a pull request checks, since main differs from the original on purpose.
 # STATE_SNAPSHOT: how both pages snapshot the game state (harness/lib/harness.js), toData when the
-# baseline has it, else the walk of the objects (the original's case).
+# baseline has it (toData-norng, without the streams' positions, when it has them as null), else
+# the walk of the objects (the original's case).
 if [ -n "${BASELINE_REF:-}" ]; then
 	BASE_SHA=$(git rev-parse --verify "$BASELINE_REF^{commit}")
 	BASE_DIR=$PWD/harness/out/base-$BASE_SHA
@@ -18,8 +19,12 @@ if [ -n "${BASELINE_REF:-}" ]; then
 	REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness"
 	reference_version() { echo "remaster $BASE_SHA"; }
 	# The state snapshot both pages take (harness/lib/harness.js snapshot): toData where the
-	# baseline has it (src/state.ts, #127)
-	if git cat-file -e "$BASE_SHA:src/state.ts" 2>/dev/null; then STATE_SNAPSHOT=toData; else STATE_SNAPSHOT=walk; fi
+	# baseline has it (src/state.ts, #127), without the random streams' positions where its toData
+	# doesn't fill them (rng: null, before #126). grep reads all of git show's output: grep -q would
+	# stop early, and under pipefail git show's SIGPIPE would make some jobs take toData
+	if ! git cat-file -e "$BASE_SHA:src/state.ts" 2>/dev/null; then STATE_SNAPSHOT=walk
+	elif [ -n "$(git show "$BASE_SHA:src/state.ts" | grep '^[[:space:]]*rng: null,')" ]; then STATE_SNAPSHOT=toData-norng
+	else STATE_SNAPSHOT=toData; fi
 	start_reference() { (cd "$BASE_DIR" && serve_vite "$REFERENCE_PORT"); }
 else
 	REFERENCE_DIR=${REFERENCE_DIR:-reference}
