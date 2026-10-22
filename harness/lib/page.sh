@@ -44,10 +44,15 @@ run_page() {
 			.then(r => window.__harnessSummary = r, e => window.__harnessSummary = { error: e.message, stack: e.stack });
 		'started'" >/dev/null
 	# A session that died answers with an error: fail instead of waiting forever (and give up
-	# after HARNESS_TIMEOUT seconds, 900 by default)
+	# after HARNESS_TIMEOUT seconds, 900 by default). A step that keeps the page busy for 20s
+	# gets the run terminated by this eval (bdg exit 102): it has to yield, see yieldToPage
 	local waited=0 answer
 	while :; do
-		answer=$(bdg eval "window.__harnessSummary !== null" --json 2>&1) || { echo "$answer" | tail -3; bdg stop >/dev/null 2>&1; return 1; }
+		answer=$(bdg eval "window.__harnessSummary !== null" --json 2>&1) || {
+			echo "$answer" | tail -3
+			case $answer in *'"exitCode":102'*) echo "(a step ran over 20s without yielding to the page: call yieldToPage in its loop)" ;; esac
+			bdg stop >/dev/null 2>&1; return 1
+		}
 		case $answer in *'"result":true'*) break ;; esac
 		waited=$((waited + 1))
 		[ $waited -lt "${HARNESS_TIMEOUT:-900}" ] || { echo "no result after ${HARNESS_TIMEOUT:-900}s"; bdg stop >/dev/null 2>&1; return 1; }

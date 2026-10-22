@@ -26,7 +26,7 @@ function __pickAttack(prefer) {
 const __used = {};
 
 // Attacks and runs the clock one timer at a time until the attack is over, recording frames
-function __attack(prefer) {
+async function __attack(prefer) {
 	const m = game.scenario.map;
 	const [u, t] = __pickAttack(prefer);
 	// a hex with an air and a ground unit selects one of them per click
@@ -43,6 +43,9 @@ function __attack(prefer) {
 		const texts = Array.from(document.querySelectorAll("#game .textBounceRed, #game .textBounceGreen"))
 			.map((e) => e.className + ":" + e.textContent + "@" + e.parentNode.style.cssText);
 		frames.push(clock.now + " " + cyrb53(canvasHashes().join("|")) + " " + texts.join(","));
+		// hashing every canvas per frame takes seconds per attack with coverage on, more on a
+		// slow runner: let the shell's polling in
+		await yieldToPage();
 	}
 	document.body.setAttribute("data-attack", "class " + u.unitData().uclass + " unit " + u.id + " -> " + t.id + " selected " + sel + " clicks " + clicks
 		+ " strength " + before + " -> " + [u.strength, t.strength] + " destroyed " + [!!u.destroyed, !!t.destroyed] + " frames " + frames.length
@@ -55,33 +58,33 @@ const isAirUnit = (u) => GameRules.isAir(u);
 
 const steps = [
 	["start scenario Vyazma, human vs AI", async () => { await startScenario("drvyaz13.xml", [0, 1, 1, 1]); }],
-	["attack 1, frame by frame", async () => { __attack(); }],
-	["attack 2, frame by frame", async () => { __attack(); }],
-	["attack 3, frame by frame", async () => { __attack(); }],
-	["attack with artillery", async () => { __attack(isArtillery); }],
-	["attack the weakest target", async () => { __attack("weakest"); }],
-	["attack the weakest target again", async () => { __attack("weakest"); }],
-	["attack the weakest target a third time", async () => { __attack("weakest"); }],
+	["attack 1, frame by frame", async () => { await __attack(); }],
+	["attack 2, frame by frame", async () => { await __attack(); }],
+	["attack 3, frame by frame", async () => { await __attack(); }],
+	["attack with artillery", async () => { await __attack(isArtillery); }],
+	["attack the weakest target", async () => { await __attack("weakest"); }],
+	["attack the weakest target again", async () => { await __attack("weakest"); }],
+	["attack the weakest target a third time", async () => { await __attack("weakest"); }],
 	["quick animations off", async () => { uiSettings.quickAnimation = false; document.body.setAttribute("data-attack", "quick off"); }],
-	["slow attack, frame by frame", async () => { __attack(); }],
+	["slow attack, frame by frame", async () => { await __attack(); }],
 	["ui scale 1.5", async () => { uiSettings.uiScale = 1.5; document.body.setAttribute("data-attack", "scale 1.5"); }],
-	["scaled loss numbers, frame by frame", async () => { __attack(); }],
-	["scaled loss numbers, second attack", async () => { __attack(); }],
-	["scaled loss numbers, third attack", async () => { __attack(); }],
+	["scaled loss numbers, frame by frame", async () => { await __attack(); }],
+	["scaled loss numbers, second attack", async () => { await __attack(); }],
+	["scaled loss numbers, third attack", async () => { await __attack(); }],
 	["ui scale back to 1, quick animations on", async () => { uiSettings.uiScale = 1; uiSettings.quickAnimation = true; document.body.setAttribute("data-attack", "reset"); }],
 	["end turn, AI attacks with animations", async () => { endTurn(); }],
-	["attack in the second turn", async () => { __attack(); }],
+	["attack in the second turn", async () => { await __attack(); }],
 	["start scenario Stalingrad, air units", async () => { await startScenario("drstu02.xml", [0, 1, 1, 1]); }],
-	["air attack 1", async () => { __attack(isAirUnit); }],
-	["air attack 2", async () => { __attack(isAirUnit); }],
-	["air attack 3", async () => { __attack(isAirUnit); }],
+	["air attack 1", async () => { await __attack(isAirUnit); }],
+	["air attack 2", async () => { await __attack(isAirUnit); }],
+	["air attack 3", async () => { await __attack(isAirUnit); }],
 	["start scenario Lake Ladoga, ships", async () => { await startScenario("drlila18.xml", [0, 1, 1, 1]); }],
-	["ship attack 1", async () => { __attack(GameRules.isSea); }],
-	["ship attack 2", async () => { __attack(GameRules.isSea); }],
-	["ship attack 3", async () => { __attack(GameRules.isSea); }],
-	["infantry attack", async () => { __attack((u) => u.unitData().uclass == unitClass.infantry); }],
-	["finish the weakest target 1", async () => { __attack("weakest"); }],
+	["ship attack 1", async () => { await __attack(GameRules.isSea); }],
+	["ship attack 2", async () => { await __attack(GameRules.isSea); }],
+	["ship attack 3", async () => { await __attack(GameRules.isSea); }],
+	["infantry attack", async () => { await __attack((u) => u.unitData().uclass == unitClass.infantry); }],
+	["finish the weakest target 1", async () => { await __attack("weakest"); }],
 	["end turn", async () => { endTurn(); }],
-	["finish the weakest target 2", async () => { __attack("weakest"); }],
-	["finish the weakest target 3", async () => { __attack("weakest"); }],
+	["finish the weakest target 2", async () => { await __attack("weakest"); }],
+	["finish the weakest target 3", async () => { await __attack("weakest"); }],
 ];

@@ -124,6 +124,18 @@ const clock = window.__clock;
 // Lets real async work (XHR, images) happen; virtual time doesn't move meanwhile
 const sleep = (ms) => new Promise((r) => clock.realSetTimeout(r, ms));
 
+// A long synchronous loop of a step script (frame by frame hashing) calls this now and then:
+// the shell polls the run with bdg eval, which waits behind a busy page and after 20s terminates
+// its scripts, the run with them (#139). Yielding moves no virtual time and delivers nothing;
+// it is skipped while an async operation is in flight, so an image the loop started can't
+// complete during it, as it couldn't without the yield.
+let lastYield = Date.now();
+async function yieldToPage() {
+	if (Date.now() - lastYield < 200 || clock.loading()) return;
+	await sleep(0);
+	lastYield = Date.now();
+}
+
 // Advances virtual time until cond() or the step budget runs out
 async function runClock(cond, maxSteps) {
 	for (let n = 0; n < maxSteps; n++) {
