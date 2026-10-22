@@ -245,7 +245,7 @@ function countLoss(d: Draft, u: UnitState) {
 }
 
 //An empty dossier, every unit class at 0 (Player.initDossier)
-function newDossier(): PlayerState["dossier"] {
+export function newDossier(): PlayerState["dossier"] {
 	const counts = () => {
 		const byClass: { [uclass: number]: number } = {};
 		for (const c of Object.keys(unitClass)) byClass[unitClass[c as keyof typeof unitClass]] = 0;

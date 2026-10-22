@@ -17,6 +17,7 @@ import {
 } from "../prototypes";
 import type { RngStream } from "../rng";
 import type { CampaignState, EquipmentState, RngStreams } from "../state";
+import { startCampaignScenario } from "./campaign";
 import { unitCost } from "./costs";
 import { createWorld } from "./create";
 import { beginDraft, finishDraft, place, writeHex } from "./draft";
@@ -101,6 +102,7 @@ export interface GameSetup {
 	isAI: number[];			//by player id (uiSettings.isAI): 1 the AI, 2 the scripted AI; ignored in a campaign
 	rng: RngStreams | null;		//where the streams are; null: the game stream reads Math.random
 	campaign: CampaignState | null;
+	carried?: PlayerState | null;	//a campaign's player from its previous scenario (campaign.ts)
 }
 
 const DEFAULT_EQUIPMENT = "eqp-adlerkorps";
@@ -152,10 +154,33 @@ function given<T extends object>(target: T, values: { [K in keyof T]?: T[K] | nu
 
 //The game a scenario file starts, as Game.newScenario leaves it before its first turn
 export function newGame(g: GameSetup): { data: ScenarioData; state: GameState } {
+	const { data, state } = emptyGame(g), f = g.scenario;
+	const rng: RngStream = { state: g.rng === null ? null : g.rng.game };
+	for (const r of f.reinforcements) {
+		const u = loadUnit(g, state, rng, r.unit);
+		if (u !== null) state.reinforcements.push({ turn: r.turn, row: r.row, col: r.col, unit: u });
+	}
+	//(Scenario.reinforcements is keyed by turn: they come out by turn, each turn's in the file's order)
+	state.reinforcements.sort((a, b) => a.turn - b.turn);
+	if (state.rng !== null) state.rng.game = rng.state;
+	//The hexes on a draft: it places the units with their sight, and the leaders draw from its stream
+	const d = beginDraft(createWorld({ data, state }, g.equipment));
+	for (const h of f.hexes) loadHex(d, g, h);
+	const s = finishDraft(d).state;
+	initialScores(s);
+	if (g.campaign === null) return { data, state: singleScenario(g, s) };
+	//(a campaign's start on a draft too: it removes units and draws the prototype)
+	const c = beginDraft(createWorld({ data, state: s }, g.equipment));
+	startCampaignScenario(c, g.campaign, g.carried || null);
+	return { data, state: finishDraft(c).state };
+}
+
+//The map header and the players: a map of clear hexes, no unit yet. A campaign's difficulty adds
+//turns to the last victory turn, which is the turn limit
+function emptyGame(g: GameSetup): { data: ScenarioData; state: GameState } {
 	const f = g.scenario, size = mapSize(f.rows, f.cols, g.imageSize[0], g.imageSize[1]);
-	const coef = g.campaign !== null ? difficultyModifiers[g.campaign.difficulty] : null;
 	const turns = f.turns.slice();
-	turns[2] = Math.round(turns[2] * (coef !== null ? coef.extraTurns : 1));
+	turns[2] = Math.round(turns[2] * (g.campaign !== null ? difficultyModifiers[g.campaign.difficulty].extraTurns : 1));
 	const data: ScenarioData = { name: g.name, description: g.description, equipment: f.equipment || DEFAULT_EQUIPMENT,
 		image: f.image, hexes: [] };
 	const state: GameState = {
@@ -176,21 +201,7 @@ export function newGame(g: GameSetup): { data: ScenarioData; state: GameState } 
 		data.hexes.push({ terrain: terrainType.Clear, road: 0, name: "", deployment: -1 });
 		state.map.hexes.push({ unit: null, air: null, owner: -1, flag: -1, victorySide: -1 });
 	}
-	const rng: RngStream = { state: g.rng === null ? null : g.rng.game };
-	for (const r of f.reinforcements) {
-		const u = loadUnit(g, state, rng, r.unit);
-		if (u !== null) state.reinforcements.push({ turn: r.turn, row: r.row, col: r.col, unit: u });
-	}
-	//(Scenario.reinforcements is keyed by turn: they come out by turn, each turn's in the file's order)
-	state.reinforcements.sort((a, b) => a.turn - b.turn);
-	if (state.rng !== null) state.rng.game = rng.state;
-	//The hexes on a draft: it places the units with their sight, and the leaders draw from its stream
-	const d = beginDraft(createWorld({ data, state }, g.equipment));
-	for (const h of f.hexes) loadHex(d, g, h);
-	const s = finishDraft(d).state;
-	initialScores(s);
-	setupPlayers(g, s);
-	return { data, state: s };
+	return { data, state };
 }
 
 //A file's player as the loader reads it: a campaign gives each turn at least a share of its starting
@@ -301,14 +312,14 @@ function initialScores(s: GameState) {
 //Game's setupPlayers and the single scenario's start: the AI where asked; every side starts with
 //the prestige its units are short of the other's, at least SCENARIO_START_PRESTIGE (not the tutorial).
 //A campaign's players are its own (campaign.ts)
-function setupPlayers(g: GameSetup, s: GameState) {
-	if (g.campaign !== null) return;
+function singleScenario(g: GameSetup, s: GameState): GameState {
 	for (const p of s.players) {
 		if (g.isAI[p.id] === 1) p.type = playerType.aiLocal;
 		else if (g.isAI[p.id] === 2) p.type = playerType.aiScripted;
 	}
-	if (g.file === "tutorial.xml") return;
+	if (g.file === "tutorial.xml") return s;
 	const cost = s.scenario.unitsCostPerSide;
 	for (const p of s.players)
 		p.prestige = Math.max(SCENARIO_START_PRESTIGE, SCENARIO_START_PRESTIGE + cost[+!p.side] - cost[p.side]);
+	return s;
 }

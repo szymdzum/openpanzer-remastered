@@ -46,6 +46,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `supply.ts` | resupply and reinforcement: whether, and how much |
 | `costs.ts` | unit, upgrade and sell costs |
 | `newgame.ts` | a game's data and state from a scenario file, as the old loader and Game start it |
+| `campaign.ts` | a campaign's scenario started (its player carried, prestige, core units, the prototype) and ended (HQ, the next scenario) |
 | `scenariofile.ts` | a scenario XML document read as plain data, for `newGame` |
 | `turn.ts` | a unit's end of turn (entrenchment, #75's hiding), the reinforcements arriving, the turn limit, the victory rating and the outcome |
 | `step.ts` | `step` and `check`, the handlers' registry |
@@ -206,7 +207,31 @@ the caller: the core turns what they hold into the state, in the old loader's or
   campaign each side's starting prestige: what its units are short of the other's, at least 2000
   (not the tutorial).
 
-The start of a campaign's scenario (its player's prestige and core units) is the campaign's, next.
+## A campaign (#135)
+
+`newGame` with `setup.campaign` (the campaign's `CampaignState`, its `progress` saying which start)
+and `setup.carried` (the campaign player from the previous scenario) starts a campaign's scenario
+as Game's setupPlayers and startCampaignScenario do (campaign.ts):
+- the other countries' players are the AI; each player of the campaign's country takes the carried
+  player's id, side, country, prestige and type, adds its score, takes its core units and dossier.
+  Kept: a scenario whose player of that country has another id or side gets the carried one's
+  anyway (#61, #64);
+- the first scenario: the campaign's starting prestige, an empty dossier, and the player's units on
+  its deployment hexes become its core units;
+- a later one: the scenario's own units of the player on its deployment hexes leave the map, to
+  make room for the core units (no loss in the dossier; the old engine left their zone of control
+  and spotting behind, #72, which the derived sight doesn't);
+- after a brilliant victory, a prototype: a unit of the next year's combat classes drawn from the
+  game stream (drawn even when there is none), a core unit waiting to deploy.
+
+`endCampaignScenario(world, outcome, scenarios)` is Game.continueCampaign: the outcome's prestige,
+the scenario in the dossier, the player sent to HQ (transports and support gone, the lost units
+dropped, the others off their transports at full strength, ammo and fuel), and the next scenario
+the outcome leads to with the campaign's progress, or null when the campaign ended. The UI's wait
+for a click between the two isn't state. Kept: a core unit of a country whose equipment the
+scenario didn't load stops the campaign (#182; the old engine throws in setPlayerToHQ, the core
+too). Not reproduced: a player whose core units all fell carries none, where the old engine brought
+back the dead units it had carried in (#183): which list a player brought in isn't state.
 
 ## The proof
 
@@ -254,6 +279,12 @@ The start of a campaign's scenario (its player's prestige and core units) is the
   Game.newScenario and by `newGame` from the same file and the equipment's own files, the streams
   seeded: the same toData as JSON. CI starts every eighth file of the scenario list (51 of its 403 entries) and some
   against the AI and the scripted tutorial; `CORE_ALL_SCENARIOS=1` starts them all (17 s): no difference.
+- **A campaign against the old engine** (test/core-campaign.test.ts): every campaign of the list
+  (17), at each difficulty in turn, started by Game.newCampaign and by `newGame`, then up to three
+  scenarios ended with an outcome by Game.continueCampaign and by `endCampaignScenario` (a core unit
+  hurt, one destroyed and one bought in between), the next started by both: the same toData after
+  every start. 17 starts, 35 transitions, 7 prototypes awarded, 6 campaign ends, one stop (#182), no
+  difference.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
   undo, a new round, #75's hiding, the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.
