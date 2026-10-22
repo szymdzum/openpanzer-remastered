@@ -183,6 +183,15 @@ test("GameState load keeps the campaign's core list (#142)", async () => {
 	expect(coreLists(await load(JSON.stringify(saved)))).toEqual(coreLists(saved));
 });
 
+//#128: the scenario's description is the save's: a campaign's scenario has the campaign's intro
+//(Game.onScenarioLoadFinished), where the load took the scenario list's again
+test("GameState load keeps the scenario's description (#128)", async () => {
+	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
+	scenario.setDescription("The campaign's intro to this scenario");
+	const again = await load(await exportGame());
+	expect(again.data.description).toBe("The campaign's intro to this scenario");
+});
+
 //The campaign fixture with a unit of the AI bought and deployed, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
