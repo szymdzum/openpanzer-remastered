@@ -113,10 +113,10 @@ test.fails.each(renumbered)("GameState load keeps the unit ids %s (#85)", async 
 	expect(ids(again)).toEqual(ids(saved));
 });
 
-//#84: the load doesn't keep tempSpotted, and the spotting it replays marks every enemy unit in
-//sight as tempSpotted. Whether a fixture shows it depends on where its units stand: one test over
-//all of them
-test.fails("GameState load keeps tempSpotted (#84)", async () => {
+//#84: the load keeps tempSpotted (an enemy unit that fired from hiding stays attackable until the
+//round ends) and doesn't mark the enemy units in sight with it as the spotting it replays used to.
+//Whether a fixture shows it depends on where its units stand: one test over all of them
+test("GameState load keeps tempSpotted (#84)", async () => {
 	const spotted = (s: SaveFile) => s.state.units.filter((u) => u.tempSpotted).map(where).sort();
 	for (const name of fixtures("engine")) {
 		const { saved, again } = await loadFixture(name);

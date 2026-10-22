@@ -100,7 +100,7 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 }
 
 //What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the units are put on the map hex by hex (#84, #85), the undo is gone
+//fixed in its own commit: the units are put on the map hex by hex (#85), the undo is gone
 //and the core lists are rebuilt (#142, #149, #150)
 function todaysLoad(scenario: Scenario, state: GameState) {
 	const m = scenario.map;
@@ -109,11 +109,12 @@ function todaysLoad(scenario: Scenario, state: GameState) {
 	emptyCoreLists(scenario, state.campaign === null ? null : m.getPlayersByCountry(state.campaign.country)[0]);
 }
 
-//#85, #84: Map.copy puts the units on the map hex by hex, a hex's units both on it before either is
-//added: they get new ids and the unit list's order in hex order, a unit no hex holds is gone, and
-//the spotting it replays marks the enemy units it sees as tempSpotted (it isn't saved)
+//#85: Map.copy puts the units on the map hex by hex, a hex's units both on it before either is
+//added: they get new ids and the unit list's order in hex order, and a unit no hex holds is gone.
+//The spotting it replays doesn't change tempSpotted (#84): the units keep the save's
 function placeHexByHex(m: GameMap) {
 	const board = m.getBoard(), units = m.getUnits();
+	const spotted = new Map(units.map((u) => [u, u.tempSpotted]));
 	const hexes: [Hex, Unit[]][] = [];
 	for (const u of units)
 		if (u.getHex() !== null)
@@ -127,15 +128,15 @@ function placeHexByHex(m: GameMap) {
 	units.length = 0;
 	board.uniqueID = 0;
 	for (const [h, on] of hexes) {
-		for (const u of on) {
-			u.tempSpotted = false;
+		for (const u of on)
 			h.setUnit(u);
-		}
 		if (h.unit !== null)
 			board.add(h.unit);
 		if (h.airunit !== null)
 			board.add(h.airunit);
 	}
+	for (const u of units)
+		u.tempSpotted = spotted.get(u);
 }
 
 //#149: the load starts every player without core units. A campaign's player (the first of its
