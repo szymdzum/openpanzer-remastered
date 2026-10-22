@@ -21,12 +21,13 @@ function farApart(types = [playerType.aiLocal, playerType.aiLocal]): World {
 
 const ai = (_type: number, player: number) => aiController(player);
 
-//A controller that plays the orders given, then ends its turn; startTurn changes the world as given
-function scripted(player: number, orders: Order[], start: (w: World) => World = (w) => w): Controller & { joined: number } {
+//A controller that plays the orders given, then ends its turn; startTurn changes the world as given,
+//and hands the player over when it changed it
+function scripted(player: number, orders: Order[], start?: (w: World) => World): Controller & { joined: number } {
 	return {
 		player, joined: 0,
 		join(w) { this.joined++; return { world: w, commands: [], events: [], view: [] }; },
-		startTurn(w) { return { world: start(w), commands: [], events: [], view: [] }; },
+		startTurn(w) { return { world: start ? start(w) : w, commands: [], events: [], view: [], handOver: start !== undefined }; },
 		plan: (w) => w,
 		next: () => orders.shift() || null,
 	};
@@ -75,8 +76,14 @@ test("A player handed over to the AI gets a new one at once, which ends that tur
 	});
 	expect(s.localSide).toBe(2);	//both scripted: hotseat, the screen shows the current player's side
 	expect(advance(s)).toMatchObject({ kind: "endTurn", player: 0, started: { player: 1 } });
-	expect([s.world.spotSide, handed]).toEqual([1, null]);
+	expect([s.world.spotSide, s.world.state.players[1].type, handed.joined, s.controllers[1]]).toEqual([1, playerType.aiLocal, 1, handed]);
 	expect(advance(s)).toMatchObject({ kind: "endTurn", player: 1 });
-	expect(handed.joined).toBe(1);
-	expect(s.world.state.players[1].type).toBe(playerType.aiLocal);
+});
+
+test("What the controllers ask of the screen when they join is kept for it, in the players' order", () => {
+	const s = startSession(farApart([playerType.aiScripted, playerType.aiScripted]), (_type, player) => ({
+		...scripted(player, []),
+		join: (w: World) => ({ world: w, commands: [], events: [], view: [{ type: "select" as const, unit: player }] }),
+	}));
+	expect(s.joined).toEqual([{ type: "select", unit: 0 }, { type: "select", unit: 1 }]);
 });

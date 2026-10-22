@@ -46,7 +46,9 @@ export interface Session {
 	readonly localSide: number;
 	readonly controllerFor: ControllerFor;
 	controllers: (Controller | null)[];	//by player id
-	types: number[];			//the player type each controller was made for
+	//What the controllers asked of the screen when they joined (the tutorial loaded on its last turn
+	//opens the main menu)
+	joined: ViewEvent[];
 	//The world at the last save point (Game.endTurn's save: before the reinforcements, #93)
 	saved: World | null;
 	ended: SessionEnd | null;
@@ -80,7 +82,7 @@ export function startSession(w: World, controllerFor: ControllerFor, options: Se
 	const players = w.state.players;
 	const localSide = options.localSide === undefined ? localSideOf(w) : options.localSide;
 	const s: Session = { world: w, localSide, controllerFor, controllers: players.map((): Controller | null => null),
-		types: players.map((p) => p.type), saved: null, ended: null };
+		joined: [], saved: null, ended: null };
 	players.forEach((p) => join(s, p.id, p.type));
 	s.world = { ...s.world, spotSide: shownSide(s) };
 	const current = s.world.state.turn.currentPlayer;
@@ -90,9 +92,11 @@ export function startSession(w: World, controllerFor: ControllerFor, options: Se
 }
 
 function join(s: Session, player: number, type: number) {
-	s.types[player] = type;
 	const c = s.controllers[player] = isProgram(type) ? s.controllerFor(type, player) : null;
-	if (c !== null) s.world = c.join(s.world).world;
+	if (c === null) return;
+	const played = c.join(s.world);
+	s.world = played.world;
+	s.joined.push(...played.view);
 }
 
 //Game's getLocalSide: the sides of the human and the scripted players, 2 when both
@@ -112,12 +116,9 @@ function shownSide(s: Session): number {
 	return s.localSide === 2 && current >= 0 ? s.world.state.players[current].side : s.localSide;
 }
 
-//The controller playing the player now: a new one when its type changed (the tutorial hands its
-//players over to a person and to the AI, which starts with nothing to do)
+//The controller playing the player now, when a program plays it (Game.processTurn)
 function controllerOf(s: Session, player: number): Controller | null {
-	const type = s.world.state.players[player].type;
-	if (type !== s.types[player]) join(s, player, type);
-	return isProgram(type) ? s.controllers[player] : null;
+	return isProgram(s.world.state.players[player].type) ? s.controllers[player] : null;
 }
 
 //Plays the next order of the current player, or ends its turn when it has none
@@ -176,6 +177,8 @@ function startTurn(s: Session): StartedTurn | null {
 	if (c === null) return null;
 	const played = c.startTurn(s.world);
 	s.world = c.plan(played.world);
+	//(the tutorial hands its players over to a person and to the AI, which starts with nothing to do)
+	if (played.handOver) join(s, player, s.world.state.players[player].type);
 	return { player, commands: played.commands, events: played.events, view: played.view };
 }
 

@@ -16,15 +16,19 @@
 import fs from "node:fs";
 import { afterAll, expect, test } from "vitest";
 import { aiController } from "../src/core/ai";
+import { tutorialController } from "../src/core/tutorial";
 import { createWorld } from "../src/core/create";
 import { advance, type Advance, startSession, type Session } from "../src/core/session";
 import { computeSight } from "../src/core/sight";
 import type { World } from "../src/core/types";
-import { difference, type OldAdvance, type OldGame, oldAdvance, oldState, planLoadedTurn, startFixture, startItem } from "./aigames";
+import { difference, makeScriptedPlayers, type OldAdvance, type OldGame, oldAdvance, oldState, planLoadedTurn, startFixture,
+	startItem, startTutorialAt } from "./aigames";
 import { fixtures } from "./contracts";
 import { countersEqual, drifted, resync } from "./invariants";
 
 const ROUNDS = process.env.CORE_AI_ROUNDS ? Number(process.env.CORE_AI_ROUNDS) : 2;
+//The tutorial's script runs to turn 4, then hands its players over
+const TUTORIAL_ROUNDS = Math.max(ROUNDS, 7);
 
 const stats: Record<string, number> = {};
 const count = (what: string, n = 1) => { stats[what] = (stats[what] || 0) + n; };
@@ -33,8 +37,8 @@ afterAll(() => { if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(stats)
 //The core's session from the old game's state now: the AI plays every player the old AI plays
 function sessionOf(g: OldGame, loaded: boolean): Session {
 	const w = createWorld(g.toData(g.game.scenario, g.game), g.Equipment.equipment, { spotSide: g.game.spotSide, noFOW: g.uiSettings.noFOW });
-	return startSession(w, (type, player) => type === g.playerType.aiLocal ? aiController(player) : null,
-		{ loaded, localSide: g.localSide });
+	return startSession(w, (type, player) => type === g.playerType.aiLocal ? aiController(player)
+		: type === g.playerType.aiScripted ? tutorialController(player) : null, { loaded, localSide: g.localSide });
 }
 
 //The core's sight: computeSight's of its state, and the old engine's counters unless they drifted from
@@ -81,6 +85,9 @@ function turnStartProblem(s: Session, o: Extract<OldAdvance, { kind: "endTurn" }
 	count("turn start commands", started.length);
 	if (JSON.stringify(o.started) !== JSON.stringify(started))
 		return `turn start: old ${JSON.stringify(o.started)}, core ${JSON.stringify(started)}`;
+	const view = c.started === null ? [] : c.started.view;
+	count("turn start view events", view.length);
+	if (JSON.stringify(o.view) !== JSON.stringify(view)) return `turn start view: old ${JSON.stringify(o.view)}, core ${JSON.stringify(view)}`;
 	if (o.startedState === null || s.ended !== null) return "";
 	const got = JSON.stringify(s.saved.state);
 	return o.startedState === got ? "" : "the state after the turn start and plan:" + difference(o.startedState, got);
@@ -100,27 +107,38 @@ function playBoth(name: string, g: OldGame, s: Session, rounds: number) {
 	if (s.ended !== null) count("ended " + s.ended.kind);
 }
 
-test.each(fixtures("engine").filter((f) => !f.startsWith("scripted")))("The core's AI plays %s as the old AI, turn by turn", async (name) => {
+test.each(fixtures("engine"))("The core's AI plays %s as the old AI, turn by turn", async (name) => {
 	const g = await startFixture(name, 7);
 	const s = sessionOf(g, true);
 	planLoadedTurn(g);
-	playBoth(name, g, s, ROUNDS);
+	playBoth(name, g, s, name.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS);
 });
 
 //harness/replay.sh's items: three scenarios of the issues, the first campaign's first scenario, every
-//40th scenario of the list, a later campaign's (the tutorial with its scripted players is
-//test/core-tutorial.test.ts's)
+//40th scenario of the list, a later campaign's, and the tutorial with its scripted players
 const replayItems = ["drpzop01.xml", "drstu02.xml", "dr9fr03.xml", "campaign:0",
-	...scenariolist.filter((s) => s.length > 1).flatMap((s, i) => i % 40 === 20 ? [s[0]] : []), "campaign:10"];
+	...scenariolist.filter((s) => s.length > 1).flatMap((s, i) => i % 40 === 20 ? [s[0]] : []), "campaign:10", "scripted:tutorial.xml"];
 
-test.each(replayItems)("The core's AI plays %s from its start as the old AI, AI against AI", async (item) => {
+test.each(replayItems)("The core's AI and tutorial play %s from its start as the old ones, AI against AI", async (item) => {
 	const g = await startItem(item, item.length * 7919);
-	playBoth(item, g, sessionOf(g, false), ROUNDS);
+	playBoth(item, g, sessionOf(g, false), item.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS);
+});
+
+//The tutorial from its later turns (a new game is stuck on turn 2, #80): turns 3 and 4 with its units
+//where its script meant them to be (the fuel emptied and the main menu opened when turn 4 is built),
+//turn 5 on the units as they start, the players handed over to a person and the AI (made then, the
+//hand-over happens again at the next turn start). The same view events when the players join
+test.each([3, 4, 5])("The core's tutorial plays from turn %i as the old one", async (turn) => {
+	const g = await startTutorialAt(turn, turn);
+	const s = sessionOf(g, false);
+	expect(JSON.stringify(s.joined), "the view events at the join").toBe(JSON.stringify(makeScriptedPlayers(g)));
+	count("join view events", s.joined.length);
+	playBoth("tutorial from turn " + turn, g, s, TUTORIAL_ROUNDS);
 });
 
 afterAll(() => {
 	//(not a test of its own: the counts are the sum of the games above, whichever ran)
-	if (stats.games === fixtures("engine").length - 1 + replayItems.length) {
+	if (stats.games === fixtures("engine").length + replayItems.length + 3) {
 		expect(stats.commands).toBeGreaterThan(500);
 		expect(stats["turn start commands"]).toBeGreaterThan(10);
 	}

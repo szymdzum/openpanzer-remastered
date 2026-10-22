@@ -462,7 +462,10 @@ whole turn at its start as the old one did, its draws from its own stream in the
 its queue out; `startSession` and `advance` play a game in Game's order. The old game played headless
 (test/aigames.ts) and the core's session play the engine fixtures and the replay's items in lockstep,
 compared after every order and turn; the engine contract's AI turns run on the core's AI beside the
-old one. The AI's settings moved to src/prototypes.ts, which the core may read.
+old one. The AI's settings moved to src/prototypes.ts, which the core may read. The scripted tutorial
+is a controller too (src/core/tutorial.ts): AIScripted's script as data, its UI calls as view events
+(a message, a selection, the main menu), #80 and #81 kept, played in lockstep with the old one from
+its start, from its later turns and in the engine contract.
 
 ### Not worth it now
 
