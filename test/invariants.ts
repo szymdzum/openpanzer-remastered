@@ -29,7 +29,8 @@ export async function load(name: string) {
 	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
 	return { scenario, m, GameRules, Leaders, CombatLog, Equipment, AI, Commands, Rng, game, ...prototypes };
 }
-export type World = Awaited<ReturnType<typeof load>>;
+//The old engine's modules of a restored fixture (the core's World is src/core/types.ts's)
+export type OldWorld = Awaited<ReturnType<typeof load>>;
 
 export const unitName = (u: Unit) => "unit#" + u.id;
 export const cellName = (c: Cell) => c.row + "," + c.col;
@@ -74,7 +75,7 @@ export function recompute(w: Board) {
 }
 
 //What the counters' checks read of the old engine: its map and its rules
-export type Board = Pick<World, "m" | "GameRules">;
+export type Board = Pick<OldWorld, "m" | "GameRules">;
 
 //Whether the old engine's counters equal the sight given, count for count
 export function countersEqual(w: Board, spot: (side: number, i: number) => number, zoc: (side: number, i: number) => number): boolean {
@@ -108,7 +109,7 @@ export function drifted(w: Board): boolean {
 type Add = (kind: string, text: string) => void;
 
 //What doesn't hold, a few of each kind. Units in offMap aren't checked for being on their hex
-export function violations(w: World, offMap: Set<Unit> = new Set()): string[] {
+export function violations(w: OldWorld, offMap: Set<Unit> = new Set()): string[] {
 	if (w.uiSettings.noFOW) return ["fog of war is off: the spotting counters can't be read"];
 	const out: string[] = [];
 	const kinds: Record<string, number> = {};
@@ -129,7 +130,7 @@ export function violations(w: World, offMap: Set<Unit> = new Set()): string[] {
 }
 
 //Every unit once in the unit list, with its owner's player, on the hex it says it is on
-function unitViolations(w: World, offMap: Set<Unit>, add: Add) {
+function unitViolations(w: OldWorld, offMap: Set<Unit>, add: Add) {
 	const { m } = w;
 	const ids = new Set<number>();
 	for (const u of m.getUnits()) {
@@ -146,7 +147,7 @@ function unitViolations(w: World, offMap: Set<Unit>, add: Add) {
 }
 
 //The units a hex holds are on it and in the unit list
-function hexUnitViolations(w: World, h: Hex, add: Add) {
+function hexUnitViolations(w: OldWorld, h: Hex, add: Add) {
 	for (const [slot, u] of [["unit", h.unit], ["airunit", h.airunit]] as const) {
 		if (!u) continue;
 		if (u.getHex() !== h) add("hex unit", cellName(h.getPos()) + "." + slot + " is " + unitName(u) + ", which is on " + hexName(u.getHex()));

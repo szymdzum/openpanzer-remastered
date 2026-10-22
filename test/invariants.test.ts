@@ -5,7 +5,7 @@
 //with their issue: fixing a bug flips its test, a new failure is a new defect.
 import { expect, test } from "vitest";
 import { fixtures } from "./contracts";
-import { cellName, hexName, load, unitName, violations, type World } from "./invariants";
+import { cellName, hexName, load, unitName, violations, type OldWorld as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
