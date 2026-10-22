@@ -100,7 +100,7 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 }
 
 //What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the undo is gone and the core lists are rebuilt (#142, #149, #150)
+//fixed in its own commit: the undo is gone and the core lists are rebuilt (#142, #149)
 function todaysLoad(scenario: Scenario, state: GameState) {
 	const m = scenario.map;
 	m.getUndoSlot().clear();
@@ -118,14 +118,15 @@ function emptyCoreLists(scenario: Scenario, campaignPlayer: Player | null) {
 		p.getCoreUnitList().length = 0;
 }
 
-//#150, #142: the campaign player's list rebuilt: the core units on the map, whoever owns them, in
-//the unit list's order, then its own not deployed; its destroyed ones are gone
+//#142: the campaign player's list rebuilt: its core units on the map in the unit list's order,
+//then its own not deployed; its destroyed ones are gone. The AI's core units (it buys them) stay
+//out of it (#150)
 function rebuildCoreList(scenario: Scenario, country: number) {
 	const m = scenario.map, player = m.getPlayersByCountry(country)[0];
 	if (!player)
 		return;
 	for (const u of m.getUnits())
-		if (u.isCore && u.isDeployed)
+		if (u.isCore && u.isDeployed && u.owner === player.id)
 			player.addCoreUnit(u);
 	for (const u of waitingReserves.get(scenario) || [])
 		player.addCoreUnit(u);

@@ -6,9 +6,9 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 export type Save = SaveFile;
 
 //A save without what a load is known to lose or rebuild, the rest must survive a load: the core
-//lists (rebuilt for the campaign player only, in hex order and without the destroyed units, with
-//the AI's core units: #142, #149, #150), the undo, the random streams, the equipment lists, the
-//campaign's progress and the scenario's description (#128)
+//lists (rebuilt for the campaign player only, in the units' order and without the destroyed
+//units: #142, #149), the undo, the random streams, the equipment lists, the campaign's progress
+//and the scenario's description (#128)
 export function withoutLosses(save: SaveFile): unknown {
 	const { data, state } = structuredClone(save);
 	delete state.turn.undoable;
