@@ -145,6 +145,18 @@ dice, the defender's, then the attacker's leader roll and the defender's: `gener
 draws even when no level was gained), then `applyFight`, which changes it. The preview (#7) can
 resolve on a copy of the stream.
 
+**Checkpoints (#137).** The old UI animated a move and an attack and finished them from the
+animation's end, showing the state in between (the animation-combat script hashes every frame of
+it). `begin(world, command)` plays a command up to its first checkpoint, `resume(world, checkpoint,
+input)` from one to the next: a move stops once moved (`surprise` next: the surprise attack and the
+capture's victory), an attack once its shots are fired (`cleanUp` next: the destroyed units leave the
+map) and once they are gone (`end` next: the retreat or the surrender, the elimination victory). The
+world resumed from can be one made again from the screen's objects. What the screen says there is an
+input, not state: the air mode the surprise attack picks its target with (#77: the person's toggle;
+a program plays with it off), and `retreat: false` when the old UI's finish skipped the retreat (an
+attack with nothing to animate read both strengths as 0, kept). `step` passes every checkpoint at
+once on one draft; test/core-steps.test.ts plays each of its commands both ways and compares them.
+
 **Undo (D5).** The state keeps `turn.undoable` exactly as the old engine's slot decides it: a human
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
 reinforcement, an upgrade or a disband, set by a retreat of a human player's unit too (#171). The undo
@@ -315,6 +327,15 @@ as Game.setupPlayers set the scripted handler after its constructor had handed t
 hands it over again at its next turn start). Kept: in a new game the first player's AI doesn't start its turn
 (the old game made it without planning: it ends its first turn at once); a game loaded on an AI's
 turn has it plan again (#71). `playTurn(s)` plays a turn to its end.
+
+A screen plays the same session one piece at a time (#137): `nextOrder(s)` asks the current player's
+controller for its order without playing it (the replay hashes the state there), `play(s, command)`
+plays a person's command or an order up to its first checkpoint and `playOn(s, checkpoint, input)`
+from there, and `endTurn(s, saved)` ends the turn, calling `saved(started)` at the save point (the
+screen shows the units the AI deployed at its turn start, then saves) before the side shown and the
+reinforcements. `StartedTurn.type` is the player's type when its turn started (the tutorial may hand
+it over then). A campaign scenario's prototype, for its message, is `awardedPrototype(campaign, state)`
+(campaign.ts).
 
 `BENCH=1` (test/core-bench.test.ts, 2026-10-22, a loaded laptop), every player the AI, the fixture
 loaded on its current player's turn: its plan alone, then its turn played to the end (its orders, the

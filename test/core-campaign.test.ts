@@ -9,7 +9,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import { difference, GAME_DIR, setupOf } from "./corefiles";
-import { endCampaignScenario, type CampaignScenario } from "../src/core/campaign";
+import { awardedPrototype, endCampaignScenario, type CampaignScenario } from "../src/core/campaign";
 import { createWorld } from "../src/core/create";
 import { newGame } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/scenario";
@@ -19,13 +19,16 @@ type Game = Awaited<ReturnType<typeof freshGame>>;
 
 const OUTCOMES: ScenarioOutcome[] = ["briliant", "victory", "tactical", "lose"];
 
+//The prototypes the old game's message showed, by eqid
+const shownPrototypes: number[] = [];
+
 //The old game, its UI's messages silent, its streams seeded, the campaign started
 async function oldCampaign(index: number, difficulty: number): Promise<{ game: Game; data: () => SavedGame }> {
 	const game = await freshGame();
 	const { UIBuilder } = await import("../src/uibuilder");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
-	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
+	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage(eqid: number) { shownPrototypes.push(eqid); } });
 	Rng.game.state = 135 + index;
 	Rng.ai.state = 7;
 	await startState(game, `campaign:${index}:${difficulty}`);
@@ -100,6 +103,7 @@ async function playCampaign(index: number, seen: Seen): Promise<string> {
 async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenario[], seen: Seen): Promise<string> {
 	playScenario(game, (await import("../src/equipment")).Equipment.equipment);
 	const ended = data();
+	shownPrototypes.length = 0;
 	const oldThrew = threw(() => game.continueCampaign(outcome));
 	let n: ReturnType<typeof endCampaignScenario> = null;
 	const coreThrew = threw(() => {
@@ -120,8 +124,15 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 	game.newScenario(oldNext.scenario, oldNext.intro);
 	await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, oldNext.scenario);
 	const got = newGame({ ...setupOf(n.next.scenario, ended.state.rng, n.campaign, n.next.intro), carried: n.player });
-	if (n.campaign.progress.awardPrototype && !got.state.campaign.progress.awardPrototype) seen.prototypes++;
-	return compared(`after ${outcome}, ${n.next.scenario}`, data(), got);
+	return prototypeProblem(n.campaign, got.state, seen) || compared(`after ${outcome}, ${n.next.scenario}`, data(), got);
+}
+
+//The prototype the old game's message showed and the one the core says it gave, "" when the same
+function prototypeProblem(campaign: CampaignState, state: SavedGame["state"], seen: Seen): string {
+	const shown = shownPrototypes.splice(0), awarded = awardedPrototype(campaign, state);
+	if (awarded !== null) seen.prototypes++;
+	const same = JSON.stringify(shown) === JSON.stringify(awarded === null ? [] : [awarded]);
+	return same ? "" : `the prototype: old ${JSON.stringify(shown)}, core ${awarded}`;
 }
 
 test("Every campaign starts, ends its scenarios and carries its player on as on the old engine", async () => {

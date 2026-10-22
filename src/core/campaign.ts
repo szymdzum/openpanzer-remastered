@@ -15,7 +15,7 @@ import { nextRandom } from "../rng";
 import type { ScenarioOutcome } from "../scenario";
 import type { CampaignState } from "../state";
 import { newDossier, offMap, playerAt, removeUnit, writePlayer, writeUnit } from "./draft";
-import type { CoreUnit, Draft, OffMapUnit, PlayerState, UnitState, World } from "./types";
+import type { CoreUnit, Draft, GameState, OffMapUnit, PlayerState, UnitState, World } from "./types";
 
 //A campaign data file's scenario (resources/campaigns/data/*.json): what each outcome gives and
 //where it goes (254 and 255 end the campaign)
@@ -103,6 +103,15 @@ function awardPrototype(d: Draft, cp: number): boolean {
 		isSurprised: false, tempSpotted: false };
 	writePlayer(d, cp).core.push({ reserve: unit });
 	return true;
+}
+
+//The prototype a new campaign scenario's start gave (newGame with the campaign given, which said a
+//brilliant victory earned one): its eqid, for the message that tells the player; null when none was
+export function awardedPrototype(campaign: CampaignState | null, state: GameState): number | null {
+	if (campaign === null || !campaign.progress.awardPrototype || state.campaign === null || state.campaign.progress.awardPrototype)
+		return null;
+	const core = state.players[campaignPlayer(state, state.campaign)].core, last = core[core.length - 1];
+	return "reserve" in last ? last.reserve.eqid : null;
 }
 
 //Scenario.getPrototypeUnitsAvailable: the equipment of a country file's country (by its country

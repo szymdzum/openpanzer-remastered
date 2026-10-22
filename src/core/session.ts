@@ -25,9 +25,9 @@ import type { Command, Refusal } from "../commands";
 import { playerType } from "../prototypes";
 import type { Controller, Order, ViewEvent } from "./controller";
 import type { GameEvent } from "./events";
-import { step } from "./step";
+import { begin, resume, step } from "./step";
 import { arriveReinforcements } from "./turn";
-import type { World } from "./types";
+import type { Checkpoint, CheckpointInput, World } from "./types";
 import { sideOf, unitById } from "./world";
 
 //How a game ended: a side won, the side on the screen played its last turn, or the old game got stuck
@@ -61,9 +61,11 @@ export type Advance =
 	| { kind: "endTurn"; player: number; events: GameEvent[]; started: StartedTurn | null; arrived: GameEvent[] }
 	| { kind: "ended" };
 
-//The next player's turn start, when a controller plays it
+//The next player's turn start, when a controller plays it: the player's type then (the tutorial may
+//hand it over at its start)
 export interface StartedTurn {
 	player: number;
+	type: number;
 	commands: Command[];
 	events: GameEvent[];
 	view: ViewEvent[];
@@ -125,9 +127,8 @@ function controllerOf(s: Session, player: number): Controller | null {
 export function advance(s: Session): Advance {
 	if (s.ended !== null) return { kind: "ended" };
 	const player = s.world.state.turn.currentPlayer;
-	const c = controllerOf(s, player);
-	const order = c === null ? null : c.next(s.world);
-	if (order === null) return endTurn(s, player);
+	const order = nextOrder(s);
+	if (order === null) return endTurn(s);
 	if ("view" in order) {
 		if (order.view.type === "stuck") s.ended = { kind: "stuck", reason: order.view.reason };
 		return { kind: "order", player, order, events: [], refusal: null };
@@ -137,6 +138,41 @@ export function advance(s: Session): Advance {
 	s.world = r.world;
 	s.ended = victoryIn(s.world, r.events);
 	return { kind: "order", player, order, events: r.events, refusal: null };
+}
+
+//The current player's controller's next order, not played yet (a screen shows the state before it:
+//harness/replay.js reads it there); null when it has none left, which ends its turn, or when a person
+//plays the player
+export function nextOrder(s: Session): Order | null {
+	const c = controllerOf(s, s.world.state.turn.currentPlayer);
+	return c === null ? null : c.next(s.world);
+}
+
+//What a command played up to a checkpoint did: refused (nothing changed), or its events so far and the
+//checkpoint where it waits for the screen (null: done)
+export interface Phase {
+	events: GameEvent[];
+	refusal: Refusal | null;
+	checkpoint: Checkpoint | null;
+}
+
+//A command a person sends, or a controller's order a screen animates: played up to its first
+//checkpoint (a move or an attack) or whole. A victory in it ends the session; the screen says so when
+//it has shown it (the old game ended at the animation's end)
+export function play(s: Session, cmd: Command): Phase {
+	const r = begin(s.world, cmd);
+	if ("refusal" in r) return { events: [], refusal: r.refusal, checkpoint: null };
+	s.world = r.world;
+	s.ended = s.ended || victoryIn(s.world, r.events);
+	return { events: r.events, refusal: null, checkpoint: r.checkpoint };
+}
+
+//Plays on from a checkpoint, with what the screen says there (the air mode of a surprise attack, #77)
+export function playOn(s: Session, cp: Checkpoint, input: CheckpointInput = {}): Phase {
+	const r = resume(s.world, cp, input);
+	s.world = r.world;
+	s.ended = s.ended || victoryIn(s.world, r.events);
+	return { events: r.events, refusal: null, checkpoint: r.checkpoint };
 }
 
 //A step's victory: a capture of the last objective, a side with no unit left after an attack, then a
@@ -149,10 +185,11 @@ function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
 	return null;
 }
 
-//The end of the player's turn, the next player's turn start and plan, the defeat at the turn limit,
-//the save point, the side shown, the reinforcements
-function endTurn(s: Session, player: number): Advance {
-	const side = s.world.state.players[player].side;
+//The end of the current player's turn, the next player's turn start and plan, the defeat at the turn
+//limit, the save point (saved: what a screen does there, in the old game's order: it shows the units the
+//AI deployed at its turn start, then saves), the side shown, the reinforcements
+export function endTurn(s: Session, saved?: (started: StartedTurn | null) => void): Advance {
+	const player = s.world.state.turn.currentPlayer, side = s.world.state.players[player].side;
 	const r = step(s.world, { type: "endTurn" });
 	if ("refusal" in r) throw new Error("the end of turn is never refused");
 	s.world = r.world;
@@ -163,6 +200,7 @@ function endTurn(s: Session, player: number): Advance {
 		return { kind: "endTurn", player, events: r.events, started, arrived: [] };
 	}
 	s.saved = s.world;
+	if (saved) saved(started);
 	s.world = { ...s.world, spotSide: shownSide(s) };
 	const arrived = arriveReinforcements(s.world);
 	s.world = arrived.world;
@@ -175,11 +213,12 @@ function startTurn(s: Session): StartedTurn | null {
 	if (!isProgram(s.world.state.players[player].type)) return null;
 	const c = controllerOf(s, player);
 	if (c === null) return null;
+	const type = s.world.state.players[player].type;
 	const played = c.startTurn(s.world);
 	s.world = c.plan(played.world);
 	//(the tutorial hands its players over to a person and to the AI, which starts with nothing to do)
 	if (played.handOver) join(s, player, s.world.state.players[player].type);
-	return { player, commands: played.commands, events: played.events, view: played.view };
+	return { player, type, commands: played.commands, events: played.events, view: played.view };
 }
 
 //Plays the current player's turn to its end: what each advance did

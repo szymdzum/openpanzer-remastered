@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { playerType } from "../src/prototypes";
 import { aiController } from "../src/core/ai";
 import type { Controller, Order } from "../src/core/controller";
-import { advance, playTurn, startSession } from "../src/core/session";
+import { advance, endTurn, nextOrder, play, playOn, playTurn, type StartedTurn, startSession } from "../src/core/session";
 import type { World } from "../src/core/types";
 import { handWorld } from "./coreworld";
 
@@ -86,4 +86,28 @@ test("What the controllers ask of the screen when they join is kept for it, in t
 		join: (w: World) => ({ world: w, commands: [], events: [], view: [{ type: "select" as const, unit: player }] }),
 	}));
 	expect(s.joined).toEqual([{ type: "select", unit: 0 }, { type: "select", unit: 1 }]);
+});
+
+test("A screen asks for the next order, shows the state, then plays it checkpoint by checkpoint", () => {
+	const move: Order = { command: { type: "move", unit: 0, to: { row: 3, col: 3 } } };
+	const s = startSession(farApart(), (_type, player) => scripted(player, player === 0 ? [move] : []));
+	const before = s.world;
+	const order = nextOrder(s);
+	expect([order, s.world]).toEqual([move, before]);
+	const moved = play(s, "command" in order ? order.command : null);
+	expect(moved).toMatchObject({ refusal: null, checkpoint: { next: "surprise", unit: 0, surprise: null, win: false } });
+	expect(moved.events.map((e) => e.type)).toEqual(["moved"]);
+	expect(playOn(s, moved.checkpoint)).toEqual({ events: [], refusal: null, checkpoint: null });
+	expect(s.world.state.units[0]).toMatchObject({ row: 3, col: 3 });
+	expect([nextOrder(s), play(s, { type: "resupply", unit: 9 })]).toEqual([null, { events: [], refusal: { reason: "no such unit" }, checkpoint: null }]);
+});
+
+test("The end of turn stops at the save point for the screen: the AI's turn started and planned, its reinforcements not yet there", () => {
+	const w = farApart();
+	const { id: _id, row: _row, col: _col, ...tp } = w.state.units[1];
+	const s = startSession({ ...w, state: { ...w.state, reinforcements: [{ turn: 1, row: 8, col: 8, unit: tp }] } }, ai);
+	const seen: [StartedTurn | null, number][] = [];
+	const ended = endTurn(s, (started) => { seen.push([started, s.world.state.units.length]); });
+	expect(seen).toEqual([[{ player: 1, type: playerType.aiLocal, commands: [], events: [], view: [] }, 2]]);
+	expect([ended.kind === "endTurn" && ended.arrived.length, s.world.state.units.length, s.saved.state.units.length]).toEqual([1, 3, 2]);
 });

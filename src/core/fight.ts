@@ -21,7 +21,7 @@ import type { Fighter, FighterState } from "./events";
 import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import { moveUnit } from "./moves";
-import type { CombatResult, Contribution, Draft, Position, UnitId, UnitState, World } from "./types";
+import type { AttackStart, CombatResult, Contribution, Draft, Position, UnitId, UnitState, World } from "./types";
 import { currentEqid, hexIndex, sideOf, unitById } from "./world";
 
 //A unit that gained an experience level gets a leader when its roll (its level to 10) is above this
@@ -90,7 +90,7 @@ const fighterState = (u: UnitState): FighterState =>
 
 function fighter(w: World, u: UnitState): Fighter {
 	return { unit: u.id, eqid: u.eqid, side: sideOf(w, u), row: u.row, col: u.col, isMounted: u.isMounted,
-		before: fighterState(u), after: null };
+		isSurprised: u.isSurprised, before: fighterState(u), after: null };
 }
 
 //Losses: strength, a hit this turn, a point of entrenchment (Unit.hit)
@@ -170,14 +170,6 @@ function fight(d: Draft, atk: UnitId, def: UnitId, support: boolean, overrun: bo
 	applyFight(d, resolveFight(d, unitById(d, atk), unitById(d, def), d.rng, support, overrun));
 }
 
-//The strengths before an attack, for its finish
-export interface AttackStart {
-	attacker: UnitId;
-	defender: UnitId;
-	atkStrength: number;
-	defStrength: number;
-}
-
 //Actions.resolveAttack: the support fire on the attacker unless it was surprised or will overrun
 //(the estimate says so), then the attack unless the attacker is destroyed or its losses stopped it
 export function resolveAttack(d: Draft, attacker: UnitId, defender: UnitId): AttackStart {
@@ -199,18 +191,25 @@ export function resolveAttack(d: Draft, attacker: UnitId, defender: UnitId): Att
 	return start;
 }
 
-//Actions.finishAttack: the destroyed units off the map (the attacker first), the defender retreats
-//on big losses or surrenders with nowhere to go, a side with no unit left loses (#92: when both
-//have none, both win)
-export function finishAttack(d: Draft, start: AttackStart) {
+//Actions.finishAttack is cleanUpAttack, then endAttack: a screen shows the state in between. First the
+//destroyed units off the map, the attacker first (the unit list's cleanup after the attack). The
+//attacker as it was, for the retreat's rule (it reads what the attacker is, even destroyed)
+export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 	const atk = unitById(d, start.attacker), def = unitById(d, start.defender);
-	const atkGone = atk.strength <= 0, defGone = def.strength <= 0;
-	if (atkGone) destroy(d, atk);
-	if (defGone) destroy(d, def);
-	if (!defGone && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
+	if (atk.strength <= 0) destroy(d, atk);
+	if (def.strength <= 0) destroy(d, def);
+	return atk;
+}
+
+//After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
+//no unit left loses (#92: when both have none, both win). retreat false: no retreat (the old UI's finish
+//of an attack with no animation to play read both units' strengths as 0, kept)
+export function endAttack(d: Draft, start: AttackStart, atk: UnitState, retreat: boolean) {
+	const def = unitById(d, start.defender);
+	if (retreat && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
 		const to = retreatPosition(d, def);
 		if (to !== null) {
-			retreat(d, def.id, to);
+			retreatTo(d, def.id, to);
 		} else {
 			removeUnit(d, def.id, true);
 			emit(d, { type: "surrendered", unit: def.id, at: { row: def.row, col: def.col } });
@@ -228,7 +227,7 @@ function destroy(d: Draft, u: UnitState) {
 //Map.retreatUnit: a move to the hex without the cost of a move (its moves and overstrength stay),
 //the rest of a move as it is: the fuel, a capture, the undo of a human player's unit (kept bug #171:
 //the attacker's player can undo the enemy's retreat)
-function retreat(d: Draft, id: UnitId, to: Position) {
+function retreatTo(d: Draft, id: UnitId, to: Position) {
 	const { moveLeft, hasMoved, hasOverstrength } = unitById(d, id);
 	//(the hex is a plain cell, no cost: the move's cost comes to NaN, which counts as 0)
 	moveUnit(d, id, to, [{ row: to.row, col: to.col, cost: NaN }], true);
@@ -239,10 +238,11 @@ function retreat(d: Draft, id: UnitId, to: Position) {
 }
 
 //The surprise attack at the end of a move (Actions.finishMove): on the unit of the hex the mover
-//can attack (the ground one first: the old engine's air mode off, #77), then the mover is no longer
-//surprised; the attack's finish is the caller's, after the move's victory
-export function surpriseAttack(d: Draft, id: UnitId, at: Position): AttackStart | null {
-	const target = attackableUnit(d, unitById(d, id), hexIndex(d, at.row, at.col), false);
+//can attack, the air one first in air mode (a program plays with it off; the old game read the
+//person's toggle, #77), then the mover is no longer surprised; the attack's finish is the caller's,
+//after the move's victory
+export function surpriseAttack(d: Draft, id: UnitId, at: Position, airMode = false): AttackStart | null {
+	const target = attackableUnit(d, unitById(d, id), hexIndex(d, at.row, at.col), airMode);
 	const start = target === null ? null : resolveAttack(d, id, target.id);
 	writeUnit(d, id).isSurprised = false;
 	return start;

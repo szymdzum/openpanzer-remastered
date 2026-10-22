@@ -14,14 +14,14 @@ import { classicRules, moveCosts } from "../src/core/rules";
 import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
-import { step, type Stepped } from "../src/core/step";
+import { begin, resume, step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import { mapSize } from "../src/core/newgame";
-import type { Contribution } from "../src/core/types";
+import type { CheckpointInput, Contribution, World } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { handWorld } from "./coreworld";
 
-const PZ_IIA = 140, TP7 = 273;
+const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280;
 
 //A Pz IIA on clear ground next to a 7TP entrenched (2) in a forest
 function forestFight() {
@@ -160,6 +160,64 @@ test("An attack draws the attacker's dice, the defender's, then a leader roll fo
 	expect(fight.record.map((c) => c.name)).toContain("entrenchment");
 	expect(unitById(r.world, 1).strength).toBe(10 - fight.result.kills);
 	expect(unitById(r.world, 0)).toMatchObject({ hasFired: true, ammo: fight.attacker.before.ammo - 1, tempSpotted: true });
+});
+
+//A Me-109 (player 0) and, 4 hexes away out of its sight, a 7TP below a P.11c (player 1)
+function hiddenPair() {
+	return withRng(handWorld({ rows: 8, cols: 8, units: [
+		{ eqid: ME_109, owner: 0, row: 4, col: 1 },
+		{ eqid: TP7, owner: 1, row: 4, col: 5 },
+		{ eqid: P11, owner: 1, row: 4, col: 5 },
+	] }), 99);
+}
+
+//begin, then resume from each checkpoint with input
+function byCheckpoints(w: World, cmd: Command, input: CheckpointInput = {}) {
+	const b = begin(w, cmd);
+	if ("refusal" in b) throw new Error(b.refusal.reason);
+	const checkpoints: string[] = [];
+	let { world, checkpoint } = b;
+	const events = b.events.slice();
+	while (checkpoint !== null) {
+		checkpoints.push(checkpoint.next);
+		const r = resume(world, checkpoint, input);
+		({ world, checkpoint } = r);
+		events.push(...r.events);
+	}
+	return { world, events, checkpoints };
+}
+
+test("A move waits for the screen once moved, an attack once fired and once the destroyed are gone; then it ends as stepped whole", () => {
+	const w = hiddenPair(), move: Command = { type: "move", unit: 0, to: { row: 4, col: 5 } };
+	const moved = begin(w, move);
+	expect(moved).toMatchObject({ ok: true, checkpoint: { next: "surprise", unit: 0, surprise: { row: 4, col: 5 }, win: false } });
+	expect(moved.ok && unitById(moved.world, 0)).toMatchObject({ isSurprised: true, strength: 10 });
+	const phased = byCheckpoints(w, move), whole = played(step(w, move));
+	expect(phased.checkpoints).toEqual(["surprise", "cleanUp", "end"]);
+	expect(JSON.stringify([phased.world.state, phased.events])).toBe(JSON.stringify([whole.world.state, whole.events]));
+});
+
+test("The surprise attack hits the unit the air mode picks: the person's toggle (#77), off for a program", () => {
+	const target = (input: CheckpointInput) => byCheckpoints(hiddenPair(), { type: "move", unit: 0, to: { row: 4, col: 5 } }, input)
+		.events.filter((e) => e.type === "fight").map((e) => e.type === "fight" && e.defender.unit);
+	expect(target({})).toEqual([1]);
+	expect(target({ airMode: true })).toEqual([2]);
+});
+
+test("An attack's finish told no retreat (the old UI's attack with nothing to animate) leaves the defender where it is", () => {
+	const veterans = () => handWorld({ rows: 6, cols: 6, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, experience: 400 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 },
+	] });
+	let seed = 1, whole: Extract<Stepped, { ok: true }>;
+	for (; seed < 500; seed++) {
+		whole = played(step(withRng(veterans(), seed), { type: "attack", unit: 0, target: 1 }));
+		if (whole.events.some((e) => e.type === "retreated")) break;
+	}
+	expect(seed).toBeLessThan(500);
+	const kept = byCheckpoints(withRng(veterans(), seed), { type: "attack", unit: 0, target: 1 }, { retreat: false });
+	expect(kept.events.map((e) => e.type)).toEqual(whole.events.map((e) => e.type).filter((t) => t !== "retreated"));
+	expect(unitById(kept.world, 1)).toMatchObject({ row: 2, col: 3 });
 });
 
 test("A move onto an enemy flag takes it, and the undo gives it back", () => {
