@@ -38,6 +38,17 @@ export function contract(module: string, run: string): Contract {
 		+ ", apply: typeof contractApply === 'function' ? contractApply : null };")() as Contract;
 }
 
+//common.js's serializer (sorted keys, entities as ids) and hash (FNV-1a), for a test that writes
+//what a contract writes
+export interface ContractCommon {
+	contractSerialize: (v: unknown) => string;
+	contractHash: (s: string) => string;
+}
+export function contractCommon(): ContractCommon {
+	return new Function(fs.readFileSync(path.join(__dirname, "contracts", "common.js"), "utf8")
+		+ "\nreturn { contractSerialize, contractHash };")() as ContractCommon;
+}
+
 //Restores the fixture's state, builds the environment record.js builds on the reference from
 //this repo's modules (and extra, what a test adds), applies the contract's setup and runs it
 export async function runFixture(module: string, run: string, name: string, extra?: ContractEnv) {

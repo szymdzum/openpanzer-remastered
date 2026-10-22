@@ -52,6 +52,7 @@
 				"src/scenario.ts",
 				"src/scenarioloader.ts",
 				"src/selection.ts",
+				"src/state.ts",
 				"src/undo.ts",
 				"src/unit.ts",
 				"src/util.ts",
