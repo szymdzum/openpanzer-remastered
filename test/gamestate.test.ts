@@ -71,8 +71,9 @@ test("GameState load numbers the reinforcements of each turn from 1", async () =
 	expect(Object.values(scenario.reinforcements).flat()).toHaveLength(count);
 });
 
-//#54: the load doesn't keep isLastRowPartial and isLastColPartial
-test.fails.each(fixtures("engine"))("GameState load keeps the partial map edges (#54) %s", async (name) => {
+//#54: the load keeps the half hexes at the map's edges (isLastRowPartial, isLastColPartial), which
+//keep the units off them (GameRules.getMoveRange)
+test.each(fixtures("engine"))("GameState load keeps the partial map edges (#54) %s", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	const edges = (s: SaveFile) => [s.state.map.lastRowPartial, s.state.map.lastColPartial];
 	expect(edges(saved), "a fixture without a partial edge proves nothing").toContain(true);

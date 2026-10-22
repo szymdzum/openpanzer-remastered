@@ -5,8 +5,8 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 
 export type Save = SaveFile;
 
-//A save without what a load is known to lose or rebuild, the rest must survive a load: the
-//partial map edges (#54), dayTurn (#55), the units' experience and cost per side
+//A save without what a load is known to lose or rebuild, the rest must survive a load: dayTurn
+//(#55), the units' experience and cost per side
 //(#83), tempSpotted (set again by the spotting a load replays, #84), the unit ids and the units'
 //order (numbered again in hex order, #85: the units sorted, the hexes' and the core lists'
 //references to them dropped), the core lists (rebuilt for the campaign player only, in hex order
@@ -15,8 +15,6 @@ export type Save = SaveFile;
 export function withoutLosses(save: SaveFile): unknown {
 	const { data, state } = structuredClone(save);
 	delete state.turn.undoable;
-	delete state.map.lastRowPartial;
-	delete state.map.lastColPartial;
 	delete state.scenario.dayTurn;
 	delete state.scenario.expPerSide;
 	delete state.scenario.unitsCostPerSide;
