@@ -47,17 +47,46 @@ better: the output is deterministic.
 At 80×50 px the model's detail hardly shows. What counts is the silhouette, the proportions and
 the camouflage: a low-poly model with a good texture is enough.
 
-### Free models
+### Where the models come from
 
-There are some, few and uneven:
+Most free WW2 models are toy-like or stylized. Three sources are worth it, each of a different
+kind.
 
-| Source | Examples | Licence |
-|---|---|---|
-| Sketchfab (filter: downloadable, Creative Commons) | low-poly Shermans: [M4 early][m4e], [M4A3 (76) HVSS][m4a3], [M4A1 (76)][m4a1], untextured; a [Tiger][tiger]; a [TKS tankette][tks]; a [Wehrmacht soldier][soldier] | mostly CC-BY (credit the author); check each model |
-| BlendSwap | [King Tiger][kt] | varies |
-| itch.io | [Lowpoly Tank Pack][ltp]: Panzer IV free, Sherman and T-34 pay what you want; [Low Poly Battle Pack][lpbp] | the Battle Pack is CC0 but stylized, not historical |
-| OpenGameArt | [tank pack][oga1], [low-poly tanks][oga2] | generic tanks |
-| Mixamo | animations and poses for infantry | free for games |
+**1. Spring: 1944 (the base).** A free WW2 RTS kept up by its community for years
+([GitHub][s44]). Its `objects3d/` holds about 750 textured models by nation: Germany, the Soviet
+Union, the US and Britain, but also Italy, Japan, Hungary, France and Sweden, close to the PG2
+roster. The German folder alone has the Jagdpanther, Jagdpanzer IV, Bf 109, Fw 190, Ju 87G,
+Kübelwagen, MG42 and FlaK guns. They are RTS models, seen from above, with a sensible polygon
+count and historical paint: what an 80×50 sprite needs. The models are mostly `.s3o` (the Spring
+engine's format), some already `.dae`; Blender needs an importer, which the Spring community has.
+
+Licence: `docs/License.txt` puts the models and textures under CC-BY-NC 3.0 (the Lua code is
+GPL): free to use with credit, non-commercial only. Fine while the game stays free; it rules out
+selling it (Steam, say). The repo has no LICENSE yet: the Spring: 1944 graphics would get their
+own licence and credits, apart from the code.
+
+**2. Wargaming miniatures for 3D printing (15 mm, 28 mm).** The most accurate WW2 models today
+come from the designers of Flames of War and Bolt Action miniatures, close in spirit to SSI's
+photographed scale models. [Wargame3D][w3d] has hundreds of vehicles of every nation
+([list by nation][w3dl]): about 7 € a model for personal use, about 22 € with a commercial
+licence. Also [WW2 3D Models on Thangs][thangs] (a Tiger for 5 $), packs on
+[MyMiniFactory][mmf], single free models on [MakerWorld][mw] and Printables. The STL files have
+no textures, so we paint the camouflage and markings in Blender. Their licences speak of
+printing: rendering them for a game has to be agreed with the author (Wargame3D gives an email).
+
+**3. Paid game models (CGTrader, TurboSquid).** A royalty-free licence allows a model in a game,
+and we only ship rendered images, the simplest case. A realistic tank is usually 10-60 $. For
+the gaps.
+
+The plan: Spring: 1944 as the base, the gaps filled with wargaming models we paint, or single
+bought ones. If the game should stay sellable, the base is the wargaming models with a commercial
+licence instead.
+
+Also useful: [Mixamo][mixamo] for infantry poses (free for games). The free low-poly models that
+turned up first are mostly stylized: the Sketchfab Shermans ([M4 early][m4e], [M4A3 (76)
+HVSS][m4a3], [M4A1 (76)][m4a1], CC-BY, untextured), the [Lowpoly Tank Pack][ltp] and the CC0
+[Low Poly Battle Pack][lpbp] on itch.io, a [King Tiger][kt] on BlendSwap, [OpenGameArt][oga1]
+tanks.
 
 To avoid: models ripped from World of Tanks, War Thunder and other games (copyright), files
 licensed "for 3D printing" or personal display only, and the models of the
@@ -114,8 +143,8 @@ Practical points:
 
 ## Plan
 
-1. Unit pilot: the Panzer IV from the itch.io pack, the Blender script, a `@2x` strip, shown in
-   the game next to the old sprites. Measure how long one unit takes.
+1. Unit pilot: a Spring: 1944 tank (the Jagdpanzer IV, say), the Blender script, a `@2x` strip,
+   shown in the game next to the old sprites. Measure how long one unit takes.
 2. Map pilot: one map through Real-ESRGAN with the "anti-plastic" pass, compared 1:1, the grid
    check.
 3. After the pilots, before going on: a style guide (camera angle, light, outline, palette,
@@ -129,8 +158,10 @@ Practical points:
   [8 Directions Render Plugin][8d], [Sprite Render Kit][srk],
   [OpenGameArt: 3D meshes to a sprite sheet][ogas], [blender-mcp][bmcp],
   [80.lv: the Dead Cells pipeline][dc], [Slitherine: unit icon tutorial][sli]
-- Models: [M4 early][m4e], [M4A3 HVSS][m4a3], [M4A1][m4a1], [Tiger][tiger], [TKS][tks],
-  [Wehrmacht soldier][soldier], [King Tiger][kt], [Lowpoly Tank Pack][ltp],
+- Models: [Spring: 1944][s44], [Wargame3D][w3d], [Wargame3D by nation][w3dl], [Thangs][thangs],
+  [MyMiniFactory][mmf], [MakerWorld][mw], [Mixamo][mixamo], [M4 early][m4e], [M4A3 HVSS][m4a3],
+  [M4A1][m4a1], [Tiger][tiger], [TKS][tks], [Wehrmacht soldier][soldier], [King Tiger][kt],
+  [Lowpoly Tank Pack][ltp],
   [Low Poly Battle Pack][lpbp], [OpenGameArt tank pack][oga1], [OpenGameArt low-poly tanks][oga2],
   [PG2 mod for Panzer Corps 2][pc2mod]
 - AI 3D: [comparison][cmp1], [TRELLIS.2 vs others][cmp2], [trellis-mac test][tmac],
@@ -153,6 +184,13 @@ Practical points:
 [tiger]: https://sketchfab.com/3d-models/ww2-tank-93dc2f72f8374ae7a473c9c82eae48ad
 [tks]: https://sketchfab.com/3d-models/tks-20mm-tankette-57b59c9962814cb1ac5e96e5cc650e9d
 [soldier]: https://sketchfab.com/3d-models/ww2-german-wehrmacht-soldier-8f519608b01247fbb9d7bc119ce961ff
+[s44]: https://github.com/spring1944/spring1944
+[w3d]: https://www.wargaming3d.com/product/stl-pack-16-military-utility-vehicles-artillery-of-ww2-volume-1-156-28mm-personal-use
+[w3dl]: https://teletype.in/@wargame3d/3D_models_BY_NATIONS
+[thangs]: https://thangs.com/designer/WW2%203D%20Models/3d-model/German%20tanks%3A%20Tiger%20I%20%28Late%20Production%29-1537364
+[mmf]: https://www.myminifactory.com/object/3d-print-german-army-full-pack-ww2-west-front-late-war-15mm-831974
+[mw]: https://makerworld.com/en/models/2619724-panzer-iv
+[mixamo]: https://www.mixamo.com
 [kt]: https://blendswap.com/blend/16580
 [ltp]: https://isolatedsoulstudio.itch.io/lowpoly-tank-pack-01
 [lpbp]: https://lightning-poly.itch.io/low-poly-battle-pack
