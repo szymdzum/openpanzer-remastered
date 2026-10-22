@@ -192,6 +192,27 @@ test("GameState load keeps the scenario's description (#128)", async () => {
 	expect(again.data.description).toBe("The campaign's intro to this scenario");
 });
 
+//#128: a game saved right after a human player's move can still take the move back once loaded
+test("GameState load keeps the undo of the last move (#128)", async () => {
+	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
+	const { GameRules } = await import("../src/gamerules");
+	const m = scenario.map;
+	const moved = m.getUnits().filter((u) => u.player === m.currentPlayer && u.getHex()).find((u) => {
+		const cell = GameRules.getMoveRange(m, u).find((c) => c.canMove);
+		if (!cell) return false;
+		m.moveUnit(u, cell.row, cell.col);
+		return m.canUndoMove(u);
+	});
+	const saved = JSON.parse(await exportGame()) as SaveFile;
+	expect(saved.state.turn.undoable).not.toBeNull();
+	const again = await load(JSON.stringify(saved));
+	expect(again.state.turn.undoable).toEqual(saved.state.turn.undoable);
+	const { game } = await import("../src/game");
+	const u = game.scenario.map.getUnitById(moved.id);
+	game.scenario.map.undoLastMove();
+	expect([u.getPos().row, u.getPos().col]).toEqual([saved.state.turn.undoable.before.row, saved.state.turn.undoable.before.col]);
+});
+
 //The campaign fixture with a unit of the AI bought and deployed, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
