@@ -10,46 +10,29 @@ import { mulberry32 } from "./lifecycle";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
+import type { AttackResult } from "../src/actions";
 
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
-//ui.ts uiUnitAttack and uiAttackAnimationFinished, without animations and alerts
-function attack(w: World, a: Unit, d: Unit) {
-	const { m, GameRules: GR } = w;
-	if (!a.getPos() || !d.getPos()) return;
-	const aOld = a.strength, dOld = d.strength;
-	const cr = GR.calculateAttackResults(a, d, true);
-	if (!a.isSurprised && !cr.isOverrun)
-		for (const s of GR.getSupportFireUnits(m.getUnits(), a, d)) {
-			if (a.destroyed) break;
-			m.attackUnit(s, a, true);
-		}
-	const stopped = GR.isLossOverRetreatThreshold(a.strength, aOld);
-	if (!a.destroyed && !stopped) m.attackUnit(a, d, false, cr.isOverrun);
-	if (stopped) a.hasFired = true;
-	const dDestroyed = dOld - d.strength >= dOld;
-	if (aOld - a.strength >= aOld || dDestroyed) m.updateUnitList();
+//the commands, finished at once, with the UI's selection refresh after an attack (#29 guarded)
+function refreshSelection(w: World, r: AttackResult) {
+	const { m } = w;
+	const a = r.attacking.unit, d = r.defending.unit;
 	if (m.currentUnit) {
 		if (a.destroyed && m.currentUnit.id == a.id) m.delCurrentUnit();
 		else m.selectUnit(m.currentUnit);
 		if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
 	}
-	if (!dDestroyed && GR.shouldDefenderRetreat(a, d, dOld)) {
-		const r = GR.getRetreatPosition(m.map, d, m.rows);
-		if (r) m.retreatUnit(d, r);
-		else { d.destroyed = true; m.updateUnitList(); }
-	}
+}
+function attack(w: World, a: Unit, d: Unit) {
+	w.Commands.execute(w.scenario, { type: "attack", unit: a.id, target: d.id },
+		{ finish: { afterCleanup: (r) => refreshSelection(w, r) } });
 }
 
-//game.ts processAction (move) and ui.ts uiUnitMove and uiMoveAnimationFinished
+//game.ts processAction (move): the move range, then the move command
 function move(w: World, u: Unit, cell: Cell) {
-	const { m } = w;
-	m.setMoveRange(u);
-	const mr = m.moveUnit(u, cell.row, cell.col);
-	if (u.isSurprised && mr.surpriseCell) {
-		const e = m.map[mr.surpriseCell.row][mr.surpriseCell.col].getAttackableUnit(u, false);
-		if (e) attack(w, u, e);
-		u.isSurprised = false;
-	}
+	w.m.setMoveRange(u);
+	w.Commands.execute(w.scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } },
+		{ surprise: { afterCleanup: (r) => refreshSelection(w, r) } });
 }
 
 //The AI plays every player for 2 turns, Math.random seeded. check() runs after every action and end
@@ -78,14 +61,14 @@ function playAI(w: World, check: (step: string, overwritten: Unit[]) => boolean)
 					occupants = [h.unit, h.airunit].filter((x): x is Unit => x !== null && x !== p[0]);
 					move(w, p[0], p[1]);
 				} else if (a.type === A.attack) { if (w.GameRules.isInAttackRange(p[0], p[1])) attack(w, p[0], p[1]); }
-				else if (a.type === A.resupply) m.resupplyUnit(p[0]);
-				else if (a.type === A.reinforce) m.reinforceUnit(p[0], false);
+				else if (a.type === A.resupply) w.Commands.execute(scenario, { type: "resupply", unit: p[0].id });
+				else if (a.type === A.reinforce) w.Commands.execute(scenario, { type: "reinforce", unit: p[0].id });
 				else if (a.type === A.endturn) break;
 				const overwritten = occupants.filter((o) => { const h = o.getHex(); return h && h.unit !== o && h.airunit !== o; });
 				if (check(step, overwritten)) return;
 			}
-			//game.ts endTurn: Scenario.endTurn, then the next player's reinforcements
-			scenario.endTurn();
+			//game.ts endTurn: the end turn command, then the next player's reinforcements
+			w.Commands.execute(scenario, { type: "endTurn" });
 			for (const r of scenario.getReinforcements(m.turn, m.currentPlayer.id)) {
 				if (m.deployReinforcement(r.unit, r.row, r.col) === null) continue;
 				CombatLog.addReinforcement(r.unit);

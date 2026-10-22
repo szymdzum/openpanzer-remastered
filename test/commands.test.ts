@@ -313,3 +313,21 @@ test("End turn hands the turn to the next player, the defeat only for a local si
 	map.currentPlayer = players[1];
 	expect(execute(scenario, { type: "endTurn" }, { localSide: 1 })).toEqual({ ok: true, result: true });
 });
+
+//check refuses an upgrade where the engine's own upgrade would do nothing: the same three cases
+test("An upgrade check refuses where GameMap.upgradeUnit does nothing", () => {
+	const inf = unitAt(3, 3), p = players[0];
+	const infantry = Equipment.getCountryEquipmentByClass(unitClass.infantry, 8).find((id) => id !== 115)!;
+	const cases: [number, number, number, string][] = [ //unit id, eqid, prestige, the refusal
+		[99, infantry, 5000, "no such unit"],
+		[inf.id, 142, 5000, "not the same class"],
+		[inf.id, infantry, 0, "not enough prestige"],
+	];
+	for (const [id, eqid, prestige, reason] of cases) {
+		p.prestige = prestige;
+		const before = state();
+		expect(refusal({ type: "upgrade", unit: id, eqid: eqid, transport: -1 })).toBe(reason);
+		expect(map.upgradeUnit(id, eqid, -1)).toBe(false);
+		expect(state()).toBe(before);
+	}
+});
