@@ -15,7 +15,7 @@
  */
 
 import { Equipment } from "./equipment";
-import type { Player, PlayerDossier } from "./map";
+import type { PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
 import {
 	campaignFromData, type CampaignHost, type CampaignState, type CoreUnit, fromData, type GameState, type HexState, type OffMapUnit,
@@ -85,7 +85,7 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 	state.equipment = { indexes: Equipment.equipmentIndexes };
 	state.rng = null;
 	const scenario = fromData({ data, state });
-	todaysLoad(scenario, state);
+	todaysLoad(scenario);
 	return scenario;
 }
 
@@ -98,19 +98,9 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 }
 
 //What today's load (Scenario.copy, Map.copy, restoreCoreUnitList) loses, kept until each loss is
-//fixed in its own commit: the undo is gone and the other players' core lists (#149)
-function todaysLoad(scenario: Scenario, state: GameState) {
-	const m = scenario.map;
-	m.getUndoSlot().clear();
-	emptyCoreLists(scenario, state.campaign === null ? null : m.getPlayersByCountry(state.campaign.country)[0]);
-}
-
-//#149: the load starts every player but the campaign's (the first of its country) without core
-//units
-function emptyCoreLists(scenario: Scenario, campaignPlayer: Player | null) {
-	for (const p of scenario.map.getPlayers())
-		if (p !== campaignPlayer)
-			p.getCoreUnitList().length = 0;
+//fixed in its own commit: the undo is gone
+function todaysLoad(scenario: Scenario) {
+	scenario.map.getUndoSlot().clear();
 }
 
 //The format before: GameState.exportGameState wrote the JSON of the game's objects, the scenario
