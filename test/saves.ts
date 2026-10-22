@@ -6,14 +6,12 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 export type Save = SaveFile;
 
 //A save without what a load is known to lose or rebuild, the rest must survive a load: the undo,
-//the random streams, the equipment lists, the campaign's progress and the scenario's description
-//(#128)
+//the random streams, the equipment lists and the campaign's progress (#128)
 export function withoutLosses(save: SaveFile): unknown {
 	const { data, state } = structuredClone(save);
 	delete state.turn.undoable;
 	delete state.rng;
 	delete state.equipment;
-	delete data.description;
 	if (state.campaign) delete state.campaign.progress;
 	return { data, state };
 }
