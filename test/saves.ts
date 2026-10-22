@@ -6,9 +6,8 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 export type Save = SaveFile;
 
 //A save without what a load is known to lose or rebuild, the rest must survive a load: the core
-//lists (rebuilt for the campaign player only, in the units' order and without the destroyed
-//units: #142, #149), the undo, the random streams, the equipment lists, the campaign's progress
-//and the scenario's description (#128)
+//lists of the players who don't play a campaign (#149), the undo, the random streams, the
+//equipment lists, the campaign's progress and the scenario's description (#128)
 export function withoutLosses(save: SaveFile): unknown {
 	const { data, state } = structuredClone(save);
 	delete state.turn.undoable;
@@ -16,7 +15,8 @@ export function withoutLosses(save: SaveFile): unknown {
 	delete state.equipment;
 	delete data.description;
 	if (state.campaign) delete state.campaign.progress;
-	for (const p of state.players) delete p.core;
+	for (const p of state.players)
+		if (!state.campaign || p !== state.players.find((x) => x.country === state.campaign.country)) delete p.core;
 	return { data, state };
 }
 
