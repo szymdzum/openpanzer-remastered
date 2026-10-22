@@ -191,12 +191,13 @@ function cyrb53(str) {
 // ---- Game state
 
 // snapshot() is the game state as src/state.ts's toData reads it (#127), or the walk of the game
-// objects' plain properties: window.__stateSnapshot ("toData" or "walk", the default), which
-// replay.sh and ui-replay.sh set on both pages from what the baseline has (harness/lib/
-// reference.sh). The original game (reference/) and a baseline before #127 have no toData: both
-// sides walk the objects then, so the two traces compare like with like.
+// objects' plain properties: window.__stateSnapshot ("toData", "toData-norng" or "walk", the
+// default), which replay.sh and ui-replay.sh set on both pages from what the baseline has
+// (harness/lib/reference.sh). The original game (reference/) and a baseline before #127 have no
+// toData: both sides walk the objects then, so the two traces compare like with like. A baseline
+// before #126 has toData with no random streams (rng null): toData-norng leaves them out on both.
 function snapshot() {
-	return window.__stateSnapshot === "toData" ? stateSnapshot() : walkSnapshot();
+	return window.__stateSnapshot === "toData" || window.__stateSnapshot === "toData-norng" ? stateSnapshot() : walkSnapshot();
 }
 
 // toData's { data, state }, and what the screen shows beside the state, which the state leaves
@@ -212,7 +213,9 @@ function stateSnapshot() {
 			const h = m.map[r][c];
 			hexes.push("" + +h.isMoveSel + +h.isAttackSel + +h.isSpotted(0) + +h.isSpotted(1) + +h.isZOC(0) + +h.isZOC(1));
 		}
-	return JSON.stringify({ ...toData(s, game), selected: m.currentUnit ? m.currentUnit.id : null, hexes: hexes.join(",") });
+	const saved = toData(s, game);
+	if (window.__stateSnapshot === "toData-norng") saved.state.rng = null;
+	return JSON.stringify({ ...saved, selected: m.currentUnit ? m.currentUnit.id : null, hexes: hexes.join(",") });
 }
 
 // The walk: built from plain properties so it doesn't depend on the modules under test more than
