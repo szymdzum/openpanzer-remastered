@@ -30,7 +30,7 @@ import { UI } from "./ui";
 import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
 import { setEngineContext } from "./context";
-import { setGame } from "./session";
+import { game, setGame } from "./session";
 
 //UI is a constructor function, not a class: this gives `new` on it a type
 export interface UIConstructor { new (game: Game): UI; }
@@ -470,8 +470,10 @@ export class Game {
 Game.defaultScenario = DEFAULT_SCENARIO;
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
-export var game: Game = new Game();
-setGame(game);
+//The running game lives in session.ts, where the UI reads it; game.ts makes it and re-exports it
+//for main.ts, the harness and the tests
+setGame(new Game());
+export { game };
 
 //What the engine reads of the game (src/context.ts): this game's fields, read at the moment the
 //engine needs them, so what a harness or a test assigns to game.* is seen as before

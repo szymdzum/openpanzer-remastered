@@ -243,6 +243,8 @@ export function UI(this: UI, game: Game) {
 
 	UIBuilder.buildStartMenu();
 	UIBuilder.buildMainMenu();
+	//Set here, not in UIBuilder, which uicombatlog imports
+	$("statusbar").onclick = $("combatLogButton").onclick = function() { UICombatLog.toggleCombatLog(false, true); };
 	UIBuilder.buildUnitInfoWindow();
 	UIBuilder.buildEquipmentWindow();
 	UIBuilder.buildEquipmentSortOptions();
