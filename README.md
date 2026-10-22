@@ -75,7 +75,8 @@ sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
   sounds and manuals in Git LFS (`git lfs install` before cloning)
 - `harness/` the comparison with the reference, `docs/TYPES.md` the typing rules,
   `docs/MECHANICS.md` how the game plays (rules, combat, AI), `docs/RESEARCH.md` what PG2 and
-  other WW2 strategy games teach about design, `docs/design/` the current UI
+  other WW2 strategy games teach about design, `docs/ASSETS.md` research on new unit and map
+  graphics, `docs/design/` the current UI
 
 Vite blanks the types out with ts-blank-space instead of compiling: the browser runs src/ line
 for line and column for column (only the import paths change), so coverage and stack traces
