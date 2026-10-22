@@ -12,20 +12,24 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 	const player = map.currentPlayer;
 	player.type = playerType.humanLocal;
 
-	//A unit of the player on the move whose first move can be undone (it spots nothing new)
+	//A unit of the player on the move whose first move can be undone (it spots nothing new), and
+	//which can reinforce when it's down to 5
 	let unit: import("../src/unit").Unit | null = null;
 	for (const u of map.getUnits().filter((x) => x.player === player && !x.hasMoved && x.getHex())) {
 		const cell = GameRules.getMoveRange(map, u)[0];
 		if (!cell) continue;
 		map.selectUnit(u);
 		map.moveUnit(u, cell.row, cell.col);
-		if (map.canUndoMove(u)) { unit = u; break; }
+		if (!map.canUndoMove(u)) continue;
+		map.undoLastMove();
+		expect(u.player).toBe(player);
+		const strength = u.strength;
+		u.strength = 5;
+		if (GameRules.canReinforce(map.map, u)) { unit = u; break; }
+		u.strength = strength;
 	}
-	expect(unit, "a unit whose move can be undone").not.toBeNull();
-	map.undoLastMove();
-	expect(unit.player).toBe(player);
+	expect(unit, "a unit whose move can be undone and which can reinforce").not.toBeNull();
 
-	unit.strength = 5;
 	const prestige = player.prestige;
 	const r = map.reinforceUnit(unit, false);
 	expect(r.strength).toBeGreaterThan(0);

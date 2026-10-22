@@ -99,11 +99,12 @@ function firstBreak(w: World): string | null {
 	return found;
 }
 
-//Fixtures where the AI's 2 turns break an invariant through a known bug. ruscam09-t2 reached #73
-//(a recon leader from support fire) on the dice the AI's draws used to shift, until the AI drew
-//from its own stream (#126). ruscam09-t0 reaches it since a load keeps the experience per side
-//(#83): unit#7 wins a leader that widens its spotting in an attack of turn 2
-const knownBreaks: Record<string, string> = { "ruscam09-t0.json.gz": "#73" };
+//Fixtures where the AI's 2 turns break an invariant through a known bug: a leader won in an attack
+//widens a unit's spotting, the counters stay (#73). ruscam09-t2 reached it on the dice the AI's
+//draws used to shift until the AI drew from its own stream (#126), and again since a load keeps the
+//units' order (#85): unit#7 in an attack of turn 3. ruscam09-t0 since a load keeps the experience
+//per side (#83): unit#7 in an attack of turn 2
+const knownBreaks: Record<string, string> = { "ruscam09-t0.json.gz": "#73", "ruscam09-t2.json.gz": "#73" };
 
 for (const name of fixtures("engine"))
 	test(`Invariants hold on ${name} as restored`, async () => {
@@ -166,21 +167,18 @@ function movers(w: World): Unit[] {
 drill("#68 undo keeps the unit attached to its player", "ruscam09-t2.json.gz", (w, setup) => {
 	const { m, GameRules: GR, playerType } = w;
 	m.currentPlayer.type = playerType.humanLocal;
-	//The first move that spots nothing new, so it can be undone
-	for (const u of movers(w))
-		for (const cell of GR.getMoveRange(m, u)) {
-			const from = u.getHex()!;
-			m.selectUnit(u);
-			m.moveUnit(u, cell.row, cell.col);
-			if (m.canUndoMove(u)) {
-				m.undoLastMove();
-				if (u.getHex() !== from) setup.push("the undo didn't move " + unitName(u) + " back");
-				return violations(w);
-			}
-			setup.push("the first move of " + unitName(u) + " can't be undone");
-			return [];
+	//The first move that spots nothing new, so it can be undone: each unit's first cell
+	for (const u of movers(w)) {
+		const from = u.getHex()!, cell = GR.getMoveRange(m, u)[0];
+		m.selectUnit(u);
+		m.moveUnit(u, cell.row, cell.col);
+		if (m.canUndoMove(u)) {
+			m.undoLastMove();
+			if (u.getHex() !== from) setup.push("the undo didn't move " + unitName(u) + " back");
+			return violations(w);
 		}
-	setup.push("no unit could move");
+	}
+	setup.push("no move could be undone");
 	return [];
 }, true);
 

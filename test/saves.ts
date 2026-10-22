@@ -5,29 +5,19 @@ import type { SaveFile, UnknownPart } from "../src/savegame";
 
 export type Save = SaveFile;
 
-//A save without what a load is known to lose or rebuild, the rest must survive a load: the unit
-//ids and the units' order (numbered again in hex order, #85: the units sorted, the hexes' and the
-//core lists' references to them dropped), the core lists (rebuilt for the campaign player only, in hex order and without the
-//destroyed units, with the AI's core units: #142, #149, #150), the undo, the random streams, the
-//equipment lists, the campaign's progress and the scenario's description (#128)
+//A save without what a load is known to lose or rebuild, the rest must survive a load: the core
+//lists (rebuilt for the campaign player only, in hex order and without the destroyed units, with
+//the AI's core units: #142, #149, #150), the undo, the random streams, the equipment lists, the
+//campaign's progress and the scenario's description (#128)
 export function withoutLosses(save: SaveFile): unknown {
 	const { data, state } = structuredClone(save);
 	delete state.turn.undoable;
-	delete state.nextUnitId;
 	delete state.rng;
 	delete state.equipment;
 	delete data.description;
 	if (state.campaign) delete state.campaign.progress;
-	for (const h of state.map.hexes) {
-		h.unit = h.unit === null ? null : 0;
-		h.air = h.air === null ? null : 0;
-	}
 	for (const p of state.players) delete p.core;
-	const units = state.units.map((u) => {
-		delete u.id;
-		return JSON.stringify(u);
-	}).sort();
-	return { data, state: { ...state, units } };
+	return { data, state };
 }
 
 //A save without what an imported save never stored (src/savegame.ts UnknownPart): an imported save
