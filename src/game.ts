@@ -377,9 +377,10 @@ export class Game {
 			if (!p) return false;
 			switch(action.type) {
 				case actionType.move: {
-					game.scenario.map.setMoveRange(p[0] as Unit); //The selection (hashed, saved), the move finds its own path
+					//The selection (hashed, saved); the move takes its path from that same range
+					game.scenario.map.setMoveRange(p[0] as Unit);
 					game.waitUIAnimation = true;
-					if (game.ui.uiUnitMove(p[0] as Unit, (p[1] as Cell).row, (p[1] as Cell).col))
+					if (game.ui.uiUnitMove(p[0] as Unit, (p[1] as Cell).row, (p[1] as Cell).col, game.scenario.map.getCurrentMoveRange()))
 						game.ui.uiSetUnitOnViewPort(p[0] as Unit);
 					else
 						game.waitUIAnimation = false;

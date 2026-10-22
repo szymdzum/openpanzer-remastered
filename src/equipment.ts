@@ -188,34 +188,21 @@ Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: 
 	return eqList;
 }
 
+//Whether the equipment eqid has an attribute bit, false for an unknown eqid
+function hasAttr(eqid: number, mask: number): boolean {
+	return typeof Equipment.equipment[eqid] !== "undefined" && (Equipment.equipment[eqid].attr & mask) != 0;
+}
+
 Equipment.isBridge = function(eqid: number) {
-	if (typeof Equipment.equipment[eqid] === "undefined")
-		return false;
-
-	if ((Equipment.equipment[eqid].attr & BRIDGE_MASK) != 0)
-		return true;
-
-	return false;
+	return hasAttr(eqid, BRIDGE_MASK);
 }
 
 Equipment.ignoresEntrenchment = function(eqid: number) {
-	if (typeof Equipment.equipment[eqid] === "undefined")
-		return false;
-
-	if ((Equipment.equipment[eqid].attr & IGNORE_ENTRENCH_MASK) != 0)
-		return true;
-
-	return false;
+	return hasAttr(eqid, IGNORE_ENTRENCH_MASK);
 }
 
 Equipment.isPurchasable = function(eqid: number) {
-	if (typeof Equipment.equipment[eqid] === "undefined")
-		return false;
-
-	if ((Equipment.equipment[eqid].attr & PURCHASABLE_MASK) != 0)
-		return true;
-
-	return false;
+	return hasAttr(eqid, PURCHASABLE_MASK);
 }
 
 //Can a unit of type eqid start an attack on a unit of type targetEqid

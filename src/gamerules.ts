@@ -857,18 +857,7 @@ GameRules.getResupplyValue = function(map, unit, isTurnStart) {
 		tFuel = unit.transport.unitData().fuel - unit.transport.fuel;
 	}
 
-	const p = unit.getPos();
-	const adj = getAdjacent(p.row, p.col);
-	let enemy = 0;
-	for (const h in adj) {
-		const r = adj[h].row;
-		const c = adj[h].col;
-		if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
-			continue;
-		//Enemy around ? Check only for ground units
-		if ((map[r][c].unit != null) && (map[r][c].unit.player.side != unit.player.side))
-			enemy++;
-	}
+	const enemy = countAdjacentEnemies(map, unit);
 
 	if (isTurnStart && (enemy > 0 || terrain != terrainType.City))
 		return new Supply(0, 0);
@@ -915,18 +904,7 @@ GameRules.getReinforceValue = function(map, unit, overstrength) {
 	if (isAir(unit))
 		return strength;
 
-	const p = unit.getPos();
-	const adj = getAdjacent(p.row, p.col);
-	let enemy = 0;
-	for (const h in adj) {
-		const r = adj[h].row;
-		const c = adj[h].col;
-		if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
-			continue;
-		//Enemy around ? Check only for ground units
-		if ((map[r][c].unit !== null) && (map[r][c].unit.player.side != unit.player.side))
-			enemy++;
-	}
+	const enemy = countAdjacentEnemies(map, unit);
 
 	if (unit.getHex().terrain != terrainType.City)
 		strength = strength / 1.3;
@@ -1042,16 +1020,7 @@ GameRules.canResupply = function(map, unit) {
 	if (!needAmmo && !needFuel)
 		return false;
 
-	if (isGround(unit))
-		return true;
-	//Air Unit
-	if (isAir(unit) && isAirfieldAroundUnit(map, unit))
-		return true;
-	//Naval Unit, the 3.2.14 bundle checks for NOT being in a port
-	if (isSea(unit) && unit.getHex().terrain != terrainType.Port)
-		return true;
-
-	return false;
+	return canSupplyHere(map, unit);
 }
 
 GameRules.canReinforce = function(map, unit, overstrength) {
@@ -1072,16 +1041,7 @@ GameRules.canReinforce = function(map, unit, overstrength) {
 			return false;
 	}
 
-	if (isGround(unit))
-		return true;
-	//Air Unit
-	if (isAir(unit) && isAirfieldAroundUnit(map, unit))
-		return true;
-	//Naval Unit, the 3.2.14 bundle checks for NOT being in a port
-	if (isSea(unit) && unit.getHex().terrain != terrainType.Port)
-		return true;
-
-	return false;
+	return canSupplyHere(map, unit);
 }
 
 //Air units and mounted artillery can't capture cities
@@ -1172,6 +1132,32 @@ GameRules.isInAttackRange = function(unit, targetUnit) {
 		return true;
 
 	return false;
+}
+
+//Enemy units on the hexes around the unit, for resupply and reinforcement
+function countAdjacentEnemies(map: Hex[][], unit: Unit): number {
+	const p = unit.getPos();
+	const adj = getAdjacent(p.row, p.col);
+	let enemy = 0;
+	for (const h in adj) {
+		const r = adj[h].row;
+		const c = adj[h].col;
+		if (typeof map[r] === "undefined" || typeof map[r][c] === "undefined")
+			continue;
+		if ((map[r][c].unit !== null) && (map[r][c].unit.player.side != unit.player.side))
+			enemy++;
+	}
+	return enemy;
+}
+
+//Where a unit that needs it can resupply or reinforce: ground units anywhere, air units next to
+//an airfield, naval units out of a port (the 3.2.14 bundle checks for NOT being in a port)
+function canSupplyHere(map: Hex[][], unit: Unit): boolean {
+	if (isGround(unit))
+		return true;
+	if (isAir(unit) && isAirfieldAroundUnit(map, unit))
+		return true;
+	return isSea(unit) && unit.getHex().terrain != terrainType.Port;
 }
 
 function isAirfieldAroundUnit(map: Hex[][], unit: Unit): boolean {

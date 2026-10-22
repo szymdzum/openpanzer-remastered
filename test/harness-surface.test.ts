@@ -64,6 +64,15 @@ test("The exports the harness uses are exposed by src/main.ts, under their names
 	expect(renamed, "exported under another name than their own").toEqual([]);
 });
 
+//A module left out of the list hides its exports from ?harness
+test("src/main.ts lists every module for ?harness", () => {
+	const main = read("src/main.ts");
+	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/(\w+)";/gm)].map((m) => [m[2], m[1]]));
+	const listed = /const modules = \[([^\]]*)\]/.exec(main)![1].split(",").map((s) => s.trim());
+	const modules = fs.readdirSync(path.join(root, "src")).filter((f) => f.endsWith(".ts") && f !== "main.ts").map((f) => f.slice(0, -3));
+	expect(modules.filter((m) => !listed.includes(imports.get(m) ?? "")), "not in src/main.ts's modules").toEqual([]);
+});
+
 test("The list of exports the harness uses is complete", async () => {
 	const names = await exposed();
 	const used = usedNames(new Set(names.keys()));

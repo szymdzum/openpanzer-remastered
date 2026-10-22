@@ -826,9 +826,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 		if (removed > 0)
 			eV.push(cell);
 
-		if (this.sidesVictoryHexes[side].length == 0)
-			return true;
-		return false;
+		return sV.length == 0;
 	}
 
 	this.setMoveRange = function(unit) { selection.setMoveRange(unit); }
