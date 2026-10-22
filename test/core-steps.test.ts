@@ -32,7 +32,7 @@ import { countersEqual, drifted, load, resync } from "./invariants";
 import { difference } from "./aigames";
 import { createWorld } from "../src/core/create";
 import { computeSight } from "../src/core/sight";
-import { check, step, type Stepped } from "../src/core/step";
+import { begin, check, resume, step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import type { GameEvent } from "../src/core/events";
 import type { Unit } from "../src/unit";
@@ -256,12 +256,38 @@ function count(what: string) {
 	stats[what] = (stats[what] || 0) + 1;
 }
 
-//The core's step on the world frozen: the state it was given must stay as it was
+//The core's step on the world frozen: the state it was given must stay as it was. The same command
+//played checkpoint by checkpoint, as a screen plays it (begin, then resume), ends the same
 function coreStep(w: CoreWorld, cmd: Command): Stepped {
 	freeze(w.state);
 	count("commands");
 	count(cmd.type);
-	return step(w, cmd);
+	const r = step(w, cmd);
+	const [whole, phased] = [r, inPhases(w, cmd)].map(outcomeOf);
+	if (whole !== phased) throw new Error(`${JSON.stringify(cmd)} by checkpoints:${difference(whole, phased)}`);
+	return r;
+}
+
+//A step's answer, state, sight and events as text
+function outcomeOf(r: Stepped): string {
+	if (!r.ok) return JSON.stringify(r);
+	const { state, sight } = r.world;
+	return JSON.stringify({ state, events: r.events, sight: [...sight.spot, ...sight.zoc].map((a) => a.join()) });
+}
+
+//begin, then resume from each checkpoint with nothing said
+function inPhases(w: CoreWorld, cmd: Command): Stepped {
+	const b = begin(w, cmd);
+	if (!b.ok) return b;
+	let { world, checkpoint } = b;
+	const events = b.events.slice();
+	while (checkpoint !== null) {
+		count("checkpoints");
+		const r = resume(world, checkpoint);
+		({ world, checkpoint } = r);
+		events.push(...r.events);
+	}
+	return { ok: true, world, events };
 }
 
 //The old engine's command with the hooks telling the story, null when it threw

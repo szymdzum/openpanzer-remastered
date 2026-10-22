@@ -14,13 +14,13 @@
 import type { Command, CommandOf, CommandType, Refusal } from "../commands";
 import { beginDraft, finishDraft } from "./draft";
 import type { GameEvent } from "./events";
-import { attack, move } from "./commands/move";
+import { attack, attackFirst, move, moveFirst, resumeFrom } from "./commands/move";
 import { reinforce, resupply } from "./commands/supply";
 import { disembark, embark, mount, unmount } from "./commands/transport";
 import { endTurn } from "./commands/turn";
 import { undo } from "./commands/undo";
 import { buy, deploy, disband, sell, upgrade, upgradeUndeployed } from "./commands/units";
-import type { CommandHandler, World } from "./types";
+import type { Checkpoint, CheckpointInput, CommandHandler, World } from "./types";
 
 //The handlers by command type, typed by a mapped type: a type without its handler, or a misspelled
 //one, doesn't compile
@@ -51,4 +51,33 @@ export function step(w: World, cmd: Command): Stepped {
 	const d = beginDraft(w);
 	handlerFor(cmd)!.run(d, cmd);
 	return { ok: true, world: finishDraft(d), events: d.events };
+}
+
+//A command played up to its first checkpoint (a move or an attack: the screen animates it there), the
+//others whole: the world then, the events so far and the checkpoint, null when the command is done
+export type Begun = { ok: true; world: World; events: GameEvent[]; checkpoint: Checkpoint | null } | { ok: false; refusal: Refusal };
+
+export function begin(w: World, cmd: Command): Begun {
+	const refusal = check(w, cmd);
+	if (refusal !== null) return { ok: false, refusal };
+	const d = beginDraft(w);
+	let checkpoint: Checkpoint | null = null;
+	if (cmd.type === "move") checkpoint = moveFirst(d, cmd);
+	else if (cmd.type === "attack") checkpoint = attackFirst(d, cmd);
+	else handlerFor(cmd)!.run(d, cmd);
+	return { ok: true, world: finishDraft(d), events: d.events, checkpoint };
+}
+
+export interface Resumed {
+	world: World;
+	events: GameEvent[];
+	checkpoint: Checkpoint | null;
+}
+
+//Goes on from a checkpoint to the next one, with what the screen says there. w is the world at the
+//checkpoint, or one made again from the screen's objects (which the screen may have changed meanwhile)
+export function resume(w: World, cp: Checkpoint, input: CheckpointInput = {}): Resumed {
+	const d = beginDraft(w);
+	const checkpoint = resumeFrom(d, cp, input);
+	return { world: finishDraft(d), events: d.events, checkpoint };
 }

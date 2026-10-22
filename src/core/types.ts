@@ -8,7 +8,7 @@
 
 import type { Command, Refusal } from "../commands";
 import type { RngStream } from "../rng";
-import type { GameState, ScenarioData, UnitId, UnitState } from "../state";
+import type { GameState, Position, ScenarioData, UnitId, UnitState } from "../state";
 import type { GameEvent } from "./events";
 
 export type {
@@ -174,4 +174,30 @@ export interface Draft extends World {
 export interface CommandHandler<C extends Command> {
 	check(w: World, cmd: C): Refusal | null;
 	run(d: Draft, cmd: C): void;
+}
+
+//The strengths before an attack, for its finish
+export interface AttackStart {
+	attacker: UnitId;
+	defender: UnitId;
+	atkStrength: number;
+	defStrength: number;
+}
+
+//Where a move or an attack waits for the screen, which animated it and finished it when the animation
+//ended (the old UI), showing the state in between; a program goes on at once
+export type Checkpoint =
+	//The unit moved: next, the surprise attack on the hidden enemy it ran into and the capture's victory
+	| { next: "surprise"; unit: UnitId; surprise: Position | null; win: boolean }
+	//The shots were fired: next, the destroyed units leave the map
+	| { next: "cleanUp"; attack: AttackStart }
+	//The destroyed units are gone: next, the retreat or the surrender, and the elimination victory
+	| { next: "end"; attack: AttackStart; attacker: UnitState };
+
+//What the screen says at a checkpoint: the air mode the surprise attack picks its target with (the
+//person's toggle, #77; off for a program), and retreat false when the attack's finish skips the
+//retreat (the old UI's finish of an attack it had no animation for read both strengths as 0, kept)
+export interface CheckpointInput {
+	airMode?: boolean;
+	retreat?: boolean;
 }

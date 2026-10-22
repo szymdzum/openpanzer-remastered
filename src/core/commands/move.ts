@@ -7,11 +7,11 @@
 
 import type { CommandOf } from "../../commands";
 import { emit } from "../draft";
-import { finishAttack, resolveAttack, surpriseAttack } from "../fight";
+import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../fight";
 import { isInAttackRange } from "../attack";
 import { pathTo, shortestPath } from "../movement";
 import { moveUnit } from "../moves";
-import type { CommandHandler, Position } from "../types";
+import type { Checkpoint, CheckpointInput, CommandHandler, Draft, Position } from "../types";
 import { playerAt, refuse, unitCheck } from "./common";
 import { onMap, unitById } from "../world";
 
@@ -31,12 +31,15 @@ export const move: CommandHandler<CommandOf<"move">> = {
 		return path.length === 0 ? refuse("can't get there") : null;
 	},
 	run(d, cmd) {
-		const moved = moveUnit(d, cmd.unit, cmd.to, cmd.cells !== undefined ? cellsOf(cmd.cells) : null);
-		const surprised = moved.surprise !== null ? surpriseAttack(d, cmd.unit, moved.surprise) : null;
-		if (moved.win) emit(d, { type: "victory", side: playerAt(d, unitById(d, cmd.unit).owner).side, kind: "capture" });
-		if (surprised !== null) finishAttack(d, surprised);
+		finishFrom(d, moveFirst(d, cmd));
 	},
 };
+
+//The move itself, up to its checkpoint
+export function moveFirst(d: Draft, cmd: CommandOf<"move">): Checkpoint {
+	const moved = moveUnit(d, cmd.unit, cmd.to, cmd.cells !== undefined ? cellsOf(cmd.cells) : null);
+	return { next: "surprise", unit: cmd.unit, surprise: moved.surprise, win: moved.win };
+}
 
 //In range, as the AI checks it. Not whether the unit can still fire: the AI attacks after a surprise
 //attack, which already fired
@@ -49,6 +52,32 @@ export const attack: CommandHandler<CommandOf<"attack">> = {
 		return isInAttackRange(w, unitById(w, cmd.unit), target) ? null : refuse("out of range");
 	},
 	run(d, cmd) {
-		finishAttack(d, resolveAttack(d, cmd.unit, cmd.target));
+		finishFrom(d, attackFirst(d, cmd));
 	},
 };
+
+//The shots, up to the attack's checkpoint
+export function attackFirst(d: Draft, cmd: CommandOf<"attack">): Checkpoint {
+	return { next: "cleanUp", attack: resolveAttack(d, cmd.unit, cmd.target) };
+}
+
+//What comes after the checkpoint, up to the next one (null: the command is done)
+export function resumeFrom(d: Draft, cp: Checkpoint, input: CheckpointInput): Checkpoint | null {
+	switch (cp.next) {
+		case "surprise": {
+			const start = cp.surprise !== null ? surpriseAttack(d, cp.unit, cp.surprise, input.airMode === true) : null;
+			if (cp.win) emit(d, { type: "victory", side: playerAt(d, unitById(d, cp.unit).owner).side, kind: "capture" });
+			return start === null ? null : { next: "cleanUp", attack: start };
+		}
+		case "cleanUp":
+			return { next: "end", attack: cp.attack, attacker: cleanUpAttack(d, cp.attack) };
+		case "end":
+			endAttack(d, cp.attack, cp.attacker, input.retreat !== false);
+			return null;
+	}
+}
+
+//Every checkpoint passed at once, as a program plays
+function finishFrom(d: Draft, cp: Checkpoint) {
+	for (let next: Checkpoint | null = cp; next !== null;) next = resumeFrom(d, next, {});
+}

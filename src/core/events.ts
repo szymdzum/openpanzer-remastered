@@ -23,6 +23,7 @@ export interface Fighter {
 	row: number;
 	col: number;
 	isMounted: boolean;
+	isSurprised: boolean;
 	before: FighterState;
 	after: FighterState;
 }
