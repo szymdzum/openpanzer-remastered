@@ -382,6 +382,27 @@ In stage A the commands sit on the current engine, so two things still hold ther
 After B, the attack splits into a pure `resolve` and an `apply`, and the state is free to take
 its final shape. Keep the session thin: the core is state, rules and commands.
 
+**How #119 was done (stage A).** `src/commands.ts`, `Commands.execute(scenario, command, hooks)`;
+contracts and verify unchanged.
+- The types are what the game does: move (with the cells the player was shown, when given),
+  attack, resupply, reinforce (overstrength), mount, unmount, embark, disembark, undo, deploy,
+  buy, upgrade and upgradeUndeployed, disband and sell, endTurn. Undeployed core units go by
+  their index in the current player's core list. The AI's select, message and viewport stay UI
+  actions in `processAction`; the AI's own purchases and deployment at its turn start stay in
+  `AI.startTurn`.
+- One module, not a file per handler: on the old engine each handler is a few lines over GameMap,
+  Player and Actions. `GameView` and the events wait for the new core: `check` takes the
+  scenario, `run` takes hooks.
+- `check` refuses what the engine wouldn't do anyway (a move with no path, an upgrade the player
+  can't afford) or what the game never offers (the UI's buttons and the AI's plan use the same
+  GameRules predicates). It doesn't check what the game does without a rule: an attack by a
+  unit that has fired (the AI attacks after its surprise attack), a unit of another player.
+- The move and the attack hand their finish to an `animate` hook; the UI calls it when the
+  animation ends, a headless caller at once. The surprise attack runs as an attack command from
+  the move's finish.
+- The engine contract and the invariants test play through the commands (`env.Commands`, the
+  copy stays for the reference); with a handler broken, 14 of the 15 engine contracts fail.
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action
