@@ -8,6 +8,7 @@ works on is docs/STATE.md's.
     queries(world, ...) -> answers		layer 1, #133
     step(world, command) -> { world', events }	layer 2, #134 (world'.state is state')
     the end of turn, the reinforcements, the outcome	layer 3, #135
+    controllers: the AI, the tutorial; a session	layer 4, #136
 
 Nothing in the running game uses the core until the switch (#137): verify stays identical.
 
@@ -54,6 +55,10 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `events.ts` | the events a step emits (types) |
 | `fight.ts` | an attack: each shot resolved then applied, the attack's finish (destroyed, retreat, surrender, elimination), the surprise attack |
 | `moves.ts` | a move: the path walked, the surprise, the capture, the fuel and points, the undo it leaves |
+| `controller.ts` | `Controller`, the orders it gives (a command, or something to show) (types) |
+| `ai.ts` | the AI as a controller: its purchases and deployment, its plan of the turn, its queue of commands |
+| `aiscore.ts` | the AI's scores: of a hex for a unit, of an attack, of the attacks from a hex, of the nearest objective |
+| `session.ts` | a game played headless: the controllers, the turns in the old game's order, the end of the game |
 | `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell; `turn.ts`: the end of turn) |
 
 The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` of `src/rng.ts`
@@ -233,6 +238,75 @@ scenario didn't load stops the campaign (#182; the old engine throws in setPlaye
 too). Not reproduced: a player whose core units all fell carries none, where the old engine brought
 back the dead units it had carried in (#183): which list a player brought in isn't state.
 
+## The controllers (#136)
+
+A `Controller` (controller.ts) plays a player: the AI (ai.ts), later the scripted tutorial, a remote
+player or an LLM (#121). It answers in the core's `Command` values, the ones a person sends, so the
+session checks and plays them the same way; what it keeps between its calls (the AI's plan, the
+tutorial's script) is its memory, not state (D6). The session calls it in the old game's order:
+
+| Call | When (the old game) | The AI |
+|---|---|---|
+| `join(w)` | the players are set up (Game.setupPlayers) | the prestige for reinforcements |
+| `startTurn(w)` | its turn starts (Map.endTurn's turn driver) | purchases and deployment, as `buy` and `deploy` commands it steps itself; `Played` gives the world after, the commands and their events |
+| `plan(w)` | right after, before the reinforcements (#94); a game loaded on its turn plans again (#71) | the whole turn, unit by unit: the world with its stream moved on |
+| `next(w)` | until it answers null, which ends the turn | the next command of its plan |
+
+**A plan, then a queue.** The old AI plans its whole turn at the turn's start, on the state as it is,
+then plays the plan whatever happens in between (Game.processAction): a move to where the plan said
+along the move range then (a hex its own unit didn't leave is taken over, #74), an attack that
+the old game skipped when the target was out of range or gone (the step refuses it: nothing
+changes either way), a resupply, a reinforcement. A `next` that decided from the state of each
+moment would decide differently: the plan's random draws, the hexes it took and freed, the kills it
+expected come from that one moment. So the AI's `plan` is the old planTurn and `next` hands its
+queue out.
+
+**The AI's draws** come from its own stream, `state.rng.ai` (D8), in the old order: each hex and
+attack score draws one `randomFactor[random(0, 7)]` unless it returns early (a hex taken, a target
+expected killed, an attack with too many losses), the purchases one per unit picked. A unit that did
+nothing in its first pass gets a second one, its moves scored again with new draws. Its scores see
+a unit on another hex as a copy of it standing there, the state unchanged (the old AI's Unit.setHex).
+Kept: #17 (the attacks count the hidden units' support fire), #21 (the reinforcement budget is the
+prestige before the purchases), #22 (the purchases cut the equipment lists, which are in the state,
+D9 revised), #74, #82 (it never mounts), the objectives in their list's order (D7, so #141's order
+after an undo), the attack estimate's #87 and #90. Its settings are `aiDefaultConfig`
+(src/prototypes.ts, the old AI's too).
+
+**What isn't state.** The old AI asked the screen to redraw after deploying (AI.onUnitsDeployed): the
+view has the `deployed` events. A controller can also ask the screen for something (`ViewEvent`:
+select a unit, show a message, look at a hex, open the main menu) or say that the old game got stuck
+there (#80): an `Order` is a command or a view event. The surprise attack at the end of an AI move
+picks its target with the air mode off (#77: the old game read the human's toggle), as the engine
+contract plays it.
+
+## A game headless (#136)
+
+`startSession(w, controllerFor, options)` and `advance(s)` (session.ts) play a game as Game's turn loop
+does, without the screen, the clock and the save: the controllers made by the players' types (a
+person's player has none: its turns end at once), each advance an order of the current player's
+controller or, when it has none left, the end of turn:
+
+    endTurn step -> the next player's controller: startTurn, plan -> the turn limit's defeat
+    -> [the save point: Session.saved] -> the side the screen shows -> arriveReinforcements
+
+The game ends at a victory (the step's `victory`, or a retreat that took its side's last objective:
+the old game finished the retreat's move after the attack), at the turn limit of a side that plays on
+this screen (Game's getLocalSide, computed once when the game starts, or given), or where a
+controller says the old game got stuck. A player whose type changes gets a new controller (the
+tutorial hands its players over). Kept: in a new game the first player's AI doesn't start its turn
+(the old game made it without planning: it ends its first turn at once); a game loaded on an AI's
+turn has it plan again (#71). `playTurn(s)` plays a turn to its end.
+
+`BENCH=1` (test/core-bench.test.ts, 2026-10-22, a loaded laptop), every player the AI, the fixture
+loaded on its current player's turn: its plan alone, then its turn played to the end (its orders, the
+end of turn, the next player's turn start and plan, the reinforcements), the old game as Game plays
+it against the session:
+
+| Per turn | Old engine | Core |
+|---|---|---|
+| The plan | 7-35 ms | 3-30 ms (1.1-3x faster) |
+| The turn | 15-71 ms | 6-31 ms (1.3-3.2x faster) |
+
 ## The proof
 
 - **The gamerules contract on both engines** (test/core-contract.test.ts): the recorded calls of
@@ -285,6 +359,24 @@ back the dead units it had carried in (#183): which list a player brought in isn
   hurt, one destroyed and one bought in between), the next started by both: the same toData after
   every start. 17 starts, 35 transitions, 7 prototypes awarded, 6 campaign ends, one stop (#182), no
   difference.
+- **The AI against the old AI** (test/core-ai.test.ts): the old game played headless as Game plays it
+  (test/aigames.ts: processAction, the UI's move and attack finished at once, Game.endTurn) and the
+  core's session, in lockstep from toData of the same state, the streams seeded. After every advance:
+  the same order (the old AI's action as the command it amounts to), the same answer (the old game's
+  skipped attack is the step's refusal), the same purchases and deployment as commands at a turn's
+  start, the same state after the plan (the save point), the same toData, the core's sight equal to
+  computeSight and to the old counters, and the game ending at the same advance, the same way. The
+  games: the 14 engine fixtures loaded on their current player's turn and harness/replay.sh's 15 items
+  but the tutorial, new games AI against AI. Masked: the old counters' drift (#72, #73), made again
+  from the units before the next advance. CI plays 2 rounds (29 games, 3,569 orders, 3,682 states,
+  113 turns, 951 turn start commands); `CORE_AI_ROUNDS=10` played 15,734 orders, 16,256 states, 522 turns, 1,047 turn
+  start commands, 6 victories and a turn limit: no difference.
+- **The engine contract's AI turns** (test/core-aicontract.test.ts): each AI of the contract (the AI
+  players' and the human players' stand-ins) has the core's AI beside it, from toData of the state
+  before each call: the same turn start commands, the same state after the plan, the same order at
+  each action the contract takes. 63 plans, 336 turn start commands, 2,475 orders: no difference.
+- **Hand-built games** (test/core-session.test.ts): the turn's order (#94, #93), the turn limit for
+  the side on the screen, a stuck controller, a player handed over.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
   undo, a new round, #75's hiding, the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.

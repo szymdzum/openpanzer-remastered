@@ -1,0 +1,190 @@
+/**
+ * Session - a game played headless on the core: the players' controllers, the turns in the old game's
+ * order, the end of the game. What Game's turn loop does (processTurn, processAIActions, endTurn),
+ * without the screen, the clock and the save
+ *
+ * Licensed under the GPL license:
+ * http://www.gnu.org/licenses/gpl.html
+ *
+ * A turn: the current player's controller gives its orders one by one, each command stepped (a
+ * refused one changes nothing, as the old game's action did nothing), until it has none left. Then
+ * the end of turn, and in the old game's order (Map.endTurn, Game.endTurn):
+ *   the end of turn step -> the next player's controller starts and plans its turn -> the defeat at
+ *   the turn limit -> [the save point] -> the side the screen shows -> the reinforcements arrive
+ * Kept: the AI plans before its reinforcements arrive (#94), the save comes before them (#93), and the
+ * turn limit ends the game only for a side that plays on this screen (localSide, Game's getLocalSide).
+ * The game ends at a victory (a capture of the last objective, or a side with no unit left after an
+ * attack), at the turn limit of a side on the screen, or where the old game got stuck (#80).
+ *
+ * A player only a person plays (human, remote) has no controller here: its turns end at once. In a
+ * new game the first player's controller doesn't start its turn: the old game's AI planned nothing
+ * then and ended its first turn at once (a game loaded on an AI's turn plans it again, #71).
+ */
+
+import type { Command, Refusal } from "../commands";
+import { playerType } from "../prototypes";
+import type { Controller, Order, ViewEvent } from "./controller";
+import type { GameEvent } from "./events";
+import { step } from "./step";
+import { arriveReinforcements } from "./turn";
+import type { World } from "./types";
+import { sideOf, unitById } from "./world";
+
+//How a game ended: a side won, the side on the screen played its last turn, or the old game got stuck
+export type SessionEnd =
+	| { kind: "victory"; side: number; how: "capture" | "elimination" }
+	| { kind: "turnLimit"; side: number }
+	| { kind: "stuck"; reason: string };
+
+//The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial), null when
+//no program plays it
+export type ControllerFor = (type: number, player: number) => Controller | null;
+
+export interface Session {
+	world: World;
+	//Which sides play on this screen (Game's getLocalSide): -1 none, 0 or 1, 2 both
+	readonly localSide: number;
+	readonly controllerFor: ControllerFor;
+	controllers: (Controller | null)[];	//by player id
+	types: number[];			//the player type each controller was made for
+	//The world at the last save point (Game.endTurn's save: before the reinforcements, #93)
+	saved: World | null;
+	ended: SessionEnd | null;
+}
+
+//What one advance did: an order played (refused: the step said no and nothing changed), or a turn
+//ended (with the next player's turn start and plan, then the reinforcements that arrived)
+export type Advance =
+	| { kind: "order"; player: number; order: Order; events: GameEvent[]; refusal: Refusal | null }
+	| { kind: "endTurn"; player: number; events: GameEvent[]; started: StartedTurn | null; arrived: GameEvent[] }
+	| { kind: "ended" };
+
+//The next player's turn start, when a controller plays it
+export interface StartedTurn {
+	player: number;
+	commands: Command[];
+	events: GameEvent[];
+	view: ViewEvent[];
+}
+
+const isProgram = (type: number) => type === playerType.aiLocal || type === playerType.aiScripted;
+
+export interface SessionOptions {
+	loaded?: boolean;	//a game loaded on an AI player's turn, which plans it again (#71)
+	localSide?: number;	//the sides on this screen, when not the players' types' (Game counts them when the game loads)
+}
+
+//Game.setupPlayers and the rest of a scenario's start: the controllers by the players' types, each
+//joining in the players' order, the side the screen shows
+export function startSession(w: World, controllerFor: ControllerFor, options: SessionOptions = {}): Session {
+	const players = w.state.players;
+	const localSide = options.localSide === undefined ? localSideOf(w) : options.localSide;
+	const s: Session = { world: w, localSide, controllerFor, controllers: players.map((): Controller | null => null),
+		types: players.map((p) => p.type), saved: null, ended: null };
+	players.forEach((p) => join(s, p.id, p.type));
+	s.world = { ...s.world, spotSide: shownSide(s) };
+	const current = s.world.state.turn.currentPlayer;
+	if (options.loaded && current >= 0 && players[current].type === playerType.aiLocal && s.controllers[current] !== null)
+		s.world = s.controllers[current].plan(s.world);
+	return s;
+}
+
+function join(s: Session, player: number, type: number) {
+	s.types[player] = type;
+	const c = s.controllers[player] = isProgram(type) ? s.controllerFor(type, player) : null;
+	if (c !== null) s.world = c.join(s.world).world;
+}
+
+//Game's getLocalSide: the sides of the human and the scripted players, 2 when both
+function localSideOf(w: World): number {
+	let sides = 1, side = -1;
+	for (const p of w.state.players)
+		if (p.type === playerType.humanLocal || p.type === playerType.aiScripted) {
+			if (side !== -1 && side !== p.side) sides++;
+			side = p.side;
+		}
+	return sides > 1 ? 2 : side;
+}
+
+//Game.setCurrentSide: the current player's side in hotseat, else the local side
+function shownSide(s: Session): number {
+	const current = s.world.state.turn.currentPlayer;
+	return s.localSide === 2 && current >= 0 ? s.world.state.players[current].side : s.localSide;
+}
+
+//The controller playing the player now: a new one when its type changed (the tutorial hands its
+//players over to a person and to the AI, which starts with nothing to do)
+function controllerOf(s: Session, player: number): Controller | null {
+	const type = s.world.state.players[player].type;
+	if (type !== s.types[player]) join(s, player, type);
+	return isProgram(type) ? s.controllers[player] : null;
+}
+
+//Plays the next order of the current player, or ends its turn when it has none
+export function advance(s: Session): Advance {
+	if (s.ended !== null) return { kind: "ended" };
+	const player = s.world.state.turn.currentPlayer;
+	const c = controllerOf(s, player);
+	const order = c === null ? null : c.next(s.world);
+	if (order === null) return endTurn(s, player);
+	if ("view" in order) {
+		if (order.view.type === "stuck") s.ended = { kind: "stuck", reason: order.view.reason };
+		return { kind: "order", player, order, events: [], refusal: null };
+	}
+	const r = step(s.world, order.command);
+	if ("refusal" in r) return { kind: "order", player, order, events: [], refusal: r.refusal };
+	s.world = r.world;
+	s.ended = victoryIn(s.world, r.events);
+	return { kind: "order", player, order, events: r.events, refusal: null };
+}
+
+//A step's victory: a capture of the last objective, a side with no unit left after an attack, then a
+//retreat that took its side's last objective (the old game's retreat finished its move after the attack)
+function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
+	for (const e of events)
+		if (e.type === "victory") return { kind: "victory", side: e.side, how: e.kind };
+	for (const e of events)
+		if (e.type === "captured" && e.win) return { kind: "victory", side: sideOf(w, unitById(w, e.unit)), how: "capture" };
+	return null;
+}
+
+//The end of the player's turn, the next player's turn start and plan, the defeat at the turn limit,
+//the save point, the side shown, the reinforcements
+function endTurn(s: Session, player: number): Advance {
+	const side = s.world.state.players[player].side;
+	const r = step(s.world, { type: "endTurn" });
+	if ("refusal" in r) throw new Error("the end of turn is never refused");
+	s.world = r.world;
+	const started = startTurn(s);
+	const limit = r.events.some((e) => e.type === "turnLimit" && e.side === side);
+	if (limit && (s.localSide === 2 || s.localSide === side)) {
+		s.ended = { kind: "turnLimit", side };
+		return { kind: "endTurn", player, events: r.events, started, arrived: [] };
+	}
+	s.saved = s.world;
+	s.world = { ...s.world, spotSide: shownSide(s) };
+	const arrived = arriveReinforcements(s.world);
+	s.world = arrived.world;
+	return { kind: "endTurn", player, events: r.events, started, arrived: arrived.events };
+}
+
+//Map.endTurn's turn driver: the next player, when a program plays it, starts and plans its turn
+function startTurn(s: Session): StartedTurn | null {
+	const player = s.world.state.turn.currentPlayer;
+	if (!isProgram(s.world.state.players[player].type)) return null;
+	const c = controllerOf(s, player);
+	if (c === null) return null;
+	const played = c.startTurn(s.world);
+	s.world = c.plan(played.world);
+	return { player, commands: played.commands, events: played.events, view: played.view };
+}
+
+//Plays the current player's turn to its end: what each advance did
+export function playTurn(s: Session): Advance[] {
+	const done: Advance[] = [];
+	for (;;) {
+		const a = advance(s);
+		done.push(a);
+		if (a.kind !== "order" || s.ended !== null) return done;
+	}
+}
