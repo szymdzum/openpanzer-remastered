@@ -70,7 +70,7 @@ export default defineConfig({
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
 			thresholds: {
-				"src/actions.ts": { statements: 89, branches: 81, functions: 85, lines: 96 },
+				"src/actions.ts": { statements: 89, branches: 84, functions: 85, lines: 96 },
 				"src/ai.ts": { statements: 99, branches: 97, functions: 95, lines: 99 },
 				"src/aiscripted.ts": { statements: 72, branches: 57, functions: 83, lines: 71 },
 				"src/board.ts": { statements: 96, branches: 100, functions: 83, lines: 96 },
@@ -82,7 +82,7 @@ export default defineConfig({
 				"src/gamerules.ts": { statements: 98, branches: 97, functions: 98, lines: 98 },
 				"src/gamestate.ts": { statements: 47, branches: 42, functions: 56, lines: 47 },
 				"src/leaders.ts": { statements: 90, branches: 81, functions: 71, lines: 91 },
-				"src/map.ts": { statements: 93, branches: 86, functions: 93, lines: 94 },
+				"src/map.ts": { statements: 93, branches: 87, functions: 93, lines: 94 },
 				"src/prototypes.ts": { statements: 93, branches: 100, functions: 72, lines: 93 },
 				"src/rng.ts": { statements: 66, branches: 100, functions: 50, lines: 66 },
 				"src/scenario.ts": { statements: 94, branches: 83, functions: 90, lines: 94 },
