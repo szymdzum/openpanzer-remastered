@@ -1,9 +1,8 @@
 // @vitest-environment node
-//The engine without a browser: GameRules, Map, Unit, the AI, Scenario and Actions load in Node, with
+//The engine without a browser: GameRules, Map, Unit, the AI, Scenario, Actions and Commands load in Node, with
 //no DOM, and a game can drive them through their seams: the random numbers (src/rng.ts, the AI's
 //rng), the engine context (src/context.ts), the turn driver (GameMap.onPlayerTurn) and the AI split
-//into startTurn, planTurn and its evaluator. A small map built by hand, no scenario file: the
-//scenario loader and the save need the DOM's XML parser and storage
+//into startTurn, planTurn and its evaluator. On a small map built by hand (test/smallgame.ts)
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -15,11 +14,11 @@ import { Unit } from "../src/unit";
 import { AI, type AIAction, type AIOptions, type AIPlan, aiDefaultConfig, createAIEvaluator } from "../src/ai";
 import { Scenario } from "../src/scenario";
 import { Actions } from "../src/actions";
-import { Equipment, type EquipmentCountryFile } from "../src/equipment";
-import { playerType, unitClass } from "../src/prototypes";
+import { Commands } from "../src/commands";
+import { unitClass } from "../src/prototypes";
+import { smallGame } from "./smallgame";
 
 const root = path.resolve(__dirname, "..");
-const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.join(root, "game");
 
 function mulberry32(seed: number): () => number {
 	return () => {
@@ -38,41 +37,6 @@ afterEach(() => {
 	GameMap.onPlayerTurn = defaultTurnDriver;
 });
 
-//Germany (8) and the Soviet Union (20), the files the game loads for them (country + 1)
-for (const file of [8, 20])
-	Equipment.parseCountryEquipment(file, JSON.parse(fs.readFileSync(path.join(GAME_DIR,
-		"resources/equipment/eqp-adlerkorps/equipment-country-" + file + ".json"), "utf8")) as EquipmentCountryFile);
-
-//A 12 x 12 clear map, a German side 0 against a Soviet side 1 (the AI), a victory hex for each
-function smallGame(): { map: GameMap; players: Player[] } {
-	const map = new GameMap();
-	map.rows = map.cols = 12;
-	map.allocMap();
-	const players = [[0, 0, 7], [1, 1, 19]].map(([id, side, country]) => {
-		const p = new Player();
-		p.id = id; p.side = side; p.country = country;
-		p.type = id == 1 ? playerType.aiLocal : playerType.humanLocal;
-		map.addPlayer(p);
-		return p;
-	});
-	const units: [number, number, number, number][] = [ //eqid, owner, row, col
-		[115, 0, 3, 3], [142, 0, 4, 4], [115, 0, 5, 3], [148, 0, 3, 5],
-		[504, 1, 7, 7], [511, 1, 8, 6], [504, 1, 7, 8], [498, 1, 9, 9],
-	];
-	for (const [eqid, owner, row, col] of units) {
-		const u = new Unit(eqid);
-		u.owner = owner;
-		u.player = players[owner]; //addUnit sets it too, but a unit added earlier may spot this one
-		map.map[row][col].setUnit(u);
-	}
-	map.map[2][2].victorySide = 1; map.map[2][2].owner = 0;
-	map.map[10][10].victorySide = 0; map.map[10][10].owner = 1;
-	for (let r = 0; r < map.rows; r++)
-		for (let c = 0; c < map.cols; c++)
-			map.setHex(r, c);
-	return { map, players };
-}
-
 const describeActions = (actions: AIAction[]) => actions.map((a) => a.type + ":" + a.param.map((x) =>
 	x instanceof Unit ? "unit#" + x.id : x && typeof x === "object" ? x.row + "," + x.col : String(x)).join(" "));
 
@@ -89,7 +53,7 @@ function planAI(options?: AIOptions): string[] {
 test("The engine modules load without a DOM", () => {
 	expect(typeof window).toBe("undefined");
 	expect(typeof document).toBe("undefined");
-	for (const m of [GameRules, GameMap, Unit, AI, Scenario, Actions, Rng])
+	for (const m of [GameRules, GameMap, Unit, AI, Scenario, Actions, Commands, Rng])
 		expect(m).toBeTruthy();
 });
 
@@ -103,7 +67,7 @@ test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => 
 		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm))
 			if (!i[1]) visit(i[2]);
 	};
-	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "actions", "leaders", "rng", "context"]) visit(m);
+	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "actions", "commands", "leaders", "rng", "context"]) visit(m);
 	const ui = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "aiscripted", "osglue", "main"];
 	expect([...reached].filter((m) => ui.includes(m))).toEqual([]);
 });
