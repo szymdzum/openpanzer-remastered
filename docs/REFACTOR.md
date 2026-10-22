@@ -280,39 +280,62 @@ loses data, and verification tied to all of it.
 
 | Stage | Step | Issue | After |
 |---|---|---|---|
-| A | A `Ruleset` in the engine context, the movement table off the global | #116 | |
 | A | One command entry, `execute(game, command)`, for every player action | #119 | |
-| A | One controller interface; AIScripted without the UI | #121 | #119 |
 | A | Property-based tests (fast-check): invariants over random command sequences | #125 | |
-| B | Separate random streams: cosmetics, then the AI, off the dice's stream | #126 | |
-| B | One state serializer, `toData`, for the harness and the contracts | #127 | |
+| B | Design the state as data: the shape of `toData`, the new core and the save | #132 | |
+| B | `toData` and `fromData` on the old engine, for the harness and the contracts | #127 | #132 |
 | B | A versioned, lossless save format on `toData` | #128 | #127 |
-| C | The new core: state as data, `step(state, command)`, module by module | #129 | A, B |
-| C | Combat as named steps in today's order, with what each contributed | #118 | #129 |
-| D | The UI on the core's events; the old engine removed | #130 | #129 |
+| B | Separate random streams: cosmetics, then the AI, off the dice's stream | #126 | |
+| C | The new core beside the old engine (tracking issue) | #129 | A, B |
+| C1 | State and pure queries; the ruleset (#116) and the combat steps (#118) born here | #133 | |
+| C2 | Command handlers, checked by differential tests | #134 | C1 |
+| C3 | The turn and the scenario and campaign lifecycle | #135 | C2 |
+| C4 | The AI and the scripted opponent as controllers (#121) | #136 | C3 |
+| C5 | The switch; the old engine removed | #137 | C4 |
+| D | The new UI (the war room mockups) on the core's events; the old UI removed | #130 | C5 |
 
-- **A, refactors on the current engine** (contracts and verify unchanged). The ruleset and the
-  command API are the boundary of the new core, needed either way.
+- **A, refactors on the current engine** (contracts and verify unchanged). Only what stage C
+  needs: the commands are the API through which the tests drive the old engine as the oracle,
+  and fast-check generates the sequences.
 - **B, the verification switch.** Deliberate, each with one new baseline. Then the internals of
   the objects stop counting as behavior:
-  - Cosmetics off the dice's stream: the contracts stay, verify compares against main from then
-    on, not against the original.
-  - The AI on its own stream: re-records the engine contract once.
-  - `toData` instead of walking own properties.
+  - The state's shape first (#132). It becomes the new core's state and the save format, so it
+    is designed on purpose: units in a table by stable id, references by id, which counters
+    are stored and which derived, the random streams' state, versioning.
+  - `toData` and `fromData` instead of walking own properties.
   - A lossless save, which fixes #71, #54, #55, #83, #85 and #84 in their own commits.
-- **C, the new core**, built behind the command API module by module (move, combat, supply,
-  spotting, the turn, the AI), not in one go:
-  - The old engine is the oracle. Differential tests generate command sequences (#125), run them
-    through both engines and compare `toData` after every step. That is a stronger net than the
-    recorded contracts.
-  - #53's remaster ruleset sits next to the classic one; the classic contracts stay the
-    gameplay reference.
-- **D, the old engine removed.** The UI draws a read-only view, plays its animations from the
-  events after the step, and sends commands. `waitUIAnimation`, the 1 s tick and the surprise
-  race (#58) go with it.
+  - Cosmetics off the dice's stream: the contracts stay, and verify compares against main from
+    then on, not against the original. The recorded contracts keep the link to the original.
+  - The AI on its own stream: re-records the engine contract once.
+- **C, the new core, beside the old engine, not inside it.** The two hold their state
+  differently, so a module can't be swapped at a time. The new core takes over in layers, each
+  proven against the old engine:
+  - queries, where the `gamerules` contract runs on both engines;
+  - commands, through differential tests that compare `toData` and the events after every step;
+  - the turn and the lifecycle;
+  - the AI, which keeps its order of draws.
+
+  The game switches only when the core has everything. #53's remaster ruleset sits next to the
+  classic one; the classic contracts stay the gameplay reference.
+- **D, the new UI, not a port of the old one.** The new interface is designed already
+  (docs/design/), and porting about 4300 lines of UI and then replacing them would be work done
+  twice.
+  - Until the switch, the old UI reads the new state through a thin adapter.
+  - The new UI draws a read-only view, plays its animations from the events after the step, and
+    sends commands.
+  - `waitUIAnimation`, the 1 s tick and the surprise race (#58) go with the old UI.
+
+**The gameplay is frozen during stage C.** No rule fixes and no new mechanics go into the old
+engine: each would be done twice, and the oracle would keep moving. The exceptions:
+- the save (#128, stage B);
+- the crashes that stop a game (#100, #101), fixed before C4 so the oracle has them.
+
+Kept bugs are reproduced in the new core, then fixed after the switch, each its own commit. This
+delays the rule fixes of milestone 1 (ROADMAP.md) until after the switch.
 
 Closed as superseded: splitting gamerules.ts behind its facade (#117) and a GameSession over the
-old model (#120). The new core does both on plain data; doing them first would be work done twice.
+old model (#120). The ruleset (#116) and the controllers (#121) moved into the new core for the
+same reason: doing them on the old engine first would be work done twice.
 
 **The layers and the commands.** Five layers, each with one job:
 
@@ -394,7 +417,7 @@ invariant tests:
 7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126).
 8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128).
 9. The campaign load as a state machine with a load token (#64, #61).
-10. A remaster ruleset next to the classic one (step 4, #116 and #129), so the mechanics gaps
+10. A remaster ruleset next to the classic one (step 4, #133), so the mechanics gaps
     (#1-#4, #14, #18) don't re-record the classic contracts (#53).
 11. Then the arena (#46) and the AI issues measured in it.
 
