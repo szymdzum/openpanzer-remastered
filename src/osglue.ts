@@ -13,7 +13,7 @@
 
 import { NATIVE_PLATFORM } from "./prototypes";
 import { $ } from "./dom";
-import { game } from "./game";
+import { game } from "./session";
 
 //The platform glue instance the module returns
 export interface OSGlue {

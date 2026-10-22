@@ -28,7 +28,7 @@ import type { PlayerDossier } from "./map";
 import type { ScenarioOutcome } from "./scenario";
 import { Campaign } from "./campaign";
 import { UICombatLog } from "./uicombatlog";
-import { game } from "./game";
+import { game } from "./session";
 import { OSGlue } from "./osglue";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (fillCloudSavesList, buildEquipmentSortOptions)

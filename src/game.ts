@@ -13,7 +13,7 @@
  */
 
 import {
-	actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, outcomeNames, playerType,
+	actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, endGameLossText, endGameType, outcomeNames, playerType,
 	uiSettings
 } from "./prototypes";
 import { GameState } from "./gamestate";
@@ -30,6 +30,7 @@ import { UI } from "./ui";
 import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
 import { setEngineContext } from "./context";
+import { setGame } from "./session";
 
 //UI is a constructor function, not a class: this gives `new` on it a type
 export interface UIConstructor { new (game: Game): UI; }
@@ -466,10 +467,11 @@ export class Game {
 	}
 }
 
-Game.defaultScenario = "tutorial.xml";
+Game.defaultScenario = DEFAULT_SCENARIO;
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
 export var game: Game = new Game();
+setGame(game);
 
 //What the engine reads of the game (src/context.ts): this game's fields, read at the moment the
 //engine needs them, so what a harness or a test assigns to game.* is seen as before

@@ -13,7 +13,7 @@
  */
 
 import {
-	type Cell, CURRENCY_MULTIPLIER, endGameType, groundConditionNames, groundFontEncoding, mouseInfo,
+	type Cell, CURRENCY_MULTIPLIER, DEFAULT_SCENARIO, endGameType, groundConditionNames, groundFontEncoding, mouseInfo,
 	type movementResults, movMethod, movMethodNames, NATIVE_PLATFORM, outcomeNames,
 	playerType, roadType, sideNames, type Supply, terrainNames, terrainType, uiSettings,
 	unitClass, unitClassNames, unitTypeNames, weatherConditionNames, weatherFontEncoding
@@ -35,7 +35,7 @@ import type { Player, ReinforceResults } from "./map";
 import { type MoveAnimationCBData, Render } from "./render";
 import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
-import { Game } from "./game";
+import type { Game } from "./game";
 import { Leaders } from "./leaders";
 import { Actions, type AttackResult } from "./actions";
 
@@ -1649,7 +1649,7 @@ function uiScaleMap(level: number) {
 				//Both sides are played by the tutorial script
 				uiSettings.isAI[0] = 2;
 				uiSettings.isAI[1] = 2;
-				game.newScenario(Game.defaultScenario);
+				game.newScenario(DEFAULT_SCENARIO);
 				toggleButton($("options"), false);
 				break;
 			}
