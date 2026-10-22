@@ -177,7 +177,9 @@ function enterCost(w: World, hex: number, s: StepRules): number {
 	return s.costs[road ? ROAD : w.data.hexes[hex].terrain];
 }
 
-//The entry and exit costs of to, entered from from: set the first time, lowered when from is cheaper
+//The entry and exit costs of to, entered from from: set the first time, lowered when from is cheaper.
+//Kept bug #167: an entry cost of 0 counts as not set, so a neighbour of the start gets another
+//neighbour's exit cost, then its exit cost goes up when it is lowered again: some ranges lose hexes
 function relax(from: MoveCell, to: MoveCell) {
 	if (to.cin === 0) to.cin = from.cout;
 	if (to.cout === 0) to.cout = to.cin + to.cost;
