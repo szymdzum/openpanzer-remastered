@@ -394,9 +394,10 @@ contracts and verify unchanged.
   Player and Actions. `GameView` and the events wait for the new core: `check` takes the
   scenario, `run` takes hooks.
 - `check` refuses what the engine wouldn't do anyway (a move with no path, an upgrade the player
-  can't afford) or what the game never offers (the UI's buttons and the AI's plan use the same
-  GameRules predicates). It doesn't check what the game does without a rule: an attack by a
-  unit that has fired (the AI attacks after its surprise attack), a unit of another player.
+  can't afford, an embark with no transport). It doesn't check what the game does without a
+  rule: an attack by a unit that has fired (the AI attacks after its surprise attack), a unit
+  of another player, a resupply, reinforcement or mount GameRules refuses (#147: verify caught
+  the UI's context button acting on a unit that changed since it was shown).
 - The move and the attack hand their finish to an `animate` hook; the UI calls it when the
   animation ends, a headless caller at once. The surprise attack runs as an attack command from
   the move's finish.
