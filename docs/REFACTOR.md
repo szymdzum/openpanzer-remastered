@@ -257,67 +257,72 @@ After the cleanup, `src/` and `test/` were reformatted to put opening braces on 
 (and `} else`): one formatting-only commit, listed in `.git-blame-ignore-revs`, every file's
 syntax tree checked identical before and after. New code uses that style.
 
-### 4. The shape for extension — next
+### 4. The core for extension — next
 
-Steps 0-3 made the engine testable and headless. The rules themselves are in good shape; what
-blocks the roadmap is how they are reached and changed. Two tracks, each a refactor (contracts
-and verify unchanged), so new rules and new kinds of players can be added without touching what
-is there:
+**What must stay the same is the gameplay, not the code** ("better without being different" is
+about the game). The rules' results, the dice and the AI's decisions stay; field order,
+closures, class names, the harness's snapshot shape and the draw order shared with the UI are
+how parity is verified today, not what parity is. So the goal is the best core, with the
+gameplay kept provably the same.
 
-- **Rules.** The movement table is a module global chosen by a switch (prototypes.ts:157,
-  scenario.ts:206); `calculateAttackResults` (gamerules.ts:452-715) is 260 lines of `if`s with
-  literal bonuses whose order matters, so weather, combined arms and the 14 leader abilities
-  that do nothing each mean another `if` in the middle; there is no place for #53's switch.
-- **Players.** There is no single way in: the UI calls about 20 GameMap methods directly,
-  attacks and moves finish in animation callbacks, and a headless driver copies
-  `processAction`. Events come back four ways (hook objects, the static `AI.onUnitsDeployed`
-  and `GameMap.onPlayerTurn`, polled flags, `engineContext`), and the engine keeps per-process
-  state (`Rng`, `CombatLog.log`, `Scenario.loader`, `uiSettings` read by the rules): two
-  games in one process, the arena (#46), would share it.
+Where it leads, the core a turn-based game wants:
 
-Where it leads:
+    state = plain data: map, hexes, units, players, turn, scenario, random streams
+    step(state, command) -> { state', events }
 
-    data/         prototypes, equipment, terrain tables          read-only
-    rules/        movement, combat, supply, spotting, predicates  behind the GameRules facade
-                  + Ruleset: movement table, combat modifiers, flags (#53)
-    model/        GameMap, Hex, Unit, Player                      state and its invariants
-    commands      execute(game, command) -> result, hooks fired where they fire today
-    GameSession   scenario, ruleset, rng, hooks, turn driver, controllers: one game
-    controllers   human (UI), AI, scripted, LLM (#45), remote (#67)
-    UI            sends commands, listens to the hooks, asks queries (move range, attack preview)
+Undo (#36) keeps the previous states, the attack preview (#7) is `step` on a copy, the arena
+(#46) runs many independent states, play by link (#67) sends commands and both sides compute
+the same, the save is the state itself. Steps 0-3 left the opposite: mutable classes with
+state in closures, the UI drawing from the dice's stream in the middle of combat, a save that
+loses data, and verification tied to all of it.
 
-The steps, each an issue with its evidence:
+**Stages.** Each an issue with its evidence:
 
-| Track | Step | Issue | After |
+| Stage | Step | Issue | After |
 |---|---|---|---|
-| Rules | R1. A `Ruleset` in the engine context, the movement table off the global | #116 | |
-| Rules | R2. gamerules.ts split into modules behind the `GameRules` facade | #117 | |
-| Rules | R3. Combat as an ordered list of named modifiers, the classic list first | #118 | R2 |
-| Players | P1. One command entry, `execute(game, command)`, for every player action | #119 | |
-| Players | P2. A `GameSession` instead of `engineContext`, `session.game` and the static slots | #120 | R1 |
-| Players | P3. One controller interface; AIScripted without the UI | #121 | P2 |
-| Both | Property-based tests (fast-check): invariants over random action sequences | #125 | |
+| A | A `Ruleset` in the engine context, the movement table off the global | #116 | |
+| A | One command entry, `execute(game, command)`, for every player action | #119 | |
+| A | One controller interface; AIScripted without the UI | #121 | #119 |
+| A | Property-based tests (fast-check): invariants over random command sequences | #125 | |
+| B | Separate random streams: cosmetics, then the AI, off the dice's stream | #126 | |
+| B | One state serializer, `toData`, for the harness and the contracts | #127 | |
+| B | A versioned, lossless save format on `toData` | #128 | #127 |
+| C | The new core: state as data, `step(state, command)`, module by module | #129 | A, B |
+| C | Combat as named steps in today's order, with what each contributed | #118 | #129 |
+| D | The UI on the core's events; the old engine removed | #130 | #129 |
 
-R1 and P1 first, in parallel (they touch different files); then R2 and P2; then R3 and P3.
-R1 and P2 both touch context.ts, hence the order. The deliberate changes below build on them:
-#53's remaster ruleset is a second `Ruleset`, the attack preview (#7) runs R3's list with
-`estimate`, multi-level undo (#36) and play by link (#67) are a journal of P1's commands, the
-arena (#46) runs many sessions side by side.
+- **A, refactors on the current engine** (contracts and verify unchanged). The ruleset and the
+  command API are the boundary of the new core, needed either way.
+- **B, the verification switch.** Deliberate, each with one new baseline. Then the internals of
+  the objects stop counting as behavior:
+  - Cosmetics off the dice's stream: the contracts stay, verify compares against main from then
+    on, not against the original.
+  - The AI on its own stream: re-records the engine contract once.
+  - `toData` instead of walking own properties.
+  - A lossless save, which fixes #71, #54, #55, #83, #85 and #84 in their own commits.
+- **C, the new core**, built behind the command API module by module (move, combat, supply,
+  spotting, the turn, the AI), not in one go:
+  - The old engine is the oracle. Differential tests generate command sequences (#125), run them
+    through both engines and compare `toData` after every step. That is a stronger net than the
+    recorded contracts.
+  - #53's remaster ruleset sits next to the classic one; the classic contracts stay the
+    gameplay reference.
+- **D, the old engine removed.** The UI draws a read-only view, plays its animations from the
+  events after the step, and sends commands. `waitUIAnimation`, the 1 s tick and the surprise
+  race (#58) go with it.
 
-What stays, as in steps 1-3: the data-field key order and the class names (the save and the
-harness snapshot), new state in closures or function properties rather than fields, the
-namespace objects the harness patches, the order of the random draws (the UI's sprite and
-sound picks share the stream, so hooks keep firing mid-combat), no new import cycle.
+Closed as superseded: splitting gamerules.ts behind its facade (#117) and a GameSession over the
+old model (#120). The new core does both on plain data; doing them first would be work done twice.
 
-**The layers and the commands (P1, and where P2 and P3 lead).** Five layers, each with one job:
+**The layers and the commands.** Five layers, each with one job:
 
-| Layer | Does | Doesn't | Today |
-|---|---|---|---|
-| Model | state and its primitives: place, remove, relocate a unit, count visibility | decide rules | GameMap, Unit, Hex; board, visibility, selection already split out |
-| Rules | pure queries: cost, range, combat result, "is it allowed" | change state | GameRules, after R2 and R3 modules and the Ruleset |
-| Commands | `check` (pure, asks the rules) and `run` (changes the model through its primitives, fires the hooks) | know the UI | spread over map.ts, actions.ts and ui.ts |
-| Session | the command queue, the turn, the players' `nextCommand`, the journal | compute rules | Game, `processAction`, the 1 s loop |
-| View | draws the model read-only, listens to the hooks, sends commands | change the model | ui.ts, render.ts, uibuilder.ts |
+| Layer | Does | Doesn't |
+|---|---|---|
+| State | plain data and its primitives: place, remove, relocate a unit, count visibility | decide rules |
+| Rules | pure queries over the state and the ruleset: cost, range, combat result, "is it allowed" | change state |
+| Commands | `check` (pure, asks the rules) and `run` (changes the state through its primitives, emits events) | know the UI |
+| Session | the command queue, the turn, the players' `nextCommand`, the journal | compute rules |
+| View | draws a read-only view, plays the events, sends commands | change the state |
 
 A command is plain data with ids, not objects, so it can be logged, saved and sent. Each type has
 a handler in its own file (`commands/move.ts`...); a registry typed by a mapped type replaces a
@@ -332,28 +337,27 @@ a handler in its own file (`commands/move.ts`...); a registry typed by a mapped 
 
     interface Handler<C extends Command> {
     	check(game: GameView, cmd: C): Refusal | null;	//pure: allowed, or why not
-    	run(game: Game, cmd: C, events: Events): Result;	//changes the state, fires the hooks
+    	run(game: Game, cmd: C, events: Events): Result;	//changes the state, emits events
     }
 
     const handlers: { [T in Command["type"]]: Handler<CommandOf<T>> } = { move: moveHandler, ... };
 
-`check` serves three callers: the UI greys a button and says why ("no fuel"), the AI and the LLM
-list the legal moves, the remote game (#67) validates the other player's command. The view sees
-the state through `GameView`, a read-only type, so a write from the UI doesn't compile; the
-linter already guards the import direction. Model methods that decide and change at once
-(`map.resupplyUnit`...) move into their handlers one at a time; the model keeps the primitives.
+`check` has three callers:
+- the UI greys a button and says why ("no fuel");
+- the AI and the LLM list the legal moves;
+- the remote game (#67) validates the other player's command.
 
-The attack can't be a pure resolve-then-apply yet: the UI's sprite and sound picks draw from the
-same stream as the dice, between the support shots, so computing the whole combat first would
-reorder the draws and change every replay. In P1 the attack's `run` fires its hooks where they
-fire today: the shape is final, the draws are not moved. The split into a pure `resolve` and an
-`apply` comes with the deliberate change 7 (separate random streams): the cosmetics then draw
-from their own stream, and the attack preview and the arena get a combat without side effects.
+`execute` always calls `check` before `run`, and a property test checks that `run` never fails
+once `check` has passed, so the two can't drift apart. The view sees the state through
+`GameView`, a read-only type, so a write from the UI doesn't compile.
 
-Worth checking first, for P2 and later: GameMap keeps its parts and methods as constructor
-closures so the snapshot and the save don't see them, but both list fields with `Object.keys`
-and `JSON.stringify`, which skip non-enumerable properties. Non-enumerable fields would let the
-methods move into the class body without changing either.
+In stage A the commands sit on the current engine, so two things still hold there:
+- The attack's `run` fires its hooks where they fire today, because the UI's picks share the
+  dice's stream.
+- New state goes in closures, not fields.
+
+After B, the attack splits into a pure `resolve` and an `apply`, and the state is free to take
+its final shape. Keep the session thin: the core is state, rules and commands.
 
 ### Not worth it now
 
@@ -387,13 +391,11 @@ invariant tests:
 4. The counter drift (#72, #73).
 5. A guard on the move's destination, the AI stacking (#74).
 6. Close the surprise and input race (#58).
-7. Separate seeded RNG streams for rules, AI and cosmetics (a new replay baseline, once, before
-   the arena's first measurements).
-8. A lossless save: whose turn, `dayTurn`, `expPerSide`, stable ids, the edge hexes (#71, #55,
-   #83, #54).
+7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126).
+8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128).
 9. The campaign load as a state machine with a load token (#64, #61).
-10. A remaster ruleset next to the classic one (step 4, R1 and R3), so the mechanics gaps (#1-#4,
-    #14, #18) don't re-record the classic contracts (#53).
+10. A remaster ruleset next to the classic one (step 4, #116 and #129), so the mechanics gaps
+    (#1-#4, #14, #18) don't re-record the classic contracts (#53).
 11. Then the arena (#46) and the AI issues measured in it.
 
 ## Rules and traps
