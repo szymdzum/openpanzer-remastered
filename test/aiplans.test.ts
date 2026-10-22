@@ -53,7 +53,7 @@ function purchases(groundPurchaseClasses: number[]) {
 	Equipment.parseCountryEquipment(20, JSON.parse(fs.readFileSync(file, "utf8")) as EquipmentCountryFile);
 	const { map, players } = smallGame();
 	const scenario = { map, date: new Date(1943, 6, 1), getSideUnitsAvgExp: () => 0 } as unknown as Scenario;
-	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0 });
+	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, host: () => null });
 	players[1].prestige = 3000;
 	const rng = mulberry32(5);
 	let draws = 0;

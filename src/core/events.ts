@@ -57,7 +57,8 @@ export type GameEvent =
 	| { type: "dismounted"; unit: UnitId }
 	| { type: "leader"; unit: UnitId; leader: number }
 	| { type: "destroyed"; unit: UnitId; at: Position }
-	| { type: "retreated"; unit: UnitId; from: Position; to: Position }
+	//The defender fell back after the attack: a move without its cost (path and visible as moved's)
+	| { type: "retreated"; unit: UnitId; from: Position; to: Position; path: PathStep[]; visible: boolean }
 	//The defender had nowhere to retreat to
 	| { type: "surrendered"; unit: UnitId; at: Position }
 	| { type: "resupplied"; unit: UnitId; supply: Supply }

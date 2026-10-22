@@ -22,13 +22,14 @@ export function unitCost(w: World, eqid?: number, transportId?: number): number 
 export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transportId?: number): number {
 	let ncost: number;
 	if (upgradeId > 0)
-		ncost = u.eqid === upgradeId ? unitCost(w, u.eqid, -1) : unitCost(w, upgradeId, -1) * UPGRADE_PENALTY;
+		//(as numbers: a scenario's units can hold their eqid as the file's text, which the old engine's == took)
+		ncost = +u.eqid === +upgradeId ? unitCost(w, u.eqid, -1) : unitCost(w, upgradeId, -1) * UPGRADE_PENALTY;
 	else
 		ncost = unitCost(w, u.eqid, -1);
 
 	let tcost = 0;
 	if (transportId > 0)
-		tcost = u.transport !== null && u.transport.eqid === transportId ? unitCost(w, -1, transportId)
+		tcost = u.transport !== null && +u.transport.eqid === +transportId ? unitCost(w, -1, transportId)
 			: unitCost(w, -1, transportId) * UPGRADE_PENALTY;
 
 	const ocost = u.transport !== null && transportId !== -1 ? unitCost(w, u.eqid, u.transport.eqid) : unitCost(w, u.eqid, -1);

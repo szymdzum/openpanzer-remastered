@@ -484,6 +484,17 @@ them, and the game runs on the session.
   verify's UI scripts, so the game keeps it until the last step, and core-steps and core-ai play the
   core on the drifting counters too (900 drifted states in 300 sequences, 175 in the AI's games: always
   the old counters).
+- The game's commands on the core (src/coreplay.ts, `CorePlay.execute`, the entry and hooks of
+  `Commands.execute`): every command the person and the AI send is stepped on the world made from the
+  objects, checkpoint by checkpoint, and mirrored after each piece; what the old commands did beside the
+  state is done on the objects where they did it (the selection's hexes, the combat log, the image
+  cache, the hooks with the shapes the UI reads, the strengths an attack's hooks saw). The surprise
+  attack is animated by the attack's hooks (`attackHooks`), its target the screen's air mode (#77).
+  test/coreplay.test.ts plays random command sequences on both entries with the UI's hooks (the
+  selection refreshed after the cleanup, units clicked between the commands): the same hooks, with the
+  same arguments, in the same order, and the same state, selection, counters, combat log and images
+  (2,000 sequences). It found the undo's order on the drifting counters (the unit copied back, then
+  its sight off, as the old engine). The end of turn and the AI's planning are still the old engine's.
 
 ### Not worth it now
 

@@ -7,9 +7,9 @@
  */
 
 import type { CommandOf } from "../../commands";
-import { addScore, emit, playerAt, relocate, writeHex, writePlayer } from "../draft";
+import { addScore, emit, playerAt, relocate, writeHex, writePlayer, writeUnit } from "../draft";
 import { reselect, updateVictorySides } from "../moves";
-import type { CommandHandler } from "../types";
+import type { CommandHandler, UnitState } from "../types";
 import { hexIndex, unitById } from "../world";
 import { unitCheck } from "./common";
 
@@ -26,10 +26,14 @@ export const undo: CommandHandler<CommandOf<"undo">> = {
 		const at = unitById(d, cmd.unit), from = { row: at.row, col: at.col };
 		emit(d, { type: "undone", unit: cmd.unit, from, to: { row: before.row, col: before.col } });
 		//(Unit.copy: every field but tempSpotted; a transport only when the saved unit has one)
-		relocate(d, cmd.unit, before, (u) => {
+		const restore = (u: UnitState) => {
 			Object.assign(u, before, { row: u.row, col: u.col, tempSpotted: u.tempSpotted,
 				transport: before.transport !== null ? { ...before.transport } : u.transport });
-		});
+		};
+		//(on the old counters, as the old engine: the unit copied back first, then its sight switched off
+		//as it was before the move, which differs only where the counters drifted since, #73)
+		if (d.keepDrift) restore(writeUnit(d, cmd.unit));
+		relocate(d, cmd.unit, before, d.keepDrift ? () => {} : restore);
 		reselect(d, cmd.unit);
 		const player = playerAt(d, unitById(d, cmd.unit).owner);
 		const hex = hexIndex(d, from.row, from.col);
