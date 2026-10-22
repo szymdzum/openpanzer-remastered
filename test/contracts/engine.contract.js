@@ -44,8 +44,9 @@
 //   action (or its end of turn and the save) can come first; here it comes after the move's
 //   capture and victory check, before the next action. A retreat's own move-finished part runs
 //   after the elimination check, as in the game
-// - The animations' and sounds' Math.random draws (sprite and sound variants, between the
-//   support fire shots) aren't made: check() seeds Math.random per step on both sides anyway
+// - The animations' and sounds' draws (sprite and sound variants, between the support fire shots)
+//   aren't made: they have their own stream in the game (#126), Math.random on the reference,
+//   where check() seeds Math.random per step anyway
 // - The selection refresh after an attack reads map.currentUnit after it may have been deleted
 //   (#29): the game throws there and skips the retreat and the victory check, the driver guards it
 // - A surprise attack picks its target with uiSettings.airMode in the game (the human's last
@@ -86,7 +87,10 @@ function runEngineContract(env) {
 	// none, the driver then calls the engine functions the commands call
 	const C = env.Commands;
 	const out = [];
-	const check = contractRecorder(out);
+	// The AI draws from its own stream where the game has one (env.Rng, #126): check seeds it per
+	// call. On the reference the AI draws from Math.random, between the dice, so the results
+	// recorded there end at the first AI draw; the fixtures hold this repo's since #126
+	const check = contractRecorder(out, env.Rng);
 	// The combat log holds what was played before the export: start empty on both sides
 	CL.reset();
 

@@ -85,7 +85,7 @@ export default defineConfig({
 				"src/leaders.ts": { statements: 90, branches: 81, functions: 71, lines: 91 },
 				"src/map.ts": { statements: 94, branches: 88, functions: 94, lines: 95 },
 				"src/prototypes.ts": { statements: 93, branches: 100, functions: 72, lines: 93 },
-				"src/rng.ts": { statements: 92, branches: 100, functions: 83, lines: 92 },
+				"src/rng.ts": { statements: 93, branches: 100, functions: 85, lines: 93 },
 				"src/scenario.ts": { statements: 94, branches: 83, functions: 90, lines: 94 },
 				"src/scenarioloader.ts": { statements: 94, branches: 84, functions: 85, lines: 94 },
 				"src/selection.ts": { statements: 94, branches: 90, functions: 88, lines: 93 },

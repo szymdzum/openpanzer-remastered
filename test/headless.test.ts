@@ -29,10 +29,11 @@ function mulberry32(seed: number): () => number {
 	};
 }
 
-const realRandom = Math.random, defaultContext = engineContext, defaultTurnDriver = GameMap.onPlayerTurn;
+const realRandom = Math.random, aiState = Rng.ai.state, defaultContext = engineContext, defaultTurnDriver = GameMap.onPlayerTurn;
 afterEach(() => {
 	Math.random = realRandom;
 	Rng.source = null;
+	Rng.ai.state = aiState;
 	setEngineContext(defaultContext);
 	GameMap.onPlayerTurn = defaultTurnDriver;
 });
@@ -82,7 +83,8 @@ test("game.ts starts no timer and no listener while it loads, main.ts does", () 
 });
 
 //Rng reads Math.random at each draw when no source is set: seeding Math.random (the harness,
-//record.js, the contracts) seeds the dice, the leaders and the AI, as before the seam
+//record.js, the contracts) seeds the dice and the leaders, as before the seam. The AI has its own
+//stream (#126)
 test("The engine's random numbers come from Rng: Math.random at the call, or the source set", () => {
 	Math.random = mulberry32(7);
 	const fromMath = [GameRules.rollDice(1, 6), GameRules.rollDice(0, 100), Rng.random()];
@@ -95,17 +97,19 @@ test("The AI plans the same turn with the same random numbers, whichever way the
 	const seeded = planAI({ rng: mulberry32(3) });
 	expect(seeded.length).toBeGreaterThan(0);
 	expect(planAI({ rng: mulberry32(3) })).toEqual(seeded);
-	Math.random = mulberry32(3);
+	//Without an rng, its own stream: Rng.ai at the same state plans the same turn
+	Rng.ai.state = 3;
 	expect(planAI()).toEqual(seeded);
-	Math.random = realRandom;
-	Rng.source = mulberry32(3);
-	expect(planAI()).toEqual(seeded);
-	//The draws are the AI's own: Math.random untouched with an rng given
+	//The draws are the AI's own: the dice's stream (Math.random, the source) untouched
 	let draws = 0;
 	const rng = mulberry32(3);
 	Math.random = () => { throw new Error("Math.random drawn"); };
+	Rng.source = () => { throw new Error("the dice's stream drawn"); };
 	expect(planAI({ rng: () => { draws++; return rng(); } })).toEqual(seeded);
 	expect(draws).toBeGreaterThan(100);
+	Rng.ai.state = 3;
+	expect(planAI()).toEqual(seeded);
+	expect(Rng.ai.state).not.toBe(3);
 });
 
 test("The AI takes its settings: aiDefaultConfig is the bundle's AI", () => {

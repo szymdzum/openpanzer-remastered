@@ -14,7 +14,7 @@ const args = window.__record;
 
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(1);
-// The game's other random streams (src/rng.ts) where it has them: the reference doesn't
+// The game's random streams (src/rng.ts) from the same seed where it has them: the reference doesn't
 if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(1);
 const old = game.scenario;
 if (args.file.startsWith("campaign:")) {
@@ -51,14 +51,16 @@ new GameState(game).restoreFromString(state);
 if (!await waitFor(() => restored, 30000)) throw new Error(args.file + ": the export didn't restore");
 
 // Every contract gets the same environment, the test builds it from this repo's modules
-// Actions (src/actions.ts), Commands (src/commands.ts) and toData (src/state.ts) only where the
-// game has them: the reference doesn't, the engine contract then runs its copy of the combat and
-// move sequence and walks the objects for its state hashes
+// Actions (src/actions.ts), Commands (src/commands.ts), toData (src/state.ts) and Rng (src/rng.ts)
+// only where the game has them: the reference doesn't, the engine contract then runs its copy of
+// the combat and move sequence, walks the objects for its state hashes and its AI draws from
+// Math.random
 const env = { GameRules, Equipment, Unit, AI, AIScripted, GameState, CombatLog, game, terrainType, leaderType, actionType,
 	playerType, unitClass, scenario: game.scenario, map: game.scenario.map, fuzzRounds: args.fuzzRounds,
 	Actions: typeof Actions !== "undefined" ? Actions : undefined,
 	Commands: typeof Commands !== "undefined" ? Commands : undefined,
-	toData: typeof toData !== "undefined" ? toData : undefined };
+	toData: typeof toData !== "undefined" ? toData : undefined,
+	Rng: typeof Rng !== "undefined" ? Rng : undefined };
 const setup = typeof contractCapture === "function" ? contractCapture(env) : null;
 // game.spotSide (the side whose view is shown, Unit.unitEndTurn reads it) isn't in the export
 const spotSide = game.spotSide;

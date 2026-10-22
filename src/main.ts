@@ -59,6 +59,10 @@ dom.changeViewPort();
 Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuilder,
 	UICombatLog: uicombatlog.UICombatLog, game: game.game });
 
+//The random streams seeded once, here and not while rng.ts loads: until then the game stream reads
+//Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
+rng.Rng.seed(rng.randomSeed());
+
 //The turn loop, processTurn every second (window.: the browser's, a number), and the start on
 //window load. game.ts did both while loading; here, so that importing it starts nothing
 game.game.loop = window.setInterval(game.game.processTurn, 1000);

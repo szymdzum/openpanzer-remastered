@@ -117,7 +117,9 @@ states recorded on the reference and replays the reference's calls on them.
 - `engine`: the AI plays every player for 2 turns through Map, Unit, GameRules, Leaders and
   Scenario, with random player actions of every kind mixed in (embarking and undo included),
   a hash of the whole state after each step; then the campaign functions, the saved game, the
-  combat log and the equipment data
+  combat log and the equipment data. Its results are the remaster's since the AI draws from its
+  own stream (#126); the reference's AI draws between the dice, so recording it again there
+  records the old stream
 
 A bug fixed on purpose changes a contract, and the reference still has the bug: `UPDATE_CONTRACTS=1
 npm test` writes the remaster's results into the fixtures (the recorded states stay). Do it only in

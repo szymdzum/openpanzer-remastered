@@ -35,16 +35,22 @@ function contractSerialize(v) {
 }
 
 // check(name, context, f): runs f with Math.random seeded per call (seed 1, 2, ...), records
-// [name, context, serialized result or "THROW message"] in out
-function contractRecorder(out) {
+// [name, context, serialized result or "THROW message"] in out. rng: the game's Rng (src/rng.ts),
+// where it has one (the reference doesn't): its streams seeded per call from the same seed, the
+// game's drawing what Math.random draws, then the game stream set back to where it was (reading
+// Math.random in a test)
+function contractRecorder(out, rng) {
 	const realRandom = Math.random;
 	let seed = 1;
 	return function check(name, context, f) {
+		const gameState = rng ? rng.game.state : null;
+		if (rng) rng.seed(seed);
 		Math.random = contractRandom(seed++);
 		let r;
 		try { r = contractSerialize(f()); }
 		catch (e) { r = "THROW " + e.message; }
 		Math.random = realRandom;
+		if (rng) rng.game.state = gameState;
 		out.push([name, context, r]);
 	};
 }

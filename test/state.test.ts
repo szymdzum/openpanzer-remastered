@@ -15,9 +15,10 @@ async function restored(name: string) {
 	const { game } = await import("../src/game");
 	const { Equipment } = await import("../src/equipment");
 	const { toData } = await import("../src/state");
+	const { Rng } = await import("../src/rng"); //the restored modules' (restoreState loads them again)
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
-	return { scenario, game, Equipment, toData };
+	return { scenario, game, Equipment, toData, Rng };
 }
 type Restored = Awaited<ReturnType<typeof restored>>;
 
@@ -34,6 +35,7 @@ function carried(r: Restored) {
 
 test.each(fixtures("engine"))("toData of %s is plain data", async (name) => {
 	const r = await restored(name);
+	r.Rng.seed(7);
 	const saved = r.toData(r.scenario, r.game);
 	expect(JSON.parse(JSON.stringify(saved))).toEqual(saved);
 	expect(structuredClone(saved)).toEqual(saved);
@@ -45,7 +47,28 @@ test.each(fixtures("engine"))("toData of %s is plain data", async (name) => {
 	expect(state.units.map((u) => u.id), "the ids grow with the placement order (D1, D2)").toEqual(state.units.map((u) => u.id).sort((a, b) => a - b));
 	expect(Math.max(-1, ...state.units.map((u) => u.id))).toBeLessThan(state.nextUnitId);
 	expect(state.campaign === null).toBe(r.game.campaign === null);
-	expect(state.rng, "#126 fills it").toBeNull();
+	expect(state.rng, "the game's and the AI's streams, not the cosmetic one (D8)").toEqual({ game: r.Rng.game.state, ai: r.Rng.ai.state });
+});
+
+//D8: a loaded game rolls the dice and plays the AI the saved one would have
+test("fromData puts the game's and the AI's streams back where toData read them", async () => {
+	const r = await restored("drpzop01-t0.json.gz");
+	const { fromData } = await import("../src/state");
+	r.Rng.seed(3);
+	const saved = r.toData(r.scenario, r.game);
+	const draw = () => [r.Rng.random(), r.Rng.random(), r.Rng.aiRandom(), r.Rng.aiRandom()];
+	const first = draw(), cosmetic = r.Rng.cosmetic.state;
+	expect(r.toData(r.scenario, r.game).state.rng).not.toEqual(saved.state.rng);
+	fromData(saved, r.game);
+	expect(draw()).toEqual(first);
+	expect(r.Rng.cosmetic.state, "the cosmetic stream isn't state").toBe(cosmetic);
+	//Unseeded, the game stream reads Math.random: nothing to save, and nothing set back
+	r.Rng.game.state = null;
+	const unseeded = r.toData(r.scenario, r.game);
+	expect(unseeded.state.rng).toBeNull();
+	r.Rng.ai.state = 9;
+	fromData(unseeded, r.game);
+	expect([r.Rng.game.state, r.Rng.ai.state]).toEqual([null, 9]);
 });
 
 test.each(fixtures("engine"))("toData of %s carries what the engine contract's state string carried", async (name) => {
@@ -82,8 +105,9 @@ async function commandOf(): Promise<(a: AIAction) => Command | null> {
 	return (a) => make[a.type] && a.param[0] instanceof Unit ? make[a.type](a.param[0].id, a.param) : null;
 }
 
-//The AI plays every player of the restored fixture for 2 turns with Math.random seeded, the
-//players' handlers stubbed (the driver plans): after(step) after every action and end of turn
+//The AI plays every player of the restored fixture for 2 turns with Math.random and the streams
+//seeded, the players' handlers stubbed (the driver plans): after(step) after every action and end of
+//turn
 async function playAI(r: Restored, seed: number, after: (step: string) => void) {
 	const { AI } = await import("../src/ai");
 	const { Commands } = await import("../src/commands");
@@ -93,6 +117,7 @@ async function playAI(r: Restored, seed: number, after: (step: string) => void) 
 	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
 	const realRandom = Math.random;
 	Math.random = mulberry32(seed);
+	r.Rng.seed(seed);
 	try {
 		for (let t = 0; t < 2 * m.getPlayers().length; t++) {
 			const ai = new AI(m.currentPlayer, m);

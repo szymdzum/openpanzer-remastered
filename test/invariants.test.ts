@@ -35,12 +35,14 @@ function move(w: World, u: Unit, cell: Cell) {
 		{ surprise: { afterCleanup: (r) => refreshSelection(w, r) } });
 }
 
-//The AI plays every player for 2 turns, Math.random seeded. check() runs after every action and end
-//of turn, with the units a move put another unit on (#74); it returns true to stop
+//The AI plays every player for 2 turns, Math.random and the streams seeded. check() runs after
+//every action and end of turn, with the units a move put another unit on (#74); it returns true to
+//stop
 function playAI(w: World, check: (step: string, overwritten: Unit[]) => boolean) {
 	const { m, scenario, CombatLog, actionType: A } = w;
-	const realRandom = Math.random;
+	const realRandom = Math.random, gameState = w.Rng.game.state;
 	Math.random = mulberry32(31); //the contracts' seeded random (contractRandom in test/contracts/common.js)
+	w.Rng.seed(31); //the game stream draws what Math.random would
 	try {
 		const steps = 2 * m.getPlayers().length;
 		for (let t = 0; t < steps; t++) {
@@ -76,7 +78,10 @@ function playAI(w: World, check: (step: string, overwritten: Unit[]) => boolean)
 			}
 			if (check(ctx + " end of turn", [])) return;
 		}
-	} finally { Math.random = realRandom; }
+	} finally {
+		Math.random = realRandom;
+		w.Rng.game.state = gameState;
+	}
 }
 
 //The first step after which an invariant doesn't hold, with what. A unit another one was moved onto
@@ -94,11 +99,10 @@ function firstBreak(w: World): string | null {
 	return found;
 }
 
-//Fixtures where the AI's 2 turns break an invariant through a known bug
-const knownBreaks: Record<string, string> = {
-	//turn 4, unit#50's support fire on unit#26 gives unit#26 a recon leader: spotting 3 -> 5
-	"ruscam09-t2.json.gz": "#73, a recon leader from support fire",
-};
+//Fixtures where the AI's 2 turns break an invariant through a known bug. None since the AI draws
+//from its own stream (#126): ruscam09-t2 reached #73 (a recon leader from support fire) on the
+//dice the AI's draws used to shift; #73 stays pinned by its drills below
+const knownBreaks: Record<string, string> = {};
 
 for (const name of fixtures("engine"))
 	test(`Invariants hold on ${name} as restored`, async () => {

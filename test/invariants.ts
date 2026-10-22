@@ -17,6 +17,7 @@ export async function load(name: string) {
 	const { Equipment } = await import("../src/equipment");
 	const { AI } = await import("../src/ai");
 	const { Commands } = await import("../src/commands");
+	const { Rng } = await import("../src/rng");
 	const { game } = await import("../src/game");
 	const prototypes = await import("../src/prototypes");
 	if (fixture.spotSide !== undefined)
@@ -26,7 +27,7 @@ export async function load(name: string) {
 	const m = scenario.map;
 	//Map.endTurn asks an AI player's handler for actions: the driver builds them itself
 	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
-	return { scenario, m, GameRules, Leaders, CombatLog, Equipment, AI, Commands, game, ...prototypes };
+	return { scenario, m, GameRules, Leaders, CombatLog, Equipment, AI, Commands, Rng, game, ...prototypes };
 }
 export type World = Awaited<ReturnType<typeof load>>;
 

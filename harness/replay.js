@@ -45,8 +45,9 @@ async function play(item) {
 	const errorsBefore = window.__replayErrors.length;
 	const seed = (args.seed || 1) ^ parseInt(cyrb53(item).slice(0, 6), 36);
 	Math.random = mulberry32(seed);
-	// The streams that aren't Math.random (src/rng.ts: the UI's sprite and sound picks) from the same
-	// seed, where the game has them (not the original)
+	// The game's streams (src/rng.ts: the dice, the AI's, the UI's sprite and sound picks) from the
+	// same seed, where the game has them (the original draws all from Math.random): the game stream
+	// draws what this Math.random would
 	if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(seed);
 	// "scripted:<file>" keeps the scenario's scripted players (AIScripted), others become AI
 	const scripted = item.startsWith("scripted:");
