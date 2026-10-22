@@ -96,9 +96,9 @@ test.each(fixtures("engine").filter((f) => !midDay.includes(f)))("GameState load
 	expect(again.state.scenario.dayTurn).toBe(0);
 });
 
-//#83: the load doesn't keep expPerSide and unitsCostPerSide (filled only by the loader), so units
-//bought after a load get 0 experience
-test.fails.each(fixtures("engine"))("GameState load keeps the experience and cost per side (#83) %s", async (name) => {
+//#83: the load keeps expPerSide and unitsCostPerSide (filled only by the scenario loader): units
+//bought after a load get the enemy side's average experience, as before it
+test.each(fixtures("engine"))("GameState load keeps the experience and cost per side (#83) %s", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	expect([again.state.scenario.expPerSide, again.state.scenario.unitsCostPerSide])
 		.toEqual([saved.state.scenario.expPerSide, saved.state.scenario.unitsCostPerSide]);
