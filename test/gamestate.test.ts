@@ -84,8 +84,8 @@ test.each(fixtures("engine"))("GameState load keeps the partial map edges (#54) 
 const savedState = (name: string) => JSON.parse(readFixture("engine", name).state) as { scenario: { dayTurn: number } };
 const midDay = fixtures("engine").filter((f) => savedState(f).scenario.dayTurn !== 0);
 
-//#55: the load doesn't keep dayTurn
-test.fails.each(midDay)("GameState load keeps the time of day (#55) %s", async (name) => {
+//#55: the load keeps the time of day (dayTurn): the date moves on when the saved game's would have
+test.each(midDay)("GameState load keeps the time of day (#55) %s", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	expect(saved.state.scenario.dayTurn).not.toBe(0);
 	expect(again.state.scenario.dayTurn).toBe(saved.state.scenario.dayTurn);
