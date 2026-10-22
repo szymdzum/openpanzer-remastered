@@ -93,7 +93,7 @@ export default defineConfig({
 				"src/unit.ts": { statements: 97, branches: 93, functions: 93, lines: 98 },
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 87, lines: 95 },
-				"src/state.ts": { statements: 98, branches: 84, functions: 96, lines: 98 },
+				"src/state.ts": { statements: 98, branches: 88, functions: 96, lines: 98 },
 			},
 		},
 	},

@@ -3,7 +3,7 @@
 // private renderer) and Image (to know when every image has loaded).
 //
 // - virtual clock: the game's timers run from a queue the harness advances (runClock)
-// - snapshot(): game state, built from plain properties, sorted keys
+// - snapshot(): game state, toData's (src/state.ts) or built from plain properties, sorted keys
 // - domSnapshot(): the page DOM, attributes, classes and inline styles sorted
 // - canvasHashes(): pixel hash of every canvas on the page, after images have loaded
 // - human-like input helpers for UI scripts: click(), clickHex(), key(), settle()
@@ -190,7 +190,32 @@ function cyrb53(str) {
 
 // ---- Game state
 
-// Built from plain properties so it doesn't depend on the modules under test more than
+// snapshot() is the game state as src/state.ts's toData reads it (#127), or the walk of the game
+// objects' plain properties: window.__stateSnapshot ("toData" or "walk", the default), which
+// replay.sh and ui-replay.sh set on both pages from what the baseline has (harness/lib/
+// reference.sh). The original game (reference/) and a baseline before #127 have no toData: both
+// sides walk the objects then, so the two traces compare like with like.
+function snapshot() {
+	return window.__stateSnapshot === "toData" ? stateSnapshot() : walkSnapshot();
+}
+
+// toData's { data, state }, and what the screen shows beside the state, which the state leaves
+// out (docs/STATE.md D6, D10): the selected unit, and per hex the move and attack marks, the
+// spotting and the zone of control of each side as the hex tells them. A scenario still loading
+// has no state yet (its date is the clock's)
+function stateSnapshot() {
+	const s = game.scenario;
+	if (!s.isLoaded) return JSON.stringify({ loading: s.file });
+	const m = s.map, hexes = [];
+	for (let r = 0; r < m.rows; r++)
+		for (let c = 0; c < m.cols; c++) {
+			const h = m.map[r][c];
+			hexes.push("" + +h.isMoveSel + +h.isAttackSel + +h.isSpotted(0) + +h.isSpotted(1) + +h.isZOC(0) + +h.isZOC(1));
+		}
+	return JSON.stringify({ ...toData(s, game), selected: m.currentUnit ? m.currentUnit.id : null, hexes: hexes.join(",") });
+}
+
+// The walk: built from plain properties so it doesn't depend on the modules under test more than
 // necessary. Keys are sorted: a different property assignment order isn't a difference.
 const ENTITIES = ["Unit", "Player", "Hex", "Map", "GameMap", "Scenario", "AI", "AIScripted", "Game", "Campaign", "Transport"];
 // Classes the remaster renamed, under their original names so traces compare with the reference
@@ -223,7 +248,7 @@ function plain(o, depth) {
 	return out;
 }
 
-function snapshot() {
+function walkSnapshot() {
 	const s = game.scenario, m = s.map;
 	const hexes = [];
 	for (let r = 0; r < m.rows; r++)

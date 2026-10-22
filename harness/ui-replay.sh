@@ -24,9 +24,9 @@ source harness/lib/reference.sh
 if [ "${1:-}" = "--job" ]; then
 	script=$2
 	export BDG_SESSION=$(session_name "$BDG_SESSION" "$script")
-	setup="window.__uiReplay = { seed: $SEED ${DUMP_STEP:+, dumpStep: $DUMP_STEP}${RENDER_LOG:+, renderLog: true} }"
+	setup="window.__uiReplay = { seed: $SEED ${DUMP_STEP:+, dumpStep: $DUMP_STEP}${RENDER_LOG:+, renderLog: true} }; window.__stateSnapshot = \"$STATE_SNAPSHOT\""
 	files=(harness/lib/harness.js "harness/ui/$script.js" harness/ui-replay.js)
-	KEY=$(reference_version | cat - "${files[@]}" harness/lib/hooks.js harness/lib/page.sh | shasum | cut -c1-12)-$SEED
+	KEY=$( (reference_version; echo "$STATE_SNAPSHOT") | cat - "${files[@]}" harness/lib/hooks.js harness/lib/page.sh | shasum | cut -c1-12)-$SEED
 	BASELINE=harness/out/baseline/ui-$script-$KEY.json
 	if [ ! -s "$BASELINE" ]; then
 		echo "reference: $script"
@@ -46,7 +46,7 @@ mkdir -p "$OUT" harness/out/baseline
 start_reference
 serve_vite "$PORT"
 
-echo "${#SCRIPTS[@]} scripts, $JOBS at once"
+echo "${#SCRIPTS[@]} scripts, $JOBS at once, state snapshot: $STATE_SNAPSHOT"
 STATUS=0
 run_jobs "$0" "${SCRIPTS[@]}" || STATUS=1
 

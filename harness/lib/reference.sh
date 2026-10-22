@@ -5,6 +5,8 @@
 # - BASELINE_REF=<git ref> (e.g. origin/main): this repo at that commit, checked out in
 #   harness/out/base-<commit> and run on its own Vite. Any difference is a change against that
 #   commit: what a pull request checks, since main differs from the original on purpose.
+# STATE_SNAPSHOT: how both pages snapshot the game state (harness/lib/harness.js), toData when the
+# baseline has it, else the walk of the objects (the original's case).
 if [ -n "${BASELINE_REF:-}" ]; then
 	BASE_SHA=$(git rev-parse --verify "$BASELINE_REF^{commit}")
 	BASE_DIR=$PWD/harness/out/base-$BASE_SHA
@@ -15,9 +17,13 @@ if [ -n "${BASELINE_REF:-}" ]; then
 	mkdir -p "$BASE_DIR/harness/out"
 	REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness"
 	reference_version() { echo "remaster $BASE_SHA"; }
+	# The state snapshot both pages take (harness/lib/harness.js snapshot): toData where the
+	# baseline has it (src/state.ts, #127)
+	if git cat-file -e "$BASE_SHA:src/state.ts" 2>/dev/null; then STATE_SNAPSHOT=toData; else STATE_SNAPSHOT=walk; fi
 	start_reference() { (cd "$BASE_DIR" && serve_vite "$REFERENCE_PORT"); }
 else
 	REFERENCE_DIR=${REFERENCE_DIR:-reference}
+	STATE_SNAPSHOT=walk # the original has no toData
 	REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness&standalone"
 	# The reference's files, not its assets (game/, the same as this repo's)
 	reference_version() { (cd "$REFERENCE_DIR" && find index.html src harness -type f | sort | xargs shasum) | shasum; }

@@ -404,6 +404,24 @@ contracts and verify unchanged.
 - The engine contract and the invariants test play through the commands (`env.Commands`, the
   copy stays for the reference); with a handler broken, 14 of the 15 engine contracts fail.
 
+**How #127 was done (stage B).** `src/state.ts`: the types of docs/STATE.md, `toData(scenario,
+game)` and `fromData({ data, state }, game)` on the old engine.
+- toData only reads; GameMap gives its board and undo slot (`getBoard`, `getUndoSlot`), Game its
+  campaign progress (`getCampaignProgress`, `setCampaignProgress`). fromData places the units through
+  the map's own placing with their ids, so their players, zone of control and spotting follow, and
+  counts the counters again (D10): the drift of #72 is the one thing it can't reproduce, a
+  `test.fails`. On every engine fixture `toData(fromData(toData(x)))` is `toData(x)`, and the AI
+  plays the same turns on fromData's scenario as on the original.
+- The engine contract hashes toData's state plus the view the state leaves out (the selection, the
+  counters, the side shown), re-recorded once: the old and the new hashes map one to one over the
+  4248 hashed states, and the fixtures changed only in their hashes. A drill now puts back the undo
+  slot too.
+- The harness snapshot takes toData when the baseline has it (`STATE_SNAPSHOT`, set by
+  harness/lib/reference.sh for both pages), else the walk of the objects: the original (reference/)
+  has no toData, so against it both sides still walk.
+- The save is still the JSON of the objects until #128: test/mapparts.test.ts keeps the fields and
+  their order pinned for it.
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action
@@ -452,8 +470,8 @@ invariant tests:
   Hex instances; no `for...in` walks a Hex, GameMap or Player today. Still grep for
   `for (` ... `in` before moving methods. The real traps: the **key order of the data fields**
   (part of the saved game: assign them in the same order), `constructor.name` lookups
-  (harness.js:183-193, test/contracts/common.js:21-23), and `#private` brand checks on methods
-  called with a foreign `this`.
+  (harness.js:220-230, the walk the harness takes against the original; test/contracts/common.js:
+  21-23), and `#private` brand checks on methods called with a foreign `this`.
 - The harness reaches into the game: `?harness` exposes every module's exports as globals
   (`src/main.ts`), `harness/lib/hooks.js` hooks `Render.prototype.getCursorCanvas`, the dev
   server adds `__harnessSet` to each module (`vite.config.mts`). Renaming exported names breaks
