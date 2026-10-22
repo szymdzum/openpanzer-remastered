@@ -257,6 +257,62 @@ After the cleanup, `src/` and `test/` were reformatted to put opening braces on 
 (and `} else`): one formatting-only commit, listed in `.git-blame-ignore-revs`, every file's
 syntax tree checked identical before and after. New code uses that style.
 
+### 4. The shape for extension — next
+
+Steps 0-3 made the engine testable and headless. The rules themselves are in good shape; what
+blocks the roadmap is how they are reached and changed. Two tracks, each a refactor (contracts
+and verify unchanged), so new rules and new kinds of players can be added without touching what
+is there:
+
+- **Rules.** The movement table is a module global chosen by a switch (prototypes.ts:157,
+  scenario.ts:206); `calculateAttackResults` (gamerules.ts:452-715) is 260 lines of `if`s with
+  literal bonuses whose order matters, so weather, combined arms and the 14 leader abilities
+  that do nothing each mean another `if` in the middle; there is no place for #53's switch.
+- **Players.** There is no single way in: the UI calls about 20 GameMap methods directly,
+  attacks and moves finish in animation callbacks, and a headless driver copies
+  `processAction`. Events come back four ways (hook objects, the static `AI.onUnitsDeployed`
+  and `GameMap.onPlayerTurn`, polled flags, `engineContext`), and the engine keeps per-process
+  state (`Rng`, `CombatLog.log`, `Scenario.loader`, `uiSettings` read by the rules): two
+  games in one process, the arena (#46), would share it.
+
+Where it leads:
+
+    data/         prototypes, equipment, terrain tables          read-only
+    rules/        movement, combat, supply, spotting, predicates  behind the GameRules facade
+                  + Ruleset: movement table, combat modifiers, flags (#53)
+    model/        GameMap, Hex, Unit, Player                      state and its invariants
+    commands      execute(game, command) -> result, hooks fired where they fire today
+    GameSession   scenario, ruleset, rng, hooks, turn driver, controllers: one game
+    controllers   human (UI), AI, scripted, LLM (#45), remote (#67)
+    UI            sends commands, listens to the hooks, asks queries (move range, attack preview)
+
+The steps, each an issue with its evidence:
+
+| Track | Step | Issue | After |
+|---|---|---|---|
+| Rules | R1. A `Ruleset` in the engine context, the movement table off the global | #116 | |
+| Rules | R2. gamerules.ts split into modules behind the `GameRules` facade | #117 | |
+| Rules | R3. Combat as an ordered list of named modifiers, the classic list first | #118 | R2 |
+| Players | P1. One command entry, `execute(game, command)`, for every player action | #119 | |
+| Players | P2. A `GameSession` instead of `engineContext`, `session.game` and the static slots | #120 | R1 |
+| Players | P3. One controller interface; AIScripted without the UI | #121 | P2 |
+
+R1 and P1 first, in parallel (they touch different files); then R2 and P2; then R3 and P3.
+R1 and P2 both touch context.ts, hence the order. The deliberate changes below build on them:
+#53's remaster ruleset is a second `Ruleset`, the attack preview (#7) runs R3's list with
+`estimate`, multi-level undo (#36) and play by link (#67) are a journal of P1's commands, the
+arena (#46) runs many sessions side by side.
+
+What stays, as in steps 1-3: the data-field key order and the class names (the save and the
+harness snapshot), new state in closures or function properties rather than fields, the
+namespace objects the harness patches, the order of the random draws (the UI's sprite and
+sound picks share the stream, so hooks keep firing mid-combat), no new import cycle.
+
+Worth checking first, for P2 and later: GameMap keeps its parts and methods as constructor
+closures so the snapshot and the save don't see them, but both list fields with `Object.keys`
+and `JSON.stringify`, which skip non-enumerable properties. Non-enumerable fields would let the
+methods move into the class body without changing either.
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action
@@ -294,8 +350,8 @@ invariant tests:
 8. A lossless save: whose turn, `dayTurn`, `expPerSide`, stable ids, the edge hexes (#71, #55,
    #83, #54).
 9. The campaign load as a state machine with a load token (#64, #61).
-10. A rules context with a classic/remaster flag, so the mechanics gaps (#1-#4, #14, #18) don't
-    re-record the classic contracts (#53).
+10. A remaster ruleset next to the classic one (step 4, R1 and R3), so the mechanics gaps (#1-#4,
+    #14, #18) don't re-record the classic contracts (#53).
 11. Then the arena (#46) and the AI issues measured in it.
 
 ## Rules and traps
