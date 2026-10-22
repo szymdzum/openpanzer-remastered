@@ -477,9 +477,10 @@ function runEngineContract(env) {
 
 	// What a drill changes, put back: the units (fields, hexes, the unit list), the players, the
 	// hexes (owners, flags, objectives, selection marks, units, the ZOC and spotting counters), the
-	// victory hexes, the current unit, the combat log and the end of the game. Not the Map's move
-	// and attack ranges and undo slot (closure state): the end of turn clears them, and nothing
-	// after the drills uses them before it
+	// victory hexes, the current unit, the combat log, the end of the game and, where the map gives
+	// it (getUndoSlot, which toData reads), the undo slot. Not the Map's move and attack ranges, nor
+	// the undo slot on the reference (closure state): the end of turn clears them, and nothing after
+	// the drills uses them before it
 	const isEntity = (v) => typeof v.unitData === "function" || typeof v.getPos === "function"
 		|| (v.constructor && v.constructor.name === "Player");
 	function keep(o, skip) {
@@ -535,6 +536,7 @@ function runEngineContract(env) {
 			for (let c = 0; c < m.cols; c++) hexes.push([keep(m.map[r][c], []), counters(m.map[r][c])]);
 		const victoryHexes = m.sidesVictoryHexes.map((s) => [s, s.slice()]);
 		const currentUnit = m.currentUnit, log = structuredClone(CL.log), wasEnded = ended;
+		const undo = m.getUndoSlot ? m.getUndoSlot() : null, undoFields = undo ? Object.assign({}, undo) : null;
 		return () => {
 			for (const s of units) {
 				if (s.u.getHex() !== s.hex) s.u.setHex(s.hex);
@@ -548,6 +550,7 @@ function runEngineContract(env) {
 			m.currentUnit = currentUnit;
 			CL.log = log;
 			ended = wasEnded;
+			if (undo) Object.assign(undo, undoFields);
 		};
 	}
 	// A drill step: f's result, then whether the state was put back

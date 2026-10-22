@@ -38,7 +38,7 @@ const harnessExports = [
 	"$", "AI", "AIScripted", "Actions", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
 	"Hex", "Leaders", "NATIVE_PLATFORM", "Player", "Render", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
 	"Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
-	"makeHidden", "makeVisible", "playerType", "terrainType", "uiSettings", "unitClass", "unitClassNames",
+	"makeHidden", "makeVisible", "playerType", "terrainType", "toData", "uiSettings", "unitClass", "unitClassNames",
 ];
 
 function usedNames(candidates: Set<string>): Set<string> {
