@@ -27,7 +27,10 @@
 //
 // Here the attack (resolveAttack, finishAttack), the move's finish (finishMove) and the end of turn
 // are the game's own, src/actions.ts (env.Actions), with the driver's hooks where the UI has its
-// own (the selection refresh, the victories). The end of the game (`ended`) is then what
+// own (the selection refresh, the victories). The player's actions (the AI's and the random ones:
+// move, attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband,
+// end turn) go through the game's command entry, src/commands.ts (env.Commands), as the game sends
+// them: the move's and the attack's finish through the command's animate hook, at once. The end of the game (`ended`) is then what
 // checkOutcome says after each attack's and move's finish and after a defeat at the turn limit;
 // the victories the hooks report are recorded as before. On the reference, which has no
 // actions.ts, the driver runs its copy of the same sequence and ends the game at the victories
@@ -79,6 +82,9 @@ function runEngineContract(env) {
 	// The reference has none (record.sh runs this driver there), it runs the copy of the sequence
 	// below: the same calls in the same order, so both record the same results
 	const X = env.Actions;
+	// The game's command entry (src/commands.ts), with the same feature check: the reference has
+	// none, the driver then calls the engine functions the commands call
+	const C = env.Commands;
 	const out = [];
 	const check = contractRecorder(out);
 	// The combat log holds what was played before the export: start empty on both sides
@@ -169,13 +175,15 @@ function runEngineContract(env) {
 	const outcome = () => ({ victory: sc.checkVictory(), alive: [m.hasAliveUnits(0), m.hasAliveUnits(1)], ended });
 
 	// ui.js uiUnitAttack without animations and alerts: support fire, the attack or attack stopped
+	function resolved(a, d, res) {
+		return { a, d, aOld: res.attacking.oldstr, dOld: res.defending.oldstr, aNew: res.attacking.newstr,
+			dNew: res.defending.newstr, cr: res.cr, support: res.support.map((s) => s.id), stopped: res.attackStopped,
+			attacker: contractUnitState(a), defender: contractUnitState(d), res };
+	}
 	function resolveAttack(a, d) {
 		if (X) {
 			const res = X.resolveAttack(m, a, d);
-			if (!res) return null;
-			return { a, d, aOld: res.attacking.oldstr, dOld: res.defending.oldstr, aNew: res.attacking.newstr,
-				dNew: res.defending.newstr, cr: res.cr, support: res.support.map((s) => s.id), stopped: res.attackStopped,
-				attacker: contractUnitState(a), defender: contractUnitState(d), res };
+			return res ? resolved(a, d, res) : null;
 		}
 		if (!a.getPos() || !d.getPos()) return null;
 		const aOld = a.strength, dOld = d.strength;
@@ -205,12 +213,12 @@ function runEngineContract(env) {
 		}
 	}
 
-	// ui.js uiAttackAnimationFinished without animations and alerts
-	function finishAttack(r) {
+	// ui.js uiAttackAnimationFinished without animations and alerts. finish: the attack command's
+	function finishAttack(r, finish) {
 		const a = r.a, d = r.d;
 		if (X) {
 			const victory = [];
-			const res = X.finishAttack(m, r.res, {
+			const res = (finish || ((hooks) => X.finishAttack(m, r.res, hooks)))({
 				afterCleanup() { refreshSelection(a, d); },
 				onVictory(side) { victory.push(win(side, "elimination")); },
 			});
@@ -239,17 +247,26 @@ function runEngineContract(env) {
 			retreat, victory, outcome: outcome() };
 	}
 
+	// The attack command: its check is the range, which the callers already checked (no position is
+	// out of range)
 	function attack(a, d) {
+		if (C) {
+			let done = "no position";
+			C.execute(sc, { type: "attack", unit: a.id, target: d.id }, {
+				animate(res, finish) { done = finishAttack(resolved(a, d, res), finish); },
+			});
+			return done;
+		}
 		const r = resolveAttack(a, d);
 		return r ? finishAttack(r) : "no position";
 	}
 
 	// ui.js uiMoveAnimationFinished: the surprise attack (its second half after the rest), the
-	// capture victory
-	function moveFinished(u, mr) {
+	// capture victory. finish: the move command's
+	function moveFinished(u, mr, finish) {
 		let surprise = null, pending = null, victory = null;
 		if (X) {
-			const res = X.finishMove(m, u, mr, false, {
+			const res = (finish || ((airMode, hooks) => X.finishMove(m, u, mr, airMode, hooks)))(false, {
 				attack(a, d) { pending = resolveAttack(a, d); return pending ? pending.res : null; },
 				onVictory(side) { victory = win(side, "capture"); },
 			});
@@ -269,12 +286,31 @@ function runEngineContract(env) {
 		return { surprise, victory };
 	}
 
-	// game.js processAction (move): the move range, then ui.js uiUnitMove
+	// game.js processAction (move): the move range, then ui.js uiUnitMove. The command refuses a move
+	// with no path, which the engine plays as an empty move: recorded as the engine's
 	function move(u, cell) {
 		m.setMoveRange(u);
-		const mr = m.moveUnit(u, cell.row, cell.col);
-		const after = moveFinished(u, mr);
+		let mr = null, after = null;
+		if (C)
+			C.execute(sc, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, {
+				animate(res, finish) { mr = res; after = moveFinished(u, mr, finish); },
+			});
+		if (!mr) {
+			mr = m.moveUnit(u, cell.row, cell.col);
+			after = moveFinished(u, mr);
+		}
 		return { mr, surprise: after.surprise, victory: after.victory, unit: contractUnitState(u), outcome: outcome() };
+	}
+
+	// A command without hooks: its result, or for a refused one what the engine function returns when
+	// it does nothing (refused: false for embark, upgrade...). Without a refused value the refusal
+	// itself, which no recording has: a command refused where the engine acted shows up there.
+	// old: the engine function, on the reference
+	function command(cmd, old, refused) {
+		if (!C) return old();
+		const r = C.execute(sc, cmd);
+		if (r.ok) return r.result === null ? undefined : r.result;
+		return arguments.length > 2 ? refused : { refused: r.refusal.reason };
 	}
 
 	// ui.js uiUnitSelect
@@ -292,10 +328,10 @@ function runEngineContract(env) {
 		switch (a.type) {
 			case A.move: return move(p[0], p[1]);
 			case A.attack: return GR.isInAttackRange(p[0], p[1]) ? attack(p[0], p[1]) : "out of range";
-			case A.resupply: return m.resupplyUnit(p[0]);
-			case A.reinforce: return m.reinforceUnit(p[0], false);
-			case A.mount: return m.mountUnit(p[0]);
-			case A.umount: return m.unmountUnit(p[0]);
+			case A.resupply: return command({ type: "resupply", unit: p[0].id }, () => m.resupplyUnit(p[0]));
+			case A.reinforce: return command({ type: "reinforce", unit: p[0].id }, () => m.reinforceUnit(p[0], false));
+			case A.mount: return command({ type: "mount", unit: p[0].id }, () => m.mountUnit(p[0]));
+			case A.umount: return command({ type: "unmount", unit: p[0].id }, () => m.unmountUnit(p[0]));
 			case A.select: return select(p[0]);
 			case A.upgrade: case A.buy: case A.deploy: case A.message: case A.viewport: return null; // nothing on the map
 			default: return false; // endturn and unknown types
@@ -342,16 +378,23 @@ function runEngineContract(env) {
 			run: (u, pick) => { m.selectUnit(u); const cells = GR.getMoveRange(m, u); return move(u, cells[pick(cells.length)]); } },
 		"attack": { can: (u) => attackTargets(u).length > 0,
 			run: (u, pick) => { const t = attackTargets(u); return attack(u, t[pick(t.length)]); } },
-		"resupply": { can: (u) => GR.canResupply(m.map, u), run: (u) => m.resupplyUnit(u) },
-		"reinforce": { can: (u) => GR.canReinforce(m.map, u), run: (u) => m.reinforceUnit(u, false) },
-		"reinforce over": { can: (u) => GR.canReinforce(m.map, u, true), run: (u) => m.reinforceUnit(u, true) },
-		"mount": { can: (u) => GR.canMount(u), run: (u) => m.mountUnit(u) },
-		"unmount": { can: (u) => GR.canUnmount(u), run: (u) => m.unmountUnit(u) },
-		"embark": { can: (u) => GR.canEmbark(m.map, u), run: (u) => m.embarkUnit(u) },
-		"disembark": { can: (u) => GR.canDisembark(m.map, u), run: (u) => m.disembarkUnit(u) },
-		"upgrade": { can: () => true, run: (u, pick, rng) => m.upgradeUnit(u.id, eqids[pick(eqids.length)],
-			rng() < 0.5 || !transports.length ? -1 : transports[pick(transports.length)]) },
-		"undo": { can: (u) => m.canUndoMove(u), run: () => m.undoLastMove() },
+		"resupply": { can: (u) => GR.canResupply(m.map, u),
+			run: (u) => command({ type: "resupply", unit: u.id }, () => m.resupplyUnit(u)) },
+		"reinforce": { can: (u) => GR.canReinforce(m.map, u),
+			run: (u) => command({ type: "reinforce", unit: u.id }, () => m.reinforceUnit(u, false)) },
+		"reinforce over": { can: (u) => GR.canReinforce(m.map, u, true),
+			run: (u) => command({ type: "reinforce", unit: u.id, overstrength: true }, () => m.reinforceUnit(u, true)) },
+		"mount": { can: (u) => GR.canMount(u), run: (u) => command({ type: "mount", unit: u.id }, () => m.mountUnit(u)) },
+		"unmount": { can: (u) => GR.canUnmount(u), run: (u) => command({ type: "unmount", unit: u.id }, () => m.unmountUnit(u)) },
+		"embark": { can: (u) => GR.canEmbark(m.map, u), run: (u) => command({ type: "embark", unit: u.id }, () => m.embarkUnit(u), false) },
+		"disembark": { can: (u) => GR.canDisembark(m.map, u),
+			run: (u) => command({ type: "disembark", unit: u.id }, () => m.disembarkUnit(u), false) },
+		"upgrade": { can: () => true, run: (u, pick, rng) => {
+			const eqid = eqids[pick(eqids.length)];
+			const transport = rng() < 0.5 || !transports.length ? -1 : transports[pick(transports.length)];
+			return command({ type: "upgrade", unit: u.id, eqid, transport }, () => m.upgradeUnit(u.id, eqid, transport), false);
+		} },
+		"undo": { can: (u) => m.canUndoMove(u), run: (u) => command({ type: "undo", unit: u.id }, () => m.undoLastMove()) },
 		"select": { can: () => true, run: (u) => m.selectUnit(u) },
 		"neighbor": { can: () => true, run: (u, pick, rng) => {
 			const n = m.getUnitNeighbor(u, rng() < 0.5 ? 1 : -1, rng() < 0.5);
@@ -373,7 +416,7 @@ function runEngineContract(env) {
 		const units = m.getUnits().filter((u) => u.player.id == player.id && !u.destroyed);
 		if (units.length > 1 && rng() < 0.3) {
 			const u = units[pick(units.length)];
-			check("player disband", ctx + " unit#" + u.id, () => [m.disbandUnit(u.id), hash()]);
+			check("player disband", ctx + " unit#" + u.id, () => [command({ type: "disband", unit: u.id }, () => m.disbandUnit(u.id), false), hash()]);
 		}
 		const row = pick(m.rows), col = pick(m.cols), eqid = eqids[pick(eqids.length)];
 		if (!m.map[row][col].unit && !m.map[row][col].airunit)
@@ -536,8 +579,8 @@ function runEngineContract(env) {
 				place(u, hex);
 				if (!(player[field] > 0)) player[field] = 1;
 				const can = GR.canEmbark(m.map, u);
-				const r = can ? m.embarkUnit(u) : "can't";
-				const back = GR.canDisembark(m.map, u) ? m.disembarkUnit(u) : "can't";
+				const r = can ? command({ type: "embark", unit: u.id }, () => m.embarkUnit(u), false) : "can't";
+				const back = GR.canDisembark(m.map, u) ? command({ type: "disembark", unit: u.id }, () => m.disembarkUnit(u), false) : "can't";
 				return [can, r, back, contractUnitState(u), hash()];
 			});
 		}
@@ -557,7 +600,7 @@ function runEngineContract(env) {
 				const cells = GR.getMoveRange(m, u);
 				const mv = move(u, cells[pick(cells.length)]);
 				const can = m.canUndoMove(u);
-				return [mv, can, can ? m.undoLastMove() : "can't", contractUnitState(u), hash()];
+				return [mv, can, can ? command({ type: "undo", unit: u.id }, () => m.undoLastMove()) : "can't", contractUnitState(u), hash()];
 			});
 		} finally { player.type = type; ended = wasEnded; }
 	}
@@ -659,7 +702,9 @@ function runEngineContract(env) {
 		check("endTurn", ctx, () => {
 			const lastSide = player.side, human = player.type == PT.humanLocal;
 			let defeat;
-			if (X) defeat = X.endTurn(sc, localSide); // Map.endTurn: the next AI player plans its turn here
+			// Map.endTurn: the next AI player plans its turn here
+			if (C) defeat = C.execute(sc, { type: "endTurn" }, { localSide }).result;
+			else if (X) defeat = X.endTurn(sc, localSide);
 			else {
 				sc.endTurn();
 				defeat = sc.checkDefeat(lastSide, localSide);

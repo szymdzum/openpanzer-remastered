@@ -35,7 +35,7 @@ async function exposed(): Promise<Map<string, unknown>> {
 //The exports the page scripts use, by name: bare (not after a dot) or as a string (constructor.name
 //lookups: harness.js ENTITIES, common.js). Kept as a list, so a renamed export shows here
 const harnessExports = [
-	"$", "AI", "AIScripted", "Actions", "Campaign", "Cell", "CombatLog", "Equipment", "Game", "GameMap", "GameRules", "GameState",
+	"$", "AI", "AIScripted", "Actions", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
 	"Hex", "Leaders", "NATIVE_PLATFORM", "Player", "Render", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
 	"Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
 	"makeHidden", "makeVisible", "playerType", "terrainType", "uiSettings", "unitClass", "unitClassNames",
