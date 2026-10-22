@@ -20,12 +20,19 @@ export function distance(row1: number, col1: number, row2: number, col2: number)
 	return dx > dy ? ((dx - dy) / 2 + dy) >> 0 : dy;
 }
 
-//Whether (row2, col2) is one of the six neighbours of (row1, col1)
-export function isAdjacent(row1: number, col1: number, row2: number, col2: number): boolean {
-	const odd = col1 % 2;
-	if (col2 === col1) return row2 === row1 - 1 || row2 === row1 + 1;
-	if (col2 !== col1 - 1 && col2 !== col1 + 1) return false;
-	return row2 === row1 - 1 + odd || row2 === row1 + odd;
+//adjacent()'s six as offsets, for the hot paths that don't make them: an odd column's side
+//neighbours are a row lower
+const NEAR_COL = [0, -1, -1, 0, 1, 1];
+const NEAR_ROW = [-1, -1, 0, 1, 0, -1];
+
+//The column of the k-th of adjacent()'s neighbours of a cell in col
+export function neighbourCol(col: number, k: number): number {
+	return col + NEAR_COL[k];
+}
+
+//Its row
+export function neighbourRow(row: number, col: number, k: number): number {
+	return row + NEAR_ROW[k] + (NEAR_COL[k] === 0 ? 0 : col % 2);
 }
 
 //The six neighbours from north: N, NW, SW, S, SE, NE (also off the map)

@@ -61,6 +61,12 @@ measures them against the old engine on the 15 engine fixtures (2026-10-22, on a
 | Combat estimate with the hidden units (the AI's) | 3-9 µs | 2-11 µs (about even) |
 | A world from `toData` (toData included) | | 0.06-0.28 ms |
 
+The path search was a move's main cost (the old engine's compares every open hex at each turn,
+O(n²) over an air unit's 700 hexes): the core's takes the next hex from a heap ordered by distance
+then by place in the list (the later first, the old engine's tie-break), and finds the neighbours
+through a table by hex. A property checks it against the old engine's on small maps full of equal
+paths.
+
 ## Combat as steps (#118)
 
 `attackResult(world, attacker, defender, rng, record?)` runs `rules.combat`, an ordered list of
@@ -93,4 +99,5 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
   CI plays 12 sequences (about 100,000 compared answers); `FC_RUNS=120` played 120 (over a million,
   12 states with drift) with no difference.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
-  of a Pz IIA against a 7TP in a forest.
+  of a Pz IIA against a 7TP in a forest, and the path search against the old engine's on maps full
+  of equal paths.
