@@ -6,9 +6,14 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
+import type { Command, Refusal } from "../commands";
+import type { RngStream } from "../rng";
 import type { GameState, ScenarioData, UnitId, UnitState } from "../state";
+import type { GameEvent } from "./events";
 
-export type { GameState, PlayerState, Position, ScenarioData, UnitId, UnitState } from "../state";
+export type {
+	CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ScenarioData, UnitId, UnitState
+} from "../state";
 
 //The equipment by eqid, as loaded (Equipment.equipment): read-only
 export type EquipmentTable = Readonly<{ [eqid: string]: EquipmentEntry }>;
@@ -143,4 +148,25 @@ export interface Fight {
 export interface CombatStep {
 	name: string;
 	run(fight: Fight): void;
+}
+
+//A step's world (draft.ts): the state as the step changes it, copied on write so the state the step
+//was given stays as it was, with the unit index and the sight kept up to date as it goes, the game's
+//random stream and the events so far
+export interface Draft extends World {
+	readonly state: GameState;
+	index: ReadonlyMap<UnitId, number>;
+	readonly sight: Sight;
+	//The objects of the state this step copied already: it changes them in place
+	readonly copied: Set<object>;
+	//The game's stream (D8): the dice and the leaders draw from it
+	readonly rng: RngStream;
+	readonly events: GameEvent[];
+}
+
+//A command's handler (docs/REFACTOR.md, step 4): check says whether it is allowed, or why not,
+//without changing anything; run plays it on a draft, once check has allowed it
+export interface CommandHandler<C extends Command> {
+	check(w: World, cmd: C): Refusal | null;
+	run(d: Draft, cmd: C): void;
 }

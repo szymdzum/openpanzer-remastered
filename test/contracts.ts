@@ -51,7 +51,8 @@ export function contractCommon(): ContractCommon {
 
 //Restores the fixture's state, builds the environment record.js builds on the reference from
 //this repo's modules (and extra, what a test adds), applies the contract's setup and runs it
-export async function runFixture(module: string, run: string, name: string, extra?: ContractEnv) {
+//extra: more of the env, or what to add to it given the env (the modules of the restored state)
+export async function runFixture(module: string, run: string, name: string, extra?: ContractEnv | ((env: ContractEnv) => ContractEnv)) {
 	const c = contract(module, run);
 	const fixture = readFixture(module, name);
 	const scenario = await restoreState(fixture.state);
@@ -70,7 +71,9 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const { terrainType, leaderType, actionType, playerType, unitClass } = await import("../src/prototypes");
 	const env: ContractEnv = { GameRules, Equipment, Unit, AI, AIScripted, GameState, CombatLog, game, terrainType,
 		leaderType, actionType, playerType, unitClass, scenario, map: scenario.map, fuzzRounds: fixture.fuzzRounds, Actions, Commands,
-		toData, Rng, ...extra };
+		toData, Rng, ...(typeof extra === "function" ? {} : extra) };
+	if (typeof extra === "function")
+		Object.assign(env, extra(env));
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
