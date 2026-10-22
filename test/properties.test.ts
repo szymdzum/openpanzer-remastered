@@ -17,7 +17,7 @@ import { isDeepStrictEqual } from "node:util";
 import fc from "fast-check";
 import { afterAll, test } from "vitest";
 import { fixtures, restoreState } from "./contracts";
-import { cellName, counter, load, violations, type World } from "./invariants";
+import { cellName, counter, load, violations, type OldWorld as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";

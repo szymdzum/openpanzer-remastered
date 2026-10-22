@@ -13,7 +13,7 @@
 import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { compareResults, contract, fixtures } from "./contracts";
-import { load, recompute, type World } from "./invariants";
+import { load, recompute, type OldWorld as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { coreGameRules } from "./coreadapter";
 import { createWorld } from "../src/core/create";
