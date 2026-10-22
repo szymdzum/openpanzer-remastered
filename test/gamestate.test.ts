@@ -104,10 +104,10 @@ test.each(fixtures("engine"))("GameState load keeps the experience and cost per 
 		.toEqual([saved.state.scenario.expPerSide, saved.state.scenario.unitsCostPerSide]);
 });
 
-//#85: the load numbers the units again in hex order, so after a load a unit has another id.
-//Fixtures before any purchase or deployment have them in hex order already
+//#85: the load keeps the unit ids and the units' order (the AI walks them in it), where it numbered
+//them again in hex order. The fixtures after purchases and deployments have them in another order
 const renumbered = fixtures("engine").filter((f) => f.endsWith("-t2.json.gz"));
-test.fails.each(renumbered)("GameState load keeps the unit ids %s (#85)", async (name) => {
+test.each(renumbered)("GameState load keeps the unit ids %s (#85)", async (name) => {
 	const { saved, again } = await loadFixture(name);
 	const ids = (s: SaveFile) => s.state.units.map((u) => where(u) + " #" + u.id);
 	expect(ids(again)).toEqual(ids(saved));
@@ -225,6 +225,21 @@ test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz", "ruscam09-t2.json.g
 		const { unknown } = readSave(old);
 		expect(withoutUnknown(await load(old), unknown)).toEqual(withoutUnknown(await load(save), unknown));
 	});
+
+//The campaign player's core list of a save of the format before, as it had it: the units on the map
+//by id, a destroyed one lost, a bought one waiting (the campaign fixture with its first core unit
+//disbanded and a unit bought)
+test("GameState import keeps the campaign's core list of a save of the format before", async () => {
+	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
+	const { game } = await import("../src/game");
+	const player = game.getCampaignPlayer(), list = player.getCoreUnitList();
+	scenario.map.disbandUnit(list[0].id);
+	player.acquireUnit(list[1].eqid, 0);
+	const { importSave } = await import("../src/savegame");
+	const { save } = importSave(JSON.parse(oldExport(game)));
+	expect(save.state.players[player.id].core).toEqual(list.map((u, i) => i === 0 ? { lost: expect.objectContaining({ eqid: u.eqid }) }
+		: i === list.length - 1 ? { reserve: expect.objectContaining({ eqid: u.eqid }) } : { onMap: u.id }));
+});
 
 //Not a save: unreadable, another format or a later version
 test("GameState refuses what isn't a save", async () => {
