@@ -308,6 +308,47 @@ harness snapshot), new state in closures or function properties rather than fiel
 namespace objects the harness patches, the order of the random draws (the UI's sprite and
 sound picks share the stream, so hooks keep firing mid-combat), no new import cycle.
 
+**The layers and the commands (P1, and where P2 and P3 lead).** Five layers, each with one job:
+
+| Layer | Does | Doesn't | Today |
+|---|---|---|---|
+| Model | state and its primitives: place, remove, relocate a unit, count visibility | decide rules | GameMap, Unit, Hex; board, visibility, selection already split out |
+| Rules | pure queries: cost, range, combat result, "is it allowed" | change state | GameRules, after R2 and R3 modules and the Ruleset |
+| Commands | `check` (pure, asks the rules) and `run` (changes the model through its primitives, fires the hooks) | know the UI | spread over map.ts, actions.ts and ui.ts |
+| Session | the command queue, the turn, the players' `nextCommand`, the journal | compute rules | Game, `processAction`, the 1 s loop |
+| View | draws the model read-only, listens to the hooks, sends commands | change the model | ui.ts, render.ts, uibuilder.ts |
+
+A command is plain data with ids, not objects, so it can be logged, saved and sent. Each type has
+a handler in its own file (`commands/move.ts`...); a registry typed by a mapped type replaces a
+`switch`: a missing or misspelled handler doesn't compile.
+
+    type Command =
+    	| { type: "move"; unit: number; to: Cell }
+    	| { type: "attack"; unit: number; target: number }
+    	| { type: "resupply"; unit: number }
+    	| { type: "endTurn" };
+    type CommandOf<T extends Command["type"]> = Extract<Command, { type: T }>;
+
+    interface Handler<C extends Command> {
+    	check(game: GameView, cmd: C): Refusal | null;	//pure: allowed, or why not
+    	run(game: Game, cmd: C, events: Events): Result;	//changes the state, fires the hooks
+    }
+
+    const handlers: { [T in Command["type"]]: Handler<CommandOf<T>> } = { move: moveHandler, ... };
+
+`check` serves three callers: the UI greys a button and says why ("no fuel"), the AI and the LLM
+list the legal moves, the remote game (#67) validates the other player's command. The view sees
+the state through `GameView`, a read-only type, so a write from the UI doesn't compile; the
+linter already guards the import direction. Model methods that decide and change at once
+(`map.resupplyUnit`...) move into their handlers one at a time; the model keeps the primitives.
+
+The attack can't be a pure resolve-then-apply yet: the UI's sprite and sound picks draw from the
+same stream as the dice, between the support shots, so computing the whole combat first would
+reorder the draws and change every replay. In P1 the attack's `run` fires its hooks where they
+fire today: the shape is final, the draws are not moved. The split into a pure `resolve` and an
+`apply` comes with the deliberate change 7 (separate random streams): the cosmetics then draw
+from their own stream, and the attack preview and the arena get a combat without side effects.
+
 Worth checking first, for P2 and later: GameMap keeps its parts and methods as constructor
 closures so the snapshot and the save don't see them, but both list fields with `Object.keys`
 and `JSON.stringify`, which skip non-enumerable properties. Non-enumerable fields would let the
