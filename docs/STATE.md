@@ -1,8 +1,8 @@
 # The game state as data
 
-**Status: proposal (#132), to be agreed before #127.** This shape becomes `toData`'s output on the
-old engine (#127), the save format (#128) and the state of the new core (#129). The decisions
-below are numbered so a review can answer them one by one.
+**Status: agreed (#132), 2026-10-22: the recommended option of each decision.** This shape becomes
+`toData`'s output on the old engine (#127), the save format (#128) and the state of the new core
+(#129). The decisions are numbered so later changes can name the one they revise.
 
 ## Why
 
@@ -35,7 +35,7 @@ interface GameState {
 }
 
 interface ScenarioState {
-	file: string;			//the scenario's file: the static data (terrain, names) is read from it (D3)
+	file: string;			//the scenario it was loaded from, for the record (D3)
 	date: string;			//ISO date of the current turn
 	turnsPerDay: number;
 	dayTurn: number;		//lost today (#55)
@@ -150,11 +150,14 @@ reused, so it can't be read from the units left.
 removal keeps the order (`splice`), so placement order and id order are the same list. An
 index by id (`Map<UnitId, number>`) is built on load and kept by the core, not stored.
 
-**D3. Static map data stays in the scenario file.** Terrain, roads, names, deployment hexes and
-the map image don't change during a game. The state keeps `scenario.file` and the five fields
-that do change per hex. A save is smaller and can't disagree with the scenario.
-The cost: a save needs its scenario file. It always has (the loader reads it today), and a hash
-of the file in the save can catch a changed scenario.
+**D3. The static map data is separate from the state, and the save carries both.** Terrain,
+roads, names, deployment hexes and the map image don't change during a game, so they are a
+`ScenarioData` object of their own: read-only, shared, never copied by a step or an undo. The
+state's hexes hold only the five fields that change. The save is self-contained: `{ data, state }`,
+the scenario data embedded, not read back from the scenario file. The remaster will fix scenario
+files (#61, #65); a save that read the file again would then load a different map under its
+units. Unciv and Wesnoth saves carry their map the same way. The data adds about 1716 hexes
+of a few small fields, tens of kilobytes, well inside localStorage.
 
 **D4. References by id; players by index.** A unit has `owner: PlayerId`, a hex `unit: UnitId`.
 `getPlayer` already looks up by index (map.ts:708); the state makes `players[id].id === id` an
@@ -165,7 +168,8 @@ deep equal.
 session's.** Today's single slot (`UndoSlot`: the saved unit, the old owner, flag, objective,
 prestige and score) exists because objects can't be copied cheaply. In the new core the session
 keeps the state before each move; `turn.undoable` holds what the rules need to decide (the move,
-whether it spotted a unit or was surprised). Multi-level undo (#36) is then a list of states.
+whether it spotted a unit or was surprised). Multi-level undo (#36) is then a list of states: with the static data out (D3), a state is
+small enough to keep one per move.
 On the old engine (#127) `undoable` is filled from `UndoSlot`.
 
 **D6. Not state: the selection, the controllers, the UI settings, the combat log.**
@@ -183,17 +187,22 @@ On the old engine (#127) `undoable` is filled from `UndoSlot`.
 **D8. The random streams are state; the cosmetic one isn't.** After #126 the game and the AI
 draw from seeded streams whose position is saved, so a loaded game rolls the same dice as the
 one that was saved. The UI's sprite and sound picks draw from their own stream, outside the
-state.
+state. The generator is a few lines of our own, mulberry32 (the harness already seeds the game
+with it, harness/lib/harness.js:158): its whole state is one 32-bit number, so `RngState` is a
+number and a step can draw from a copy. pure-rand, which fast-check uses, doesn't document a way
+to save and restore a generator's state, and the game needs nothing more than uniform draws.
 
 **D9. The AI's removals from the equipment lists are state, while #22 is kept.** The AI's
 purchases splice the shared lists (#22), which changes what it can buy later in the session. To
 reproduce it, the state lists what was removed per country; after #22 is fixed, this goes.
 
-**D10. Spotting and zone of control are derived, not stored.** They are computed from the units
-(at most about 180 units on 1716 hexes, about 35 ms of engine work per AI turn today). Stored
-counters drift today (#72, #73), so the differential tests mask those two issues until the
-switch. `tempSpotted` is stored: it records an event (a unit fired from hiding), not a sight
-line.
+**D10. Spotting and zone of control are derived: recomputed after each step, kept beside the
+state, never saved.** They follow from the units: at most about 180 units on 1716 hexes, a few
+thousand operations per recompute, against about 35 ms of engine work per AI turn today. A
+full recompute at the end of every step can't drift, unlike today's hand-kept counters (#72,
+#73); the differential tests mask those two issues until the switch. The result is a cache
+next to the state (rebuilt on load), so queries read it without recomputing. `tempSpotted` is
+stored: it records an event (a unit fired from hiding), not a sight line.
 
 **D11. Dates as ISO strings, a version number, today's saves imported.** `version: 1` starts
 the format; a loader for the current format (the `GameStateExport` of gamestate.ts) converts
@@ -208,6 +217,19 @@ old saves, with what they lost marked as unknown.
 - **Lost today and kept by this shape:** #54, #55, #71, #83, #84, #85, #142, #149, and the units
   of #150 (they stay the AI's). Each is fixed in its own commit when the save moves to it.
 - **#149:** a save outside a campaign keeps the bought units (`core` with `reserve`).
+
+## What the decisions rest on
+
+- The state inventory of #132 (fields, closures, what the save loses), with the bugs it found:
+  #149, #150 and the stale ids noted on #64.
+- How other turn-based games keep their state: Unciv's JSON saves embed the whole tile map
+  ([a community guide to the save format](https://app.notion.com/p/WIP-Savefile-Editing-3a9c1098d3bf8050ba46c00747d5359c));
+  Wesnoth unified its save format and removed data stored twice
+  ([GSoC 2009 savegame project](https://wiki.wesnoth.org/SummerOfCodeProposal_Euschn));
+  boardgame.io keeps the game as plain data with a seeded random generator in it, so earlier
+  states can be replayed.
+- pure-rand's documentation ([github.com/dubzzz/pure-rand](https://github.com/dubzzz/pure-rand)):
+  four generators, stateful or pure, no documented way to save a generator's state.
 
 ## Size
 
