@@ -10,9 +10,9 @@
  * destroyed units removed, retreat or surrender, the elimination victory). The UI calls the second
  * from the attack animation's callback, a headless caller right after the first.
  *
- * The hooks are called synchronously where the UI animated or alerted. Their order matters: the
- * animations' sprite and sound picks draw from the same Math.random as the dice, between the
- * support fire shots.
+ * The hooks are called synchronously where the UI animated or alerted. The animations' sprite and
+ * sound picks draw from their own stream (Rng.cosmeticRandom), not the dice's, so the order of the
+ * hooks no longer moves the dice; they still fire between the support fire shots, as they did.
  *
  * checkOutcome says whether the game is over, who won and why, for any side. The game itself still
  * decides it where it did (the victory hooks, Game.endTurn's local-side defeat); the contract and

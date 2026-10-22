@@ -14,6 +14,7 @@
 
 import { uiSettings } from "./prototypes";
 import { soundData, type soundSprite } from "./sound";
+import { Rng } from "./rng";
 
 //What runAnimation is given: called back with itself when the chain ends. A method so callers
 //can pass their own data type (method parameters are bivariant)
@@ -218,7 +219,7 @@ export function animationSprite(spriteFiles: AnimationFile[], soundSpriteName: s
 	}
 
 	return function() {
-		var r = Math.floor(Math.random() * sprites.length);
+		var r = Math.floor(Rng.cosmeticRandom() * sprites.length);
 		return sprites[r];
 	}
 }

@@ -29,6 +29,7 @@ import type { ScenarioOutcome } from "./scenario";
 import { Campaign } from "./campaign";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
+import { Rng } from "./rng";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (fillCloudSavesList, buildEquipmentSortOptions)
 var div: any;
@@ -1089,12 +1090,12 @@ UIBuilder.simulateDossier = function() {
 	var i;
 
 	for (i = 0; i < units.length; i++)
-		if (Math.random() > 0.5)
+		if (Rng.cosmeticRandom() > 0.5)
 			player.addDestroyedUnitToDossier(units[i]);
 
 	var data = game.campaign.getCampaignData();
 	for (i = 0; i < data.length; i++) {
-		var outcome: number | string = Math.floor(Math.random() * 3);
+		var outcome: number | string = Math.floor(Rng.cosmeticRandom() * 3);
 		outcome = (outcome == 0) ? "victory" : ((outcome == 1) ? "tactical" : "briliant");
 		var scenarioName = game.campaign.getScenarioNameFromId(i);
 		player.addOutcomeToDossier(outcome, scenarioName);

@@ -11,7 +11,7 @@
 //   unitAt(row, col)                  the unit on a hex (ground first), for picking targets
 //   endTurn()                         presses the end turn button twice (it asks to confirm)
 // Every step is followed by settle(): the virtual clock runs until animations and AI turns are
-// done. Math.random is seeded once at the start.
+// done. Math.random and the game's other random streams (Rng.seed) are seeded once at the start.
 
 async function startScenario(file, isAI) {
 	uiSettings.isAI = isAI || [0, 1, 1, 1];
@@ -45,6 +45,9 @@ const __ui = { steps: [], errors: [] };
 // With no save the game loads the tutorial at start, let that finish first
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(window.__uiReplay.seed || 1);
+// The streams that aren't Math.random (src/rng.ts: the UI's sprite and sound picks) from the same
+// seed, where the game has them (not the original)
+if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(window.__uiReplay.seed || 1);
 
 // RENDER_LOG=1: records the renderer's render(...) calls per step, to find a redraw difference
 if (window.__uiReplay.renderLog && window.__harnessRender) {

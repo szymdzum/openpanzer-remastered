@@ -476,9 +476,10 @@ invariant tests:
   (`src/main.ts`), `harness/lib/hooks.js` hooks `Render.prototype.getCursorCanvas`, the dev
   server adds `__harnessSet` to each module (`vite.config.mts`). Renaming exported names breaks
   harness scripts: grep `harness/` before.
-- The order of `Math.random` draws is behavior: UI sprite and sound picks share the stream with
-  the dice and the AI. Don't move a draw, don't skip one (the leader roll draws even when
-  unused).
+- The order of the draws within a stream is behavior: the game stream (`Rng.random`, the dice,
+  the leaders and the AI, read from `Math.random` until it is seeded) and the cosmetic stream
+  (`Rng.cosmeticRandom`, the UI's sprite and sound picks, #126). Don't move a draw, don't skip
+  one (the leader roll draws even when unused), don't draw a UI pick from the game stream.
 - Contract tests sit outside `describe` blocks on purpose (Stryker), and the tests' time zone
   is pinned to Europe/Warsaw (the recording's).
 - Node: `export PATH="$(nvmrc-bin):$PATH"` before npm in this repo.
