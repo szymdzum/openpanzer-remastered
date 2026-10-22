@@ -123,10 +123,10 @@ test.fails("GameState load keeps tempSpotted (#84)", async () => {
 	}
 });
 
-//#71: the load gives the turn to the first player. The game saves right after Scenario.endTurn
+//#71: the turn stays with the player who had it. The game saves right after Scenario.endTurn
 //(Game.endTurn), so a save is usually made on the next player's turn. The AI players (of a
 //campaign) plan nothing here: Map.endTurn asks their handler
-test.fails.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
+test.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 	"GameState load keeps whose turn it is (#71) %s", async (name) => {
 		const scenario = await restoreState(readFixture("engine", name).state);
 		for (const p of scenario.map.getPlayers())
@@ -137,6 +137,31 @@ test.fails.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 		const again = await load(JSON.stringify(saved));
 		expect(again.state.turn.currentPlayer).toBe(saved.state.turn.currentPlayer);
 	});
+
+//#71: a game loaded on an AI player's turn has the AI plan it, as the end of the turn before had it
+//plan: the game (Game.setupGameState) gives the player its AI and the AI its turn
+test("GameState load on the AI's turn has the AI play it (#71)", async () => {
+	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
+	for (const p of scenario.map.getPlayers())
+		p.handler = { buildActions() {}, getAction() { return null; } };
+	scenario.endTurn();
+	const ai = scenario.map.currentPlayer.id, save = await exportGame();
+	const game = await playing("drpzop01-t0.json.gz");
+	const { Game } = await import("../src/game");
+	const { uiSettings, playerType } = await import("../src/prototypes");
+	game.setupGameState = new Game().setupGameState; //Game's own, restoreState's stand-in only waits
+	uiSettings.isAI[ai] = 1;
+	try {
+		const old = game.scenario;
+		game.state.restoreFromString(save);
+		await loadedAfter(old);
+		const player = game.scenario.map.currentPlayer;
+		expect([player.id, player.type]).toEqual([ai, playerType.aiLocal]);
+		expect(player.handler.getAction(), "the AI planned its turn").not.toBeNull();
+	} finally {
+		uiSettings.isAI[ai] = 0;
+	}
+});
 
 //The core lists by where their units stand: what stays when the ids don't (#85)
 function coreLists(s: SaveFile) {
@@ -216,7 +241,7 @@ async function startup() {
 	vi.resetModules(); //a new page, the local save stays
 	const { game: fresh } = await import("../src/game");
 	clearInterval(fresh.loop);
-	fresh.ui = { setNewScenario() {} } as unknown as typeof fresh.ui;
+	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {} } as unknown as typeof fresh.ui;
 	fresh.init();
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the startup restore");
 	return JSON.parse(await exportGame()) as SaveFile;
@@ -261,7 +286,7 @@ async function playing(name: string) {
 	const { game, Game } = await import("../src/game");
 	game.cleanup = new Game().cleanup; //Game's own: the methods are its constructor's closures
 	game.state = new GameState(game);
-	game.ui = { setNewScenario() {} } as unknown as typeof game.ui;
+	game.ui = { setNewScenario() {}, handleReinforcementDeployment() {} } as unknown as typeof game.ui;
 	return game;
 }
 

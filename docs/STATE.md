@@ -203,8 +203,9 @@ and builds the game with fromData.
   in hex order, as its load always did. A save without an equipment set (older than 3.x) keeps the
   game's set, as before.
 - **Lost on load until fixed.** The load first did what the old load did, so the format changed
-  nothing else; each loss is fixed in its own commit, naming its issue. Still lost: whose turn
-  (#71), the partial edges (#54), the time of day (#55), the experience and cost per side (#83),
+  nothing else; each loss is fixed in its own commit, naming its issue. Fixed: whose turn (#71; a
+  game loaded on an AI's turn has the AI plan the turn again, its plan isn't state, D6). Still
+  lost: the partial edges (#54), the time of day (#55), the experience and cost per side (#83),
   tempSpotted (#84), the unit ids and order (#85), the campaign player's core list (rebuilt from
   the map with the AI's core units, #142, #150), the other players' core lists (#149), and of #128
   itself the undo, the random streams, the equipment lists, the campaign's progress and the

@@ -160,6 +160,7 @@ export class Game {
 			setupPlayers(this);
 			localPlayingSide = getLocalSide(this.scenario.map.getPlayers());
 			this.setCurrentSide();
+			startLoadedTurn(this);
 
 			this.gameStarted = true;
 			needScenarioLoad = this.gameEnded = false;
@@ -196,6 +197,8 @@ export class Game {
 			const players = this.scenario.map.getPlayers();
 			localPlayingSide = getLocalSide(players);
 			this.setCurrentSide();
+			if (isRestore)
+				startLoadedTurn(this);
 
 			this.waitUIAnimation = false;
 			this.gameStarted = true;
@@ -472,6 +475,15 @@ export class Game {
 					UIBuilder.showPrototypeAwardMessage(protoId);
 				}
 			}
+		}
+
+		//A game loaded on an AI player's turn (#71): the AI plans the turn again, its plan isn't saved
+		//(docs/STATE.md D6). Its turn's start (the purchases and the deployment) was before the save.
+		//The scripted AI queues its turn when it's made (setupPlayers)
+		function startLoadedTurn(game: Game) {
+			const player = game.scenario.map.currentPlayer;
+			if (player && player.type == playerType.aiLocal)
+				(player.handler as AI).planTurn();
 		}
 
 		//Returns which sides are played by players on this computer
