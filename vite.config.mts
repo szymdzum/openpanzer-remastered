@@ -66,7 +66,7 @@ export default defineConfig({
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
 				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/core/*.ts", "src/core/commands/*.ts"],
-			exclude: ["src/core/types.ts", "src/core/events.ts"], //types only
+			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -95,6 +95,8 @@ export default defineConfig({
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 87, lines: 95 },
 				"src/state.ts": { statements: 98, branches: 91, functions: 96, lines: 98 },
+				"src/core/ai.ts": { statements: 98, branches: 95, functions: 96, lines: 99 },
+				"src/core/aiscore.ts": { statements: 97, branches: 98, functions: 95, lines: 96 },
 				"src/core/attack.ts": { statements: 96, branches: 97, functions: 90, lines: 97 },
 				"src/core/campaign.ts": { statements: 93, branches: 89, functions: 94, lines: 98 },
 				"src/core/combat.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
@@ -109,6 +111,7 @@ export default defineConfig({
 				"src/core/newgame.ts": { statements: 97, branches: 87, functions: 96, lines: 99 },
 				"src/core/rules.ts": { statements: 80, branches: 100, functions: 50, lines: 80 },
 				"src/core/scenariofile.ts": { statements: 90, branches: 75, functions: 91, lines: 94 },
+				"src/core/session.ts": { statements: 94, branches: 86, functions: 93, lines: 98 },
 				"src/core/sight.ts": { statements: 94, branches: 94, functions: 85, lines: 96 },
 				"src/core/step.ts": { statements: 92, branches: 100, functions: 66, lines: 90 },
 				"src/core/supply.ts": { statements: 97, branches: 97, functions: 90, lines: 98 },

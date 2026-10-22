@@ -47,7 +47,7 @@ export function counter(isSet: () => boolean, set: (on: boolean) => void): numbe
 //Every unit's zone of control and spotting put on an empty board with the game's own per-unit
 //functions: a board hex counts what the game adds, and claims to be spotted already, so
 //setSpotRange marks no unit as newly spotted
-export function recompute(w: World) {
+export function recompute(w: Board) {
 	const { m, GameRules } = w;
 	const board: { zoc: number[]; spot: number[] }[][] = [];
 	const shadow: Hex[][] = [];
@@ -71,6 +71,38 @@ export function recompute(w: World) {
 		GameRules.setSpotRange(shadow, u, true, m.rows, m.cols);
 	}
 	return board;
+}
+
+//What the counters' checks read of the old engine: its map and its rules
+export type Board = Pick<World, "m" | "GameRules">;
+
+//Whether the old engine's counters equal the sight given, count for count
+export function countersEqual(w: Board, spot: (side: number, i: number) => number, zoc: (side: number, i: number) => number): boolean {
+	const counters = w.m.getBoard().visibility.counters;
+	for (let r = 0; r < w.m.rows; r++)
+		for (let c = 0; c < w.m.cols; c++)
+			for (const side of [0, 1]) {
+				const i = r * w.m.cols + c;
+				if (counters[r][c].spot[side] !== spot(side, i) || counters[r][c].zoc[side] !== zoc(side, i)) return false;
+			}
+	return true;
+}
+
+//The old engine's counters as its units make them
+export function resync(w: Board) {
+	const board = recompute(w), counters = w.m.getBoard().visibility.counters;
+	for (let r = 0; r < w.m.rows; r++)
+		for (let c = 0; c < w.m.cols; c++) {
+			counters[r][c].spot = board[r][c].spot.slice();
+			counters[r][c].zoc = board[r][c].zoc.slice();
+		}
+}
+
+//The old engine's counters drifted from its own units (#72, #73)
+export function drifted(w: Board): boolean {
+	const board = recompute(w);
+	return !countersEqual(w, (side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].spot[side],
+		(side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].zoc[side]);
 }
 
 type Add = (kind: string, text: string) => void;

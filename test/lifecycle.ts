@@ -68,9 +68,10 @@ export async function freshGame(): Promise<Game> {
 }
 
 //Starts a state of record.sh the way record.js does, before the AI plays: Math.random seeded, then
-//Game.newScenario (a scenario file, its players human; "scripted:<file>", every player the
-//scripted AI) or Game.newCampaign ("campaign:<index>:<difficulty>"). Resolves when it has loaded
-export async function startState(game: Game, item: string) {
+//Game.newScenario (a scenario file, its players human, or as isAI says; "scripted:<file>", every
+//player the scripted AI) or Game.newCampaign ("campaign:<index>:<difficulty>"). Resolves when it has
+//loaded
+export async function startState(game: Game, item: string, isAI = [0, 0, 0, 0]) {
 	const { uiSettings } = await import("../src/prototypes");
 	Math.random = mulberry32(1);
 	const old = game.scenario;
@@ -80,7 +81,7 @@ export async function startState(game: Game, item: string) {
 	} else {
 		const scripted = item.startsWith("scripted:");
 		const file = scripted ? item.slice("scripted:".length) : item;
-		uiSettings.isAI = scripted ? [2, 2, 2, 2] : [0, 0, 0, 0];
+		uiSettings.isAI = scripted ? [2, 2, 2, 2] : isAI;
 		game.campaign = null;
 		const entry = scenariolist.find((x) => x[0] === file);
 		game.newScenario(file, entry ? entry[2] : "");

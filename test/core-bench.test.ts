@@ -142,3 +142,37 @@ test.runIf(!!process.env.BENCH)("Benchmark: the core's end of turn against the o
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
+
+//An AI turn on each fixture, every player the AI (test/aigames.ts, src/core/session.ts): the plan of the
+//current player's turn alone, then the turn played to its end (its orders, the end of turn, the next
+//player's turn start and plan, the reinforcements), the old game as Game plays it against the core's
+//session, in ms, best of 5 (the fixture loaded again before each round, not timed)
+test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core against the old AI", async () => {
+	const { startFixture, oldAdvance, planLoadedTurn } = await import("./aigames");
+	const { aiController } = await import("../src/core/ai");
+	const { startSession, playTurn } = await import("../src/core/session");
+	const rows: string[] = ["fixture, orders | plan old/core ms | turn old/core ms"];
+	for (const name of fixtures("engine").filter((f) => !f.startsWith("scripted"))) {
+		const best = { planOld: Infinity, planCore: Infinity, turnOld: Infinity, turnCore: Infinity };
+		let orders = 0;
+		for (let round = 0; round < 5; round++) {
+			const g = await startFixture(name, round + 1);
+			const w = createWorld(g.toData(g.game.scenario, g.game), g.Equipment.equipment, { spotSide: -1 });
+			let t = performance.now();
+			const s = startSession(w, (type, player) => type === g.playerType.aiLocal ? aiController(player) : null, { loaded: true, localSide: -1 });
+			best.planCore = Math.min(best.planCore, performance.now() - t);
+			t = performance.now();
+			planLoadedTurn(g);
+			best.planOld = Math.min(best.planOld, performance.now() - t);
+			t = performance.now();
+			orders = playTurn(s).length - 1;
+			best.turnCore = Math.min(best.turnCore, performance.now() - t);
+			t = performance.now();
+			while (oldAdvance(g).kind === "order");
+			best.turnOld = Math.min(best.turnOld, performance.now() - t);
+		}
+		const ms = (x: number) => x.toFixed(1);
+		rows.push(`${name} ${orders} | ${ms(best.planOld)} / ${ms(best.planCore)} | ${ms(best.turnOld)} / ${ms(best.turnCore)}`);
+	}
+	fs.writeSync(2, rows.join("\n") + "\n");
+}, 600_000);

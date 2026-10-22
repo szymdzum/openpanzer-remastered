@@ -456,6 +456,14 @@ order. Differential tests play random command sequences on both engines and comp
 sight and the events after every command; the engine contract's own commands are stepped on the
 core too. The end of turn is the next layer's (#135).
 
+**How #136 goes (stage C4).** docs/CORE.md, "The controllers" and "A game headless": a `Controller`
+(join, startTurn, plan, next) answering in the same `Command` values; the AI on the core plans its
+whole turn at its start as the old one did, its draws from its own stream in the old order, and hands
+its queue out; `startSession` and `advance` play a game in Game's order. The old game played headless
+(test/aigames.ts) and the core's session play the engine fixtures and the replay's items in lockstep,
+compared after every order and turn; the engine contract's AI turns run on the core's AI beside the
+old one. The AI's settings moved to src/prototypes.ts, which the core may read.
+
 ### Not worth it now
 
 - Optimizing AI or pathfinding: ~35 ms of engine work per AI turn. The 1 s tick per action

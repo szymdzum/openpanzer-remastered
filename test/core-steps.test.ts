@@ -28,7 +28,8 @@ import fs from "node:fs";
 import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { type ContractEnv, fixtures, runFixture } from "./contracts";
-import { load, recompute } from "./invariants";
+import { countersEqual, drifted, load, resync } from "./invariants";
+import { difference } from "./aigames";
 import { createWorld } from "../src/core/create";
 import { computeSight } from "../src/core/sight";
 import { check, step, type Stepped } from "../src/core/step";
@@ -210,35 +211,6 @@ function freeze(o: unknown) {
 	for (const v of Object.values(o)) freeze(v);
 }
 
-//Whether the old engine's counters equal the sight given, count for count
-function countersEqual(w: World, spot: (side: number, i: number) => number, zoc: (side: number, i: number) => number): boolean {
-	const counters = w.m.getBoard().visibility.counters;
-	for (let r = 0; r < w.m.rows; r++)
-		for (let c = 0; c < w.m.cols; c++)
-			for (const side of [0, 1]) {
-				const i = r * w.m.cols + c;
-				if (counters[r][c].spot[side] !== spot(side, i) || counters[r][c].zoc[side] !== zoc(side, i)) return false;
-			}
-	return true;
-}
-
-//The old engine's counters as its units make them
-function resync(w: World) {
-	const board = recompute(w), counters = w.m.getBoard().visibility.counters;
-	for (let r = 0; r < w.m.rows; r++)
-		for (let c = 0; c < w.m.cols; c++) {
-			counters[r][c].spot = board[r][c].spot.slice();
-			counters[r][c].zoc = board[r][c].zoc.slice();
-		}
-}
-
-//The old engine's counters drifted from its own units (#72, #73)
-function drifted(w: World): boolean {
-	const board = recompute(w);
-	return !countersEqual(w, (side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].spot[side],
-		(side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].zoc[side]);
-}
-
 const stats = { sequences: 0, commands: 0, refused: 0, oldThrew: 0, ended: 0 } as Record<string, number>;
 afterAll(() => { if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(stats) + "\n"); });
 
@@ -321,14 +293,6 @@ function sightProblem(w: CoreWorld, sameAsOld: boolean): string {
 
 function storyProblem(old: string[], core: string[]): string {
 	return old.join("; ") === core.join("; ") ? "" : `old hooks: ${old.join("; ")}\n  core events: ${core.join("; ")}`;
-}
-
-//Where two texts first differ
-function difference(want: string, got: string): string {
-	let d = 0;
-	while (d < want.length && want[d] === got[d]) d++;
-	const cut = (t: string) => t.slice(Math.max(0, d - 150), d + 150);
-	return "\n    old  " + cut(want) + "\n    core " + cut(got);
 }
 
 //The end of turn as game.ts plays it on both: the command, the turn limit's defeat, the side shown,
