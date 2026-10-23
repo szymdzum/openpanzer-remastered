@@ -66,7 +66,7 @@ The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` o
 and types: no UI module, no mutable object of the old engine (the linter checks it).
 
 **Kept bugs are kept.** The classic ruleset reproduces the old engine exactly, every kept bug
-included (#87, #88, #90, #95, #19, #23...): they are fixed after the switch, in the core.
+included (#87, #88, #90, #95, #19...): they are fixed after the switch, in the core.
 
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
 only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table
