@@ -50,10 +50,7 @@ const RUNS = process.env.FC_RUNS ? Number(process.env.FC_RUNS) : 0;
 
 //The game: every player human (as the undo needs), but a campaign's other players (Game makes them
 //AI on every load); the game stream seeded, so the dice have a position in the state
-//keep: the core plays on the old engine's counters with their arithmetic (World.keepDrift), as the
-//running game does until the counters go (#137): its sight must be the old counters after every command,
-//drift included, and nothing is masked
-async function start(seq: Sequence, keep = false) {
+async function start(seq: Sequence) {
 	const w = await load(seq.fixture);
 	const { toData } = await import("../src/state");
 	const { Actions } = await import("../src/actions");
@@ -62,26 +59,12 @@ async function start(seq: Sequence, keep = false) {
 	w.game.spotSide = w.m.currentPlayer.side;
 	w.Rng.game.state = seq.seed >>> 0;
 	const data = () => toData(w.scenario, w.game);
-	return { w, Actions, data, keep, core: coreOf(w, data, keep), log: [] as string[] };
+	return { w, Actions, data, core: coreOf(w, data), log: [] as string[] };
 }
 type Play = Awaited<ReturnType<typeof start>>;
 
-function coreOf(w: World, data: () => ReturnType<typeof ToData>, keep = false): CoreWorld {
-	return createWorld(data(), w.Equipment.equipment, { spotSide: w.game.spotSide, sight: keep ? oldCounters(w) : undefined,
-		keepDrift: keep });
-}
-
-//The old engine's counters as the core's sight, count for count
-function oldCounters(w: World): CoreWorld["sight"] {
-	const counters = w.m.getBoard().visibility.counters, n = w.m.rows * w.m.cols;
-	const sight = { spot: [new Uint16Array(n), new Uint16Array(n)], zoc: [new Uint16Array(n), new Uint16Array(n)] } as CoreWorld["sight"];
-	for (let r = 0; r < w.m.rows; r++)
-		for (let c = 0; c < w.m.cols; c++)
-			for (const side of [0, 1]) {
-				sight.spot[side][r * w.m.cols + c] = counters[r][c].spot[side];
-				sight.zoc[side][r * w.m.cols + c] = counters[r][c].zoc[side];
-			}
-	return sight;
+function coreOf(w: World, data: () => ReturnType<typeof ToData>): CoreWorld {
+	return createWorld(data(), w.Equipment.equipment, { spotSide: w.game.spotSide });
 }
 
 //What the old engine's hooks saw, as text
@@ -150,19 +133,12 @@ function compareStates(p: Play, cmd: Command, core: CoreWorld, events: GameEvent
 	const { w } = p;
 	const want = JSON.stringify(p.data().state), got = JSON.stringify(core.state);
 	const sightOk = countersEqual(w, (side, i) => core.sight.spot[side][i], (side, i) => core.sight.zoc[side][i]);
-	if ((want !== got || !sightOk) && !p.keep && drifted(w)) return masked(p, cmd, core, want === got);
+	if ((want !== got || !sightOk) && drifted(w)) return masked(p, cmd, core, want === got);
 	p.core = core;
 	for (const e of events) count("event " + e.type);
-	const problems = [want !== got ? "toData:" + difference(want, got) : "", keptSightProblem(p, core, sightOk),
+	const problems = [want !== got ? "toData:" + difference(want, got) : "", sightProblem(core, sightOk),
 		storyProblem(story, coreStory(events))].filter((x) => x !== "");
 	return problems.length ? problems.join("\n") : null;
-}
-
-//The core's sight: on the old counters (keep), those counters, drift included; else sightProblem's
-function keptSightProblem(p: Play, core: CoreWorld, sightOk: boolean): string {
-	if (!p.keep) return sightProblem(core, sightOk);
-	if (drifted(p.w)) count("drifted, kept");
-	return sightOk ? "" : "the core's sight isn't the old counters";
 }
 
 //The old engine's counters drifted (#72, #73): with the same state, it goes on with the counters its
@@ -300,8 +276,8 @@ function outcomeProblem(p: Play, ended?: number): string | null {
 	return null;
 }
 
-async function run(seq: Sequence, keep = false): Promise<void> {
-	const p = await start(seq, keep);
+async function run(seq: Sequence): Promise<void> {
+	const p = await start(seq);
 	stats.sequences++;
 	const played = () => seq.fixture + ", seed " + seq.seed + ":\n  " + p.log.join("\n  ");
 	Object.assign(seq, { [fc.toStringMethod]: played });
@@ -324,13 +300,6 @@ test("Property: the core's commands play as the old engine's, state, sight and e
 	expect(stats.commands).toBeGreaterThan(0);
 }, RUNS ? RUNS * 5000 : 120_000);
 
-
-test("Property: on the old counters with their arithmetic, the core's sight stays the old counters, drift included (#72, #73)", async () => {
-	const before = stats.commands;
-	await fc.assert(fc.asyncProperty(sequences, (seq) => run(seq, true)), { seed: SEED + 1, path: process.env.FC_PATH, numRuns: RUNS || 20 });
-	expect(stats.commands).toBeGreaterThan(before);
-	expect(stats["drifted, kept"]).toBeGreaterThan(0);
-}, RUNS ? RUNS * 5000 : 120_000);
 
 //Every fixture's turns ended one after the other past its turn limit, the screen showing one side as
 //against the AI (the side that hides units in the end of turn, #75) or none (AI against AI), both

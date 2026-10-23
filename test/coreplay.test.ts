@@ -7,12 +7,13 @@
 //command both tell the same story:
 //- the hooks called, in order, with what they were given (cells, units, strengths, the combat result,
 //  the move's hexes and what the other side saw of them);
-//- toData's state, the selection's hexes and unit, the counters, the combat log, the image cache.
+//- toData's state, the selection's hexes and unit, the combat log, the image cache (not the counters:
+//  the old engine's drift, #72, #73, which the core's sight computed from the units doesn't have).
 import fs from "node:fs";
 import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { commandOf, type Sequence, sequences } from "./commandgen";
-import { load } from "./invariants";
+import { drifted, load } from "./invariants";
 import { difference } from "./aigames";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
@@ -156,8 +157,8 @@ function snapshot(w: World): string {
 	const m = w.m, hexes: string[] = [];
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
-			const h = m.map[r][c], k = m.getBoard().visibility.counters[r][c];
-			hexes.push(`${+h.isMoveSel}${+h.isAttackSel}${k.spot.join("")}${k.zoc.join("")}`);
+			const h = m.map[r][c];
+			hexes.push(`${+h.isMoveSel}${+h.isAttackSel}`);
 		}
 	return JSON.stringify({ state: w.toData(w.scenario, w.game).state, selected: m.currentUnit ? m.currentUnit.id : null,
 		moveCells: m.getCurrentMoveRange().map((c) => c.row + "," + c.col).join(" "), hexes: hexes.join(","),
@@ -199,7 +200,7 @@ async function playOn(seq: Sequence, engine: Engine, commands?: (Command | null)
 		: (cmd: Command, hooks?: unknown) => CorePlay.execute(w.scenario, cmd, hooks as never);
 	const p = new Play(w, engine, execute);
 	const played: (Command | null)[] = [], steps: string[] = [];
-	for (let i = 0; i < seq.steps.length && !w.Actions.checkOutcome(w.scenario); i++) {
+	for (let i = 0; i < (commands ? commands.length : seq.steps.length) && !w.Actions.checkOutcome(w.scenario); i++) {
 		const cmd = commands ? commands[i] : commandOf(w, seq.steps[i]);
 		played.push(cmd);
 		if (cmd === null) continue;
@@ -207,6 +208,12 @@ async function playOn(seq: Sequence, engine: Engine, commands?: (Command | null)
 		p.story = [];
 		count(engine + " " + cmd.type);
 		p.run(cmd, seq.steps[i].any % 2 === 1);
+		//(where the old engine's counters drift, #72 and #73, the core's sight doesn't: the two part there,
+		//the command played on both, not compared)
+		if (engine === "old" && drifted(w)) {
+			count("drifted");
+			break;
+		}
 		steps.push(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ") + "\n" + snapshot(w));
 	}
 	return { steps, commands: played };
@@ -216,7 +223,7 @@ async function both(seq: Sequence) {
 	if (process.env.FC_TRACE) fs.appendFileSync(process.env.FC_TRACE, JSON.stringify(seq) + "\n");
 	const old = await playOn(seq, "old");
 	const core = await playOn(seq, "core", old.commands);
-	for (let i = 0; i < Math.max(old.steps.length, core.steps.length); i++)
+	for (let i = 0; i < old.steps.length; i++)
 		if (old.steps[i] !== core.steps[i])
 			throw new Error(`${seq.fixture}, step ${i}: ${(old.steps[i] || "").split("\n").filter((l) => !l.startsWith("{\"state")).join("\n")}${difference(old.steps[i] || "", core.steps[i] || "")}`);
 	count("sequences");

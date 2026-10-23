@@ -17,7 +17,6 @@ export interface WorldOptions {
 	spotSide?: number;		//-1, no side
 	destroyed?: ReadonlySet<UnitId>;
 	sight?: Sight;			//given instead of computed (a test reads the old engine's counters)
-	keepDrift?: boolean;		//the sight given drifts as the old engine's counters (World.keepDrift)
 }
 
 export function createWorld(saved: { data: ScenarioData; state: GameState }, equipment: EquipmentTable,
@@ -27,7 +26,7 @@ export function createWorld(saved: { data: ScenarioData; state: GameState }, equ
 		data, state, equipment, rules: options.rules || classicRules, noFOW: !!options.noFOW,
 		spotSide: options.spotSide === undefined ? -1 : options.spotSide,
 		destroyed: options.destroyed || new Set(), index: unitIndex(state),
-		sight: options.sight || emptySight(state.map.rows * state.map.cols), keepDrift: !!options.keepDrift, scratch: null,
+		sight: options.sight || emptySight(state.map.rows * state.map.cols), scratch: null,
 	};
 	return options.sight ? w : { ...w, sight: computeSight(w) };
 }

@@ -479,11 +479,10 @@ them, and the game runs on the session.
   so what the harness and the UI write into them keeps its effect; `mirrorDifference` compares the two.
   test/mirror.test.ts plays every engine fixture's round as the AI and random commands a person sends,
   checkpoint by checkpoint, and checks after each piece: the same toData, the same counters, every unit
-  the object it was, the world made again the same. Until the counters go, the world's sight is the old
-  counters with their arithmetic (`keepDrift`, docs/CORE.md): the drift of #72 and #73 shows up in
-  verify's UI scripts, so the game keeps it until the last step, and core-steps and core-ai play the
-  core on the drifting counters too (900 drifted states in 300 sequences, 175 in the AI's games: always
-  the old counters).
+  the object it was, the world made again the same. Until the last step the world's sight was the old
+  counters with their arithmetic (`keepDrift`: the drift of #72 and #73 shows in verify's UI scripts,
+  so the game kept it until then; 900 drifted states in 300 sequences played that way, always the old
+  counters). The last step computes the sight from the units and writes it into the counters.
 - The game's commands on the core (src/coreplay.ts, `CorePlay.execute`, the entry and hooks of
   `Commands.execute`): every command the person and the AI send is stepped on the world made from the
   objects, checkpoint by checkpoint, and mirrored after each piece; what the old commands did beside the
@@ -534,6 +533,12 @@ them, and the game runs on the session.
   test/gameturn.test.ts plays the campaigns on to their next scenario both ways. The differences:
   the next scenario's counters have no phantom zone of control or spotting from the removed units
   (#72), and a player whose core units all fell carries none (#183).
+- The sight computed from the units (D10): `worldOf` no longer takes the counters, `keepDrift` is gone,
+  and applyData writes the world's sight into them for the screen. The harness's teleports still switch
+  the counters (GameRules.setZOCRange and setSpotRange) so the screen shows them until the next command.
+  Expected verify differences: the counters' drift where the old engine forgot to switch them (#73: an
+  embark, a disembark, an upgrade, a leader that sees farther) and what followed from it (a unit marked
+  seen, a move range).
 
 ### Not worth it now
 

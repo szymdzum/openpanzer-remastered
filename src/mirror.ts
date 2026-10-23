@@ -12,9 +12,8 @@
  * carrier flips) is read back by worldOf, which makes the world again from toData of the objects: the
  * writes keep the effect they had on the old engine. checkMirror says when the two differ.
  *
- * The spotting and zone of control counters stay the old engine's until the switch removes them: the
- * world takes them as its sight and keeps their arithmetic (World.keepDrift), so they drift as before
- * (#72, #73), and applyData writes the world's sight back into them.
+ * The spotting and zone of control are the core's, computed from the units (D10: no drift, #72, #73):
+ * applyData writes the world's sight into the hexes' counters, which the screen reads.
  */
 
 import { Cell } from "./prototypes";
@@ -51,13 +50,12 @@ export function unitObject(m: GameMap, id: number): Unit | null {
 	return u !== null ? u : seenUnits(m).get(id) || null;
 }
 
-//The world of the objects as they are now: toData's state, the old counters as the sight (drifting as
-//they did), the units destroyed by an attack whose cleanup hasn't run yet
+//The world of the objects as they are now: toData's state, its sight computed from the units, the units
+//destroyed by an attack whose cleanup hasn't run yet
 export function worldOf(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): World {
 	const m = scenario.map;
 	const destroyed = new Set(m.getUnits().filter((u) => u.destroyed).map((u) => u.id));
-	return createWorld(toData(scenario, host), Equipment.equipment, { spotSide: inputs.spotSide, noFOW: inputs.noFOW, destroyed,
-		sight: countersOf(m), keepDrift: true });
+	return createWorld(toData(scenario, host), Equipment.equipment, { spotSide: inputs.spotSide, noFOW: inputs.noFOW, destroyed });
 }
 
 //The old counters, count for count

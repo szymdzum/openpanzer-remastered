@@ -37,10 +37,6 @@ export interface World {
 	readonly index: ReadonlyMap<UnitId, number>;
 	//Spotting and zone of control (D10)
 	readonly sight: Sight;
-	//The sight given is the old engine's counters, kept with their arithmetic: no switch where the old
-	//engine forgot one (#73), no count below 0. Only while the running game keeps the old counters
-	//(#137); the core's own sight never drifts (#72, #73)
-	readonly keepDrift: boolean;
 	//The move range's hex -> cell table, reused from one call to the next (movement.ts)
 	scratch: Int32Array | null;
 }
