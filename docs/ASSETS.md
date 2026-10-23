@@ -369,6 +369,44 @@ rigid things with scale drawings (vehicles, guns: the leFH 18 next).
 | AI image to 3D (TRELLIS.2) | needs about 24 GB of memory, the laptop has 16 |
 | Pose from a photo (SMPL, HMR) | research-only licences |
 
+## How to make the next unit
+
+The two pilots, and three independent projects that render Blender models as sprites by script
+([3d-to-pixel-sprite][a2p], [blender-game-skills][bgs], [blender-kiln][kiln]), come to the same
+way of working. The tank followed it and worked; the infantry broke it (a pose made by numbers,
+judged by eye, the same numbers nudged round after round) and didn't.
+
+1. **The reference first.** A scale drawing for the shape (the tank: a side view, 269 px a
+   metre), photographs for what the drawing lacks, and the old strip itself: its frame size (not
+   always 80×50), the line its feet or tracks end on, its palette. Every number in the model
+   script is either measured, with a comment naming the view it came from, or marked as a guess.
+2. **Gates on evidence, not on looking.** Render from the reference's own camera and compare:
+   the outline overlap with the drawing (the tank: 90%), the outline, area and foot line against
+   each old frame (the tank: every frame's area within 5%), where the mass sits (widest at the
+   bottom, not the top). "It looks fine in the render" is not a gate.
+3. **The old strip is the target, not the real vehicle.** The game's figures are squatter and
+   heavier at the bottom than real ones; match the pixels (`pxm`, `squash`, `widen`, `CENTRE` in
+   `render.py pixel`), keep the model's real measurements.
+4. **Three tries, then change the approach.** If a gate is still failing after about three
+   rounds, write down why and change something else (the camera, the proportions, the source of
+   the pose), instead of nudging the same number again.
+5. **A pose comes from somewhere, never from numbers.** For figures: whole motion-capture
+   animations (Mixamo), the frame and turn picked by the best outline overlap with the old
+   figure, never two animations glued together.
+6. **The sprite's own rules**: hard pixels in the old strip's palette, a dark rim, a black
+   shadow, the old camouflage; thin parts (guns, antennae, rifles) thicker than real or drawn from
+   their own render pass; turn the model, not the camera, so the light stays put; the Standard view
+   transform.
+7. **The last gate is the owner's eye**: an old-against-new sheet at 4×, then the strip in the
+   game (`public/hd/units/images/NAME.webp`). Numbers don't judge readability.
+8. **One Blender render at a time.** Four at once, on top of the tests, crashed the laptop.
+
+For infantry this means: the old figures (`jk467`, `le126`) as the reference, the pose picked
+automatically from the frames of whole Mixamo animations by outline overlap, the proportions
+matched to the old figures' pixels, the owner's sign-off. A stylized low-poly soldier
+([World War Soldier][wws], 9.99 $, rigged, with a rifle; licence to check) may read better at
+25 px than the realistic Mixamo character: small sprites read better with less detail.
+
 ## Plan
 
 1. Unit pilots: the Panzer IV H (above), modelled from a drawing rather than taken from Spring:
@@ -377,7 +415,7 @@ rigid things with scale drawings (vehicles, guns: the leFH 18 next).
 2. Map pilot: one map through Real-ESRGAN with the "anti-plastic" pass, compared 1:1, the grid
    check.
 3. After the pilots, before going on: a style guide (camera angle, light, outline, palette,
-   saturation).
+   saturation), following "How to make the next unit".
 4. Batches of archetypes, each model's credit and licence recorded.
 
 ## Sources
@@ -395,6 +433,8 @@ rigid things with scale drawings (vehicles, guns: the leFH 18 next).
   [PG2 mod for Panzer Corps 2][pc2mod]
 - AI 3D: [comparison][cmp1], [TRELLIS.2 vs others][cmp2], [trellis-mac test][tmac],
   [Hunyuan3D licence][hlic]
+- Sprite pipelines: [3d-to-pixel-sprite][a2p], [blender-game-skills][bgs], [blender-kiln][kiln],
+  [World War Soldier][wws]
 - Maps: [Beamdog: upscaling IE maps][bd1], [Beamdog: REAL-ESRGAN][bd2],
   [Tripo: texture upscaling][tripo], [Scenario: isometric tiles][scn], [ControlNet Tile][cnt]
 
@@ -435,3 +475,7 @@ rigid things with scale drawings (vehicles, guns: the leFH 18 next).
 [tripo]: https://www.tripo3d.ai/blog/explore/ai-3d-model-generator-texture-upscaling-pipelines
 [scn]: https://www.scenario.com/blog/build-isometric-game-tiles-with-ai
 [cnt]: https://runware.ai/docs/models/controlnet-preprocess-tile.md
+[a2p]: https://github.com/atou42/3d-to-pixel-sprite
+[bgs]: https://github.com/majidmanzarpour/blender-game-skills
+[kiln]: https://github.com/elithril/blender-kiln
+[wws]: https://superhivemarket.com/products/world-war-soldier---game-ready---rigged---low-poly---colourly
