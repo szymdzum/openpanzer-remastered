@@ -108,14 +108,15 @@ export interface GameSetup {
 const DEFAULT_EQUIPMENT = "eqp-adlerkorps";
 
 //The equipment country files a scenario needs (Equipment.addPlayersEquipment), by country index:
-//-1 for the generic file, then the players' countries and their supporting ones, in the order they
-//load
-export function equipmentCountries(file: ScenarioFile): number[] {
+//-1 for the generic file, then the players' countries and their supporting ones, and the countries
+//of the core units a campaign carries in (campaign.ts coreCountries, #182), in the order they load
+export function equipmentCountries(file: ScenarioFile, core: number[] = []): number[] {
 	const set: { [country: string]: boolean } = { "-1": true };
 	for (const p of file.players) {
 		set[p.country] = true;
 		for (const c of supportCountries(p)) set[c - 1] = true;
 	}
+	for (const c of core) set[c] = true;
 	return Object.keys(set).map(Number);
 }
 

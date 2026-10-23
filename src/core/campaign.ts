@@ -15,7 +15,7 @@ import { nextRandom } from "../rng";
 import type { ScenarioOutcome } from "../scenario";
 import type { CampaignState } from "../state";
 import { newDossier, offMap, playerAt, removeUnit, writePlayer, writeUnit } from "./draft";
-import type { CoreUnit, Draft, GameState, OffMapUnit, PlayerState, UnitState, World } from "./types";
+import type { CoreUnit, Draft, EquipmentTable, GameState, OffMapUnit, PlayerState, UnitState, World } from "./types";
 
 //A campaign data file's scenario (resources/campaigns/data/*.json): what each outcome gives and
 //where it goes (254 and 255 end the campaign)
@@ -145,8 +145,7 @@ export interface CampaignNext {
 
 //Game.continueCampaign: the outcome's prestige and the scenario in the dossier, the campaign player
 //sent to HQ (Player.setPlayerToHQ), then the next scenario the outcome leads to; a brilliant victory
-//earns a prototype there. Kept: a core unit whose country's equipment the scenario didn't load stops
-//it (#182). Not reproduced: a player whose core units all fell carries none, where the old engine
+//earns a prototype there (the core units' equipment is loaded: coreCountries, #182). Not reproduced: a player whose core units all fell carries none, where the old engine
 //carried the dead units it brought in (#183: the list it brought isn't state)
 export function endCampaignScenario(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[]): CampaignNext {
 	const campaign = w.state.campaign, played = scenarios[campaign.scenario];
@@ -184,6 +183,26 @@ function playerAtHQ(w: World, outcome: ScenarioOutcome, scenarios: CampaignScena
 	Object.assign(p, { supportCountries: [], prestigePerTurn: [], airTransports: 0, navalTransports: 0 });
 	p.core = p.core.filter((c) => !("lost" in c));
 	return p;
+}
+
+//The countries whose equipment a player's core units need, by country index as the players have
+//theirs (Equipment.addPlayersEquipment): a unit's and its transport's, by the equipment's file when the
+//table knows the unit, else by the unit's flag (a scenario's own units don't always fly their
+//equipment's country). A scenario loads them beside its players' (#182): a supporting country's unit
+//made a core unit plays on in scenarios that country isn't in
+export function coreCountries(p: PlayerState, units: readonly UnitState[], equipment: EquipmentTable): number[] {
+	const countries = new Set<number>();
+	const add = (eqid: number, flag: number) => {
+		const c = equipment[eqid] !== undefined ? +equipment[eqid].country - 1 : flag - 1;
+		if (c >= 0) countries.add(c);
+	};
+	for (const c of p.core) {
+		const u = "onMap" in c ? units.find((x) => x.id === c.onMap) : "reserve" in c ? c.reserve : c.lost;
+		if (u === undefined) continue;
+		add(u.eqid, u.flag);
+		if (u.transport !== null) add(u.transport.eqid, u.flag);
+	}
+	return [...countries];
 }
 
 //A core unit at HQ: off its transport and carrier, its turn's flags clear, back to full strength (an

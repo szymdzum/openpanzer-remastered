@@ -28,14 +28,16 @@ export function readEquipment(set: string, countries: number[]): { equipment: Eq
 	return { equipment, indexes };
 }
 
-//What the core starts a scenario file of the list from
-export function setupOf(file: string, rng: GameSetup["rng"], campaign: GameSetup["campaign"] = null, description?: string): GameSetup {
+//What the core starts a scenario file of the list from; core: the countries of the core units a
+//campaign carries in (coreCountries)
+export function setupOf(file: string, rng: GameSetup["rng"], campaign: GameSetup["campaign"] = null, description?: string,
+	core: number[] = []): GameSetup {
 	const xml = fs.readFileSync(path.join(GAME_DIR, "resources/scenarios/data", file), "utf8");
 	const scenario = readScenarioFile(new DOMParser().parseFromString(xml, "text/xml"));
 	const entry = scenariolist.find((e) => e[0] === file);
 	return { file, name: entry ? entry[1] : "", description: description !== undefined ? description : entry ? entry[2] : "",
 		scenario, imageSize: mapSizes[scenario.image], isAI: [0, 0, 0, 0], rng, campaign,
-		...readEquipment(scenario.equipment || "eqp-adlerkorps", equipmentCountries(scenario)) };
+		...readEquipment(scenario.equipment || "eqp-adlerkorps", equipmentCountries(scenario, core)) };
 }
 
 //Where two texts first differ

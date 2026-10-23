@@ -15,7 +15,7 @@ import { Equipment } from "./equipment";
 import { Rng } from "./rng";
 import type { Scenario } from "./scenario";
 import { campaignState, fromData, type PlayerState, type RngStreams } from "./state";
-import { awardedPrototype } from "./core/campaign";
+import { awardedPrototype, coreCountries } from "./core/campaign";
 import { type FileUnit, newGame, type ScenarioFile } from "./core/newgame";
 import { readScenarioFile } from "./core/scenariofile";
 import { game } from "./session";
@@ -25,6 +25,12 @@ let carried: PlayerState | null = null;
 
 export function carryPlayer(p: PlayerState | null) {
 	carried = p;
+}
+
+//ScenarioLoader.coreCountries: the countries a campaign's next scenario loads the equipment of beside
+//its players', for the core units carried in (#182); the equipment still loaded is the scenario's before
+export function carriedCountries(): number[] {
+	return game.campaign !== null && carried !== null ? coreCountries(carried, [], Equipment.equipment) : [];
 }
 
 //The prototype the last scenario started gave (its eqid), for the message; null for none

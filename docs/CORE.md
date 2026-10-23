@@ -254,9 +254,9 @@ as Game's setupPlayers and startCampaignScenario do (campaign.ts):
 the scenario in the dossier, the player sent to HQ (transports and support gone, the lost units
 dropped, the others off their transports at full strength, ammo and fuel), and the next scenario
 the outcome leads to with the campaign's progress, or null when the campaign ended. The UI's wait
-for a click between the two isn't state. Kept: a core unit of a country whose equipment the
-scenario didn't load stops the campaign (#182; the old engine throws in setPlayerToHQ, the core
-too). Not reproduced: a player whose core units all fell carries none, where the old engine brought
+for a click between the two isn't state. A scenario loads the equipment of the core units carried
+in beside its players' (`coreCountries`, #182: the old engine didn't, and a supporting country's
+unit made a core unit stopped the campaign where that country wasn't in the scenario). Not reproduced: a player whose core units all fell carries none, where the old engine brought
 back the dead units it had carried in (#183): which list a player brought in isn't state.
 
 ## The controllers (#136)
@@ -419,8 +419,8 @@ session now (test/coreengine.ts), the gamerules contract on the game's GameRules
   (17), at each difficulty in turn, started by Game.newCampaign and by `newGame`, then up to three
   scenarios ended with an outcome by Game.continueCampaign and by `endCampaignScenario` (a core unit
   hurt, one destroyed and one bought in between), the next started by both: the same toData after
-  every start. 17 starts, 35 transitions, 7 prototypes awarded, 6 campaign ends, one stop (#182), no
-  difference.
+  every start. 17 starts, 37 transitions, 8 prototypes awarded, 6 campaign ends, no difference (one
+  stop, #182, until its fix).
 - **The AI against the old AI** (test/core-ai.test.ts, pinned by hashes since #137): the old game played headless as Game plays it
   (test/aigames.ts: processAction, the UI's move and attack finished at once, Game.endTurn) and the
   core's session, in lockstep from toData of the same state, the streams seeded. After every advance:
