@@ -207,6 +207,9 @@ first, then reposition.
 
 ## AI
 
+The detail, the scores and the playtests are in docs/ai/; the code is src/core/ai.ts and
+src/core/aiscore.ts.
+
 `AI` (ai.ts) plans the whole turn once, at its start, by scoring options. It doesn't search
 moves ahead and doesn't react to combat results during the turn.
 
@@ -237,18 +240,16 @@ war.
 
 `AIScripted` (aiscripted.ts) is only the tutorial's scripted opponent.
 
-### Good attacker, weak defender
+### A cautious attacker, a weak defender
 
-Surprising in play: the AI attacks well and defends badly, because it is driven by the
-objectives it has to capture.
-
-Every victory hex belongs to the side that has to capture it (`sidesVictoryHexes`, map.ts).
-In a scenario where the player defends, the AI's side has the victory hexes to take and the
-player's side has none (it wins by holding until the last turn). The objective scores pull the
-AI toward them, and the rest of its heuristics fit an attack: artillery and aircraft plan
-first, units stay next to their artillery, losing attacks are skipped, attacked units get
-finished, infantry takes the close terrain. Together with the scenario's units and prestige,
-it reads as an opponent that attacks with a plan.
+Every victory hex belongs to the side that has to capture it (`sidesVictoryHexes`, map.ts). In a
+scenario where the player defends, the AI's side has the victory hexes to take. Its heuristics fit an
+attack on paper (artillery and aircraft plan first, units stay next to their artillery, losing
+attacks are skipped, attacked units get finished), but in play it attacks cautiously and
+piecemeal. Every unit is pulled toward the one nearest objective by 4000 / distance, which loses to
+the +50 per entrenchment level for staying; units arrive one or two at a time; nothing reads the
+turn limit. In the first playtest the German AI took 1 of 5 objectives in 17 turns
+(docs/ai/weak-attacker.md, docs/ai/playtests/).
 
 When the player attacks, the AI's side usually has no victory hexes to capture, so the
 objective score is 0 and only the terrain and the attack potential are left. Its units then
