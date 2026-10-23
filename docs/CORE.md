@@ -66,7 +66,7 @@ The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` o
 and types: no UI module, no mutable object of the old engine (the linter checks it).
 
 **Kept bugs are kept.** The classic ruleset reproduces the old engine exactly, every kept bug
-included (#87, #88, #19...): they are fixed after the switch, in the core.
+included (#88, #19...): they are fixed after the switch, in the core.
 
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
 only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table
@@ -296,7 +296,7 @@ its country's ground transports that carries it, is in service and fits the budg
 bought none). Kept: #17 (the attacks count the hidden units' support fire),
 #21 (the reinforcement budget is the prestige before the purchases), #22 (the purchases cut the
 equipment lists, which are in the state, D9 revised), the objectives in their list's order (D7, so #141's order
-after an undo), the attack estimate's #87. Its settings are `aiDefaultConfig`
+after an undo). Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 
 **The tutorial** (tutorial.ts) is src/aiscripted.ts's script without the UI, both sides of

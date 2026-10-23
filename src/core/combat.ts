@@ -345,30 +345,28 @@ export function rollDice(rng: RngStream, min: number, max: number): number {
 }
 
 //The attack with the support fire on the attacker first (GameRules.calculateCombatResults), unless
-//the attacker is surprised. withHiddenUnits: the losses of every support unit, with the kills and
-//losses as they come; otherwise only of the support units the attacker's side sees, capped at
-//each unit's strength (kept bug #87: the kills on the support units count as kills on the target)
+//the attacker is surprised. withHiddenUnits: the losses from every support unit, as they come;
+//otherwise only from the support units the attacker's side sees, capped at the attacker's strength.
+//The kills are the target's: the attacker's return fire on a support unit hits that unit (#87: the
+//old engine counted it as kills on the target)
 export function combatResult(w: World, atk: UnitState, def: UnitState, withHiddenUnits: boolean, rng: RngStream | null,
 	record: Contribution[] | null = null): CombatResult {
 	const side = sideOf(w, atk);
-	let realLosses = 0, realKills = 0, evalLosses = 0, evalKills = 0;
+	let realLosses = 0, evalLosses = 0;
 	const support = atk.isSurprised ? [] : supportFireUnits(w, atk, def);
 	for (const s of support) {
 		const cr = attackResult(w, s, atk, rng);
 		if (isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted) {
 			if (record !== null) record.push({ name: "support fire", side: "defender", field: "losses", before: evalLosses, after: evalLosses + cr.kills });
 			evalLosses += cr.kills; //the support's kills are the attacker's losses
-			evalKills += cr.losses;
 		}
 		realLosses += cr.kills;
-		realKills += cr.losses;
 	}
 
 	const cr = attackResult(w, atk, def, rng, record);
 	const losses = withHiddenUnits ? realLosses + cr.losses : Math.min(evalLosses + cr.losses, atk.strength);
-	const kills = withHiddenUnits ? realKills + cr.kills : Math.min(evalKills + cr.kills, def.strength);
+	if (!withHiddenUnits) cr.kills = Math.min(cr.kills, def.strength);
 	cr.losses = losses;
-	cr.kills = kills;
 	return cr;
 }
 
