@@ -19,7 +19,8 @@ other unit. A weak unit hits weakly: strength 4 deals about 40% of what strength
 - Hit threshold 15. It's 19 for artillery, level bombers, fortifications and ships firing at
   land: they hit less often, but nothing fires back at them from range.
 - The estimate (the AI's, the attack cursor's and a future odds preview) uses no dice:
-  `kills = (5 * clamp(kF + 21 - threshold, 1, 19) * strength + 50) / 100`.
+  `kills = (5 * clamp(kF + 21 - threshold, 1, 19) * strength + 50) / 100`, an integer division:
+  the expected kills of the dice, rounded (#90).
 
 **Which values fight.** Every unit has a target type: soft (infantry, trucks), hard (tanks),
 air or naval. The attacker uses its attack against the defender's target type (soft, hard, air
