@@ -8,8 +8,8 @@
  * The core's world is the game; the objects hold what the old UI draws and the harness reads. After
  * each step or checkpoint applyData updates them in place to the world's state, by unit id, keeping
  * each object (the UI compares units with === and keeps them in closures). What wrote to them since
- * (the harness, the animation's facing, the selection's carrier flips) is
- * read back: the writes keep the effect they had on the old engine. The world of the objects is kept
+ * (the harness, the selection's carrier flips) is read back: the writes keep the effect they had on
+ * the old engine. The world of the objects is kept
  * between the writes (it was made again at every rule the screen asked, about 150 µs): the screen's
  * rules read it until something says it wrote (touched, src/context.ts), a step starts from it while
  * toData of the objects is its state (savedAs, src/state.ts), else worldOf makes it again from toData.
