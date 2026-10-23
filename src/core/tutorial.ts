@@ -5,28 +5,27 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * Both sides play a script for turns 1 to 4: messages pointing at hexes, selections, mounts, moves,
+ * Both sides play a script for turns 1 to 5: messages pointing at hexes, selections, mounts, moves,
  * attacks, a reinforcement and a resupply. A turn's actions are built when the turn starts, the units
  * they name looked up then, by the hex they stand on (or picked by their starting hex when the script
- * joins the game), and played one by one later whatever happened in between, as the old game played
- * them (Game.processAction):
- * - a move or a command of a unit that wasn't there is refused (the old game threw before the move
- *   and went on with the next action);
- * - an attack with no unit or no target is where the old game got stuck for good (#80 kept): the order
- *   says so and the session stops;
- * - a selection, a message, the main menu are view events (the main menu opens when the last turn is
- *   built, not when it is played).
- * The turn-1 actions are built twice for the allies (#81 kept: when the script joins the game, then at
- * their turn's start, still turn 1). From turn 5 on, side 0 goes to a person and the other side to the
- * AI, which plans nothing that turn (#81). Most of the turn-1 moves can't reach their hexes (#188 kept),
- * so a new game stops on turn 2.
+ * joins the game), and played one by one later, as the old game played them (Game.processAction); a
+ * selection, a message, the main menu are view events (the main menu opens when the last turn is built,
+ * not when it is played).
+ * The script is planned on the terrain's costs: each move is in its unit's range from where the turn
+ * before left it (#188: it was planned one point a hex, so most moves were refused and the game got
+ * stuck on turn 2, #80). The dice decide the rest, so an order the dice made pointless is skipped (an
+ * order of a unit that isn't there, an attack on a unit gone or out of reach, a move into a hex an enemy
+ * is seen on), never refused.
+ * From turn 6 on, side 0 goes to a person and the other side to the AI, which plans nothing that turn
+ * (#81).
  */
 
 import type { Command } from "../commands";
 import { playerSide, playerType } from "../prototypes";
 import type { Controller, Order, Played, ViewEvent } from "./controller";
-import type { Position, UnitId, World } from "./types";
-import { hexIndex, unitAt } from "./world";
+import type { Position, UnitId, UnitState, World } from "./types";
+import { isInAttackRange } from "./attack";
+import { hexIndex, isSpotted, unitAt, unitById } from "./world";
 
 //The units the tutorial picks by their starting hexes when it joins the game
 const NAMED = { recon: [8, 12], legioninf: [4, 2], pz2a: [9, 6], ssinf1: [8, 6], ssinf2: [9, 5], ssinf3: [9, 4], arty: [8, 4],
@@ -46,7 +45,20 @@ type Step =
 	| readonly ["attack", Who, Who]
 	| readonly ["mainMenu"];
 
-//Turn 1: the objectives, the units, the moves into fire range
+//Where the script moves its units, turn by turn: each within the unit's move range from where the
+//turn before left it (on its transport where it mounts), as the terrain costs it
+const AT = {
+	//turn 1, towards the city (8,15); turn 2 puts the infantry next to it, on 7,15, 8,14 and 9,14
+	legion1: [8, 7], pz1: [8, 11], ssinf1: [7, 11], ssinf2: [9, 11], ssinf3: [10, 10], arty1: [8, 10],
+	pz2: [9, 15], recon2: [11, 9],
+	//turn 3: the recon sent through the hidden infantry on 15,9, which stops it on 15,10
+	gamble: [15, 9], surprised: [15, 10],
+	//turns 4 and 5, towards the last objective (16,8) and next to its defenders
+	ssinf1T4: [10, 15], ssinf2T4: [12, 12], ssinf3T4: [12, 9], legion4: [9, 9], arty4: [10, 11], pz4: [11, 10],
+	ssinf3T5: [14, 9], arty5: [12, 11], pz5: [14, 8],
+} as const;
+
+//Turn 1: the objectives, the units, the moves towards the city
 const AXIS_TURN_1: Step[] = [
 	["message", "The objective of the game is to conquer all enemy positions marked by a golden frame and enemy flag. This is one of the positions. Moving one of your units into this position will capture this city and raise your flag over it.", 8, 15],
 	["message", "This is the second primary objective since it has your enemy flag (Republican Spain) and a golden frame around. Capturing primary objectives gives you a good amount of points called prestige which can be used to upgrade or buy new troops.", 16, 8],
@@ -57,31 +69,47 @@ const AXIS_TURN_1: Step[] = [
 	["message", "This unit has a transport, shown by the <span class='smallButtonSubMenu'>[</span> button on the bottom of the screen. While on transports moving range is increased but, except infantry, units become vulnerable to enemy fire. I will now mount and move this unit for you toward objective.", 4, 2],
 	["mount", "legioninf"],
 	["select", "legioninf"],
-	["move", "legioninf", 7, 9],
+	["move", "legioninf", ...AT.legion1],
 	["select", "recon"],
 	["message", "This is a recon unit. Recon units can move multiple times per turn and have bigger spotting range <span class='statsGlyph'>'</span> as the game will only show enemy units in the spotting range of your units. Let's check if there aren't any hidden units near the city.", 8, 12],
 	["move", "recon", 10, 14],
-	["message", "The objective is lightly defended by just one infantry unit. Let's move the rest of the units into fire range, destroy the defender and capture the city. When units move watch how the strength number color changes indicating that unit has moved.", 8, 15],
-	["move", "pz2a", 7, 11],
+	["message", "The objective is lightly defended by just one infantry unit. Let's move the rest of the units towards the city, then into fire range, destroy the defender and capture the city. When units move watch how the strength number color changes indicating that unit has moved.", 8, 15],
+	["move", "pz2a", ...AT.pz1],
 	["mount", "ssinf1"],
-	["move", "ssinf1", 7, 15],
+	["move", "ssinf1", ...AT.ssinf1],
 	["mount", "ssinf2"],
-	["move", "ssinf2", 8, 14],
+	["move", "ssinf2", ...AT.ssinf2],
 	["mount", "ssinf3"],
-	["move", "ssinf3", 9, 14],
+	["move", "ssinf3", ...AT.ssinf3],
 	["mount", "arty"],
-	["move", "arty", 7, 13],
-	["message", "As we moved all our units and no the targets are in fire range, we should end turn <span class='smallButtonSubMenu'>t</span>which will start enemy turn. If we don't capture all primary objectives in the maximum number of turns (shown left of the top bar) the scenario will end in defeat.", 7, 13],
+	["move", "arty", ...AT.arty1],
+	["message", "Moving cost depends on terrain: the city is still too far to reach in one turn. We should end turn <span class='smallButtonSubMenu'>t</span>which will start enemy turn. If we don't capture all primary objectives in the maximum number of turns (shown left of the top bar) the scenario will end in defeat.", ...AT.arty1],
 ];
 
-//Turn 1 of the allies: the infantry in the city fires on the mounted SS infantry
-const ALLIES_TURN_1: Step[] = [["attack", "inf1", "ssinf1"]];
-
-//Turn 2: artillery first, the city taken, the gamble on the last objective
+//Turn 2: the moves into fire range
 const AXIS_TURN_2: Step[] = [
+	["message", "All units are dismounted at the start of your turn. Let's mount the infantry again and move it next to the city with our tank, into fire range. Our artillery is already close enough to fire on the city.", 8, 15],
+	["mount", AT.ssinf1],
+	["move", AT.ssinf1, 7, 15],
+	["mount", AT.ssinf2],
+	["move", AT.ssinf2, 8, 14],
+	["mount", AT.ssinf3],
+	["move", AT.ssinf3, 9, 14],
+	["move", AT.pz1, ...AT.pz2],
+	["select", [10, 14]],
+	["message", "Let's also move our recon unit closer to the last remaining objective.", 16, 8],
+	["move", [10, 14], ...AT.recon2],
+	["message", "As we moved all our units and now the targets are in fire range, we should end turn <span class='smallButtonSubMenu'>t</span> which will start enemy turn.", 8, 14],
+];
+
+//Turn 2 of the allies: the infantry in the city fires on the mounted SS infantry
+const ALLIES_TURN_2: Step[] = [["attack", "inf1", "ssinf1"]];
+
+//Turn 3: artillery first, the city taken, the gamble on the last objective
+const AXIS_TURN_3: Step[] = [
 	["message", "Notice how this infantry unit jumped out of transport when attacked, instead of staying in the vulnerable transport. Only infantry units will do this others will not dismount when attached. All units are dismounted at the start of your turn.", 7, 15],
-	["message", "This is an artillery unit, depending on it's fire range <span class='statsGlyph'>&gt;</span> it can fire on enemy positions from afar without suffering losses. Also each attack will soften enemy positions reducing their <span class='statsGlyph'>&quot;</span> entrenchment.", 7, 13],
-	["attack", "arty", "inf1"],
+	["message", "This is an artillery unit, depending on it's fire range <span class='statsGlyph'>&gt;</span> it can fire on enemy positions from afar without suffering losses. Also each attack will soften enemy positions reducing their <span class='statsGlyph'>&quot;</span> entrenchment.", ...AT.arty1],
+	["attack", AT.arty1, "inf1"],
 	["message", "We inflicted losses to at least 1 company from the enemy battalion and reduced their entrenchment. Both attacker and defender received combat experience <span class='statsGlyph'>@</span> the later only a small amount since it hasn't inflicted any casualties.", 8, 15],
 	["message", "Entrenchment <span class='statsGlyph'>&quot;</span> of a unit is important as it can avoid loses completely. It's a good idea to always check and reduce entrenchment with artillery or bombers before attacking in close combat. Entrenchment is automatically increased depending on terrain each turn when a unit doesn't move.", 8, 15],
 	["message", "Notice the small circle on the left of the unit strength box. The presence of this circle signifies that the unit hasn't fired yet and can do so. Some units like mounted artillery and mobile air defense can't move and fire in the same turn.", 8, 14],
@@ -90,57 +118,58 @@ const AXIS_TURN_2: Step[] = [
 	["attack", [9, 14], "inf1"],
 	["attack", [7, 15], "inf1"],
 	["message", "Since the unit defending the city was destroyed or retreated because of heavy casualties we can now move one of our units to capture this objective and get our prestige reward.", 8, 15],
-	["move", [7, 11], 8, 15],
+	["move", AT.pz2, 8, 15],
 	["message", "The city is now ours, and it's flag changed to your flag. This objective capture also increased your prestige by 150&nbsp;{prestige}. You can check prestige, score, remaining turns  and objectives by clicking anywhere on the top bar.", 8, 15],
-	["attack", [7, 11], "inf1"],
+	["attack", AT.pz2, "inf1"],
 	["message", "This is the last remaining primary objective. Let's gamble and try capturing it without trying to spot enemy. Capturing objectives in early turns gives a better score.", 16, 8],
-	["select", [10, 14]],
-	["move", [10, 14], 16, 8],
-	["message", "Our unit was surprised by an enemy unit. This happens when you move a unit into an unspotted hex that's occupied by an enemy unit. Surprise attack reduces unit defense and attack values resulting in heavy casualties. Let move to the next turn.", 15, 10],
-	["select", [10, 14]],
+	["select", AT.recon2],
+	["move", AT.recon2, ...AT.gamble],
+	["message", "Our unit was surprised by an enemy unit. This happens when you move a unit into an unspotted hex that's occupied by an enemy unit. Surprise attack reduces unit defense and attack values resulting in heavy casualties. Let move to the next turn.", ...AT.surprised],
+	["select", AT.recon2],
 ];
 
-//Turn 3: a reinforcement, the units moved towards the last objective
-const AXIS_TURN_3: Step[] = [
-	["select", [15, 10]],
-	["message", "You can reinforce this unit casualties by clicking on the <span class='smallButtonSubMenu'>#</span> button at the bottom of the screen. Reinforcements costs prestige and the amount is reduced by enemy units adjacent to your unit. After reinforce unit can no longer attack or move.", 15, 10],
-	["reinforce", [15, 10]],
+//Turn 4: a reinforcement, the units moved towards the last objective
+const AXIS_TURN_4: Step[] = [
+	["select", AT.surprised],
+	["message", "You can reinforce this unit casualties by clicking on the <span class='smallButtonSubMenu'>#</span> button at the bottom of the screen. Reinforcements costs prestige and the amount is reduced by enemy units adjacent to your unit. After reinforce unit can no longer attack or move.", ...AT.surprised],
+	["reinforce", AT.surprised],
 	["select", [7, 15]],
 	["message", "Let's move the rest of the units towards the objective, note how terrain influence movement range. The longest move range is on road or clear terrain but it also depends on unit movement type shown with symbol <span class='statsGlyph' style='float:none;'>~</span>", 7, 15],
 	["mount", [7, 15]],
-	["move", [7, 15], 14, 11],
+	["move", [7, 15], ...AT.ssinf1T4],
 	["mount", [8, 14]],
 	["select", [8, 14]],
-	["move", [8, 14], 14, 9],
+	["move", [8, 14], ...AT.ssinf2T4],
 	["mount", [9, 14]],
 	["select", [9, 14]],
-	["move", [9, 14], 14, 8],
-	["mount", [7, 9]],
-	["select", [7, 9]],
-	["move", [7, 9], 11, 9],
-	["mount", [7, 13]],
-	["select", [7, 13]],
-	["move", [7, 13], 13, 13],
+	["move", [9, 14], ...AT.ssinf3T4],
+	["mount", AT.legion1],
+	["select", AT.legion1],
+	["move", AT.legion1, ...AT.legion4],
+	["mount", AT.arty1],
+	["select", AT.arty1],
+	["move", AT.arty1, ...AT.arty4],
 	["select", [8, 15]],
-	["move", [8, 15], 12, 12],
+	["move", [8, 15], ...AT.pz4],
 ];
 
-//Turn 4: the attacks on the front line, the resupply, the end of the tutorial
-const AXIS_TURN_4: Step[] = [
-	["select", [14, 9]],
+//Turn 5: the attacks on the front line, the resupply, the end of the tutorial
+const AXIS_TURN_5: Step[] = [
+	["select", AT.ssinf3T4],
 	["message", "Let's attack the weakest enemy unit on the front line. The attack cursor gives an estimate of your casualties on the left and enemy casualties on the right below the flags of the units involved in combat.", 15, 9],
-	["attack", [14, 9], [15, 9]],
+	["move", AT.ssinf3T4, ...AT.ssinf3T5],
+	["attack", AT.ssinf3T4, [15, 9]],
 	["message", "This artillery unit has automatically fired when we attacked. That's because artillery provides support fire to friendly units in their range if attacked. Other units with combat support include air defense and fighter planes when attacked by an enemy plane.", 16, 7],
-	["message", "Luckily our artillery unit has a bigger range than enemy artillery so we can safely move it into fire range without making us vulnerable to enemy fire while in transport.", 13, 13],
-	["mount", [13, 13]],
-	["move", [13, 13], 14, 12],
-	["message", "Armored units are considered hard targets <span class='statsGlyph'>`</span> and will take less casualties from artillery fire than a soft target like infantry or artillery. In some cases armored units are used to deplete the ammo of the defending artillery.", 12, 12],
-	["move", [12, 12], 14, 7],
-	["attack", [12, 12], [15, 8]],
-	["noFuel", [15, 10]],
-	["select", [15, 10]],
-	["message", "This unit it's out of fuel and it can no longer move.You can always supply ammo <span class='statsGlyph'></span> and fuel to your units by clicking on the <span class='smallButtonSubMenu'>!</span>   button on the bottom of the screen", 15, 10],
-	["resupply", [15, 10]],
+	["message", "Luckily our artillery unit has a bigger range than enemy artillery so we can safely move it into fire range without making us vulnerable to enemy fire while in transport.", ...AT.arty4],
+	["mount", AT.arty4],
+	["move", AT.arty4, ...AT.arty5],
+	["message", "Armored units are considered hard targets <span class='statsGlyph'>`</span> and will take less casualties from artillery fire than a soft target like infantry or artillery. In some cases armored units are used to deplete the ammo of the defending artillery.", ...AT.pz4],
+	["move", AT.pz4, ...AT.pz5],
+	["attack", AT.pz4, [15, 8]],
+	["noFuel", AT.surprised],
+	["select", AT.surprised],
+	["message", "This unit it's out of fuel and it can no longer move.You can always supply ammo <span class='statsGlyph'></span> and fuel to your units by clicking on the <span class='smallButtonSubMenu'>!</span>   button on the bottom of the screen", ...AT.surprised],
+	["resupply", AT.surprised],
 	["mainMenu"],
 	["message", "This concludes the tutorial and gives you the control of the army to capture the last objective. Remember to use your prestige to upgrade or buy new units by clicking on the <span class='smallButtonSubMenu'>w</span>  button from the menu on the right side of the screen.", 16, 8],
 	["message", "You should attack enemy artillery with your own artillery and move your tanks and attack the enemy artillery. There is a possibility that your armor attack will result in an OverRun which completely destroys an unit and allows your armor to continue move and attack.", 16, 8],
@@ -175,11 +204,39 @@ export function tutorialController(player: number): Controller {
 		},
 		startTurn: build,
 		plan: (w) => w,
-		next() {
-			const q = queue.shift();
-			return q === undefined ? null : orderOf(q);
+		next(w) {
+			for (let q = queue.shift(); q !== undefined; q = queue.shift())
+				if (playable(w, q, player)) return orderOf(q);
+			return null;
 		},
 	};
+}
+
+//Whether an order still makes sense when its turn comes: the dice decide whether the city's defender
+//falls, retreats or holds, and whether a unit survives. An order of a unit that isn't there, an attack
+//on a unit gone or out of reach, a move into a hex an enemy is seen on are skipped (the old game got
+//stuck on an attack without its unit for good, #80)
+function playable(w: World, q: Queued, player: number): boolean {
+	if (q.step === "message" || q.step === "select") return true;
+	const u = onMap(w, q.unit);
+	if (u === null || u.owner !== player) return false;
+	if (q.step === "attack") return inReach(w, u, q.target);
+	return q.step !== "move" || !enemySeenOn(w, q.at, player);
+}
+
+function inReach(w: World, u: UnitState, target: UnitId | null): boolean {
+	const t = onMap(w, target);
+	return t !== null && isInAttackRange(w, u, t);
+}
+
+function enemySeenOn(w: World, at: Position, player: number): boolean {
+	const hex = hexIndex(w, at.row, at.col), there = unitAt(w, hex, false);
+	return there !== null && there.owner !== player && isSpotted(w, hex, w.state.players[player].side);
+}
+
+function onMap(w: World, id: UnitId | null): UnitState | null {
+	const u = id === null ? null : unitById(w, id);
+	return u !== null && u.row >= 0 ? u : null;
 }
 
 function unitOn(w: World, row: number, col: number): UnitId | null {
@@ -194,11 +251,11 @@ function pick(w: World): Named {
 }
 
 //The script of the turn for the side: its actions queued, the world with the fuel it empties, the main
-//menu it opens. Past turn 4, the hand-over: side 0 to a person, the other to the AI
+//menu it opens. Past turn 5, the hand-over: side 0 to a person, the other to the AI
 function buildTurn(w: World, player: number, named: Named): { world: World; queue: Queued[]; view: ViewEvent[]; handOver: boolean } {
 	const turn = w.state.turn.turn, side = w.state.players[player].side;
-	if (turn < 1 || turn > 4) return { world: handOver(w, player), queue: [], view: [], handOver: true };
-	const steps = side === playerSide.axis ? [AXIS_TURN_1, AXIS_TURN_2, AXIS_TURN_3, AXIS_TURN_4][turn - 1] : turn === 1 ? ALLIES_TURN_1 : [];
+	if (turn < 1 || turn > 5) return { world: handOver(w, player), queue: [], view: [], handOver: true };
+	const steps = side === playerSide.axis ? [AXIS_TURN_1, AXIS_TURN_2, AXIS_TURN_3, AXIS_TURN_4, AXIS_TURN_5][turn - 1] : turn === 2 ? ALLIES_TURN_2 : [];
 	const queue: Queued[] = [], view: ViewEvent[] = [];
 	const who = (x: Who) => typeof x === "string" ? named[x] : unitOn(w, x[0], x[1]);
 	for (const s of steps) {
@@ -220,7 +277,6 @@ function queued(s: Exclude<Step, readonly ["mainMenu"]>, who: (x: Who) => UnitId
 
 //The unit's own fuel emptied (whoever it is)
 function noFuel(w: World, id: UnitId | null): World {
-	if (id === null) return w;
 	return { ...w, state: { ...w.state, units: w.state.units.map((u) => u.id === id ? { ...u, fuel: 0 } : u) } };
 }
 
@@ -234,17 +290,14 @@ function orderOf(q: Queued): Order {
 	switch (q.step) {
 		case "message": return { view: { type: "message", text: q.text, at: q.at } };
 		case "select": return { view: { type: "select", unit: q.unit } };
-		case "attack":
-			if (q.unit === null || q.target === null)
-				return { view: { type: "stuck", reason: "an attack without its unit (#80)", unit: q.unit, target: q.target } };
-			return { command: { type: "attack", unit: q.unit, target: q.target } };
+		case "attack": return { command: { type: "attack", unit: q.unit, target: q.target } };
 		default: return { command: unitCommand(q) };
 	}
 }
 
-//A command of a unit: one that wasn't there is -1, which the step refuses
+//A command of a unit (one that is there: playable)
 function unitCommand(q: Queued): Command {
-	const unit = q.unit === null ? -1 : q.unit;
+	const unit = q.unit;
 	if (q.step === "move") return { type: "move", unit, to: q.at };
 	return { type: q.step === "mount" ? "mount" : q.step === "reinforce" ? "reinforce" : "resupply", unit };
 }

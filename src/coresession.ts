@@ -106,14 +106,13 @@ function actionOf(game: Game, order: Order | null): AIAction | null {
 
 type UnitOf = (id: number | null | undefined) => Unit | null;
 
-//What the tutorial shows: a selection, a message pointing at a hex, a look at a hex; the attack the old
-//game got stuck on (#80)
+//What the tutorial shows: a selection, a message pointing at a hex, a look at a hex (no controller says
+//it is stuck since the tutorial's script plays through, #188)
 function viewAction(v: ViewEvent, u: UnitOf): AIAction | null {
 	switch (v.type) {
 		case "select": return { type: actionType.select, param: [u(v.unit)] };
 		case "message": return { type: actionType.message, param: [v.text.split("{prestige}").join(UIBuilder.currencyIcon), cell(v.at)] };
 		case "viewport": return { type: actionType.viewport, param: [cell(v.at)] };
-		case "stuck": return { type: actionType.attack, param: [u(v.unit), u(v.target)] };
 		default: return null;
 	}
 }
