@@ -36,12 +36,12 @@ import type { GameState, MoveCell, Position, UnitState, World } from "./types";
 import { isAir, isGround, isSea, unitUsesFuel } from "./units";
 import { hexIndex, unitData } from "./world";
 
-export interface AIOptions {
+export interface AIControllerOptions {
 	config?: AIConfig;	//aiDefaultConfig, the bundle's
 }
 
 //The computer player of player id
-export function aiController(player: number, options: AIOptions = {}): Controller {
+export function aiController(player: number, options: AIControllerOptions = {}): Controller {
 	const config = options.config || aiDefaultConfig;
 	let queue: Command[] = [];
 	//The prestige left for reinforcements: the player's when the AI was made, then at each turn's start

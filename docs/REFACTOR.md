@@ -494,7 +494,19 @@ them, and the game runs on the session.
   selection refreshed after the cleanup, units clicked between the commands): the same hooks, with the
   same arguments, in the same order, and the same state, selection, counters, combat log and images
   (2,000 sequences). It found the undo's order on the drifting counters (the unit copied back, then
-  its sight off, as the old engine). The end of turn and the AI's planning are still the old engine's.
+  its sight off, as the old engine).
+- The game's turns on the session (src/coresession.ts): Game.init sets the drivers of `AI` and
+  `AIScripted`, so a player's handler hands out the session's next order as the old action (the
+  replay still wraps `handler.getAction` and hashes the state there) and a handler made while the game
+  runs (the replay's `new AI`) joins the session with its controller; Game.processAction plays the
+  action as before. The session starts when the players are set up (their controllers join, a loaded
+  game's AI plans again, #71); Game.endTurn clears the selection, ends the turn on the session and, at
+  its save point, mirrors the objects, logs the turn start's resupplies, shows what the AI deployed
+  (the old `AI.onUnitsDeployed`), opens the tutorial's main menu, saves and shows the next side; then
+  the reinforcements arrive with their alerts and combat log. A Game nobody inits (the tests of the old
+  engine) still plays the old AI and end of turn. test/gameturn.test.ts plays Game itself both ways,
+  every player the AI as the replay makes them, 3 turns, a save in the middle of an AI's turn and the
+  load: the same actions, states, combat log, images and screen calls on harness/replay.sh's 16 items.
 
 ### Not worth it now
 

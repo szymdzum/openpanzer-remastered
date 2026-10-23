@@ -31,6 +31,8 @@ import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
 import { Commands } from "./commands";
 import { CorePlay } from "./coreplay";
+import { coreDriver, endGameTurn, startGameSession } from "./coresession";
+import type { Session } from "./core/session";
 import { setEngineContext } from "./context";
 import { game, setGame } from "./session";
 import type { CampaignProgress } from "./state";
@@ -51,6 +53,7 @@ export class Game {
 	declare spotSide: number;
 	declare uiMessageClicked: boolean;
 	declare loop: number;
+	declare session: Session | null; //the core's session the game plays on (src/coresession.ts), null before a scenario
 	declare init: () => void;
 	declare processTurn: () => void;
 	declare startTurn: () => void;
@@ -93,9 +96,12 @@ export class Game {
 		let shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
 		let isCampaignStart = false; //First scenario of a campaign: set prestige, dossier and core units
 
-		//Restores the last saved game, or starts the default scenario if there is none
+		//Restores the last saved game, or starts the default scenario if there is none. The game plays on
+		//the core (#137): its programs are the session's controllers (a test that doesn't init plays the
+		//old engine's)
 		this.init = function() {
 			AI.onUnitsDeployed = function() { game.ui.handleReinforcementDeployment(); };
+			AI.driver = AIScripted.driver = coreDriver;
 			this.state = new GameState(this);
 			this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 				this.newScenario.bind(this, "failRestore"));
@@ -135,15 +141,15 @@ export class Game {
 
 		this.endTurn = function() {
 			this.waitUIAnimation = false;
+			if (this.session !== null) {
+				if (endGameTurn(this)) defeated(this);
+				return;
+			}
 
 			//Check if game ended in defeat only for human players
 			const ended = Commands.execute(this.scenario, { type: "endTurn" }, { localSide: localPlayingSide });
 			if (ended.ok && ended.result) {
-				//If in a campaign set the campaign outcome to lost and get next available scenario
-				if (this.campaign !== null)
-					this.continueCampaign("lose", endGameType.noTurnsLeft);
-				else //If single scenario game has ended
-					this.gameEnded = true;
+				defeated(this);
 			} else {
 				this.state.save(); //with the campaign's progress
 
@@ -153,15 +159,26 @@ export class Game {
 			}
 		}
 
+		//The side that ended its turn lost at the turn limit (only a side that plays on this screen): in a
+		//campaign the outcome is lost and the next scenario follows, a single scenario ends
+		function defeated(game: Game) {
+			if (game.campaign !== null)
+				game.continueCampaign("lose", endGameType.noTurnsLeft);
+			else
+				game.gameEnded = true;
+		}
+
 		this.loop = 0; //the turn loop's interval: src/main.ts starts it, not the module's loading
+		this.session = null;
 
 		//Called by GameState after a game was restored from a save (local, file or cloud)
 		this.setupGameState = function() {
 			savedPlayer = null;
+			this.session = null;
 			setupPlayers(this);
 			localPlayingSide = getLocalSide(this.scenario.map.getPlayers());
 			this.setCurrentSide();
-			startLoadedTurn(this);
+			startLoadedTurn(this, true);
 
 			this.gameStarted = true;
 			needScenarioLoad = this.gameEnded = false;
@@ -194,12 +211,12 @@ export class Game {
 
 			if (defined(scenIntro)) this.scenario.setDescription(scenIntro); //Set from campaign
 
+			this.session = null;
 			setupPlayers(this);
 			const players = this.scenario.map.getPlayers();
 			localPlayingSide = getLocalSide(players);
 			this.setCurrentSide();
-			if (isRestore)
-				startLoadedTurn(this);
+			startLoadedTurn(this, isRestore);
 
 			this.waitUIAnimation = false;
 			this.gameStarted = true;
@@ -338,6 +355,7 @@ export class Game {
 			}
 			delete(this.scenario);
 			this.scenario = null;
+			this.session = null;
 		}
 
 		//Set AI, Network or campaign for players. Local player is the default value
@@ -481,10 +499,17 @@ export class Game {
 			}
 		}
 
-		//A game loaded on an AI player's turn (#71): the AI plans the turn again, its plan isn't saved
-		//(docs/STATE.md D6). Its turn's start (the purchases and the deployment) was before the save.
-		//The scripted AI queues its turn when it's made (setupPlayers)
-		function startLoadedTurn(game: Game) {
+		//The players' programs start: on the core, the session (its controllers join, a loaded game's AI
+		//plans the turn again). On the old engine, a game loaded on an AI player's turn (#71): the AI plans
+		//the turn again, its plan isn't saved (docs/STATE.md D6). Its turn's start (the purchases and the
+		//deployment) was before the save. The scripted AI queues its turn when it's made (setupPlayers)
+		function startLoadedTurn(game: Game, loaded: boolean) {
+			if (AI.driver !== null) {
+				startGameSession(game, loaded, localPlayingSide);
+				return;
+			}
+			if (!loaded)
+				return;
 			const player = game.scenario.map.currentPlayer;
 			if (player && player.type == playerType.aiLocal)
 				(player.handler as AI).planTurn();

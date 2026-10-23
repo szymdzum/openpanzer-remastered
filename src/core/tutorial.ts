@@ -235,7 +235,8 @@ function orderOf(q: Queued): Order {
 		case "message": return { view: { type: "message", text: q.text, at: q.at } };
 		case "select": return { view: { type: "select", unit: q.unit } };
 		case "attack":
-			if (q.unit === null || q.target === null) return { view: { type: "stuck", reason: "an attack without its unit (#80)" } };
+			if (q.unit === null || q.target === null)
+				return { view: { type: "stuck", reason: "an attack without its unit (#80)", unit: q.unit, target: q.target } };
 			return { command: { type: "attack", unit: q.unit, target: q.target } };
 		default: return { command: unitCommand(q) };
 	}

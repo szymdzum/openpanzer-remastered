@@ -31,6 +31,14 @@ import { Rng } from "./rng";
 export type AIActionParam = Unit | Cell | string;
 export interface AIAction { type: number; param: any[]; }
 
+//Who plays the running game's programs (#137): the core's session (src/coresession.ts). A handler made
+//while it is set hands out the session's orders as actions and joins its player to the session; null
+//(a test of the old AI) the old AI plans and plays
+export interface AIDriver {
+	getAction(): AIAction | null;
+	join(player: Player): void;
+}
+
 //What an AI can be given besides its player and map: its random numbers in [0, 1) (default
 //Rng.aiRandom, the AI's own stream, not the dice's, read at each draw) and its settings (default
 //aiDefaultConfig). Nothing else: an AI is a player's handler, and the saved game keeps the player's
@@ -104,8 +112,17 @@ export class AI {
 	declare getEvaluator: () => AIEvaluator;
 
 	declare static onUnitsDeployed: (() => void) | null; //assigned below
+	declare static driver: AIDriver | null; //assigned below
 
 	constructor(player: Player, map: GameMap, options?: AIOptions) {
+		if (AI.driver !== null) {
+			const driver = AI.driver;
+			this.getAction = function() { return driver.getAction(); };
+			this.buildActions = this.startTurn = this.planTurn = function() {};
+			this.getEvaluator = function() { return null; };
+			driver.join(player);
+			return;
+		}
 		const config = options && options.config ? options.config : aiDefaultConfig;
 		var rng = options && options.rng ? options.rng : Rng.aiRandom;
 		var allUnits: Unit[] = [];
@@ -656,3 +673,4 @@ export function createAIEvaluator(player: Player, map: GameMap, plan: AIPlan, co
 
 //Called after the AI deployed its units, before it plans: Game.init sets it to the UI's redraw
 AI.onUnitsDeployed = null as (() => void) | null;
+AI.driver = null as AIDriver | null;
