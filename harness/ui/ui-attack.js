@@ -1,7 +1,8 @@
 // ui: attacks and their animations: ranged attack, overrun, support fire, attack stopped,
 // destroyed attacker, rugged defense, retreat, surrender, new leaders, surprise on move,
 // flag capture, victory by capture and by elimination.
-// Units are placed next to their targets (teleport) and strengths set so each outcome happens.
+// Units are placed next to their targets (teleport) and strengths set so each outcome happens; a mover
+// and a hidden enemy where the mover's side doesn't see them (the spotting follows the units).
 function check(cond, what) { if (!cond) throw new Error("check failed: " + what); }
 const M = () => game.scenario.map;
 const U = (id) => M().getUnitById(id);
@@ -20,6 +21,33 @@ function freeAround(row, col) {
 	return GameRules.getAdjacent(row, col).filter((c) => c.row > 0 && c.col > 0 && c.row < m.rows - 1 && c.col < m.cols - 1
 		&& !m.map[c.row][c.col].unit && !m.map[c.row][c.col].airunit
 		&& m.map[c.row][c.col].terrain !== terrainType.Ocean && m.map[c.row][c.col].terrain !== terrainType.River);
+}
+// puts mover on a hex side 0 doesn't see and enemy on one just past mover's sight, in its move range:
+// the move there runs into a hidden enemy (the spotting follows the units). The first such pair
+function hideInRange(mover, enemy) {
+	const m = M(), range = GameRules.getUnitSpotRange(mover) + 1, home = mover.getPos(), back = enemy.getPos();
+	const open = (r, c) => r > 0 && c > 0 && r < m.rows - 1 && c < m.cols - 1 && !m.map[r][c].unit && !m.map[r][c].airunit
+		&& m.map[r][c].terrain !== terrainType.Ocean && m.map[r][c].terrain !== terrainType.River && !m.map[r][c].isSpotted(0);
+	const reaches = (c) => GameRules.getMoveRange(m, mover).some((x) => x.canMove && x.row === c.row && x.col === c.col);
+	for (let r = 1; r < m.rows - 1; r++)
+		for (let c = 1; c < m.cols - 1; c++) {
+			if (!open(r, c)) continue;
+			const far = [];
+			for (let r2 = r - range; r2 <= r + range; r2++)
+				for (let c2 = c - range; c2 <= c + range; c2++)
+					if (r2 >= 0 && c2 >= 0 && r2 < m.rows && c2 < m.cols && GameRules.distance(r, c, r2, c2) === range && open(r2, c2)) far.push(new Cell(r2, c2));
+			if (!far.length) continue;
+			teleport(mover, r, c);
+			for (const f of far) {
+				if (m.map[f.row][f.col].isSpotted(0) || !reaches(f)) continue;
+				teleport(enemy, f.row, f.col);
+				enemy.tempSpotted = false;
+				if (!m.map[f.row][f.col].isSpotted(0) && reaches(f)) return m.map[f.row][f.col];
+				teleport(enemy, back.row, back.col);
+			}
+			teleport(mover, home.row, home.col);
+		}
+	throw new Error("check failed: no hidden hex for unit#" + mover.id);
 }
 // the floating texts remove themselves when their animation ends, keep a log of them
 if (!window.__bounceLog) {
@@ -151,11 +179,7 @@ const steps = [
 	}],
 	["move onto a hidden enemy: surprised and attacked", async () => {
 		const tank = U(53), enemy = U(64);
-		const p = tank.getPos(), f = freeAround(p.row, p.col)[0];
-		teleport(enemy, f.row, f.col);
-		const h = M().map[f.row][f.col];
-		for (let n = 0; n < 20 && h.isSpotted(0); n++) h.setSpotted(0, false);
-		enemy.tempSpotted = false;
+		const h = hideInRange(tank, enemy), p = tank.getPos(), f = h.getPos();
 		clickHex(p.row, p.col);
 		check(M().currentUnit === tank && h.isMoveSel, "hidden hex looks free");
 		clickHex(f.row, f.col);
@@ -163,12 +187,14 @@ const steps = [
 		{ const al = alerts(); check(al.indexOf("Surprised") >= 0, "Surprised alert in " + al); }
 	}],
 	["unit without ammo surprised by a hidden enemy: can't attack back", async () => {
-		const u = U(45), enemy = U(73);
-		const p = u.getPos(), f = freeAround(p.row, p.col)[0];
-		teleport(enemy, f.row, f.col);
-		const h = M().map[f.row][f.col];
-		for (let n = 0; n < 20 && h.isSpotted(0); n++) h.setSpotted(0, false);
-		enemy.tempSpotted = false;
+		// unit#45, or the first unit of side 0 that can still move to such a hex
+		const enemy = U(73), movers = [U(45), ...M().getUnits().filter((x) => x.player.id === 0 && !x.hasMoved && !GameRules.isAir(x))];
+		let u = null, h = null;
+		for (const x of movers) {
+			try { h = hideInRange(x, enemy); u = x; break; } catch (e) { if (!String(e.message).startsWith("check failed")) throw e; }
+		}
+		check(u !== null, "a unit that can move onto a hidden enemy");
+		const p = u.getPos(), f = h.getPos();
 		u.ammo = 0;
 		if (M().currentUnit) window.dispatchEvent(new KeyboardEvent("keyup", { code: "Escape", key: "Escape", bubbles: true }));
 		clickHex(p.row, p.col);
