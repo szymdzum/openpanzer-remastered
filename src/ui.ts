@@ -1879,8 +1879,11 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Sell an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (resultOf(Commands.execute(game.scenario, { type: "sell", index: deployId }), false))
+					if (resultOf(Commands.execute(game.scenario, { type: "sell", index: deployId }), false)) {
+						//The units after it in the core list moved up: the index named the sold one, now another or none (#208)
+						$<EqUserSelElement>("eqUserSel").deployunit = -1;
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
+					}
 				} else { //Disband a unit on map
 					if (resultOf(Commands.execute(game.scenario, { type: "disband", unit: unitId }), false)) {
 						R.cacheImages(function() { R.render(); });
