@@ -37,7 +37,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 |---|---|
 | `world.ts` | `World`, `createWorld`, the unit index, hex access, the unit's current equipment, moves, ammo and fuel |
 | `rules.ts` | `Ruleset` and `classicRules`: the movement tables by ground condition (no global `movTable`, #116), the class leaders, the combat steps |
-| `geometry.ts` | distance, adjacency, cells in range (with #69), directions, the partial edge hexes |
+| `geometry.ts` | distance, adjacency, cells in range, directions, the partial edge hexes |
 | `equipment.ts` | the equipment's attribute bits: bridge, ignores entrenchment, which targets a unit can start an attack on |
 | `units.ts` | the predicates: air, sea, ground, train, leaders, enemies, fuel and ammo, mount, entrench, capture |
 | `sight.ts` | spotting and zone of control computed from the units (D10), and who a unit spots |
@@ -66,7 +66,7 @@ The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` o
 and types: no UI module, no mutable object of the old engine (the linter checks it).
 
 **Kept bugs are kept.** The classic ruleset reproduces the old engine exactly, every kept bug
-included (#69, #87, #88, #90, #95, #19, #23...): they are fixed after the switch, in the core.
+included (#87, #88, #90, #95, #19, #23...): they are fixed after the switch, in the core.
 
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
 only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table

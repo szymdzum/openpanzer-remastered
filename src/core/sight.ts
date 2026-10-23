@@ -26,8 +26,7 @@ export function zocCells(w: World, u: UnitState): Position[] {
 	return adjacent(u.row, u.col).filter((c) => onMap(w, c.row, c.col));
 }
 
-//The hexes a unit spots: its spotting range and its own hex (with #69's column 0); none for a
-//unit on no hex
+//The hexes a unit spots: its spotting range and its own hex; none for a unit on no hex
 export function spotCells(w: World, u: UnitState): Position[] {
 	if (u.row < 0) return [];
 	const cells = cellsInRange(u.row, u.col, unitSpotRange(w, u), w.state.map.rows, w.state.map.cols);
