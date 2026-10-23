@@ -1,6 +1,6 @@
 /**
- * Resupply and reinforce. Not refused where the rules (canResupply, canReinforce) would: the old
- * engine plays them on any unit and changes it, the score too (#147)
+ * Resupply and reinforce, refused where the rules refuse them: a unit that can't resupply, or would
+ * get no strength (#147: the old engine played them on any unit and changed it, the score too)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -10,7 +10,7 @@ import type { CommandOf } from "../../commands";
 import { OVERSTRENGTH_PENALTY, scoreGains } from "../../prototypes";
 import { costPerStrength } from "../costs";
 import { addScore, emit, writePlayer, writeUnit } from "../draft";
-import { reinforceValue, resupplyValue } from "../supply";
+import { canResupply, reinforceValue, resupplyValue } from "../supply";
 import type { Draft, CommandHandler, Supply, UnitId } from "../types";
 import { unitById } from "../world";
 import { playerAt, unitCheck } from "./common";
@@ -36,7 +36,7 @@ export function refill(d: Draft, id: UnitId, s: Supply) {
 
 export const resupply: CommandHandler<CommandOf<"resupply">> = {
 	check(w, cmd) {
-		return unitCheck(w, cmd.unit);
+		return unitCheck(w, cmd.unit, (u) => canResupply(w, u), "can't resupply");
 	},
 	run(d, cmd) {
 		d.state.turn.undoable = null;
@@ -51,7 +51,7 @@ export const resupply: CommandHandler<CommandOf<"resupply">> = {
 //not what was paid for; a unit nobody can pay for stays as it was
 export const reinforce: CommandHandler<CommandOf<"reinforce">> = {
 	check(w, cmd) {
-		return unitCheck(w, cmd.unit);
+		return unitCheck(w, cmd.unit, (u) => reinforceValue(w, u, cmd.overstrength === true) > 0, "can't reinforce");
 	},
 	run(d, cmd) {
 		d.state.turn.undoable = null;
@@ -69,7 +69,6 @@ export const reinforce: CommandHandler<CommandOf<"reinforce">> = {
 		w.strength += strength;
 		w.hasMoved = w.hasFired = true;
 		if (over) w.hasOverstrength = true;
-		if (strength <= 0) return;
 		resupplyUnit(d, cmd.unit, s);
 		emit(d, { type: "reinforced", unit: cmd.unit, strength, supply: s });
 	},
