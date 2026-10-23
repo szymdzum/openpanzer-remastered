@@ -15,11 +15,18 @@
 # values, which depend on the base). After a new push the label stays when verify finds the same
 # fingerprint (a rebase that changed nothing the label accepted); with other differences verify
 # takes the label off and fails, and they are read again.
+#
+# The jobs: play the game only on a push (four shards side by side: the AI games, and the UI scripts
+# in thirds), then judge (the required check verify, verify-judge.sh). Adding or taking off the label
+# plays nothing: the judge reads the play of the same commit. After every push to main, warm plays
+# main's own traces into the cache, so a pull request on it plays only its side.
 name: Verify
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 # The contracts and the scenario dates were recorded in this time zone (test/setup.ts)
@@ -27,133 +34,148 @@ env:
   TZ: Europe/Warsaw
 
 jobs:
-  verify:
+  # Whether the pull request touches the game or the harness, and whether this event plays (a push) or
+  # only judges (a label)
+  changes:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      contents: read
-      pull-requests: write
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+      play: ${{ steps.changes.outputs.play }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # the base branch is checked out next to this one
-      - name: Does the change touch the game or the harness?
-        id: changes
+          fetch-depth: 0
+      - id: changes
         run: |
-          base=origin/${{ github.base_ref || 'main' }}
-          if [ "${{ github.event_name }}" != "pull_request" ] || git diff --name-only "$base"...HEAD \
-            | grep -qE '^(src|harness|reference|game|public)/|^index\.html$|^vite\.config\.mts$|^package(-lock)?\.json$|^\.github/workflows/verify\.yml$'; then
+          if git diff --name-only "origin/${{ github.base_ref }}"...HEAD \
+            | grep -qE '^(src|harness|reference|game|public)/|^index\.html$|^vite\.config\.mts$|^package(-lock)?\.json$|^\.github/(workflows/verify\.yml|scripts/verify-|actions/verify-)'; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "No change to the game or the harness: nothing to verify." >> "$GITHUB_STEP_SUMMARY"
           fi
-      # The game's images and sounds are in Git LFS (about 300 MB): cached, so the LFS bandwidth
-      # quota is spent once per change of the assets, not on every run
-      - name: List the LFS objects
-        if: steps.changes.outputs.code == 'true'
-        run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
-      - uses: actions/cache@v6
-        if: steps.changes.outputs.code == 'true'
+          case "${{ github.event.action }}" in
+            opened|synchronize|reopened) echo "play=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "play=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  # One shard of the game played on the pull request and on its base, its log kept for the judge. A
+  # newer push cancels it
+  play:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.play == 'true'
+    name: play (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: verify-play-${{ github.event.pull_request.number }}-${{ matrix.shard }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [replay, ui-0-of-3, ui-1-of-3, ui-2-of-3]
+    steps:
+      - uses: actions/checkout@v7
         with:
-          path: .git/lfs
-          key: lfs-${{ hashFiles('.lfs-ids') }}
-          restore-keys: lfs-
-      - run: git lfs pull
-        if: steps.changes.outputs.code == 'true'
-      - uses: actions/setup-node@v7
-        if: steps.changes.outputs.code == 'true'
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-        if: steps.changes.outputs.code == 'true'
-      - run: npm install --global browser-debugger-cli@0.21.0
-        if: steps.changes.outputs.code == 'true'
-      # The base branch's traces, kept between runs (the file names carry the base commit)
+          fetch-depth: 0 # the base is checked out next to this one
+      # The checkout is GitHub's merge commit, and its first parent the base it was built on. GitHub
+      # doesn't build it again while the pull request conflicts with its base: comparing with the base
+      # branch's head would count its new commits, reversed, as the pull request's differences (#263)
+      - name: The base
+        id: base
+        run: |
+          base=$(git rev-parse HEAD^1)
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+          if [ "$base" != "$(git rev-parse "origin/${{ github.base_ref }}")" ]; then
+            echo "The pull request's merge commit is built on $base, not on the base branch's head: it conflicts with the base or was built before the base moved on. Compared with $base." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: ./.github/actions/verify-setup
+      # The base's traces, played by warm after its push to main (the file names carry the base commit
+      # and the harness's version)
       - uses: actions/cache@v6
-        if: steps.changes.outputs.code == 'true'
         with:
           path: harness/out/baseline
-          key: verify-baseline-${{ github.event.pull_request.base.sha || github.sha }}-${{ hashFiles('harness/**') }}
-          restore-keys: verify-baseline-
-      - name: Verify against the base branch
-        id: verify
-        if: steps.changes.outputs.code == 'true'
-        continue-on-error: true
-        # On a pull request the checkout is GitHub's merge commit, and its first parent the base it was
-        # built on. GitHub doesn't build it again while the pull request conflicts with its base: the
-        # base branch may have moved on since, and comparing with it would count the base's new
-        # commits, reversed, as the pull request's differences (#263 on 23 October)
-        run: |
-          set -o pipefail
-          base=origin/${{ github.base_ref || 'main' }}
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base=$(git rev-parse HEAD^1)
-            if [ "$base" != "$(git rev-parse "origin/${{ github.base_ref }}")" ]; then
-              echo "The pull request's merge commit is built on $base, not on the base branch's head: it conflicts with the base or was built before the base moved on. Compared with $base." >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-          BASELINE_REF=$base JOBS=3 npm run verify 2>&1 | tee "$RUNNER_TEMP/verify.log"
-      - name: Summary
-        if: always() && steps.changes.outputs.code == 'true'
-        run: |
-          {
-            echo "### verify against ${{ github.base_ref || 'main' }}"
-            echo '```'
-            grep -E 'items differ|identical|scripts identical|DIFF|TIMED OUT' "$RUNNER_TEMP/verify.log" | head -80 || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          key: verify-baseline-${{ steps.base.outputs.sha }}-${{ hashFiles('harness/**') }}-${{ matrix.shard }}
+      - name: Play
+        run: BASELINE_REF=${{ steps.base.outputs.sha }} JOBS=3 .github/scripts/verify-shard.sh "$RUNNER_TEMP/verify-${{ matrix.shard }}.log" ${{ matrix.shard }}
       - uses: actions/upload-artifact@v7
-        if: steps.verify.outcome == 'failure'
+        if: always()
         with:
-          name: verify-traces
+          name: verify-log-${{ matrix.shard }}
+          path: ${{ runner.temp }}/verify-${{ matrix.shard }}.log
+          retention-days: 30
+      - name: Any difference?
+        id: differs
+        if: always()
+        run: |
+          if grep -qE "^DIFF |^== UI replay [^:]+: (DIFF|didn.t finish)" "$RUNNER_TEMP/verify-${{ matrix.shard }}.log"; then
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.differs.outputs.yes == 'true'
+        with:
+          name: verify-traces-${{ matrix.shard }}
           path: |
             harness/out/replay-*/
             harness/out/ui-*/
-            ${{ runner.temp }}/verify.log
           retention-days: 7
-      # A difference fails the check, unless the owner accepted it with the label behavior-change. A
-      # run the label accepts records its fingerprint; after a new push the label holds only for
-      # the same fingerprint. The label is read now, not from the event (it may have changed since)
-      - name: Differences accepted?
-        if: steps.verify.outcome == 'failure'
+
+  # The required check: the differences of the play of this commit, accepted or not. On a label added
+  # or taken off it reads the play of the push before, waiting for it if it still runs
+  verify:
+    needs: [changes, play]
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+    steps:
+      - name: Nothing to verify
+        if: needs.changes.outputs.code != 'true'
+        run: |
+          echo "No change to the game or the harness: nothing to verify." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v7
+        if: needs.changes.outputs.code == 'true'
+        with:
+          sparse-checkout: .github/scripts
+      - name: Judge
+        if: needs.changes.outputs.code == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+          PLAYED: ${{ needs.changes.outputs.play }}
           NEW_PUSH: ${{ github.event.action == 'synchronize' }}
         run: |
-          fingerprint=$(.github/scripts/verify-fingerprint.sh "$RUNNER_TEMP/verify.log")
-          echo "Fingerprint of the differences: \`$fingerprint\`" >> "$GITHUB_STEP_SUMMARY"
-          if [ -z "$PR" ]; then
-            echo "verify found differences: read the summary." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          labelled=$(gh pr view "$PR" --repo "$REPO" --json labels -q '[.labels[].name] | index("behavior-change") != null')
-          accepted=$(gh api "repos/$REPO/issues/$PR/comments" --paginate -q '.[].body' \
-            | grep -oE 'verify-accepted: [0-9a-f]+' | tail -1 | cut -d' ' -f2 || true)
-          if [ "$labelled" != "true" ]; then
-            echo "verify found differences: read the summary; a deliberate change needs the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          if [ "$NEW_PUSH" = "true" ]; then
-            if [ "$fingerprint" = "$accepted" ]; then
-              echo "The same differences as the ones accepted with behavior-change (fingerprint $accepted): the label stays." >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            gh pr edit "$PR" --repo "$REPO" --remove-label behavior-change
-            echo "The differences changed since behavior-change accepted them (fingerprint ${accepted:-none}, now $fingerprint): the label is off, read them again." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          echo "Differences accepted with the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
-          if [ "$fingerprint" != "$accepted" ]; then
-            {
-              echo "<!-- verify-accepted: $fingerprint -->"
-              echo "verify: the label \`behavior-change\` accepted these differences ([run]($GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID)). A new push keeps the label only if verify finds the same ones."
-              echo '```'
-              .github/scripts/verify-fingerprint.sh "$RUNNER_TEMP/verify.log" --lines | head -60
-              echo '```'
-            } > "$RUNNER_TEMP/accepted.md"
-            gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/accepted.md"
-          fi
+          PLAY_RUN=$(.github/scripts/verify-play-logs.sh "$RUNNER_TEMP/logs")
+          export PLAY_RUN
+          echo "The play: $GITHUB_SERVER_URL/$REPO/actions/runs/$PLAY_RUN" | tee -a "$GITHUB_STEP_SUMMARY"
+          ls "$RUNNER_TEMP"/logs/*/
+          cat "$RUNNER_TEMP"/logs/*/*.log > "$RUNNER_TEMP/verify.log"
+          .github/scripts/verify-judge.sh "$RUNNER_TEMP/verify.log"
+
+  # After a push to main, main's own traces, which the pull requests on it compare with, into the cache
+  warm:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    name: warm (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [replay, ui-0-of-3, ui-1-of-3, ui-2-of-3]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/verify-setup
+      - uses: actions/cache@v6
+        with:
+          path: harness/out/baseline
+          key: verify-baseline-${{ github.sha }}-${{ hashFiles('harness/**') }}-${{ matrix.shard }}
+      - name: Play the base's traces
+        run: BASELINE_ONLY=1 BASELINE_REF=${{ github.sha }} JOBS=3 .github/scripts/verify-shard.sh "$RUNNER_TEMP/warm.log" ${{ matrix.shard }}

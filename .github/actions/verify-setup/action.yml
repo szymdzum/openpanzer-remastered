@@ -1,0 +1,26 @@
+# What a verify job needs to play the game (verify.yml): the game's images and sounds from Git LFS
+# (about 300 MB, cached so the LFS bandwidth quota is spent once per change of the assets), Node and
+# the packages, and bdg to drive headless Chrome. Runs after the checkout
+name: Verify setup
+description: LFS assets, Node, packages and bdg for harness/replay.sh and harness/ui-replay.sh
+runs:
+  using: composite
+  steps:
+    - name: List the LFS objects
+      shell: bash
+      run: git lfs ls-files --long | cut -d' ' -f1 | sort > .lfs-ids
+    - uses: actions/cache@v6
+      with:
+        path: .git/lfs
+        key: lfs-${{ hashFiles('.lfs-ids') }}
+        restore-keys: lfs-
+    - shell: bash
+      run: git lfs pull
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+    - shell: bash
+      run: npm ci
+    - shell: bash
+      run: npm install --global browser-debugger-cli@0.21.0
