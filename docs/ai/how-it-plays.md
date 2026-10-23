@@ -3,7 +3,7 @@
 The AI is a controller on the new core (docs/CORE.md, "The AI"): `aiController` in src/core/ai.ts,
 scores in src/core/aiscore.ts, settings in `aiDefaultConfig` (src/prototypes.ts). It reproduces the
 bundle's AI exactly, draw for draw on the AI's own random stream (src/rng.ts), apart from the bugs
-fixed since (#74, #75, #77, #82, #100, #101, #207, #224).
+fixed since (#74, #75, #77, #82, #100, #101, #207, #224, #21).
 
 ## The turn
 
@@ -27,7 +27,7 @@ Units are planned one at a time. Artillery, fortifications, combat aircraft and 
 (`actsFirst`), the rest in unit-list order. For each unit, until it has nothing left to do:
 
 1. **Reinforce** if its strength is under 4, or if it can neither move nor attack, while prestige
-   is left (`reinforceUnit`).
+   is left after the turn's purchases (`reinforceUnit`, #21).
 2. **Resupply** if ammo is under 2 or fuel under 5, or if it is idle (`resupplyUnit`).
 3. **Move** to the best scored hex of its move range, if it beats staying (`moveUnit`,
    `bestMove`). Towed and foot units may mount their transport to go further (#82).

@@ -15,9 +15,9 @@
  * - an attack, which the step refuses when the target is out of range by then (Game skipped it);
  * - a resupply or a reinforcement;
  * - a mount, right before a move only its transport makes (#82).
- * Kept: the reinforcement budget is the prestige before the purchases
- * (#21), the attack scores count the hidden units' support fire (#17), and the objectives are scored in
- * the order of the side's list (D7, #141's order after an undo included).
+ * The reinforcement budget is the prestige left after the purchases (#21). Kept: the attack scores
+ * count the hidden units' support fire (#17), and the objectives are scored in the order of the side's
+ * list (D7, #141's order after an undo included).
  */
 
 import type { Command } from "../commands";
@@ -45,7 +45,8 @@ export interface AIControllerOptions {
 export function aiController(player: number, options: AIControllerOptions = {}): Controller {
 	const config = options.config || aiDefaultConfig;
 	let queue: Command[] = [];
-	//The prestige left for reinforcements: the player's when the AI was made, then at each turn's start
+	//The prestige left for reinforcements: the player's when the AI was made, then after each turn's
+	//purchases (#21: the old AI took it before them, and spent the same prestige twice)
 	let prestigeLeft = 0;
 	return {
 		player,
@@ -54,8 +55,9 @@ export function aiController(player: number, options: AIControllerOptions = {}):
 			return { world: w, commands: [], events: [], view: [] };
 		},
 		startTurn(w) {
-			prestigeLeft = w.state.players[player].prestige;
-			return buyAndDeploy(w, player, config);
+			const played = buyAndDeploy(w, player, config);
+			prestigeLeft = played.world.state.players[player].prestige;
+			return played;
 		},
 		plan(w) {
 			const planned = planTurn(w, player, config, prestigeLeft);
