@@ -616,7 +616,7 @@ Each its own commit, naming its issue, re-recorded with `UPDATE_CONTRACTS=1`, ch
 invariant tests:
 
 1. Undo keeps the real player (#68). Done.
-2. AI purchases stop mutating the shared equipment lists (#22). Open.
+2. AI purchases stop mutating the shared equipment lists (#22). Done.
 3. `tempSpotted` by the unit's own side (#75): done. The AI's fog leaks (#17): open.
 4. The counter drift (#72, #73). Done: sight is derived from the units (C5).
 5. A guard on the move's destination, the AI stacking (#74). Done.

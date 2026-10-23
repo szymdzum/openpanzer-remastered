@@ -229,15 +229,15 @@ test("GameState load puts the random streams where the save left them (#128)", a
 	expect(draws(after)).toEqual(want);
 });
 
-//#128: the equipment lists are the save's (docs/STATE.md D9): the AI's purchases remove from them
-//(#22) and the purchase window sorts them, which decides what the AI buys next. Loaded in a new
+//#128: the equipment lists are the save's (docs/STATE.md D9): the purchase window sorts them, which
+//decides what the AI buys next (the old AI's purchases removed from them too, #22). Loaded in a new
 //page, the game has the lists as the save had them, not as the equipment files have them
 test("GameState load keeps the equipment lists (#128)", async () => {
 	await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
 	const { Equipment } = await import("../src/equipment");
 	const country = Object.keys(Equipment.equipmentIndexes)[0], lists = Equipment.equipmentIndexes[country].unitclass;
 	const uclass = Object.keys(lists).find((c) => lists[c].length > 1);
-	lists[uclass].splice(0, 1); //as an AI purchase does (#22)
+	lists[uclass].splice(0, 1); //as the old AI's purchases did (#22)
 	lists[uclass].reverse(); //as the purchase window's sorting does
 	const saved = JSON.parse(await exportGame()) as SaveFile;
 	expect((await load(JSON.stringify(saved))).state.equipment).toEqual(saved.state.equipment);

@@ -294,8 +294,7 @@ one of them is best, it mounts and moves there, and plans no attack after (#82: 
 mounted, so its towed guns never moved). It buys a unit a transport carries with a random one of
 its country's ground transports that carries it, is in service and fits the budget left (#224: the old AI
 bought none). Kept: #17 (the attacks count the hidden units' support fire),
-#21 (the reinforcement budget is the prestige before the purchases), #22 (the purchases cut the
-equipment lists, which are in the state, D9 revised), the objectives in their list's order (D7, so #141's order
+#21 (the reinforcement budget is the prestige before the purchases), the objectives in their list's order (D7, so #141's order
 after an undo). Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 

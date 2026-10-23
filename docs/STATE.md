@@ -271,9 +271,10 @@ with it, harness/lib/harness.js:158): its whole state is one 32-bit number, so `
 number and a step can draw from a copy. pure-rand, which fast-check uses, doesn't document a way
 to save and restore a generator's state, and the game needs nothing more than uniform draws.
 
-**D9. The AI's removals from the equipment lists are state, while #22 is kept.** The AI's
-purchases splice the shared lists (#22), which changes what it can buy later in the session. To
-reproduce it, the state lists what was removed per country; after #22 is fixed, this goes.
+**D9. The equipment lists are state.** The old AI's purchases spliced the shared lists (#22),
+which changed what it could buy later in the session, and the purchase window sorts them in place,
+which decides what the AI picks and which transport a unit embarks on. So the state holds the lists.
+Since #22 is fixed the AI works on copies; the window's order still makes them state.
 
 **D10. Spotting and zone of control are derived: recomputed after each step, kept beside the
 state, never saved.** They follow from the units: at most about 180 units on 1716 hexes, a few
