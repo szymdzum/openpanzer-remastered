@@ -75,8 +75,8 @@ export function canReinforce(w: World, u: UnitState, overstrength = false): bool
 }
 
 //What a resupply gives: all that's missing for air and naval units, otherwise / 1.3 outside a
-//city, / 1.5 with one or two enemies around, / 3 with more, at least 1 ammo and 1 fuel (kept bug
-//#95: even when full). isTurnStart: the automatic resupply at a turn's start, only in a city with
+//city, / 1.5 with one or two enemies around, / 3 with more, at least 1 ammo and 1 fuel of what is
+//missing (#95). isTurnStart: the automatic resupply at a turn's start, only in a city with
 //no enemy around
 export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supply {
 	if (!canResupply(w, u)) return supply(0, 0, 0, 0);
@@ -96,11 +96,17 @@ export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supp
 	if (isTurnStart && (enemies > 0 || !inCity)) return supply(0, 0, 0, 0);
 
 	const divisor = supplyDivisor(inCity, enemies);
-	ammo = Math.max(1, ammo / divisor[0] / divisor[1]);
-	fuel = Math.max(1, fuel / divisor[0] / divisor[1]);
+	ammo = atLeastOne(ammo / divisor[0] / divisor[1]);
+	fuel = atLeastOne(fuel / divisor[0] / divisor[1]);
 	tAmmo = tAmmo / divisor[0] / divisor[1];
 	tFuel = tFuel / divisor[0] / divisor[1];
 	return supply(Math.round(ammo), Math.round(fuel), Math.round(tAmmo), Math.round(tFuel));
+}
+
+//A share of what is missing, at least 1 when anything is (#95: the old engine gave 1 also when
+//nothing was missing, so a full unit went over its maximum and infantry got fuel)
+function atLeastOne(share: number): number {
+	return share > 0 ? Math.max(1, share) : 0;
 }
 
 //The two divisions of what a unit gets, applied one after the other: outside a city, then by the

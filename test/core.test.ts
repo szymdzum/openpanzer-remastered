@@ -10,6 +10,7 @@ import { type Cell, leaderType, movMethod, movTableDry, movTableMud, roadType, t
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
+import { resupplyValue } from "../src/core/supply";
 import { classicRules, moveCosts } from "../src/core/rules";
 import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
@@ -22,7 +23,7 @@ import type { Command } from "../src/commands";
 import { createWorld } from "../src/core/create";
 import { type HandUnit, handWorld } from "./coreworld";
 
-const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280, PSW_222 = 117;
+const PZ_IIA = 140, TP7 = 273, INFANTERIE = 115, ME_109 = 159, P11 = 280, PSW_222 = 117;
 
 //A Pz IIA on clear ground next to a 7TP entrenched (2) in a forest
 function forestFight() {
@@ -209,6 +210,22 @@ test("An enemy's zone of control stops the move but costs the hex's terrain: a r
 	expect(isZOC(w, hexIndex(w, 4, 3), 1)).toBe(true);
 	const moved = unitById(played(step(w, { type: "move", unit: 0, to: { row: 4, col: 3 } })).world, 0);
 	expect(moved).toMatchObject({ row: 4, col: 3, moveLeft: 0, fuel: 55 - 6, hasMoved: true });
+});
+
+test("A resupply gives only what is missing: a tank with full ammo gets fuel, no ammo, and stays at its maximum (#95)", () => {
+	//a Pz IIA (8 ammo, 50 fuel) at 20 fuel in the open, and an infantry (no fuel) short of ammo
+	const w = handWorld({ rows: 6, cols: 6, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, fuel: 20 },
+		{ eqid: INFANTERIE, owner: 0, row: 4, col: 4, ammo: 2 },
+	] });
+	expect(resupplyValue(w, unitById(w, 0))).toEqual({ ammo: 0, fuel: 23, transportAmmo: 0, transportFuel: 0 }); //30 / 1.3
+	expect(resupplyValue(w, unitById(w, 1))).toEqual({ ammo: 3, fuel: 0, transportAmmo: 0, transportFuel: 0 }); //4 / 1.3
+	const tank = unitById(played(step(w, { type: "resupply", unit: 0 })).world, 0);
+	expect([tank.ammo, tank.fuel]).toEqual([8, 43]);
+	//a little missing still gets at least 1
+	const low = handWorld({ rows: 6, cols: 6, units: [{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, ammo: 7, fuel: 49 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 }, { eqid: TP7, owner: 1, row: 1, col: 2 }, { eqid: TP7, owner: 1, row: 3, col: 2 }] });
+	expect(resupplyValue(low, unitById(low, 0))).toMatchObject({ ammo: 1, fuel: 1 });
 });
 
 test("A unit's range doesn't go through an enemy it sees: a 7TP next to a Pz IIA doesn't reach the hex behind it with 2 points (#205)", () => {
