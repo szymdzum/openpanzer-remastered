@@ -35,13 +35,14 @@ export interface EnemyUnit {
 //What the AI has decided so far this turn (AIPlan)
 export interface AIPlan {
 	enemyUnits: Map<UnitId, EnemyUnit>;
-	takenPositions: Position[];	//hexes its units were ordered to move to
-	freedPositions: FreedPosition[];	//hexes its units were ordered to leave
+	takenPositions: PlannedPosition[];	//hexes its units were ordered to move to
+	freedPositions: PlannedPosition[];	//hexes its units were ordered to leave
 	objectives: Position[];		//the side's objectives to take, in their order (D7, #141)
 }
 
-//A hex an AI unit was ordered to leave, and the slot it frees: the air above it or the ground (#74)
-interface FreedPosition extends Position {
+//A hex an AI unit was ordered to move to or to leave, and the slot it takes or frees: the air above it
+//or the ground (#74, #225)
+interface PlannedPosition extends Position {
 	air: boolean;
 }
 
@@ -76,8 +77,10 @@ export function findFreed(plan: AIPlan, cell: Position, air?: boolean): number {
 	return plan.freedPositions.findIndex((c) => c.row === cell.row && c.col === cell.col && (air === undefined || c.air === air));
 }
 
-function isTaken(plan: AIPlan, cell: Position): boolean {
-	return plan.takenPositions.some((c) => c.row === cell.row && c.col === cell.col);
+//Whether the plan sent a unit to the hex's slot already: an aircraft ordered over a hex leaves its
+//ground free (#225)
+function isTaken(plan: AIPlan, cell: Position, air: boolean): boolean {
+	return plan.takenPositions.some((c) => c.row === cell.row && c.col === cell.col && c.air === air);
 }
 
 function expectedKilled(plan: AIPlan, id: UnitId): boolean {
@@ -131,10 +134,12 @@ export function attackPotential(s: Scorer, u: UnitState, cell: Position): number
 
 //The score of u standing on cell: the terrain, the objectives and the neighbours. canMove: the move
 //range says it can stop there (a hex another AI unit of its kind leaves counts as free: an aircraft
-//leaving frees the air above a ground unit, not the ground, #74)
+//leaving frees the air above a ground unit, not the ground, #74). A hex another AI unit of its kind
+//was ordered to is taken (#225)
 export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: boolean): number {
-	if (isTaken(s.plan, cell)) return -5000;
-	if (!canMove && findFreed(s.plan, cell, isAir(s.w, u)) < 0) return -5000;
+	const air = isAir(s.w, u);
+	if (isTaken(s.plan, cell, air)) return -5000;
+	if (!canMove && findFreed(s.plan, cell, air) < 0) return -5000;
 
 	const w = s.w, hex = hexIndex(w, cell.row, cell.col), side = sideOf(w, u);
 	const uclass = unitData(w, u).uclass;
