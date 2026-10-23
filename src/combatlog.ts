@@ -196,8 +196,7 @@ CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number
 	defInfo.str = +defunit.strength;
 	defInfo.xp += +defunit.experience - c.defender.xp;
 	defInfo.ammo = +defunit.ammo;
-	//Bundle subtracts the attacker entrenchment here, kept
-	defInfo.entrenchLost += +c.defender.entrench - atkunit.entrenchment;
+	defInfo.entrenchLost += +c.defender.entrench - defunit.entrenchment; //(the bundle subtracted the attacker's, #79)
 	defInfo.entrench = +defunit.entrenchment;
 	defInfo.pos = c.defender.pos;
 	defInfo.isCore = defunit.isCore;
@@ -206,7 +205,6 @@ CombatLog.addCombatEnd = function(atkunit: Unit, defunit: Unit, combatId: number
 
 	atkInfo.kills = defInfo.losses;
 	defInfo.kills = atkInfo.losses;
-	defInfo.unitCombatList.push(atkId); //pushed a second time in the bundle, kept
 
 	CombatLog.combatRound[combatId] = {};
 	delete CombatLog.combatRound[combatId];
