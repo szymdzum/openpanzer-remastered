@@ -270,6 +270,30 @@ test("An attack draws the attacker's dice, the defender's, then a leader roll fo
 	expect(unitById(r.world, 0)).toMatchObject({ hasFired: true, ammo: fight.attacker.before.ammo - 1, tempSpotted: true });
 });
 
+test("An air unit's range counts the steps around the enemy aircraft it sees and over its own: every hex in it is a path within its points (#217)", () => {
+	//a Me 109 (15 points) at 2,2 and a wall of P.11s it sees (they fired) at 0,4 to 5,4: the way east goes around below them
+	const w = handWorld({ rows: 8, cols: 20, units: [{ eqid: ME_109, owner: 0, row: 2, col: 2 },
+		...[0, 1, 2, 3, 4, 5].map((row) => ({ eqid: P11, owner: 1, row, col: 4, tempSpotted: true }))] });
+	const fighter = unitById(w, 0);
+	expect(fighter.moveLeft).toBe(15);
+	const cells = moveRange(w, fighter).filter((c) => c.canMove);
+	const steps = cells.map((c) => ({ at: [c.row, c.col], steps: pathTo(w, fighter, c).length - 1 }));
+	expect(steps.filter((s) => s.steps < 0 || s.steps > 15)).toEqual([]);
+	expect(cells.some((c) => c.row === 2 && c.col === 17)).toBe(false); //15 hexes away, more steps around the wall
+	//the farthest east on its row, 15 steps away: the move uses all the points, no more
+	expect(Math.max(...cells.filter((c) => c.row === 2).map((c) => c.col))).toBe(14);
+	const moved = unitById(played(step(w, { type: "move", unit: 0, to: { row: 2, col: 14 } })).world, 0);
+	expect(moved).toMatchObject({ row: 2, col: 14, moveLeft: 0 });
+	//over a wall of its own fighters: they are hexes it passes, not stops on, and 2,17 is 15 steps away
+	const own = handWorld({ rows: 8, cols: 20, units: [{ eqid: ME_109, owner: 0, row: 2, col: 2 },
+		...[0, 1, 2, 3, 4, 5].map((row) => ({ eqid: ME_109, owner: 0, row, col: 4 }))] });
+	const over = moveRange(own, unitById(own, 0));
+	expect(over.find((c) => c.row === 2 && c.col === 4)).toMatchObject({ canMove: false, canPass: true });
+	expect(over.find((c) => c.row === 2 && c.col === 17)).toMatchObject({ canMove: true });
+	const flown = unitById(played(step(own, { type: "move", unit: 0, to: { row: 2, col: 17 } })).world, 0);
+	expect(flown).toMatchObject({ row: 2, col: 17, moveLeft: 0 });
+});
+
 //A Me-109 (player 0) and, 4 hexes away out of its sight, a 7TP below a P.11c (player 1)
 function hiddenPair() {
 	return withRng(handWorld({ rows: 8, cols: 8, units: [
