@@ -637,6 +637,11 @@ function uiShowAlert(row: number, col: number, text: string | number, positive?:
 }
 
 //Shows or hides the unit list, with the equipment window when withEquipment
+//A unit's small map tooltip: "gsttu" (removeAllSmallToolTips finds the units' by it), the unit, what it is out of
+function unitToolTipId(unitId: number, outOf: "ammo" | "fuel") {
+	return "gsttu" + unitId + "-" + outOf;
+}
+
 function toggleUnitsAndEquipmentWindow(withEquipment: boolean) {
 	if (map.currentPlayer.type != playerType.humanLocal)
 		return;
@@ -1596,23 +1601,22 @@ function uiScaleMap(level: number) {
 
 				var unit = hex.getUnit(uiSettings.airMode);
 				if (unit && unit.player.side == side && text == null) {
-					var id = "gsttu" + unit.id;
 					if (GameRules.unitLowAmmo(unit, 1))
-						this.showSmallToolTip("No Ammo", row, col, 0, id);
+						this.showSmallToolTip("No Ammo", row, col, 0, unitToolTipId(unit.id, "ammo"));
 					if (GameRules.unitLowFuel(unit, 1))
-						this.showSmallToolTip("No Fuel", row, col, 0, id);
+						this.showSmallToolTip("No Fuel", row, col, 0, unitToolTipId(unit.id, "fuel"));
 				}
 			}
 		}
 	};
 
+	//Both of the unit's tooltips, out of ammo and out of fuel (#25: they shared one id, one stayed)
 	this.removeUnitToolTip = function(unitId: number) {
+		const ids = [unitToolTipId(unitId, "ammo"), unitToolTipId(unitId, "fuel")];
 		for (var i = UIBuilder.smallToolTipList.length - 1; i >= 0; i--) {
 			var id = UIBuilder.smallToolTipList[i];
-			if (id == "gsttu" + unitId) {
+			if (ids.indexOf(id) >= 0)
 				delTag($(id));
-				break;
-			}
 		}
 	};
 

@@ -4,6 +4,8 @@
 function check(cond, what) { if (!cond) throw new Error("check failed: " + what); }
 const M = () => game.scenario.map;
 const U = (id) => M().getUnitById(id);
+// A low ammo or fuel tooltip of unit 53: gsttu53 in the original, gsttu53-ammo and -fuel since #25
+const lowSupplyTip53 = (id) => id === "gsttu53" || id.startsWith("gsttu53-");
 function keyCode(code, key) { window.dispatchEvent(new KeyboardEvent("keyup", { code, key: key || code.slice(3).toLowerCase(), bubbles: true })); }
 async function finish() {
 	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
@@ -108,13 +110,15 @@ const steps = [
 		endTurn();
 		await finish();
 		check(M().turn === 2 && !isVisible("equipment") && uiSettings.shownEndTurnTip, "turn 2, windows closed");
-		check(UIBuilder.smallToolTipList.indexOf("gsttu53") >= 0, "low supply tooltip on the unit");
+		check(UIBuilder.smallToolTipList.some(lowSupplyTip53), "low supply tooltip on the unit");
 	}],
 	["select the low supply unit: its tooltip goes", async () => {
-		// No Ammo and No Fuel share the id gsttu53, only the first one found is removed
-		const n = document.querySelectorAll("#gsttu53").length;
+		// The original gives No Ammo and No Fuel one id, gsttu53, and removes only the first one found
+		// (#25); the remaster gives them gsttu53-ammo and gsttu53-fuel and removes both. The DOM shows which
+		const shown = () => [...document.querySelectorAll(".smallToolTip")].filter((e) => lowSupplyTip53(e.id)).length;
+		const n = shown();
 		clickHex(U(53).getPos().row, U(53).getPos().col);
-		check(M().currentUnit === U(53) && document.querySelectorAll("#gsttu53").length === n - 1, "one tooltip removed");
+		check(M().currentUnit === U(53) && shown() < n, "tooltip removed");
 	}],
 	["end turn with the confirmation tip already shown", async () => {
 		click("#endturn");
