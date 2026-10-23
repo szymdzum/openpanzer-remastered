@@ -5,7 +5,8 @@
 # Usage: harness/ui-replay.sh [script...]   (default: every script in harness/ui)
 # Env: JOBS (Chromes at once, default 3/4 of the cores), BDG_SESSION (prefix of the sessions,
 #   default "ui"), BASELINE_REF, REFERENCE_DIR, REFERENCE_PORT, PORT, SEED as in replay.sh, DUMP_STEP=<n>
-#   (keep step n's canvases as PNGs in the trace), RENDER_LOG=1 (record render() calls per step)
+#   (keep step n's canvases as PNGs in the trace), RENDER_LOG=1 (record render() calls per step),
+#   BASELINE_ONLY=1 (play only the reference's traces into harness/out/baseline, the cache CI keeps)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,6 +34,7 @@ if [ "${1:-}" = "--job" ]; then
 		run_page_retry "$REFERENCE_URL" "$BASELINE.$BDG_SESSION.tmp" "" __uiResult "$setup" "${files[@]}"
 		mv "$BASELINE.$BDG_SESSION.tmp" "$BASELINE"
 	fi
+	[ -n "${BASELINE_ONLY:-}" ] && exit
 	run_page_retry "$VARIANT_URL" "$OUT/$script.json" "$OUT/$script.coverage.json" __uiResult "$setup" "${files[@]}"
 	node harness/ui-diff.js "$BASELINE" "$OUT/$script.json" "$script"
 	exit
@@ -44,6 +46,11 @@ for script in "${SCRIPTS[@]}"; do [ -f "harness/ui/$script.js" ] || { echo "no h
 rm -rf "$OUT"
 mkdir -p "$OUT" harness/out/baseline
 start_reference
+if [ -n "${BASELINE_ONLY:-}" ]; then
+	echo "${#SCRIPTS[@]} scripts, $JOBS at once: the reference's traces only"
+	run_jobs "$0" "${SCRIPTS[@]}"
+	exit
+fi
 serve_vite "$PORT"
 
 echo "${#SCRIPTS[@]} scripts, $JOBS at once, state snapshot: $STATE_SNAPSHOT"

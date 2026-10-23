@@ -9,7 +9,8 @@
 # Env: JOBS (Chromes at once, default 3/4 of the cores), BDG_SESSION (prefix of the sessions,
 #   default "replay"), BASELINE_REF (compare with this repo at a git ref, e.g. origin/main),
 #   REFERENCE_DIR (reference), REFERENCE_PORT (8643), PORT (8644),
-#   SEED (1), FULL_FROM (keep full states from that action index on, for debugging)
+#   SEED (1), FULL_FROM (keep full states from that action index on, for debugging),
+#   BASELINE_ONLY=1 (play only the reference's traces into harness/out/baseline, the cache CI keeps)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -41,6 +42,7 @@ if [ "${1:-}" = "--job" ]; then
 		run_page_retry "$REFERENCE_URL" "$BASELINE.$BDG_SESSION.tmp" "" __replayResult "$setup" "${files[@]}"
 		mv "$BASELINE.$BDG_SESSION.tmp" "$BASELINE"
 	fi
+	[ -n "${BASELINE_ONLY:-}" ] && exit
 	ln -sf "$PWD/$BASELINE" "$OUT/$(item_file "$item").baseline.json"
 	echo "remaster: $item"
 	run_page_retry "$VARIANT_URL" "$OUT/$(item_file "$item").json" "$OUT/$(item_file "$item").coverage.json" __replayResult "$setup" "${files[@]}"
@@ -62,6 +64,11 @@ ITEMS_JSON=$(printf '%s\n' "${ITEMS[@]}" | node -e 'console.log(JSON.stringify(r
 rm -rf "$OUT"
 mkdir -p "$OUT" harness/out/baseline
 start_reference
+if [ -n "${BASELINE_ONLY:-}" ]; then
+	echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once: the reference's traces only"
+	run_jobs "$0" "${ITEMS[@]}" >"$OUT/jobs.log" || { cat "$OUT/jobs.log"; exit 1; }
+	exit
+fi
 serve_vite "$PORT"
 
 echo "${#ITEMS[@]} items, $TURNS turns, $JOBS at once, state snapshot: $STATE_SNAPSHOT"

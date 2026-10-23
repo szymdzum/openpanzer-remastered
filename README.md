@@ -106,7 +106,9 @@ the scripts start the servers when they're not running.
 
 Pull requests run verify on GitHub Actions against their base branch (`.github/workflows/
 verify.yml`): main differs from the original on purpose (the unit markers), so against main a
-refactor comes out identical and a deliberate change shows only itself.
+refactor comes out identical and a deliberate change shows only itself. There the game plays in four
+shards side by side (the AI games, the UI scripts in thirds), main's own traces are played into the
+cache after each push to main, and the label `behavior-change` is judged without playing again.
 
 Every item and script plays in its own Chrome, several at once (JOBS, default 3/4 of the
 cores). The reference's traces are cached per item in harness/out/baseline, until the reference
