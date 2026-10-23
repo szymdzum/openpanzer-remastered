@@ -176,3 +176,33 @@ test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core against the o
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
+
+//The screen's rules in the running game (src/corerules.ts): what the render loop asks of every unit it
+//draws (the unit's own rules: its move range, ammo, fuel, ground, the bridge it stands on) and what a
+//click asks of the map (the move and attack hexes, the estimate under the attack cursor, the context
+//buttons), each on the world made from the objects at the call, against the old GameRules
+test.runIf(!!process.env.BENCH)("Benchmark: the screen's rules on the core against the old engine's", async () => {
+	const rows: string[] = ["fixture, units | render loop per unit old/core µs | move+attack hexes old/core µs | estimate old/core µs | context buttons old/core µs"];
+	for (const name of fixtures("engine")) {
+		const w = await load(name);
+		const { CoreRules } = await import("../src/corerules");
+		const { setEngineContext, engineContext } = await import("../src/context");
+		setEngineContext({ ...engineContext, host: () => w.game });
+		const { m, GameRules: GR } = w;
+		const units = m.getUnits().filter((u) => u.getPos());
+		const pair = units.flatMap((a) => units.filter((d) => a.player.side !== d.player.side && GR.isInAttackRange(a, d)).map((d) => [a, d]))[0];
+		type R = typeof CoreRules;
+		let sink = 0;
+		const loop = (R: R) => () => { for (const u of units) sink += R.getUnitMoveRange(u) + +R.unitUsesAmmo(u) + +R.unitUsesFuel(u) + +R.isGround(u) + +R.isBridgeForSide(u.getHex(), 0); };
+		const hexes = (R: R) => () => { R.getMoveRange(m, units[0]); R.getUnitAttackCells(m.map, units[0], m.rows, m.cols); };
+		const estimate = (R: R) => () => { if (pair) R.calculateCombatResults(pair[0], pair[1], m.getUnits(), false, true); };
+		const buttons = (R: R) => () => { const u = units[0]; R.canMount(u); R.canEmbark(m.map, u); R.canDisembark(m.map, u); R.canResupply(m.map, u); R.canReinforce(m.map, u); };
+		const old = GR as unknown as R;
+		const per = (x: number) => (x / units.length).toFixed(2);
+		rows.push(`${name} ${units.length} | ${per(time(20, loop(old)))} / ${per(time(20, loop(CoreRules)))}`
+			+ ` | ${time(10, hexes(old)).toFixed(0)} / ${time(10, hexes(CoreRules)).toFixed(0)}`
+			+ ` | ${time(10, estimate(old)).toFixed(0)} / ${time(10, estimate(CoreRules)).toFixed(0)}`
+			+ ` | ${time(10, buttons(old)).toFixed(0)} / ${time(10, buttons(CoreRules)).toFixed(0)}`);
+	}
+	fs.writeSync(2, rows.join("\n") + "\n");
+}, 600_000);

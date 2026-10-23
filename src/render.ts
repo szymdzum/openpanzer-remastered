@@ -20,7 +20,7 @@ import { Equipment } from "./equipment";
 import { $, addTag, type VendorStyled } from "./dom";
 import { type HexStyle, hexstyle, terrainencoding, unitstyle } from "./style";
 import { type AnimationCBData, AnimationChain, animationsData } from "./animation";
-import { GameRules } from "./gamerules";
+import { CoreRules } from "./corerules";
 import type { Unit } from "./unit";
 import type { GameMap, Hex, UnitImagesList } from "./map";
 import { UIBuilder } from "./uibuilder";
@@ -516,7 +516,7 @@ export class Render {
 						xstep = ((dPos.x - cPos.x)/animSteps) >> 0;
 						ystep = ((dPos.y - cPos.y)/animSteps) >> 0;
 
-						actualFacing = GameRules.getDirection(cCell.row, cCell.col, dCell.row, dCell.col);
+						actualFacing = CoreRules.getDirection(cCell.row, cCell.col, dCell.row, dCell.col);
 
 						if (Math.abs(actualFacing - unit.facing) > 1) {
 							unit.facing = actualFacing;
@@ -736,7 +736,7 @@ export class Render {
 
 			var atkflag = atkunit.flag - 1; //flags from 1-25, array from 0-24
 			var defflag = defunit.flag - 1;
-			var cr = GameRules.calculateCombatResults(atkunit, defunit, map.getUnits(), false, true);
+			var cr = CoreRules.calculateCombatResults(atkunit, defunit, map.getUnits(), false, true);
 
 			bb.clearRect(0, 0, bbw, bbh);
 			bb.drawImage(imgAttackCursor, bbw/2 - imgAttackCursor.width/2, bbh/2 - imgAttackCursor.height/2);
@@ -821,7 +821,7 @@ export class Render {
 			var image: HTMLImageElement = null;
 			//A ground unit on a bridge of its side is drawn as the bridge, unless it's selected or moving
 			if (unit.hasAnimation || (map.currentUnit && map.currentUnit.id == unit.id)
-				|| !GameRules.isGround(unit) || !GameRules.isBridgeForSide(unit.getHex(), unit.player.side))
+				|| !CoreRules.isGround(unit) || !CoreRules.isBridgeForSide(unit.getHex(), unit.player.side))
 				image = imgUnits[unit.getIcon()];
 			else
 				image = imgBridge;
@@ -877,8 +877,8 @@ export class Render {
 
 			var canMove = false, canFire = false, noAmmo = false;
 			if (own && side == map.currentPlayer.side && unit.player.id == map.currentPlayer.id) {
-				canMove = !unit.hasMoved && GameRules.getUnitMoveRange(unit) > 0;
-				if (!unit.hasFired && GameRules.unitUsesAmmo(unit)) {
+				canMove = !unit.hasMoved && CoreRules.getUnitMoveRange(unit) > 0;
+				if (!unit.hasFired && CoreRules.unitUsesAmmo(unit)) {
 					canFire = unit.getAmmo() > 0;
 					noAmmo = !canFire;
 				}
@@ -943,13 +943,13 @@ export class Render {
 			//Supply tags under the plate, only for a problem: fuel for less than two moves, two attacks or less
 			if (own) {
 				var tags: [string, string][] = [];
-				if (GameRules.unitUsesFuel(unit)) {
+				if (CoreRules.unitUsesFuel(unit)) {
 					var mp = unit.unitData().movpoints;
 					var fuel = unit.getFuel();
 					if (fuel < mp) tags.push(["fuel", unitstyle.supplyCritical]);
 					else if (fuel < 2 * mp) tags.push(["fuel", unitstyle.supplyLow]);
 				}
-				if (GameRules.unitUsesAmmo(unit) && unit.getAmmo() <= 2)
+				if (CoreRules.unitUsesAmmo(unit) && unit.getAmmo() <= 2)
 					tags.push(["ammo" + unit.getAmmo(), unit.getAmmo() == 0 ? unitstyle.supplyCritical : unitstyle.supplyLow]);
 				drawSupplyTags(c, cx, py + ph + 1, tags);
 			}

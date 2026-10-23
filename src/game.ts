@@ -20,7 +20,6 @@ import { GameState } from "./gamestate";
 import { defined } from "./dom";
 import { AI, type AIAction } from "./ai";
 import { AIScripted } from "./aiscripted";
-import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import { Player } from "./map";
 import { Scenario, type ScenarioOutcome } from "./scenario";
@@ -31,6 +30,8 @@ import { OSGlue } from "./osglue";
 import { Actions } from "./actions";
 import { Commands } from "./commands";
 import { CorePlay } from "./coreplay";
+import { CoreRules } from "./corerules";
+import { MapSelection } from "./selection";
 import { coreDriver, endGameTurn, startGameSession } from "./coresession";
 import type { Session } from "./core/session";
 import { setEngineContext } from "./context";
@@ -102,6 +103,7 @@ export class Game {
 		this.init = function() {
 			AI.onUnitsDeployed = function() { game.ui.handleReinforcementDeployment(); };
 			AI.driver = AIScripted.driver = coreDriver;
+			MapSelection.rules = CoreRules;
 			this.state = new GameState(this);
 			this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 				this.newScenario.bind(this, "failRestore"));
@@ -419,7 +421,7 @@ export class Game {
 				}
 				case actionType.attack: {
 					game.waitUIAnimation = true;
-					if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit) && game.ui.uiUnitAttack(p[0] as Unit, p[1] as Unit))
+					if (CoreRules.isInAttackRange(p[0] as Unit, p[1] as Unit) && game.ui.uiUnitAttack(p[0] as Unit, p[1] as Unit))
 						game.ui.uiSetUnitOnViewPort(p[0] as Unit);
 					else
 						game.waitUIAnimation = false;
