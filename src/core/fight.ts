@@ -22,6 +22,7 @@ import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import { moveUnit } from "./moves";
 import type { AttackStart, CombatResult, Contribution, Draft, Position, UnitId, UnitState, World } from "./types";
+import { isAir } from "./units";
 import { currentEqid, hexIndex, sideOf, unitById } from "./world";
 
 //A unit that gained an experience level gets a leader when its roll (its level to 10) is above this
@@ -238,11 +239,12 @@ function retreatTo(d: Draft, id: UnitId, to: Position) {
 }
 
 //The surprise attack at the end of a move (Actions.finishMove): on the unit of the hex the mover
-//can attack, the air one first in air mode (a program plays with it off; the old game read the
-//person's toggle, #77), then the mover is no longer surprised; the attack's finish is the caller's,
-//after the move's victory
-export function surpriseAttack(d: Draft, id: UnitId, at: Position, airMode = false): AttackStart | null {
-	const target = attackableUnit(d, unitById(d, id), hexIndex(d, at.row, at.col), airMode);
+//can attack, the one of its kind first, which stopped it (the old game picked by the person's air
+//mode toggle, for the AI's moves too, #77), then the mover is no longer surprised; the attack's
+//finish is the caller's, after the move's victory
+export function surpriseAttack(d: Draft, id: UnitId, at: Position): AttackStart | null {
+	const mover = unitById(d, id);
+	const target = attackableUnit(d, mover, hexIndex(d, at.row, at.col), isAir(d, mover));
 	const start = target === null ? null : resolveAttack(d, id, target.id);
 	writeUnit(d, id).isSurprised = false;
 	return start;

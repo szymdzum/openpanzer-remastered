@@ -11,7 +11,7 @@ import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../figh
 import { isInAttackRange } from "../attack";
 import { canEndMoveOn, pathTo, shortestPath } from "../movement";
 import { moveUnit } from "../moves";
-import type { Checkpoint, CheckpointInput, CommandHandler, Draft, Position } from "../types";
+import type { Checkpoint, CommandHandler, Draft, Position } from "../types";
 import { playerAt, refuse, unitCheck } from "./common";
 import { onMap, unitById } from "../world";
 
@@ -63,10 +63,10 @@ export function attackFirst(d: Draft, cmd: CommandOf<"attack">): Checkpoint {
 }
 
 //What comes after the checkpoint, up to the next one (null: the command is done)
-export function resumeFrom(d: Draft, cp: Checkpoint, input: CheckpointInput): Checkpoint | null {
+export function resumeFrom(d: Draft, cp: Checkpoint): Checkpoint | null {
 	switch (cp.next) {
 		case "surprise": {
-			const start = cp.surprise !== null ? surpriseAttack(d, cp.unit, cp.surprise, input.airMode === true) : null;
+			const start = cp.surprise !== null ? surpriseAttack(d, cp.unit, cp.surprise) : null;
 			if (cp.win) emit(d, { type: "victory", side: playerAt(d, unitById(d, cp.unit).owner).side, kind: "capture" });
 			return start === null ? null : { next: "cleanUp", attack: start };
 		}
@@ -80,5 +80,5 @@ export function resumeFrom(d: Draft, cp: Checkpoint, input: CheckpointInput): Ch
 
 //Every checkpoint passed at once, as a program plays
 function finishFrom(d: Draft, cp: Checkpoint) {
-	for (let next: Checkpoint | null = cp; next !== null;) next = resumeFrom(d, next, {});
+	for (let next: Checkpoint | null = cp; next !== null;) next = resumeFrom(d, next);
 }

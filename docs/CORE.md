@@ -148,13 +148,13 @@ resolve on a copy of the stream.
 
 **Checkpoints (#137).** The old UI animated a move and an attack and finished them from the
 animation's end, showing the state in between (the animation-combat script hashes every frame of
-it). `begin(world, command)` plays a command up to its first checkpoint, `resume(world, checkpoint,
-input)` from one to the next: a move stops once moved (`surprise` next: the surprise attack and the
+it). `begin(world, command)` plays a command up to its first checkpoint, `resume(world, checkpoint)`
+from one to the next: a move stops once moved (`surprise` next: the surprise attack and the
 capture's victory), an attack once its shots are fired (`cleanUp` next: the destroyed units leave the
 map) and once they are gone (`end` next: the retreat or the surrender, the elimination victory). The
-world resumed from can be one made again from the screen's objects. What the screen says there is an
-input, not state: the air mode the surprise attack picks its target with (#77: the person's toggle;
-a program plays with it off). `step` passes every checkpoint at
+world resumed from can be one made again from the screen's objects. The surprise attack hits the
+hidden unit of the mover's kind first, the one that stopped it (#77: the old game picked by the
+person's air mode toggle, for the AI's moves too). `step` passes every checkpoint at
 once on one draft; test/core-steps.test.ts played each of its commands both ways until #137.
 
 **Undo (D5).** The state keeps `turn.undoable` as the old engine's slot decides it: a human
@@ -312,9 +312,7 @@ freezes on turn 2). `{prestige}` in a message stands for the prestige icon, whic
 view has the `deployed` events. A controller can also ask the screen for something (`ViewEvent`:
 select a unit, show a message, look at a hex, open the main menu) or say that the old game got stuck
 there (#80): an `Order` is a command or a view event; a turn start's and a join's view events come
-with them (`StartedTurn.view`, `Session.joined`). The surprise attack at the end of an AI move
-picks its target with the air mode off (#77: the old game read the human's toggle), as the engine
-contract plays it.
+with them (`StartedTurn.view`, `Session.joined`).
 
 ## A game headless (#136)
 
@@ -338,7 +336,7 @@ turn has it plan again (#71). `playTurn(s)` plays a turn to its end.
 
 A screen plays the same session one piece at a time (#137): `nextOrder(s)` asks the current player's
 controller for its order without playing it (the replay hashes the state there), `play(s, command)`
-plays a person's command or an order up to its first checkpoint and `playOn(s, checkpoint, input)`
+plays a person's command or an order up to its first checkpoint and `playOn(s, checkpoint)`
 from there, and `endTurn(s, saved)` ends the turn, calling `saved(started)` at the save point (the
 screen shows the units the AI deployed at its turn start, then saves) before the side shown and the
 reinforcements. `StartedTurn.type` is the player's type when its turn started (the tutorial may hand

@@ -133,7 +133,7 @@ function stand(game: Game, Commands: typeof import("../src/commands").Commands, 
 		uiUnitMove(unit: Unit, row: number, col: number) {
 			const r = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row, col } }, {
 				animate: (_mr, finish) => {
-					finish(false, { attackHooks });
+					finish({ attackHooks });
 					game.waitUIAnimation = false;
 				},
 			});
