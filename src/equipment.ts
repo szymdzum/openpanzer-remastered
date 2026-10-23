@@ -12,7 +12,6 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { touched } from "./context";
 
 //The index lists of a country file: equipment ids by unit class
 export interface EquipmentIndexes {
@@ -144,8 +143,9 @@ Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryF
 
 //Selects equipment by unitclass and country sorting it by sortkey
 //(getCountryEquipmentByKey of 2.9 inlined, without the early return: an index without
-//the unitclass key leaves the empty list, a class missing from it leaves undefined and sort throws)
-//The sort is done in place on the index list
+//the unitclass key leaves the empty list, a class missing from it leaves undefined and sorting it throws)
+//Sorted, it is a copy: the index lists' order is the game's (what the AI buys, a unit's first
+//transport, #186). Unsorted, the index list itself
 Equipment.getCountryEquipmentByClass = function(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean) {
 	let eqList: number[] = [];
 
@@ -153,10 +153,8 @@ Equipment.getCountryEquipmentByClass = function(uclass: number, country: number,
 		if (Equipment.equipmentIndexes[country].hasOwnProperty("unitclass"))
 			eqList = Equipment.equipmentIndexes[country]["unitclass"][uclass];
 
-		if (sortkey) {
-			eqList.sort(keySort(sortkey, reverse));
-			touched(); //(the lists are the state's, #186)
-		}
+		if (sortkey)
+			eqList = eqList.slice().sort(keySort(sortkey, reverse));
 	}
 
 	return eqList;
