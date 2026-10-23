@@ -250,8 +250,28 @@ exists. So the new strip goes in without touching the game:
 the tank shows, selects and moves like any other unit. `public/hd/` is not in Git (it holds the
 generated files of `scripts/upscale-assets.sh`), so the strip only shows where it was copied.
 
+### A second review
+
+An independent review of the strip (Claude, read-only) asked for five things. Done in the scripts:
+
+- **The brick silhouette**: on top of the height squash, the pixel strip widens the tank 8%
+  (`widen` in `render.py pixel`): the front is 28 × 29 px against the old 28 × 28. The diagonals
+  grow with it (8-19% more area than the old frames): the old strip's inconsistent proportions
+  again.
+- **The gun breaking up**: a third render pass shows the gun alone, the rest of the tank held out
+  (so the turret still hides it from behind), and every pixel it touches is drawn in a dark
+  colour of the palette: an unbroken line in every frame.
+- **A calmer camouflage**: a darker base, lighter bands, narrower. It came out too calm: the bands
+  nearly vanish, the old ones show clearly, only darker. The next setting is halfway.
+- **Bigger crosses** on the hull skirts (1.5 times): a readable black and white spot at 1x.
+- Not done: "the turret is too high, the muzzle brake sticks out of the drawing". That is the H's
+  turret skirts and its longer L/48 gun, which the G of the drawing doesn't have.
+
+![After the review, old (top) and new (bottom) at 2x on map_0](assets-pilot/on-map-review.png)
+
 ### What's left
 
+- The camouflage halfway between the two settings above.
 - A way to ship the new strips: `public/hd/` is generated and ignored, so a made strip needs its
   own place in the repo and a step that copies it there (after `upscale-assets.sh`, which skips
   files that exist).
