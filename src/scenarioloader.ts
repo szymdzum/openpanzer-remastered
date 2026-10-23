@@ -29,11 +29,15 @@ export const scenarioPath = "resources/scenarios/data/";
 //end, with scen.isLoaded telling if the scenario loaded.
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
+	//Who makes the game once its files are in: the core in the running game (#137: src/coreload.ts, set by
+	//Game.init), else the loader itself (the old engine's tests)
+	declare static build: ((scen: Scenario, xmlData: Document, imageSize: [number, number]) => void) | null;
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;
 
 	constructor() {
 		var scen: Scenario = null;
+		let imageSize: [number, number] = [0, 0]; //the map image's, for ScenarioLoader.build
 
 		this.noCache = true; //add a timestamp to the scenario url so the browser doesn't cache it
 
@@ -118,6 +122,10 @@ export class ScenarioLoader {
 		function equipmentLoaded(players: Player[], xmlData: Document) {
 			if (--Equipment.equipmentToLoad)
 				return;
+			if (ScenarioLoader.build !== null) {
+				ScenarioLoader.build(scen, xmlData, imageSize);
+				return;
+			}
 
 			//Units need the equipment so players are added only now
 			for (let i = 0; i < players.length; i++) {
@@ -211,6 +219,7 @@ export class ScenarioLoader {
 			const img = new Image();
 			img.src = scen.map.terrainImage;
 			img.onload = function() {
+				imageSize = [img.width, img.height];
 				let rows = scen.map.rows;
 				let cols = scen.map.cols;
 				let width = img.width;
@@ -348,3 +357,5 @@ export class ScenarioLoader {
 		}
 	}
 }
+
+ScenarioLoader.build = null;

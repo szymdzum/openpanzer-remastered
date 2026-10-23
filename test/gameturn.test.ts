@@ -45,7 +45,12 @@ async function play(item: string, mode: Mode): Promise<string[]> {
 	const { CombatLog } = await import("../src/combatlog");
 	const { playerType } = await import("../src/prototypes");
 	const { GameState } = await import("../src/gamestate");
-	if (mode === "core") AI.driver = AIScripted.driver = coreDriver;
+	const { buildOnCore } = await import("../src/coreload");
+	const { ScenarioLoader } = await import("../src/scenarioloader");
+	if (mode === "core") {
+		AI.driver = AIScripted.driver = coreDriver;
+		ScenarioLoader.build = buildOnCore;
+	}
 	AI.onUnitsDeployed = () => { game.ui.handleReinforcementDeployment(); }; //(Game.init)
 	const seed = item.length * 7919;
 	Rng.seed(seed);
@@ -67,7 +72,8 @@ async function play(item: string, mode: Mode): Promise<string[]> {
 				p.type = playerType.aiLocal;
 				p.handler = new AI(p, map());
 			}
-			if (traced.has(p.handler)) continue;
+			//(a campaign carries the player's type: the AI the replay made it, with no handler in the next scenario)
+			if (p.handler === null || traced.has(p.handler)) continue;
 			const getAction = p.handler.getAction.bind(p.handler);
 			p.handler.getAction = () => {
 				const a = getAction();
@@ -106,6 +112,18 @@ async function play(item: string, mode: Mode): Promise<string[]> {
 	traced.clear();
 	trace.push("restored\n" + state());
 	ticks(map().turn + 2);
+	//A campaign's scenario won: the scenario left as the old game leaves it, then the next one, played on
+	if (game.campaign !== null && !game.gameEnded) {
+		game.continueCampaign("briliant");
+		trace.push("won\n" + state());
+		const won = game.scenario;
+		game.uiMessageClicked = true;
+		game.processTurn();
+		await until(() => game.scenario !== won && game.scenario.isLoaded && game.gameStarted, item + " next scenario");
+		traced.clear();
+		trace.push("next scenario\n" + state());
+		ticks(map().turn + 2);
+	}
 	return trace;
 }
 
