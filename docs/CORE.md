@@ -58,7 +58,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `controller.ts` | `Controller`, the orders it gives (a command, or something to show) (types) |
 | `ai.ts` | the AI as a controller: its purchases and deployment, its plan of the turn, its queue of commands |
 | `aiscore.ts` | the AI's scores: of a hex for a unit, of an attack, of the attacks from a hex, of the nearest objective |
-| `tutorial.ts` | the scripted tutorial as a controller: its script of turns 1 to 4 as data, the hand-over after them |
+| `tutorial.ts` | the scripted tutorial as a controller: its script of turns 1 to 5 as data, the hand-over after them |
 | `session.ts` | a game played headless: the controllers, the turns in the old game's order, the end of the game |
 | `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell; `turn.ts`: the end of turn) |
 
@@ -269,7 +269,7 @@ tutorial's script) is its memory, not state (D6). The session calls it in the ol
 | Call | When (the old game) | The AI | The tutorial |
 |---|---|---|---|
 | `join(w)` | the players are set up (Game.setupPlayers) | the prestige for reinforcements | picks its units by their starting hexes, builds the turn's script |
-| `startTurn(w)` | its turn starts (Map.endTurn's turn driver) | purchases and deployment, as `buy` and `deploy` commands it steps itself; `Played` gives the world after, the commands and their events | builds the turn's script; past turn 4 hands the player over |
+| `startTurn(w)` | its turn starts (Map.endTurn's turn driver) | purchases and deployment, as `buy` and `deploy` commands it steps itself; `Played` gives the world after, the commands and their events | builds the turn's script; past turn 5 hands the player over |
 | `plan(w)` | right after, before the reinforcements (#94); a game loaded on its turn plans again (#71) | the whole turn, unit by unit: the world with its stream moved on | nothing |
 | `next(w)` | until it answers null, which ends the turn | the next command of its plan | the next action of its script |
 
@@ -300,19 +300,22 @@ after an undo), the attack estimate's #87. Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 
 **The tutorial** (tutorial.ts) is src/aiscripted.ts's script without the UI, both sides of
-tutorial.xml, each turn's actions in the old order as data. A turn's script is built when the turn
-starts (and when the player joins): the units it names are looked up then, the seven it picked by
-their starting hexes or the one on a hex, and its actions are played one by one later whatever
-happened in between, as Game.processAction played them: a message pointing at a hex and a selection
-are view events, a mount, a move, a reinforcement or a resupply a command (of unit -1, which the step
-refuses, where the hex was empty), an attack with no unit or no target says the old game got stuck
-there (#80). On turn 4 it empties a unit's fuel while building the script (a change of the world it
-returns, so the resupply has something to do) and opens the main menu (a view event of the turn
-start, not of an order). Past turn 4 it hands its player over (`Played.handOver`): side 0 to a person,
-the other to the AI, which ends that turn having planned nothing. Kept: #80; #81 (the allies'
-turn-1 attack is queued twice, at the join and at their turn start, and the AI they are handed to
-skips a turn); #188 (five of its seven turn-1 moves can't reach their hexes, so every new game
-freezes on turn 2). `{prestige}` in a message stands for the prestige icon, which is the view's.
+tutorial.xml, each turn's actions in order as data. A turn's script is built when the turn starts (and
+when the player joins): the units it names are looked up then, the eight it picked by their starting
+hexes or its own unit on a hex, and its actions are played one by one later, as Game.processAction
+played them: a message pointing at a hex and a selection are view events, a mount, a move, an attack,
+a reinforcement or a resupply a command. The script is planned on the terrain's costs, each move in its
+unit's range from where the turn before left it (#188: it was planned one point a hex, most of its
+moves were refused and every new game got stuck on turn 2, #80): turn 1 towards the city, turn 2 next
+to it, the allies' infantry fires on the mounted SS infantry, turn 3 the attacks, the capture and the
+recon's surprise, turn 4 the reinforcement and the moves towards the last objective, turn 5 the attacks
+on its defenders and the resupply. The dice decide the rest, so an order they made pointless is
+skipped: an order of a unit that isn't there, an attack on a unit gone or out of reach, a move into a
+hex an enemy is seen on. On turn 5 it empties a unit's fuel while building the script (a change of the
+world it returns, so the resupply has something to do) and opens the main menu (a view event of the
+turn start, not of an order). Past turn 5 it hands its player over (`Played.handOver`): side 0 to a
+person, the other to the AI, which ends that turn having planned nothing (#81 kept). `{prestige}` in a
+message stands for the prestige icon, which is the view's.
 
 **What isn't state.** The old AI asked the screen to redraw after deploying (AI.onUnitsDeployed): the
 view has the `deployed` events. A controller can also ask the screen for something (`ViewEvent`:

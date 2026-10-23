@@ -1,8 +1,7 @@
 //The AI and the tutorial as controllers on the core (src/core/ai.ts, src/core/tutorial.ts), played in
 //the core's headless session (src/core/session.ts) for rounds of turns: every engine fixture loaded on
 //its current player's turn (#71), the replay's items (harness/replay.sh) started anew AI against AI,
-//and the tutorial from its later turns, its units where its script meant them to be (a new game is
-//stuck on turn 2, #80). Until the old engine went (#137) each advance was compared with the old AI's
+//and the tutorial from its later turns, its units where its script puts them. Until the old engine went (#137) each advance was compared with the old AI's
 //and the old AIScripted's, played as Game played them, in lockstep: the same order, answer, turn start,
 //state and end (test/aigames.ts then). The hashes of every advance then (test/coreai.json.gz) pin them
 //since: the order or the end of turn, the state after it, how the game ended
@@ -74,16 +73,17 @@ async function startItem(item: string, seed: number): Promise<{ o: Modules; loca
 	return { o, localSide };
 }
 
-//Where the tutorial's turns 1 and 2 meant its units to be when turn 3 starts, and turn 3 when turn 4
-//starts, by unit id: a new game never gets there (#80, #188). The allied infantry in the city is gone
-//by then
+//Where the tutorial's script has put its units when turns 3, 4 and 5 start, by unit id: the Legion, the
+//artillery, the three SS infantry, the recon car and the Pz IIA. The allied infantry in the city is gone
+//by turn 4
 const TUTORIAL_PLACES: Record<number, [number, number, number][]> = {
-	3: [[3, 15, 10], [2, 7, 15], [6, 8, 14], [5, 9, 14], [0, 7, 9], [1, 7, 13], [7, 8, 15]],
-	4: [[3, 15, 10], [2, 14, 11], [6, 14, 9], [5, 14, 8], [0, 11, 9], [1, 13, 13], [7, 12, 12]],
+	3: [[0, 8, 7], [1, 8, 10], [2, 7, 15], [3, 11, 9], [5, 9, 14], [6, 8, 14], [7, 9, 15]],
+	4: [[0, 8, 7], [1, 8, 10], [2, 7, 15], [3, 15, 10], [5, 9, 14], [6, 8, 14], [7, 8, 15]],
+	5: [[0, 9, 9], [1, 10, 11], [2, 10, 15], [3, 15, 10], [5, 12, 9], [6, 12, 12], [7, 11, 10]],
 };
 const TUTORIAL_CITY_DEFENDER = 4;
 
-//The tutorial as from turn turn, as a game loaded on that turn, its units where its script meant them
+//The tutorial as from turn turn, as a game loaded on that turn, its units where its script puts them
 async function tutorialAt(turn: number): Promise<Session> {
 	const { o, localSide } = await startItem("scripted:tutorial.xml", turn);
 	const m = o.game.scenario.map;
@@ -91,8 +91,10 @@ async function tutorialAt(turn: number): Promise<Session> {
 	(await import("../src/context")).touched();
 	const places = TUTORIAL_PLACES[turn];
 	if (places !== undefined) {
-		m.getUnitById(TUTORIAL_CITY_DEFENDER).destroyed = true;
-		m.updateUnitList();
+		if (turn > 3) {
+			m.getUnitById(TUTORIAL_CITY_DEFENDER).destroyed = true;
+			m.updateUnitList();
+		}
 		for (const [id, row, col] of places) {
 			const u = m.getUnitById(id), p = u.getPos();
 			m.map[p.row][p.col].delUnit(u);
@@ -132,7 +134,7 @@ function same(name: string, got: string[]) {
 	expect(i === -1 && got.length === want.length ? "" : `${name}: advance ${i} of ${got.length} (${want.length} recorded)`).toBe("");
 }
 
-//The tutorial's script runs to turn 4, then hands its players over
+//The tutorial's script runs to turn 5, then hands its players over
 const ROUNDS = 2, TUTORIAL_ROUNDS = 7;
 
 test.each(fixtures("engine"))("The core's AI plays %s as the old AI did, turn by turn", async (name) => {
@@ -149,28 +151,59 @@ test.each(replayItems)("The core's AI and tutorial play %s from its start as the
 	same(item, played(sessionOf(o, localSide, false), item.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS));
 }, 120_000);
 
-//Turns 3 and 4 with its units where its script meant them (the fuel emptied and the main menu opened
-//when turn 4 is built), turn 5 on the units as they start, the players handed over to a person and the
+//Turns 3 to 5 with its units where its script puts them (the fuel emptied and the main menu opened
+//when turn 5 is built), turn 6 on the units as they start, the players handed over to a person and the
 //AI. The view events when the players join are pinned too
-test.each([3, 4, 5])("The core's tutorial plays from turn %i as the old one did", async (turn) => {
+test.each([3, 4, 5, 6])("The core's tutorial plays from turn %i as the old one did", async (turn) => {
 	const s = await tutorialAt(turn);
 	same("tutorial from turn " + turn, played(s, TUTORIAL_ROUNDS, [hash(JSON.stringify(s.joined))]));
 }, 120_000);
 
 //Where the tutorial's turn 1 sends its seven units (src/core/tutorial.ts), by unit id: the Legion, the
 //artillery, the three SS infantry, the recon car and the Pz IIA
-const TUTORIAL_TURN_1: [number, number, number][] = [[0, 7, 9], [1, 7, 13], [2, 7, 15], [3, 10, 14], [5, 9, 14], [6, 8, 14], [7, 7, 11]];
+const TUTORIAL_TURN_1: [number, number, number][] = [[0, 8, 7], [1, 8, 10], [2, 7, 11], [3, 10, 14], [5, 10, 10], [6, 9, 11], [7, 8, 11]];
 
-//The script was planned in hexes, one point each: every move is within the unit's points in hexes but
-//costs more in terrain (the trucks are wheeled, 2 a clear hex), so the moves are refused and turn 2
-//finds no attackers (#80)
-test.fails("A new tutorial's turn 1 moves its units to the hexes its script sends them to (fails: #188)", async () => {
-	const { o, localSide } = await startItem("scripted:tutorial.xml", 1);
-	const s = sessionOf(o, localSide, false);
-	while (s.ended === null && s.world.state.turn.turn < 2) advance(s);
-	const places = TUTORIAL_TURN_1.map(([id]) => {
+//The places of the tutorial's seven units now, by unit id
+function placesOf(s: Session, of: [number, number, number][]): [number, number, number][] {
+	return of.map(([id]) => {
 		const u = s.world.state.units.find((x) => x.id === id);
 		return [id, u?.row, u?.col];
 	});
-	expect(places).toEqual(TUTORIAL_TURN_1);
+}
+
+//The script is planned on the terrain's costs (the trucks are wheeled, 2 a clear hex): every move is in
+//its unit's range (#188, the script was planned one point a hex)
+test("A new tutorial's turn 1 moves its units to the hexes its script sends them to (#188)", async () => {
+	const { o, localSide } = await startItem("scripted:tutorial.xml", 1);
+	const s = sessionOf(o, localSide, false);
+	while (s.ended === null && s.world.state.turn.turn < 2) advance(s);
+	expect(placesOf(s, TUTORIAL_TURN_1)).toEqual(TUTORIAL_TURN_1);
 }, 120_000);
+
+//A new game played by the tutorial on both sides, whatever the dice: every order the script gives is
+//one the core allows, the game goes on to the hand-over after turn 5 (it got stuck on turn 2, #80), and
+//when the dice let the story go as written the units are where the later turns look for them
+test("A new tutorial plays its script to its end, every scripted order allowed (#188)", async () => {
+	for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+		const { o, localSide } = await startItem("scripted:tutorial.xml", seed);
+		const s = sessionOf(o, localSide, false);
+		const { refused, places } = playedToHandOver(s);
+		expect(refused, "seed " + seed).toEqual([]);
+		expect(s.ended, "seed " + seed).toBeNull();
+		expect(s.world.state.players.map((p) => p.type), "seed " + seed).toEqual([o.playerType.humanLocal, o.playerType.aiLocal]);
+		if (seed === 1) expect(places).toEqual(TUTORIAL_PLACES);
+	}
+}, 240_000);
+
+//The tutorial played to the allies' turn 6, which hands them over to the AI as the axis' turn 6 handed
+//them to a person: the orders refused, and the places of its units when turns 3 to 5 start
+function playedToHandOver(s: Session): { refused: string[]; places: Record<number, [number, number, number][]> } {
+	const refused: string[] = [], places: Record<number, [number, number, number][]> = {};
+	const turn = () => s.world.state.turn;
+	while (s.ended === null && !(turn().turn === 6 && turn().currentPlayer === 1)) {
+		const a = advance(s);
+		if (a.kind === "order" && a.refusal !== null) refused.push(`turn ${turn().turn}: ${JSON.stringify(a.order)} ${a.refusal.reason}`);
+		if (a.kind === "endTurn" && turn().currentPlayer === 0 && TUTORIAL_PLACES[turn().turn]) places[turn().turn] = placesOf(s, TUTORIAL_PLACES[turn().turn]);
+	}
+	return { refused, places };
+}
