@@ -3,7 +3,7 @@
 The AI is a controller on the new core (docs/CORE.md, "The AI"): `aiController` in src/core/ai.ts,
 scores in src/core/aiscore.ts, settings in `aiDefaultConfig` (src/prototypes.ts). It reproduces the
 bundle's AI exactly, draw for draw on the AI's own random stream (src/rng.ts), apart from the bugs
-fixed since (#74, #75, #77, #82, #100, #101, #207).
+fixed since (#74, #75, #77, #82, #100, #101, #207, #224).
 
 ## The turn
 
@@ -11,7 +11,9 @@ The session (src/core/session.ts) calls the controller in Game's order:
 
 1. **`startTurn`, buy and deploy** (`buyAndDeploy`): with the prestige over a reserve of 1000, 30%
    of it for aircraft (fighters, tactical bombers), the rest for ground units in a fixed rotation
-   (infantry, infantry, artillery, anti-tank, tank, infantry, tank), units costing 120 to 900. Then
+   (infantry, infantry, artillery, anti-tank, tank, infantry, tank), units costing 120 to 900. A unit
+   a transport carries gets a random one of its country's ground transports that carries it, is in
+   service in the scenario's year and fits the budget left (#224), as a person buys it. Then
    it deploys the undeployed core units on the deployment hexes.
 2. **`plan`, the whole turn at once** (`planTurn`), on the state at the turn's start. The
    reinforcements arrive after the plan (#94, kept).

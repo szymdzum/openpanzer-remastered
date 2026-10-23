@@ -35,7 +35,7 @@ import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
 import type { GameState, MoveCell, Position, UnitState, World } from "./types";
-import { canMount, isAir, isGround, isSea, unitUsesFuel } from "./units";
+import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
 import { groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
 
 export interface AIControllerOptions {
@@ -85,8 +85,9 @@ function withAIStream(w: World, rng: RngStream): World {
 
 //AI.startTurn: the purchases, bought from the last one of each list, air first; then each undeployed
 //core unit on the first deployment hex of its side it fits on, hex by hex. The commands are the ones
-//the old AI's calls amount to (Player.buyUnit with no transport, Map.deployPlayerUnit where it
-//succeeded); the redraw it asked for after (AI.onUnitsDeployed) is the view's, from the events
+//the old AI's calls amount to (Player.buyUnit, Map.deployPlayerUnit where it succeeded), a unit with
+//the transport it was bought with (#224); the redraw it asked for after (AI.onUnitsDeployed) is the
+//view's, from the events
 function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 	const rng = aiStream(w);
 	const bought = purchases(w, player, config, rng);
@@ -99,7 +100,7 @@ function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 		commands.push(cmd);
 		events.push(...r.events);
 	};
-	for (const eqid of bought.units) play({ type: "buy", eqid, transport: -1 });
+	for (const b of bought.units) play({ type: "buy", eqid: b.eqid, transport: b.transport });
 	const side = world.state.players[player].side;
 	for (const to of deployHexes(world, side)) {
 		const core = world.state.players[player].core;
@@ -125,7 +126,7 @@ function deployHexes(w: World, side: number): Position[] {
 
 //What the AI buys with the prestige over its reserve, part of it for air units (none under 300), in
 //the order it buys them; the world with the equipment lists as the choosing left them (#22)
-function purchases(w: World, player: number, config: AIConfig, rng: RngStream): { world: World; units: number[] } {
+function purchases(w: World, player: number, config: AIConfig, rng: RngStream): { world: World; units: Purchase[] } {
 	let prestige = w.state.players[player].prestige;
 	if (prestige <= config.prestigeReserve) return { world: w, units: [] };
 	const lists = countryLists(w, w.state.players[player].country + 1);
@@ -134,8 +135,9 @@ function purchases(w: World, player: number, config: AIConfig, rng: RngStream): 
 	if (airPrestige < 300) airPrestige = 0;
 	prestige -= airPrestige;
 	const year = new Date(w.state.scenario.date).getFullYear();
-	const air = buyUnits(w, lists.of, rng, airPrestige, config.airPurchaseClasses, config, year);
-	const ground = buyUnits(w, lists.of, rng, prestige, config.groundPurchaseClasses, config, year);
+	const buying: Buying = { w, listOf: lists.of, transports: groundTransports(w, w.state.players[player].country + 1), rng, config, year };
+	const air = buyUnits(buying, airPrestige, config.airPurchaseClasses);
+	const ground = buyUnits(buying, prestige, config.groundPurchaseClasses);
 	return { world: lists.written(w), units: [...air.reverse(), ...ground.reverse()] };
 }
 
@@ -169,29 +171,66 @@ function countryLists(w: World, country: number) {
 	};
 }
 
+//A unit the AI buys and its transport (-1: none)
+interface Purchase {
+	eqid: number;
+	transport: number;
+}
+
+interface Buying {
+	w: World;
+	listOf: (uclass: number) => number[];
+	transports: readonly number[];	//the country's ground transports
+	rng: RngStream;
+	config: AIConfig;
+	year: number;
+}
+
+//The country's ground transports, as the state has them (the AI reads the list, it doesn't change it)
+function groundTransports(w: World, country: number): readonly number[] {
+	const indexes = w.state.equipment.indexes[country];
+	const list = indexes !== undefined ? indexes.unitclass[String(unitClass.groundTransport)] : undefined;
+	return list !== undefined ? list : [];
+}
+
 //AI buyUnits: random affordable units of the classes in classList, cycling through the list, until
-//the prestige runs out or a whole cycle ends on a class with nothing to buy
-function buyUnits(w: World, listOf: (uclass: number) => number[], rng: RngStream, prestige: number, classList: number[],
-	config: AIConfig, year: number): number[] {
-	const units: number[] = [];
+//the prestige runs out or a whole cycle ends on a class with nothing to buy. A unit a transport can
+//carry gets one, as a person buys it (#224)
+function buyUnits(b: Buying, prestige: number, classList: number[]): Purchase[] {
+	const units: Purchase[] = [];
 	let classIndex = 0, noneFound = false;
 	while (prestige > 0) {
 		if (classIndex > classList.length - 1) {
 			if (noneFound) break;
 			classIndex = 0;
 		}
-		const list = listOf(classList[classIndex]);
+		const list = b.listOf(classList[classIndex]);
 		for (let i = list.length - 1; i >= 0; i--)
-			if (!canBuy(w, list[i], prestige, config, year)) list.splice(i, 1);
+			if (!canBuy(b.w, list[i], prestige, b.config, b.year)) list.splice(i, 1);
 		noneFound = list.length === 0;
 		if (!noneFound) {
-			const eqid = list[Math.floor(nextRandom(rng) * list.length)];
-			prestige -= unitCost(w, eqid);
-			units.push(eqid);
+			const eqid = list[Math.floor(nextRandom(b.rng) * list.length)];
+			prestige -= unitCost(b.w, eqid);
+			const transport = pickTransport(b, eqid, prestige);
+			prestige -= unitCost(b.w, -1, transport);
+			units.push({ eqid, transport });
 		}
 		classIndex++;
 	}
 	return units;
+}
+
+//A random one of the country's ground transports that carries the unit, is built and not yet retired
+//(the equipment window's), and fits the prestige left; -1 for a unit no transport carries, or none fits
+function pickTransport(b: Buying, eqid: number, prestige: number): number {
+	if (!isTransportable(b.w, eqid)) return -1;
+	const weight = b.w.equipment[eqid].groundweight;
+	const fitting = b.transports.filter((t) => {
+		const e = b.w.equipment[t];
+		return e !== undefined && (e.groundweight & weight) !== 0 && e.yearavailable <= b.year && e.yearexpired >= b.year
+			&& unitCost(b.w, -1, t) <= prestige;
+	});
+	return fitting.length === 0 ? -1 : fitting[Math.floor(nextRandom(b.rng) * fitting.length)];
 }
 
 //What the AI can buy now; the rest leaves the list for good (#22): too dear for what is left, outside
