@@ -6,17 +6,39 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { readFixture } from "./contracts";
+import { setupOf } from "./corefiles";
 import { freshFixtures, freshGame, mapSizes, startState } from "./lifecycle";
 import { oldExport } from "./saves";
+
+//The reference's export with the deliberate fixes to the loading since: in a campaign, a player of
+//another country than the campaign's (the AI's) gets the scenario file's prestige per turn, not the
+//difficulty's minimum (#15)
+function withFixes(reference: string): string {
+	const state = JSON.parse(reference) as OldExport;
+	if (state.campaign === null) return reference;
+	const filePlayers = setupOf(state.scenario.file, null).scenario.players;
+	state.players.forEach((p, i) => {
+		if (p.country === state.campaign.country) return;
+		p.prestigePerTurn = filePlayers[i].prestigePerTurn.slice();
+		p.prestige = p.prestigePerTurn[0];
+	});
+	return JSON.stringify(state);
+}
+
+interface OldExport {
+	scenario: { file: string };
+	players: { country: number; prestige: number; prestigePerTurn: number[] }[];
+	campaign: { country: number } | null;
+}
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test.each(freshFixtures("engine"))("ScenarioLoader contract %s", async (name) => {
 	const fixture = readFixture("engine", name);
 	const game = await freshGame();
 	await startState(game, fixture.file);
-	const actual = oldExport(game);
-	expect(JSON.parse(actual), "a different scenario than the reference loaded").toEqual(JSON.parse(fixture.state));
-	expect(actual, "same data, different key order").toBe(fixture.state);
+	const actual = oldExport(game), expected = withFixes(fixture.state);
+	expect(JSON.parse(actual), "a different scenario than the reference loaded").toEqual(JSON.parse(expected));
+	expect(actual, "same data, different key order").toBe(expected);
 });
 
 //test/mapsizes.json stands in for the map images (Git LFS, not checked out in CI): it must match

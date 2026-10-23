@@ -278,9 +278,9 @@ difficulty, single scenarios don't (`difficultyModifiers`, prototypes.ts):
 | Tactical | +20% | 10% of the start prestige | x1.2 | x0.8 |
 | Operational (easiest) | +50% | 25% of the start prestige | x1.5 | x0.5 |
 
-The minimum prestige per turn is applied to every player of the scenario, the AI's included
-(`loadPlayers`, scenarioloader.ts): on an easier level the AI can get more prestige than on
-Historical.
+The minimum prestige per turn is the campaign player's only (`newPlayer`, src/core/newgame.ts):
+the AI's players get what the scenario gives them at every level (#15: the original gave the
+minimum to every player, so an easier level made the AI richer).
 
 The real difficulty is in the scenario files: the enemy's units, their entrenchment, its
 prestige per turn and the turn limit.
