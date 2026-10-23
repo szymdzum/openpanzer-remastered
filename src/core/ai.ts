@@ -10,8 +10,8 @@
  * reinforcements arrive), unit by unit, each scored hex and attack drawing from its own stream
  * (state.rng.ai, D8) in the old order. Its plan is a queue of the commands it then plays one by one,
  * whatever happened in between: the old AI's actions, as Game played them (processAction):
- * - a move to where the plan said, along its move range then (a hex its own unit didn't leave in the
- *   end is taken over, #74 kept);
+ * - a move to where the plan said, along its move range then, which the step refuses when the unit
+ *   that was to leave the hex is still there (#74: its move failed);
  * - an attack, which the step refuses when the target is out of range by then (Game skipped it);
  * - a resupply or a reinforcement.
  * It never mounts (#82 kept). Kept too: the reinforcement budget is the prestige before the purchases
@@ -297,7 +297,7 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 }
 
 //The unit to the best scored hex of its move range, if it beats where it stands: the hex taken, the
-//one it leaves freed
+//one it leaves freed, for the units of its kind (#74)
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const cells = a.didMove || a.didResupplyReinforce ? [] : moveRange(s.w, u);
@@ -306,11 +306,11 @@ function moveUnit(t: Planning, a: AIUnit) {
 		a.noMove = true;
 		return;
 	}
-	const plan = s.plan;
+	const plan = s.plan, air = isAir(s.w, u);
 	plan.takenPositions.push(to);
 	const freed = findFreed(plan, to);
 	if (freed >= 0) plan.freedPositions.splice(freed, 1);
-	plan.freedPositions.push({ row: u.row, col: u.col });
+	plan.freedPositions.push({ row: u.row, col: u.col, air });
 	t.queue.push({ type: "move", unit: u.id, to });
 	a.didMove = true;
 	a.newPosition = to;

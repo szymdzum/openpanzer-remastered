@@ -9,7 +9,7 @@ import type { CommandOf } from "../../commands";
 import { emit } from "../draft";
 import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../fight";
 import { isInAttackRange } from "../attack";
-import { pathTo, shortestPath } from "../movement";
+import { canEndMoveOn, pathTo, shortestPath } from "../movement";
 import { moveUnit } from "../moves";
 import type { Checkpoint, CheckpointInput, CommandHandler, Draft, Position } from "../types";
 import { playerAt, refuse, unitCheck } from "./common";
@@ -20,13 +20,14 @@ import { onMap, unitById } from "../world";
 type PathCells = readonly { row: number; col: number; cost: number }[];
 const cellsOf = (cells: Position[]) => cells as unknown as PathCells;
 
-//To a hex the unit can reach: along the cells given (the move range the player was shown), or its
-//move range now. Then the surprise attack, the capture's victory, the attack's finish
+//To a hex the unit can reach and stop on (#74): along the cells given (the move range the player was
+//shown), or its move range now. Then the surprise attack, the capture's victory, the attack's finish
 export const move: CommandHandler<CommandOf<"move">> = {
 	check(w, cmd) {
 		const u = unitById(w, cmd.unit);
 		if (u === null || u.row < 0) return refuse("no such unit");
 		if (!onMap(w, cmd.to.row, cmd.to.col)) return refuse("can't get there");
+		if (!canEndMoveOn(w, u, cmd.to)) return refuse("the hex is taken");
 		const path = cmd.cells !== undefined ? shortestPath(u, cmd.to, cellsOf(cmd.cells)) : pathTo(w, u, cmd.to);
 		return path.length === 0 ? refuse("can't get there") : null;
 	},

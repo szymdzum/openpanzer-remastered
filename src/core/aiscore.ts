@@ -22,7 +22,7 @@ import { combatResult } from "./combat";
 import { playerAt } from "./draft";
 import { adjacent, distance } from "./geometry";
 import type { Position, UnitId, UnitState, World } from "./types";
-import { canEntrench, isCloseCombatTerrain, isEnemy, isGround } from "./units";
+import { canEntrench, isAir, isCloseCombatTerrain, isEnemy, isGround } from "./units";
 import { hexIndex, isSpotted, playerOf, sideOf, unitAt, unitData } from "./world";
 
 //An enemy unit the AI attacks this turn: the strength it expects it to lose so far
@@ -36,8 +36,13 @@ export interface EnemyUnit {
 export interface AIPlan {
 	enemyUnits: Map<UnitId, EnemyUnit>;
 	takenPositions: Position[];	//hexes its units were ordered to move to
-	freedPositions: Position[];	//hexes its units were ordered to leave
+	freedPositions: FreedPosition[];	//hexes its units were ordered to leave
 	objectives: Position[];		//the side's objectives to take, in their order (D7, #141)
+}
+
+//A hex an AI unit was ordered to leave, and the slot it frees: the air above it or the ground (#74)
+interface FreedPosition extends Position {
+	air: boolean;
 }
 
 //What the scores need: the world as the turn started, the AI's player, its settings, its plan and
@@ -65,8 +70,10 @@ export function standingOn(u: UnitState, cell: Position): UnitState {
 	return u.row === cell.row && u.col === cell.col ? u : { ...u, row: cell.row, col: cell.col };
 }
 
-export function findFreed(plan: AIPlan, cell: Position): number {
-	return plan.freedPositions.findIndex((c) => c.row === cell.row && c.col === cell.col);
+//Where the plan freed the hex, its air (air true) or its ground (false) or either (undefined); -1 when
+//it didn't
+export function findFreed(plan: AIPlan, cell: Position, air?: boolean): number {
+	return plan.freedPositions.findIndex((c) => c.row === cell.row && c.col === cell.col && (air === undefined || c.air === air));
 }
 
 function isTaken(plan: AIPlan, cell: Position): boolean {
@@ -123,11 +130,11 @@ export function attackPotential(s: Scorer, u: UnitState, cell: Position): number
 }
 
 //The score of u standing on cell: the terrain, the objectives and the neighbours. canMove: the move
-//range says it can stop there (a hex another AI unit leaves counts as free)
+//range says it can stop there (a hex another AI unit of its kind leaves counts as free: an aircraft
+//leaving frees the air above a ground unit, not the ground, #74)
 export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: boolean): number {
 	if (isTaken(s.plan, cell)) return -5000;
-	const isFreed = findFreed(s.plan, cell) >= 0;
-	if (!canMove && !isFreed) return -5000;
+	if (!canMove && findFreed(s.plan, cell, isAir(s.w, u)) < 0) return -5000;
 
 	const w = s.w, hex = hexIndex(w, cell.row, cell.col), side = sideOf(w, u);
 	const uclass = unitData(w, u).uclass;
@@ -138,7 +145,7 @@ export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: bool
 	if (uclass === unitClass.fighter || uclass === unitClass.tacticalBomber || uclass === unitClass.levelBomber)
 		return score * randomFactor(s);
 
-	score += terrainScore(w, u, hex) + occupyScore(s, u, hex, isFreed) + neighboursScore(s, u, cell);
+	score += terrainScore(w, u, hex) + occupyScore(s, u, hex, findFreed(s.plan, cell) >= 0) + neighboursScore(s, u, cell);
 	return score * randomFactor(s);
 }
 
@@ -167,7 +174,7 @@ function closeCombatScore(uclass: number): number {
 }
 
 //An objective the unit can stand on: free, freed by an AI unit, its own, or held by a unit expected to
-//be killed. Only the hex's ground unit counts
+//be killed. Only the hex's ground unit counts (isFreed: an AI unit leaves the hex)
 function occupyScore(s: Scorer, u: UnitState, hex: number, isFreed: boolean): number {
 	const h = s.w.state.map.hexes[hex];
 	if (h.victorySide === -1) return 0;

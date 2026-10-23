@@ -274,6 +274,37 @@ test("A liberator takes a flag for twice the prestige, the score as any unit", (
 	expect(moved.world.state.turn.undoable).toMatchObject({ prestigeGain: 100, scoreGain: 50 });
 });
 
+//A unit passes through its own side's units but can't stop on one of its kind: the hex holds one ground
+//(or naval) unit and one air unit. A program's move is refused there, with the move range given as its
+//cells too; an aircraft stops over a tank. (An enemy it doesn't see doesn't refuse it: the move stops
+//before, surprised, as in the tests above)
+test("A move can't end on a hex its side's unit of the same kind holds; an aircraft can over a tank (#74)", () => {
+	const w = handWorld({ rows: 8, cols: 8, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 },
+		{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 },
+		{ eqid: ME_109, owner: 0, row: 2, col: 1 },
+	] });
+	const taken = { ok: false, refusal: { reason: "the hex is taken" } };
+	expect(step(w, { type: "move", unit: 0, to: { row: 4, col: 3 } })).toEqual(taken);
+	expect(step(w, { type: "move", unit: 0, to: { row: 4, col: 3 }, cells: moveRange(w, unitById(w, 0)) })).toEqual(taken);
+	const flown = played(step(w, { type: "move", unit: 2, to: { row: 4, col: 3 } }));
+	expect(flown.world.state.map.hexes[hexIndex(w, 4, 3)]).toMatchObject({ unit: 1, air: 2 });
+	//passing through the tank to the hex beyond it
+	expect(unitById(played(step(w, { type: "move", unit: 0, to: { row: 4, col: 4 } })).world, 0)).toMatchObject({ row: 4, col: 4 });
+});
+
+//A Polish infantry on its truck next to a Pz IIA
+test("Mounted infantry attacked gets off its truck to fight", () => {
+	const PIECHOTA = 271, PF621 = 278;
+	const w = withRng(handWorld({ rows: 6, cols: 6, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2 },
+		{ eqid: PIECHOTA, owner: 1, row: 2, col: 3, isMounted: true, transport: { eqid: PF621, ammo: 0, fuel: 50 } },
+	] }), 5);
+	const r = played(step(w, { type: "attack", unit: 0, target: 1 }));
+	expect(r.events.map((e) => e.type)).toContain("dismounted");
+	expect(unitById(r.world, 1)).toMatchObject({ isMounted: false, transport: { eqid: PF621 } });
+});
+
 //An SS infantry leaving its Ju-52 on an airfield: selecting it (as a mount does last) puts it back on
 //the carrier when no neighbour lets it land (MapSelection.select), and leaves it landing otherwise
 test("A unit leaving its carrier gets back on it when selected, unless it can still land", () => {

@@ -76,6 +76,17 @@ function seen(w: World, hex: number, side: number, unit: UnitState | null): bool
 	return isSpotted(w, hex, side) || (unit !== null && unit.tempSpotted);
 }
 
+//Whether u may be ordered to end its move on a hex (#74): no other unit of its kind there (ground and
+//naval, or air: the slot it would take), but an enemy its side doesn't see, which stops the move before
+//it (the surprise). The move range's canMove, for any hex a command names: the range also holds the
+//hexes the unit only passes through, its side's units, and a command may give cells of its own
+export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
+	const hex = hexIndex(w, cell.row, cell.col), side = sideOf(w, u);
+	const other = isAir(w, u) ? airUnitAt(w, hex) : groundUnitAt(w, hex);
+	if (other === null || other.id === u.id) return true;
+	return sideOf(w, other) !== side && !seen(w, hex, side, other);
+}
+
 //The hexes a unit can move to or pass through (GameRules.getMoveRange), in the order of
 //cellsInRange, then its own hex. The range expands ring by ring: a hex's entry cost (cin) is the
 //exit cost (cout) of a neighbour one ring nearer, its exit cost the entry plus the terrain cost,
