@@ -147,17 +147,19 @@ test("A hidden enemy's hex is in the move range: the move ends in a surprise", (
 	expect(moveRange(w, unitById(w, 0)).find((x) => x.row === 4 && x.col === 4)).toMatchObject({ canMove: true });
 });
 
-test("Column 0 is out of every other column's range (#69)", () => {
-	expect(cellsInRange(3, 1, 2, 8, 8).some((c) => c.col === 0)).toBe(false);
-	expect(cellsInRange(3, 1, 2, 8, 8).length).toBe(11); //15 hexes within 2, less the unit's and column 0's three
+test("Column 0 is a column like the others: a unit next to it reaches, spots and attacks it (#69)", () => {
+	expect(cellsInRange(3, 1, 2, 8, 8).filter((c) => c.col === 0).length).toBe(4);
+	expect(cellsInRange(3, 1, 2, 8, 8).length).toBe(15); //the 18 hexes within 2, less the three off the map's left edge
 	expect(distance(3, 1, 3, 0)).toBe(1);
 	const w = handWorld({ rows: 8, cols: 8, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 3, col: 1 },
 		{ eqid: TP7, owner: 1, row: 3, col: 0 },
 	] });
-	expect(spotCells(w, unitById(w, 0)).some((c) => c.col === 0)).toBe(false);
-	expect(isSpotted(w, hexIndex(w, 3, 0), 0)).toBe(false);
-	expect(attackCells(w, unitById(w, 0))).toEqual([]);
+	expect(spotCells(w, unitById(w, 0)).some((c) => c.row === 3 && c.col === 0)).toBe(true);
+	expect(isSpotted(w, hexIndex(w, 3, 0), 0)).toBe(true);
+	expect(attackCells(w, unitById(w, 0))).toEqual([{ row: 3, col: 0 }]);
+	expect(moveRange(w, unitById(w, 0)).find((c) => c.row === 5 && c.col === 0)).toMatchObject({ canMove: true });
+	expect(played(step(w, { type: "move", unit: 0, to: { row: 5, col: 0 } })).world.state.units[0]).toMatchObject({ row: 5, col: 0 });
 });
 
 //The commands (src/core/step.ts, #134): that they play as the old engine's was test/core-steps.test.ts's

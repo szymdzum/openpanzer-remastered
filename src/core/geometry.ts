@@ -50,8 +50,8 @@ export function adjacent(row: number, col: number): Position[] {
 
 //The cells around (row, col) up to range on a rows x cols map, without the cell itself: its
 //column first, top down, then the columns at 1, 2... on the right and the left, row by row. The
-//order is the move range's and the attack cells'. Kept bug #69: column 0 is never in the range of
-//another column (the left edge test is > 0)
+//order is the move range's and the attack cells'. Column 0 is a column like the others (#69: the
+//left edge test was > 0, so no other column reached it)
 export function cellsInRange(row: number, col: number, range: number, rows: number, cols: number): Position[] {
 	const cells: Position[] = [];
 	if (range <= 0) return cells;
@@ -77,7 +77,7 @@ export function cellsInRange(row: number, col: number, range: number, rows: numb
 function columnPair(cells: Position[], lo: number, hi: number, col: number, colOff: number, cols: number) {
 	for (let r = lo; r <= hi; r++) {
 		if (col + colOff < cols) cells.push({ row: r, col: col + colOff });
-		if (col - colOff > 0) cells.push({ row: r, col: col - colOff });
+		if (col - colOff >= 0) cells.push({ row: r, col: col - colOff });
 	}
 }
 
