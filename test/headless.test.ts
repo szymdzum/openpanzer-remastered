@@ -53,7 +53,7 @@ test("game.ts starts no timer and no listener while it loads, main.ts does", () 
 		.filter((l) => /^\S/.test(l) && !l.startsWith("//")).join("\n");
 	expect(top("game.ts")).not.toMatch(/setInterval|addEventListener/);
 	const main = fs.readFileSync(path.join(root, "src/main.ts"), "utf8");
-	expect(main).toMatch(/^game\.game\.loop = window\.setInterval\(game\.game\.processTurn, 1000\);$/m);
+	expect(main).toMatch(/^game\.game\.loop = window\.setInterval\(game\.game\.processTurn, 250\);$/m);
 	expect(main).toMatch(/^window\.addEventListener\("load", game\.gameStart\);$/m);
 });
 

@@ -206,3 +206,28 @@ test("The handlers plan nothing themselves: they hand out the session's orders",
 	//(the tutorial's first message of turn 1, then its second: both handlers ask the same session)
 	expect([scripted.getAction().type, ai.getAction().type]).toEqual([actionType.message, actionType.message]);
 });
+
+//What the screen doesn't animate, a resupply, a reinforcement, a mount, plays on in the same tick: the
+//turn loop waits only for what the player watches (#8, an AI turn took a minute at an action a second)
+test("The AI plays its resupplies, reinforcements and mounts within one tick of the turn loop (#8)", async () => {
+	const game = await freshGame();
+	const { Commands } = await import("../src/commands");
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { actionType } = await import("../src/prototypes");
+	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {} });
+	game.ui = stand(game, Commands, []) as unknown as Game["ui"];
+	await startState(game, "drpzop01.xml", [1, 1, 1, 1]);
+	const map = game.scenario.map, unit = map.getUnits().find((u) => u.player === map.currentPlayer) as Unit;
+	const orders: AIAction[] = [actionType.resupply, actionType.reinforce, actionType.mount, actionType.umount,
+		actionType.select, actionType.resupply].map((type) => ({ type, param: [unit] }));
+	const handed: number[] = [];
+	map.currentPlayer.handler.getAction = () => {
+		const a = orders.shift() as AIAction;
+		handed.push(a.type);
+		return a;
+	};
+	game.uiMessageClicked = true;
+	game.waitUIAnimation = false;
+	game.processTurn();
+	expect(handed).toEqual([actionType.resupply, actionType.reinforce, actionType.mount, actionType.umount, actionType.select]);
+});
