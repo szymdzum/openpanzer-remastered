@@ -294,8 +294,9 @@ transport reaches, after its own range, except those next to an enemy ground uni
 one of them is best, it mounts and moves there, and plans no attack after (#82: the old AI never
 mounted, so its towed guns never moved). It buys a unit a transport carries with a random one of
 its country's ground transports that carries it, is in service and fits the budget left (#224: the old AI
-bought none). Kept: #17 (the attacks count the hidden units' support fire),
-#21 (the reinforcement budget is the prestige before the purchases), the objectives in their list's order (D7, so #141's order
+bought none). Its reinforcements are budgeted with the prestige left after its purchases (#21: the
+old AI took it before them). Kept: #17 (the attacks count the hidden units' support fire),
+the objectives in their list's order (D7, so #141's order
 after an undo). Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 

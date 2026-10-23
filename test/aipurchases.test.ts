@@ -4,7 +4,8 @@ import { expect, test } from "vitest";
 import { aiController } from "../src/core/ai";
 import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
-import { unitCost } from "../src/core/costs";
+import { costPerStrength, unitCost } from "../src/core/costs";
+import { reinforceValue } from "../src/core/supply";
 import { isTransportable } from "../src/core/units";
 import { Equipment } from "../src/equipment";
 import { aiDefaultConfig, unitClass } from "../src/prototypes";
@@ -68,4 +69,29 @@ test("The AI's purchases leave the country's equipment lists as they were (#22)"
 	const played = aiController(1, {}).startTurn(createWorld(saved, Equipment.equipment));
 	expect(played.events.some((e) => e.type === "bought")).toBe(true);
 	expect(played.world.state.equipment.indexes).toEqual(before);
+});
+
+//The prestige the purchases spent is gone: the AI plans its reinforcements with what is left after
+//them, each as much strength as the prestige still left pays for, up to what the hex gives
+test("The AI budgets its reinforcements with the prestige left after its purchases (#21)", () => {
+	const saved = smallGameData();
+	for (const u of saved.state.units) if (u.owner === 1) u.strength = 2;
+	saved.state.players[1].prestige = 600;
+	saved.state.turn.currentPlayer = 1;
+	const config = { ...aiDefaultConfig, prestigeReserve: 0, airPrestigeRatio: 0 };
+	const ai = aiController(1, { config });
+	const w = createWorld(saved, Equipment.equipment);
+	ai.join(w);
+	const started = ai.startTurn(w);
+	expect(started.events.some((e) => e.type === "bought")).toBe(true);
+	const planned = ai.plan(started.world);
+	let budget = planned.state.players[1].prestige;
+	for (let o = ai.next(planned); o !== null; o = ai.next(planned)) {
+		if (!("command" in o) || o.command.type !== "reinforce") continue;
+		const cmd = o.command, u = planned.state.units.find((x) => x.id === cmd.unit);
+		const perStrength = costPerStrength(planned, u);
+		const strength = Math.min(Math.floor(budget / perStrength), reinforceValue(planned, u));
+		expect(strength).toBeGreaterThan(0);
+		budget -= strength * perStrength;
+	}
 });
