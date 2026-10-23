@@ -20,3 +20,8 @@ test("The combat log counts the entrenchment the defender lost and its attacker 
 	expect(defender.unitCombatList).toEqual([1]);
 	expect(CombatLog.log.combat[1]).toMatchObject({ entrenchLost: 0, unitCombatList: [2] });
 });
+
+test("The resupply report lists the first unit of the scenario, id 0 (#114)", () => {
+	CombatLog.addResupply(Object.assign(unit(0, 1, 10, 0), { fuel: 20 }));
+	expect(CombatLog.log.resupply[0]).toMatchObject({ eqid: 100, ammo: 5, fuel: 20, side: 1 });
+});

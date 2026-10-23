@@ -239,7 +239,8 @@ CombatLog.addLeader = function(unit: Unit): void {
 
 CombatLog.addResupply = function(unit: Unit): void {
 	const id = unit.id;
-	if (!id || typeof id === "undefined" || typeof unit.player === "undefined" || unit.player === null)
+	//(units are numbered from 0: the first one placed has id 0, #114)
+	if (typeof id !== "number" || typeof unit.player === "undefined" || unit.player === null)
 		return;
 
 	let info = CombatLog.log.resupply[id];
