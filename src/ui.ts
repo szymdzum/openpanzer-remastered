@@ -792,7 +792,6 @@ function updateUnitInfoWindow(u: UIUnitOrEntry) {
 
 	if ((ammo as number) < uinfo.ammo / 4) ammo = "<span style='color: #FF6347'>" + ammo + "</span>";
 	if ((fuel as number) < uinfo.fuel / 4) fuel = "<span style='color: #FF6347'>" + fuel + "</span>";
-	if (uinfo.gunrange == 0) uinfo.gunrange = 1; //Changes the equipment data
 
 	$("uImage").style.backgroundImage = "url(" + uinfo.icon + ")";
 	$("uSmallFlag").style.backgroundPosition = "" + (u.flag - 1) * -21 + "px 0px";
@@ -816,7 +815,8 @@ function updateUnitInfoWindow(u: UIUnitOrEntry) {
 	$("uStr").textContent = u.strength + "/10";
 	$("uFuel").innerHTML = fuel as string;
 	$("uAmmo").innerHTML = ammo as string;
-	$("uGunRange").textContent = uinfo.gunrange as unknown as string;
+	//A range of 0 shows as 1; uinfo is the equipment's entry, the rules read it (#26)
+	$("uGunRange").textContent = String(uinfo.gunrange == 0 ? 1 : uinfo.gunrange);
 	$("uMovement").textContent = uinfo.movpoints as unknown as string;
 
 	$("uExp").textContent = exp as unknown as string;

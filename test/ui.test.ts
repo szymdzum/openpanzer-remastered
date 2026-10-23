@@ -226,3 +226,18 @@ test("A human's end turn keeps the combat log entries of the next turn's start (
 	expect(unit.ammo).toBeGreaterThan(0);
 	expect(CombatLog.log.resupply[unit.id]).toMatchObject({ eqid: unit.eqid, ammo: unit.ammo });
 }, 60_000);
+
+test("The unit info shows a gun range of 0 as 1 and leaves the equipment's 0 (#26)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { Equipment } = await import("../src/equipment");
+	const map = game.scenario.map;
+	//A unit of an equipment with a gun range of 0, as 46 infantry entries have, inspected
+	const unit = map.getUnits().find((u) => u.player === map.currentPlayer && u.getPos() !== null)!;
+	Equipment.equipment[unit.eqid].gunrange = 0;
+	ui.uiUnitSelect(unit);
+	document.getElementById("unit-info")!.style.display = "none";
+	ui.mainMenuButton("inspectunit");
+	expect(document.getElementById("uName")!.textContent).toContain(unit.unitData().name);
+	expect(document.getElementById("uGunRange")!.textContent).toBe("1");
+	expect(Equipment.equipment[unit.eqid].gunrange).toBe(0);
+}, 60_000);
