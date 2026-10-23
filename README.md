@@ -44,6 +44,15 @@ look and a soundtrack, without losing the painted-map feel.
 through Real-ESRGAN, the hand-drawn sprites through hqx, a pixel-art filter that keeps their
 edges.*
 
+A filter only sharpens what the old pixels hold. Past that, a unit can be rebuilt as a 3D model
+and rendered into a new strip at any size, in the old strip's angles and palette
+([docs/ASSETS.md](docs/ASSETS.md)).
+
+![A Panzer IV H modelled in Blender, untextured, in the viewport](docs/screenshots/panzer-iv-model.webp)
+
+*Work in progress: the Pz IV H, the first unit rebuilt this way, in Blender before its paint.
+Its strip comes from the same scene, rendered by script through the game's camera.*
+
 The interface becomes a 1940s war room, paper, typed orders and brass, in a light theme and a
 dark one for long evenings, and gets out of the map's way.
 
