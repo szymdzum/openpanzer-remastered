@@ -10,7 +10,7 @@ import { leaderType, playerType, prestigeGains, scoreGains, unitClass } from "..
 import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer, writeUnit } from "./draft";
 import type { PathStep } from "./events";
 import { directionTo } from "./geometry";
-import { canPassInto, disembarkPositions, pathTo, shortestPath } from "./movement";
+import { canPassInto, disembarkPositions, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState } from "./types";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isSpotted, unitById, unitData } from "./world";
@@ -42,21 +42,24 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { r
 		path: walked.passed, visible } : { type: "moved", unit: id, path: walked.passed, cost: walked.cost, visible });
 
 	const win = last.row === to.row && last.col === to.col && capturer ? capture(d, id, last, undo) : false;
-	payMove(d, writeUnit(d, id), walked.cost);
+	payMove(d, writeUnit(d, id), walked.cost, walked.stopped);
 	const spotted = relocate(d, id, last, (u) => { u.facing = directionTo(start.row, start.col, last.row, last.col); });
 	if (walked.surprise !== null) emit(d, { type: "surprised", unit: id, at: walked.surprise });
 	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && undoable ? undo : null;
 	return { surprise: walked.surprise, win };
 }
 
+//Path costs from this one up stop the move: a hex that uses all the points, or a zone of control
+const STOP = 254;
+
 //The unit along its path until a hex it can't pass (an enemy it didn't see): the hexes passed, what
-//they cost, where it was surprised. The move shows where the enemy sees it (a human's and the
-//scripted opponent's always)
-function walk(d: Draft, u: UnitState, path: PathCell[]): { passed: PathStep[]; cost: number; surprise: Position | null } {
+//they cost, whether a hex stopped the move, where it was surprised. The move shows where the enemy
+//sees it (a human's and the scripted opponent's always)
+function walk(d: Draft, u: UnitState, path: PathCell[]): { passed: PathStep[]; cost: number; stopped: boolean; surprise: Position | null } {
 	const player = playerAt(d, u.owner);
 	const seen = player.type === playerType.humanLocal || player.type === playerType.aiScripted;
 	const passed: PathStep[] = [];
-	let cost = 0, surprise: Position | null = null;
+	let surprise: Position | null = null;
 	for (let i = 0; i < path.length; i++) {
 		const c = path[i];
 		if (i > 0 && !canPassInto(d, u, c)) {
@@ -64,10 +67,27 @@ function walk(d: Draft, u: UnitState, path: PathCell[]): { passed: PathStep[]; c
 			break;
 		}
 		passed.push({ row: c.row, col: c.col, visible: seen || isSpotted(d, hexIndex(d, c.row, c.col), ~player.side & 1) });
-		cost += c.cost;
+	}
+	return { passed, ...pathCost(d, u, path.slice(0, passed.length)), surprise };
+}
+
+//What the hexes of a path entered cost, and whether one stopped the move
+function pathCost(d: Draft, u: UnitState, path: PathCell[]): { cost: number; stopped: boolean } {
+	let cost = 0, stopped = false;
+	for (let i = 1; i < path.length; i++) {
+		stopped = path[i].cost >= STOP;
+		cost += stopped ? stopCost(d, u, path[i], cost) : path[i].cost;
 	}
 	//(NaN from a path whose cells have no cost: a retreat)
-	return { passed, cost: !cost || cost < 0 ? 0 : cost, surprise };
+	return { cost: !cost || cost < 0 ? 0 : cost, stopped };
+}
+
+//What a hex that stops the move costs after the path's cost before it (#214): a hex that uses all the
+//points (an A of the tables: a mountain, a river) all those left, a hex in a zone of control its
+//terrain. The old engine paid 1 for either, so a recon unit moved on from a river
+function stopCost(d: Draft, u: UnitState, c: PathCell, before: number): number {
+	const terrain = terrainCost(d, u, c);
+	return terrain >= STOP ? Math.max(unitMoveRange(d, u) - before, 1) : terrain;
 }
 
 //A unit stopped by an enemy it didn't see is surprised, unless its leader sees the enemy coming
@@ -85,11 +105,12 @@ function newUndo(u: UnitState): UndoState {
 }
 
 //Unit.move: no entrenchment left, the fuel and points (a transport uses all of them and can't fire
-//after), a recon unit with points left can move again; a unit leaving its carrier is off it for good
-function payMove(d: Draft, u: UnitState, cost: number) {
+//after; so does a hex that stops the move, #214), a recon unit with points left can move again; a unit
+//leaving its carrier is off it for good
+function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 	u.entrenchment = 0;
-	//(a cost of 254 or more stops the move there: what is left of it is the fuel)
-	burn(d, u, cost >= 254 ? (cost / 254 + cost % 254) >> 0 : cost);
+	burn(d, u, cost);
+	if (stopped) u.moveLeft = 0;
 	if (unitData(d, u).uclass !== unitClass.recon || u.moveLeft <= 0) {
 		u.hasMoved = true;
 		u.hasOverstrength = true;

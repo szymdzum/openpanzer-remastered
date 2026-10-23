@@ -96,14 +96,15 @@ then assault, then overrun with tanks.
   A move pays the hexes it enters, in movement points and fuel; the hex it leaves costs nothing
   (#70). A unit enters a hex only when its points and fuel left pay for it; a hex that uses all
   the points (254 in the tables: mountains, rivers...) takes any left, at least one, and ends the
-  move (#205).
+  move (#205): it uses all of them, in points and fuel (#214).
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
   fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
-  move (`getMoveRange`): a hidden enemy's zone doesn't. Air units ignore ZOC.
+  move (`getMoveRange`): a hidden enemy's zone doesn't. The hex costs its terrain, and the unit,
+  recon included, has no points left (#214). Air units ignore ZOC.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
   attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
   ground unit), whatever the screen's air mode shows.
-- Recon can split its movement over several moves in a turn.
+- Recon can split its movement over several moves in a turn, until a hex stops it.
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
 - A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank
   and air defense have to stay in place to fire (`Unit.move`).

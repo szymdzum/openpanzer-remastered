@@ -186,6 +186,23 @@ test("An enemy's zone of control stops a unit on a hex it can pay for: a Pz IIA 
 	expect(tankWith(3, forest, {}, enemy).at(4, 3)).toMatchObject({ cin: 1, cost: 254 });
 });
 
+test("A hex that uses all the points uses them all, in points and fuel: a recon car entering a river with points left can't move on (#214)", () => {
+	//a Psw 222 (9 points, 55 fuel, wheeled: clear costs 2) at 4,1, a river at 4,3
+	const w = handWorld({ rows: 8, cols: 8, terrain: (r, c) => r === 4 && c === 3 ? terrainType.River : terrainType.Clear,
+		units: [{ eqid: PSW_222, owner: 0, row: 4, col: 1 }] });
+	const moved = unitById(played(step(w, { type: "move", unit: 0, to: { row: 4, col: 3 } })).world, 0);
+	expect(moved).toMatchObject({ row: 4, col: 3, moveLeft: 0, fuel: 55 - 9, hasMoved: true });
+});
+
+test("An enemy's zone of control stops the move but costs the hex's terrain: a recon car entering a forest there pays 4 and can't move on (#214)", () => {
+	//a Psw 222 at 4,1: clear at 4,2 (2), a forest at 4,3 (4) next to a 7TP at 4,4
+	const w = handWorld({ rows: 8, cols: 8, terrain: (r, c) => r === 4 && c === 3 ? terrainType.Forest : terrainType.Clear,
+		units: [{ eqid: PSW_222, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 4, col: 4 }] });
+	expect(isZOC(w, hexIndex(w, 4, 3), 1)).toBe(true);
+	const moved = unitById(played(step(w, { type: "move", unit: 0, to: { row: 4, col: 3 } })).world, 0);
+	expect(moved).toMatchObject({ row: 4, col: 3, moveLeft: 0, fuel: 55 - 6, hasMoved: true });
+});
+
 test("A unit's range doesn't go through an enemy it sees: a 7TP next to a Pz IIA doesn't reach the hex behind it with 2 points (#205)", () => {
 	//a Polish 7TP (spotting 1) next to a Pz IIA: the hexes beside both are in its zone of control and
 	//seen, the hex behind it isn't seen
