@@ -241,3 +241,23 @@ test("The unit info shows a gun range of 0 as 1 and leaves the equipment's 0 (#2
 	expect(document.getElementById("uGunRange")!.textContent).toBe("1");
 	expect(Equipment.equipment[unit.eqid].gunrange).toBe(0);
 }, 60_000);
+
+test("A unit out of ammo and fuel shows both map tooltips with their own ids, and removing its tooltips removes both (#25)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { touched } = await import("../src/context");
+	const map = game.scenario.map;
+	const unit = map.getUnits().find((u) => u.player === map.currentPlayer && u.getPos() !== null
+		&& u.unitData().fuel > 0 && u.unitData().ammo > 0)!;
+	Object.assign(unit, { ammo: 0, fuel: 0 });
+	touched();
+	expect(GameRules.unitLowAmmo(unit, 1) && GameRules.unitLowFuel(unit, 1)).toBe(true);
+	ui.removeAllSmallToolTips();
+	ui.addSmallToolTips(true);
+	const shown = () => [...document.querySelectorAll<HTMLElement>(".smallToolTip")]
+		.filter((t) => /^gsttu(\d+)/.exec(t.id)?.[1] === String(unit.id));
+	expect(shown().map((t) => t.textContent)).toEqual(["No Ammo", "No Fuel"]);
+	expect(new Set(shown().map((t) => t.id)).size).toBe(2);
+	ui.removeUnitToolTip(unit.id);
+	expect(shown()).toEqual([]);
+}, 60_000);
