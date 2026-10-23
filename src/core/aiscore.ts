@@ -12,7 +12,7 @@
  *
  * Each cell and attack score draws once from the AI's stream (randomFactor[random(0, 7)]), except
  * where it returns early: the order of the draws is behavior. Kept: the attacks count the support
- * fire of the hidden units (#17), and an attack's estimate is the old one (#87, #90).
+ * fire of the hidden units (#17), and an attack's estimate is the old one (#87).
  */
 
 import { type AIConfig, roadType, terrainEntrenchment, terrainInitiative, terrainType, unitClass } from "../prototypes";

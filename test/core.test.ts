@@ -76,6 +76,33 @@ test("The estimate draws nothing; the dice draw one number per strength point, t
 	}
 });
 
+//The share of d20 rolls that kill a strength point: 1 misses, 20 hits, the others with the kill fraction added
+function hitChance(kF: number, threshold: number): number {
+	let hits = 0;
+	for (let roll = 1; roll <= 20; roll++)
+		if (roll === 20 || (roll > 1 && roll + kF >= threshold)) hits++;
+	return hits / 20;
+}
+
+test("The estimate is the dice's expected kills rounded once, PG2's integer division: no half point more (#90)", () => {
+	//a Pz IIA against a 7TP in the open, each at strengths 1 to 10: no leader, kill fractions of 4 or less
+	for (let strength = 1; strength <= 10; strength++) {
+		const w = handWorld({ rows: 6, cols: 6, units: [
+			{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, strength },
+			{ eqid: TP7, owner: 1, row: 2, col: 3, strength },
+		] });
+		const record: Contribution[] = [];
+		const cr = attackResult(w, unitById(w, 0), unitById(w, 1), null, record);
+		const last = (side: string, field: string) => {
+			const steps = record.filter((r) => r.side === side && r.field === field);
+			return steps[steps.length - 1].after;
+		};
+		const kills = strength * hitChance(last("attacker", "aav") - last("defender", "ddv"), 15);
+		const losses = strength * hitChance(last("defender", "dav") - last("attacker", "adv"), 15);
+		expect([cr.kills, cr.losses], "strength " + strength).toEqual([Math.floor(kills + 0.5), Math.floor(losses + 0.5)]);
+	}
+});
+
 test("A surprised attacker loses its defense and half its attack", () => {
 	const w = handWorld({ rows: 6, cols: 6, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, isSurprised: true },

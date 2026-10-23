@@ -316,14 +316,15 @@ function hitThreshold(w: World, atk: UnitState, def: UnitState): number {
 }
 
 //The strength atk kills with attack value atkval against defense defval: a die per strength point,
-//or the expected number with rng null. Overwhelming attack kills one more
+//or the expected number with rng null, rounded once as PG2's integer division rounds it (#90: the
+//old engine rounded the quotient again, half a point high). Overwhelming attack kills one more
 function combatKills(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, rng: RngStream | null): number {
 	const kF = killFraction(w, atkval, defval, atk, def);
 	const threshold = hitThreshold(w, atk, def);
-	let kills = rng === null ? (5 * Math.min(19, Math.max(1, kF + 21 - threshold)) * atk.strength + 50) / 100
+	let kills = rng === null ? Math.floor((5 * Math.min(19, Math.max(1, kF + 21 - threshold)) * atk.strength + 50) / 100)
 		: rolledKills(rng, kF, threshold, atk.strength);
 	if (hasLeader(w, atk, leaderType.overwhelmingAttack)) kills += 1;
-	return Math.round(kills);
+	return kills;
 }
 
 //A die per strength point: 1 always misses, 20 always hits, the others hit from threshold - kF
