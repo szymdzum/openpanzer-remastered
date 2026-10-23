@@ -476,7 +476,8 @@ Player) stay as a two-way mirror of the core's world while the old UI and the ha
 them, and the game runs on the session.
 - The core's checkpoints (#190): `begin` and `resume` play a move up to the end of its animation and an
   attack up to the end of its shots and its cleanup, as the old UI showed them; the surprise attack's
-  air mode (#77) and the finish that skips the retreat (an attack with nothing to animate) are inputs.
+  air mode (#77) is an input (so was the finish that skipped the retreat, an attack with nothing to
+  animate, until #111 fixed it).
   The session's `nextOrder`, `play`, `playOn` and `endTurn` with its save point are a screen's entries.
 - The mirror (src/mirror.ts): `applyData` updates the objects in place to the world's state, by unit id
   (a deployed core unit keeps its object); `worldOf` makes the world again from toData of the objects,

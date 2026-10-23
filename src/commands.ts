@@ -464,24 +464,20 @@ function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, lea
 	if (h.onAttack) h.onAttack(result);
 }
 
-//The old Actions.finishAttack: the losses told, the units destroyed (by the strengths in the result: the UI's
-//finish of an attack with nothing to animate reads them as 0, kept) off the map, the selection's turn,
-//the retreat or the surrender, the victory
+//The old Actions.finishAttack: the losses told, the units destroyed (by the strengths in the result) off
+//the map, the selection's turn, the retreat or the surrender, the victory
 function finishAttack(scenario: Scenario, result: AttackResult, cp: Checkpoint | null, h: FinishAttackHooks): AttackResult {
 	if (h.onLosses) h.onLosses(result);
-	const seen = [result.attacking, result.defending].map((side) => {
-		const gone = side.oldstr - side.newstr >= side.oldstr;
-		if (gone) {
-			result.destroyed.push(side.unit);
-			if (h.onDestroyed) h.onDestroyed(side.cell, side.unit);
-		}
-		return gone;
-	});
+	for (const side of [result.attacking, result.defending]) {
+		if (side.oldstr - side.newstr < side.oldstr) continue;
+		result.destroyed.push(side.unit);
+		if (h.onDestroyed) h.onDestroyed(side.cell, side.unit);
+	}
 	if (cp === null) return result;
 	const cleaned = resume(worldNow(scenario), cp);
 	mirror(scenario, cleaned.world);
 	if (h.afterCleanup) h.afterCleanup(result);
-	const ended = resume(worldNow(scenario), cleaned.checkpoint, { retreat: !seen[1] });
+	const ended = resume(worldNow(scenario), cleaned.checkpoint);
 	mirror(scenario, ended.world);
 	for (const e of ended.events) ending(scenario, result, e, ended.events, h);
 	return result;

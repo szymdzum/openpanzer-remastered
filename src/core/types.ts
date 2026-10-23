@@ -195,9 +195,7 @@ export type Checkpoint =
 	| { next: "end"; attack: AttackStart; attacker: UnitState | null };
 
 //What the screen says at a checkpoint: the air mode the surprise attack picks its target with (the
-//person's toggle, #77; off for a program), and retreat false when the attack's finish skips the
-//retreat (the old UI's finish of an attack it had no animation for read both strengths as 0, kept)
+//person's toggle, #77; off for a program)
 export interface CheckpointInput {
 	airMode?: boolean;
-	retreat?: boolean;
 }

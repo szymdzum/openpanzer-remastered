@@ -549,12 +549,8 @@ function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks
 			var animationCBData: UIAttackAnimationData = { result: result,
 				cbfunc: function(data: UIAttackAnimationData) { uiAttackAnimationFinished(data, finish); } };
 			//An empty animation chain (a carrier or naval transport attack without support fire) calls back
-			//at once, before the bundle set the new strengths: the finish then sees both units at 0 (kept)
-			var newstr = [result.attacking.newstr, result.defending.newstr];
-			result.attacking.newstr = result.defending.newstr = 0;
+			//at once: the finish reads the new strengths, already set (the bundle set them after, #111)
 			R.runAnimation(animationCBData);
-			result.attacking.newstr = newstr[0];
-			result.defending.newstr = newstr[1];
 		}
 	};
 }
