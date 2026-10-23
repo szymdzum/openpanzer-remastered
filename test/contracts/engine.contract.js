@@ -41,7 +41,7 @@
 // need (a unit put anywhere, a side's units taken off, the deployment hexes) are done as they did it.
 // env.outcomes,
 // when a test passes an array, gets [index of the step, checkOutcome's result] for every call
-// (test/outcome.test.ts).
+// (test/engine.test.ts).
 //
 // Where the driver still differs from the game, and why:
 // - Synchronous. In the game an attack's second half runs when its animation ends. For an AI

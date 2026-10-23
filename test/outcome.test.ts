@@ -1,37 +1,10 @@
-//The core's outcome (src/core/turn.ts, the old Actions.checkOutcome) against the engine contract's
-//recordings: the capture and wipe-out drills end the game (or don't) the way it says, and the turn
-//limit is the side's last turn played, whichever side
+//The core's outcome (src/core/turn.ts, the old Actions.checkOutcome) at the turn limit: the side's last
+//turn played, whichever side (the capture and wipe-out drills are test/engine.test.ts's, on the engine
+//contract's run)
 import { expect, test } from "vitest";
-import { fixtures, readFixture, restoreState, runFixture } from "./contracts";
-import type { Outcome } from "../src/core/turn";
-
-//The end of the game a drill recorded: its move's or attack's `outcome.ended` (the reference's
-//first victory), null when it didn't end; undefined when the drill made no move or attack
-function recordedEnd(name: string, result: string): { side: number; kind: string; outcome: string } | null | undefined {
-	const [r] = JSON.parse(result);
-	const step = name == "capture drill" ? (Array.isArray(r) ? r[2] : null) : (Array.isArray(r) ? r[1] : null);
-	if (!step || typeof step !== "object" || !step.outcome) return undefined;
-	return step.outcome.ended;
-}
+import { fixtures, readFixture, restoreState } from "./contracts";
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
-test.each(fixtures("engine"))("The outcome agrees with the drills of %s", async (name) => {
-	const outcomes: [number, Outcome | null][] = [];
-	const { expected } = await runFixture("engine", "runEngineContract", name, { outcomes });
-	let compared = 0;
-	expected.forEach(([call, context, result], i) => {
-		if (call != "capture drill" && call != "wipe-out drill") return;
-		const want = recordedEnd(call, result);
-		if (want === undefined) return;
-		const asked = outcomes.filter(([at]) => at == i).map(([, o]) => o);
-		expect(asked.length, `${call} (${context}) asked the outcome`).toBeGreaterThan(0);
-		const got = asked.find((o) => o !== null) || null;
-		expect(got && { side: got.winner, kind: got.kind, outcome: got.rating }, `${call} (${context})`).toEqual(want);
-		compared++;
-	});
-	expect(compared, "drills compared").toBeGreaterThan(0);
-});
-
 test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name) => {
 	const scenario = await restoreState(readFixture("engine", name).state);
 	const { game } = await import("../src/game");

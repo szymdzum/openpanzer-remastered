@@ -4,33 +4,10 @@
 //the side shown) and the known losses. fromData builds the objects again: toData of them is the same
 //state, and they play on as the ones it was read from
 import { expect, test } from "vitest";
-import { fixtures, readFixture, restoreState } from "./contracts";
-import { freshGame, mulberry32, startState, until } from "./lifecycle";
-import { coreEngine } from "./coreengine";
-import { contractStateString, stateStringFromData, viewOf } from "./statedata";
-
-//The fixture restored as the contracts restore it, with its modules
-async function restored(name: string) {
-	const fixture = readFixture("engine", name);
-	const scenario = await restoreState(fixture.state);
-	const { game } = await import("../src/game");
-	const { Equipment } = await import("../src/equipment");
-	const { toData } = await import("../src/state");
-	const { Rng } = await import("../src/rng"); //the restored modules' (restoreState loads them again)
-	if (fixture.spotSide !== undefined)
-		game.spotSide = fixture.spotSide;
-	return { scenario, game, Equipment, toData, Rng };
-}
-type Restored = Awaited<ReturnType<typeof restored>>;
-
-//What the old contract string has, and the same string rebuilt from toData
-function carried(r: Restored) {
-	const saved = r.toData(r.scenario, r.game);
-	return {
-		want: contractStateString(r.scenario, r.Equipment, r.game.spotSide),
-		got: stateStringFromData(saved, viewOf(r.scenario.map, r.game.spotSide), r.Equipment),
-	};
-}
+import { fixtures } from "./contracts";
+import { freshGame, startState, until } from "./lifecycle";
+import { viewOf } from "./statedata";
+import { carried, playAI, restored } from "./stateplay";
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 
@@ -76,66 +53,6 @@ test.each(fixtures("engine"))("toData of %s carries what the engine contract's s
 	const { want, got } = carried(await restored(name));
 	expect(got).toBe(want);
 });
-
-//The AI plays every player for 2 turns, Math.random seeded, the state compared after every action
-//(through the commands, as the game sends them) and every end of turn
-test.each(fixtures("engine"))("toData carries the state string after every AI action of %s", async (name) => {
-	const r = await restored(name);
-	const differences: string[] = [];
-	await playAI(r, 7, (step) => {
-		const { want, got } = carried(r);
-		if (want !== got && differences.length < 3) differences.push(step + "\n" + firstDifference(want, got));
-	});
-	expect(differences).toEqual([]);
-});
-
-//An AI action as the command the game sends for it (game.ts processAction), null for the UI's
-type AIAction = import("../src/ai").AIAction;
-type Command = import("../src/commands").Command;
-async function commandOf(): Promise<(a: AIAction) => Command | null> {
-	const { actionType: A } = await import("../src/prototypes");
-	const { Unit } = await import("../src/unit");
-	const make: Record<number, (unit: number, p: AIAction["param"]) => Command> = {
-		[A.move]: (unit, p) => ({ type: "move", unit, to: p[1] as { row: number; col: number } }),
-		[A.attack]: (unit, p) => ({ type: "attack", unit, target: (p[1] as { id: number }).id }),
-		[A.resupply]: (unit) => ({ type: "resupply", unit }),
-		[A.reinforce]: (unit) => ({ type: "reinforce", unit }),
-		[A.mount]: (unit) => ({ type: "mount", unit }),
-		[A.umount]: (unit) => ({ type: "unmount", unit }),
-	};
-	return (a) => make[a.type] && a.param[0] instanceof Unit ? make[a.type](a.param[0].id, a.param) : null;
-}
-
-//The AI plays every player of the restored fixture for 2 turns with Math.random and the streams
-//seeded, on the game's session (test/coreengine.ts: each player's AI, the end of turn with its
-//reinforcements): after(step) after every action and end of turn
-async function playAI(r: Restored, seed: number, after: (step: string) => void) {
-	const { Commands } = await import("../src/commands");
-	const command = await commandOf();
-	const m = r.scenario.map;
-	(r.game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {}, showAlert() {}, mainMenuButton() {} };
-	const engine = await coreEngine();
-	const realRandom = Math.random;
-	Math.random = mulberry32(seed);
-	r.Rng.seed(seed);
-	try {
-		for (let t = 0; t < 2 * m.getPlayers().length; t++) {
-			const ai = new engine.AI(m.currentPlayer, m);
-			ai.buildActions();
-			after("turn " + m.turn + " purchases");
-			for (let n = 0, a = ai.getAction(); a && n < 500; n++, a = ai.getAction()) {
-				const c = command(a);
-				if (c) Commands.execute(r.scenario, c);
-				after("turn " + m.turn + " action " + n);
-			}
-			if (engine.Actions.endTurn().defeat) break;
-			r.game.spotSide = m.currentPlayer.side;
-			after("turn " + m.turn + " end");
-		}
-	} finally {
-		Math.random = realRandom;
-	}
-}
 
 //fromData's scenario: its toData is the state it was built from
 test.each(fixtures("engine"))("toData(fromData(toData(x))) is toData(x) for %s, restored and after every AI turn", async (name) => {
@@ -242,12 +159,6 @@ test("A campaign's next scenario starts with no zone of control or spotting of t
 	expect(counters).toEqual(sight);
 	expect(m.getUnits().length, "the scenario's own units on the player's deployment hexes taken off").toBeGreaterThan(0);
 });
-
-function firstDifference(want: string, got: string): string {
-	let d = 0;
-	while (d < want.length && want[d] === got[d]) d++;
-	return "  want " + want.slice(Math.max(0, d - 100), d + 100) + "\n  got  " + got.slice(Math.max(0, d - 100), d + 100);
-}
 
 //savedAs (what the mirror asks of the world it keeps, src/mirror.ts) sees every write toData would:
 //each field of a unit's state and of a hex changed on the objects, and a write into each other part

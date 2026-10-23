@@ -138,9 +138,9 @@ unit markers of fb58437, with the same hashes; nothing in game state or DOM).
   Elimination is the state's, so at a campaign's start, before the player deployed the core
   units (ruscam09-t0), it already reports one. Game and the UI don't call it: they keep the
   victory hooks and `endTurn`'s local-side defeat (#76 stays). The contract ends its game with
-  it when `env.Actions` is there (the recorded victories still come from the hooks), and
-  test/outcome.test.ts checks it against every recorded capture and wipe-out drill, and against
-  `checkDefeat` at the turn limit.
+  it when `env.Actions` is there (the recorded victories still come from the hooks),
+  test/engine.test.ts checks it against every recorded capture and wipe-out drill (on the contract's
+  own run) and test/outcome.test.ts against `checkDefeat` at the turn limit.
 
 Left for later, as deliberate commits: closing the surprise race (#58, the UI calling
 `finishAttack` right after `resolveAttack`, which re-records the replays), the surprise target
@@ -583,7 +583,10 @@ them, and the game runs on the session.
   | A move played by the game (`Commands.execute`) | | 2.3-4.1 ms | 0.7-1.9 ms |
   | An AI turn played by the game | | 50-289 ms | 28-120 ms |
 
-  The property tests are back to the default timeout.
+  `npm test` on the same laptop: 80 s before (41 s before #137's switch), 40 s after; the property tests
+  are back to the default timeout. Two test files were run once where they ran twice or on one worker:
+  the engine contract's run gives its outcome test too (test/engine.test.ts), and the state's slowest
+  test has a file of its own (test/state-ai.test.ts).
 
 ### Not worth it now
 
