@@ -354,7 +354,7 @@ def blur(c):
 	return sum(p[1 + dy:1 + dy + c.shape[0], 1 + dx:1 + dx + c.shape[1]] for dy in (-1, 0, 1) for dx in (-1, 0, 1)) / 9
 
 
-def pixelate(tank, shadowed, gun, palette, f):
+def pixelate(tank, shadowed, gun, palette, f, line="dark"):
 	# One frame in the PG2 manner: hard pixels, the colours of the old sprite's palette, a dark
 	# rim round the silhouette and a solid black shadow
 	rgb, a = downsample(tank, f)
@@ -374,11 +374,15 @@ def pixelate(tank, shadowed, gun, palette, f):
 	shadow = (sa > 0.4) & ~mask
 	out[shadow] = (0, 0, 0, 1)
 	# The gun as an unbroken dark line, as the old strips draw it: every pixel it touches
-	_, ga = downsample(gun, f)
-	line = ga > 0.12
-	dark = palette[((palette - 0.2) ** 2).sum(axis=1).argmin()]
-	out[line, :3] = dark
-	out[line, 3] = 1
+	# (line="rendered": in the weapon's own shaded colour, for the infantry's light rifles)
+	grgb, ga = downsample(gun, f)
+	drawn = ga > 0.12
+	if line == "rendered":
+		d = ((np.clip(grgb * 1.15, 0, 1)[:, :, None, :] - palette[None, None, :, :]) ** 2).sum(axis=3)
+		out[drawn, :3] = palette[d.argmin(axis=2)][drawn]
+	else:
+		out[drawn, :3] = palette[((palette - 0.2) ** 2).sum(axis=1).argmin()]
+	out[drawn, 3] = 1
 	return out
 
 
@@ -442,21 +446,23 @@ def scene(out, elev=22.5, pxm=7.2):
 	print("saved", out)
 
 
-args = sys.argv[sys.argv.index("--") + 1:]
-if args[0] == "pixel":
-	pixel(os.path.abspath(args[1]), os.path.abspath(args[2]))
-elif args[0] == "scene":
-	scene(os.path.abspath(args[1]))
-elif args[0] == "side":
-	side(os.path.abspath(args[1]), os.path.abspath(args[2]))
-elif args[0] == "view":
-	view(os.path.abspath(args[1]), float(args[2]), float(args[3]))
-elif args[0] == "fit":
-	if len(args) > 2:  # a finer search: fit REF ELEV0 ELEV1 ELEVSTEP PXM0 PXM1 PXMSTEP [SQ0 SQ1 SQSTEP]
-		a = [float(x) for x in args[2:]]
-		sq = np.arange(a[6], a[7] + 1e-6, a[8]) if len(a) >= 9 else (1.0,)
-		fit(os.path.abspath(args[1]), np.arange(a[0], a[1] + 1e-6, a[2]), np.arange(a[3], a[4] + 1e-6, a[5]), sq)
+# Run as a script; soldier.py imports the camera, the light and the pixel steps from here
+if __name__ == "__main__":
+	args = sys.argv[sys.argv.index("--") + 1:]
+	if args[0] == "pixel":
+		pixel(os.path.abspath(args[1]), os.path.abspath(args[2]))
+	elif args[0] == "scene":
+		scene(os.path.abspath(args[1]))
+	elif args[0] == "side":
+		side(os.path.abspath(args[1]), os.path.abspath(args[2]))
+	elif args[0] == "view":
+		view(os.path.abspath(args[1]), float(args[2]), float(args[3]))
+	elif args[0] == "fit":
+		if len(args) > 2:  # a finer search: fit REF ELEV0 ELEV1 ELEVSTEP PXM0 PXM1 PXMSTEP [SQ0 SQ1 SQSTEP]
+			a = [float(x) for x in args[2:]]
+			sq = np.arange(a[6], a[7] + 1e-6, a[8]) if len(a) >= 9 else (1.0,)
+			fit(os.path.abspath(args[1]), np.arange(a[0], a[1] + 1e-6, a[2]), np.arange(a[3], a[4] + 1e-6, a[5]), sq)
+		else:
+			fit(os.path.abspath(args[1]))
 	else:
-		fit(os.path.abspath(args[1]))
-else:
-	strip(os.path.abspath(args[1]), float(args[2]) if len(args) > 2 else 20, float(args[3]) if len(args) > 3 else 8, int(args[4]) if len(args) > 4 else 2)
+		strip(os.path.abspath(args[1]), float(args[2]) if len(args) > 2 else 20, float(args[3]) if len(args) > 3 else 8, int(args[4]) if len(args) > 4 else 2)
