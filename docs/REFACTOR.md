@@ -617,7 +617,7 @@ invariant tests:
 
 1. Undo keeps the real player (#68).
 2. AI purchases stop mutating the shared equipment lists (#22).
-3. `tempSpotted` by the unit's own side (#75); the AI's fog leaks (#17).
+3. `tempSpotted` by the unit's own side (#75): done. The AI's fog leaks (#17).
 4. The counter drift (#72, #73).
 5. A guard on the move's destination, the AI stacking (#74). Done.
 6. Close the surprise and input race (#58).
