@@ -27,12 +27,13 @@
 import { Cell } from "./prototypes";
 import { Equipment, type EquipmentIndexes } from "./equipment";
 import { Transport, Unit } from "./unit";
-import { type GameMap, Player, type PlayerDossier } from "./map";
+import { type GameMap, type Hex, Player, type PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
 import { Rng } from "./rng";
 import type { Campaign } from "./campaign";
 import { createWorld } from "./core/create";
 import type { Sight } from "./core/types";
+import { touched } from "./context";
 
 export type UnitId = number;
 export type PlayerId = number;
@@ -260,31 +261,163 @@ export function toData(scenario: Scenario, host?: CampaignHost | null): SavedGam
 		}
 	const state: GameState = {
 		version: 1,
-		scenario: {
-			file: scenario.file,
-			date: scenario.date.toISOString(),
-			turnsPerDay: scenario.turnsPerDay,
-			dayTurn: scenario.dayTurn,
-			atmospheric: scenario.atmosferic,
-			ground: scenario.ground,
-			latitude: scenario.latitude,
-			maxTurns: m.maxTurns,
-			victoryTurns: m.victoryTurns.slice(),
-			expPerSide: [{ ...scenario.expPerSide[0] }, { ...scenario.expPerSide[1] }],
-			unitsCostPerSide: [scenario.unitsCostPerSide[0], scenario.unitsCostPerSide[1]],
-		},
+		scenario: scenarioState(scenario),
 		map: { rows: m.rows, cols: m.cols, lastRowPartial: m.isLastRowPartial, lastColPartial: m.isLastColPartial, hexes },
 		units: units.map(unitState),
 		nextUnitId: m.getBoard().uniqueID,
 		players: m.getPlayers().map((p) => playerState(p, units)),
-		turn: { turn: m.turn, currentPlayer: m.currentPlayer ? m.currentPlayer.id : -1, undoable: undoState(m) },
-		objectives: [m.sidesVictoryHexes[0].map(position), m.sidesVictoryHexes[1].map(position)],
+		turn: turnState(m),
+		objectives: objectivesOf(m),
 		reinforcements: reinforcements(scenario),
 		rng: rngStreams(),
-		campaign: host && host.campaign ? campaignState(host.campaign, host.getCampaignProgress()) : null,
-		equipment: { indexes: structuredClone(Equipment.equipmentIndexes) },
+		campaign: campaignOf(host),
+		equipment: { indexes: copyData(Equipment.equipmentIndexes) },
 	};
 	return { data, state };
+}
+
+//Whether toData of the scenario has saved's values: what the mirror asks of every world it keeps
+//(src/mirror.ts), without making the whole state. The hexes, the units and the equipment lists compared
+//where they are, the rest made as toData makes it and compared
+export function savedAs(scenario: Scenario, host: CampaignHost | null, saved: SavedGame): boolean {
+	const m = scenario.map, units = m.getUnits(), { data, state } = saved;
+	if (!sameItems([data.name, data.description, data.equipment, data.image, state.map.rows, state.map.cols, state.map.lastRowPartial,
+		state.map.lastColPartial, state.units.length, state.nextUnitId, state.players.length], [scenario.name, scenario.getDescription(),
+		scenario.eqp, m.terrainImage, m.rows, m.cols, m.isLastRowPartial, m.isLastColPartial, units.length, m.getBoard().uniqueID,
+		m.getPlayers().length]) || !sameHexes(m, saved))
+		return false;
+	for (let i = 0; i < units.length; i++)
+		if (!isUnitState(units[i], state.units[i])) return false;
+	return m.getPlayers().every((p, i) => sameData(playerState(p, units), state.players[i]))
+		&& sameData([scenarioState(scenario), turnState(m), objectivesOf(m), reinforcements(scenario), rngStreams(), campaignOf(host)],
+			[state.scenario, state.turn, state.objectives, state.reinforcements, state.rng, state.campaign])
+		&& sameData(Equipment.equipmentIndexes, state.equipment.indexes);
+}
+
+//Whether two lists hold the same values, one by one
+export function sameItems(a: readonly unknown[], b: readonly unknown[]): boolean {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+	return true;
+}
+
+//Whether unitState of a unit has a state's values, field by field (offMapUnit's fields; test/state.test.ts
+//changes each field unitState has and looks). In parts: the mirror asks it of every unit at every step
+function isUnitState(u: Unit, x: UnitState): boolean {
+	return samePlace(u, x) && sameCounts(u, x) && sameStanding(u, x) && sameFlags(u, x);
+}
+
+function samePlace(u: Unit, x: UnitState): boolean {
+	const p = u.getPos();
+	return x.id === u.id && x.eqid === u.eqid && x.owner === u.owner && x.row === (p === null ? -1 : p.row) && x.col === (p === null ? -1 : p.col)
+		&& sameTransport(u.transport, x.transport);
+}
+
+function sameTransport(t: Transport | null, y: UnitState["transport"]): boolean {
+	return t === null || y === null ? t === y : y.eqid === t.eqid && y.ammo === t.ammo && y.fuel === t.fuel;
+}
+
+function sameCounts(u: Unit, x: UnitState): boolean {
+	return x.strength === u.strength && x.moveLeft === u.moveLeft && x.ammo === u.ammo && x.fuel === u.fuel && x.hits === u.hits
+		&& x.experience === u.experience;
+}
+
+function sameStanding(u: Unit, x: UnitState): boolean {
+	return x.carrier === u.carrier && x.entrenchment === u.entrenchment && x.entrenchTicks === u.entrenchTicks && x.leader === u.leader
+		&& x.facing === u.facing && x.flag === u.flag;
+}
+
+function sameFlags(u: Unit, x: UnitState): boolean {
+	return x.isCore === u.isCore && x.isMounted === u.isMounted && x.hasMoved === u.hasMoved && x.hasFired === u.hasFired
+		&& x.hasResupplied === u.hasResupplied && x.hasOverstrength === u.hasOverstrength && x.isSurprised === u.isSurprised
+		&& x.tempSpotted === u.tempSpotted;
+}
+
+//The hexes' fields toData reads, the same as saved's
+function sameHexes(m: GameMap, saved: SavedGame): boolean {
+	const data = saved.data.hexes, state = saved.state.map.hexes;
+	for (let r = 0, i = 0; r < m.rows; r++) {
+		const row = m.map[r];
+		for (let c = 0; c < m.cols; c++, i++)
+			if (!sameHexData(row[c], data[i]) || !sameHexState(row[c], state[i])) return false;
+	}
+	return true;
+}
+
+function sameHexData(h: Hex, d: ScenarioData["hexes"][number]): boolean {
+	return d.terrain === h.terrain && d.road === h.road && d.name === h.name && d.deployment === h.isDeployment;
+}
+
+function sameHexState(h: Hex, x: HexState): boolean {
+	return x.unit === (h.unit ? h.unit.id : null) && x.air === (h.airunit ? h.airunit.id : null) && x.owner === h.owner && x.flag === h.flag
+		&& x.victorySide === h.victorySide;
+}
+
+//Whether two plain data trees are the same, keys in the same order (what their JSON compares, but
+//for the values JSON leaves out or changes: undefined, NaN)
+export function sameData(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	if (!isTree(a) || !isTree(b) || Array.isArray(a) !== Array.isArray(b)) return false;
+	return Array.isArray(a) ? sameList(a, b as unknown as unknown[]) : sameTree(a, b);
+}
+
+const isTree = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null;
+
+//(by index: the lists of the state are long, the equipment's, the hexes')
+function sameList(a: unknown[], b: unknown[]): boolean {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) {
+		const x = a[i], y = b[i];
+		if (x !== y && (typeof x !== "object" || !sameData(x, y))) return false;
+	}
+	return true;
+}
+
+function sameTree(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+	const ka = Object.keys(a), kb = Object.keys(b);
+	if (ka.length !== kb.length) return false;
+	for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i] || !sameData(a[ka[i]], b[ka[i]])) return false;
+	return true;
+}
+
+function scenarioState(scenario: Scenario): GameState["scenario"] {
+	const m = scenario.map;
+	return {
+		file: scenario.file,
+		date: scenario.date.toISOString(),
+		turnsPerDay: scenario.turnsPerDay,
+		dayTurn: scenario.dayTurn,
+		atmospheric: scenario.atmosferic,
+		ground: scenario.ground,
+		latitude: scenario.latitude,
+		maxTurns: m.maxTurns,
+		victoryTurns: m.victoryTurns.slice(),
+		expPerSide: [{ ...scenario.expPerSide[0] }, { ...scenario.expPerSide[1] }],
+		unitsCostPerSide: [scenario.unitsCostPerSide[0], scenario.unitsCostPerSide[1]],
+	};
+}
+
+function turnState(m: GameMap): GameState["turn"] {
+	return { turn: m.turn, currentPlayer: m.currentPlayer ? m.currentPlayer.id : -1, undoable: undoState(m) };
+}
+
+function objectivesOf(m: GameMap): GameState["objectives"] {
+	return [m.sidesVictoryHexes[0].map(position), m.sidesVictoryHexes[1].map(position)];
+}
+
+function campaignOf(host: CampaignHost | null | undefined): CampaignState | null {
+	return host && host.campaign ? campaignState(host.campaign, host.getCampaignProgress()) : null;
+}
+
+//A copy of plain data, as structuredClone makes it: a toData reads the equipment lists and the dossiers
+//at every step and every rule the screen asks under ?harness, where structuredClone costs more than the
+//rest of the state
+function copyData<T>(x: T): T {
+	if (typeof x !== "object" || x === null) return x;
+	if (Array.isArray(x)) return x.map(copyData) as T;
+	const copy: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(x)) copy[k] = copyData(v);
+	return copy as T;
 }
 
 //Where the game's and the AI's streams are (D8): the cosmetic stream isn't state. Null while the
@@ -297,11 +430,15 @@ function position(c: Position): Position {
 	return { row: c.row, col: c.col };
 }
 
+function transportState(t: OffMapUnit["transport"]): OffMapUnit["transport"] {
+	return t ? { eqid: t.eqid, ammo: t.ammo, fuel: t.fuel } : null;
+}
+
 //A unit's fields but its id and position: of a Unit, or of a unit in a save of the format before
 export function offMapUnit(u: OffMapUnit): OffMapUnit {
 	return {
 		eqid: u.eqid, owner: u.owner,
-		transport: u.transport ? { eqid: u.transport.eqid, ammo: u.transport.ammo, fuel: u.transport.fuel } : null,
+		transport: transportState(u.transport),
 		carrier: u.carrier, strength: u.strength, moveLeft: u.moveLeft, ammo: u.ammo, fuel: u.fuel, hits: u.hits,
 		experience: u.experience, entrenchment: u.entrenchment, entrenchTicks: u.entrenchTicks, leader: u.leader,
 		facing: u.facing, flag: u.flag, isCore: u.isCore, isMounted: u.isMounted, hasMoved: u.hasMoved, hasFired: u.hasFired,
@@ -319,7 +456,7 @@ function playerState(p: Player, units: Unit[]): PlayerState {
 		id: p.id, side: p.side, country: p.country, type: p.type, prestige: p.prestige,
 		prestigePerTurn: p.prestigePerTurn.slice(), score: p.score, playedTurn: p.playedTurn,
 		airTransports: p.airTransports, navalTransports: p.navalTransports, supportCountries: p.supportCountries.slice(),
-		dossier: structuredClone(p.dossier),
+		dossier: copyData(p.dossier),
 		core: p.getCoreUnitList().map((u): CoreUnit => units.includes(u) ? { onMap: u.id }
 			: u.destroyed ? { lost: offMapUnit(u) } : { reserve: offMapUnit(u) }),
 	};
@@ -361,6 +498,7 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null, into?: Sc
 	const { data, state } = saved;
 	const s = state.scenario;
 	const scenario = into || new Scenario(s.file);
+	touched();
 	scenario.name = data.name;
 	scenario.setDescription(data.description);
 	scenario.maxTurns = s.maxTurns;

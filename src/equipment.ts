@@ -12,6 +12,8 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { touched } from "./context";
+
 //The index lists of a country file: equipment ids by unit class
 export interface EquipmentIndexes {
 	unitclass?: { [uclass: string]: number[] };
@@ -151,8 +153,10 @@ Equipment.getCountryEquipmentByClass = function(uclass: number, country: number,
 		if (Equipment.equipmentIndexes[country].hasOwnProperty("unitclass"))
 			eqList = Equipment.equipmentIndexes[country]["unitclass"][uclass];
 
-		if (sortkey)
+		if (sortkey) {
 			eqList.sort(keySort(sortkey, reverse));
+			touched(); //(the lists are the state's, #186)
+		}
 	}
 
 	return eqList;

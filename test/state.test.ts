@@ -248,3 +248,58 @@ function firstDifference(want: string, got: string): string {
 	while (d < want.length && want[d] === got[d]) d++;
 	return "  want " + want.slice(Math.max(0, d - 100), d + 100) + "\n  got  " + got.slice(Math.max(0, d - 100), d + 100);
 }
+
+//savedAs (what the mirror asks of the world it keeps, src/mirror.ts) sees every write toData would:
+//each field of a unit's state and of a hex changed on the objects, and a write into each other part
+//of the state, makes it say no, and putting it back yes
+test("savedAs sees what toData would of every field it reads", async () => {
+	const r = await restored("campaign-3-1-t0.json.gz");
+	const { savedAs } = await import("../src/state");
+	r.Rng.seed(5);
+	const m = r.scenario.map, saved = r.toData(r.scenario, r.game);
+	const sees = (what: string, write: () => () => void) => {
+		expect(savedAs(r.scenario, r.game, saved), "before " + what).toBe(true);
+		const undo = write();
+		expect(savedAs(r.scenario, r.game, saved), what).toBe(false);
+		undo();
+	};
+	const change = (o: object, k: string) => () => {
+		const x = o as Record<string, unknown>, was = x[k];
+		x[k] = typeof was === "boolean" ? !was : typeof was === "number" ? was + 1 : typeof was === "string" ? was + "!" : 1;
+		return () => { x[k] = was; };
+	};
+	const u = m.getUnits()[0], mounted = m.getUnits().find((x) => x.transport !== null)!;
+	for (const k of Object.keys(saved.state.units[0]).filter((x) => !["id", "row", "col", "transport"].includes(x)))
+		sees("the unit's " + k, change(u, k));
+	sees("the unit's id", change(u, "id"));
+	sees("the unit's hex", () => { const h = u.getHex(); u.setHex(m.map[0][0]); return () => u.setHex(h); });
+	sees("the unit's transport", change(mounted.transport, "fuel"));
+	sees("a transport", () => { const t = mounted.transport; mounted.transport = null; return () => { mounted.transport = t; }; });
+	const h = m.map[1][1];
+	for (const k of ["terrain", "road", "name", "isDeployment", "owner", "flag", "victorySide"]) sees("the hex's " + k, change(h, k));
+	sees("the hex's unit", () => { h.unit = u; return () => { h.unit = null; }; });
+	sees("the hex's air unit", () => { h.airunit = u; return () => { h.airunit = null; }; });
+	const p = m.getPlayers()[0], core = p.getCoreUnitList();
+	for (const k of ["prestige", "score", "airTransports", "type"]) sees("the player's " + k, change(p, k));
+	sees("the player's prestige per turn", () => { p.prestigePerTurn.push(1); return () => p.prestigePerTurn.pop(); });
+	sees("the player's dossier", () => { const d = p.dossier; p.dossier = { ...d, units: {} }; return () => { p.dossier = d; }; });
+	sees("the player's core list", () => { core.reverse(); return () => core.reverse(); });
+	for (const k of ["ground", "atmosferic", "dayTurn", "name", "eqp"]) sees("the scenario's " + k, change(r.scenario, k));
+	for (const k of ["turn", "maxTurns", "isLastRowPartial", "terrainImage"]) sees("the map's " + k, change(m, k));
+	sees("the current player", () => { const c = m.currentPlayer; m.currentPlayer = m.getPlayers()[1]; return () => { m.currentPlayer = c; }; });
+	const objectives = m.sidesVictoryHexes.find((l) => l.length > 0)!;
+	sees("the objectives", () => { const o = objectives.pop()!; return () => objectives.push(o); });
+	sees("the next unit id", change(m.getBoard(), "uniqueID"));
+	const turn = Object.keys(r.scenario.reinforcements).find((t) => r.scenario.reinforcements[t].length > 0)!;
+	sees("a reinforcement", change(r.scenario.reinforcements[turn][0].unit, "strength"));
+	sees("the undo slot", () => { const slot = m.getUndoSlot(); slot.unit = u; slot.savedUnit = u; return () => slot.clear(); });
+	sees("the dice", () => { r.Rng.random(); return () => { r.Rng.game.state = saved.state.rng!.game; }; });
+	sees("the campaign's progress", () => {
+		const was = r.game.getCampaignProgress();
+		r.game.setCampaignProgress({ ...was, awardPrototype: !was.awardPrototype }, r.scenario);
+		return () => r.game.setCampaignProgress(was, r.scenario);
+	});
+	const list = Object.values(Object.values(r.Equipment.equipmentIndexes)[0].unitclass!).find((l) => l.length > 1)!;
+	sees("the equipment lists' order", () => { list.reverse(); return () => list.reverse(); });
+	expect(savedAs(r.scenario, r.game, saved)).toBe(true);
+});

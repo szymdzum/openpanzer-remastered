@@ -7,8 +7,9 @@
  *
  * The rules were the old engine's (reconstructed from the Panzer Marshal 3.2.14 bundle). They are the
  * core's now, over a world: rulesOn(source) takes where that world comes from. The running game's is
- * made from the game's objects at the call (src/mirror.ts), so what the screen or the harness just
- * wrote into them is in it; the gamerules contract's reads the old counters (test/coreadapter.ts).
+ * the world of the game's objects (src/mirror.ts rulesWorld: kept until something says it wrote into
+ * them, under ?harness while toData of them is its state), so what the screen or the harness just wrote
+ * into them is in it; the gamerules contract's reads the old counters (test/coreadapter.ts).
  * What a unit is by itself (the render loop asks it of every unit it draws) reads the unit object as
  * the core's unit state, on a world of the equipment alone.
  *
@@ -19,7 +20,7 @@
 
 import { type Cell, type combatResults, type extendedCell, type pathCell, type Supply, terrainType } from "./prototypes";
 import { Equipment } from "./equipment";
-import { engineContext } from "./context";
+import { engineContext, touched } from "./context";
 import type { Hex, GameMap } from "./map";
 import type { Transport, Unit } from "./unit";
 import type { RngStream } from "./rng";
@@ -156,6 +157,7 @@ export function rulesOn(src: RulesSource): GameRulesModule {
 			if (other && other.player.side !== side) {
 				spotted++;
 				other.tempSpotted = true;
+				touched();
 			}
 			h.setSpotted(side, on);
 		}

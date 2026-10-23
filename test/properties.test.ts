@@ -133,6 +133,7 @@ async function start(fixture: string, seed: number) {
 	//(a campaign's other players stay AI: Game.setupPlayers makes them AI again on every load)
 	for (const p of w.m.getPlayers())
 		if (!w.game.campaign || p.country === w.game.campaign.country) p.type = w.playerType.humanLocal;
+	(await import("../src/context")).touched(); //(the players' types written, as Game.setupPlayers does)
 	w.game.spotSide = w.m.currentPlayer.side; //Game.setCurrentSide in hotseat
 	//The game's session with these players (its end of turn, the core's outcome)
 	const { Actions } = await coreEngine();
@@ -484,10 +485,6 @@ async function run(seq: Sequence, checks: Checks, after?: (p: Play) => Promise<s
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 
-//How long a property may take: every command plays on the core with the game's objects mirrored after
-//each piece of it, slower than the old engine's own calls were
-const PLAYING = 180_000;
-
 const playerActions = { "move": 6, "capture": 1, "attack": 4, "resupply": 1, "reinforce": 1, "reinforce over": 1, "mount": 1,
 	"unmount": 1, "disband": 1, "undo": 2, "end turn": 1 };
 
@@ -495,35 +492,35 @@ const playerActions = { "move": 6, "capture": 1, "attack": 4, "resupply": 1, "re
 //at each other (so no two units on one hex), every unit belongs to its owner's Player
 test("Property: the invariants hold after every player action", async () => {
 	await holds(fc.asyncProperty(sequences(playerActions, 40), (seq) => run(seq, { invariants: true })), 40);
-}, PLAYING);
+});
 
 //(#73: the old engine's counters drifted there, and where a recon unit won a leader)
 test("Property: the invariants hold after embarking, disembarking and upgrading (#73)", async () => {
 	await holds(fc.asyncProperty(sequences({ ...playerActions, "embark": 3, "disembark": 3, "upgrade": 3 }, 40),
 		(seq) => run(seq, { invariants: true })), 40);
-}, PLAYING);
+});
 
 //The undo is checked right after a move: its kinds come up often
 const undoActions = { "move": 3, "capture": 2, "undo": 4, "attack": 1, "end turn": 1 };
 test("Property: an undo right after a move restores the state from before the move, but for #140 and #141", async () => {
 	await holds(fc.asyncProperty(sequences(undoActions, 20),
 		(seq) => run(seq, { undo: { unitFields: ["tempSpotted"], objectiveOrder: true } })), 30);
-}, PLAYING);
+});
 
 test.fails("Property: an undo right after a move restores tempSpotted too (fails: #140)", async () => {
 	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { objectiveOrder: true } })), 30,
 		/undo didn't restore the units:\n {4}before .{106}"tempSpotted":false/); //(the text around the first difference)
-}, PLAYING);
+});
 
 test.fails("Property: an undo right after a move restores the objectives' order too (fails: #141)", async () => {
 	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { unitFields: ["tempSpotted"] } })), 30,
 		/undo didn't restore the objectives/);
-}, PLAYING);
+});
 
 test("Property: the attack estimate draws nothing from the random stream and changes nothing", async () => {
 	await holds(fc.asyncProperty(sequences({ "estimate": 3, "move": 2, "attack": 2, "end turn": 1 }, 20),
 		(seq) => run(seq, { estimate: true })), 30);
-}, PLAYING);
+});
 
 //Any command among the player's: the ones the rules don't stop (a unit of the other player, a
 //resupply the button wouldn't offer...), the ones check refuses
@@ -532,13 +529,13 @@ const anyActions = { ...playerActions, "embark": 1, "disembark": 1, "upgrade": 1
 //The check/run drift guard (docs/REFACTOR.md, step 4): check passes only what run can play
 test("Property: execute never throws once check has allowed a command", async () => {
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { drift: true })), 25);
-}, PLAYING);
+});
 
 //check is pure, and a refused command neither changes the game's data (src/state.ts toData) nor
 //draws a random number
 test("Property: a refused command changes nothing", async () => {
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { refused: true })), 25);
-}, PLAYING);
+});
 
 //The save of a game played on, loaded back. The game saves after Scenario.endTurn (game.ts
 //endTurn), with nothing selected: the end of turn first, then GameState.exportGameState, then
@@ -562,4 +559,4 @@ test("Property: a save keeps the game after a player's actions, but for the know
 		const want = withoutLosses(saved), got = withoutLosses(again);
 		return isDeepStrictEqual(want, got) ? [] : ["the load changed the save:" + difference(JSON.stringify(want), JSON.stringify(got))];
 	})), 15);
-}, PLAYING);
+});

@@ -13,6 +13,7 @@
  */
 
 import type { Cell } from "./prototypes";
+import { touched } from "./context";
 import { Equipment } from "./equipment";
 import { defined } from "./util";
 import type { Hex, Player } from "./map";
@@ -128,6 +129,7 @@ export class Unit {
 		this.getHex = function() { return hex; }
 		this.setHex = function(h: Hex | null) {
 			hex = h;
+			touched();
 			if (h !== null) // set unit as deployed (might be called from map.deployUnit)
 				this.isDeployed = true;
 			//We don't set isDeployed to false here only in setPlayerToHQ() when units are sent to HQ pool
@@ -198,7 +200,10 @@ Unit.prototype.getFuel = function(): number {
 }
 
 //Switches between embarked (carrier > 0) and disembarked keeping the carrier (carrier < 0)
-Unit.prototype.toggleEmbark = function() { this.carrier = -this.carrier; }
+Unit.prototype.toggleEmbark = function() {
+	this.carrier = -this.carrier;
+	touched();
+}
 Unit.prototype.getIcon = function(): string { return this.unitData().icon; }
 
 //frees memory associated with this object if possible

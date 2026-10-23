@@ -26,6 +26,7 @@ import type { GameMap, Hex, UnitImagesList } from "./map";
 import { UIBuilder } from "./uibuilder";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
+import { touched } from "./context";
 
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
 export interface MoveAnimationCBData {
@@ -520,6 +521,7 @@ export class Render {
 
 						if (Math.abs(actualFacing - unit.facing) > 1) {
 							unit.facing = actualFacing;
+							touched(); //(the facing is the unit's state, #187)
 							needRedraw = true;
 						}
 					}

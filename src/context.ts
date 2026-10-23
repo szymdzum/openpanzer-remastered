@@ -26,7 +26,7 @@ export interface EngineContext {
 	campaignPlayer(): Player | null;
 	spotSide(): number;
 	host(): CampaignHost | null;
-	world(): World; //the core's world of the game's objects now (src/mirror.ts worldOf), which the rules read
+	world(): World; //the core's world of the game's objects now (src/mirror.ts rulesWorld), which the rules read
 }
 
 export var engineContext: EngineContext = {
@@ -40,4 +40,19 @@ export var engineContext: EngineContext = {
 
 export function setEngineContext(context: EngineContext): void {
 	engineContext = context;
+}
+
+//How many times something said it wrote into the game's objects outside the mirror (src/mirror.ts):
+//the screen's carrier flips, the animation's facing, its sorts of the lists (#186, #187), a unit put on
+//a hex, a load. The world the screen's rules read is kept while this count stays (the harness writes
+//without saying: under ?harness the world is compared with the objects instead)
+let writes = 0;
+
+//The game's objects were written to: the screen's rules read their world again
+export function touched(): void {
+	writes++;
+}
+
+export function objectWrites(): number {
+	return writes;
 }

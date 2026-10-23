@@ -1,14 +1,14 @@
 //How fast the core answers (docs/CORE.md), on each engine fixture: the AI's hot queries (the move
 //range of every unit that can move, the combat estimate of every unit on what it can attack) and what
 //building the world from toData costs; a move and an attack played by the core's step and by the
-//game's command (the world made from the objects, the objects updated after); an end of turn; an AI
-//turn; and the screen's rules (src/gamerules.ts) the render loop and a click ask. Off unless BENCH=1
+//game's command (on the world of the objects, the objects updated after); an end of turn; an AI
+//turn on the core and in the game; and the screen's rules (src/gamerules.ts) the render loop and a click ask. Off unless BENCH=1
 //(timings on a shared machine aren't a test): BENCH=1 npx vitest run test/core-bench.test.ts prints
 //the tables
 import fs from "node:fs";
 import { test } from "vitest";
 import { fixtures } from "./contracts";
-import { load } from "./invariants";
+import { load as loadChecked } from "./invariants";
 import { createWorld } from "../src/core/create";
 import { moveRange } from "../src/core/movement";
 import { combatResult } from "../src/core/combat";
@@ -17,6 +17,14 @@ import { step } from "../src/core/step";
 import { arriveReinforcements } from "../src/core/turn";
 import type { Command } from "../src/commands";
 import type { Unit } from "../src/unit";
+import type { AIAction } from "../src/ai";
+
+//A fixture as the page plays it: the mirror without the checks the tests run with (src/mirror.ts)
+async function load(name: string) {
+	const w = await loadChecked(name);
+	(await import("../src/mirror")).mirrorOptions.checks = false;
+	return w;
+}
 
 //The time per call in microseconds, of the best of 5 rounds of reps calls
 function time(reps: number, f: () => void): number {
@@ -162,10 +170,50 @@ test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core", async () =>
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
+//An AI action as the command the game sends for it (Game.processAction), null for what only the screen shows
+function commandOf(A: Awaited<ReturnType<typeof load>>["actionType"], a: AIAction): Command | null {
+	const unit = a.param[0] as Unit | null, other = a.param[1] as Unit & { row: number; col: number };
+	if (unit === null) return null;
+	switch (a.type) {
+		case A.move: return { type: "move", unit: unit.id, to: { row: other.row, col: other.col } };
+		case A.attack: return { type: "attack", unit: unit.id, target: other.id };
+		case A.resupply: return { type: "resupply", unit: unit.id };
+		case A.reinforce: return { type: "reinforce", unit: unit.id };
+		case A.mount: return { type: "mount", unit: unit.id };
+		case A.umount: return { type: "unmount", unit: unit.id };
+		default: return null;
+	}
+}
+
+//An AI turn in the game, every player the AI: the turn's start and plan, every order played as the game
+//plays it (the commands on the world of the objects, the objects updated after each piece), the end of
+//turn with the next player's start: in ms, best of 5
+test.runIf(!!process.env.BENCH)("Benchmark: an AI turn in the game", async () => {
+	const rows: string[] = ["fixture | AI turn in the game ms"];
+	for (const name of fixtures("engine").filter((f) => !f.startsWith("scripted"))) {
+		let best = Infinity;
+		for (let round = 0; round < 5; round++) {
+			const w = await load(name);
+			const m = w.m;
+			const t = performance.now();
+			const ai = new w.AI(m.currentPlayer, m);
+			ai.buildActions();
+			for (let n = 0, a = ai.getAction(); a && n < 500; n++, a = ai.getAction()) {
+				const c = commandOf(w.actionType, a);
+				if (c !== null) w.Commands.execute(w.scenario, c);
+			}
+			w.endTurn();
+			best = Math.min(best, performance.now() - t);
+		}
+		rows.push(`${name} | ${best.toFixed(1)}`);
+	}
+	fs.writeSync(2, rows.join("\n") + "\n");
+}, 600_000);
+
 //The screen's rules in the running game (src/gamerules.ts): what the render loop asks of every unit it
 //draws (the unit's own rules: its move range, ammo, fuel, ground, the bridge it stands on) and what a
 //click asks of the map (the move and attack hexes, the estimate under the attack cursor, the context
-//buttons), each on the world made from the objects at the call
+//buttons), on the world kept while nothing wrote into the objects (src/mirror.ts)
 test.runIf(!!process.env.BENCH)("Benchmark: the screen's rules on the core", async () => {
 	const rows: string[] = ["fixture, units | render loop per unit µs | move+attack hexes µs | estimate µs | context buttons µs"];
 	for (const name of fixtures("engine")) {

@@ -31,11 +31,11 @@ import { Commands } from "./commands";
 import { GameRules } from "./gamerules";
 import { coreDriver, endGameTurn, removeDestroyed, startGameSession } from "./coresession";
 import { buildOnCore, carryPlayer, prototypeAwarded } from "./coreload";
-import { applyData, worldOf } from "./mirror";
+import { applyData, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
 import { endCampaignScenario, scenarioEnded } from "./core/campaign";
 import type { Session } from "./core/session";
-import { setEngineContext } from "./context";
+import { setEngineContext, touched } from "./context";
 import { game, setGame } from "./session";
 import type { CampaignProgress } from "./state";
 
@@ -353,6 +353,7 @@ export class Game {
 					}
 				}
 			}
+			touched(); //(the players' types, a campaign player carried)
 			return true;
 		}
 
@@ -501,7 +502,7 @@ setEngineContext({
 	campaignPlayer: function() { return game.getCampaignPlayer(); },
 	spotSide: function() { return game.spotSide; },
 	host: function() { return game; },
-	world: function() { return worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW }); }
+	world: function() { return rulesWorld(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW }); }
 });
 
 export function gameStart() {

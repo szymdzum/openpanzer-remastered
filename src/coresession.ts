@@ -11,15 +11,15 @@
  * for the current player's next order and hands it out as the old action (harness/replay.js wraps it
  * to hash the state there), and Game.processAction plays it as before, its commands on the core
  * (src/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
- * the session with its controller. The session's world is made again from the objects before each
- * call, so what the screen and the harness wrote into them is in it.
+ * the session with its controller. The session's world is the objects' before each call (src/mirror.ts
+ * stepWorld), so what the screen and the harness wrote into them is in it.
  */
 
 import { actionType, type Cell, playerType, uiSettings } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import type { AIAction, AIDriver } from "./ai";
 import type { GameMap, Player } from "./map";
-import { applyData, mirrorDifference, unitObject, worldOf } from "./mirror";
+import { applyData, checkedDifference, stepWorld, unitObject, worldOf } from "./mirror";
 import { beginDraft, finishDraft, removeUnit } from "./core/draft";
 import { aiController } from "./core/ai";
 import { tutorialController } from "./core/tutorial";
@@ -39,17 +39,17 @@ function controllerFor(type: number, player: number): Controller | null {
 	return null;
 }
 
-//The game's world now, made from its objects, with the side shown and the fog of war
+//The game's world now, of its objects, with the side shown and the fog of war
 function synced(game: Game): Session {
 	const s = game.session;
-	s.world = worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+	s.world = stepWorld(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
 	return s;
 }
 
-//The objects to the session's world: they must then mirror it
+//The objects to the session's world: they must then mirror it (the checks look)
 function mirrored(game: Game) {
 	applyData(game.scenario, game.session.world, game);
-	const difference = mirrorDifference(game.scenario, game.session.world, game);
+	const difference = checkedDifference(game.scenario, game.session.world, game);
 	if (difference !== "") throw new Error("CoreSession: " + difference);
 }
 

@@ -6,7 +6,7 @@
  *
  * A command names its units by id and its hexes by cell, so it can be logged, saved, sent and written
  * by a program (docs/REFACTOR.md, step 4). The core plays it (src/core/step.ts: check, then the
- * command's handler); Commands.execute plays it in the running game: on the world made from the game's
+ * command's handler); Commands.execute plays it in the running game: on the world of the game's
  * objects (src/mirror.ts), checkpoint by checkpoint, the objects updated after each piece, and what the
  * old engine did beside the state where it did it: the selection's hexes, the combat log, the image
  * cache, and the hooks the UI animates and alerts with.
@@ -15,7 +15,7 @@
  * attack its own, which the UI calls when the attack's animation ends. Between the two the objects
  * show the state in between, as the old game did: the move made, the shots fired. What the UI or the
  * harness writes into the objects meanwhile (the animation's facing, #187) is in the world the finish
- * plays on: each piece starts from the world made again from the objects.
+ * plays on: each piece starts from the objects' world (src/mirror.ts stepWorld).
  *
  * What the state doesn't hold, done on the objects as the old engine's commands did it: a move shows
  * the unit's new move and attack hexes, an attack clears the attack hexes, a resupply, a reinforcement,
@@ -27,11 +27,11 @@
 
 import { Cell, type combatResults, movementResults, type Supply, uiSettings, unitClass } from "./prototypes";
 import { CombatLog } from "./combatlog";
-import { engineContext } from "./context";
+import { engineContext, touched } from "./context";
 import type { ReinforceResults } from "./map";
 import type { Scenario } from "./scenario";
 import type { Unit } from "./unit";
-import { applyData, mirrorDifference, unitObject, worldOf } from "./mirror";
+import { applyData, checkedDifference, rulesWorld, stepWorld, unitObject } from "./mirror";
 import { attackResult } from "./core/combat";
 import type { Fighter, GameEvent } from "./core/events";
 import { begin, check, resume } from "./core/step";
@@ -173,22 +173,23 @@ export type ResultOf<T extends CommandType> = CommandResults[T];
 
 export type Executed<T extends CommandType> = { ok: true; result: ResultOf<T> } | { ok: false; refusal: Refusal };
 
-//The world of the game's objects now
+//The world of the game's objects now, for a step to start from
 function worldNow(scenario: Scenario): World {
-	return worldOf(scenario, engineContext.host(), { spotSide: engineContext.spotSide(), noFOW: !!uiSettings.noFOW });
+	return stepWorld(scenario, engineContext.host(), { spotSide: engineContext.spotSide(), noFOW: !!uiSettings.noFOW });
 }
 
-//The objects to the world: they must then mirror it (a difference is a bug in the mirror)
+//The objects to the world: they must then mirror it (a difference is a bug in the mirror, which the
+//checks look for)
 function mirror(scenario: Scenario, w: World) {
 	const host = engineContext.host();
 	applyData(scenario, w, host);
-	const difference = mirrorDifference(scenario, w, host);
+	const difference = checkedDifference(scenario, w, host);
 	if (difference !== "") throw new Error("Commands: " + difference);
 }
 
-//Whether cmd is allowed now, or why not
+//Whether cmd is allowed now, or why not (a query: on the world the screen's rules read)
 function checkNow(scenario: Scenario, cmd: Command): Refusal | null {
-	return check(worldNow(scenario), cmd);
+	return check(rulesWorld(scenario, engineContext.host(), { spotSide: engineContext.spotSide(), noFOW: !!uiSettings.noFOW }), cmd);
 }
 
 //Checks cmd, then plays it on the core and mirrors it, with the old commands' hooks
@@ -522,9 +523,11 @@ function showRetreatRanges(m: Scenario["map"], u: Unit) {
 	const kept = { moveLeft: u.moveLeft, hasMoved: u.hasMoved, hasOverstrength: u.hasOverstrength };
 	if (u.isMounted && u.transport !== null) u.moveLeft = 0;
 	if (u.unitData().uclass !== unitClass.recon || u.moveLeft <= 0) u.hasMoved = u.hasOverstrength = true;
+	touched();
 	m.setMoveRange(u);
 	m.setAttackRange(u);
 	Object.assign(u, kept);
+	touched();
 }
 
 //The end of a retreat's move (its animation's end): its capture and the victory it won

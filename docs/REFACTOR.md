@@ -559,6 +559,31 @@ them, and the game runs on the session.
   the empty move the AI ordered where no path was, the shape of the cells), the invariants (the #73
   drills are plain tests now), the properties, the state, save, undo and outcome tests. The unit
   contract went with Unit's methods. Verify: identical to the step before.
+- The world kept (after #137): the world was made again from toData of the objects at every rule the
+  screen asked and every step, and the objects compared with the world after every update, which made
+  `npm test` take twice as long and a click's rules hundreds of µs. The mirror keeps the world of the
+  objects now. The screen's rules read it until something says it wrote into the objects (`touched()`,
+  src/context.ts: the selection's carrier flips through `Unit.toggleEmbark`, the animation's facing,
+  the UI's sorts of the unit and equipment lists, a unit put on a hex, the retreat's ranges, a load, the
+  players set up); a step starts from it while toData of the objects is its state (`savedAs`, src/state.ts,
+  the parts toData reads compared where they are, about 50 µs against 150-250 to make the world again),
+  so a write nobody announced is never lost under a step. Under ?harness, whose scripts write anywhere,
+  the rules read it the same way, compared with the objects. The checks (`mirrorOptions.checks`: the tests
+  and the dev server, off in the build) throw where a world trusted isn't the objects' (a write without
+  `touched()`), compare `savedAs` with toData at one step in 16 and the objects with the world after one
+  update in 8 (test/mirror.test.ts after every piece). `BENCH=1` (2026-10-23, the page's mirror, no
+  checks), per call:
+
+  | | Old engine | Core, world made at each rule | Core, world kept |
+  |---|---|---|---|
+  | Render loop, per unit drawn | 0.24-0.47 µs | 0.38-0.77 µs | 0.36-0.65 µs |
+  | A click's move and attack hexes | 4-458 µs | 277-667 µs | 6-194 µs |
+  | The estimate under the attack cursor | 3-16 µs | 175-284 µs | 4-17 µs |
+  | The context buttons (5 rules) | 1-2 µs | 456-1096 µs | 1-2 µs |
+  | A move played by the game (`Commands.execute`) | | 2.3-4.1 ms | 0.7-1.9 ms |
+  | An AI turn played by the game | | 50-289 ms | 28-120 ms |
+
+  The property tests are back to the default timeout.
 
 ### Not worth it now
 

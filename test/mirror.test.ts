@@ -146,6 +146,7 @@ test("What a screen writes into the objects is in the world made from them", asy
 	const sorted = Object.values(list).find((l) => l.length > 2)!;
 	sorted.reverse();
 	x.o.m.getVisibility().counters[1][1].spot[0] += 2;
+	(await import("../src/context")).touched(); //(as the screen says it wrote)
 	const w = x.worldOf();
 	expect(w.state.units[3]).toMatchObject({ facing: u.facing, strength: 4 });
 	expect(w.state.map.hexes[0].owner).toBe(1);
@@ -154,6 +155,49 @@ test("What a screen writes into the objects is in the world made from them", asy
 	//(the sight is computed from the units: a counter switched by hand isn't in it, D10)
 	expect(w.sight.spot[0][x.o.m.cols + 1]).toBe(x.o.m.getVisibility().counters[1][1].spot[0] - 2);
 	expect(x.difference(w)).toBe("the counters differ from the world's sight");
+});
+
+//The world the screen's rules read is kept until something says it wrote into the objects (touched);
+//a write that didn't say so throws where the checks look (the tests, the dev server), and isn't seen
+//without them. Under ?harness (no cache) the world is kept while toData of the objects is its state
+test("The screen's rules read the world kept until something says it wrote into the objects", async () => {
+	const x = await mirrorOf("drpzop01-t2.json.gz");
+	const { rulesWorld, stepWorld, mirrorOptions } = await import("../src/mirror");
+	const { touched } = await import("../src/context");
+	const world = () => rulesWorld(x.o.scenario, x.o.game, x.inputs);
+	const u = x.o.m.getUnits()[3], strength = () => world().state.units[3].strength;
+	const w = world();
+	expect(world()).toBe(w);
+	expect(stepWorld(x.o.scenario, x.o.game, x.inputs)).toBe(w);
+	expect(rulesWorld(x.o.scenario, x.o.game, { ...x.inputs, spotSide: 1 - x.inputs.spotSide }), "another side shown").not.toBe(w);
+	u.strength = 4;
+	touched();
+	expect(strength()).toBe(4);
+	u.strength = 5;
+	expect(world, "a write nobody announced").toThrow(/without touched/);
+	expect(() => stepWorld(x.o.scenario, x.o.game, x.inputs)).toThrow(/without touched/);
+	mirrorOptions.checks = false;
+	expect(strength(), "trusted without the checks").toBe(4);
+	mirrorOptions.cache = false;
+	expect(strength(), "?harness").toBe(5);
+	expect(world()).toBe(world());
+	u.strength = 6;
+	expect(strength()).toBe(6);
+});
+
+//The purchase window sorts the equipment lists in place (#186): the state's, which the AI buys from.
+//The sort says so, and the world the rules read has the lists in the new order
+test("The equipment lists sorted for the purchase window are in the world the rules read next (#186)", async () => {
+	const x = await mirrorOf("drpzop01-t2.json.gz");
+	const { rulesWorld } = await import("../src/mirror");
+	const world = () => rulesWorld(x.o.scenario, x.o.game, x.inputs);
+	const [country, index] = Object.entries(x.o.Equipment.equipmentIndexes).find(([, e]) => e.unitclass)!;
+	const [uclass] = Object.entries(index.unitclass!).find(([, l]) => l.length > 2)!;
+	const listed = () => world().state.equipment.indexes[country].unitclass![uclass].join();
+	const before = listed();
+	const sorted = x.o.Equipment.getCountryEquipmentByClass(+uclass, +country, "cost", true).join();
+	expect(sorted).not.toBe(before);
+	expect(listed()).toBe(sorted);
 });
 
 test("The pieces played cover the checkpoints, the save point and new units", () => {

@@ -67,6 +67,8 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const { toData } = await import("../src/state");
 	const { Rng } = await import("../src/rng");
 	const { terrainType, leaderType, actionType, playerType, unitClass } = await import("../src/prototypes");
+	//(the contract's script writes into the game's objects anywhere, as the harness's do: no world kept)
+	(await import("../src/mirror")).mirrorOptions.cache = false;
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	//(the engine's players, end of turn and outcome on the game's session)
