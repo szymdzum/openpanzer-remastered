@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import type { Game } from "../src/game";
 import type { EqUserSelElement, UI } from "../src/ui";
-import type { AttackResult } from "../src/commands";
+import type { AttackCommandHooks, AttackResult, FinishAttackHooks } from "../src/commands";
 import type { Unit } from "../src/unit";
 
 //Any property of it, called or not, is itself; as a number it is 0
@@ -260,4 +260,42 @@ test("A unit out of ammo and fuel shows both map tooltips with their own ids, an
 	expect(new Set(shown().map((t) => t.id)).size).toBe(2);
 	ui.removeUnitToolTip(unit.id);
 	expect(shown()).toEqual([]);
+}, 60_000);
+
+//The AI waits for every animation its action starts: a defender that retreats moves after the attack's
+//own animation, and the AI's next action came during that move while the turn loop ticked once a second
+//(#248). The attack's retreat put in by hand: the first attack of campaign:0:1 has none
+test("The AI's next action waits for the retreat its attack caused to end (#248)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { Commands } = await import("../src/commands");
+	const { movementResults, uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const units = map.getUnits();
+	let pair: [Unit, Unit] | undefined;
+	for (const a of units.filter((u) => u.player.id === map.currentPlayer.id))
+		for (const d of units.filter((u) => GameRules.isEnemy(a, u)))
+			if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
+	const [attacker, defender] = pair!;
+	const execute = Commands.execute.bind(Commands);
+	vi.spyOn(Commands, "execute").mockImplementation(((scenario: unknown, cmd: { type: string }, hooks?: AttackCommandHooks) => {
+		if (cmd.type !== "attack" || !hooks) return execute(scenario as never, cmd as never, hooks as never);
+		return execute(scenario as never, cmd as never, { ...hooks, animate: (result: AttackResult, finish: (h?: FinishAttackHooks) => AttackResult) =>
+			hooks.animate!(result, (h?: FinishAttackHooks) => {
+				const r = finish(h);
+				const mr = new movementResults(), at = defender.getPos();
+				mr.passedCells = [at, at];
+				h!.onRetreat!(defender, at, mr);
+				return r;
+			}) } as never);
+	}) as unknown as typeof Commands.execute);
+	//What the defender was doing each time the AI's wait was cleared
+	const cleared: boolean[] = [];
+	let wait = true;
+	Object.defineProperty(game, "waitUIAnimation", { configurable: true, get: () => wait,
+		set: (v: boolean) => { if (!v) cleared.push(defender.hasAnimation); wait = v; } });
+	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
+	await until(() => !wait && !defender.hasAnimation, "the attack and the retreat");
+	expect(cleared).toEqual([false]);
 }, 60_000);

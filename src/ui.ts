@@ -456,14 +456,23 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 
 	if (!finish)
 		finish = function(hooks?: FinishMoveHooks) { Commands.finishRetreat(unit, mr, hooks); };
+	//The surprise attack is animated as an attack, its finish runs when its animation ends: the AI waits
+	//for it (its next action could come first, hidden while the turn loop ticked once a second, #248)
+	let surprise = false;
 	finish({
 		onSurprised: function(cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
-		attackHooks: uiAttackHooks, //the surprise attack is animated as an attack, its finish runs when its animation ends
+		attackHooks: function(attacker: Unit, target: Unit) {
+			const hooks = uiAttackHooks(attacker, target);
+			return { ...hooks, animate: function(result: AttackResult, end: (h?: FinishAttackHooks) => AttackResult) {
+				surprise = true;
+				hooks.animate(result, function(h?: FinishAttackHooks) { surprise = false; return end(h); });
+			} };
+		},
 		onCapture: function(u: Unit) { uiShowAlert(p.row, p.col, "Captured", u.player.side == game.spotSide || game.spotSide == 2); },
 		onVictory: uiMoveVictory
 	});
 
-	game.waitUIAnimation = false;
+	game.waitUIAnimation = surprise;
 }
 
 //A side has won by capturing all victory hexes (or by destroying all the enemy units)
@@ -563,6 +572,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 	var a = result.attacking;
 	var d = result.defending;
 	var renderRange = GameRules.getUnitAttackRange(a.unit);
+	let retreating = false; //the AI waits for the retreat's move too (#248)
 
 	finish({
 		onLosses: function() {
@@ -608,7 +618,9 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 		//Defender retreats on big losses or surrenders when it has nowhere to go
 		onRetreat: function(unit: Unit, rpos: Cell, mr: movementResults) {
 			uiShowAlert(rpos.row - 0.2, rpos.col - 0.6, "Retreat ", false);
-			moveAnimationCBData = { unit: unit, moveResults: mr, cbfunc: uiMoveAnimationFinished };
+			retreating = true;
+			moveAnimationCBData = { unit: unit, moveResults: mr,
+				cbfunc: function(data: MoveAnimationCBData) { retreating = false; uiMoveAnimationFinished(data); } };
 			unit.hasAnimation = true;
 			R.moveAnimation(moveAnimationCBData);
 		},
@@ -624,7 +636,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 	if (result.destroyed.length > 0 || result.retreat !== null || result.surrender)
 		R.render(a.cell.row, a.cell.col, renderRange);
 
-	game.waitUIAnimation = false;
+	game.waitUIAnimation = retreating;
 	uiTurnInfo();
 }
 
