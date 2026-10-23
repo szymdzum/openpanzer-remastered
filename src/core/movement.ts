@@ -27,14 +27,15 @@ function costsOf(w: World, movmethod: number): number[] {
 	return moveCosts(w.rules, w.state.scenario.ground, movmethod);
 }
 
-//The most hexes a unit can move, terrain aside: its moves left, no more than its fuel, the leaders'
-//extra hex. A towed gun without transport (not a fortification) moves 1
+//The most hexes a unit can move, terrain aside: its moves left and the leaders' extra hex, no more
+//than its fuel (#205: the leaders' hex came after the fuel, so a move could end below 0 fuel). A
+//towed gun without transport (not a fortification) moves 1
 export function unitMoveRange(w: World, u: UnitState): number {
 	let range = movesLeft(w, u);
 	const ud = unitData(w, u);
-	if (unitUsesFuel(w, u) && fuelOf(u) < range) range = fuelOf(u);
 	if (hasLeader(w, u, leaderType.aggressiveTankManeuver)) range += 1;
 	if (hasLeader(w, u, leaderType.aggressiveManeuver)) range += 1;
+	if (unitUsesFuel(w, u) && fuelOf(u) < range) range = fuelOf(u);
 	if (ud.movmethod === movMethod.towed && u.transport === null && range === 0 && ud.uclass !== unitClass.fortification)
 		range = 1;
 	return range;
@@ -90,9 +91,10 @@ export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
 //The hexes a unit can move to or pass through (GameRules.getMoveRange), in the order of
 //cellsInRange, then its own hex. The range expands ring by ring: a hex's entry cost (cin) is the
 //exit cost (cout) of a neighbour one ring nearer, its exit cost the entry plus the terrain cost,
-//lowered when another neighbour is cheaper. An enemy zone of control the unit's side sees stops it
-//(254). An air unit moves anywhere in range at cost 1. The order of the updates is the old
-//engine's, list order, so a tie resolves as it did
+//lowered when another neighbour is cheaper. A hex is in reach when the points left pay for it (#205);
+//a hex that uses all the points (254) takes any left, at least one. An enemy zone of control the
+//unit's side sees stops it (254) on a hex it can pay for. An air unit moves anywhere in range at
+//cost 1. The order of the updates is the old engine's, list order, so a tie resolves as it did
 export function moveRange(w: World, u: UnitState): MoveCell[] {
 	if (u.hasMoved) return [];
 	const { rows, cols, lastRowPartial, lastColPartial } = w.state.map;
@@ -145,8 +147,11 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	}
 }
 
-//The steps from a cell to its neighbours as far or farther (not always right: a path can turn back)
+//The steps from a cell to its neighbours as far or farther (not always right: a path can turn back),
+//from the unit's hex or a cell the path can go through (#205: the old engine went on from every
+//cell, an enemy's it sees too, so the hexes behind it showed costs no path had)
 function expandFrom(w: World, c: MoveCell[], from: MoveCell, slot: Int32Array, near: number[], s: StepRules) {
+	if (from.range > 0 && !from.canPass && !from.canMove) return;
 	neighbours(w, from, slot, near);
 	for (const j of near)
 		if (c[j].range >= from.range) step(w, from, c[j], s);
@@ -166,11 +171,18 @@ function step(w: World, from: MoveCell, to: MoveCell, s: StepRules) {
 	const hex = hexIndex(w, to.row, to.col);
 	const other = groundUnitAt(w, hex);
 	const visible = seen(w, hex, s.side, other);
-	to.cost = enterCost(w, hex, s);
-	if (visible && to.cost < STOP && isZOC(w, hex, s.enemySide))
-		to.cost = STOP;
+	const terrain = enterCost(w, hex, s);
+	to.cost = visible && terrain < STOP && isZOC(w, hex, s.enemySide) ? STOP : terrain;
 	relax(from, to);
-	if (to.cout <= s.range || (to.cost <= STOP && to.cin <= s.range)) reach(w, to, other, visible, s);
+	if (affordable(to.cin, terrain, s.range)) reach(w, to, other, visible, s);
+}
+
+//Whether the points left after cin pay for a hex of that terrain cost: all of it, or at least one
+//for a hex that uses them all (#205: the old engine let any hex up to 254 in on the points left, or
+//none left, so a move ended below 0 points and fuel)
+function affordable(cin: number, terrain: number, range: number): boolean {
+	if (terrain === STOP) return cin < range;
+	return terrain < STOP && cin + terrain <= range;
 }
 
 //A hex in reach (canPassInto, canMoveInto of a unit that isn't air): the unit passes through it

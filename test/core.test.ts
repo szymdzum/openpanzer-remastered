@@ -17,10 +17,10 @@ import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
 import { begin, resume, step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import { mapSize } from "../src/core/newgame";
-import type { Contribution, World } from "../src/core/types";
+import type { Contribution, UnitState, World } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { createWorld } from "../src/core/create";
-import { handWorld } from "./coreworld";
+import { type HandUnit, handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280, PSW_222 = 117;
 
@@ -125,11 +125,11 @@ test("A move pays the hexes it enters, not the one it leaves: a recon car's 3 ro
 //A strip of land in the sea: the tank at 4,4, clear at 3,5, 4,5 and 6,5, a forest at 5,5
 function landStrip() {
 	const land = (r: number, c: number) => (r === 3 && c === 5) || (r === 4 && c === 5) || (r === 6 && c === 5);
-	return handWorld({ rows: 9, cols: 9, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 4, moveLeft: 3 }],
+	return handWorld({ rows: 9, cols: 9, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 4, moveLeft: 4 }],
 		terrain: (r, c) => r === 4 && c === 4 || land(r, c) ? terrainType.Clear : r === 5 && c === 5 ? terrainType.Forest : terrainType.Ocean });
 }
 
-test("A hex next to the unit costs only its own entry, whatever its neighbours cost: 3 points reach clear, forest, clear (#167)", () => {
+test("A hex next to the unit costs only its own entry, whatever its neighbours cost: 4 points reach clear, forest, clear (#167)", () => {
 	const w = landStrip();
 	const cells = moveRange(w, unitById(w, 0));
 	const at = (r: number, c: number) => cells.find((x) => x.row === r && x.col === c);
@@ -137,6 +137,66 @@ test("A hex next to the unit costs only its own entry, whatever its neighbours c
 	expect(at(5, 5)).toMatchObject({ cin: 1, cout: 3 });
 	expect(at(6, 5)).toMatchObject({ cin: 3, canMove: true });
 	expect(pathTo(w, unitById(w, 0), { row: 6, col: 5 }).map((p) => [p.row, p.col])).toEqual([[4, 4], [4, 5], [5, 5], [6, 5]]);
+});
+
+//A Pz IIA at 4,1 with moveLeft points left (more: its other fields), on the terrain given, with the units given; its move range
+function tankWith(moveLeft: number, terrain: (r: number, c: number) => number, more: Partial<UnitState> = {}, units: HandUnit[] = []) {
+	const w = handWorld({ rows: 8, cols: 8, terrain, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, moveLeft, ...more }, ...units] });
+	const cells = moveRange(w, unitById(w, 0));
+	return { w, at: (r: number, c: number) => cells.find((x) => x.row === r && x.col === c && x.canMove) };
+}
+
+test("A unit enters a hex only with the points to pay for it: a Pz IIA with 1 point left can't enter a forest (#205)", () => {
+	const { w, at } = tankWith(1, (r, c) => r === 4 && c === 2 ? terrainType.Forest : terrainType.Clear);
+	expect(at(4, 2)).toBeUndefined(); //the forest costs 2
+	expect(at(5, 1)).toMatchObject({ cin: 0, cout: 1 }); //clear costs 1
+	expect(step(w, { type: "move", unit: 0, to: { row: 4, col: 2 } })).toEqual({ ok: false, refusal: { reason: "can't get there" } });
+	expect(unitById(played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } })).world, 0)).toMatchObject({ moveLeft: 0, fuel: 49 });
+});
+
+test("A unit enters a hex only with the fuel to pay for it: a Pz IIA with 1 fuel can't enter a forest, nor go further with a leader (#205)", () => {
+	const forest = (r: number, c: number) => r === 4 && c === 2 ? terrainType.Forest : terrainType.Clear;
+	expect(tankWith(5, forest, { fuel: 1 }).at(4, 2)).toBeUndefined();
+	expect(tankWith(5, forest, { fuel: 1 }).at(5, 1)).toBeDefined();
+	//the leader's extra hex is a movement point too, paid in fuel
+	const { at } = tankWith(5, () => terrainType.Clear, { fuel: 2, leader: leaderType.aggressiveManeuver });
+	expect(at(4, 3)).toBeDefined();
+	expect(at(4, 4)).toBeUndefined();
+});
+
+test("A hex that uses all the points (a mountain for a tank) takes any points left, at least one (#205)", () => {
+	const mountain = (_: number, c: number) => c === 3 ? terrainType.Mountain : terrainType.Clear;
+	const two = tankWith(2, mountain);
+	expect(two.at(4, 3)).toMatchObject({ cin: 1, cost: 254 }); //1 point left after the clear hex
+	const moved = unitById(played(step(two.w, { type: "move", unit: 0, to: { row: 4, col: 3 } })).world, 0);
+	expect(moved).toMatchObject({ row: 4, col: 3, hasMoved: true });
+	expect(moved.moveLeft).toBeGreaterThanOrEqual(0);
+	expect(moved.fuel).toBeGreaterThanOrEqual(0);
+	//no point left after a forest
+	expect(tankWith(2, (r, c) => c === 2 ? terrainType.Forest : mountain(r, c)).at(4, 3)).toBeUndefined();
+	expect(tankWith(1, (r, c) => r === 4 && c === 2 ? terrainType.Mountain : terrainType.Clear).at(4, 2)).toMatchObject({ cin: 0 });
+});
+
+test("An enemy's zone of control stops a unit on a hex it can pay for: a Pz IIA with 2 points can't enter a forest there after a clear hex (#205)", () => {
+	const forest = (r: number, c: number) => r === 4 && c === 3 ? terrainType.Forest : terrainType.Clear;
+	const enemy: HandUnit[] = [{ eqid: TP7, owner: 1, row: 4, col: 4 }];
+	const two = tankWith(2, forest, {}, enemy);
+	expect(isZOC(two.w, hexIndex(two.w, 4, 3), 1)).toBe(true);
+	expect(two.at(4, 3)).toBeUndefined(); //1 + 2
+	expect(tankWith(3, forest, {}, enemy).at(4, 3)).toMatchObject({ cin: 1, cost: 254 });
+});
+
+test("A unit's range doesn't go through an enemy it sees: a 7TP next to a Pz IIA doesn't reach the hex behind it with 2 points (#205)", () => {
+	//a Polish 7TP (spotting 1) next to a Pz IIA: the hexes beside both are in its zone of control and
+	//seen, the hex behind it isn't seen
+	const w = handWorld({ rows: 8, cols: 8, units: [
+		{ eqid: TP7, owner: 1, row: 4, col: 2, moveLeft: 2 },
+		{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 },
+	] });
+	const cells = moveRange(w, unitById(w, 0));
+	expect(isSpotted(w, hexIndex(w, 4, 4), 1)).toBe(false);
+	expect(cells.find((x) => x.row === 4 && x.col === 3)).toBeUndefined(); //the enemy's hex
+	expect(cells.find((x) => x.row === 4 && x.col === 4)).toBeUndefined(); //only through it for 2 points
 });
 
 test("A hidden enemy's hex is in the move range: the move ends in a surprise", () => {

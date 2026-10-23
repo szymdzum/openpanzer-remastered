@@ -94,7 +94,9 @@ then assault, then overrun with tanks.
   leg, towed, air, naval...) and the ground condition: dry, frozen or mud (`movTableDry`,
   `movTableFrozen`, `movTableMud`). Roads, and bridges for their owner's side, use the road cost.
   A move pays the hexes it enters, in movement points and fuel; the hex it leaves costs nothing
-  (#70).
+  (#70). A unit enters a hex only when its points and fuel left pay for it; a hex that uses all
+  the points (254 in the tables: mountains, rivers...) takes any left, at least one, and ends the
+  move (#205).
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
   fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
   move (`getMoveRange`): a hidden enemy's zone doesn't. Air units ignore ZOC.
