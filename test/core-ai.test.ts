@@ -156,3 +156,21 @@ test.each([3, 4, 5])("The core's tutorial plays from turn %i as the old one did"
 	const s = await tutorialAt(turn);
 	same("tutorial from turn " + turn, played(s, TUTORIAL_ROUNDS, [hash(JSON.stringify(s.joined))]));
 }, 120_000);
+
+//Where the tutorial's turn 1 sends its seven units (src/core/tutorial.ts), by unit id: the Legion, the
+//artillery, the three SS infantry, the recon car and the Pz IIA
+const TUTORIAL_TURN_1: [number, number, number][] = [[0, 7, 9], [1, 7, 13], [2, 7, 15], [3, 10, 14], [5, 9, 14], [6, 8, 14], [7, 7, 11]];
+
+//The script was planned in hexes, one point each: every move is within the unit's points in hexes but
+//costs more in terrain (the trucks are wheeled, 2 a clear hex), so the moves are refused and turn 2
+//finds no attackers (#80)
+test.fails("A new tutorial's turn 1 moves its units to the hexes its script sends them to (fails: #188)", async () => {
+	const { o, localSide } = await startItem("scripted:tutorial.xml", 1);
+	const s = sessionOf(o, localSide, false);
+	while (s.ended === null && s.world.state.turn.turn < 2) advance(s);
+	const places = TUTORIAL_TURN_1.map(([id]) => {
+		const u = s.world.state.units.find((x) => x.id === id);
+		return [id, u?.row, u?.col];
+	});
+	expect(places).toEqual(TUTORIAL_TURN_1);
+}, 120_000);
