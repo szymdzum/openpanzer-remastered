@@ -185,9 +185,9 @@ test("The screen's rules read the world kept until something says it wrote into 
 	expect(strength()).toBe(6);
 });
 
-//The purchase window sorts the equipment lists in place (#186): the state's, which the AI buys from.
-//The sort says so, and the world the rules read has the lists in the new order
-test("The equipment lists sorted for the purchase window are in the world the rules read next (#186)", async () => {
+//The purchase window sorts a copy of an equipment list (#186): the state's lists, which the AI buys
+//from, keep their order, in the objects and in the world the rules read
+test("The equipment lists sorted for the purchase window leave the world's lists in their order (#186)", async () => {
 	const x = await mirrorOf("drpzop01-t2.json.gz");
 	const { rulesWorld } = await import("../src/mirror");
 	const world = () => rulesWorld(x.o.scenario, x.o.game, x.inputs);
@@ -197,7 +197,8 @@ test("The equipment lists sorted for the purchase window are in the world the ru
 	const before = listed();
 	const sorted = x.o.Equipment.getCountryEquipmentByClass(+uclass, +country, "cost", true).join();
 	expect(sorted).not.toBe(before);
-	expect(listed()).toBe(sorted);
+	expect(listed()).toBe(before);
+	expect(x.o.Equipment.equipmentIndexes[country].unitclass![uclass].join()).toBe(before);
 });
 
 test("The pieces played cover the checkpoints, the save point and new units", () => {

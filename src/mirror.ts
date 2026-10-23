@@ -8,7 +8,7 @@
  * The core's world is the game; the objects hold what the old UI draws and the harness reads. After
  * each step or checkpoint applyData updates them in place to the world's state, by unit id, keeping
  * each object (the UI compares units with === and keeps them in closures). What wrote to them since
- * (the harness, the UI's sorts of the lists, the animation's facing, the selection's carrier flips) is
+ * (the harness, the animation's facing, the selection's carrier flips) is
  * read back: the writes keep the effect they had on the old engine. The world of the objects is kept
  * between the writes (it was made again at every rule the screen asked, about 150 µs): the screen's
  * rules read it until something says it wrote (touched, src/context.ts), a step starts from it while
@@ -450,8 +450,8 @@ function keptEntries(have: Reinforcement[], want: { row: number; col: number; un
 	return kept;
 }
 
-//The equipment lists by country and class as the state has them, in place: the purchase window holds
-//and sorts them (#186)
+//The equipment lists by country and class as the state has them, in place: what asked for a list
+//unsorted holds the list itself
 function applyEquipment(indexes: { [country: string]: EquipmentIndexes }) {
 	const have = Equipment.equipmentIndexes;
 	for (const country of Object.keys(have))

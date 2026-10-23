@@ -36,7 +36,6 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { touched } from "./context";
 import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
@@ -1016,20 +1015,19 @@ function updateEquipmentWindow(eqclass?: number) {
 
 	var oldDeployMode = uiSettings.deployMode;
 
+	//The lists are sorted for display on copies: their order is the game's (the AI walks the units in it,
+	//the deploy, sell and upgrade commands name a core unit by its index in it, #186)
+	var coreList = map.currentPlayer.getCoreUnitList();
 	if (map.currentPlayer.hasUndeployedUnits()) {
 		//The units that current player hasn't deployed yet
 		userUnitSelected = $<EqUserSelElement>("eqUserSel").deployunit;
-		unitList = map.currentPlayer.getCoreUnitList();
-		unitList.sort(unitListSorter(false)); //Sorts the player core unit list itself
-		touched();
+		unitList = coreList.slice().sort(unitListSorter(false));
 		uiSettings.deployMode = true;
 		$("statusmsg").innerHTML = "Deploy (on map grey hexes) or upgrade your core units";
 	} else {
 		//The actual units on the map
 		userUnitSelected = $<EqUserSelElement>("eqUserSel").userunit;
-		unitList = map.getUnits();
-		unitList.sort(unitListSorter(true));
-		touched();
+		unitList = map.getUnits().slice().sort(unitListSorter(true));
 		uiSettings.deployMode = false;
 		$("statusmsg").innerHTML = "Units currently deployed on map.";
 	}
@@ -1052,11 +1050,12 @@ function updateEquipmentWindow(eqclass?: number) {
 		div = uiAddUnitBox("unitlist", u);
 
 		//Make a default selection for deployment mode so we don't have to click each time we deploy.
-		if (uiSettings.deployMode && (userUnitSelected == -1 || unitList[userUnitSelected].isDeployed))
-			$<EqUserSelElement>("eqUserSel").deployunit = userUnitSelected = i;
+		//A row in deployment mode is the unit's index in the core list
+		if (uiSettings.deployMode && (userUnitSelected == -1 || coreList[userUnitSelected].isDeployed))
+			$<EqUserSelElement>("eqUserSel").deployunit = userUnitSelected = coreList.indexOf(u);
 
 		if (uiSettings.deployMode)
-			div.unitid = i;
+			div.unitid = coreList.indexOf(u);
 		else
 			div.unitid = u.id;
 

@@ -165,8 +165,8 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 - **`CoreUnit`** has a third case, `{ lost: OffMapUnit }`: a core unit destroyed on the map stays
   in the list until the player goes to HQ.
 - **D9, revised:** `EquipmentState` holds the lists by country and unit class, not only what the
-  AI removed. The purchase window sorts them in place, and the order decides what the AI buys and
-  which transport a unit embarks on.
+  AI removed. The order decides what the AI buys and which transport a unit embarks on. The
+  purchase window sorted them in place until it sorted copies (#186).
 - **Left out on purpose:** the selection and the handlers (D6), the spotting and zone of control
   counters (D10: fromData counts them again, the drift of #72 and #73 is lost), the unit icons, an
   off-map unit's stale id (D1), a destroyed unit still in the list (only between an attack and the

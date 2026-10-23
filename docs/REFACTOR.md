@@ -564,8 +564,8 @@ them, and the game runs on the session.
   `npm test` take twice as long and a click's rules hundreds of µs. The mirror keeps the world of the
   objects now. The screen's rules read it until something says it wrote into the objects (`touched()`,
   src/context.ts: the selection's carrier flips through `Unit.toggleEmbark`, the animation's facing,
-  the UI's sorts of the unit and equipment lists, a unit put on a hex, the retreat's ranges, a load, the
-  players set up); a step starts from it while toData of the objects is its state (`savedAs`, src/state.ts,
+  a unit put on a hex, the retreat's ranges, a load, the players set up; the UI's sorts of the unit and
+  equipment lists did until they sorted copies, #186); a step starts from it while toData of the objects is its state (`savedAs`, src/state.ts,
   the parts toData reads compared where they are, about 50 µs against 150-250 to make the world again),
   so a write nobody announced is never lost under a step. Under ?harness, whose scripts write anywhere,
   the rules read it the same way, compared with the objects. The checks (`mirrorOptions.checks`: the tests
