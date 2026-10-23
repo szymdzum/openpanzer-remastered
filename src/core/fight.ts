@@ -203,11 +203,10 @@ export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 }
 
 //After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
-//no unit left loses (#92: when both have none, both win). retreat false: no retreat (the old UI's finish
-//of an attack with no animation to play read both units' strengths as 0, kept)
-export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null, retreat: boolean) {
+//no unit left loses (#92: when both have none, both win)
+export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null) {
 	const def = unitById(d, start.defender);
-	if (retreat && atk !== null && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
+	if (atk !== null && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
 		const to = retreatPosition(d, def);
 		if (to !== null) {
 			retreatTo(d, def.id, to);

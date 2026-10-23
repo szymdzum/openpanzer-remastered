@@ -234,22 +234,6 @@ test("The surprise attack hits the unit the air mode picks: the person's toggle 
 	expect(target({ airMode: true })).toEqual([2]);
 });
 
-test("An attack's finish told no retreat (the old UI's attack with nothing to animate) leaves the defender where it is", () => {
-	const veterans = () => handWorld({ rows: 6, cols: 6, units: [
-		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, experience: 400 },
-		{ eqid: TP7, owner: 1, row: 2, col: 3 },
-	] });
-	let seed = 1, whole: Extract<Stepped, { ok: true }>;
-	for (; seed < 500; seed++) {
-		whole = played(step(withRng(veterans(), seed), { type: "attack", unit: 0, target: 1 }));
-		if (whole.events.some((e) => e.type === "retreated")) break;
-	}
-	expect(seed).toBeLessThan(500);
-	const kept = byCheckpoints(withRng(veterans(), seed), { type: "attack", unit: 0, target: 1 }, { retreat: false });
-	expect(kept.events.map((e) => e.type)).toEqual(whole.events.map((e) => e.type).filter((t) => t !== "retreated"));
-	expect(unitById(kept.world, 1)).toMatchObject({ row: 2, col: 3 });
-});
-
 test("A move onto an enemy flag takes it, and the undo gives it back", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }] });
 	const flag = { owner: 1, flag: 15, victorySide: -1 };

@@ -3,10 +3,11 @@
 //started as the contracts start it, then the UI made as Game makes it
 import fs from "node:fs";
 import path from "node:path";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import type { Game } from "../src/game";
 import type { EqUserSelElement, UI } from "../src/ui";
+import type { AttackResult } from "../src/commands";
 import type { Unit } from "../src/unit";
 
 //Any property of it, called or not, is itself; as a number it is 0
@@ -162,4 +163,38 @@ test("Selling the last unit of the core list from the deployment window picks an
 	const shown = [...document.querySelectorAll<HTMLElement & { unitid: number }>("#unitlist > div")];
 	expect(shown.map((r) => p.getCoreUnitList()[r.unitid])).toEqual([tank]);
 	expect(p.getCoreUnitList()[sel.deployunit]).toBe(tank);
+}, 60_000);
+
+//An attack in the UI on a fresh campaign:0:1, its attacker the first unit of the side playing with an
+//enemy in range, animated or with every attack animation gone (a carrier's, class "none"): what it ends with
+async function uiAttack(animated: boolean) {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { Commands } = await import("../src/commands");
+	const { attackAnimationByClass } = await import("../src/animation");
+	const { uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const units = map.getUnits();
+	let pair: [Unit, Unit] | undefined;
+	for (const a of units.filter((u) => u.player.id === map.currentPlayer.id))
+		for (const d of units.filter((u) => GameRules.isEnemy(a, u)))
+			if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
+	const [attacker, defender] = pair!;
+	if (!animated) attackAnimationByClass.fill("none");
+	const execute = vi.spyOn(Commands, "execute");
+	game.waitUIAnimation = true;
+	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
+	await until(() => !game.waitUIAnimation, "the attack animation");
+	const executed = execute.mock.results.map((r) => r.value as { ok: boolean; result: unknown });
+	const result = executed.find((r, i) => execute.mock.calls[i][1].type === "attack" && r.ok)!.result as AttackResult;
+	return { destroyed: ids(result.destroyed), retreat: result.retreat, surrender: result.surrender,
+		units: [attacker, defender].map((u) => [u.id, u.strength, u.destroyed, u.getPos()]) };
+}
+
+test("An attack with nothing to animate ends as the same attack animated, its units not destroyed (#111)", async () => {
+	const animated = await uiAttack(true);
+	const still = await uiAttack(false);
+	expect(animated.units.every((u) => u[1] as number > 0)).toBe(true);
+	expect(still).toEqual(animated);
 }, 60_000);

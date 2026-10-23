@@ -154,8 +154,7 @@ capture's victory), an attack once its shots are fired (`cleanUp` next: the dest
 map) and once they are gone (`end` next: the retreat or the surrender, the elimination victory). The
 world resumed from can be one made again from the screen's objects. What the screen says there is an
 input, not state: the air mode the surprise attack picks its target with (#77: the person's toggle;
-a program plays with it off), and `retreat: false` when the old UI's finish skipped the retreat (an
-attack with nothing to animate read both strengths as 0, kept). `step` passes every checkpoint at
+a program plays with it off). `step` passes every checkpoint at
 once on one draft; test/core-steps.test.ts played each of its commands both ways until #137.
 
 **Undo (D5).** The state keeps `turn.undoable` exactly as the old engine's slot decides it: a human

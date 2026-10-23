@@ -72,7 +72,7 @@ export function resumeFrom(d: Draft, cp: Checkpoint, input: CheckpointInput): Ch
 		case "cleanUp":
 			return { next: "end", attack: cp.attack, attacker: cleanUpAttack(d, cp.attack) };
 		case "end":
-			endAttack(d, cp.attack, cp.attacker, input.retreat !== false);
+			endAttack(d, cp.attack, cp.attacker);
 			return null;
 	}
 }
