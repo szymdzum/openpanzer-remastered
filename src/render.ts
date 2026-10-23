@@ -26,7 +26,6 @@ import type { GameMap, Hex, UnitImagesList } from "./map";
 import { UIBuilder } from "./uibuilder";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
-import { touched } from "./context";
 
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
 export interface MoveAnimationCBData {
@@ -455,6 +454,7 @@ export class Render {
 				var cCell: pathCell, dCell: pathCell;
 				var xstep: number, ystep: number;
 				var actualFacing: number;
+				var drawnFacing = unit.facing; //the facing drawn along the path: the unit's stays the engine's (#187)
 				var needRedraw = true;
 
 				this.movTimer = null;
@@ -472,7 +472,7 @@ export class Render {
 					if (needRedraw) {
 						ubb.clearRect(0, 0, ubb.canvas.width, ubb.canvas.height);
 						//Offset the sprite drawing on canvas otherwise it will be clipped
-						drawUnitSprite(ubb, -renderOffsetX, -renderOffsetY, unit);
+						drawUnitSprite(ubb, -renderOffsetX, -renderOffsetY, unit, drawnFacing);
 						if (cubb.style.display == "none")
 							cubb.style.display = "inline";
 					}
@@ -519,9 +519,8 @@ export class Render {
 
 						actualFacing = GameRules.getDirection(cCell.row, cCell.col, dCell.row, dCell.col);
 
-						if (Math.abs(actualFacing - unit.facing) > 1) {
-							unit.facing = actualFacing;
-							touched(); //(the facing is the unit's state, #187)
+						if (Math.abs(actualFacing - drawnFacing) > 1) {
+							drawnFacing = actualFacing;
 							needRedraw = true;
 						}
 					}
@@ -816,7 +815,8 @@ export class Render {
 
 		//TODO performance render unit to a backbuffer and on main render function render
 		// units in order of their image id so we can save some translate/rotate operations
-		function drawUnitSprite(c: CanvasRenderingContext2D, x0: number, y0: number, unit: Unit): boolean {
+		//facing: the one drawn (the move animation's own, else the unit's)
+		function drawUnitSprite(c: CanvasRenderingContext2D, x0: number, y0: number, unit: Unit, facing: number): boolean {
 			if (unit === null)
 				return false;
 
@@ -841,7 +841,6 @@ export class Render {
 			//Offset the transparent regions of the unit sprite
 			var ix0 = (x0 - imagew/2 + s/2) >> 0;
 			var iy0 = (y0 - imageh/2 + r - unitTextHeight) >> 0;
-			var facing = unit.facing;
 			if (facing > 8) {
 				facing = 16 - facing;
 				mirror = true;
@@ -865,7 +864,7 @@ export class Render {
 		//(arrow: move, crosshair: fire), experience bars and the leader star on its right, and a supply tag
 		//under it only when fuel or ammo runs low. All in css pixels, sharp on high density screens
 		function drawHexUnit(c: RenderContext, x0: number, y0: number, unit: Unit, drawIndicators: boolean): void {
-			if (!drawUnitSprite(c, x0, y0, unit)) return;
+			if (!drawUnitSprite(c, x0, y0, unit, unit.facing)) return;
 			if (!drawIndicators || unit.strength < 1) return;
 
 			var side = unit.player.side;

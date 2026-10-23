@@ -4,9 +4,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { freshGame, startState } from "./lifecycle";
+import { freshGame, startState, until } from "./lifecycle";
 import type { Game } from "../src/game";
 import type { EqUserSelElement, UI } from "../src/ui";
+import type { Unit } from "../src/unit";
 
 //Any property of it, called or not, is itself; as a number it is 0
 const nothing: unknown = new Proxy(function() {}, {
@@ -98,4 +99,35 @@ test("A unit picked in the deployment window is the one deployed, sold or upgrad
 	ui.equipmentWindowButtons("sell");
 	expect(p.getCoreUnitList()).toContain(infantry);
 	expect(p.getCoreUnitList().length).toBe(order.length - 1);
+}, 60_000);
+
+test("After a move along a turning path the unit faces the way the engine set, not its path's last step (#187)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	//A unit of the side playing, to a hex whose path ends turned away from the straight line to it:
+	//the animation draws the unit along that last step
+	const straight = (a: { row: number; col: number }, b: { row: number; col: number }) =>
+		GameRules.getDirection(a.row, a.col, b.row, b.col);
+	let move: { unit: Unit; to: { row: number; col: number } } | undefined;
+	for (const unit of map.getUnits().filter((u) => u.player.id === map.currentPlayer.id)) {
+		const range = GameRules.getMoveRange(map, unit);
+		const to = range.find((c) => {
+			const cells = GameRules.getShortestPath(unit.getPos(), c, range);
+			return cells.length > 2 && Math.abs(straight(cells[cells.length - 2], c) - straight(unit.getPos(), c)) > 1;
+		});
+		if (to !== undefined) {
+			move = { unit, to };
+			break;
+		}
+	}
+	const { unit, to } = move!;
+	const from = unit.getPos();
+	ui.uiUnitSelect(unit);
+	expect(ui.uiUnitMove(unit, to.row, to.col)).toBe(true);
+	await until(() => !unit.hasAnimation, "the move animation");
+	expect(unit.getPos()).toEqual({ row: to.row, col: to.col });
+	expect(unit.facing).toBe(straight(from, to));
 }, 60_000);
