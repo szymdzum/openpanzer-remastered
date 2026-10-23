@@ -205,10 +205,11 @@ function emptyGame(g: GameSetup): { data: ScenarioData; state: GameState } {
 	return { data, state };
 }
 
-//A file's player as the loader reads it: a campaign gives each turn at least a share of its starting
-//prestige; the first turn's prestige to start with
+//A file's player as the loader reads it: a campaign gives its own country's player each turn at least
+//a share of its starting prestige, by the difficulty, not the AI's players (#15: the old loader gave it
+//to every player, so an easier level made the AI richer); the first turn's prestige to start with
 function newPlayer(p: FilePlayer, campaign: CampaignState | null): PlayerState {
-	const min = campaign === null ? 0
+	const min = campaign === null || p.country !== campaign.country ? 0
 		: Math.round(campaign.startPrestige * difficultyModifiers[campaign.difficulty].turnPrestige);
 	const prestigePerTurn = p.prestigePerTurn.map((v) => v < min ? min : v);
 	return { id: p.id, side: p.side, country: p.country, type: playerType.humanLocal, prestige: prestigePerTurn[0],
