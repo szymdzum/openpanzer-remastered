@@ -56,3 +56,16 @@ test("The AI buys a tank without a transport (#224)", () => {
 	expect(bought.length).toBeGreaterThan(0);
 	for (const b of bought) expect(b.transport).toBe(-1);
 });
+
+//The AI's choosing drops from its candidates what it can't buy now (too dear for what is left, outside
+//its price range, not yet built), but only for this purchase: the country's lists stay whole, for its
+//later turns and for the player's equipment window
+test("The AI's purchases leave the country's equipment lists as they were (#22)", () => {
+	const saved = smallGameData();
+	const before = structuredClone(saved.state.equipment.indexes);
+	saved.state.players[1].prestige = aiDefaultConfig.prestigeReserve + 3000;
+	saved.state.turn.currentPlayer = 1;
+	const played = aiController(1, {}).startTurn(createWorld(saved, Equipment.equipment));
+	expect(played.events.some((e) => e.type === "bought")).toBe(true);
+	expect(played.world.state.equipment.indexes).toEqual(before);
+});

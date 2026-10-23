@@ -224,10 +224,9 @@ export interface CampaignProgress {
 	awardPrototype: boolean;	//after a brilliant victory: a prototype unit in the next scenario
 }
 
-//The equipment lists by country and unit class as the game holds them now (D9): the AI's
-//purchases remove from them (#22) and the purchase window sorts them in place, so the lists
-//themselves, not only what was removed, decide what the AI buys next and which transport a unit
-//embarks on. Goes when #22 is fixed
+//The equipment lists by country and unit class as the game holds them now (D9): the purchase window
+//sorts them in place, so their order decides what the AI buys next and which transport a unit
+//embarks on. The AI's purchases no longer remove from them (#22)
 export interface EquipmentState {
 	indexes: { [country: string]: EquipmentIndexes };
 }

@@ -16,9 +16,8 @@
  * - a resupply or a reinforcement;
  * - a mount, right before a move only its transport makes (#82).
  * Kept: the reinforcement budget is the prestige before the purchases
- * (#21), the purchases remove from the equipment lists for good (#22: the lists are in the state, D9),
- * the attack scores count the hidden units' support fire (#17), and the objectives are scored in the
- * order of the side's list (D7, #141's order after an undo included).
+ * (#21), the attack scores count the hidden units' support fire (#17), and the objectives are scored in
+ * the order of the side's list (D7, #141's order after an undo included).
  */
 
 import type { Command } from "../commands";
@@ -34,7 +33,7 @@ import { moveRange } from "./movement";
 import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
-import type { GameState, MoveCell, Position, UnitState, World } from "./types";
+import type { MoveCell, Position, UnitState, World } from "./types";
 import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
 import { groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
 
@@ -91,7 +90,7 @@ function withAIStream(w: World, rng: RngStream): World {
 function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 	const rng = aiStream(w);
 	const bought = purchases(w, player, config, rng);
-	let world = withAIStream(bought.world, rng);
+	let world = withAIStream(w, rng);
 	const commands: Command[] = [], events: GameEvent[] = [];
 	const play = (cmd: Command) => {
 		const r = step(world, cmd);
@@ -100,7 +99,7 @@ function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 		commands.push(cmd);
 		events.push(...r.events);
 	};
-	for (const b of bought.units) play({ type: "buy", eqid: b.eqid, transport: b.transport });
+	for (const b of bought) play({ type: "buy", eqid: b.eqid, transport: b.transport });
 	const side = world.state.players[player].side;
 	for (const to of deployHexes(world, side)) {
 		const core = world.state.players[player].core;
@@ -125,49 +124,38 @@ function deployHexes(w: World, side: number): Position[] {
 }
 
 //What the AI buys with the prestige over its reserve, part of it for air units (none under 300), in
-//the order it buys them; the world with the equipment lists as the choosing left them (#22)
-function purchases(w: World, player: number, config: AIConfig, rng: RngStream): { world: World; units: Purchase[] } {
+//the order it buys them
+function purchases(w: World, player: number, config: AIConfig, rng: RngStream): Purchase[] {
 	let prestige = w.state.players[player].prestige;
-	if (prestige <= config.prestigeReserve) return { world: w, units: [] };
+	if (prestige <= config.prestigeReserve) return [];
 	const lists = countryLists(w, w.state.players[player].country + 1);
 	prestige -= config.prestigeReserve;
 	let airPrestige = prestige * config.airPrestigeRatio;
 	if (airPrestige < 300) airPrestige = 0;
 	prestige -= airPrestige;
 	const year = new Date(w.state.scenario.date).getFullYear();
-	const buying: Buying = { w, listOf: lists.of, transports: groundTransports(w, w.state.players[player].country + 1), rng, config, year };
+	const buying: Buying = { w, listOf: lists, transports: groundTransports(w, w.state.players[player].country + 1), rng, config, year };
 	const air = buyUnits(buying, airPrestige, config.airPurchaseClasses);
 	const ground = buyUnits(buying, prestige, config.groundPurchaseClasses);
-	return { world: lists.written(w), units: [...air.reverse(), ...ground.reverse()] };
+	return [...air.reverse(), ...ground.reverse()];
 }
 
-//The country's equipment lists by unit class, as buyUnits removes from them: a list is copied the first
-//time, the state's stays as it was. A class the country has no list of gives an empty one each time
-//(#101), as Equipment.getCountryEquipmentByClass did
-function countryLists(w: World, country: number) {
+//The country's equipment lists by unit class, copied for one purchase: buyUnits drops from a copy
+//what it can't buy now, the state's lists stay whole (#22: the old AI cut them for the rest of the
+//session). A class the country has no list of gives an empty one each time (#101), as
+//Equipment.getCountryEquipmentByClass did
+function countryLists(w: World, country: number): (uclass: number) => number[] {
 	const indexes = w.state.equipment.indexes[country];
 	const classes = indexes !== undefined ? indexes.unitclass : undefined;
-	const changed = new Map<string, number[]>();
-	return {
-		of: (uclass: number): number[] => {
-			const key = String(uclass);
-			let list = changed.get(key);
-			if (list !== undefined) return list;
-			const original = classes !== undefined ? classes[key] : undefined;
-			if (original === undefined) return [];
-			list = original.slice();
-			changed.set(key, list);
-			return list;
-		},
-		//The world with the lists changed, the keys in their order (the save's)
-		written: (world: World): World => {
-			if (changed.size === 0) return world;
-			const s: GameState = world.state;
-			const unitclass = { ...classes };
-			for (const [k, list] of changed) unitclass[k] = list;
-			const equipment = { indexes: { ...s.equipment.indexes, [country]: { ...indexes, unitclass } } };
-			return { ...world, state: { ...s, equipment } };
-		},
+	const copies = new Map<number, number[]>();
+	return (uclass) => {
+		let list = copies.get(uclass);
+		if (list !== undefined) return list;
+		const original = classes !== undefined ? classes[String(uclass)] : undefined;
+		if (original === undefined) return [];
+		list = original.slice();
+		copies.set(uclass, list);
+		return list;
 	};
 }
 
@@ -233,8 +221,8 @@ function pickTransport(b: Buying, eqid: number, prestige: number): number {
 	return fitting.length === 0 ? -1 : fitting[Math.floor(nextRandom(b.rng) * fitting.length)];
 }
 
-//What the AI can buy now; the rest leaves the list for good (#22): too dear for what is left, outside
-//its price range, deep naval, not yet built
+//What the AI can buy now; the rest leaves this purchase's list: too dear for what is left, outside its
+//price range, deep naval, not yet built
 function canBuy(w: World, eqid: number, prestige: number, config: AIConfig, year: number): boolean {
 	const cost = unitCost(w, eqid), e = w.equipment[eqid];
 	return !(cost > prestige || cost > config.maxUnitCost || cost < config.minUnitCost || e.movmethod === movMethod.deepnaval
