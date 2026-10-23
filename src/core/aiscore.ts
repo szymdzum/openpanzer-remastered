@@ -145,7 +145,7 @@ export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: bool
 	if (uclass === unitClass.fighter || uclass === unitClass.tacticalBomber || uclass === unitClass.levelBomber)
 		return score * randomFactor(s);
 
-	score += terrainScore(w, u, hex) + occupyScore(s, u, hex, findFreed(s.plan, cell) >= 0) + neighboursScore(s, u, cell);
+	score += terrainScore(w, u, hex) + occupyScore(s, u, hex, findFreed(s.plan, cell, false) >= 0) + neighboursScore(s, u, cell);
 	return score * randomFactor(s);
 }
 
@@ -174,7 +174,8 @@ function closeCombatScore(uclass: number): number {
 }
 
 //An objective the unit can stand on: free, freed by an AI unit, its own, or held by a unit expected to
-//be killed. Only the hex's ground unit counts (isFreed: an AI unit leaves the hex)
+//be killed. Only the hex's ground unit counts (isFreed: the AI's ground unit leaves the hex, not an
+//aircraft above it, #207)
 function occupyScore(s: Scorer, u: UnitState, hex: number, isFreed: boolean): number {
 	const h = s.w.state.map.hexes[hex];
 	if (h.victorySide === -1) return 0;
@@ -186,7 +187,8 @@ function occupyScore(s: Scorer, u: UnitState, hex: number, isFreed: boolean): nu
 }
 
 //The neighbours: friends that stay (artillery more), enemies or friends leaving, objectives (more when
-//not the side's own). Kept from the bundle: the last row and column are left out
+//not the side's own). A friend leaves when the plan freed its own slot: a ground unit stays when the
+//aircraft above it was ordered away (#207). Kept from the bundle: the last row and column are left out
 function neighboursScore(s: Scorer, u: UnitState, cell: Position): number {
 	const { rows, cols } = s.w.state.map;
 	let score = 0;
@@ -200,7 +202,7 @@ function neighbourScore(s: Scorer, u: UnitState, c: Position): number {
 	const other = unitAt(w, hex, false);
 	let score = 0;
 	if (other !== null && other.id !== u.id) {
-		if (!isEnemy(w, u, other) && findFreed(s.plan, c) < 0) score += unitData(w, other).uclass === unitClass.artillery ? 100 : 20;
+		if (!isEnemy(w, u, other) && findFreed(s.plan, c, isAir(w, other)) < 0) score += unitData(w, other).uclass === unitClass.artillery ? 100 : 20;
 		else score += artillery ? -100 : 40;
 	}
 	const h = w.state.map.hexes[hex];

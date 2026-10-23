@@ -85,6 +85,34 @@ test("The AI doesn't plan a unit onto a hex its own unit of the same kind keeps:
 	}
 });
 
+//A Me-109 over a fortress on an objective of its side, ordered off: the plan frees the air above the
+//hex, and the fortress stays. An infantry next to the hex counts it as a friend that stays, and a Ju-52
+//scored over the objective finds its ground held, as when the fighter wasn't ordered anywhere
+test("The AI scores the ground unit under an aircraft ordered away as staying: a freed hex is freed for the slot that left (#207)", () => {
+	const ME_109 = 159, FESTUNG = 107, INFANTERIE = 115, JU_52 = 176, TP7 = 273;
+	const w = handWorld({ rows: 10, cols: 10, units: [
+		{ eqid: ME_109, owner: 0, row: 4, col: 4 },
+		{ eqid: FESTUNG, owner: 0, row: 4, col: 4 },
+		{ eqid: INFANTERIE, owner: 0, row: 4, col: 6 },
+		{ eqid: JU_52, owner: 0, row: 2, col: 2 },
+		{ eqid: TP7, owner: 1, row: 8, col: 8 },
+	] });
+	w.state.map.hexes[4 * 10 + 4].victorySide = 0;
+	//A constant random factor of 1
+	const config = { ...aiDefaultConfig, randomFactor: aiDefaultConfig.randomFactor.map(() => 1) };
+	const score = (unit: number, row: number, col: number, freed: AIPlan["freedPositions"]) => {
+		const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: freed, objectives: [] };
+		return cellScore({ w, player: 0, config, plan, rng: { state: 1 } }, w.state.units[unit], { row, col }, true);
+	};
+	const fighterLeaves = [{ row: 4, col: 4, air: true }];
+	expect(score(2, 4, 5, fighterLeaves)).toBe(score(2, 4, 5, []));
+	expect(score(3, 4, 4, fighterLeaves)).toBe(score(3, 4, 4, []));
+	//When the fortress is the one leaving, its neighbour and the objective count it gone
+	const fortressLeaves = [{ row: 4, col: 4, air: false }];
+	expect(score(2, 4, 5, fortressLeaves)).toBe(score(2, 4, 5, []) + 20);
+	expect(score(3, 4, 4, fortressLeaves)).toBe(score(3, 4, 4, []) + 300);
+});
+
 //The units the AI buys at the start of its turn on the small game, with 3000 prestige and its ground
 //purchases cycling through classes, and where its stream is after (how many numbers it drew)
 function purchases(groundPurchaseClasses: number[]) {
