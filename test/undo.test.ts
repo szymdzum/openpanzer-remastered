@@ -9,6 +9,7 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 	const { GameRules } = await import("../src/gamerules");
 	const { playerType } = await import("../src/prototypes");
 	const { Commands } = await import("../src/commands");
+	(await import("../src/mirror")).mirrorOptions.cache = false; //(the strength written by hand below)
 	const map = scenario.map;
 	const player = map.currentPlayer;
 	player.type = playerType.humanLocal;

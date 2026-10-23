@@ -8,9 +8,12 @@
  * The core's world is the game; the objects hold what the old UI draws and the harness reads. After
  * each step or checkpoint applyData updates them in place to the world's state, by unit id, keeping
  * each object (the UI compares units with === and keeps them in closures). What wrote to them since
- * (the harness, the UI's sorts of the equipment lists, the animation's facing, the selection's
- * carrier flips) is read back by worldOf, which makes the world again from toData of the objects: the
- * writes keep the effect they had on the old engine. checkMirror says when the two differ.
+ * (the harness, the UI's sorts of the lists, the animation's facing, the selection's carrier flips) is
+ * read back: the writes keep the effect they had on the old engine. The world of the objects is kept
+ * between the writes (it was made again at every rule the screen asked, about 150 µs): the screen's
+ * rules read it until something says it wrote (touched, src/context.ts), a step starts from it while
+ * toData of the objects is its state (savedAs, src/state.ts), else worldOf makes it again from toData.
+ * mirrorDifference says when the two differ.
  *
  * The spotting and zone of control are the core's, computed from the units (D10: no drift, #72, #73):
  * applyData writes the world's sight into the hexes' counters, which the screen reads.
@@ -23,9 +26,10 @@ import type { GameMap, Player } from "./map";
 import type { Reinforcement, Scenario } from "./scenario";
 import { Rng } from "./rng";
 import {
-	type CampaignHost, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, setUnitFields, toData, type UnitState,
-	writeSight
+	type CampaignHost, campaignState, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, sameData, sameItems,
+	savedAs, setUnitFields, toData, type UnitState, writeSight
 } from "./state";
+import { objectWrites } from "./context";
 import { createWorld } from "./core/create";
 import type { Sight, World } from "./core/types";
 
@@ -51,12 +55,135 @@ export function unitObject(m: GameMap, id: number): Unit | null {
 	return u !== null ? u : seenUnits(m).get(id) || null;
 }
 
+//How the mirror runs (src/main.ts sets it for the page). cache: the world of the objects trusted until
+//something says it wrote into them (touched), for the screen's rules and the next step; off under
+//?harness, whose scripts write into the objects anywhere: the world kept is then compared with the objects
+//(savedAs) whenever it is asked for. checks: the objects compared with the world trusted, and with every
+//update (the tests and the dev server: a write that didn't call touched() throws there)
+export const mirrorOptions = { cache: true, checks: true };
+
+//The world of the objects kept, with what it was made of beside them. Made when first asked: after an
+//update, from the world the objects were updated to
+interface Kept {
+	world: World | null;
+	make: (() => World) | null;
+	made: unknown[];	//of what beside the objects (madeOf)
+	since: unknown[];	//as far as anyone said (said)
+	queries: number;	//the times the screen's rules were given it
+}
+
+//What the world of the objects is made of beside them: the game, the side shown, the fog of war, the
+//equipment
+function madeOf(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): unknown[] {
+	return [scenario, scenario.map, host, inputs.spotSide, inputs.noFOW, Equipment.equipment, Equipment.equipmentIndexes];
+}
+
+//What says the objects are still the world's: the writes announced (touched), the streams
+function said(): unknown[] {
+	return [objectWrites(), Rng.game.state, Rng.ai.state];
+}
+
+//The checks compare the objects with the world trusted at the first query and then at one in so many
+//(the render loop and a click ask hundreds of rules between two steps) and at every step; with toData at
+//one step in so many (what savedAs leaves out would show there); and with the world they were updated
+//to at one update in so many (test/mirror.test.ts compares them after every piece of play). A world
+//trusted that isn't the objects' throws: something wrote into them without touched()
+const CHECKED_QUERIES = 16;
+const COMPARED_STEPS = 16;
+const COMPARED_UPDATES = 8;
+
+let held: Kept | null = null;
+let steps = 0, updates = 0;
+
+//The world kept, or what makes it when first asked
+function keep(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs, world: World | (() => World)) {
+	held = { world: typeof world === "function" ? null : world, make: typeof world === "function" ? world : null,
+		made: madeOf(scenario, host, inputs), since: said(), queries: 0 };
+}
+
+//The world kept, when it was made of the same game, side shown, fog of war and equipment
+function heldFor(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): Kept | null {
+	const k = held;
+	if (k === null || !sameItems(k.made, madeOf(scenario, host, inputs))) return null;
+	if (k.world === null) k.world = k.make();
+	return k;
+}
+
+//The world kept, when it is still the objects' as far as anyone said: nothing wrote into them since
+//(touched), the streams where they were, the same campaign progress
+function trusted(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): Kept | null {
+	const k = mirrorOptions.cache ? heldFor(scenario, host, inputs) : null;
+	return k !== null && sameItems(k.since, said()) && sameCampaign(host, k.world) ? k : null;
+}
+
+//Whether the world's campaign is the game's now (its progress is Game's, which a campaign's end sets)
+function sameCampaign(host: CampaignHost | null, w: World): boolean {
+	const campaign = w.state.campaign;
+	if (host === null || !host.campaign) return campaign === null;
+	return campaign !== null && sameData(campaign, campaignState(host.campaign, host.getCampaignProgress()));
+}
+
+//The units marked destroyed: by an attack whose cleanup hasn't run yet
+function destroyedUnits(m: GameMap): Set<number> {
+	return new Set(m.getUnits().filter((u) => u.destroyed).map((u) => u.id));
+}
+
+//Whether a world is the objects': toData of them is its data and state, the units marked destroyed its
+function isWorldOf(scenario: Scenario, host: CampaignHost | null, w: World): boolean {
+	const destroyed = destroyedUnits(scenario.map);
+	if (destroyed.size !== w.destroyed.size) return false;
+	for (const id of destroyed) if (!w.destroyed.has(id)) return false;
+	return savedAs(scenario, host, w);
+}
+
 //The world of the objects as they are now: toData's state, its sight computed from the units, the units
-//destroyed by an attack whose cleanup hasn't run yet
+//destroyed by an attack whose cleanup hasn't run yet. The world kept while it is theirs, else made again
 export function worldOf(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): World {
-	const m = scenario.map;
-	const destroyed = new Set(m.getUnits().filter((u) => u.destroyed).map((u) => u.id));
-	return createWorld(toData(scenario, host), Equipment.equipment, { spotSide: inputs.spotSide, noFOW: inputs.noFOW, destroyed });
+	const k = heldFor(scenario, host, inputs);
+	if (k !== null && isWorldOf(scenario, host, k.world)) {
+		k.since = said();
+		return k.world;
+	}
+	if (mirrorOptions.checks && trusted(scenario, host, inputs) !== null) throw unannounced(scenario, host, k.world);
+	const w = createWorld(toData(scenario, host), Equipment.equipment, { spotSide: inputs.spotSide, noFOW: inputs.noFOW,
+		destroyed: destroyedUnits(scenario.map) });
+	keep(scenario, host, inputs, w);
+	return w;
+}
+
+//The world of the objects for the screen's rules: the one trusted while nothing was written into them
+//since, else worldOf
+export function rulesWorld(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): World {
+	const k = trusted(scenario, host, inputs);
+	if (k === null) return worldOf(scenario, host, inputs);
+	if (mirrorOptions.checks && k.queries++ % CHECKED_QUERIES === 0 && !isWorldOf(scenario, host, k.world))
+		throw unannounced(scenario, host, k.world);
+	return k.world;
+}
+
+//The world of the objects a step starts from: worldOf, never only trusted (a write nobody announced
+//isn't lost under the step's update). The checks compare savedAs with toData at one step in so many
+export function stepWorld(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): World {
+	const w = worldOf(scenario, host, inputs);
+	if (mirrorOptions.checks && steps++ % COMPARED_STEPS === 0) {
+		const d = stateDifference(w.state, toData(scenario, host).state);
+		if (d !== "") throw new Error("Mirror: savedAs missed where toData differs " + d);
+	}
+	return w;
+}
+
+function unannounced(scenario: Scenario, host: CampaignHost | null, w: World): Error {
+	const d = stateDifference(w.state, toData(scenario, host).state);
+	return new Error("Mirror: the objects were written to without touched(): " + (d !== "" ? d : "the units marked destroyed"));
+}
+
+//Where the state the objects have differs from the one wanted, "" when it doesn't (the same JSON)
+function stateDifference(want: unknown, have: unknown): string {
+	if (sameData(want, have)) return "";
+	const a = JSON.stringify(want), b = JSON.stringify(have);
+	let d = 0;
+	while (d < a.length && a[d] === b[d]) d++;
+	return d < a.length || d < b.length ? "at " + d + ": " + b.slice(Math.max(0, d - 80), d + 80) : "";
 }
 
 //The old counters, count for count
@@ -75,14 +202,8 @@ function countersOf(m: GameMap): Sight {
 //Where the objects differ from the world's state, "" when they don't (the same toData, as JSON, the
 //same counters)
 export function mirrorDifference(scenario: Scenario, w: World, host: CampaignHost | null): string {
-	const saved = toData(scenario, host).state;
-	if (!sameData(w.state, saved)) {
-		const want = JSON.stringify(w.state), got = JSON.stringify(saved);
-		let d = 0;
-		while (d < want.length && want[d] === got[d]) d++;
-		if (d < want.length || d < got.length)
-			return "the objects' state differs from the world's at " + d + ": " + got.slice(Math.max(0, d - 80), d + 80);
-	}
+	const d = stateDifference(w.state, toData(scenario, host).state);
+	if (d !== "") return "the objects' state differs from the world's " + d;
 	const counters = countersOf(scenario.map);
 	for (const side of [0, 1])
 		if (!sameCounts(counters.spot[side], w.sight.spot[side]) || !sameCounts(counters.zoc[side], w.sight.zoc[side]))
@@ -90,17 +211,9 @@ export function mirrorDifference(scenario: Scenario, w: World, host: CampaignHos
 	return "";
 }
 
-//Whether two plain data trees are the same, keys in the same order (what their JSON compares): a
-//quick look, without the strings; where it says no, the JSON decides
-function sameData(a: unknown, b: unknown): boolean {
-	if (a === b) return true;
-	const isTree = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null;
-	return isTree(a) && isTree(b) && Array.isArray(a) === Array.isArray(b) && sameTree(a, b);
-}
-
-function sameTree(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
-	const ka = Object.keys(a), kb = Object.keys(b);
-	return ka.length === kb.length && ka.every((k, i) => k === kb[i] && sameData(a[k], b[k]));
+//mirrorDifference where the checks compare an update, "" elsewhere
+export function checkedDifference(scenario: Scenario, w: World, host: CampaignHost | null): string {
+	return mirrorOptions.checks && updates++ % COMPARED_UPDATES === 0 ? mirrorDifference(scenario, w, host) : "";
 }
 
 function sameCounts(a: Uint16Array, b: Uint16Array): boolean {
@@ -111,6 +224,7 @@ function sameCounts(a: Uint16Array, b: Uint16Array): boolean {
 
 //The objects updated in place to the world's state (and its sight into the counters)
 export function applyData(scenario: Scenario, w: World, host: CampaignHost | null) {
+	held = null;
 	const m = scenario.map, s = w.state;
 	applyScenario(scenario, w);
 	const players = m.getPlayers();
@@ -131,6 +245,10 @@ export function applyData(scenario: Scenario, w: World, host: CampaignHost | nul
 	}
 	applyEquipment(s.equipment.indexes);
 	if (host && s.campaign !== null) host.setCampaignProgress({ ...s.campaign.progress }, scenario);
+	//(the world the objects mirror now, as worldOf would make it: toData of them is w's state)
+	const destroyed = destroyedUnits(m);
+	keep(scenario, host, w, () => createWorld({ data: w.data, state: s }, Equipment.equipment, { spotSide: w.spotSide, noFOW: w.noFOW,
+		destroyed }));
 }
 
 function applyScenario(scenario: Scenario, w: World) {

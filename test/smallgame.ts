@@ -9,7 +9,7 @@ import { playerType } from "../src/prototypes";
 import { Scenario } from "../src/scenario";
 import { fromData, type GameState, type PlayerState, type SavedGame, type UnitState } from "../src/state";
 import { setEngineContext } from "../src/context";
-import { worldOf } from "../src/mirror";
+import { mirrorOptions, worldOf } from "../src/mirror";
 import type { GameMap, Player } from "../src/map";
 
 const root = path.resolve(__dirname, "..");
@@ -67,8 +67,10 @@ export function smallGameData(units = smallGameUnits): SavedGame {
 	return { data, state };
 }
 
-//The small game's objects, and the engine context of a game playing it (the side shown: 0)
+//The small game's objects, and the engine context of a game playing it (the side shown: 0). Its tests
+//write into the objects by hand, as the harness does: the rules read the world made again at every call
 export function smallGame(units = smallGameUnits, saved = smallGameData(units)): { scenario: Scenario; map: GameMap; players: Player[] } {
+	mirrorOptions.cache = false;
 	const scenario = fromData(saved, null, new Scenario());
 	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, host: () => null,
 		world: () => worldOf(scenario, null, { spotSide: 0, noFOW: false }) });

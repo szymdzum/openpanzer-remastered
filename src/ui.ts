@@ -36,6 +36,7 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
+import { touched } from "./context";
 import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
@@ -1020,6 +1021,7 @@ function updateEquipmentWindow(eqclass?: number) {
 		userUnitSelected = $<EqUserSelElement>("eqUserSel").deployunit;
 		unitList = map.currentPlayer.getCoreUnitList();
 		unitList.sort(unitListSorter(false)); //Sorts the player core unit list itself
+		touched();
 		uiSettings.deployMode = true;
 		$("statusmsg").innerHTML = "Deploy (on map grey hexes) or upgrade your core units";
 	} else {
@@ -1027,6 +1029,7 @@ function updateEquipmentWindow(eqclass?: number) {
 		userUnitSelected = $<EqUserSelElement>("eqUserSel").userunit;
 		unitList = map.getUnits();
 		unitList.sort(unitListSorter(true));
+		touched();
 		uiSettings.deployMode = false;
 		$("statusmsg").innerHTML = "Units currently deployed on map.";
 	}

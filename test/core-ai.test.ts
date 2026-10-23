@@ -88,6 +88,7 @@ async function tutorialAt(turn: number): Promise<Session> {
 	const { o, localSide } = await startItem("scripted:tutorial.xml", turn);
 	const m = o.game.scenario.map;
 	m.turn = turn;
+	(await import("../src/context")).touched();
 	const places = TUTORIAL_PLACES[turn];
 	if (places !== undefined) {
 		m.getUnitById(TUTORIAL_CITY_DEFENDER).destroyed = true;

@@ -72,11 +72,18 @@ rng.Rng.seed(rng.randomSeed());
 game.game.loop = window.setInterval(game.game.processTurn, 1000);
 window.addEventListener("load", game.gameStart);
 
+//The mirror's world kept for the screen's rules (src/mirror.ts), but under ?harness, whose scripts write
+//into the game's objects anywhere; its checks on the dev server only (its modules have __harnessSet,
+//vite.config.mts), where a write into the objects that didn't say so throws
+const harness = new URLSearchParams(location.search).has("harness");
+mirror.mirrorOptions.cache = !harness;
+mirror.mirrorOptions.checks = "__harnessSet" in mirror;
+
 //?harness: every module's exports as globals, the way harness/ scripts and harness/lib/hooks.js
 //reach into the game. Read live; assigned through the module's __harnessSet, which the dev
 //server adds (vite.config.mts)
 type HarnessModule = Record<string, unknown> & { __harnessSet?: (name: string, value: unknown) => void };
-if (new URLSearchParams(location.search).has("harness"))
+if (harness)
 	for (const ns of modules as HarnessModule[])
 		for (const name of Object.keys(ns).filter((n) => !n.startsWith("__")))
 			Object.defineProperty(window, name, { configurable: true,

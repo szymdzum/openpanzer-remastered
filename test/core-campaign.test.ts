@@ -23,9 +23,13 @@ const OUTCOMES: ScenarioOutcome[] = ["briliant", "victory", "tactical", "lose"];
 //The prototypes the game's message showed, by eqid
 const shownPrototypes: number[] = [];
 
+//What the tests write into the game's objects by hand, said as the screen says it (src/context.ts)
+let touched: () => void;
+
 //The game, its UI's messages silent, its streams seeded, the campaign started
 async function oldCampaign(index: number, difficulty: number): Promise<{ game: Game; data: () => SavedGame }> {
 	const game = await freshGame();
+	({ touched } = await import("../src/context"));
 	const { UIBuilder } = await import("../src/uibuilder");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
@@ -44,6 +48,7 @@ function playScenario(game: Game, equipment: { [eqid: string]: EquipmentEntry },
 	if (list.length > 0)
 		Object.assign(list[0], { strength: 3, ammo: 0, hasMoved: true, entrenchment: 2, experience: list[0].experience + 150,
 			isMounted: list[0].transport !== null });
+	touched();
 	if (list.length > 2) {
 		list[1].destroyed = true;
 		m.updateUnitList();
@@ -53,8 +58,10 @@ function playScenario(game: Game, equipment: { [eqid: string]: EquipmentEntry },
 	if (eqid === undefined) return;
 	const current = m.currentPlayer;
 	m.currentPlayer = cp;
+	touched();
 	commands.execute(game.scenario, { type: "buy", eqid, transport: -1 });
 	m.currentPlayer = current;
+	touched();
 }
 
 //Whether f threw
@@ -179,6 +186,7 @@ test("A campaign player whose core units all fell starts the next scenario with 
 	const cp = game.getCampaignPlayer();
 	expect(cp.getCoreUnitList().length, "core units brought into the second scenario").toBeGreaterThan(0);
 	for (const u of cp.getCoreUnitList()) u.destroyed = true;
+	touched();
 	game.scenario.map.updateUnitList();
 	await next();
 	expect(game.getCampaignPlayer().getCoreUnitList()).toEqual([]);

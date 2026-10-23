@@ -35,8 +35,9 @@ test.each(fixtures("engine"))("The outcome agrees with the drills of %s", async 
 test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name) => {
 	const scenario = await restoreState(readFixture("engine", name).state);
 	const { game } = await import("../src/game");
-	const { worldOf } = await import("../src/mirror");
+	const { mirrorOptions, worldOf } = await import("../src/mirror");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
+	mirrorOptions.cache = false; //(the turn and the players written by hand below)
 	const world = () => worldOf(scenario, game, { spotSide: game.spotSide, noFOW: false });
 	const m = scenario.map;
 	let defeats = 0;

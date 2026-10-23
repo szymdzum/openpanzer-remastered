@@ -44,6 +44,7 @@ async function play(item: string): Promise<string[]> {
 	const { CombatLog } = await import("../src/combatlog");
 	const { playerType } = await import("../src/prototypes");
 	const { GameState } = await import("../src/gamestate");
+	const { touched } = await import("../src/context");
 	const seed = item.length * 7919;
 	Rng.seed(seed);
 	Math.random = mulberry32(seed);
@@ -62,6 +63,7 @@ async function play(item: string): Promise<string[]> {
 		for (const p of map().getPlayers()) {
 			if (p.type !== playerType.aiLocal && p.type !== playerType.aiScripted) {
 				p.type = playerType.aiLocal;
+				touched(); //(the harness runs without the world kept, src/main.ts)
 				p.handler = new AI(p, map());
 			}
 			//(a campaign carries the player's type: the AI the replay made it, with no handler in the next scenario)

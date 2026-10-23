@@ -43,7 +43,7 @@ export class MapSelection {
 
 		//Negative carrier: the unit is disembarking, show the disembark positions
 		if (unit.carrier < 0) {
-			unit.carrier = -unit.carrier;
+			unit.toggleEmbark();
 			this.map.disembarkUnit(unit);
 		}
 

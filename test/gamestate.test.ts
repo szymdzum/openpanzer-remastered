@@ -269,6 +269,7 @@ async function aiBoughtUnit() {
 	const eqid = m.getUnits().find((u) => u.player === ai).eqid;
 	while (m.currentPlayer !== ai) await play({ type: "endTurn" });
 	ai.prestige += 10000;
+	(await import("../src/context")).touched();
 	await play({ type: "buy", eqid, transport: -1 });
 	const free = m.map.flat().find((h) => h.isDeployment > -1 && m.getPlayer(h.isDeployment).side === ai.side && h.unit === null
 		&& h.airunit === null);
@@ -320,6 +321,7 @@ test("GameState import keeps the campaign's core list of a save of the format be
 	expect(scenario.map.currentPlayer).toBe(player);
 	await play({ type: "disband", unit: list[0].id });
 	player.prestige += 10000;
+	(await import("../src/context")).touched();
 	await play({ type: "buy", eqid: list[1].eqid, transport: -1 });
 	const { importSave } = await import("../src/savegame");
 	const { save } = importSave(JSON.parse(oldExport(game)));

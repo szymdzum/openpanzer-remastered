@@ -151,7 +151,9 @@ const drillRuns = new Map<string, Promise<DrillResult>>();
 function drill(name: string, fixture: string, run: (w: World, setup: string[]) => string[], fixed = false) {
 	const result = () => {
 		if (!drillRuns.has(name))
-			drillRuns.set(name, load(fixture).then((w) => {
+			drillRuns.set(name, load(fixture).then(async (w) => {
+				//(a drill writes into the objects by hand, as the harness does: no world kept)
+				(await import("../src/mirror")).mirrorOptions.cache = false;
 				const setup: string[] = [];
 				const before = violations(w);
 				if (before.length) setup.push("invariants broken before the drill: " + before.join("; "));
