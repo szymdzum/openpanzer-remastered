@@ -157,17 +157,19 @@ input, not state: the air mode the surprise attack picks its target with (#77: t
 a program plays with it off). `step` passes every checkpoint at
 once on one draft; test/core-steps.test.ts played each of its commands both ways until #137.
 
-**Undo (D5).** The state keeps `turn.undoable` exactly as the old engine's slot decides it: a human
+**Undo (D5).** The state keeps `turn.undoable` as the old engine's slot decides it: a human
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
-reinforcement, an upgrade or a disband, set by a retreat of a human player's unit too (#171). The undo
-plays the old single slot back, #140 and #141 included; the states before are the caller's.
+reinforcement, an upgrade or a disband; a retreat leaves nothing to undo, and an undo takes back only
+a unit of the player whose turn it is (#171: the old engine let the attacker's player undo the enemy's
+retreat). The undo plays the old single slot back, #140 and #141 included; the states before are the
+caller's.
 
 **The move's hex.** A move can end on a hex that holds no unit of the mover's kind (a ground or naval
 unit, or an air unit: an aircraft stops over a tank), or an enemy one its side doesn't see, which
 stops it before (the surprise). The old engine put the unit over what was there and the unit under it
 fell off the map, keeping its zone of control (#74, mostly the AI's moves after a surprise).
 
-**What the old engine does and the core does too:** a retreat is a move (fuel, capture, undo), a
+**What the old engine does and the core does too:** a retreat is a move (fuel, capture), a
 command doesn't check whose unit it moves (#147), a mount, unmount or undo selects the unit (a unit
 leaving its carrier gets back on it unless it can land), a campaign's losses count in the campaign
 player's dossier (the last player of its country) and its difficulty scales the score.

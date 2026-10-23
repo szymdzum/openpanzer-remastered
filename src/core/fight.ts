@@ -225,8 +225,8 @@ function destroy(d: Draft, u: UnitState) {
 }
 
 //Map.retreatUnit: a move to the hex without the cost of a move (its moves and overstrength stay),
-//the rest of a move as it is: the fuel, a capture, the undo of a human player's unit (kept bug #171:
-//the attacker's player can undo the enemy's retreat)
+//the rest of a move as it is: the fuel, a capture. It leaves nothing to undo (#171: the old engine let
+//the attacker's player undo the enemy's retreat)
 function retreatTo(d: Draft, id: UnitId, to: Position) {
 	const { moveLeft, hasMoved, hasOverstrength } = unitById(d, id);
 	//(the hex is a plain cell, no cost: the move's cost comes to NaN, which counts as 0)

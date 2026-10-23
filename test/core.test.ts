@@ -234,6 +234,30 @@ test("The surprise attack hits the unit the air mode picks: the person's toggle 
 	expect(target({ airMode: true })).toEqual([2]);
 });
 
+//Two human players: a defender pushed back by an attack is the other player's unit, and the retreat
+//isn't a move its player made
+test("A retreat leaves nothing to undo, and an undo takes back only the current player's own move (#171)", () => {
+	const veterans = () => handWorld({ rows: 6, cols: 6, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, experience: 400 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 },
+	] });
+	let seed = 1, r: Extract<Stepped, { ok: true }>;
+	for (; seed < 500; seed++) {
+		r = played(step(withRng(veterans(), seed), { type: "attack", unit: 0, target: 1 }));
+		if (r.events.some((e) => e.type === "retreated")) break;
+	}
+	expect(seed).toBeLessThan(500);
+	expect(r!.world.state.turn.undoable).toBeNull();
+	expect(step(r!.world, { type: "undo", unit: 1 })).toEqual({ ok: false, refusal: { reason: "can't undo" } });
+
+	//A move's undo, then the other player's turn: not theirs to take back
+	const apart = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 0, col: 7 }] });
+	const moved = played(step(apart, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
+	expect(moved.world.state.turn.undoable).toMatchObject({ unit: 0 });
+	const otherTurn = { ...moved.world, state: { ...moved.world.state, turn: { ...moved.world.state.turn, currentPlayer: 1 } } };
+	expect(step(otherTurn, { type: "undo", unit: 0 })).toEqual({ ok: false, refusal: { reason: "can't undo" } });
+});
+
 test("A move onto an enemy flag takes it, and the undo gives it back", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }] });
 	const flag = { owner: 1, flag: 15, victorySide: -1 };

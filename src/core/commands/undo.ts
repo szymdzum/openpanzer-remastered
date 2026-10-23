@@ -16,10 +16,12 @@ import { unitCheck } from "./common";
 //Map.undoLastMove: the unit as it was before the move, back where it stood (it spots from there
 //again: #140, the enemy units it sees there are marked seen), the hex it took given back (#141: at
 //the end of its side's list), the prestige and score taken back
+//Only the current player's own unit (#171)
 export const undo: CommandHandler<CommandOf<"undo">> = {
 	check(w, cmd) {
 		const slot = w.state.turn.undoable;
-		return unitCheck(w, cmd.unit, (u) => slot !== null && slot.unit === u.id, "can't undo");
+		return unitCheck(w, cmd.unit, (u) => slot !== null && slot.unit === u.id && u.owner === w.state.turn.currentPlayer,
+			"can't undo");
 	},
 	run(d, cmd) {
 		const slot = d.state.turn.undoable, before = slot.before;
