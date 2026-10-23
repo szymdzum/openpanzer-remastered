@@ -81,9 +81,20 @@ jobs:
         id: verify
         if: steps.changes.outputs.code == 'true'
         continue-on-error: true
+        # On a pull request the checkout is GitHub's merge commit, and its first parent the base it was
+        # built on. GitHub doesn't build it again while the pull request conflicts with its base: the
+        # base branch may have moved on since, and comparing with it would count the base's new
+        # commits, reversed, as the pull request's differences (#263 on 23 October)
         run: |
           set -o pipefail
-          BASELINE_REF=origin/${{ github.base_ref || 'main' }} JOBS=3 npm run verify 2>&1 | tee "$RUNNER_TEMP/verify.log"
+          base=origin/${{ github.base_ref || 'main' }}
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base=$(git rev-parse HEAD^1)
+            if [ "$base" != "$(git rev-parse "origin/${{ github.base_ref }}")" ]; then
+              echo "The pull request's merge commit is built on $base, not on the base branch's head: it conflicts with the base or was built before the base moved on. Compared with $base." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          BASELINE_REF=$base JOBS=3 npm run verify 2>&1 | tee "$RUNNER_TEMP/verify.log"
       - name: Summary
         if: always() && steps.changes.outputs.code == 'true'
         run: |
