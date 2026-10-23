@@ -40,7 +40,7 @@ and four objectives missing, the AI weighed the same scores as on turn 3 (#232).
 ## 5. A bug that kept an objective empty
 
 When the AI ordered a fighter over an empty enemy objective, its ground units didn't move onto it:
-the plan counted the hex as taken whatever the slot (#237, fix in review). In the playtest objective
+the plan counted the hex as taken whatever the slot (#237, fixed by #238). In the playtest objective
 2,20 stood empty on several turns with German tanks and infantry next to it.
 
 ## 6. Its aircraft fly alone
@@ -61,7 +61,7 @@ German lines.
 
 ## Measuring a change
 
-Every change to these scores is measured in the AI arena (#46): the same scenarios, the AI against
-the scripted general (#236), many seeds. For an attacker the measures are the turn of the first
+Every change to these scores is measured in the AI arena (arena.md, #46): the same scenarios, the AI against
+the AI and the scripted general (#236), many seeds. For an attacker the measures are the turn of the first
 objective taken, the victory level reached, and the losses per objective; for a defender, the
 objectives held and the attacker's losses.

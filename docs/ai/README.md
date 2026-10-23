@@ -9,6 +9,7 @@ for whoever changes the AI.
 | [how-it-plays.md](how-it-plays.md) | The turn, the scores, the settings: the AI as the code runs it (src/core/ai.ts, src/core/aiscore.ts) |
 | [weak-attacker.md](weak-attacker.md) | Why it attacks weakly, with the numbers that cause it |
 | [playtests/2026-10-23-ostpreussen.md](playtests/2026-10-23-ostpreussen.md) | Games played against it, turn by turn, with what they found |
+| [arena.md](arena.md) | The AI arena: games played headless against the AI and a scripted general, the measures, the baseline |
 
 ## In short
 
@@ -23,12 +24,12 @@ took the first one on turn 4 with the same army.
 
 ## Known weaknesses and what is planned
 
-Each is an issue; each change is measured in the AI arena (#46) against a scripted general (#236)
-before and after.
+Each is an issue; each change is measured in the AI arena (arena.md, `npm run arena`) against
+the AI and a scripted general, before and after.
 
 | Weakness | Issue | Status |
 |---|---|---|
-| Ground units don't take an empty objective their own fighter is over | #237 | bug, fix in review (#238) |
+| Ground units don't take an empty objective their own fighter is over | #237 | fixed (#238) |
 | No sense of time: the same play on turn 3 and turn 14 | #232 | design |
 | No concentration: units come in one at a time, no artillery, air, assault order | #233 | design |
 | No artillery doctrine: guns don't follow the front or fire before the assault | #234 | design |
