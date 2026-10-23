@@ -104,7 +104,7 @@ export class Game {
 				this.newScenario.bind(this, "failRestore"));
 		}
 
-		//Called every second by this.loop. Uses the global game, not this
+		//Called every tick of this.loop (src/main.ts). Uses the global game, not this
 		this.processTurn = function() {
 			if (!game.gameStarted || game.gameEnded)
 				return;
@@ -122,18 +122,26 @@ export class Game {
 
 		this.startTurn = function() {}
 
-		this.processAIActions = function() {
-			const action = this.scenario.map.currentPlayer.handler.getAction();
+		//The actions the screen doesn't animate play on in the same tick: the AI's turn waits only for what
+		//the player watches, a unit picked, moving or attacking, a message (#8)
+		const unanimated = [actionType.resupply, actionType.reinforce, actionType.upgrade, actionType.buy,
+			actionType.deploy, actionType.mount, actionType.umount];
 
-			if (!processAction(this, action)) {
-				UIBuilder.showAIStatus(false);
-				game.waitUIAnimation = true;
-				game.endTurn();
-				setTimeout(function() {
-					if (!game.gameEnded)
-						game.ui.uiEndTurnInfo();
-				}, 2500);
-			}
+		this.processAIActions = function() {
+			let action: AIAction;
+			do {
+				action = this.scenario.map.currentPlayer.handler.getAction();
+				if (!processAction(this, action)) {
+					UIBuilder.showAIStatus(false);
+					game.waitUIAnimation = true;
+					game.endTurn();
+					setTimeout(function() {
+						if (!game.gameEnded)
+							game.ui.uiEndTurnInfo();
+					}, 2500);
+					return;
+				}
+			} while (unanimated.includes(action.type));
 		}
 
 		//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side

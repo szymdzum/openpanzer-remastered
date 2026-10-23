@@ -67,9 +67,10 @@ Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuild
 //Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
 rng.Rng.seed(rng.randomSeed());
 
-//The turn loop, processTurn every second (window.: the browser's, a number), and the start on
-//window load. game.ts did both while loading; here, so that importing it starts nothing
-game.game.loop = window.setInterval(game.game.processTurn, 1000);
+//The turn loop, processTurn every quarter of a second (window.: the browser's, a number): an AI action
+//per tick, a picked unit shown that long before it moves (it was a second, an AI turn took a minute, #8).
+//And the start on window load. game.ts did both while loading; here, so that importing it starts nothing
+game.game.loop = window.setInterval(game.game.processTurn, 250);
 window.addEventListener("load", game.gameStart);
 
 //The mirror's world kept for the screen's rules (src/mirror.ts), but under ?harness, whose scripts write
