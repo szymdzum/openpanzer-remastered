@@ -220,7 +220,7 @@ const playerAt = (s: GameState, id: number) => id < s.players.length ? s.players
 
 //A world to ask the unit queries in, while loading
 const queries = (g: GameSetup, s: GameState): World => ({ data: null, state: s, equipment: g.equipment, rules: classicRules,
-	noFOW: false, spotSide: -1, destroyed: new Set(), index: new Map(), sight: emptySight(0), keepDrift: false, scratch: null });
+	noFOW: false, spotSide: -1, destroyed: new Set(), index: new Map(), sight: emptySight(0), scratch: null });
 
 //An equipment id the equipment knows, else the first it has (Unit's knownEqid: as the key, a string)
 function known(g: GameSetup, eqid: number): number {

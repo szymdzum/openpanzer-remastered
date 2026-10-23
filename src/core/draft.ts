@@ -43,7 +43,7 @@ export function finishDraft(d: Draft): World {
 	const s = d.state;
 	const state: GameState = s.rng === null ? s : { ...s, rng: { game: d.rng.state, ai: s.rng.ai } };
 	return { data: d.data, state, equipment: d.equipment, rules: d.rules, noFOW: d.noFOW, spotSide: d.spotSide, destroyed: d.destroyed,
-		index: d.index, sight: d.sight, keepDrift: d.keepDrift, scratch: d.scratch };
+		index: d.index, sight: d.sight, scratch: d.scratch };
 }
 
 export function emit(d: Draft, e: GameEvent) {
@@ -157,15 +157,10 @@ export function spotOn(d: Draft, u: UnitState): UnitId[] {
 	return spotted;
 }
 
-//(the old engine's counters don't go below 0: an off with nothing to take off is dropped, which only
-//happens once they drifted)
 function countCells(d: Draft, counts: [Uint16Array, Uint16Array], u: UnitState, cells: Position[], by: number) {
 	const side = sideOf(d, u);
 	if (side > 1) return;
-	for (const c of cells) {
-		const hex = c.row * d.state.map.cols + c.col;
-		if (by > 0 || !d.keepDrift || counts[side][hex] > 0) counts[side][hex] += by;
-	}
+	for (const c of cells) counts[side][c.row * d.state.map.cols + c.col] += by;
 }
 
 //Moves a unit to a hex (MapBoard.relocate): its sight off, the hexes, change (the facing, the undo's
@@ -185,7 +180,6 @@ export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitSta
 //leader that sees farther): its sight off and on around the change, no unit marked seen
 export function changeUnit(d: Draft, id: UnitId, change: (u: UnitState) => void) {
 	const u = writeUnit(d, id);
-	if (d.keepDrift) return change(u);
 	sightOff(d, u);
 	change(u);
 	countCells(d, d.sight.zoc, u, zocCells(d, u), 1);

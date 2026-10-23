@@ -1,7 +1,7 @@
 //The old engine's objects as a mirror of the core's world (src/mirror.ts, #137): on every engine
 //fixture, the core plays a round as the AI (every order checkpoint by checkpoint, as the screen plays
 //it, every end of turn with its reinforcements), and after each piece applyData updates the objects:
-//- toData of the objects is the world's state, and the old counters its sight (drift kept);
+//- toData of the objects is the world's state, and the counters its sight;
 //- each unit still on the map is the object it was (the UI compares units with ===);
 //- the world made again from the objects is the one they mirror.
 //Then random commands a person sends, every type, the same way; and the other way: what a screen writes
@@ -151,8 +151,9 @@ test("What a screen writes into the objects is in the world made from them", asy
 	expect(w.state.map.hexes[0].owner).toBe(1);
 	expect(Object.values(w.state.equipment.indexes).some((e) => e.unitclass && Object.values(e.unitclass).some((l) => l.join() === sorted.join())))
 		.toBe(true);
-	expect(w.sight.spot[0][x.o.m.cols + 1]).toBe(x.o.m.getBoard().visibility.counters[1][1].spot[0]);
-	expect(x.difference(w)).toBe("");
+	//(the sight is computed from the units: a counter switched by hand isn't in it, D10)
+	expect(w.sight.spot[0][x.o.m.cols + 1]).toBe(x.o.m.getBoard().visibility.counters[1][1].spot[0] - 2);
+	expect(x.difference(w)).toBe("the counters differ from the world's sight");
 });
 
 test("The pieces played cover the checkpoints, the save point and new units", () => {

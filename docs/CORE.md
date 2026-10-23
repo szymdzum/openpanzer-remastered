@@ -27,7 +27,6 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `destroyed` | units an attack destroyed whose removal hasn't run yet | empty: only the contract's adapter sets it (the step removes a unit where the old engine did) |
 | `index` | unit id -> its index in `state.units` (D2) | derived, built with the world |
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
-| `keepDrift` | the sight given is the old engine's counters, kept with their arithmetic: no switch where it forgot one (#73), no count below 0 | false; the running game's world until the switch removes the counters (#137) |
 
 The types are src/state.ts's (one source of truth): the core imports them with `import type`.
 The derived parts are a cache beside the state, never saved; a step rebuilds them.

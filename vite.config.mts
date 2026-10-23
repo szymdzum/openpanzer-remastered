@@ -102,7 +102,7 @@ export default defineConfig({
 				"src/core/combat.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
 				"src/core/costs.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
 				"src/core/create.ts": { statements: 75, branches: 100, functions: 50, lines: 75 },
-				"src/core/draft.ts": { statements: 97, branches: 91, functions: 96, lines: 99 },
+				"src/core/draft.ts": { statements: 97, branches: 90, functions: 96, lines: 99 },
 				"src/core/equipment.ts": { statements: 88, branches: 84, functions: 80, lines: 90 },
 				"src/core/fight.ts": { statements: 99, branches: 100, functions: 95, lines: 99 },
 				"src/core/geometry.ts": { statements: 98, branches: 97, functions: 90, lines: 97 },
