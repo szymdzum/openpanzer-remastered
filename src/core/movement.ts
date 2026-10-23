@@ -93,8 +93,9 @@ export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
 //exit cost (cout) of a neighbour one ring nearer, its exit cost the entry plus the terrain cost,
 //lowered when another neighbour is cheaper. A hex is in reach when the points left pay for it (#205);
 //a hex that uses all the points (254) takes any left, at least one. An enemy zone of control the
-//unit's side sees stops it (254) on a hex it can pay for. An air unit moves anywhere in range at
-//cost 1. The order of the updates is the old engine's, list order, so a tie resolves as it did
+//unit's side sees stops it (254) on a hex it can pay for. An air unit moves at cost 1 a hex, over its
+//side's aircraft and around the enemy's it sees, as far as its points take it (#217). The order of
+//the updates is the old engine's, list order, so a tie resolves as it did
 export function moveRange(w: World, u: UnitState): MoveCell[] {
 	if (u.hasMoved) return [];
 	const { rows, cols, lastRowPartial, lastColPartial } = w.state.map;
@@ -110,17 +111,47 @@ export function moveRange(w: World, u: UnitState): MoveCell[] {
 		const allowed: MoveCell[] = [];
 		for (const cell of c) {
 			const hex = hexIndex(w, cell.row, cell.col);
-			if (seen(w, hex, side, airUnitAt(w, hex)) && !canMoveInto(w, u, cell)) continue;
-			cell.canMove = true;
+			if (!seen(w, hex, side, airUnitAt(w, hex)) || canMoveInto(w, u, cell)) cell.canMove = true;
+			else if (canPassInto(w, u, cell)) cell.canPass = true; //over its side's aircraft (#217: left out, flown around)
+			else continue;
 			cell.cost = 1; //no terrain cost in the air
 			allowed.push(cell);
 		}
-		return allowed;
+		return withinSteps(w, u, allowed, range);
 	}
 
 	c.push(moveCell(u.row, u.col, 0));
 	expand(w, u, c, range, side);
 	return c.filter((cell) => cell.canPass || cell.canMove);
+}
+
+//The cells a path through them reaches from u's hex in range steps or less, in their order (#217: an
+//air unit's range was every hex within range, and the path around the aircraft it can't fly through
+//took more points than it had)
+function withinSteps(w: World, u: UnitState, cells: MoveCell[], range: number): MoveCell[] {
+	const cols = w.state.map.cols;
+	const slot = scratch(w);
+	for (let i = 0; i < cells.length; i++) slot[cells[i].row * cols + cells[i].col] = i + 1;
+	const steps = new Int32Array(cells.length).fill(-1);
+	const near: number[] = [];
+	let ring: Position[] = [u];
+	try {
+		for (let r = 1; r <= range && ring.length > 0; r++) {
+			const next: MoveCell[] = [];
+			for (const from of ring) {
+				neighbours(w, from, slot, near);
+				for (const j of near)
+					if (steps[j] < 0) {
+						steps[j] = r;
+						next.push(cells[j]);
+					}
+			}
+			ring = next;
+		}
+	} finally {
+		for (const cell of cells) slot[cell.row * cols + cell.col] = 0;
+	}
+	return cells.filter((_, i) => steps[i] > 0);
 }
 
 function moveCell(row: number, col: number, range: number): MoveCell {
@@ -223,7 +254,7 @@ function scratch(w: World): Int32Array {
 }
 
 //The cell indexes of from's neighbours in the range, ascending (the order the old engine visits them)
-function neighbours(w: World, from: MoveCell, slot: Int32Array, out: number[]) {
+function neighbours(w: World, from: Position, slot: Int32Array, out: number[]) {
 	out.length = 0;
 	const { rows, cols } = w.state.map;
 	for (let n = 0; n < 6; n++) { //adjacent()'s six, without making them
