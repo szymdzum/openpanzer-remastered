@@ -218,13 +218,13 @@ moves ahead and doesn't react to combat results during the turn.
 
 1. Buys units with the prestige over a reserve of 1000, 30% of it for aircraft.
 2. Deploys undeployed core units.
-3. Orders its units: artillery, fortifications, combat aircraft and warships first, so they
-   soften targets before the assault.
+3. Orders its units: artillery, fortifications, combat aircraft and warships first. They attack
+   what they can reach that turn, not to open the way for an assault (#233, #234).
 4. For each unit, until it has nothing left to do: reinforce if weak (strength under 4) or
    idle, resupply if low (ammo under 2, fuel under 5) or idle, move, attack.
 5. Move: scores every reachable hex (`getCellScore`) and goes to the best one if it beats
    staying. The score adds up, for example: free victory hex +600 for infantry (+350 tanks),
-   infantry in close terrain +120, next to own artillery +80, river without road -70, hex not
+   infantry in close terrain +120, next to own artillery +100, river without road -70, hex not
    spotted by the enemy -40, distance to the nearest objective (4000 / distance), and the
    attacks possible from there.
 6. Attack: the target with the best expected kills x target class value minus losses x own

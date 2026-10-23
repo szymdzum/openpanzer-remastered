@@ -20,7 +20,7 @@ The objective score counts only the nearest objective to take. All the units of 
 toward the same hex; the ones that arrive first take the hexes around it, those hexes then score
 -5000 for the rest, and the rest stop where staying beats the leftover hexes. They don't turn to
 another objective, because the nearest one still pulls hardest. In the playtest the German northern
-group crowded round objective 2,20 for ten turns while objective 4,30, further east, waited.
+group crowded round objective 2,20 for ten turns while objective 4,30, further east, waited (#258).
 
 ## 3. No concentration, no order of arms
 
@@ -47,7 +47,7 @@ the plan counted the hex as taken whatever the slot (#237, fixed by #238). In th
 
 Aircraft score a third of the objective pull and no danger: they don't avoid enemy anti-aircraft or
 escort each other. In the playtest the Germans lost three aircraft (He-51, Me-109B, Do-17) to Polish
-AA and a fighter, two of them over Mława.
+AA and a fighter, two of them over Mława (#259).
 
 ## What it does well
 

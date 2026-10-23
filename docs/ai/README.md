@@ -10,6 +10,9 @@ for whoever changes the AI.
 | [weak-attacker.md](weak-attacker.md) | Why it attacks weakly, with the numbers that cause it |
 | [playtests/2026-10-23-ostpreussen.md](playtests/2026-10-23-ostpreussen.md) | Games played against it, turn by turn, with what they found |
 | [arena.md](arena.md) | The AI arena: games played headless against the AI and a scripted general, the measures, the baseline |
+| [foundations.md](foundations.md) | How game AI opponents are built (utility, influence maps, search, learning, language models) and a path for this one |
+| [remastered-design.md](remastered-design.md) | A proposal for the remaster's own AI, designed from scratch: layers, the language-model commander, tests, order of work |
+| [industry-research.md](industry-research.md) | How shipped strategy games build their AI (Unity of Command, Wesnoth, Civilization, Total War, Killzone, HOI4) and what it changes in the design |
 
 ## In short
 
@@ -33,6 +36,8 @@ the AI and a scripted general, before and after.
 | No sense of time: the same play on turn 3 and turn 14 | #232 | design |
 | No concentration: units come in one at a time, no artillery, air, assault order | #233 | design |
 | No artillery doctrine: guns don't follow the front or fire before the assault | #234 | design |
+| Every unit is pulled to the one nearest objective: a sector crowds one hex while others wait | #258 | design |
+| Its aircraft fly alone: no sense of enemy AA or fighters, no escort | #259 | design |
 | Buys towed guns and infantry without transports | #224 | bug |
 | The bonus for staying entrenched glues an attacker to its hexes | #235 | design |
 | Doesn't finish weak, valuable units or withdraw its own damaged ones | #6 | design |
