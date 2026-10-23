@@ -23,7 +23,7 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `equipment` | the equipment table by eqid (`EquipmentEntry`) | loaded once, read-only |
 | `rules` | the `Ruleset` | `classicRules`: today's game |
 | `noFOW` | the fog of war off: every hex is spotted | an option, not state (D6) |
-| `spotSide` | the side the screen shows (-1 none): the end of turn hides the units it doesn't see (kept #75) | an input, not state (D6) |
+| `spotSide` | the side the screen shows (-1 none); the rules no longer read it since #75 | an input, not state (D6) |
 | `destroyed` | units an attack destroyed whose removal hasn't run yet | empty: only the contract's adapter sets it (the step removes a unit where the old engine did) |
 | `index` | unit id -> its index in `state.units` (D2) | derived, built with the world |
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
@@ -49,7 +49,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `newgame.ts` | a game's data and state from a scenario file, as the old loader and Game start it |
 | `campaign.ts` | a campaign's scenario started (its player carried, prestige, core units, the prototype) and ended (HQ, the next scenario) |
 | `scenariofile.ts` | a scenario XML document read as plain data, for `newGame` |
-| `turn.ts` | a unit's end of turn (entrenchment, #75's hiding), the reinforcements arriving, the turn limit, the victory rating and the outcome |
+| `turn.ts` | a unit's end of turn (entrenchment, hiding from the enemy, #75), the reinforcements arriving, the turn limit, the victory rating and the outcome |
 | `step.ts` | `step` and `check`, the handlers' registry |
 | `draft.ts` | the state a step changes, copied on write, and its primitives: place, relocate, remove a unit with its sight, the score, the dossier |
 | `events.ts` | the events a step emits (types) |
@@ -186,8 +186,9 @@ end of turn (the turn played, the prestige the scenario gives for the next turn,
 undo gone, the next player by id. When the first player is next, a new round: the turn counter, and
 each unit in the list's order gets off its transport (spotting again, marking what it sees), takes
 the turn start's resupply (in a city with no enemy around; #95 kept) and ends its turn
-(`unitEndTurn`: entrenchment, its points and flags back, and hidden again unless the side the screen
-shows sees it, #75 kept). Events: `turnEnded` (the prestige), `unmounted`, `resupplied`,
+(`unitEndTurn`: entrenchment, its points and flags back, and hidden again unless its enemy sees its
+hex; #75: the old game asked the side the screen showed, so that side's units stayed seen for good
+once they had fired, and the AI kept shooting at them in the fog). Events: `turnEnded` (the prestige), `unmounted`, `resupplied`,
 `turnStarted` (turn, date, time of day), and `turnLimit` when the side that ended has played its
 last turn. The game ends there only for a side that plays on this screen (Game's local side): that
 is the session's to decide, as the side shown is. The ground and the weather don't change during a
@@ -445,4 +446,4 @@ session now (test/coreengine.ts), the gamerules contract on the game's GameRules
   the side on the screen, a stuck controller, a player handed over, the view events of the joins.
 - **Hand-built situations** (test/core.test.ts): the rules as they read, such as the combat record
   of a Pz IIA against a 7TP in a forest, the draws of an attack, a flag taken and given back by the
-  undo, a new round, #75's hiding, the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.
+  undo, a new round, the hiding from the enemy (#75), the turn limit, the reinforcements arriving, and the path search against the old engine's on maps full of equal paths.

@@ -17,25 +17,23 @@ import type { GameEvent } from "./events";
 import { reinforcementDeployPosition } from "./movement";
 import type { Draft, OffMapUnit, UnitId, UnitState, World } from "./types";
 import { canEntrench } from "./units";
-import { hexIndex, sideOf, unitData } from "./world";
+import { hexIndex, isSpotted, sideOf, unitData } from "./world";
 
-//Whether the side the screen shows sees a hex (Hex.isSpotted of game.spotSide): -1, no side, sees none
-function shownTo(w: World, hex: number, side: number): boolean {
-	return w.noFOW || (side >= 0 && side < 2 && w.sight.spot[side][hex] > 0);
-}
-
-//Unit.unitEndTurn: entrenchment, the movement points and the turn's flags back, and a unit the
-//screen's side no longer sees hidden again. Kept: #75, the screen's side (spotSide), not the unit's
-//enemy, decides whether it hides; fortifications stay seen once seen
+//Unit.unitEndTurn: entrenchment, the movement points and the turn's flags back, and a unit its enemy
+//no longer sees hidden again; fortifications stay seen once seen
 export function unitEndTurn(d: Draft, id: UnitId) {
 	const u = writeUnit(d, id);
 	entrench(d, u);
 	u.moveLeft = d.equipment[u.eqid].movpoints;
 	u.hasMoved = u.hasFired = u.hasResupplied = u.isSurprised = u.hasOverstrength = false;
 	u.hits = 0;
-	if (unitData(d, u).uclass !== unitClass.fortification && u.row >= 0
-		&& !shownTo(d, hexIndex(d, u.row, u.col), d.spotSide))
-		u.tempSpotted = false;
+	if (unitData(d, u).uclass !== unitClass.fortification && u.row >= 0 && !seenByEnemy(d, u)) u.tempSpotted = false;
+}
+
+//The enemy side spots the unit's hex. The old game asked the side the screen showed, so that side's
+//own units stayed seen in the fog for good once they had fired (#75)
+function seenByEnemy(w: World, u: UnitState): boolean {
+	return isSpotted(w, hexIndex(w, u.row, u.col), ~sideOf(w, u) & 1);
 }
 
 //Unit.entrench: up to the terrain's entrenchment at once, then one level at a time as the ticks

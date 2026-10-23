@@ -19,6 +19,7 @@ import { arriveReinforcements, outcome } from "../src/core/turn";
 import { mapSize } from "../src/core/newgame";
 import type { Contribution, World } from "../src/core/types";
 import type { Command } from "../src/commands";
+import { createWorld } from "../src/core/create";
 import { handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280, PSW_222 = 117;
@@ -359,10 +360,21 @@ test("The turn passes to the next player; once both played, a new round: points 
 	expect(second.world.state.players.map((p) => [p.playedTurn, p.score])).toEqual([[1, -10], [1, -10]]);
 });
 
-test("A unit seen after firing hides again at the round's end unless it is the side the screen shows (kept #75)", () => {
-	for (const [spotSide, seen] of [[0, [true, false]], [1, [false, true]], [-1, [false, false]]] as const) {
-		const ended = played(step(played(step(farApart(spotSide), { type: "endTurn" })).world, { type: "endTurn" })).world;
-		expect([unitById(ended, 0).tempSpotted, unitById(ended, 1).tempSpotted], "screen shows " + spotSide).toEqual(seen);
+//Far apart, neither side sees the other's unit any more: both hide again, whichever side the screen
+//shows (the old game kept the screen side's own units seen, which the AI then shot at in the fog).
+//Side by side, each sees the other: both stay seen
+test("A unit seen after firing hides again at the round's end unless its enemy sees its hex, whatever the screen shows (#75)", () => {
+	const roundEnded = (w: World) => played(step(played(step(w, { type: "endTurn" })).world, { type: "endTurn" })).world;
+	for (const spotSide of [0, 1, -1]) {
+		const apart = roundEnded(farApart(spotSide));
+		expect([unitById(apart, 0).tempSpotted, unitById(apart, 1).tempSpotted], "screen shows " + spotSide).toEqual([false, false]);
+		const near = farApart(spotSide);
+		near.state.units[1] = { ...near.state.units[1], row: 1, col: 2 };
+		near.state.map.hexes[9 * 12 + 9].unit = null;
+		near.state.map.hexes[1 * 12 + 2].unit = 1;
+		const together = roundEnded(createWorld({ data: near.data, state: near.state }, near.equipment, { spotSide }));
+		expect([unitById(together, 0).tempSpotted, unitById(together, 1).tempSpotted], "side by side, screen shows " + spotSide)
+			.toEqual([true, true]);
 	}
 });
 

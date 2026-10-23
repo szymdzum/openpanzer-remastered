@@ -329,4 +329,4 @@ drill("#74 the AI moves units onto hexes its own units hold", "dr9fr03-t2.json.g
 	return broken;
 }, true);
 
-//(#75, tempSpotted cleared against the side on display: pinned on the core, test/core.test.ts)
+//(#75, tempSpotted cleared against the side on display: fixed and tested on the core, test/core.test.ts)
