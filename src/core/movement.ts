@@ -192,8 +192,15 @@ function reach(w: World, to: MoveCell, other: UnitState | null, visible: boolean
 	if (!visible || (s.groundOrSea && other === null)) to.canMove = true;
 }
 
+//What entering a hex costs u in its terrain (the road's, a bridge's), its zone of control aside: what
+//a move pays for the hex a zone of control stopped it on (#214)
+export function terrainCost(w: World, u: UnitState, cell: Position): number {
+	return enterCost(w, hexIndex(w, cell.row, cell.col), { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u),
+		side: sideOf(w, u) });
+}
+
 //The terrain's cost, or the road's: trains can't use roads, bridges are roads for their side
-function enterCost(w: World, hex: number, s: StepRules): number {
+function enterCost(w: World, hex: number, s: Pick<StepRules, "costs" | "train" | "side">): number {
 	const road = (!s.train && w.data.hexes[hex].road > roadType.none) || isBridgeForSide(w, hex, s.side);
 	return s.costs[road ? ROAD : w.data.hexes[hex].terrain];
 }
