@@ -82,7 +82,8 @@ canvas pixels on purpose.
   rebase merge. A branch per piece of work. A difference in verify fails it: a refactor must
   come out identical; a deliberate change passes once the owner has read its differences and
   added the label `behavior-change` (Claude may add it when the differences are exactly the
-  ones the change intends, and says so in the pull request).
+  ones the change intends, and says so in the pull request). A new push clears the label: read
+  the new run's differences before adding it again.
 - Work fast locally, let CI do the heavy checks: the hooks and `npm test` before a commit, then
   push the branch and open the pull request right away (no need to ask), with
   `gh pr merge --auto --rebase` so it merges itself once the required checks are green. Keep
@@ -91,5 +92,6 @@ canvas pixels on purpose.
   what verify showed. No AI attribution, no Co-Authored-By.
 - Parallel agents: a git worktree each, outside the repo (`../openpanzer-wt/<name>`), with
   `node_modules` symlinked from the main checkout (stage files by path, never `git add -A`; remove
-  only the symlink when cleaning up), and their own `PORT`, `REFERENCE_PORT` and `BDG_SESSION` for verify. Other agents may be working in the repo at the same time:
+  only the symlink when cleaning up), and their own `PORT`, `REFERENCE_PORT` and `BDG_SESSION` for verify.
+  No `git stash`: the stash list is shared by every worktree; commit work in progress on your branch. Other agents may be working in the repo at the same time:
   only touch your own files.

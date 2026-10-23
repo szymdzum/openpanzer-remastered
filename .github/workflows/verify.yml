@@ -21,7 +21,20 @@ env:
   TZ: Europe/Warsaw
 
 jobs:
+  # A new push to a pull request clears behavior-change: the differences it accepted were those of
+  # the previous commit, so the new ones are read again before the label goes back on
+  clear-acceptance:
+    if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'behavior-change')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - run: gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label behavior-change
+        env:
+          GH_TOKEN: ${{ github.token }}
   verify:
+    needs: clear-acceptance
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -97,7 +110,8 @@ jobs:
       - name: Differences accepted?
         if: steps.verify.outcome == 'failure'
         run: |
-          if [ "${{ contains(github.event.pull_request.labels.*.name, 'behavior-change') }}" = "true" ]; then
+          # On a new push the label was just cleared (clear-acceptance), whatever the event says
+          if [ "${{ github.event.action != 'synchronize' && contains(github.event.pull_request.labels.*.name, 'behavior-change') }}" = "true" ]; then
             echo "Differences accepted with the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "verify found differences: read the summary; a deliberate change needs the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
