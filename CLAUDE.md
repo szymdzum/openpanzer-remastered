@@ -82,8 +82,10 @@ canvas pixels on purpose.
   rebase merge. A branch per piece of work. A difference in verify fails it: a refactor must
   come out identical; a deliberate change passes once the owner has read its differences and
   added the label `behavior-change` (Claude may add it when the differences are exactly the
-  ones the change intends, and says so in the pull request). A new push clears the label: read
-  the new run's differences before adding it again.
+  ones the change intends, and says so in the pull request). The run the label accepts records
+  the fingerprint of its differences in a comment; after a new push the label stays only if verify
+  finds the same fingerprint (a rebase that changed nothing it accepted). Otherwise verify takes
+  it off: read the new run's differences before adding it again.
 - Work fast locally, let CI do the heavy checks: the hooks and `npm test` before a commit, then
   push the branch and open the pull request right away (no need to ask), with
   `gh pr merge --auto --rebase` so it merges itself once the required checks are green. Keep

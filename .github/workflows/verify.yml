@@ -9,6 +9,12 @@
 # difference fails it, unless the pull request carries the label behavior-change, which the
 # owner adds after reading the differences of a deliberate change: then it passes and the
 # summary still lists every difference.
+#
+# The run the label accepts records the fingerprint of its differences in a comment on the pull
+# request (.github/scripts/verify-fingerprint.sh: which games and steps differ and how, not the
+# values, which depend on the base). After a new push the label stays when verify finds the same
+# fingerprint (a rebase that changed nothing the label accepted); with other differences verify
+# takes the label off and fails, and they are read again.
 name: Verify
 
 on:
@@ -21,22 +27,12 @@ env:
   TZ: Europe/Warsaw
 
 jobs:
-  # A new push to a pull request clears behavior-change: the differences it accepted were those of
-  # the previous commit, so the new ones are read again before the label goes back on
-  clear-acceptance:
-    if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'behavior-change')
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - run: gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label behavior-change
-        env:
-          GH_TOKEN: ${{ github.token }}
   verify:
-    needs: clear-acceptance
-    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -106,14 +102,47 @@ jobs:
             harness/out/ui-*/
             ${{ runner.temp }}/verify.log
           retention-days: 7
-      # A difference fails the check, unless the owner accepted it with the label behavior-change
+      # A difference fails the check, unless the owner accepted it with the label behavior-change. A
+      # run the label accepts records its fingerprint; after a new push the label holds only for
+      # the same fingerprint. The label is read now, not from the event (it may have changed since)
       - name: Differences accepted?
         if: steps.verify.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          NEW_PUSH: ${{ github.event.action == 'synchronize' }}
         run: |
-          # On a new push the label was just cleared (clear-acceptance), whatever the event says
-          if [ "${{ github.event.action != 'synchronize' && contains(github.event.pull_request.labels.*.name, 'behavior-change') }}" = "true" ]; then
-            echo "Differences accepted with the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
-          else
+          fingerprint=$(.github/scripts/verify-fingerprint.sh "$RUNNER_TEMP/verify.log")
+          echo "Fingerprint of the differences: \`$fingerprint\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$PR" ]; then
+            echo "verify found differences: read the summary." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          labelled=$(gh pr view "$PR" --repo "$REPO" --json labels -q '[.labels[].name] | index("behavior-change") != null')
+          accepted=$(gh api "repos/$REPO/issues/$PR/comments" --paginate -q '.[].body' \
+            | grep -oE 'verify-accepted: [0-9a-f]+' | tail -1 | cut -d' ' -f2 || true)
+          if [ "$labelled" != "true" ]; then
             echo "verify found differences: read the summary; a deliberate change needs the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
             exit 1
+          fi
+          if [ "$NEW_PUSH" = "true" ]; then
+            if [ "$fingerprint" = "$accepted" ]; then
+              echo "The same differences as the ones accepted with behavior-change (fingerprint $accepted): the label stays." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            gh pr edit "$PR" --repo "$REPO" --remove-label behavior-change
+            echo "The differences changed since behavior-change accepted them (fingerprint ${accepted:-none}, now $fingerprint): the label is off, read them again." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Differences accepted with the label behavior-change." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$fingerprint" != "$accepted" ]; then
+            {
+              echo "<!-- verify-accepted: $fingerprint -->"
+              echo "verify: the label \`behavior-change\` accepted these differences ([run]($GITHUB_SERVER_URL/$REPO/actions/runs/$GITHUB_RUN_ID)). A new push keeps the label only if verify finds the same ones."
+              echo '```'
+              .github/scripts/verify-fingerprint.sh "$RUNNER_TEMP/verify.log" --lines | head -60
+              echo '```'
+            } > "$RUNNER_TEMP/accepted.md"
+            gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/accepted.md"
           fi
