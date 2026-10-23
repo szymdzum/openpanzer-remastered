@@ -41,7 +41,7 @@ def node_material(name, base):
 # the H in 1944; "grey" is the Panzergrau with dark stripes of the old PG2 sprites
 PALETTES = {
 	"dunkelgelb": [(0.46, 0.36, 0.17), (0.085, 0.10, 0.045), (0.075, 0.037, 0.025)],
-	"grey": [(0.24, 0.24, 0.23), (0.035, 0.037, 0.035), (0.035, 0.037, 0.035)],
+	"grey": [(0.20, 0.20, 0.19), (0.06, 0.062, 0.058), (0.06, 0.062, 0.058)],
 }
 
 
@@ -101,7 +101,7 @@ def stripe_material(colours):
 	ramp.color_ramp.interpolation = "CONSTANT"
 	els = ramp.color_ramp.elements
 	els[0].color = (*colours[0], 1)
-	els[1].position = 0.8
+	els[1].position = 0.84
 	els[1].color = (*colours[1], 1)
 	nt.links.new(coord.outputs["Object"], wave.inputs["Vector"])
 	nt.links.new(wave.outputs["Fac"], ramp.inputs["Fac"])
@@ -354,7 +354,7 @@ def blur(c):
 	return sum(p[1 + dy:1 + dy + c.shape[0], 1 + dx:1 + dx + c.shape[1]] for dy in (-1, 0, 1) for dx in (-1, 0, 1)) / 9
 
 
-def pixelate(tank, shadowed, palette, f):
+def pixelate(tank, shadowed, gun, palette, f):
 	# One frame in the PG2 manner: hard pixels, the colours of the old sprite's palette, a dark
 	# rim round the silhouette and a solid black shadow
 	rgb, a = downsample(tank, f)
@@ -373,10 +373,16 @@ def pixelate(tank, shadowed, palette, f):
 	out[..., 3] = mask
 	shadow = (sa > 0.4) & ~mask
 	out[shadow] = (0, 0, 0, 1)
+	# The gun as an unbroken dark line, as the old strips draw it: every pixel it touches
+	_, ga = downsample(gun, f)
+	line = ga > 0.12
+	dark = palette[((palette - 0.2) ** 2).sum(axis=1).argmin()]
+	out[line, :3] = dark
+	out[line, 3] = 1
 	return out
 
 
-def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.85, render_scale=8):
+def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.85, widen=1.08, render_scale=8):
 	# Render big, then pixelate to the 1x strip and to the @2x strip, in the old strip's colours
 	ref = load_rgba(reference)
 	opaque = ref[..., 3] > 0.5
@@ -384,10 +390,10 @@ def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.85, render_scale=8):
 	reset()
 	global SUN_TILT
 	SUN_TILT = 25  # a high sun: a bright roof over darker sides, as on the old sprites
-	panzer_iv.THICKEN.update(gun=1.6, antenna=5)
+	panzer_iv.THICKEN.update(gun=1.6, antenna=5, cross=1.5)
 	root = build()
 	# The PG2 sprites are squatter than the real vehicle: wider and longer for their height
-	root.scale = (1, 1, squash)
+	root.scale = (1, widen, squash)
 	camera(elev, pxm, render_scale)
 	lights()
 	plane = ground()
@@ -399,12 +405,18 @@ def pixel(reference, out, elev=22.5, pxm=7.6, squash=0.85, render_scale=8):
 	render_frames(root, lambda i: os.path.join(tmp, f"s{i}.png"))
 	plane.hide_render = True
 	render_frames(root, lambda i: os.path.join(tmp, f"t{i}.png"))
+	# The gun alone, the rest of the tank held out: where it shows, not where the turret hides it
+	gun_parts = ("gun", "gun_sleeve", "gun_collar", "muzzle_brake")
+	for ob in root.children:
+		ob.is_holdout = ob.name not in gun_parts
+	render_frames(root, lambda i: os.path.join(tmp, f"g{i}.png"))
 	for scale in (1, 2):
 		frames = []
 		for i in range(9):
 			t = load_rgba(os.path.join(tmp, f"t{i}.png"))
 			s_ = load_rgba(os.path.join(tmp, f"s{i}.png"))
-			frames.append(pixelate(t, s_, palette, render_scale // scale))
+			g = load_rgba(os.path.join(tmp, f"g{i}.png"))
+			frames.append(pixelate(t, s_, g, palette, render_scale // scale))
 		path = out.replace(".png", "@2x.png") if scale == 2 else out
 		pack(frames, path, scale)
 		print("wrote", path)

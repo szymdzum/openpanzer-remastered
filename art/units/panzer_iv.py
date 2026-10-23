@@ -30,7 +30,7 @@ IDLER = (5.45, 0.55, 0.30)
 SKIRT_Y, SKIRT_Z, SKIRT_D = 1.62, (0.60, 1.68), (0.95, 5.45)
 # A sprite needs the gun and the antenna thicker than real, or they break up at 80x50: the old
 # strips draw them as a clear line. render.py sets this for the pixel strips.
-THICKEN = {"gun": 1.0, "antenna": 1.0}
+THICKEN = {"gun": 1.0, "antenna": 1.0, "cross": 1.0}
 TURRET_SKIRT_Y, TURRET_SKIRT_D = 1.33, (2.05, 4.85)
 
 
@@ -269,8 +269,8 @@ def build(m):
 	parts = hull(m) + turret(m) + skirts(m) + running_gear(m)
 	# Balkenkreuze on the hull skirts and on the turret skirts
 	for s in (-1, 1):
-		parts += cross_marking(f"cross_skirt_{s}", 3.10, s * (SKIRT_Y + 0.012), 1.18, s, 0.55, m)
-		parts += cross_marking(f"cross_turret_{s}", 4.25, s * TURRET_SKIRT_Y + TURRET_OFF, (TURRET_Z[0] + TURRET_Z[1]) / 2 + 0.02, s, 0.36, m)
+		parts += cross_marking(f"cross_skirt_{s}", 3.10, s * (SKIRT_Y + 0.012), 1.18, s, 0.55 * THICKEN["cross"], m)
+		parts += cross_marking(f"cross_turret_{s}", 4.25, s * TURRET_SKIRT_Y + TURRET_OFF, (TURRET_Z[0] + TURRET_Z[1]) / 2 + 0.02, s, 0.36 * min(THICKEN["cross"], 1.6), m)
 	for ob in parts:
 		if ob.name in ("lower_hull", "superstructure", "turret", "bustle", "mantlet", "glacis"):
 			bevel(ob, 0.02)
