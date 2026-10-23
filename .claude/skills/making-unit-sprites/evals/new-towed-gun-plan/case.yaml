@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: new-towed-gun-plan
+expected_outcome: |
+  Runs art/units/find_unit.py for the leFH 18, notices that several strips (pa796, pa797, pa798)
+  carry that name and asks which one or says which it picked and why, reads the old strip's size,
+  starts art/units/notes/<strip>.md from the template, and lays out a plan that starts from a scale
+  drawing with a recorded licence, measures the model's constants from it, and passes the shape gate
+  (render.py side) and the frame gate (check_frames.py) before the owner's review. Renders nothing.

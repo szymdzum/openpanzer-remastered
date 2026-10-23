@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: show-sprite-in-game
+expected_outcome: |
+  Converts docs/assets-pilot/pa131@2x.png to public/hd/units/images/pa131.webp with cwebp (lossless),
+  starts or explains the dev server on a free port, and tells the user to open New Game, Scenarios,
+  "Zitadelle" (prok1.xml, not "Operation Zitadelle"), where Pz IVH units stand on the listed hexes,
+  and to hover one (the top bar says "Unit: Pz IVH"). Mentions that the @2x file only shows on screens
+  of 1.5x density or more and that public/hd is not in Git.

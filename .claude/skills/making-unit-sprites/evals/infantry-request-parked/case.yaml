@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: infantry-request-parked
+expected_outcome: |
+  Tells the user that the infantry pilot was parked as "so-so" and why (a pose made by numbers had
+  nothing to check against; gluing animations broke the body), does not start modelling or rendering,
+  and proposes the retry route: the old strip as the reference, whole Mixamo animations (ideally a
+  charge with the rifle forward) downloaded by the user with the right settings, the pose picked by
+  outline overlap, the owner's sign-off. Asks before going further.

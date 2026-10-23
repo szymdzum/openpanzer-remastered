@@ -371,6 +371,10 @@ rigid things with scale drawings (vehicles, guns: the leFH 18 next).
 
 ## How to make the next unit
 
+The project skill `.claude/skills/making-unit-sprites/` turns this into a step-by-step workflow
+with the commands, the gates (`art/units/check_frames.py`) and a notes file per unit
+(`art/units/notes/`).
+
 The two pilots, and three independent projects that render Blender models as sprites by script
 ([3d-to-pixel-sprite][a2p], [blender-game-skills][bgs], [blender-kiln][kiln]), come to the same
 way of working. The tank followed it and worked; the infantry broke it (a pose made by numbers,
