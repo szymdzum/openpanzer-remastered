@@ -66,7 +66,7 @@ The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` o
 and types: no UI module, no mutable object of the old engine (the linter checks it).
 
 **Kept bugs are kept.** The classic ruleset reproduces the old engine exactly, every kept bug
-included (#87, #88, #90, #95, #19...): they are fixed after the switch, in the core.
+included (#87, #88, #90, #19...): they are fixed after the switch, in the core.
 
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
 only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table
@@ -185,7 +185,7 @@ after the day's last turn, the date counted in local time as the old engine coun
 end of turn (the turn played, the prestige the scenario gives for the next turn, the score), the
 undo gone, the next player by id. When the first player is next, a new round: the turn counter, and
 each unit in the list's order gets off its transport (spotting again, marking what it sees), takes
-the turn start's resupply (in a city with no enemy around; #95 kept) and ends its turn
+the turn start's resupply (in a city with no enemy around) and ends its turn
 (`unitEndTurn`: entrenchment, its points and flags back, and hidden again unless its enemy sees its
 hex; #75: the old game asked the side the screen showed, so that side's units stayed seen for good
 once they had fired, and the AI kept shooting at them in the fog). Events: `turnEnded` (the prestige), `unmounted`, `resupplied`,

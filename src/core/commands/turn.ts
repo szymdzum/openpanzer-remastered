@@ -40,8 +40,8 @@ function nextTimeOfDay(d: Draft) {
 }
 
 //Map.endTurn's new round, once every player has played: each unit in the list's order gets off its
-//transport, takes the turn start's resupply (in a city with no enemy around; kept #95: at least 1 ammo
-//and fuel) and ends its turn
+//transport, takes the turn start's resupply (in a city with no enemy around) and ends its
+//turn
 function newRound(d: Draft) {
 	for (const id of d.state.units.map((u) => u.id)) {
 		if (unitById(d, id).isMounted) {
