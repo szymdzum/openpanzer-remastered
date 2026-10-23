@@ -197,10 +197,10 @@ scenario; the move costs follow `state.scenario.ground` through the ruleset's ta
 **The reinforcements are a step of their own:** `arriveReinforcements(world)` (turn.ts) places the
 current player's reinforcements due by this turn, by turn then as listed, each on its hex or the
 first neighbour it can stand on (`arrived`, then what it spots); those with no room wait. The old
-game plays, in order: the end of turn, the next AI player's turn start and plan (inside
+game played, in order: the end of turn, the next AI player's turn start and plan (inside
 Map.endTurn), the save, the side shown, then the reinforcements. Kept: the AI plans before its
-reinforcements arrive (#94), the save is written before them (#93). The session (C4, C5) plays the
-two with the controller's turn start in between. No command stands for the arrival: no player
+reinforcements arrive (#94). The save comes after them since #93 (a reload during the turn lost
+them). The session (C4, C5) plays the two with the controller's turn start in between. No command stands for the arrival: no player
 sends it.
 
 `outcome(world, last?)` is Actions.checkOutcome: a capture that took the side's last objective
@@ -326,7 +326,8 @@ person's player has none: its turns end at once), each advance an order of the c
 controller or, when it has none left, the end of turn:
 
     endTurn step -> the next player's controller: startTurn, plan -> the turn limit's defeat
-    -> [the save point: Session.saved] -> the side the screen shows -> arriveReinforcements
+    -> [the screen's turn start] -> the side the screen shows -> arriveReinforcements
+    -> [the save point: Session.saved, #93]
 
 The game ends at a victory (the step's `victory`, or a retreat that took its side's last objective:
 the old game finished the retreat's move after the attack), at the turn limit of a side that plays on
@@ -341,9 +342,9 @@ turn has it plan again (#71). `playTurn(s)` plays a turn to its end.
 A screen plays the same session one piece at a time (#137): `nextOrder(s)` asks the current player's
 controller for its order without playing it (the replay hashes the state there), `play(s, command)`
 plays a person's command or an order up to its first checkpoint and `playOn(s, checkpoint)`
-from there, and `endTurn(s, saved)` ends the turn, calling `saved(started)` at the save point (the
-screen shows the units the AI deployed at its turn start, then saves) before the side shown and the
-reinforcements. `StartedTurn.type` is the player's type when its turn started (the tutorial may hand
+from there, and `endTurn(s, shown)` ends the turn, calling `shown(started)` at the turn start (the
+screen shows the units the AI deployed at its turn start) before the side shown and the
+reinforcements; the game saves after them (#93). `StartedTurn.type` is the player's type when its turn started (the tutorial may hand
 it over then). A campaign scenario's prototype, for its message, is `awardedPrototype(campaign, state)`
 (campaign.ts).
 

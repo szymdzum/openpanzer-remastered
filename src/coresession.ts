@@ -1,7 +1,7 @@
 /**
  * CoreSession - the running game's turns on the core's session (#137): the players' controllers (the
  * AI, the tutorial), their orders handed out as the old handlers' actions, the end of turn with the
- * next player's turn start, the save point and the reinforcements, each mirrored into the game's
+ * next player's turn start, the reinforcements and the save, each mirrored into the game's
  * objects (src/mirror.ts) and told to the screen where the old game told it
  *
  * Licensed under the GPL license:
@@ -131,9 +131,9 @@ function commandAction(c: Command, u: UnitOf): AIAction {
 }
 
 //Game.endTurn on the session: the selection cleared (Map.endTurn), the end of turn and the next
-//player's turn start and plan; at the save point the screen shows what the AI deployed, saves and shows
-//the next side; then the reinforcements with their alerts. True when the side that ended lost at the
-//turn limit (only a side that plays on this screen)
+//player's turn start and plan; then the screen shows what the AI deployed and the next side; then the
+//reinforcements with their alerts, and the save (after them, #93: a reload during the turn has them).
+//True when the side that ended lost at the turn limit (only a side that plays on this screen)
 export function endGameTurn(game: Game): boolean {
 	const m = game.scenario.map;
 	m.delMoveSel();
@@ -150,7 +150,6 @@ export function endGameTurn(game: Game): boolean {
 	};
 	const ended = endTurn(s, (st, events) => {
 		turnStarted(st, events);
-		game.state.save();
 		game.setCurrentSide();
 	});
 	if (ended.kind !== "endTurn") return false;
@@ -158,6 +157,7 @@ export function endGameTurn(game: Game): boolean {
 	if (s.ended !== null && s.ended.kind === "turnLimit") return true;
 	mirrored(game);
 	arrived(game, ended.arrived);
+	game.state.save();
 	return false;
 }
 
