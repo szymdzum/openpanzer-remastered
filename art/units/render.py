@@ -4,7 +4,7 @@
 #   blender -b -P render.py -- pixel REFERENCE.png OUT.png   the strip in the PG2 manner, 1x and @2x
 #   blender -b -P render.py -- strip OUT.png [ELEV] [PXM] [SCALE]   a smooth strip (SCALE 2 for @2x)
 #   blender -b -P render.py -- fit REFERENCE.png             the camera angle and scale that match it
-#   blender -b -P render.py -- side DRAWING.png OUT.png      the side laid over a scale drawing
+#   blender -b -P render.py -- side DRAWING.png OUT.png [PXM NOSE GROUND]   the side over a scale drawing
 #   blender -b -P render.py -- view OUT.png ELEV TURN        a large smooth render, to look at
 #   blender -b -P render.py -- scene OUT.blend               a scene for the Blender app
 import math
@@ -454,7 +454,8 @@ if __name__ == "__main__":
 	elif args[0] == "scene":
 		scene(os.path.abspath(args[1]))
 	elif args[0] == "side":
-		side(os.path.abspath(args[1]), os.path.abspath(args[2]))
+		# side DRAWING OUT [PX_PER_METRE NOSE_COLUMN GROUND_ROW]: the drawing's scale (Panzer IV: 269 248 733)
+		side(os.path.abspath(args[1]), os.path.abspath(args[2]), *(float(x) for x in args[3:6]))
 	elif args[0] == "view":
 		view(os.path.abspath(args[1]), float(args[2]), float(args[3]))
 	elif args[0] == "fit":

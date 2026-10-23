@@ -1,5 +1,8 @@
 # Unit sprites from 3D models
 
+The way of working is the project skill `.claude/skills/making-unit-sprites/`; each unit's notes
+are in `notes/`.
+
 The infantry scripts (`soldier.py`, `mixamo_soldier.py`) are a parked pilot: docs/ASSETS.md.
 
 Blender scripts that build a unit as a model and render it as a PG2 strip. docs/ASSETS.md says
@@ -16,6 +19,9 @@ this folder:
 | `blender -b -P compare.py -- OLD.png NEW.png OUT.png [ZOOM]` | the old strip over the new one |
 | `blender -b -P mockup.py -- MAP.png OLD.png NEW@2x.png OUT.png` | both on a piece of a map, at 2x |
 | `blender -b -P measure.py -- STRIP.png` | the box, centre and main colours of each frame |
+| `python3 find_unit.py "Pz IVH"` (or `--icon pa131`) | a unit's strip and the scenarios that start with it on the map |
+| `blender -b -P drawing_profile.py -- ref.png` | a side drawing's outline, column by column, to measure from |
+| `blender -b -P check_frames.py -- OLD.png NEW.png` | the gate: area, foot line, mass per frame against the old strip |
 | `blender -b -P soldier.py -- frame OUT.png germany REF.png 4` | the built (MPFB 2) infantryman, one frame; needs the MPFB extension |
 | `NATION=germany blender -b -P mixamo_soldier.py -- frame OUT.png mixamo/CHAR.fbx mixamo/ANIM.fbx 1 REF.png 4` | the Mixamo infantryman, one frame; the FBX files are downloaded by hand into `mixamo/` |
 | `blender -b -P figure_sheet.py -- OLD NEW NEW@2x OLD NEW NEW@2x OUT.png` | old infantry frame 4 next to new figures |
