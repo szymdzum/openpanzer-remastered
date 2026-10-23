@@ -108,13 +108,14 @@ test("After a move along a turning path the unit faces the way the engine set, n
 	uiSettings.quickAnimation = true;
 	const map = game.scenario.map;
 	//A unit of the side playing, to a hex whose path ends turned away from the straight line to it:
-	//the animation draws the unit along that last step
+	//the animation draws the unit along that last step. A hex it can stop on: not one its side holds (#74)
 	const straight = (a: { row: number; col: number }, b: { row: number; col: number }) =>
 		GameRules.getDirection(a.row, a.col, b.row, b.col);
 	let move: { unit: Unit; to: { row: number; col: number } } | undefined;
 	for (const unit of map.getUnits().filter((u) => u.player.id === map.currentPlayer.id)) {
 		const range = GameRules.getMoveRange(map, unit);
 		const to = range.find((c) => {
+			if (!c.canMove) return false;
 			const cells = GameRules.getShortestPath(unit.getPos(), c, range);
 			return cells.length > 2 && Math.abs(straight(cells[cells.length - 2], c) - straight(unit.getPos(), c)) > 1;
 		});

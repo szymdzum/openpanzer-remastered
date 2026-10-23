@@ -4,6 +4,7 @@
 //since #128 it is toData's state, src/savegame.ts)
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
+import { smallGame } from "./smallgame";
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test("a hex counter doesn't go below 0", async () => {
@@ -73,4 +74,13 @@ test("an enemy on a hex the attacker's side doesn't spot can be attacked only af
 	target.tempSpotted = true;
 	expect(h.getAttackableUnit(atk, airMode)).toBe(target);
 	uiSettings.noFOW = noFOW;
+});
+
+//A Me-109 over an infantry: the hex lets go of the aircraft by its id, the infantry stays
+test("taking an aircraft off a hex leaves the ground unit under it", () => {
+	const { map } = smallGame([[115, 0, 3, 3], [159, 0, 3, 3], [504, 1, 7, 7]]);
+	const h = map.map[3][3];
+	h.delUnit(h.airunit!);
+	expect(h.airunit).toBeNull();
+	expect(h.unit!.id).toBe(0);
 });

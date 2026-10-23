@@ -10,7 +10,9 @@ import type { World } from "../src/core/types";
 import { Equipment } from "../src/equipment";
 import { aiDefaultConfig, unitClass } from "../src/prototypes";
 import type { SavedGame } from "../src/state";
+import { step } from "../src/core/step";
 import { setupOf } from "./corefiles";
+import { handWorld } from "./coreworld";
 import { smallGameData } from "./smallgame";
 
 const at = (saved: SavedGame, row: number, col: number) => saved.state.map.hexes[row * saved.state.map.cols + col];
@@ -54,6 +56,33 @@ test("The AI plans its turn with units on and next to victory hexes with no owne
 		at(saved, row, col).owner = -1;
 	}
 	expect(firstOrders(worldOf(saved), 1).length).toBeGreaterThan(0);
+});
+
+//A Me-109 over a fortress on an objective of its side, an infantry next to it: the fighter flies off,
+//which frees the air above the hex, not the ground the fortress keeps. The infantry stays off it, and
+//every order played leaves each unit on its hex
+test("The AI doesn't plan a unit onto a hex its own unit of the same kind keeps: an aircraft leaving frees only the air (#74)", () => {
+	const ME_109 = 159, FESTUNG = 107, INFANTERIE = 115, TP7 = 273;
+	let w = handWorld({ rows: 10, cols: 10, units: [
+		{ eqid: ME_109, owner: 0, row: 4, col: 4 },
+		{ eqid: FESTUNG, owner: 0, row: 4, col: 4 },
+		{ eqid: INFANTERIE, owner: 0, row: 4, col: 5 },
+		{ eqid: TP7, owner: 1, row: 8, col: 8 },
+	] });
+	w.state.rng = { game: 1, ai: 1 };
+	w.state.map.hexes[4 * 10 + 4].victorySide = 0;
+	w.state.objectives[0].push({ row: 4, col: 4 });
+	const orders = firstOrders(w, 0).map((o) => "command" in o ? o.command : null);
+	expect(orders).toContainEqual({ type: "move", unit: 0, to: { row: 4, col: 5 } }); //the fighter leaves
+	expect(orders).not.toContainEqual(expect.objectContaining({ type: "move", unit: 2, to: { row: 4, col: 4 } }));
+	for (const cmd of orders) {
+		const r = cmd === null ? null : step(w, cmd);
+		if (r !== null && r.ok) w = r.world;
+	}
+	for (const u of w.state.units) {
+		const h = w.state.map.hexes[u.row * 10 + u.col];
+		expect([h.unit, h.air], "unit " + u.id).toContain(u.id);
+	}
 });
 
 //The units the AI buys at the start of its turn on the small game, with 3000 prestige and its ground

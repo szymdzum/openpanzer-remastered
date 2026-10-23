@@ -114,15 +114,11 @@ function playAI(w: World, check: (step: string, overwritten: Unit[]) => boolean)
 	}
 }
 
-//The first step after which an invariant doesn't hold, with what. A unit another one was moved onto
-//(#74, its own drill below) is off the map without knowing it: that it isn't on its hex is let
-//through, the rest is still checked
+//The first step after which an invariant doesn't hold, with what
 function firstBreak(w: World): string | null {
 	let found: string | null = null;
-	const orphans = new Set<Unit>();
-	playAI(w, (step, overwritten) => {
-		overwritten.forEach((u) => orphans.add(u));
-		const v = violations(w, orphans);
+	playAI(w, (step) => {
+		const v = violations(w);
 		if (v.length) found = "after " + step + ":\n" + v.join("\n");
 		return found !== null;
 	});
@@ -331,6 +327,6 @@ drill("#74 the AI moves units onto hexes its own units hold", "dr9fr03-t2.json.g
 	});
 	if (!moves) setup.push("the AI made no move");
 	return broken;
-});
+}, true);
 
 //(#75, tempSpotted cleared against the side on display: pinned on the core, test/core.test.ts)

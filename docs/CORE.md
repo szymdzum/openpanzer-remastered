@@ -163,6 +163,11 @@ player's move that spotted nothing new and wasn't surprised, cleared by an attac
 reinforcement, an upgrade or a disband, set by a retreat of a human player's unit too (#171). The undo
 plays the old single slot back, #140 and #141 included; the states before are the caller's.
 
+**The move's hex.** A move can end on a hex that holds no unit of the mover's kind (a ground or naval
+unit, or an air unit: an aircraft stops over a tank), or an enemy one its side doesn't see, which
+stops it before (the surprise). The old engine put the unit over what was there and the unit under it
+fell off the map, keeping its zone of control (#74, mostly the AI's moves after a surprise).
+
 **What the old engine does and the core does too:** a retreat is a move (fuel, capture, undo), a
 command doesn't check whose unit it moves (#147), a mount, unmount or undo selects the unit (a unit
 leaving its carrier gets back on it unless it can land), a campaign's losses count in the campaign
@@ -268,9 +273,9 @@ tutorial's script) is its memory, not state (D6). The session calls it in the ol
 
 **A plan, then a queue.** The old AI plans its whole turn at the turn's start, on the state as it is,
 then plays the plan whatever happens in between (Game.processAction): a move to where the plan said
-along the move range then (a hex its own unit didn't leave is taken over, #74), an attack that
-the old game skipped when the target was out of range or gone (the step refuses it: nothing
-changes either way), a resupply, a reinforcement. A `next` that decided from the state of each
+along the move range then (refused when the unit that was to leave the hex is still there, #74), an
+attack that the old game skipped when the target was out of range or gone (the step refuses it:
+nothing changes either way), a resupply, a reinforcement. A `next` that decided from the state of each
 moment would decide differently: the plan's random draws, the hexes it took and freed, the kills it
 expected come from that one moment. So the AI's `plan` is the old planTurn and `next` hands its
 queue out.
@@ -280,9 +285,10 @@ attack score draws one `randomFactor[random(0, 7)]` unless it returns early (a h
 expected killed, an attack with too many losses), the purchases one per unit picked. A unit that did
 nothing in its first pass gets a second one, its moves scored again with new draws. Its scores see
 a unit on another hex as a copy of it standing there, the state unchanged (the old AI's Unit.setHex).
-Kept: #17 (the attacks count the hidden units' support fire), #21 (the reinforcement budget is the
-prestige before the purchases), #22 (the purchases cut the equipment lists, which are in the state,
-D9 revised), #74, #82 (it never mounts), the objectives in their list's order (D7, so #141's order
+A hex an AI unit leaves counts as free for a unit of its kind only: an aircraft leaving frees the air
+above a ground unit, not the ground (#74). Kept: #17 (the attacks count the hidden units' support fire),
+#21 (the reinforcement budget is the prestige before the purchases), #22 (the purchases cut the
+equipment lists, which are in the state, D9 revised), #82 (it never mounts), the objectives in their list's order (D7, so #141's order
 after an undo), the attack estimate's #87 and #90. Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 

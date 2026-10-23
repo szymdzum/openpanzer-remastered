@@ -59,8 +59,8 @@ export type Board = Pick<Restored, "m" | "scenario" | "game" | "toData" | "Equip
 
 type Add = (kind: string, text: string) => void;
 
-//What doesn't hold, a few of each kind. Units in offMap aren't checked for being on their hex
-export function violations(w: Restored, offMap: Set<Unit> = new Set()): string[] {
+//What doesn't hold, a few of each kind
+export function violations(w: Restored): string[] {
 	if (w.uiSettings.noFOW) return ["fog of war is off: the spotting counters can't be read"];
 	const out: string[] = [];
 	const kinds: Record<string, number> = {};
@@ -68,7 +68,7 @@ export function violations(w: Restored, offMap: Set<Unit> = new Set()): string[]
 		kinds[kind] = (kinds[kind] || 0) + 1;
 		if (kinds[kind] <= 3) out.push(text);
 	};
-	unitViolations(w, offMap, add);
+	unitViolations(w, add);
 	const board = recompute(w);
 	for (let r = 0; r < w.m.rows; r++)
 		for (let c = 0; c < w.m.cols; c++) {
@@ -81,7 +81,7 @@ export function violations(w: Restored, offMap: Set<Unit> = new Set()): string[]
 }
 
 //Every unit once in the unit list, with its owner's player, on the hex it says it is on
-function unitViolations(w: Restored, offMap: Set<Unit>, add: Add) {
+function unitViolations(w: Restored, add: Add) {
 	const { m } = w;
 	const ids = new Set<number>();
 	for (const u of m.getUnits()) {
@@ -90,7 +90,7 @@ function unitViolations(w: Restored, offMap: Set<Unit>, add: Add) {
 		if (u.player !== m.getPlayer(u.owner))
 			add("player", unitName(u) + " has a player that isn't the map's player#" + u.owner);
 		const h = u.getHex();
-		if (h && h.unit !== u && h.airunit !== u && !offMap.has(u))
+		if (h && h.unit !== u && h.airunit !== u)
 			add("unit hex", unitName(u) + " is on " + hexName(h) + ", which holds "
 				+ [h.unit, h.airunit].map((x) => x ? unitName(x) : "nothing").join(" and "));
 		if (u.destroyed) add("destroyed", unitName(u) + " is destroyed and still in the unit list");

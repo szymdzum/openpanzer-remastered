@@ -618,7 +618,7 @@ invariant tests:
 2. AI purchases stop mutating the shared equipment lists (#22).
 3. `tempSpotted` by the unit's own side (#75); the AI's fog leaks (#17).
 4. The counter drift (#72, #73).
-5. A guard on the move's destination, the AI stacking (#74).
+5. A guard on the move's destination, the AI stacking (#74). Done.
 6. Close the surprise and input race (#58).
 7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126).
 8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128). Done, with #142, #149

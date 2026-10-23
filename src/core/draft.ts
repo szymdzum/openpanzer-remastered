@@ -112,7 +112,8 @@ function leaveHex(d: Draft, hex: number, id: UnitId) {
 	if (w.air === id) w.air = null;
 }
 
-//Puts the unit in the hex's slot of what it is now, air or ground, over what was there (Hex.setUnit, #74)
+//Puts the unit in the hex's slot of what it is now, air or ground, over what was there (Hex.setUnit): the
+//move's check keeps a unit off a slot another one holds (#74)
 function enterHex(d: Draft, hex: number, u: UnitState) {
 	const air = unitData(d, u).movmethod === movMethod.air;
 	const w = writeHex(d, hex);
