@@ -120,6 +120,7 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	const cols = w.state.map.cols;
 	const slot = scratch(w);
 	for (let i = 0; i < c.length; i++) slot[c[i].row * cols + c[i].col] = i + 1;
+	for (const cell of c) if (cell.range > 0) cell.cin = -1; //not reached yet (relax)
 
 	const s: StepRules = { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range,
 		groundOrSea: isGround(w, u) || isSea(w, u) };
@@ -175,12 +176,10 @@ function enterCost(w: World, hex: number, s: StepRules): number {
 }
 
 //The entry and exit costs of to, entered from from: set the first time, lowered when from is cheaper.
-//Kept bug #167: an entry cost of 0 counts as not set, so a neighbour of the start gets another
-//neighbour's exit cost, then its exit cost goes up when it is lowered again: some ranges lose hexes
+//Not set is an entry cost below 0 (expand): a neighbour of the unit's hex is entered at 0 (#167: 0
+//counted as not set, so another neighbour overwrote it and its exit cost went up, and ranges lost hexes)
 function relax(from: MoveCell, to: MoveCell) {
-	if (to.cin === 0) to.cin = from.cout;
-	if (to.cout === 0) to.cout = to.cin + to.cost;
-	if (to.cin > from.cout && to.cost <= STOP) {
+	if (to.cin < 0 || (to.cin > from.cout && to.cost <= STOP)) {
 		to.cin = from.cout;
 		to.cout = to.cin + to.cost;
 	}
