@@ -507,6 +507,22 @@ them, and the game runs on the session.
   engine) still plays the old AI and end of turn. test/gameturn.test.ts plays Game itself both ways,
   every player the AI as the replay makes them, 3 turns, a save in the middle of an AI's turn and the
   load: the same actions, states, combat log, images and screen calls on harness/replay.sh's 16 items.
+- The screen's rules on the core (src/corerules.ts, `CoreRules`): the GameRules entries the UI, the
+  render loop and the selection call (`MapSelection.rules`, set by Game.init), with their shapes. What a
+  unit is by itself (the render loop asks it of every unit it draws) reads the unit object as the
+  core's unit state on a world of the equipment alone; what the map decides is asked of the world made
+  from the objects at the call, so the harness's and the UI's writes are in it. test/corerules.test.ts
+  compares every rule with the old one on the fixtures after random commands. `BENCH=1` (2026-10-23, a
+  loaded laptop), per call:
+
+  | | Old engine | Core |
+  |---|---|---|
+  | Render loop, per unit drawn (move range, ammo, fuel, ground, bridge) | 0.24-0.47 µs | 0.29-0.54 µs |
+  | A click's move and attack hexes | 4-458 µs | 237-489 µs |
+  | The estimate under the attack cursor | 3-16 µs | 132-214 µs |
+  | The context buttons (5 rules) | 1-2 µs | 430-805 µs |
+
+  The map's rules pay for the world made from the objects (about 150 µs): under a millisecond a click.
 
 ### Not worth it now
 

@@ -45,6 +45,7 @@
 				"src/commands.ts",
 				"src/context.ts",
 				"src/coreplay.ts",
+				"src/corerules.ts",
 				"src/equipment.ts",
 				"src/gamerules.ts",
 				"src/leaders.ts",

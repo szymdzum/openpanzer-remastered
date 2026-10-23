@@ -28,7 +28,7 @@ import {
 import { hexstyle, tooltipColor, tooltipStyle } from "./style";
 import { moveSoundByMoveMethod, soundData } from "./sound";
 import { attackAnimationByClass } from "./animation";
-import { GameRules } from "./gamerules";
+import { CoreRules } from "./corerules";
 import type { Unit } from "./unit";
 import type { Player, ReinforceResults } from "./map";
 import { type MoveAnimationCBData, Render } from "./render";
@@ -235,7 +235,7 @@ export function UI(this: UI, game: Game) {
 			updateStatusBarLocation(row, col);
 
 		//Set the airMode depending on current unit automatically
-		uiSettings.airMode = GameRules.isAir(map.currentUnit);
+		uiSettings.airMode = CoreRules.isAir(map.currentUnit);
 		toggleButton($("air"), uiSettings.airMode);
 		updateUnitContextWindow(map.currentUnit); //Update after an action not only on select/deselect
 		return false;
@@ -408,7 +408,7 @@ function uiUnitSelect(unit: Unit | null) {
 //without it the move finds its path in the unit's move range
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	var mm = unit.unitData().movmethod;
-	if (GameRules.isTrain(unit))
+	if (CoreRules.isTrain(unit))
 		mm = movMethod.tracked; //Trains use the tracked move sound
 	//Save render properties before moving
 	var r = getRenderRange(unit);
@@ -568,7 +568,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 	var result = animationCBData.result;
 	var a = result.attacking;
 	var d = result.defending;
-	var renderRange = GameRules.getUnitAttackRange(a.unit);
+	var renderRange = CoreRules.getUnitAttackRange(a.unit);
 
 	finish({
 		onLosses: function() {
@@ -681,7 +681,7 @@ function updateUnitContextWindow(u?: Unit) {
 	clearTag("unit-context");
 
 	if (u && u.player && u.player.id == map.currentPlayer.id) {
-		if (GameRules.canMount(u)) {
+		if (CoreRules.canMount(u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -691,7 +691,7 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.mount = true;
 		}
 
-		if (GameRules.canEmbark(map.map, u) || GameRules.canDisembark(map.map, u)) {
+		if (CoreRules.canEmbark(map.map, u) || CoreRules.canDisembark(map.map, u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -701,7 +701,7 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.embark = true;
 		}
 
-		if (GameRules.canResupply(map.map, u)) {
+		if (CoreRules.canResupply(map.map, u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -711,8 +711,8 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.resupply = true;
 		}
 
-		if (map.currentPlayer.prestige >= GameRules.calculateUnitCostPerStrength(u)) {
-			if (GameRules.canReinforce(map.map, u, false)) {
+		if (map.currentPlayer.prestige >= CoreRules.calculateUnitCostPerStrength(u)) {
+			if (CoreRules.canReinforce(map.map, u, false)) {
 				nbuttons++;
 				div = addTag("unit-context", "div");
 				div.className = "smallButtonSubMenu";
@@ -721,7 +721,7 @@ function updateUnitContextWindow(u?: Unit) {
 				div.onclick = function() { unitContextButton("reinforce", u); };
 				contextButtons.reinforce = true;
 			}
-			if (GameRules.canReinforce(map.map, u, true)) {
+			if (CoreRules.canReinforce(map.map, u, true)) {
 				nbuttons++;
 				div = addTag("unit-context", "div");
 				div.className = "smallButtonSubMenu";
@@ -788,7 +788,7 @@ function updateUnitInfoWindow(u: UIUnitOrEntry) {
 		else
 			uinfo = u.unitData();
 		ammo = u.getAmmo();
-		if (GameRules.unitUsesFuel(u))
+		if (CoreRules.unitUsesFuel(u))
 			fuel = u.getFuel();
 		exp = u.experience;
 		ent = u.entrenchment;
@@ -1070,7 +1070,7 @@ function updateEquipmentWindow(eqclass?: number) {
 			//Automatically set transport on transport list if user has not selected a new transport
 			//Check if user selected equipment unit for upgrade can be transported
 			if (u.transport !== null && $<EqUserSelElement>("eqUserSel").eqtransport == -1
-				&& ($<EqUserSelElement>("eqUserSel").equnit == -1 || GameRules.isTransportable($<EqUserSelElement>("eqUserSel").equnit)))
+				&& ($<EqUserSelElement>("eqUserSel").equnit == -1 || CoreRules.isTransportable($<EqUserSelElement>("eqUserSel").equnit)))
 				$<EqUserSelElement>("eqUserSel").eqtransport = u.transport.eqid;
 
 			div.setAttribute("selectedUnit", ud.name); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
@@ -1169,7 +1169,7 @@ function updateEquipmentWindow(eqclass?: number) {
 	//Add the transport to the list if unit can be transported
 	eqTransportSelected = $<EqUserSelElement>("eqUserSel").eqtransport;
 	hasTransportSelected = false;
-	if (GameRules.isTransportable(eqUnitSelected) || eqTransportSelected > 0) {
+	if (CoreRules.isTransportable(eqUnitSelected) || eqTransportSelected > 0) {
 		eu = Equipment.equipment[eqUnitSelected];
 		eqUnitList = Equipment.getCountryEquipmentByClass(unitClass.groundTransport, country, sortProperty, sortOrder);
 
@@ -1248,11 +1248,11 @@ function updateEquipmentCosts() {
 			eqcountry = Equipment.equipment[eqUnitSelected].country - 1;
 			if (eqclass == unitClass.flak) eqclass = unitClass.airDefence;
 			if (uclass == eqclass && ucountry == eqcountry)
-				upCost = GameRules.calculateUpgradeCosts(unit, eqUnitSelected, eqTransportSelected);
+				upCost = CoreRules.calculateUpgradeCosts(unit, eqUnitSelected, eqTransportSelected);
 		}
 		//In campaigns only core units can be sold
 		if (game.campaign == null || unit.isCore)
-			sellCost = GameRules.calculateUnitSellCost(unit);
+			sellCost = CoreRules.calculateUnitSellCost(unit);
 	}
 
 	//-1 cost: can't be bought
@@ -1266,7 +1266,7 @@ function updateEquipmentCosts() {
 		else if (game.campaign !== null && game.campaign.country !== eqcountry)
 			buyCost = -1;
 		else
-			buyCost = GameRules.calculateUnitCosts(eqUnitSelected, eqTransportSelected);
+			buyCost = CoreRules.calculateUnitCosts(eqUnitSelected, eqTransportSelected);
 	}
 
 	UIBuilder.showEquipmentCosts(prestige, buyCost, upCost, sellCost);
@@ -1341,7 +1341,7 @@ function uiAddUnitBox(parentTagName: string, u: UIUnitOrEntry) {
 			icons.className = "eqUnitBoxIconsMenu";
 			if (!u.hasFired) status += ">";
 			if (!u.hasMoved) status += "|";
-			if ((GameRules.unitUsesFuel(u) && u.fuel < 5) || u.ammo < 2)
+			if ((CoreRules.unitUsesFuel(u) && u.fuel < 5) || u.ammo < 2)
 				status += ";";
 		} else {
 			icons.className = "eqUnitBoxIcons";
@@ -1440,8 +1440,8 @@ function getRenderRange(unit: Unit | null) {
 	if (unit === null)
 		return 0;
 
-	var range = GameRules.getUnitMoveRange(unit);
-	var r = GameRules.getUnitAttackRange(unit);
+	var range = CoreRules.getUnitMoveRange(unit);
+	var r = CoreRules.getUnitAttackRange(unit);
 	if (r > range) range = r;
 	r = unit.unitData().spotrange;
 	if (r > range) range = r;
@@ -1592,9 +1592,9 @@ function uiScaleMap(level: number) {
 				var unit = hex.getUnit(uiSettings.airMode);
 				if (unit && unit.player.side == side && text == null) {
 					var id = "gsttu" + unit.id;
-					if (GameRules.unitLowAmmo(unit, 1))
+					if (CoreRules.unitLowAmmo(unit, 1))
 						this.showSmallToolTip("No Ammo", row, col, 0, id);
-					if (GameRules.unitLowFuel(unit, 1))
+					if (CoreRules.unitLowFuel(unit, 1))
 						this.showSmallToolTip("No Fuel", row, col, 0, id);
 				}
 			}
@@ -1706,7 +1706,7 @@ function uiScaleMap(level: number) {
 		switch (id) {
 			case "air": {
 				//Leaving air mode deselects an air unit
-				if (uiSettings.airMode && GameRules.isAir(map.currentUnit))
+				if (uiSettings.airMode && CoreRules.isAir(map.currentUnit))
 					handleUnitDeselect();
 				uiSettings.airMode = !uiSettings.airMode;
 				toggleButton($("air"), uiSettings.airMode);
