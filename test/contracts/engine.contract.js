@@ -766,6 +766,8 @@ function runEngineContract(env) {
 			// Map.endTurn: the next AI player plans its turn here. On this repo the game's end of turn on
 			// its session: the reinforcements arrive in it, after the side shown is set
 			alerts = [];
+			// The UI's end turn starts the log again before the next turn's start logs into it (#86)
+			if (human) CL.reset();
 			if (X) {
 				turnEnd = X.endTurn(sc, localSide);
 				defeat = turnEnd.defeat;
@@ -788,10 +790,7 @@ function runEngineContract(env) {
 					deployed = [r, waiting.filter((x) => left.indexOf(x) < 0), alerts];
 				}
 				log = logHash();
-				if (human) {
-					CL.reset();
-					selected = selectFirstUnit();
-				}
+				if (human) selected = selectFirstUnit();
 			}
 			return [defeat, sc.checkVictory(), deployed, selected, sc.dayTurn,
 				[sc.date.getFullYear(), sc.date.getMonth(), sc.date.getDate()], ended, hash(), log];

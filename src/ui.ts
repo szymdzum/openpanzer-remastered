@@ -1769,13 +1769,14 @@ function uiScaleMap(level: number) {
 						game.state.saveSettings();
 					}
 					if (map.currentPlayer.type == playerType.humanLocal) {
+						//The log starts again before the next turn's start logs its resupplies and reinforcements (#86)
+						CombatLog.reset();
 						game.endTurn();
 						if (game.gameEnded && game.gameStarted) {
 							uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
 						} else {
 							countries = map.getCountriesBySide(game.spotSide);
 							UIBuilder.setDefaultUserSelections();
-							CombatLog.reset();
 							updateEquipmentWindow(unitClass.tank); //Refresh equipment window for the new player
 							updateUnitContextWindow();
 							uiEndTurnInfo();

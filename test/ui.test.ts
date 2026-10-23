@@ -199,3 +199,30 @@ test("An attack with nothing to animate ends as the same attack animated, its un
 	expect(animated.units.every((u) => u[1] as number > 0)).toBe(true);
 	expect(still).toEqual(animated);
 }, 60_000);
+
+test("A human's end turn keeps the combat log entries of the next turn's start (#86)", async () => {
+	const { game, ui } = await uiGame("drpzop01.xml");
+	const { CombatLog } = await import("../src/combatlog");
+	const { touched } = await import("../src/context");
+	const { GameRules } = await import("../src/gamerules");
+	const { terrainType } = await import("../src/prototypes");
+	const map = game.scenario.map;
+	const endTurn = () => {
+		ui.mainMenuButton("endturn");
+		ui.mainMenuButton("endturn"); //the second click confirms
+	};
+	//Every player a person: the last one's end of turn starts a new round, which resupplies a unit out
+	//of ammo in a city with no enemy around
+	const players = map.getPlayers();
+	for (let i = 1; i < players.length; i++) endTurn();
+	expect(map.currentPlayer.id).toBe(players[players.length - 1].id);
+	const unit = map.getUnits().find((u) => u.player.id === players[0].id && u.unitData().ammo > 0
+		&& map.map[u.getPos().row][u.getPos().col].terrain === terrainType.City
+		&& GameRules.getAdjacent(u.getPos().row, u.getPos().col).every((c) => !GameRules.isEnemy(u, map.map[c.row]?.[c.col]?.unit ?? null)))!;
+	unit.ammo = 0;
+	touched();
+	endTurn();
+	expect(map.currentPlayer.id).toBe(players[0].id);
+	expect(unit.ammo).toBeGreaterThan(0);
+	expect(CombatLog.log.resupply[unit.id]).toMatchObject({ eqid: unit.eqid, ammo: unit.ammo });
+}, 60_000);
