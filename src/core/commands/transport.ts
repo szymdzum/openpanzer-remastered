@@ -1,6 +1,6 @@
 /**
  * Mount and unmount a ground transport, embark on and disembark from an air or naval one. Mount and
- * unmount aren't refused where canMount and canUnmount would (#147)
+ * unmount are refused where canMount and canUnmount refuse them (#147: the old engine played them)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -12,6 +12,7 @@ import { changeUnit, emit, spotOff, spotOn, writePlayer, writeUnit } from "../dr
 import { disembarkPositions, embarkTypeOf } from "../movement";
 import { reselect } from "../moves";
 import type { Draft, CommandHandler, UnitId, World } from "../types";
+import { canMount, canUnmount } from "../units";
 import { unitById } from "../world";
 import { playerAt, unitCheck } from "./common";
 
@@ -33,7 +34,7 @@ export function setMounted(d: Draft, id: UnitId, mounted: boolean) {
 
 export const mount: CommandHandler<CommandOf<"mount">> = {
 	check(w, cmd) {
-		return unitCheck(w, cmd.unit);
+		return unitCheck(w, cmd.unit, (u) => canMount(w, u), "can't mount");
 	},
 	run(d, cmd) {
 		setMounted(d, cmd.unit, true);
@@ -44,7 +45,7 @@ export const mount: CommandHandler<CommandOf<"mount">> = {
 
 export const unmount: CommandHandler<CommandOf<"unmount">> = {
 	check(w, cmd) {
-		return unitCheck(w, cmd.unit);
+		return unitCheck(w, cmd.unit, canUnmount, "can't unmount");
 	},
 	run(d, cmd) {
 		setMounted(d, cmd.unit, false);

@@ -197,16 +197,21 @@ test("Mount and unmount a unit with a transport", () => {
 	expect(inf.isMounted).toBe(false);
 });
 
-//Kept (#147): the engine resupplies, reinforces and mounts units the rules refuse, so the commands
-//allow it (the UI's context button can be older than the unit's state). The fix refuses them
-test.fails("#147: resupply, reinforce and mount refuse what GameRules refuses, and change nothing", () => {
+//The UI's context button can be older than the unit's state: the commands refuse what the rules
+//refuse, and change nothing (the old engine played them, the score too)
+test("Resupply, reinforce, mount and unmount refuse a unit the rules refuse, and change nothing (#147)", () => {
 	const inf = unitAt(3, 3), tank = unitAt(4, 4);
 	players[0].prestige = 1000;
 	const before = state();
 	const score = players[0].score;
+	expect(refusal({ type: "resupply", unit: inf.id })).toBe("can't resupply"); //full
+	expect(refusal({ type: "reinforce", unit: tank.id })).toBe("can't reinforce"); //full strength
+	expect(refusal({ type: "reinforce", unit: tank.id, overstrength: true })).toBe("can't reinforce"); //no experience
+	expect(refusal({ type: "mount", unit: inf.id })).toBe("can't mount"); //no transport
+	expect(refusal({ type: "unmount", unit: inf.id })).toBe("can't unmount"); //not mounted
 	for (const cmd of [{ type: "resupply", unit: inf.id }, { type: "reinforce", unit: tank.id },
-		{ type: "mount", unit: inf.id }] as Command[])
-		execute(scenario, cmd); //full, full strength, no transport
+		{ type: "mount", unit: inf.id }, { type: "unmount", unit: inf.id }] as Command[])
+		execute(scenario, cmd);
 	expect([state(), players[0].score, inf.isMounted]).toEqual([before, score, false]);
 });
 

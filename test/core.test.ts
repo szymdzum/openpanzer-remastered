@@ -241,6 +241,18 @@ test("A unit's range doesn't go through an enemy it sees: a 7TP next to a Pz IIA
 	expect(cells.find((x) => x.row === 4 && x.col === 4)).toBeUndefined(); //only through it for 2 points
 });
 
+test("A reinforcement worth no strength is refused and changes nothing: 1 point missing next to three enemies outside a city (#147)", () => {
+	const w = handWorld({ rows: 6, cols: 6, units: [{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, strength: 9 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 }, { eqid: TP7, owner: 1, row: 1, col: 2 }, { eqid: TP7, owner: 1, row: 3, col: 2 }] });
+	w.state.players[0].prestige = 1000;
+	expect(step(w, { type: "reinforce", unit: 0 })).toEqual({ ok: false, refusal: { reason: "can't reinforce" } }); //1 / 1.3 / 3
+	//two enemies around: 1 / 1.3 / 1.5 rounds to 1
+	const two = handWorld({ rows: 6, cols: 6, units: [{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, strength: 9 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 }, { eqid: TP7, owner: 1, row: 1, col: 2 }] });
+	two.state.players[0].prestige = 1000;
+	expect(unitById(played(step(two, { type: "reinforce", unit: 0 })).world, 0)).toMatchObject({ strength: 10, hasMoved: true });
+});
+
 test("A hidden enemy's hex is in the move range: the move ends in a surprise", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 },
@@ -453,10 +465,11 @@ test("Mounted infantry attacked gets off its truck to fight", () => {
 //An SS infantry leaving its Ju-52 on an airfield: selecting it (as a mount does last) puts it back on
 //the carrier when no neighbour lets it land (MapSelection.select), and leaves it landing otherwise
 test("A unit leaving its carrier gets back on it when selected, unless it can still land", () => {
-	const SS_INFANTRY = 108, JU52 = 176;
+	//(a mount selects the unit: it has a truck to mount, #147)
+	const SS_INFANTRY = 108, JU52 = 176, OPEL_BLITZ = 157;
 	for (const [around, carrier] of [[terrainType.Clear, -JU52], [terrainType.Ocean, JU52]]) {
 		const w = handWorld({ rows: 5, cols: 5, terrain: (r, c) => r === 2 && c === 2 ? terrainType.Airfield : around,
-			units: [{ eqid: SS_INFANTRY, owner: 0, row: 2, col: 2, carrier: -JU52 }] });
+			units: [{ eqid: SS_INFANTRY, owner: 0, row: 2, col: 2, carrier: -JU52, transport: { eqid: OPEL_BLITZ, ammo: 4, fuel: 55 } }] });
 		expect(unitById(played(step(w, { type: "mount", unit: 0 })).world, 0).carrier, "around: " + around).toBe(carrier);
 	}
 });
