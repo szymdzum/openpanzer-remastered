@@ -93,6 +93,8 @@ then assault, then overrun with tanks.
 - Move cost per hex comes from the movement table of the unit's move method (tracked, wheeled,
   leg, towed, air, naval...) and the ground condition: dry, frozen or mud (`movTableDry`,
   `movTableFrozen`, `movTableMud`). Roads, and bridges for their owner's side, use the road cost.
+  A move pays the hexes it enters, in movement points and fuel; the hex it leaves costs nothing
+  (#70).
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
   fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
   move (`getMoveRange`): a hidden enemy's zone doesn't. Air units ignore ZOC.

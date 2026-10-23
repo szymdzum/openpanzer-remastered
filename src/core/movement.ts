@@ -227,14 +227,14 @@ interface PathNode {
 }
 
 //The cheapest path from start to end through cells (GameRules.getShortestPath), start included,
-//[] when there is none. Each cell costs what entering it costs; the start keeps cost 1 (kept bug
-//#70: a move pays one point more than its range shows). The path's tie-breaks are the old
-//engine's: of cells as near, it takes the last in the list first. The old engine compares every
-//open cell at each turn; here a heap ordered by distance, then by place in the list (the later
-//first), gives the same cell, and a table by hex the neighbours to update (in any order: each is
-//updated from the same cell)
+//[] when there is none. Each cell costs what entering it costs; the start costs nothing, the unit
+//is already there (#70: it cost 1, so a move paid one point more than its range showed). The
+//path's tie-breaks are the old engine's: of cells as near, it takes the last in the list first.
+//The old engine compares every open cell at each turn; here a heap ordered by distance, then by
+//place in the list (the later first), gives the same cell, and a table by hex the neighbours to
+//update (in any order: each is updated from the same cell)
 export function shortestPath(start: Position, end: Position, cells: readonly { row: number; col: number; cost: number }[]): PathCell[] {
-	const first: PathNode = { index: 0, row: start.row, col: start.col, cost: 1, dist: 0, prev: null, open: true };
+	const first: PathNode = { index: 0, row: start.row, col: start.col, cost: 0, dist: 0, prev: null, open: true };
 	first.prev = first;
 	const byHex = new Map<number, PathNode[]>();
 	addNode(byHex, first);

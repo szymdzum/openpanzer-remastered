@@ -81,13 +81,17 @@ export async function runFixture(module: string, run: string, name: string, extr
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
 		c.apply(env, fixture.setup);
 	const actual = c.run(env);
+	return { expected: recorded(module, name, fixture, actual), actual };
+}
+
+//The results a contract run is compared with: the fixture's, or with UPDATE_CONTRACTS=1 the run's,
+//written into the fixture
+export function recorded(module: string, name: string, fixture: ContractFixture, actual: ContractFixture["results"]) {
 	if (process.env.UPDATE_CONTRACTS && process.env.CI)
 		throw new Error("UPDATE_CONTRACTS in CI: the contracts would pass by construction");
-	if (process.env.UPDATE_CONTRACTS) {
-		writeFixture(module, name, { ...fixture, results: actual });
-		return { expected: actual, actual };
-	}
-	return { expected: fixture.results, actual };
+	if (!process.env.UPDATE_CONTRACTS) return fixture.results;
+	writeFixture(module, name, { ...fixture, results: actual });
+	return actual;
 }
 
 //UPDATE_CONTRACTS=1 npm test: the fixture keeps the reference's state, setup and spotSide and

@@ -2,7 +2,7 @@
 //answered by the game's GameRules (rulesOn, test/coreadapter.ts) from toData of the same restored
 //state, must equal the recording
 import { expect, test } from "vitest";
-import { compareResults, contract, fixtures, readFixture, restoreState } from "./contracts";
+import { compareResults, contract, fixtures, readFixture, recorded, restoreState } from "./contracts";
 import { coreGameRules, oldSight } from "./coreadapter";
 import { createWorld } from "../src/core/create";
 import { unitById } from "../src/core/world";
@@ -25,7 +25,7 @@ test.each(fixtures("gamerules"))("GameRules contract on the core %s", async (nam
 	const GameRules = coreGameRules({ rulesOn, scenario, Equipment, toData, game: Rng.game });
 	const env = { GameRules, Equipment, terrainType, leaderType, map: scenario.map, fuzzRounds: fixture.fuzzRounds };
 	const actual = contract("gamerules", "runGameRulesContract").run(env);
-	expect(compareResults(fixture.results, actual), "the core differs from the recording").toBeNull();
+	expect(compareResults(recorded("gamerules", name, fixture, actual), actual), "the core differs from the recording").toBeNull();
 });
 
 //The core's state is toData's (docs/STATE.md): a world keeps the data and the state it was given as
