@@ -300,8 +300,8 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 }
 
 //The unit to the best scored hex of its move range or, mounted, of its transport's, if it beats where it
-//stands: the hex taken, the one it leaves freed, for the units of its kind (#74). A unit moved in its
-//transport can't fire that turn (#82)
+//stands: the hex taken, the one it leaves freed, for the units of its kind (#74, #225). A unit moved in
+//its transport can't fire that turn (#82)
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const moving = !(a.didMove || a.didResupplyReinforce);
@@ -313,8 +313,8 @@ function moveUnit(t: Planning, a: AIUnit) {
 		return;
 	}
 	const plan = s.plan, air = isAir(s.w, u);
-	plan.takenPositions.push(to.cell);
-	const freed = findFreed(plan, to.cell);
+	plan.takenPositions.push({ ...to.cell, air });
+	const freed = findFreed(plan, to.cell, air);
 	if (freed >= 0) plan.freedPositions.splice(freed, 1);
 	plan.freedPositions.push({ row: u.row, col: u.col, air });
 	if (to.mounted) t.queue.push({ type: "mount", unit: u.id });

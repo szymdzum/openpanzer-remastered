@@ -114,6 +114,33 @@ test("The AI scores the ground unit under an aircraft ordered away as staying: a
 	expect(score(3, 4, 4, fortressLeaves)).toBe(score(3, 4, 4, []) + 300);
 });
 
+//An empty enemy objective, a Pz IA next to it and a Me-109 with nothing to attack: the fighter, planned
+//first, flies over the objective, which takes the air above it, not the ground. The tank still moves
+//onto it, and takes it when the orders are played
+test("The AI's ground unit takes an empty enemy objective its fighter was ordered over: a taken hex is taken for the slot that moved there (#237, #225)", () => {
+	const ME_109 = 159, PZ_IA = 138, TP7 = 273;
+	for (const ai of [1, 2, 3, 4, 5]) {
+		let w = handWorld({ rows: 12, cols: 12, units: [
+			{ eqid: PZ_IA, owner: 0, row: 4, col: 5 },
+			{ eqid: ME_109, owner: 0, row: 2, col: 2 },
+			{ eqid: TP7, owner: 1, row: 11, col: 11 },
+		] });
+		w.state.rng = { game: 1, ai };
+		const objective = w.state.map.hexes[5 * 12 + 5];
+		objective.victorySide = 0;
+		objective.owner = 1;
+		w.state.objectives[0].push({ row: 5, col: 5 });
+		const orders = firstOrders(w, 0).map((o) => "command" in o ? o.command : null);
+		expect(orders, "ai " + ai).toContainEqual({ type: "move", unit: 1, to: { row: 5, col: 5 } });
+		expect(orders, "ai " + ai).toContainEqual({ type: "move", unit: 0, to: { row: 5, col: 5 } });
+		for (const cmd of orders) {
+			const r = cmd === null ? null : step(w, cmd);
+			if (r !== null && r.ok) w = r.world;
+		}
+		expect(w.state.map.hexes[5 * 12 + 5]).toMatchObject({ unit: 0, air: 1, owner: 0 });
+	}
+});
+
 //Plays the orders the AI of player gives on its turn of w, and its turn's end; the world after and
 //the commands it sent
 function aiTurn(w: World, player: number) {
