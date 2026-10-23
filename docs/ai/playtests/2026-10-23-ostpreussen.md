@@ -8,8 +8,10 @@ chose every move by hand, and read the combat estimate (`GameRules.calculateComb
 every attack. No console error appeared in either game.
 
 **The scenario:** Germany attacks and must take five objectives (2,20; 4,30; Mława 15,12; 18,32;
-28,23). A brilliant victory needs all of them by turn 9, a victory by 12, a tactical victory by 16.
-The turn limit is 17. Poland wins by holding at least one. At the start Germany has 32 units and
+28,23). A brilliant victory needs all of them by turn 10, a victory by 13, a tactical victory by
+17, which is also the turn limit (the scenario's `turns="10, 13, 17"`, read by `victoryRating`,
+src/core/turn.ts). Under PG2's rule Poland wins by holding at least one; the game now decides
+the turn limit by the victory hexes held (#231), an open question in #256. At the start Germany has 32 units and
 air (Me-109, Do-17, Ju-87); Poland has 46, mostly infantry, bunkers, artillery, two TKS tankettes,
 a P.11c fighter and a PZL.23 Karaś bomber, and 2000 prestige. Both sides get reinforcements during
 the game; Poland gets no prestige per turn.

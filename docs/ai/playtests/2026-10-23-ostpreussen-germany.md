@@ -3,7 +3,7 @@
 The second game of the day in the first scenario of the Das Reich campaign, this time a full 17-turn
 game with Claude as Germany against the Polish AI, played in Chrome on the dev server with the owner
 watching and a running commentary in chat. The goal set was a brilliant victory (all five objectives
-by turn 9), at least a victory (by turn 12). Moves went through the old UI's own actions
+by turn 10), at least a victory (by turn 13). Moves went through the old UI's own actions
 (`uiUnitMove`, `uiUnitAttack`, `Commands.execute` for buy, deploy, mount, resupply, reinforce), and
 the combat estimate (`GameRules.calculateCombatResults(..., estimate)`) was read before nearly every
 attack. The first game of the day is in [2026-10-23-ostpreussen.md](2026-10-23-ostpreussen.md).
