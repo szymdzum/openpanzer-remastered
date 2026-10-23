@@ -343,7 +343,7 @@ function reinforcements(scenario: Scenario): ReinforcementState[] {
 
 //A campaign whose data is still loading (Game.newCampaign, before its first scenario) has no
 //scenario yet: -1
-function campaignState(c: Campaign, progress: CampaignProgress): CampaignState {
+export function campaignState(c: Campaign, progress: CampaignProgress): CampaignState {
 	const data = c.getCampaignData();
 	return { id: c.id, file: c.file, scenario: data ? data.indexOf(c.getCurrentScenario()) : -1, country: c.country,
 		difficulty: c.difficulty, startPrestige: c.startprestige, progress: { ...progress } };
@@ -353,10 +353,12 @@ function campaignState(c: Campaign, progress: CampaignProgress): CampaignState {
 //load loses kept (the ids, the order, the core lists, the undo slot...). Sets the equipment lists
 //and the movement table (global), and with host the campaign's scenario and Game's progress: the
 //equipment and the campaign are loaded already
-export function fromData(saved: SavedGame, host?: CampaignHost | null): Scenario {
+//into: the scenario to fill, a new one by default (a scenario file the core started, #137, fills the one
+//loading)
+export function fromData(saved: SavedGame, host?: CampaignHost | null, into?: Scenario): Scenario {
 	const { data, state } = saved;
 	const s = state.scenario;
-	const scenario = new Scenario(s.file);
+	const scenario = into || new Scenario(s.file);
 	scenario.name = data.name;
 	scenario.setDescription(data.description);
 	scenario.maxTurns = s.maxTurns;

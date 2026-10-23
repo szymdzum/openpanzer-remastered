@@ -19,7 +19,7 @@ import type { CoreUnit, Draft, GameState, OffMapUnit, PlayerState, UnitState, Wo
 
 //A campaign data file's scenario (resources/campaigns/data/*.json): what each outcome gives and
 //where it goes (254 and 255 end the campaign)
-export interface CampaignScenario {
+export interface CampaignScenarioData {
 	id: number;
 	intro: string;
 	scenario: string;
@@ -139,7 +139,7 @@ function isPrototype(e: EquipmentEntry): boolean {
 //(null: the campaign ended) and the campaign's progress
 export interface CampaignNext {
 	player: PlayerState;
-	next: CampaignScenario | null;
+	next: CampaignScenarioData | null;
 	campaign: CampaignState;
 }
 
@@ -148,18 +148,42 @@ export interface CampaignNext {
 //earns a prototype there. Kept: a core unit whose country's equipment the scenario didn't load stops
 //it (#182). Not reproduced: a player whose core units all fell carries none, where the old engine
 //carried the dead units it brought in (#183: the list it brought isn't state)
-export function endCampaignScenario(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenario[]): CampaignNext {
+export function endCampaignScenario(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[]): CampaignNext {
 	const campaign = w.state.campaign, played = scenarios[campaign.scenario];
-	const p = structuredClone(w.state.players[campaignPlayer(w.state, campaign)]);
-	p.prestige += played.outcome[outcome].prestige;
-	if (!p.dossier.outcomes) p.dossier = newDossier();
-	p.dossier.outcomes[outcome].push(w.data.name);
-	Object.assign(p, { supportCountries: [], prestigePerTurn: [], airTransports: 0, navalTransports: 0 });
-	p.core = p.core.filter((c) => !("lost" in c)).map((c): CoreUnit => ({ reserve: toHQ(w, c) }));
+	const p = playerAtHQ(w, outcome, scenarios);
+	p.core = p.core.map((c): CoreUnit => ({ reserve: toHQ(w, c) }));
 	const goto = played.outcome[outcome].goto, next = goto < scenarios.length ? scenarios[goto] : null;
 	const progress = { isStart: false, removeNonCampaignUnits: true,
 		awardPrototype: campaign.progress.awardPrototype || (next !== null && outcome === "briliant") };
 	return { player: p, next, campaign: { ...campaign, scenario: next !== null ? goto : campaign.scenario, progress } };
+}
+
+//The scenario as the old game leaves it once it is over, until the next one loads (Game.continueCampaign
+//worked on the campaign player in place, and the screen shows it meanwhile): the outcome's prestige and
+//the scenario in its dossier, its transports, support and prestige by turn gone, its lost units out of
+//its list and the others as at HQ, the ones on the map off their hexes but still in the unit list (the
+//hexes still name them). The campaign's progress is the next scenario's
+export function scenarioEnded(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], next: CampaignState): GameState {
+	const s = w.state, cp = campaignPlayer(s, s.campaign);
+	const p = playerAtHQ(w, outcome, scenarios);
+	p.core = p.core.map((c): CoreUnit => "onMap" in c ? c : { reserve: toHQ(w, c) });
+	const home = new Set(p.core.map((c) => "onMap" in c ? c.onMap : -1));
+	const units = s.units.map((u) => home.has(u.id) ? { id: u.id, eqid: u.eqid, owner: u.owner, row: -1, col: -1, ...toHQ(w, { onMap: u.id }) } : u);
+	return { ...s, units, players: s.players.map((x, i) => i === cp ? p : x), campaign: next };
+}
+
+//The campaign player at its scenario's end (Game.continueCampaign, Player.setPlayerToHQ): the outcome's
+//prestige, the scenario in its dossier, no transports, support or prestige by turn, its lost units out
+//of its core list (the others as they are, for the caller to send to HQ)
+function playerAtHQ(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[]): PlayerState {
+	const s = w.state, played = scenarios[s.campaign.scenario];
+	const p = structuredClone(s.players[campaignPlayer(s, s.campaign)]);
+	p.prestige += played.outcome[outcome].prestige;
+	if (!p.dossier.outcomes) p.dossier = newDossier();
+	p.dossier.outcomes[outcome].push(w.data.name);
+	Object.assign(p, { supportCountries: [], prestigePerTurn: [], airTransports: 0, navalTransports: 0 });
+	p.core = p.core.filter((c) => !("lost" in c));
+	return p;
 }
 
 //A core unit at HQ: off its transport and carrier, its turn's flags clear, back to full strength (an

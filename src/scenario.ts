@@ -56,7 +56,7 @@ export class Scenario {
 	declare isLoaded: boolean;
 	declare eqp: string;
 	declare load: (onFinished: () => void) => void;
-	declare onLoadFinished: () => void;
+	declare onLoadFinished: (scored?: boolean) => void;
 	declare addReinforcement: (turn: number, row: number, col: number, unit: Unit) => void;
 	declare getReinforcements: (turn: number, playerId: number) => Reinforcement[];
 	declare removeReinforcement: (turn: number, id: number) => boolean;
@@ -107,8 +107,11 @@ export class Scenario {
 		}
 
 		//Called by the loader when the scenario finished loading (or failed to load)
-		this.onLoadFinished = function() {
-			if (this.isLoaded) {
+		//scored: the players have their starting score already (a game the core started, #137)
+		this.onLoadFinished = function(scored?: boolean) {
+			if (this.isLoaded && scored) {
+				this.setMoveTable();
+			} else if (this.isLoaded) {
 				this.setMoveTable();
 
 				//Initial score of each player: objectives worth per turn and the units it has

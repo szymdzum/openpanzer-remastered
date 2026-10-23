@@ -9,7 +9,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import { difference, GAME_DIR, setupOf } from "./corefiles";
-import { awardedPrototype, endCampaignScenario, type CampaignScenario } from "../src/core/campaign";
+import { awardedPrototype, endCampaignScenario, type CampaignScenarioData, scenarioEnded } from "../src/core/campaign";
 import { createWorld } from "../src/core/create";
 import { newGame } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/scenario";
@@ -68,7 +68,7 @@ function startOf(index: number, difficulty: number, prestigeMod: number): Campai
 		progress: { isStart: true, removeNonCampaignUnits: false, awardPrototype: false } };
 }
 
-type Seen = { starts: number; carried: number; prototypes: number; ended: number; threw: number };
+type Seen = { starts: number; carried: number; prototypes: number; ended: number; threw: number; left: number };
 type Old = Awaited<ReturnType<typeof oldCampaign>>;
 
 //The first difference between the old engine's game and the core's, "" for none
@@ -82,7 +82,7 @@ function compared(what: string, want: SavedGame, got: SavedGame): string {
 async function playCampaign(index: number, seen: Seen): Promise<string> {
 	const { difficultyModifiers } = await import("../src/prototypes");
 	const difficulty = index % 3, file = campaignlist[index].file;
-	const scenarios = JSON.parse(fs.readFileSync(path.join(GAME_DIR, "resources/campaigns/data", file), "utf8")) as CampaignScenario[];
+	const scenarios = JSON.parse(fs.readFileSync(path.join(GAME_DIR, "resources/campaigns/data", file), "utf8")) as CampaignScenarioData[];
 	const old = await oldCampaign(index, difficulty);
 	const campaign = startOf(index, difficulty, difficultyModifiers[difficulty].startPrestige);
 	const problem = compared(file + " start", old.data(),
@@ -100,7 +100,7 @@ async function playCampaign(index: number, seen: Seen): Promise<string> {
 //A scenario played (playScenario), ended with outcome on both engines and the next one started:
 //"" when they agree and the campaign goes on, "end" when it ended (or stopped, #182, on both), else
 //what differs
-async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenario[], seen: Seen): Promise<string> {
+async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], seen: Seen): Promise<string> {
 	playScenario(game, (await import("../src/equipment")).Equipment.equipment);
 	const ended = data();
 	shownPrototypes.length = 0;
@@ -116,6 +116,11 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 	}
 	const oldNext = game.gameEnded ? null : game.campaign.getCurrentScenario();
 	if ((n.next === null) !== (oldNext === null)) return outcome + ": the campaign's end differs";
+	//The scenario as it stays until the next one loads: its campaign player sent to HQ in place
+	const between = scenarioEnded(createWorld(ended, setupOf(game.scenario.file, null).equipment), outcome, scenarios, n.campaign);
+	const left = data();
+	if (JSON.stringify(left.state) !== JSON.stringify(between)) return outcome + ": the scenario left behind:" + difference(JSON.stringify(left.state), JSON.stringify(between));
+	seen.left++;
 	if (n.next === null) {
 		seen.ended++;
 		return "end";
@@ -137,7 +142,7 @@ function prototypeProblem(campaign: CampaignState, state: SavedGame["state"], se
 
 test("Every campaign starts, ends its scenarios and carries its player on as on the old engine", async () => {
 	const problems: string[] = [];
-	const seen: Seen = { starts: 0, carried: 0, prototypes: 0, ended: 0, threw: 0 };
+	const seen: Seen = { starts: 0, carried: 0, prototypes: 0, ended: 0, threw: 0, left: 0 };
 	for (let index = 0; index < campaignlist.length; index++) {
 		const problem = await playCampaign(index, seen);
 		if (problem) problems.push(problem);
@@ -146,5 +151,6 @@ test("Every campaign starts, ends its scenarios and carries its player on as on 
 	expect(seen.starts).toBe(campaignlist.length);
 	expect(seen.carried).toBeGreaterThan(20);
 	expect(seen.prototypes).toBeGreaterThan(2);
+	expect(seen.left).toBeGreaterThan(20);
 	if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(seen) + "\n");
 }, 600_000);

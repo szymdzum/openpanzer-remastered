@@ -523,6 +523,17 @@ them, and the game runs on the session.
   | The context buttons (5 rules) | 1-2 µs | 430-805 µs |
 
   The map's rules pay for the world made from the objects (about 150 µs): under a millisecond a click.
+- The scenarios started on the core (src/coreload.ts, `ScenarioLoader.build`, set by Game.init): the
+  loader reads the file, the map image and the equipment as before (the page's requests in the same
+  order), then the core's `newGame` makes the game (the AI asked for, the single scenario's prestige,
+  a campaign's start: its player carried, its units on the deployment hexes removed, the prototype)
+  and `fromData` fills the scenario's objects; the image cache keeps the icons of the units the start
+  removed, as the old loader left it. The end of a campaign's scenario is `endCampaignScenario` (the
+  player carried) and `scenarioEnded` (the scenario as the old game left it until the next loads: its
+  player sent to HQ in place); the saved player a load during the campaign copies is kept (#196).
+  test/gameturn.test.ts plays the campaigns on to their next scenario both ways. The differences:
+  the next scenario's counters have no phantom zone of control or spotting from the removed units
+  (#72), and a player whose core units all fell carries none (#183).
 
 ### Not worth it now
 
