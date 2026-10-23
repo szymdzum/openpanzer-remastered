@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, leaderType, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, leaderType, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -21,7 +21,7 @@ import type { CheckpointInput, Contribution, World } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { handWorld } from "./coreworld";
 
-const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280;
+const PZ_IIA = 140, TP7 = 273, ME_109 = 159, P11 = 280, PSW_222 = 117;
 
 //A Pz IIA on clear ground next to a 7TP entrenched (2) in a forest
 function forestFight() {
@@ -94,7 +94,7 @@ test("The ruleset holds the movement tables by ground and the leaders of each cl
 	}
 });
 
-test("A tank's move range stops at an enemy's zone of control, and its path pays one point more (#70)", () => {
+test("A tank's move range stops at an enemy's zone of control, and its path costs what the range shows (#70)", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 },
 		{ eqid: TP7, owner: 1, row: 4, col: 3 }, //2 hexes away: the Pz IIA spots it
@@ -108,7 +108,17 @@ test("A tank's move range stops at an enemy's zone of control, and its path pays
 	expect(at(5, 1)).toMatchObject({ canMove: true, cost: 1, cout: 1 });
 	const path = pathTo(w, tank, { row: 5, col: 1 });
 	expect(path.map((p) => [p.row, p.col])).toEqual([[4, 1], [5, 1]]);
-	expect(path.reduce((sum, p) => sum + p.cost, 0)).toBe(2); //one hex of clear, charged 2 (#70)
+	expect(path.reduce((sum, p) => sum + p.cost, 0)).toBe(1); //one hex of clear: the start hex costs nothing
+});
+
+test("A move pays the hexes it enters, not the one it leaves: a recon car's 3 road hexes use 3 points and 3 fuel (#70)", () => {
+	const w = handWorld({ rows: 8, cols: 8, road: () => roadType.north, units: [{ eqid: PSW_222, owner: 0, row: 4, col: 1 }] });
+	const car = unitById(w, 0);
+	const r = played(step(w, { type: "move", unit: 0, to: { row: 4, col: 4 } }));
+	expect(unitById(r.world, 0)).toMatchObject({ row: 4, col: 4, moveLeft: car.moveLeft - 3, fuel: car.fuel - 3, hasMoved: false });
+	//the rest of its move, split: what the range showed is what it can still reach
+	const again = played(step(r.world, { type: "move", unit: 0, to: { row: 4, col: 7 } }));
+	expect(unitById(again.world, 0)).toMatchObject({ row: 4, col: 7, moveLeft: car.moveLeft - 6, fuel: car.fuel - 6 });
 });
 
 test("A hidden enemy's hex is in the move range: the move ends in a surprise", () => {
@@ -352,7 +362,7 @@ function nearestOpen(open: Open[]): number {
 }
 
 function oldShortestPath(start: Cell, end: Cell, list: { row: number; col: number; cost: number }[]): Open[] {
-	const open: Open[] = [{ row: start.row, col: start.col, cost: 1, dist: 0, prev: null }];
+	const open: Open[] = [{ row: start.row, col: start.col, cost: 0, dist: 0, prev: null }]; //(cost 1 until #70)
 	open[0].prev = open[0];
 	for (const c of list) open.push({ row: c.row, col: c.col, cost: c.cost, dist: Infinity, prev: null });
 	for (let idx = nearestOpen(open); idx >= 0; idx = open.length ? nearestOpen(open) : -1) {
