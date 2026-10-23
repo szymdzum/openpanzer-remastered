@@ -26,6 +26,17 @@ assault, and it plays the last turns like the first. In the first playtest (Panz
 Ostpreussen, 2026-10-23) the German AI took 1 of 5 objectives in 17 turns. A human-style player
 took the first one on turn 4 with the same army.
 
+As a defender it is dangerous as a fortress, not as a commander (the game as Germany,
+playtests/2026-10-23-ostpreussen-germany.md). What was hard to beat was what stayed put and the
+rules behind it: objectives dug in to entrenchment 6-8, where one kill cost the attacker 3-6
+points; hidden artillery whose support fire spoiled nearly every assault; veteran AA that shot
+bombers up before they released; and every damaged unit reinforced to full while its prestige
+lasted. What moved mostly lost: the counterattack on a lost objective, in the open, that emptied
+Mława (#5), infantry walking out between the attacker's units, twice into the same gap, and
+aircraft sent alone (#259). Its only active wins were TKS raids on a bridge and reinforcements
+that caught guns pushed ahead of the infantry. It doesn't plan, concentrate or garrison ahead of
+the threat, so as an opponent it is average: the attacker's own delays decide more than its play.
+
 ## Known weaknesses and what is planned
 
 Each is an issue; each change is measured in the AI arena (arena.md, `npm run arena`) against
