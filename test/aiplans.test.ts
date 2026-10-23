@@ -10,6 +10,7 @@ import type { World } from "../src/core/types";
 import { Equipment } from "../src/equipment";
 import { aiDefaultConfig, unitClass } from "../src/prototypes";
 import type { SavedGame } from "../src/state";
+import { distance } from "../src/core/geometry";
 import { step } from "../src/core/step";
 import { setupOf } from "./corefiles";
 import { handWorld } from "./coreworld";
@@ -111,6 +112,69 @@ test("The AI scores the ground unit under an aircraft ordered away as staying: a
 	const fortressLeaves = [{ row: 4, col: 4, air: false }];
 	expect(score(2, 4, 5, fortressLeaves)).toBe(score(2, 4, 5, []) + 20);
 	expect(score(3, 4, 4, fortressLeaves)).toBe(score(3, 4, 4, []) + 300);
+});
+
+//Plays the orders the AI of player gives on its turn of w, and its turn's end; the world after and
+//the commands it sent
+function aiTurn(w: World, player: number) {
+	const ai = aiController(player, {});
+	ai.join(w);
+	w = ai.plan(ai.startTurn(w).world);
+	const commands = [];
+	for (let o = ai.next(w); o !== null; o = ai.next(w)) {
+		if (!("command" in o)) continue;
+		commands.push(o.command);
+		const r = step(w, o.command);
+		if (r.ok) w = r.world;
+	}
+	const ended = step(w, { type: "endTurn" });
+	return { world: ended.ok ? ended.world : w, commands };
+}
+
+//A towed howitzer with its half-track, an objective ten hexes away: the gun can't move on its own
+//(a towed unit with a transport has no move range unmounted), so the AI mounts it and drives it on.
+//Mounted it can't fire that turn, so it plans no attack after the move. Two turns get it next to the
+//objective, the infantry walking behind
+test("The AI mounts a towed gun on its transport to move it toward its objective (#82)", () => {
+	const LEFH18 = 92, SDKFZ7 = 2403, INFANTERIE = 115, TP7 = 273;
+	let w = handWorld({ rows: 10, cols: 14, units: [
+		{ eqid: LEFH18, owner: 0, row: 4, col: 1, transport: { eqid: SDKFZ7, ammo: 0, fuel: 60 } },
+		{ eqid: INFANTERIE, owner: 0, row: 6, col: 1 },
+		{ eqid: TP7, owner: 1, row: 0, col: 13 },
+	] });
+	w.state.rng = { game: 1, ai: 1 };
+	w.state.map.hexes[4 * 14 + 11].victorySide = 0;
+	w.state.objectives[0].push({ row: 4, col: 11 });
+	const near = () => distance(w.state.units[0].row, w.state.units[0].col, 4, 11);
+	const first = aiTurn(w, 0);
+	const mount = first.commands.findIndex((c) => c.type === "mount" && c.unit === 0);
+	expect(mount).toBeGreaterThanOrEqual(0);
+	expect(first.commands[mount + 1]).toMatchObject({ type: "move", unit: 0 });
+	expect(first.commands).not.toContainEqual(expect.objectContaining({ type: "attack", unit: 0 }));
+	w = first.world;
+	expect(near()).toBeLessThan(10);
+	expect(w.state.units[0].isMounted).toBe(true); //until the round ends
+	w = aiTurn(w, 1).world; //the round ends: off its transport again
+	expect(w.state.units[0].isMounted).toBe(false);
+	w = aiTurn(w, 0).world;
+	expect(near()).toBeLessThanOrEqual(1);
+});
+
+//An anti-tank gun with its half-track and a 7TP it sees (it fired) on the way to the objective: the gun
+//would like to stand next to the tank, but not in its truck, which it stays in until the round ends
+test("The AI doesn't drive a unit in its transport next to an enemy it sees (#82)", () => {
+	const PAK40 = 78, SDKFZ7 = 2403, TP7 = 273;
+	const w = handWorld({ rows: 10, cols: 14, units: [
+		{ eqid: PAK40, owner: 0, row: 4, col: 1, transport: { eqid: SDKFZ7, ammo: 0, fuel: 60 } },
+		{ eqid: TP7, owner: 1, row: 4, col: 6, tempSpotted: true },
+	] });
+	w.state.rng = { game: 1, ai: 1 };
+	w.state.map.hexes[4 * 14 + 11].victorySide = 0;
+	w.state.objectives[0].push({ row: 4, col: 11 });
+	const moves = aiTurn(w, 0).commands.filter((c) => c.type === "move");
+	expect(moves).toHaveLength(1);
+	const to = moves[0].type === "move" ? moves[0].to : null;
+	expect(distance(to!.row, to!.col, 4, 6)).toBeGreaterThan(1);
 });
 
 //The units the AI buys at the start of its turn on the small game, with 3000 prestige and its ground

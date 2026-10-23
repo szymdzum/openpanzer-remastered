@@ -288,9 +288,12 @@ expected killed, an attack with too many losses), the purchases one per unit pic
 nothing in its first pass gets a second one, its moves scored again with new draws. Its scores see
 a unit on another hex as a copy of it standing there, the state unchanged (the old AI's Unit.setHex).
 A hex an AI unit leaves counts as free for a unit of its kind only: an aircraft leaving frees the air
-above a ground unit, not the ground (#74). Kept: #17 (the attacks count the hidden units' support fire),
+above a ground unit, not the ground (#74). A ground unit with a transport also scores the hexes only its
+transport reaches, after its own range, except those next to an enemy ground unit its side sees; when
+one of them is best, it mounts and moves there, and plans no attack after (#82: the old AI never
+mounted, so its towed guns never moved). Kept: #17 (the attacks count the hidden units' support fire),
 #21 (the reinforcement budget is the prestige before the purchases), #22 (the purchases cut the
-equipment lists, which are in the state, D9 revised), #82 (it never mounts), the objectives in their list's order (D7, so #141's order
+equipment lists, which are in the state, D9 revised), the objectives in their list's order (D7, so #141's order
 after an undo), the attack estimate's #87 and #90. Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 

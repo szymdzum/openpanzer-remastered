@@ -13,8 +13,9 @@
  * - a move to where the plan said, along its move range then, which the step refuses when the unit
  *   that was to leave the hex is still there (#74: its move failed);
  * - an attack, which the step refuses when the target is out of range by then (Game skipped it);
- * - a resupply or a reinforcement.
- * It never mounts (#82 kept). Kept too: the reinforcement budget is the prestige before the purchases
+ * - a resupply or a reinforcement;
+ * - a mount, right before a move only its transport makes (#82).
+ * Kept: the reinforcement budget is the prestige before the purchases
  * (#21), the purchases remove from the equipment lists for good (#22: the lists are in the state, D9),
  * the attack scores count the hidden units' support fire (#17), and the objectives are scored in the
  * order of the side's list (D7, #141's order after an undo included).
@@ -27,14 +28,15 @@ import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
 import type { Controller, Played } from "./controller";
 import { playerAt } from "./draft";
+import { adjacent } from "./geometry";
 import type { GameEvent } from "./events";
 import { moveRange } from "./movement";
 import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
 import type { GameState, MoveCell, Position, UnitState, World } from "./types";
-import { isAir, isGround, isSea, unitUsesFuel } from "./units";
-import { hexIndex, unitData } from "./world";
+import { canMount, isAir, isGround, isSea, unitUsesFuel } from "./units";
+import { groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
 
 export interface AIControllerOptions {
 	config?: AIConfig;	//aiDefaultConfig, the bundle's
@@ -210,6 +212,7 @@ interface AIUnit {
 	didAttack: boolean;
 	didMove: boolean;
 	didResupplyReinforce: boolean;
+	didMount: boolean;
 	newPosition: Position | null;
 }
 
@@ -230,7 +233,7 @@ function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: numb
 	for (const u of w.state.units) {
 		if (u.owner !== player) continue;
 		const a: AIUnit = { u, noAttack: false, noMove: false, noReinforce: false, noResupply: false, didAttack: false, didMove: false,
-			didResupplyReinforce: false, newPosition: null };
+			didResupplyReinforce: false, didMount: false, newPosition: null };
 		if (actsFirst(w, u)) units.unshift(a);
 		else units.push(a);
 	}
@@ -296,34 +299,59 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 	return u.ammo < config.minAmmo || (unitUsesFuel(w, u) && u.fuel < config.minFuel);
 }
 
-//The unit to the best scored hex of its move range, if it beats where it stands: the hex taken, the
-//one it leaves freed, for the units of its kind (#74)
+//The unit to the best scored hex of its move range or, mounted, of its transport's, if it beats where it
+//stands: the hex taken, the one it leaves freed, for the units of its kind (#74). A unit moved in its
+//transport can't fire that turn (#82)
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
-	const cells = a.didMove || a.didResupplyReinforce ? [] : moveRange(s.w, u);
-	const to = cells.length === 0 ? null : bestMove(s, u, cells);
+	const moving = !(a.didMove || a.didResupplyReinforce);
+	const cells = moving ? moveRange(s.w, u) : [];
+	const mounted = moving ? mountedCells(s.w, u, cells) : [];
+	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted);
 	if (to === null) {
 		a.noMove = true;
 		return;
 	}
 	const plan = s.plan, air = isAir(s.w, u);
-	plan.takenPositions.push(to);
-	const freed = findFreed(plan, to);
+	plan.takenPositions.push(to.cell);
+	const freed = findFreed(plan, to.cell);
 	if (freed >= 0) plan.freedPositions.splice(freed, 1);
 	plan.freedPositions.push({ row: u.row, col: u.col, air });
-	t.queue.push({ type: "move", unit: u.id, to });
+	if (to.mounted) t.queue.push({ type: "mount", unit: u.id });
+	t.queue.push({ type: "move", unit: u.id, to: to.cell });
 	a.didMove = true;
-	a.newPosition = to;
+	a.didMount = to.mounted;
+	a.newPosition = to.cell;
 }
 
-//The best scored hex of the move range, null when none beats staying: where it stands scores with its
-//entrenchment and, for a ground unit, its objective; a hex of the range with the objective it nears
-//(less for an air unit, none for a ship), the cell's own score first: a taken hex isn't scored further
-function bestMove(s: Scorer, u: UnitState, cells: MoveCell[]): Position | null {
+//The hexes a ground unit reaches only in its transport (a towed gun's whole range): the PG2 AI drives
+//its guns and infantry up in their trucks (#82). None for a unit without one or already moved, and not
+//next to an enemy ground unit the side sees: it would stand there in its truck until the round ends
+function mountedCells(w: World, u: UnitState, cells: MoveCell[]): MoveCell[] {
+	if (u.isMounted || !canMount(w, u)) return [];
+	return moveRange(w, { ...u, isMounted: true }).filter((m) => !cells.some((c) => c.row === m.row && c.col === m.col)
+		&& !nextToSeenEnemy(w, u, m));
+}
+
+function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
+	const side = sideOf(w, u);
+	return adjacent(cell.row, cell.col).some((c) => {
+		if (!onMap(w, c.row, c.col)) return false;
+		const hex = hexIndex(w, c.row, c.col), other = groundUnitAt(w, hex);
+		return other !== null && sideOf(w, other) !== side && (isSpotted(w, hex, side) || other.tempSpotted);
+	});
+}
+
+//The best scored hex of the move range, then of the hexes only its transport reaches (mounted), null
+//when none beats staying: where it stands scores with its entrenchment and, for a ground unit, its
+//objective; a hex with the objective it nears (less for an air unit, none for a ship), the cell's own
+//score first: a taken hex isn't scored further. A hex is scored for the unit standing there, not its
+//transport: it gets off it at the round's end
+function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[]): { cell: Position; mounted: boolean } | null {
 	let best = stayScore(s, u);
 	const nearing = isSea(s.w, u) ? 0 : isAir(s.w, u) ? 0.3 : 1;
 	let bestCell: MoveCell | null = null;
-	for (const c of cells) {
+	for (const c of [...cells, ...mounted]) {
 		const objective = nearing === 0 ? 0 : nearing === 1 ? objectiveScore(s, c).score : objectiveScore(s, c).score * nearing;
 		let score = cellScore(s, u, c, c.canMove) + objective;
 		if (score < -2000) continue;
@@ -333,7 +361,7 @@ function bestMove(s: Scorer, u: UnitState, cells: MoveCell[]): Position | null {
 			best = score;
 		}
 	}
-	return bestCell === null ? null : { row: bestCell.row, col: bestCell.col };
+	return bestCell === null ? null : { cell: { row: bestCell.row, col: bestCell.col }, mounted: mounted.includes(bestCell) };
 }
 
 //Staying where it stands: the hex, for a ground unit its objective, its entrenchment, its attacks
@@ -349,7 +377,7 @@ function stayScore(s: Scorer, u: UnitState): number {
 //class's losses (less eager from an objective). Its expected kills count for the next attackers
 function attackUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
-	if (u.hasFired || a.didAttack || a.didResupplyReinforce) {
+	if (!mayAttack(a)) {
 		a.noAttack = true;
 		return;
 	}
@@ -361,6 +389,11 @@ function attackUnit(t: Planning, a: AIUnit) {
 	expectKills(s.plan, target.unit, target.kills);
 	t.queue.push({ type: "attack", unit: u.id, target: target.unit.id });
 	a.didAttack = true;
+}
+
+//Not fired, attacked, resupplied or reinforced yet, nor moved in its transport (it can't fire after)
+function mayAttack(a: AIUnit): boolean {
+	return !(a.u.hasFired || a.didAttack || a.didResupplyReinforce || a.didMount);
 }
 
 //The target attacked, with the kills expected so far: past its strength, it counts as killed
