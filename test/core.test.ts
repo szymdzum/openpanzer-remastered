@@ -6,7 +6,7 @@ import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, leaderType, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, leaderType, movMethod, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -93,6 +93,14 @@ test("The ruleset holds the movement tables by ground and the leaders of each cl
 		expect(classicRules.classLeaders[c], "class " + c).toBe(Leaders.unitClassLeaders[c][0] ?? -1);
 		expect(classicRules.leaders[c], "class " + c).toEqual(Leaders.unitClassLeaders[c]);
 	}
+});
+
+test("A towed unit pays 2 to enter a fortification in mud, as the other ground units do, not 21 (#23)", () => {
+	const mud = moveCosts(classicRules, 2, movMethod.towed);
+	expect(mud[terrainType.Fortification]).toBe(2);
+	//(a towed gun in its transport moves by the transport's table: a fortification in mud is 2 for tracks, legs and half-tracks)
+	expect([movMethod.tracked, movMethod.halfTracked, movMethod.leg].map((m) => moveCosts(classicRules, 2, m)[terrainType.Fortification]))
+		.toEqual([2, 2, 2]);
 });
 
 test("A tank's move range stops at an enemy's zone of control, and its path costs what the range shows (#70)", () => {
