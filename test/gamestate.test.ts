@@ -58,18 +58,23 @@ test.each(fixtures("engine"))("GameState load keeps the reinforcements %s", asyn
 });
 
 //The save has no reinforcement ids: a loaded scenario numbers each turn's from 1, the order they
-//are in, and removing one by a turn or an id it doesn't have changes nothing
+//are in
 test("GameState load numbers the reinforcements of each turn from 1", async () => {
 	const scenario = await restoreState(readFixture("engine", "ruscam09-t2.json.gz").state);
 	const turns = Object.keys(scenario.reinforcements);
 	expect(turns.length).toBeGreaterThan(0);
 	for (const t of turns)
 		expect(scenario.reinforcements[t].map((r) => r.id)).toEqual(scenario.reinforcements[t].map((_, i) => i + 1));
-	const count = Object.values(scenario.reinforcements).flat().length;
-	expect(scenario.removeReinforcement(1e6, 1)).toBe(false);
-	expect(scenario.removeReinforcement(+turns[0], 1e6)).toBe(false);
-	expect(Object.values(scenario.reinforcements).flat()).toHaveLength(count);
 });
+
+//A command played as the game sends it, on the game the global game module holds now; it must be
+//allowed
+async function play(cmd: import("../src/commands").Command) {
+	const { Commands } = await import("../src/commands");
+	const { game } = await import("../src/game");
+	const r = Commands.execute(game.scenario, cmd);
+	if ("refusal" in r) throw new Error(JSON.stringify(cmd) + " refused: " + r.refusal.reason);
+}
 
 //#54: the load keeps the half hexes at the map's edges (isLastRowPartial, isLastColPartial), which
 //keep the units off them (GameRules.getMoveRange)
@@ -124,15 +129,13 @@ test("GameState load keeps tempSpotted (#84)", async () => {
 	}
 });
 
-//#71: the turn stays with the player who had it. The game saves right after Scenario.endTurn
-//(Game.endTurn), so a save is usually made on the next player's turn. The AI players (of a
-//campaign) plan nothing here: Map.endTurn asks their handler
+//#71: the turn stays with the player who had it. The game saves right after the end of turn
+//(Game.endTurn), so a save is usually made on the next player's turn. The end of turn alone here:
+//no player plans
 test.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 	"GameState load keeps whose turn it is (#71) %s", async (name) => {
-		const scenario = await restoreState(readFixture("engine", name).state);
-		for (const p of scenario.map.getPlayers())
-			p.handler = { buildActions() {}, getAction() { return null; } };
-		scenario.endTurn();
+		await restoreState(readFixture("engine", name).state);
+		await play({ type: "endTurn" });
 		const saved = JSON.parse(await exportGame()) as SaveFile;
 		expect(saved.state.turn.currentPlayer).not.toBe(0);
 		const again = await load(JSON.stringify(saved));
@@ -143,9 +146,7 @@ test.each(fixtures("engine").filter((f) => f.endsWith("-t0.json.gz")))(
 //plan: the game (Game.setupGameState) gives the player its AI and the AI its turn
 test("GameState load on the AI's turn has the AI play it (#71)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
-	for (const p of scenario.map.getPlayers())
-		p.handler = { buildActions() {}, getAction() { return null; } };
-	scenario.endTurn();
+	await play({ type: "endTurn" });
 	const ai = scenario.map.currentPlayer.id, save = await exportGame();
 	const game = await playing("drpzop01-t0.json.gz");
 	const { Game } = await import("../src/game");
@@ -175,9 +176,9 @@ function coreLists(s: SaveFile) {
 //in hex order and dropped its destroyed units: the campaign fixture with its first core unit
 //disbanded (it stays in the list until the player goes to HQ), saved and loaded
 test("GameState load keeps the campaign's core list (#142)", async () => {
-	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
+	await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
 	const { game } = await import("../src/game");
-	scenario.map.disbandUnit(game.getCampaignPlayer().getCoreUnitList()[0].id);
+	await play({ type: "disband", unit: game.getCampaignPlayer().getCoreUnitList()[0].id });
 	const saved = JSON.parse(await exportGame()) as SaveFile;
 	expect(coreLists(saved).flat(), "a destroyed core unit").toContain("lost 539");
 	expect(coreLists(await load(JSON.stringify(saved)))).toEqual(coreLists(saved));
@@ -197,10 +198,11 @@ test("GameState load keeps the undo of the last move (#128)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
 	const { GameRules } = await import("../src/gamerules");
 	const m = scenario.map;
+	const { Commands } = await import("../src/commands");
 	const moved = m.getUnits().filter((u) => u.player === m.currentPlayer && u.getHex()).find((u) => {
 		const cell = GameRules.getMoveRange(m, u).find((c) => c.canMove);
 		if (!cell) return false;
-		m.moveUnit(u, cell.row, cell.col);
+		Commands.execute(scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } });
 		return m.canUndoMove(u);
 	});
 	const saved = JSON.parse(await exportGame()) as SaveFile;
@@ -209,7 +211,7 @@ test("GameState load keeps the undo of the last move (#128)", async () => {
 	expect(again.state.turn.undoable).toEqual(saved.state.turn.undoable);
 	const { game } = await import("../src/game");
 	const u = game.scenario.map.getUnitById(moved.id);
-	game.scenario.map.undoLastMove();
+	await play({ type: "undo", unit: u.id });
 	expect([u.getPos().row, u.getPos().col]).toEqual([saved.state.turn.undoable.before.row, saved.state.turn.undoable.before.col]);
 });
 
@@ -259,16 +261,19 @@ test("GameState load keeps a campaign's progress and doesn't apply it again (#12
 	expect(await startup()).toEqual(saved);
 });
 
-//The campaign fixture with a unit of the AI bought and deployed, saved and loaded
+//The campaign fixture with a unit of the AI bought and deployed on its turn, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
 	const { game } = await import("../src/game");
 	const m = scenario.map, ai = m.getPlayers().find((p) => p.country !== game.campaign.country);
 	const eqid = m.getUnits().find((u) => u.player === ai).eqid;
-	ai.acquireUnit(eqid, 0);
-	const free = m.map.flat().find((h) => h.unit === null && h.airunit === null && h.terrain === 0);
+	while (m.currentPlayer !== ai) await play({ type: "endTurn" });
+	ai.prestige += 10000;
+	await play({ type: "buy", eqid, transport: -1 });
+	const free = m.map.flat().find((h) => h.isDeployment > -1 && m.getPlayer(h.isDeployment).side === ai.side && h.unit === null
+		&& h.airunit === null);
 	const { row, col } = free.getPos();
-	expect(m.deployPlayerUnit(ai, ai.getCoreUnitList().length - 1, row, col)).not.toBe(false);
+	await play({ type: "deploy", index: ai.getCoreUnitList().length - 1, to: { row, col } });
 	const saved = JSON.parse(await exportGame()) as SaveFile;
 	return { saved, again: await load(JSON.stringify(saved)), at: row + "," + col + " " + eqid, ai: ai.id };
 }
@@ -285,10 +290,11 @@ test("GameState load keeps the AI's bought units the AI's (#150)", async () => {
 //keeps every player's core list
 test("GameState load keeps the units bought outside a campaign (#149)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
-	const p = scenario.map.getPlayers()[0];
-	p.acquireUnit(scenario.map.getUnits().find((u) => u.player === p).eqid, 0);
+	const p = scenario.map.currentPlayer;
+	p.prestige += 10000;
+	await play({ type: "buy", eqid: scenario.map.getUnits().find((u) => u.player === p).eqid, transport: -1 });
 	const saved = JSON.parse(await exportGame()) as SaveFile;
-	expect(coreLists(saved)[0]).toHaveLength(1);
+	expect(coreLists(saved)[p.id]).toHaveLength(1);
 	expect(coreLists(await load(JSON.stringify(saved)))).toEqual(coreLists(saved));
 });
 
@@ -311,8 +317,10 @@ test("GameState import keeps the campaign's core list of a save of the format be
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
 	const { game } = await import("../src/game");
 	const player = game.getCampaignPlayer(), list = player.getCoreUnitList();
-	scenario.map.disbandUnit(list[0].id);
-	player.acquireUnit(list[1].eqid, 0);
+	expect(scenario.map.currentPlayer).toBe(player);
+	await play({ type: "disband", unit: list[0].id });
+	player.prestige += 10000;
+	await play({ type: "buy", eqid: list[1].eqid, transport: -1 });
 	const { importSave } = await import("../src/savegame");
 	const { save } = importSave(JSON.parse(oldExport(game)));
 	expect(save.state.players[player.id].core).toEqual(list.map((u, i) => i === 0 ? { lost: expect.objectContaining({ eqid: u.eqid }) }

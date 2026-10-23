@@ -35,7 +35,7 @@ async function exposed(): Promise<Map<string, unknown>> {
 //The exports the page scripts use, by name: bare (not after a dot) or as a string (constructor.name
 //lookups: harness.js ENTITIES, common.js). Kept as a list, so a renamed export shows here
 const harnessExports = [
-	"$", "AI", "AIScripted", "Actions", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
+	"$", "AI", "AIScripted", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
 	"Hex", "NATIVE_PLATFORM", "Player", "Render", "Rng", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
 	"UNIT_MAX_EXPERIENCE", "Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
 	"makeHidden", "makeVisible", "playerType", "terrainType", "toData", "uiSettings", "unitClass", "unitClassNames",
@@ -80,9 +80,13 @@ test("The list of exports the harness uses is complete", async () => {
 	expect(harnessExports.filter((n) => names.has(n) && !used.has(n)), "no longer used, remove them from harnessExports").toEqual([]);
 });
 
+//What the engine contract calls only on the reference (record.sh), whose Game has it: the end of turn's
+//reinforcements, which arrive in the game's session here
+const referenceOnly = ["deployReinforcements"];
+
 test("The game.* members the harness uses exist", async () => {
 	const { game } = await import("../src/game");
-	const missing = members(/(?<![\w$])game\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game));
+	const missing = members(/(?<![\w$])game\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game) && !referenceOnly.includes(n));
 	expect(missing, "game members used by harness/ or test/contracts").toEqual([]);
 });
 

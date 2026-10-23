@@ -16,7 +16,7 @@ transition lose data.
 | Check | Time | Catches |
 |---|---|---|
 | `npm run check` | seconds | types |
-| `npm test` | ~9 s | the contracts: 3 × 15 game states recorded on the reference; the invariant, loader, save and harness-surface tests |
+| `npm test` | ~2 min | the contracts: 2 × 15 game states recorded on the reference; the invariant, loader, save and harness-surface tests |
 | `npm run verify` | 3-4 min | the whole game in Chrome against the original (`reference/`, or main with `BASELINE_REF`): 16 AI vs AI replays, 24 UI scripts, state, DOM and pixels |
 | CI (`ci.yml`) | ~30 s | check and test on every push |
 | Mutation testing (`mutation.yml`) | hours, on GitHub | whether the tests notice small changes, per module |
@@ -25,10 +25,11 @@ The rule: **a refactor re-records nothing.** If a contract or a replay changes, 
 changed: stop, find out why, and either restore it or make it a separate, deliberate commit.
 The one planned exception is step 0's re-recording on the unchanged reference.
 
-The contracts (README, Verification): `gamerules` (every rule), `unit` (every Unit method),
-`engine` (the AI and random player actions playing 2 turns through Map, Unit, GameRules,
-Leaders and Scenario, a hash of the whole state after each step, then the campaign functions and
-hashes of the saved game, the combat log and the equipment data).
+The contracts (README, Verification): `gamerules` (every rule), `engine` (the AI and random player
+actions playing 2 turns, a hash of the whole state after each step, then hashes of the saved game,
+the combat log and the equipment data; through Map, Unit, GameRules, Leaders and Scenario until
+#137, through the game's commands and session on the core since). The `unit` contract (every Unit
+method) went with the old engine's Unit in #137.
 
 Coverage after step 0: 85.8% of statements over the 14 engine files (all but the UI modules),
 up from 75.2%. Still thin: campaign.ts (49%), game.ts (48%), gamestate.ts (47%), aiscripted.ts
@@ -335,6 +336,9 @@ engine: each would be done twice, and the oracle would keep moving. The exceptio
 Kept bugs are reproduced in the new core, then fixed after the switch, each its own commit. This
 delays the rule fixes of milestone 1 (ROADMAP.md) until after the switch.
 
+**The freeze ended with C5** (#137, 2026-10-23): the game plays on the core and the old engine is
+gone. The rule fixes and new mechanics go into the core now, each its own commit with its test.
+
 Closed as superseded: splitting gamerules.ts behind its facade (#117) and a GameSession over the
 old model (#120). The ruleset (#116) and the controllers (#121) moved into the new core for the
 same reason: doing them on the old engine first would be work done twice.
@@ -539,6 +543,22 @@ them, and the game runs on the session.
   Expected verify differences: the counters' drift where the old engine forgot to switch them (#73: an
   embark, a disembark, an upgrade, a leader that sees farther) and what followed from it (a unit marked
   seen, a move range).
+- The old engine removed: src/actions.ts; the old command handlers (src/commands.ts is the game's
+  entry on the core, coreplay.ts merged into it); the old AI and AIScripted (now handlers that hand
+  out the session's orders, src/coresession.ts drives them); GameRules' own rules (src/gamerules.ts is
+  corerules.ts's mapping over a world, `rulesOn`; setZOCRange and setSpotRange still switch the
+  counters the harness moves units with); the counters' arithmetic (MapVisibility only holds them);
+  and what of GameMap, Unit, Scenario, Leaders, ScenarioLoader, MapBoard and UndoSlot only the old
+  engine used. The names the harness uses stay (test/harness-surface.test.ts). Where a test compared
+  the core with the old engine, the core's side was recorded where they agreed, as hashes the game
+  must still give (test/gameturn, core-ai, coreplay, corerules); the differential tests of the
+  commands and queries went with the old engine (test/core-differential, core-steps, core-aicontract;
+  their results are in docs/CORE.md). The tests that drove the old engine play the game's commands and
+  session now: the engine contract (test/coreengine.ts gives
+  it the session's players and end of turn; re-recorded, the differences being #72's and #73's drift,
+  the empty move the AI ordered where no path was, the shape of the cells), the invariants (the #73
+  drills are plain tests now), the properties, the state, save, undo and outcome tests. The unit
+  contract went with Unit's methods. Verify: identical to the step before.
 
 ### Not worth it now
 

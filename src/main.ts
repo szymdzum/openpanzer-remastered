@@ -33,7 +33,6 @@ import * as uicombatlog from "./uicombatlog";
 import * as game from "./game";
 import * as osglue from "./osglue";
 import * as leaders from "./leaders";
-import * as actions from "./actions";
 import * as rng from "./rng";
 import * as context from "./context";
 import * as board from "./board";
@@ -46,15 +45,13 @@ import * as commands from "./commands";
 import * as state from "./state";
 import * as savegame from "./savegame";
 import * as mirror from "./mirror";
-import * as coreplay from "./coreplay";
 import * as coresession from "./coresession";
-import * as corerules from "./corerules";
 import * as coreload from "./coreload";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
-	actions, rng, context, board, visibility, selection, undo, util, session, commands, state,
-	savegame, mirror, coreplay, coresession, corerules, coreload];
+	rng, context, board, visibility, selection, undo, util, session, commands, state,
+	savegame, mirror, coresession, coreload];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import

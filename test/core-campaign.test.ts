@@ -1,9 +1,9 @@
-//A campaign on the core against the old engine's (docs/CORE.md, #135): every campaign of the list,
-//at each difficulty in turn, started by Game.newCampaign and by newGame from its first scenario's
-//file; then three scenarios on, each ended with an outcome by Game.continueCampaign and by
-//endCampaignScenario, the next one started by Game.newScenario and by newGame with the player
-//carried. Between them the campaign player's core units are changed as a scenario would: one hurt,
-//one destroyed, one bought. After each start: the same toData, as JSON
+//A campaign on the core's functions against the game's (docs/CORE.md, #135; the old engine's until
+//#137): every campaign of the list, at each difficulty in turn, started by Game.newCampaign and by
+//newGame from its first scenario's file; then three scenarios on, each ended with an outcome by
+//Game.continueCampaign and by endCampaignScenario, the next one started by Game.newScenario and by
+//newGame with the player carried. Between them the campaign player's core units are changed as a
+//scenario would: one hurt, one destroyed, one bought. After each start: the same toData, as JSON
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
@@ -14,15 +14,16 @@ import { createWorld } from "../src/core/create";
 import { newGame } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/scenario";
 import type { CampaignState, SavedGame } from "../src/state";
+import type { CommandsAPI } from "../src/commands";
 
 type Game = Awaited<ReturnType<typeof freshGame>>;
 
 const OUTCOMES: ScenarioOutcome[] = ["briliant", "victory", "tactical", "lose"];
 
-//The prototypes the old game's message showed, by eqid
+//The prototypes the game's message showed, by eqid
 const shownPrototypes: number[] = [];
 
-//The old game, its UI's messages silent, its streams seeded, the campaign started
+//The game, its UI's messages silent, its streams seeded, the campaign started
 async function oldCampaign(index: number, difficulty: number): Promise<{ game: Game; data: () => SavedGame }> {
 	const game = await freshGame();
 	const { UIBuilder } = await import("../src/uibuilder");
@@ -36,8 +37,9 @@ async function oldCampaign(index: number, difficulty: number): Promise<{ game: G
 }
 
 //What a scenario does to the campaign player's core units: the first hurt (strength, ammo, moved,
-//mounted, entrenched, more experience), the second destroyed when a third is left, a unit bought
-function playScenario(game: Game, equipment: { [eqid: string]: EquipmentEntry }) {
+//mounted, entrenched, more experience), the second destroyed when a third is left, a unit bought (on
+//its turn, as the game buys)
+function playScenario(game: Game, equipment: { [eqid: string]: EquipmentEntry }, commands: CommandsAPI) {
 	const m = game.scenario.map, cp = game.getCampaignPlayer(), list = cp.getCoreUnitList().filter((u) => u.getPos());
 	if (list.length > 0)
 		Object.assign(list[0], { strength: 3, ammo: 0, hasMoved: true, entrenchment: 2, experience: list[0].experience + 150,
@@ -48,7 +50,11 @@ function playScenario(game: Game, equipment: { [eqid: string]: EquipmentEntry })
 	}
 	cp.prestige += 5000;
 	const eqid = Object.keys(equipment).map(Number).find((id) => equipment[id].country === cp.country + 1 && equipment[id].uclass === 2);
-	if (eqid !== undefined) cp.buyUnit(eqid);
+	if (eqid === undefined) return;
+	const current = m.currentPlayer;
+	m.currentPlayer = cp;
+	commands.execute(game.scenario, { type: "buy", eqid, transport: -1 });
+	m.currentPlayer = current;
 }
 
 //Whether f threw
@@ -71,7 +77,7 @@ function startOf(index: number, difficulty: number, prestigeMod: number): Campai
 type Seen = { starts: number; carried: number; prototypes: number; ended: number; threw: number; left: number };
 type Old = Awaited<ReturnType<typeof oldCampaign>>;
 
-//The first difference between the old engine's game and the core's, "" for none
+//The first difference between the game and the core's functions, "" for none
 function compared(what: string, want: SavedGame, got: SavedGame): string {
 	const [a, b] = [JSON.stringify(want), JSON.stringify(got)];
 	return a === b ? "" : what + ":" + difference(a, b);
@@ -101,7 +107,7 @@ async function playCampaign(index: number, seen: Seen): Promise<string> {
 //"" when they agree and the campaign goes on, "end" when it ended (or stopped, #182, on both), else
 //what differs
 async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], seen: Seen): Promise<string> {
-	playScenario(game, (await import("../src/equipment")).Equipment.equipment);
+	playScenario(game, (await import("../src/equipment")).Equipment.equipment, (await import("../src/commands")).Commands);
 	const ended = data();
 	shownPrototypes.length = 0;
 	const oldThrew = threw(() => game.continueCampaign(outcome));
@@ -132,7 +138,7 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 	return prototypeProblem(n.campaign, got.state, seen) || compared(`after ${outcome}, ${n.next.scenario}`, data(), got);
 }
 
-//The prototype the old game's message showed and the one the core says it gave, "" when the same
+//The prototype the game's message showed and the one the core says it gave, "" when the same
 function prototypeProblem(campaign: CampaignState, state: SavedGame["state"], seen: Seen): string {
 	const shown = shownPrototypes.splice(0), awarded = awardedPrototype(campaign, state);
 	if (awarded !== null) seen.prototypes++;
@@ -140,7 +146,7 @@ function prototypeProblem(campaign: CampaignState, state: SavedGame["state"], se
 	return same ? "" : `the prototype: old ${JSON.stringify(shown)}, core ${awarded}`;
 }
 
-test("Every campaign starts, ends its scenarios and carries its player on as on the old engine", async () => {
+test("Every campaign starts, ends its scenarios and carries its player on as the game does", async () => {
 	const problems: string[] = [];
 	const seen: Seen = { starts: 0, carried: 0, prototypes: 0, ended: 0, threw: 0, left: 0 };
 	for (let index = 0; index < campaignlist.length; index++) {
@@ -154,3 +160,26 @@ test("Every campaign starts, ends its scenarios and carries its player on as on 
 	expect(seen.left).toBeGreaterThan(20);
 	if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(seen) + "\n");
 }, 600_000);
+
+//#183: the old game carried a campaign player whose core units all fell on with the list it brought into
+//the scenario, its dead units in it. The game starts a campaign's scenario on the core now
+//(src/coreload.ts): the player starts the next one with no core unit. In the campaign's second scenario
+//(the first brings in none)
+test("A campaign player whose core units all fell starts the next scenario with none (#183)", async () => {
+	const { game } = await oldCampaign(0, 1);
+	const { UIBuilder } = await import("../src/uibuilder");
+	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
+	const next = async () => {
+		game.continueCampaign("victory");
+		const before = game.scenario, scenario = game.campaign.getCurrentScenario();
+		game.newScenario(scenario.scenario, scenario.intro);
+		await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, scenario.scenario);
+	};
+	await next();
+	const cp = game.getCampaignPlayer();
+	expect(cp.getCoreUnitList().length, "core units brought into the second scenario").toBeGreaterThan(0);
+	for (const u of cp.getCoreUnitList()) u.destroyed = true;
+	game.scenario.map.updateUnitList();
+	await next();
+	expect(game.getCampaignPlayer().getCoreUnitList()).toEqual([]);
+}, 60_000);

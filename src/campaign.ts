@@ -48,7 +48,6 @@ export class Campaign {
 	declare setScenarioByName: (scenarioName: string) => boolean;
 	declare getCurrentScenario: () => CampaignScenario;
 	declare loadNextScenario: (outcomeType: ScenarioOutcome) => CampaignScenario;
-	declare getOutcomePrestige: (outcomeType: ScenarioOutcome) => number;
 	declare getOutcomeText: (outcomeType: ScenarioOutcome) => string;
 	declare getCampaignFlow: () => string;
 	declare getScenarioNameFromId: (id: number) => string;
@@ -107,11 +106,6 @@ export class Campaign {
 				return campaignData[o.goto];
 			} else
 				return null;
-		}
-
-		this.getOutcomePrestige = function(outcomeType: ScenarioOutcome) {
-			const o = getOutcome(outcomeType);
-			return o.prestige;
 		}
 
 		this.getOutcomeText = function(outcomeType: ScenarioOutcome) {

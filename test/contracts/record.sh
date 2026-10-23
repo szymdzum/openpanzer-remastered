@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Records the contracts of a module on the reference (openpanzer-src): the expected results the
 # Vitest contract tests compare this repo with. Every state plays in its own Chrome, in parallel.
-# Usage: test/contracts/record.sh [module=gamerules] [state...]   (gamerules, unit or engine; the
+# Usage: test/contracts/record.sh [module=gamerules] [state...]   (gamerules or engine; the
 # states below by default)
 # Writes test/contracts/<module>/<state>-t<turns>.json.gz: the exported game state and the
 # serialized result of every call. Record again when the reference or a contract changes.
@@ -32,7 +32,6 @@ STATES=(drpzop01.xml:0 drpzop01.xml:2 drstu02.xml:0 dr9fr03.xml:2 ruscam09.xml:0
 FUZZ_ROUNDS=${FUZZ_ROUNDS:-1}
 case $MODULE in
 	gamerules) RUN=runGameRulesContract ;;
-	unit) RUN=runUnitContract ;;
 	engine) RUN=runEngineContract ;;
 	*) echo "no contract for $MODULE"; exit 2 ;;
 esac

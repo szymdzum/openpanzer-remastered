@@ -1,17 +1,16 @@
 // @vitest-environment node
 //The player's commands (src/commands.ts) on a small map built by hand: what each one checks,
-//what it does through the engine, and when the move and the attack finish
+//what it does on the core through the game's objects, and when the move and the attack finish
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { Commands, type Command } from "../src/commands";
-import { type EngineContext, engineContext, setEngineContext } from "../src/context";
+import { type AttackResult, Commands, type Command } from "../src/commands";
+import { engineContext, setEngineContext } from "../src/context";
 import { Equipment } from "../src/equipment";
 import { GameRules } from "../src/gamerules";
-import { GameMap, type Player } from "../src/map";
+import type { GameMap, Player } from "../src/map";
 import { Rng } from "../src/rng";
-import { Scenario } from "../src/scenario";
-import type { Unit } from "../src/unit";
+import type { Scenario } from "../src/scenario";
+import { Transport, type Unit } from "../src/unit";
 import { type Cell, terrainType, unitClass } from "../src/prototypes";
-import type { AttackResult } from "../src/actions";
 import { smallGame, smallGameUnits } from "./smallgame";
 
 const check = (sc: Scenario, cmd: Command) => Commands.check(sc, cmd);
@@ -23,20 +22,13 @@ const duel: [number, number, number, number][] = [[115, 0, 6, 7], ...smallGameUn
 const ambush: [number, number, number, number][] = [[142, 0, 3, 7], [504, 1, 6, 7]];
 
 let scenario: Scenario, map: GameMap, players: Player[];
-const defaultContext = engineContext, defaultTurnDriver = GameMap.onPlayerTurn;
+const defaultContext = engineContext;
 function setup(units = smallGameUnits) {
-	scenario = new Scenario();
-	({ map, players } = smallGame(scenario.map, units));
-	const context: EngineContext = { scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, host: () => null };
-	setEngineContext(context);
-	(globalThis as { map?: GameMap }).map = map; //Map.attackUnit reads a global map (#28)
+	({ scenario, map, players } = smallGame(units));
 }
 beforeEach(() => setup());
 afterEach(() => {
-	delete (globalThis as { map?: GameMap }).map;
 	setEngineContext(defaultContext);
-	GameMap.onPlayerTurn = defaultTurnDriver;
-	Rng.source = null;
 });
 
 const unitAt = (row: number, col: number) => map.map[row][col].getUnit(false)!;
@@ -53,14 +45,6 @@ function refusal(cmd: Command): string | null {
 function reachable(u: Unit): Cell {
 	const c = GameRules.getMoveRange(map, u).find((x) => x.canMove)!;
 	return { row: c.row, col: c.col };
-}
-function mulberry32(seed: number): () => number {
-	return () => {
-		seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-		let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-		return ((t ^ t >>> 14) >>> 0) / 4294967296;
-	};
 }
 
 test("check changes nothing, execute refuses what check refuses and changes nothing then", () => {
@@ -131,7 +115,7 @@ test("A move finishes when the caller's animation ends, or at once", () => {
 	setup(ambush);
 	const tank = unitAt(3, 7), enemy = unitAt(6, 7);
 	expect(map.map[6][7].isSpotted(0)).toBe(false);
-	Rng.source = mulberry32(5);
+	Rng.game.state = 5;
 	const losses: Unit[] = [];
 	const s = execute(scenario, { type: "move", unit: tank.id, to: { row: 7, col: 7 } },
 		{ surprise: { onLosses(a) { losses.push(a.defending.unit); } } });
@@ -155,7 +139,7 @@ test("An attack needs both units and the target in range", () => {
 test("An attack fires its hooks in the combat's order and finishes when the caller says", () => {
 	setup(duel);
 	const inf = unitAt(6, 7), enemy = unitAt(7, 7);
-	Rng.source = mulberry32(3);
+	Rng.game.state = 3;
 	const calls: string[] = [];
 	let finish: (() => AttackResult) | null = null;
 	const r = execute(scenario, { type: "attack", unit: inf.id, target: enemy.id }, {
@@ -175,7 +159,7 @@ test("An attack fires its hooks in the combat's order and finishes when the call
 
 	//Without animate it finishes at once
 	setup(duel);
-	Rng.source = mulberry32(3);
+	Rng.game.state = 3;
 	const finished: string[] = [];
 	const again = execute(scenario, { type: "attack", unit: unitAt(6, 7).id, target: unitAt(7, 7).id },
 		{ finish: { onLosses() { finished.push("losses"); } } });
@@ -206,7 +190,7 @@ test("Mount and unmount a unit with a transport", () => {
 	const inf = unitAt(3, 3);
 	expect(refusal({ type: "mount", unit: 99 })).toBe("no such unit");
 	expect(refusal({ type: "unmount", unit: 99 })).toBe("no such unit");
-	inf.setTransport(Equipment.getCountryEquipmentByClass(unitClass.groundTransport, 8)[0]);
+	inf.transport = new Transport(Equipment.getCountryEquipmentByClass(unitClass.groundTransport, 8)[0]);
 	expect(execute(scenario, { type: "mount", unit: inf.id })).toEqual({ ok: true, result: null });
 	expect(inf.isMounted).toBe(true);
 	expect(execute(scenario, { type: "unmount", unit: inf.id })).toEqual({ ok: true, result: null });
@@ -310,22 +294,16 @@ test("Buy, upgrade, deploy and sell a core unit; upgrade and disband one on the 
 	expect([p.getCoreUnitList().length, p.prestige > before[1]]).toEqual([before[0] - 1, true]);
 });
 
-test("End turn hands the turn to the next player, the defeat only for a local side", () => {
-	const started: number[] = [];
-	GameMap.onPlayerTurn = (p) => { started.push(p.id); };
+//(the game ends a turn through its session, with the next player's turn start and the turn limit:
+//test/core-session.test.ts; the command is the step alone)
+test("End turn hands the turn to the next player", () => {
 	expect(check(scenario, { type: "endTurn" })).toBeNull();
-	expect(execute(scenario, { type: "endTurn" })).toEqual({ ok: true, result: false });
-	expect([map.currentPlayer.id, started]).toEqual([1, [1]]);
-	//The allies play their last turn: they lose it, when they play locally
-	map.turn = map.maxTurns = 1;
-	expect(execute(scenario, { type: "endTurn" }, { localSide: 0 })).toEqual({ ok: true, result: false });
-	map.turn = map.maxTurns;
-	map.currentPlayer = players[1];
-	expect(execute(scenario, { type: "endTurn" }, { localSide: 1 })).toEqual({ ok: true, result: true });
+	expect(execute(scenario, { type: "endTurn" })).toEqual({ ok: true, result: null });
+	expect(map.currentPlayer.id).toBe(1);
 });
 
-//check refuses an upgrade where the engine's own upgrade would do nothing: the same three cases
-test("An upgrade check refuses where GameMap.upgradeUnit does nothing", () => {
+//check refuses an upgrade where the old engine's own upgrade did nothing: the same three cases
+test("An upgrade check refuses where the old engine's upgrade did nothing, and changes nothing", () => {
 	const inf = unitAt(3, 3), p = players[0];
 	const infantry = Equipment.getCountryEquipmentByClass(unitClass.infantry, 8).find((id) => id !== 115)!;
 	const cases: [number, number, number, string][] = [ //unit id, eqid, prestige, the refusal
@@ -337,7 +315,7 @@ test("An upgrade check refuses where GameMap.upgradeUnit does nothing", () => {
 		p.prestige = prestige;
 		const before = state();
 		expect(refusal({ type: "upgrade", unit: id, eqid: eqid, transport: -1 })).toBe(reason);
-		expect(map.upgradeUnit(id, eqid, -1)).toBe(false);
+		expect(execute(scenario, { type: "upgrade", unit: id, eqid: eqid, transport: -1 }).ok).toBe(false);
 		expect(state()).toBe(before);
 	}
 });

@@ -1,13 +1,13 @@
-//The gamerules contract on the new core (docs/CORE.md, #133): every recorded call of every fixture,
-//answered by the core through test/coreadapter.ts from toData of the same restored state, must
-//equal the recording, as the old engine's answers do (test/gamerules.test.ts)
+//The gamerules contract on the core (docs/CORE.md, #133): every recorded call of every fixture,
+//answered by the game's GameRules (rulesOn, test/coreadapter.ts) from toData of the same restored
+//state, must equal the recording
 import { expect, test } from "vitest";
 import { compareResults, contract, fixtures, readFixture, restoreState } from "./contracts";
 import { coreGameRules, oldSight } from "./coreadapter";
 import { createWorld } from "../src/core/create";
 import { unitById } from "../src/core/world";
 
-//The fixture's state restored into the old engine, and its modules
+//The fixture's state restored into the game's objects, and its modules
 async function restore(name: string) {
 	const fixture = readFixture("gamerules", name);
 	const scenario = await restoreState(fixture.state);
@@ -15,13 +15,14 @@ async function restore(name: string) {
 	const { toData } = await import("../src/state");
 	const { Rng } = await import("../src/rng");
 	const { terrainType, leaderType } = await import("../src/prototypes");
-	return { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType };
+	const { rulesOn } = await import("../src/gamerules");
+	return { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType, rulesOn };
 }
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test.each(fixtures("gamerules"))("GameRules contract on the core %s", async (name) => {
-	const { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType } = await restore(name);
-	const GameRules = coreGameRules({ scenario, Equipment, toData, game: Rng.game });
+	const { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType, rulesOn } = await restore(name);
+	const GameRules = coreGameRules({ rulesOn, scenario, Equipment, toData, game: Rng.game });
 	const env = { GameRules, Equipment, terrainType, leaderType, map: scenario.map, fuzzRounds: fixture.fuzzRounds };
 	const actual = contract("gamerules", "runGameRulesContract").run(env);
 	expect(compareResults(fixture.results, actual), "the core differs from the recording").toBeNull();
@@ -29,9 +30,9 @@ test.each(fixtures("gamerules"))("GameRules contract on the core %s", async (nam
 
 //The core's state is toData's (docs/STATE.md): a world keeps the data and the state it was given as
 //they are, a copy of them (as a save makes) gives the same world, and the index finds every unit.
-//The contract reads the old engine's counters (the fuzz changes units under them); the core's own
+//The contract reads the hexes' counters (the fuzz changes units under them); the core's own
 //sight, computed from the units, equals them on the restored states
-test.each(fixtures("gamerules"))("The core's world from toData on %s: the state as given, the sight the old engine's", async (name) => {
+test.each(fixtures("gamerules"))("The core's world from toData on %s: the state as given, the sight the counters'", async (name) => {
 	const { scenario, Equipment, toData } = await restore(name);
 	const saved = toData(scenario);
 	const before = structuredClone(saved);

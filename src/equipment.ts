@@ -12,9 +12,6 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { unitClass, unitType } from "./prototypes";
-import { defined } from "./util";
-
 //The index lists of a country file: equipment ids by unit class
 export interface EquipmentIndexes {
 	unitclass?: { [uclass: string]: number[] };
@@ -50,11 +47,7 @@ export interface EquipmentModule {
 	addCountryEquipment(country: number, callback: () => void): void;
 	parseCountryEquipment(country: number, e: EquipmentCountryFile): boolean;
 	getCountryEquipmentByClass(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean): number[];
-	getCountryEquipmentByYearRange(startYear: number, endYear: number, country: number): number[];
-	isBridge(eqid: number): boolean;
-	ignoresEntrenchment(eqid: number): boolean;
 	isPurchasable(eqid: number): boolean;
-	canInitiateAttackOnUnitType(eqid: number, targetEqid: number): boolean;
 }
 
 export var Equipment: EquipmentModule = (function(Equipment: EquipmentModule) { //Module start
@@ -81,12 +74,6 @@ Equipment.countryNames = {
 };
 
 //The bit masks of the attr field, only the ones used here (see the 2.9 source for the full list)
-const IGNORE_ENTRENCH_MASK 	= 1 << 2; //bit 3 (skip 2 is unknown)
-const BRIDGE_MASK				= 1 << 3; //bit 4
-const START_SOFT_ATTACK_MASK	= 1 << 4;
-const START_HARD_ATTACK_MASK	= 1 << 5;
-const START_AIR_ATTACK_MASK	= 1 << 6;
-const ATTACK_AIR_MASK			= 1 << 15;
 const PURCHASABLE_MASK		= 1 << 18;
 
 Equipment.getCountryName = function(country: number) {
@@ -171,73 +158,15 @@ Equipment.getCountryEquipmentByClass = function(uclass: number, country: number,
 	return eqList;
 }
 
-Equipment.getCountryEquipmentByYearRange = function(startYear: number, endYear: number, country: number) {
-	const eqList: number[] = [];
-	let u: EquipmentEntry, id: any = 0; //id is the for...in key, a string
-
-	if (typeof Equipment.equipmentIndexes[country] === "undefined") //TODO send load request ?
-		return eqList;
-
-	for (id in Equipment.equipment) {
-		u = Equipment.equipment[id];
-		if (u.country == country && u.yearavailable >= startYear && u.yearavailable <= endYear) {
-			eqList.push(+id); //make it integer
-		}
-	}
-
-	return eqList;
-}
-
 //Whether the equipment eqid has an attribute bit, false for an unknown eqid
 function hasAttr(eqid: number, mask: number): boolean {
 	return typeof Equipment.equipment[eqid] !== "undefined" && (Equipment.equipment[eqid].attr & mask) != 0;
-}
-
-Equipment.isBridge = function(eqid: number) {
-	return hasAttr(eqid, BRIDGE_MASK);
-}
-
-Equipment.ignoresEntrenchment = function(eqid: number) {
-	return hasAttr(eqid, IGNORE_ENTRENCH_MASK);
 }
 
 Equipment.isPurchasable = function(eqid: number) {
 	return hasAttr(eqid, PURCHASABLE_MASK);
 }
 
-//Can a unit of type eqid start an attack on a unit of type targetEqid
-Equipment.canInitiateAttackOnUnitType = function(eqid: number, targetEqid: number) {
-	if (!defined(Equipment.equipment[eqid]) || !defined(Equipment.equipment[targetEqid]))
-		return false;
-
-	const uclass = Equipment.equipment[eqid].uclass;
-	const targetType = Equipment.equipment[targetEqid].target;
-
-	//Only destroyers and tactical bombers can attack submarines
-	if (Equipment.equipment[targetEqid].uclass == unitClass.submarine
-		&& uclass != unitClass.destroyer && uclass != unitClass.tacticalBomber)
-		return false;
-
-	if ((targetType == unitType.soft) && (Equipment.equipment[eqid].attr & START_SOFT_ATTACK_MASK) != 0)
-		return false;
-
-	if ((targetType == unitType.hard) && (Equipment.equipment[eqid].attr & START_HARD_ATTACK_MASK) != 0)
-		return false;
-
-	//Air targets: units with the start air attack flag can't, and neither can the classes not
-	//listed here unless they have the attack air flag
-	if ((targetType == unitType.air)
-		&& ((Equipment.equipment[eqid].attr & START_AIR_ATTACK_MASK) != 0
-			|| (uclass != unitClass.airDefence && uclass != unitClass.fighter
-				&& uclass != unitClass.levelBomber && uclass != unitClass.tacticalBomber
-				&& uclass != unitClass.battleship && uclass != unitClass.battleCruiser
-				&& uclass != unitClass.lightCruiser && uclass != unitClass.airTransport
-				&& (Equipment.equipment[eqid].attr & ATTACK_AIR_MASK) == 0)))
-		return false;
-
-	//Return true if can initiate attack or targetType is unitType.sea
-	return true;
-}
 
 //Loads a country equipment file from the current equipment set, callback is called after
 //the request finished, also when it failed

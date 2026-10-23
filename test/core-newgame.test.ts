@@ -1,8 +1,9 @@
-//A new game on the core against the old engine's (docs/CORE.md, #135): the scenario files of the
-//scenario list, each started by Game.newScenario (its players human, the streams seeded) and by
-//the core's newGame from the same file read by scenariofile.ts, the equipment read from its own
-//files: the same toData, as JSON (the save's key order, the streams' positions after the leaders'
-//draws). CI starts every eighth scenario of the list; CORE_ALL_SCENARIOS=1 starts them all
+//A new game on the core's newGame against the game's (docs/CORE.md, #135; the old engine's until
+//#137): the scenario files of the scenario list, each started by Game.newScenario (its players human,
+//the streams seeded: the scenario loader's files, src/coreload.ts) and by the core's newGame from the
+//same file read by scenariofile.ts, the equipment read from its own files: the same toData, as JSON
+//(the save's key order, the streams' positions after the leaders' draws). CI starts every eighth
+//scenario of the list; CORE_ALL_SCENARIOS=1 starts them all
 import { expect, test } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import { difference, scenarioFiles, setupOf } from "./corefiles";
@@ -12,7 +13,7 @@ const SEEDS = { game: 135, ai: 7 };
 
 const every = process.env.CORE_ALL_SCENARIOS ? 1 : 8;
 
-test("A scenario file starts the same game on the core as on the old engine", async () => {
+test("A scenario file starts the same game on the core as in the game", async () => {
 	const files = scenarioFiles().filter((_f, i) => i % every === 0);
 	const problems: string[] = [];
 	let leaders = 0;
@@ -35,7 +36,7 @@ test("A scenario file starts the same game on the core as on the old engine", as
 
 //The players the game asks for: the AI on side 1 (its controller sorts nothing at the start), and the
 //tutorial with every player the scripted AI
-test("A scenario started against the AI, or the scripted tutorial, starts the same on both engines", async () => {
+test("A scenario started against the AI, or the scripted tutorial, starts the same on the core and in the game", async () => {
 	const cases: [string, number[]][] = [...scenarioFiles().filter((_f, i) => i % 16 === 5).map((f): [string, number[]] => [f, [0, 1, 0, 0]]),
 		["tutorial.xml", [2, 2, 2, 2]]];
 	for (const [file, isAI] of cases) {

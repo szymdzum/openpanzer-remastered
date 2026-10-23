@@ -11,31 +11,25 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, there is no 2.9 counterpart.
  */
 
-import { leaderType, UNIT_MAX_EXPERIENCE, unitClass } from "./prototypes";
+import { leaderType, unitClass } from "./prototypes";
 import type { Unit } from "./unit";
-import { Rng } from "./rng";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none
 export interface LeadersModule {
 	unitClassLeaders: { [uclass: number]: number[] };
 	description: [string, string][]; //[name, description] by leaderType
-	LEADER_CHANCE_THRESHOLD: number;
-	generateLeader(unit: Unit | null): number;
-	generateLeaderWithChance(unit: Unit | null, expGained: number): number;
 	getUnitClassLeader(unit: Unit | null): number;
-	unitHasLeader(unit: Unit | null, leader: number): boolean;
 	getUnitLeaderDescriptions(unit: Unit | null): [string, string][];
 }
 
 export var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module start
 
 //Leaders a unit class can get, by unitClass. The first one is the class leader, which every
-//unit with a leader also has, the others are the random leaders generateLeader picks from
+//unit with a leader also has, the others are the random leaders a unit can get (the core's
+//classicRules holds the same lists, src/core/rules.ts)
 Leaders.unitClassLeaders = {};
 //[name, description] by leaderType
 Leaders.description = [];
-//A unit that gained an experience level gets a leader when its 0-10 roll is above this
-Leaders.LEADER_CHANCE_THRESHOLD = 8;
 
 Leaders.unitClassLeaders[unitClass.none] = [];
 Leaders.unitClassLeaders[unitClass.infantry] = [
@@ -261,44 +255,6 @@ Leaders.description[leaderType.superiorManeuver] = [
 	"The unit may bypass enemy unit zones of control."
 ];
 
-//Returns a random leader for the unit from its class leaders, -1 if the class has none
-//Bug kept: the roll range is length - 3, not length - 1, so it never picks the last two
-//leaders of the list and with only 2 leaders it can pick the class leader (index 0)
-Leaders.generateLeader = function(unit) {
-	if (!unit) return -1;
-
-	const uclass = unit.unitData().uclass;
-	const count = Leaders.unitClassLeaders[uclass].length;
-
-	if (count < 2) return -1;
-
-	const idx = Math.floor(Rng.random() * (count - 1 - 2)) + 1;
-	return Leaders.unitClassLeaders[uclass][idx];
-}
-
-//Called after combat with the experience the unit gained: a unit at max experience always
-//gets a leader, otherwise only when it went up an experience level and wins the roll.
-//Returns the new leader or -1
-Leaders.generateLeaderWithChance = function(unit, expGained) {
-	if (!unit || unit.leader != -1) return -1;
-
-	const level = (unit.experience / 100) >> 0;
-	const prevLevel = ((unit.experience - expGained) / 100) >> 0;
-	//rolled even when it isn't used
-	const roll = Math.floor(Rng.random() * (10 - level + 1)) + level;
-
-	if (unit.experience >= UNIT_MAX_EXPERIENCE)
-		return Leaders.generateLeader(unit);
-
-	if (level - prevLevel <= 0)
-		return -1;
-
-	if (roll > Leaders.LEADER_CHANCE_THRESHOLD)
-		return Leaders.generateLeader(unit);
-
-	return -1;
-}
-
 //The class leader of a unit that has a leader, -1 otherwise
 Leaders.getUnitClassLeader = function(unit) {
 	if (unit && unit.leader != -1)
@@ -307,16 +263,6 @@ Leaders.getUnitClassLeader = function(unit) {
 }
 
 //Checks if the unit has the leader, either as its own leader or as its class leader
-Leaders.unitHasLeader = function(unit, leader) {
-	if (!unit || unit.leader == -1) return false;
-	if (unit.leader == leader) return true;
-
-	const classLeader = Leaders.getUnitClassLeader(unit);
-	if (leader == classLeader)
-		return true;
-	return false;
-}
-
 //Returns the [name, description] of the unit leader and of its class leader
 Leaders.getUnitLeaderDescriptions = function(unit) {
 	if (!unit || unit.leader == -1) return [];

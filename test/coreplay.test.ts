@@ -1,30 +1,26 @@
-//The running game's commands on the core (src/coreplay.ts, #137) against the old engine's
-//(Commands.execute): random command sequences on the engine fixtures (test/commandgen.ts), each played
-//on the old engine, then the same sequence on the core through the game's objects, with the hooks the
-//UI gives (the move's finish when its animation ends, the surprise attack's animated as an attack, an
-//attack's finish when its animation ends, the selection refreshed after the cleanup, a retreat's
-//capture when its animation ends), the person clicking units between the commands. After every
-//command both tell the same story:
-//- the hooks called, in order, with what they were given (cells, units, strengths, the combat result,
-//  the move's hexes and what the other side saw of them);
-//- toData's state, the selection's hexes and unit, the combat log, the image cache (not the counters:
-//  the old engine's drift, #72, #73, which the core's sight computed from the units doesn't have).
+//The running game's commands on the core (src/commands.ts, #137): random command sequences on the engine
+//fixtures (test/commandgen.ts), played through the game's objects with the hooks the UI gives (the
+//move's finish when its animation ends, the surprise attack's animated as an attack, an attack's finish
+//when its animation ends, the selection refreshed after the cleanup, a retreat's capture when its
+//animation ends), the person clicking units between the commands. After every command, its story: the
+//hooks called, in order, with what they were given (cells, units, strengths, the combat result, the
+//move's hexes and what the other side saw of them); toData's state, the selection's hexes and unit,
+//the combat log, the image cache. Until the old engine went (#137) the old engine's commands told the
+//same story on the same sequences, up to where its counters drifted (#72, #73); the hashes of the
+//stories then (test/coreplay.json.gz) pin them since
 import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+import { createHash } from "node:crypto";
 import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { commandOf, type Sequence, sequences } from "./commandgen";
-import { drifted, load } from "./invariants";
-import { difference } from "./aigames";
+import { load } from "./invariants";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
-import type { ActionsAPI, AttackResult, FinishAttackHooks } from "../src/actions";
-import type { toData as ToData } from "../src/state";
-import type { AttackCommandHooks, Command } from "../src/commands";
+import type { AttackCommandHooks, AttackResult, Command, FinishAttackHooks } from "../src/commands";
 
-type World = Awaited<ReturnType<typeof load>> & { toData: typeof ToData; Actions: ActionsAPI };
-//The command entry under test: the old engine's, or the core's through the objects (the same hooks,
-//but the surprise attack's: the old one asks the UI to attack, the new one for the attack's hooks)
-type Engine = "old" | "core";
+type World = Awaited<ReturnType<typeof loaded>>;
 
 const stats: Record<string, number> = {};
 const count = (what: string) => { stats[what] = (stats[what] || 0) + 1; };
@@ -45,18 +41,18 @@ function resultStory(r: AttackResult): string {
 		+ ` | destroyed ${r.destroyed.map(unitName).join(",")} retreat ${cellName(r.retreat)} surrender ${r.surrender} won ${r.victorySides.join(",")}`;
 }
 
-//One game played on one engine: the story of every command
+//One game played: the story of every command
 class Play {
 	story: string[] = [];
 	later: (() => void)[] = [];
 	declare readonly w: World;
-	declare readonly engine: Engine;
-	declare readonly execute: (cmd: Command, hooks?: unknown) => { ok: boolean };
 
-	constructor(w: World, engine: Engine, execute: (cmd: Command, hooks?: unknown) => { ok: boolean }) {
+	constructor(w: World) {
 		this.w = w;
-		this.engine = engine;
-		this.execute = execute;
+	}
+
+	execute(cmd: Command, hooks?: unknown): { ok: boolean } {
+		return this.w.Commands.execute(this.w.scenario, cmd, hooks as never);
 	}
 
 	tell(what: string) {
@@ -94,7 +90,7 @@ class Play {
 			},
 			onRetreat: (u, c, mr) => {
 				this.tell(`retreat ${unitName(u)} ${cellName(c)} ${moveStory(mr)}`);
-				this.later.push(() => this.w.Actions.finishMove(m, u, mr, false, {
+				this.later.push(() => this.w.Commands.finishRetreat(u, mr, {
 					onCapture: (x) => this.tell("retreat capture " + unitName(x)),
 					onVictory: (side) => this.tell("retreat victory " + side),
 				}));
@@ -105,7 +101,7 @@ class Play {
 	}
 
 	endTurn() {
-		endTurnOld(this);
+		endTurn(this);
 	}
 
 	//ui.ts uiUnitMove and uiMoveAnimationFinished: the finish with the air mode, the surprise attack
@@ -116,12 +112,7 @@ class Play {
 			onSurprised: (c: Cell, u: Unit) => this.tell(`surprised ${cellName(c)} ${unitName(u)}`),
 			onCapture: (u: Unit) => this.tell("capture " + unitName(u)),
 			onVictory: (side: number) => this.tell("move victory " + side),
-			...(this.engine === "old"
-				? { attack: (a: Unit, d: Unit) => {
-					const r = this.execute({ type: "attack", unit: a.id, target: d.id }, this.attackHooks(a, d, true));
-					return r.ok ? (r as unknown as { result: AttackResult }).result : null;
-				} }
-				: { attackHooks: (a: Unit, d: Unit) => this.attackHooks(a, d, true) }),
+			attackHooks: (a: Unit, d: Unit) => this.attackHooks(a, d, true),
 		};
 		return this.execute(cmd, {
 			animate: (mr: movementResults, finish: (air: boolean, hooks: unknown) => unknown) => {
@@ -143,13 +134,26 @@ class Play {
 	}
 }
 
-//The end of turn on the old engine for both (Game.endTurn: the next player's side shown, its
-//reinforcements), as the game still plays it
-function endTurnOld(p: Play) {
+//The end of turn as Game.endTurn plays it on the session (src/coresession.ts endGameTurn), no player
+//planning (the people play): the selection cleared, the end of turn step, the resupplies of the new
+//turn in the combat log, the next player's side shown, its reinforcements arrived, each in the log
+function endTurn(p: Play) {
 	const w = p.w;
-	w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: 2 });
+	w.m.delMoveSel();
+	w.m.delAttackSel();
+	w.m.delCurrentUnit();
+	const r = w.step(w.worldOf(), { type: "endTurn" });
+	if (!r.ok) throw new Error("the end of turn refused");
+	w.applyData(r.world);
+	for (const e of r.events) if (e.type === "resupplied") w.CombatLog.addResupply(w.m.getUnitById(e.unit));
 	w.game.spotSide = w.m.currentPlayer.side;
-	w.Actions.deployReinforcements(w.scenario, w.m.turn, w.m.currentPlayer.id, (c) => p.tell("arrived " + cellName(c)));
+	const arrived = w.arriveReinforcements(w.worldOf());
+	w.applyData(arrived.world);
+	for (const e of arrived.events)
+		if (e.type === "arrived") {
+			p.tell("arrived " + cellName(e.at as Cell));
+			w.CombatLog.addReinforcement(w.m.getUnitById(e.unit));
+		}
 }
 
 //The state and what the screen shows beside it
@@ -167,12 +171,12 @@ function snapshot(w: World): string {
 
 //A fixture loaded for a sequence: every player a person (but a campaign's other players), the side
 //shown the current player's, the streams seeded, the combat log empty
-async function loaded(seq: Sequence): Promise<World> {
-	const w = await load(seq.fixture) as World;
-	const { toData } = await import("../src/state");
+async function loaded(seq: Sequence) {
+	const w = await load(seq.fixture);
 	const { setEngineContext, engineContext } = await import("../src/context");
-	const { Actions } = await import("../src/actions");
-	Object.assign(w, { toData, Actions });
+	const { worldOf, applyData } = await import("../src/mirror");
+	const { arriveReinforcements, outcome } = await import("../src/core/turn");
+	const { step } = await import("../src/core/step");
 	setEngineContext({ ...engineContext, host: () => w.game });
 	for (const p of w.m.getPlayers())
 		if (!w.game.campaign || p.country === w.game.campaign.country) p.type = w.playerType.humanLocal;
@@ -181,7 +185,9 @@ async function loaded(seq: Sequence): Promise<World> {
 	w.Rng.ai.state = 7;
 	w.CombatLog.reset();
 	(globalThis as { map?: unknown }).map = w.m; //Map.attackUnit logs the turn of a global map (#28)
-	return w;
+	const world = () => worldOf(w.scenario, w.game, { spotSide: w.game.spotSide, noFOW: false });
+	return Object.assign(w, { worldOf: world, applyData: (x: ReturnType<typeof world>) => applyData(w.scenario, x, w.game),
+		arriveReinforcements, step, ended: () => outcome(world()) !== null });
 }
 
 //The person clicks a unit of theirs first, now and then (the selection's carrier flips)
@@ -192,45 +198,39 @@ function click(w: World, pick: Sequence["steps"][number]) {
 	w.m.selectUnit(own[pick.unit % own.length]);
 }
 
-//The sequence on one engine: after each command its story and the snapshot
-async function playOn(seq: Sequence, engine: Engine, commands?: (Command | null)[]): Promise<{ steps: string[]; commands: (Command | null)[] }> {
+//The sequence: after each command its story and the snapshot, as hashes
+async function play(seq: Sequence): Promise<string[]> {
 	const w = await loaded(seq);
-	const { CorePlay } = await import("../src/coreplay");
-	const execute = engine === "old" ? (cmd: Command, hooks?: unknown) => w.Commands.execute(w.scenario, cmd, hooks as never)
-		: (cmd: Command, hooks?: unknown) => CorePlay.execute(w.scenario, cmd, hooks as never);
-	const p = new Play(w, engine, execute);
-	const played: (Command | null)[] = [], steps: string[] = [];
-	for (let i = 0; i < (commands ? commands.length : seq.steps.length) && !w.Actions.checkOutcome(w.scenario); i++) {
-		const cmd = commands ? commands[i] : commandOf(w, seq.steps[i]);
-		played.push(cmd);
+	const p = new Play(w);
+	const steps: string[] = [];
+	for (let i = 0; i < seq.steps.length && !w.ended(); i++) {
+		const cmd = commandOf(w, seq.steps[i]);
 		if (cmd === null) continue;
 		click(w, seq.steps[i]);
 		p.story = [];
-		count(engine + " " + cmd.type);
+		count(cmd.type);
 		p.run(cmd, seq.steps[i].any % 2 === 1);
-		//(where the old engine's counters drift, #72 and #73, the core's sight doesn't: the two part there,
-		//the command played on both, not compared)
-		if (engine === "old" && drifted(w)) {
-			count("drifted");
-			break;
-		}
-		steps.push(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ") + "\n" + snapshot(w));
+		steps.push(createHash("sha1").update(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ") + "\n" + snapshot(w))
+			.digest("hex").slice(0, 12));
 	}
-	return { steps, commands: played };
+	return steps;
 }
 
-async function both(seq: Sequence) {
-	if (process.env.FC_TRACE) fs.appendFileSync(process.env.FC_TRACE, JSON.stringify(seq) + "\n");
-	const old = await playOn(seq, "old");
-	const core = await playOn(seq, "core", old.commands);
-	for (let i = 0; i < old.steps.length; i++)
-		if (old.steps[i] !== core.steps[i])
-			throw new Error(`${seq.fixture}, step ${i}: ${(old.steps[i] || "").split("\n").filter((l) => !l.startsWith("{\"state")).join("\n")}${difference(old.steps[i] || "", core.steps[i] || "")}`);
-	count("sequences");
-}
+//The hashes recorded, by sequence (UPDATE_CONTRACTS=1 writes them again, in a commit that names the
+//issue it fixes): the old engine's story was the same up to where its counters drifted
+const pinned = path.join(__dirname, "coreplay.json.gz");
+const recorded = () => JSON.parse(zlib.gunzipSync(fs.readFileSync(pinned)).toString("utf8")) as string[][];
 
-test("Property: the game's commands on the core tell the UI what the old engine's did, and leave the same game", async () => {
-	await fc.assert(fc.asyncProperty(sequences, both), { seed: 137, path: process.env.FC_PATH,
-		numRuns: process.env.FC_RUNS ? Number(process.env.FC_RUNS) : 40, endOnFailure: !!process.env.FC_NOSHRINK });
-	expect(stats["core attack"]).toBeGreaterThan(10);
-}, process.env.FC_RUNS ? Number(process.env.FC_RUNS) * 1000 : 300_000);
+test("The game's commands on the core tell the UI what the old engine's did, and leave the same game", async () => {
+	const want = recorded(), got: string[][] = [];
+	for (const seq of fc.sample(sequences, { seed: 137, numRuns: want.length })) {
+		const steps = await play(seq);
+		const i = got.length;
+		got.push(steps);
+		if (process.env.UPDATE_CONTRACTS) continue;
+		const k = want[i].findIndex((h, n) => steps[n] !== h);
+		expect(k, `sequence ${i} on ${seq.fixture}, step ${k}`).toBe(-1);
+	}
+	if (process.env.UPDATE_CONTRACTS) fs.writeFileSync(pinned, zlib.gzipSync(JSON.stringify(got), { level: 9 }));
+	expect(stats.attack).toBeGreaterThan(10);
+}, 300_000);

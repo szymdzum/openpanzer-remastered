@@ -71,7 +71,8 @@ included (#69, #70, #167, #87, #88, #90, #95, #19, #23...): they are fixed after
 **Hot paths.** The AI calls the move range and the combat result many times a turn: they allocate
 only their answer, the move range finds a cell's neighbours through a reused hex-to-cell table
 (the old engine compares every pair of cells). `BENCH=1 npx vitest run test/core-bench.test.ts`
-measures them against the old engine on the 15 engine fixtures (2026-10-22, on a loaded laptop):
+measured them against the old engine on the 15 engine fixtures (2026-10-22, on a loaded laptop; it
+measures the core alone since #137):
 
 | Per call | Old engine | Core |
 |---|---|---|
@@ -155,7 +156,7 @@ world resumed from can be one made again from the screen's objects. What the scr
 input, not state: the air mode the surprise attack picks its target with (#77: the person's toggle;
 a program plays with it off), and `retreat: false` when the old UI's finish skipped the retreat (an
 attack with nothing to animate read both strengths as 0, kept). `step` passes every checkpoint at
-once on one draft; test/core-steps.test.ts plays each of its commands both ways and compares them.
+once on one draft; test/core-steps.test.ts played each of its commands both ways until #137.
 
 **Undo (D5).** The state keeps `turn.undoable` exactly as the old engine's slot decides it: a human
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
@@ -349,14 +350,25 @@ it against the session:
 
 ## The proof
 
-- **The gamerules contract on both engines** (test/core-contract.test.ts): the recorded calls of
-  every fixture run against `test/coreadapter.ts`, the old `GameRules` API on the core: each call
-  takes `toData` of the same restored state and the core's answer, turned back into the old
-  shapes. Every rule, every unit pair, every result must equal the recording.
-  - The spotting and zone of control the queries read are the old engine's own counters there: the
-    contract's fuzz changes the units under counters that stay (as #73 does). `computeSight` is
-    checked against the counters separately, on the states where they don't drift.
-- **Differential property tests** (test/core-differential.test.ts, fast-check): random legal
+Until the switch (#137) the core was proven against the old engine, which the tests ran beside it.
+The game plays on the core since, and the old engine is gone. Where a test compared the two, the
+core's side of it was recorded on the last commit that had both, where they agreed, as hashes: the
+game's turns (test/gameturn.test.ts), the AI and the tutorial (test/core-ai.test.ts), the game's
+commands with the UI's hooks (test/coreplay.test.ts) and the screen's rules (test/corerules.test.ts)
+must still give them, so they still say "as the old engine did". The differential tests of the
+commands and of the queries against the old engine (test/core-steps.test.ts,
+test/core-differential.test.ts) and the engine contract's AI turns (test/core-aicontract.test.ts)
+went with it, their results as measured below; the engine contract runs on the game's commands and
+session now (test/coreengine.ts), the gamerules contract on the game's GameRules.
+
+- **The gamerules contract** (test/core-contract.test.ts): the recorded calls of every fixture run
+  against the game's `GameRules` (src/gamerules.ts `rulesOn`, test/coreadapter.ts): each call takes
+  `toData` of the same restored state and the core's answer, in the old API's shapes. Every rule,
+  every unit pair, every result must equal the recording.
+  - The spotting and zone of control the queries read are the hexes' counters there: the
+    contract's fuzz changes the units under counters that stay. `computeSight` is checked against
+    the counters separately, on the restored states.
+- **Differential property tests** (until #137: test/core-differential.test.ts, fast-check): random legal
   commands played on the engine fixtures through `Commands.execute`, then on the state reached:
   - the core's sight equals the old engine's recomputation from its units, hex by hex, counts
     included. Where the old counters drift from it (#72, #73), the state is masked by name: its
@@ -367,7 +379,7 @@ it against the session:
 
   CI plays 12 sequences (about 100,000 compared answers); `FC_RUNS=120` played 120 (over a million,
   12 states with drift) with no difference.
-- **The commands against the old engine** (test/core-steps.test.ts, fast-check): random command
+- **The commands against the old engine** (until #137: test/core-steps.test.ts, fast-check): random command
   sequences on the engine fixtures, the legal ones the old engine offers and any command at all
   (one in eight), each played through `Commands.execute` and through `step`, the core playing on
   from its own state. After every command: the same answer (and `check`'s), the same toData as JSON
@@ -389,17 +401,18 @@ it against the session:
     side 1 or none (#75): the new rounds, the reinforcements, the defeat of the side shown.
   - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
     deploy; a campaign's kills and losses in the dossier.
-- **A new game against the old loader** (test/core-newgame.test.ts): a scenario file started by
-  Game.newScenario and by `newGame` from the same file and the equipment's own files, the streams
-  seeded: the same toData as JSON. CI starts every eighth file of the scenario list (51 of its 403 entries) and some
+- **A new game against the old loader** (test/core-newgame.test.ts; against the game's own path,
+  src/coreload.ts, since #137): a scenario file started by Game.newScenario and by `newGame` from the
+  same file and the equipment's own files, the streams seeded: the same toData as JSON. CI starts every eighth file of the scenario list (51 of its 403 entries) and some
   against the AI and the scripted tutorial; `CORE_ALL_SCENARIOS=1` starts them all (17 s): no difference.
-- **A campaign against the old engine** (test/core-campaign.test.ts): every campaign of the list
+- **A campaign against the old engine** (test/core-campaign.test.ts; against the game's own path
+  since #137): every campaign of the list
   (17), at each difficulty in turn, started by Game.newCampaign and by `newGame`, then up to three
   scenarios ended with an outcome by Game.continueCampaign and by `endCampaignScenario` (a core unit
   hurt, one destroyed and one bought in between), the next started by both: the same toData after
   every start. 17 starts, 35 transitions, 7 prototypes awarded, 6 campaign ends, one stop (#182), no
   difference.
-- **The AI against the old AI** (test/core-ai.test.ts): the old game played headless as Game plays it
+- **The AI against the old AI** (test/core-ai.test.ts, pinned by hashes since #137): the old game played headless as Game plays it
   (test/aigames.ts: processAction, the UI's move and attack finished at once, Game.endTurn) and the
   core's session, in lockstep from toData of the same state, the streams seeded. After every advance:
   the same order (the old AI's action as the command it amounts to), the same answer (the old game's
@@ -417,7 +430,7 @@ it against the session:
   for the tutorial (34 games, 3,700 orders, 3,842 states, 142 turns, 951 turn start commands; the
   tutorial's 5 games 131 orders, 3 stuck); `CORE_AI_ROUNDS=10` played 15,881 orders, 16,438 states,
   557 turns, 1,047 turn start commands, 7 victories, a turn limit and 3 stops at #80: no difference.
-- **The engine contract's AI turns** (test/core-aicontract.test.ts): each AI of the contract (the AI
+- **The engine contract's AI turns** (until #137: test/core-aicontract.test.ts): each AI of the contract (the AI
   players' and the human players' stand-ins) has the core's AI beside it, and each scripted player
   (scripted-tutorial-t2) the core's tutorial, from toData of the state before each call: the same
   turn start commands, the same view events when it is made and at its turn start, the same state

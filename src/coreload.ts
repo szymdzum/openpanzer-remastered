@@ -7,8 +7,7 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * The loader reads the files as before, in the same order (the page's requests are part of what the
- * harness replays); only who makes the units and players changed. Set by Game.init as
- * ScenarioLoader.build: the old engine's tests load with the loader's own.
+ * harness replays); only who makes the units and players changed. Set by game.ts as ScenarioLoader.build.
  */
 
 import { uiSettings } from "./prototypes";
@@ -46,7 +45,7 @@ export function buildOnCore(scen: Scenario, xmlData: Document, imageSize: [numbe
 	prototypeAwarded = awardedPrototype(campaign, saved.state);
 	fromData(saved, campaign !== null ? game : null, scen);
 	cacheFileImages(scen, file);
-	scen.onLoadFinished(true);
+	scen.onLoadFinished();
 }
 
 //The icons of every unit the file put on the map, in the image cache as the old loader left them: a

@@ -12,32 +12,25 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { difficultyModifiers } from "./prototypes";
 import { Equipment } from "./equipment";
-import { GameRules } from "./gamerules";
-import { Unit } from "./unit";
-import { Player } from "./map";
 import type { Scenario } from "./scenario";
-import { engineContext } from "./context";
-import { Leaders } from "./leaders";
 
 //Where the scenario files are, relative to the page (Scenario.scenarioPath is the same string)
 export const scenarioPath = "resources/scenarios/data/";
 
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
-//size), then the equipment of the players countries. scen.onLoadFinished() is called at the
-//end, with scen.isLoaded telling if the scenario loaded.
+//size), then the equipment of the players countries; then ScenarioLoader.build makes the game (the
+//core's newGame, src/coreload.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load
+//calls it with scen.isLoaded false.
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
-	//Who makes the game once its files are in: the core in the running game (#137: src/coreload.ts, set by
-	//Game.init), else the loader itself (the old engine's tests)
-	declare static build: ((scen: Scenario, xmlData: Document, imageSize: [number, number]) => void) | null;
+	//Who makes the game once its files are in (src/coreload.ts, set by game.ts)
+	declare static build: (scen: Scenario, xmlData: Document, imageSize: [number, number]) => void;
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;
 
 	constructor() {
 		var scen: Scenario = null;
-		let imageSize: [number, number] = [0, 0]; //the map image's, for ScenarioLoader.build
 
 		this.noCache = true; //add a timestamp to the scenario url so the browser doesn't cache it
 
@@ -68,49 +61,18 @@ export class ScenarioLoader {
 				loadFailed();
 		}
 
-		//Inlined into parseScenario in the bundle
+		//The equipment set (its country names are the game's from now on), then the map image
 		function parseMapHeader(xmlData: Document) {
 			const mapHeader = xmlData.getElementsByTagName("map")[0];
-			if (mapHeader) {
-				//The 2.9 check for 0 < rows, cols < 99 is gone, the map image decides the size
-				const rows = +mapHeader.getAttribute("rows");
-				const cols = +mapHeader.getAttribute("cols");
-				const eqp = mapHeader.getAttribute("eqp");
-				let turnsModifier = 1;
-
-				if (engineContext.campaign())
-					turnsModifier = difficultyModifiers[engineContext.campaign().difficulty].extraTurns;
-
-				scen.map.rows = rows;
-				scen.map.cols = cols;
-				if (eqp) {
-					scen.eqp = eqp;
-					Equipment.name = eqp;
-				}
-				//strings at first, converted below
-				scen.map.victoryTurns = mapHeader.getAttribute("turns").split(", ") as unknown as number[];
-
-				for (let i = 0; i < scen.map.victoryTurns.length; i++)
-					scen.map.victoryTurns[i] = +scen.map.victoryTurns[i] //convert to int
-
-				scen.map.victoryTurns[2] = Math.round(scen.map.victoryTurns[2] * turnsModifier);
-				scen.map.maxTurns = scen.map.victoryTurns[2]; //tactical victory
-
-				//TODO move more generics from map to scenario object
-				scen.maxTurns = scen.map.victoryTurns[2]; //tactical victory
-				scen.date.setTime(Date.parse(mapHeader.getAttribute("date")));
-				scen.atmosferic = +mapHeader.getAttribute("atmosferic");
-				scen.latitude = +mapHeader.getAttribute("latitude");
-				scen.ground = +mapHeader.getAttribute("ground");
-				scen.turnsPerDay = +mapHeader.getAttribute("dayturns") || 1;
-				scen.turnsPerDay *= 2;
-				scen.map.terrainImage = mapHeader.getAttribute("image");
-
-				loadMapImage(xmlData);
-
-				return true;
+			if (!mapHeader)
+				return false;
+			const eqp = mapHeader.getAttribute("eqp");
+			if (eqp) {
+				scen.eqp = eqp;
+				Equipment.name = eqp;
 			}
-			return false;
+			loadMapImage(xmlData, mapHeader.getAttribute("image"));
+			return true;
 		}
 
 		function loadFailed() {
@@ -118,244 +80,27 @@ export class ScenarioLoader {
 			scen.onLoadFinished();
 		}
 
-		//Called after each equipment file loaded, the last one loads the rest of the scenario
-		function equipmentLoaded(players: Player[], xmlData: Document) {
-			if (--Equipment.equipmentToLoad)
-				return;
-			if (ScenarioLoader.build !== null) {
-				ScenarioLoader.build(scen, xmlData, imageSize);
-				return;
-			}
-
-			//Units need the equipment so players are added only now
-			for (let i = 0; i < players.length; i++) {
-				const p = new Player();
-				p.copy(players[i]);
-				scen.map.addPlayer(p);
-			}
-			loadReinforcements(xmlData);
-			loadHexes(xmlData);
-
-			scen.isLoaded = true;
-			scen.onLoadFinished();
-		}
-
-		//Inlined into equipmentLoaded in the bundle
-		function loadReinforcements(xmlData: Document) {
-			const reinforceNodes = xmlData.getElementsByTagName("reinforce");
-			if (reinforceNodes) {
-				for (let i = 0; i < reinforceNodes.length; i++) {
-					const turn = +reinforceNodes[i].getAttribute("turn");
-
-					for (let j = 0; j < reinforceNodes[i].childNodes.length; j++) {
-						if (reinforceNodes[i].childNodes[j].nodeName != "at")
-							continue;
-
-						const atNode = reinforceNodes[i].childNodes[j] as Element;
-						const row = +atNode.getAttribute("row");
-						const col = +atNode.getAttribute("col");
-
-						for (let k = 0; k < atNode.childNodes.length; k++) {
-							if (atNode.childNodes[k].nodeName == "unit") {
-								const u = loadUnit(atNode.childNodes[k] as Element);
-								if (u !== null)
-									scen.addReinforcement(turn, row, col, u);
-							}
-						}
-					}
-				}
-			}
-		}
-
-		//Inlined into equipmentLoaded in the bundle
-		function loadHexes(xmlData: Document) {
-			const hexNodes = xmlData.getElementsByTagName("hex");
-			if (hexNodes) {
-				let hex = null;
-				let v = null;
-				let row, col;
-				for (let i = 0; i < hexNodes.length; i++) {
-					row = +hexNodes[i].getAttribute("row");
-					col = +hexNodes[i].getAttribute("col");
-					//Hexes outside of the map (cut by the map image size) are skipped
-					if (row >= scen.map.rows || col >= scen.map.cols)
-						continue;
-					hex = scen.map.map[row][col];
-					if (!hex || typeof hex === "undefined")
-						continue;
-
-					if ((v = hexNodes[i].getAttribute("terrain")) !== null)
-						hex.terrain = +v;
-					if ((v = hexNodes[i].getAttribute("road")) !== null)
-						hex.road = +v;
-					if ((v = hexNodes[i].getAttribute("name")) !== null)
-						hex.name = v;
-					if ((v = hexNodes[i].getAttribute("flag")) !== null)
-						hex.flag = +v;
-					if ((v = hexNodes[i].getAttribute("owner")) !== null)
-						hex.owner = +v;
-					if ((v = hexNodes[i].getAttribute("victory")) !== null)
-						hex.victorySide = +v;
-					if ((v = hexNodes[i].getAttribute("deploy")) !== null)
-						hex.isDeployment = +v;
-					//Supply hexes are deployment hexes too, unless the hex has a deploy side
-					if ((v = hexNodes[i].getAttribute("supply")) !== null && hex.isDeployment == -1)
-						hex.isDeployment = +v;
-
-					for (let j = 0; j < hexNodes[i].childNodes.length; j++) {
-						if (hexNodes[i].childNodes[j].nodeName == "unit") {
-							v = loadUnit(hexNodes[i].childNodes[j] as Element);
-							if (v !== null)
-								hex.setUnit(v);
-						}
-					}
-					scen.map.setHex(row, col);
-				}
-			}
-		}
-
-		//The map size is computed from the map image, the scenario rows/cols are only an upper limit
-		function loadMapImage(xmlData: Document) {
+		//The map image's size gives the map's (the scenario's rows and cols are only an upper limit),
+		//then the equipment of the players' countries and their supporting ones
+		function loadMapImage(xmlData: Document, src: string) {
 			const img = new Image();
-			img.src = scen.map.terrainImage;
+			img.src = src;
 			img.onload = function() {
-				imageSize = [img.width, img.height];
-				let rows = scen.map.rows;
-				let cols = scen.map.cols;
-				let width = img.width;
-				let imgCols = 1;
-				const imgRows = img.height / 50; //hex height
-				let isLastColPartial = false;
-				let isLastRowPartial = false;
-
-				//Hexes alternate 60 and 30 pixels of width
-				while (width >= 30) {
-					if (imgCols % 2)
-						width -= 60;
-					else
-						width -= 30;
-					imgCols++;
-				}
-				isLastColPartial = width < 0;
-
-				let fullRows = imgRows;
-				const rowFraction = imgRows - Math.floor(imgRows);
-				if (rowFraction >= 0.39 && rowFraction < 0.8) {
-					isLastRowPartial = true;
-					fullRows = Math.ceil(imgRows);
-				} else if (rowFraction >= 0.8) {
-					isLastRowPartial = false;
-					fullRows = Math.ceil(imgRows);
-				} else if (rowFraction < 0.39) {
-					isLastRowPartial = false;
-					fullRows = Math.floor(imgRows);
-				}
-
-				if (fullRows > 0 && (rows > fullRows || rows == 0))
-					rows = fullRows;
-				if (imgCols > 0 && (cols > imgCols || cols == 0))
-					cols = imgCols;
-
-				scen.map.rows = rows;
-				scen.map.cols = cols;
-				scen.map.isLastColPartial = isLastColPartial;
-				scen.map.isLastRowPartial = isLastRowPartial;
-				scen.map.allocMap();
-
-				const players = loadPlayers(xmlData);
-				Equipment.addPlayersEquipment(players, equipmentLoaded.bind(null, players, xmlData));
+				const players = playerCountries(xmlData);
+				const imageSize: [number, number] = [img.width, img.height];
+				Equipment.addPlayersEquipment(players, function() {
+					if (--Equipment.equipmentToLoad) //called after each file, the last one makes the game
+						return;
+					ScenarioLoader.build(scen, xmlData, imageSize);
+				});
 			}
 			img.onerror = loadFailed;
 		}
 
-		//Inlined into loadMapImage in the bundle. Players are only parsed here, they are added
-		//to the map after the equipment loaded
-		function loadPlayers(xmlData: Document) {
-			const playerNodes = xmlData.getElementsByTagName("player");
-			const players: Player[] = [];
-			let minPrestige = 0; //campaigns give a minimum prestige per turn
-
-			if (engineContext.campaign())
-				minPrestige = Math.round(engineContext.campaign().startprestige
-					* difficultyModifiers[engineContext.campaign().difficulty].turnPrestige);
-
-			if (playerNodes) {
-				for (let i = 0; i < playerNodes.length; i++) {
-					const p = new Player();
-					var v;
-					p.id = +playerNodes[i].getAttribute("id");
-					p.side = +playerNodes[i].getAttribute("side");
-					p.country = +playerNodes[i].getAttribute("country");
-					p.airTransports = +playerNodes[i].getAttribute("airtrans");
-					p.navalTransports = +playerNodes[i].getAttribute("navaltrans");
-
-					//strings at first, converted below
-					p.prestigePerTurn = playerNodes[i].getAttribute("turnprestige").split(", ") as unknown as number[];
-					for (var j = 0; j < p.prestigePerTurn.length; j++) {
-						v = +p.prestigePerTurn[j]; //convert to int
-						p.prestigePerTurn[j] = v;
-						if (v < minPrestige)
-							p.prestigePerTurn[j] = minPrestige;
-					}
-
-					//Set start prestige
-					p.prestige = p.prestigePerTurn[0];
-
-					//Only the countries that are set
-					p.supportCountries = [];
-					v = playerNodes[i].getAttribute("support").split(", ");
-					for (j = 0; j < v.length; j++)
-						if (+v[j] > 0)
-							p.supportCountries.push(+v[j]);
-
-					players.push(p);
-				}
-			}
-			return players;
-		}
-
-		function loadUnit(node: Element): Unit {
-			//create the unit object
-			const unitId = +node.getAttribute("id");
-			const playerId = +node.getAttribute("owner");
-			let u = null;
-			let v, side;
-
-			if (unitId >= 0 && playerId >= 0) {
-				u = new Unit(unitId);
-				u.owner = playerId >> 0;
-				if ((v = node.getAttribute("face")) !== null)
-					u.facing = +v;
-				if ((v = node.getAttribute("flag")) !== null)
-					u.flag = +v;
-				if ((v = node.getAttribute("transport")) !== null)
-					u.setTransport(+v);
-				if ((v = node.getAttribute("carrier")) !== null)
-					u.carrier = +v;
-				if ((v = node.getAttribute("exp")) !== null)
-					u.experience = +v;
-				if ((v = node.getAttribute("ent")) !== null)
-					u.entrenchment = +v;
-				if ((v = node.getAttribute("str")) !== null)
-					u.strength = +v;
-				if (node.getAttribute("ldr") !== null)
-					u.leader = Leaders.generateLeader(u);
-
-				//Ground and air units costs and experience per side
-				if (!GameRules.isSea(u)) {
-					side = scen.map.getPlayer(u.owner).side;
-					u.unitData(true); //unused
-					scen.unitsCostPerSide[side] += GameRules.calculateUnitCosts(u.eqid,
-						u.transport ? u.transport.eqid : null);
-					scen.expPerSide[side].exp += u.experience;
-					scen.expPerSide[side].count++;
-				}
-
-				return u;
-			}
-			return null;
+		//The players' countries and supporting countries, for the equipment to load
+		function playerCountries(xmlData: Document) {
+			return Array.from(xmlData.getElementsByTagName("player")).map((p) => ({ country: +p.getAttribute("country"),
+				supportCountries: p.getAttribute("support").split(", ").map(Number).filter((c) => c > 0) }));
 		}
 	}
 }
-
-ScenarioLoader.build = null;

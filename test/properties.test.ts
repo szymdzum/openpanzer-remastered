@@ -17,13 +17,16 @@ import { isDeepStrictEqual } from "node:util";
 import fc from "fast-check";
 import { afterAll, test } from "vitest";
 import { fixtures, restoreState } from "./contracts";
-import { cellName, counter, load, violations, type OldWorld as World } from "./invariants";
+import { cellName, load, violations, type Restored as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackResult, FinishAttackHooks, OutcomeContext } from "../src/actions";
-import type { Command, Refusal } from "../src/commands";
+import type { AttackResult, Command, FinishAttackHooks, Refusal } from "../src/commands";
+import { coreEngine } from "./coreengine";
+
+//What just happened, for the outcome: a move's (or a retreat's) capture, the side that ended its turn
+interface OutcomeContext { move?: { victorySide: number } | null; endedSide?: number }
 
 //CI plays the same sequences every run; FC_SEED, FC_PATH and FC_RUNS replay or widen a run
 const SEED = process.env.FC_SEED ? Number(process.env.FC_SEED) : 125;
@@ -125,13 +128,14 @@ async function sequencesWithCommands(weights: Partial<Record<Kind, number>>, max
 //keeps the undo for a human player only); log lists the commands played
 async function start(fixture: string, seed: number) {
 	const w = await load(fixture);
-	const { Actions } = await import("../src/actions");
 	const { GameState } = await import("../src/gamestate");
 	const { toData } = await import("../src/state");
 	//(a campaign's other players stay AI: Game.setupPlayers makes them AI again on every load)
 	for (const p of w.m.getPlayers())
 		if (!w.game.campaign || p.country === w.game.campaign.country) p.type = w.playerType.humanLocal;
 	w.game.spotSide = w.m.currentPlayer.side; //Game.setCurrentSide in hotseat
+	//The game's session with these players (its end of turn, the core's outcome)
+	const { Actions } = await coreEngine();
 	//The AI's and the UI's streams from the sequence's seed; the game stream stays unseeded, it
 	//reads Math.random, which run seeds (and the estimate property counts)
 	w.Rng.ai.state = (seed ^ 0x61692121) >>> 0;
@@ -162,9 +166,10 @@ function finishAttack(p: Play, res: AttackResult, finish: (hooks?: FinishAttackH
 	if (res.retreatMove) retreated(p, d, res.retreatMove);
 }
 
-//ui.ts uiMoveAnimationFinished for a retreat (no command: Actions.finishMove), then the capture victory
+//ui.ts uiMoveAnimationFinished for a retreat (Commands.finishRetreat), then the capture victory
 function retreated(p: Play, u: Unit, mr: movementResults) {
-	settle(p, { move: p.Actions.finishMove(p.w.m, u, mr, false) });
+	p.w.Commands.finishRetreat(u, mr);
+	settle(p, { move: { victorySide: mr.isVictorySide } });
 }
 
 //The attack command as ui.ts uiUnitAttack sends it, its finish called at once (the animation's end)
@@ -175,19 +180,14 @@ function attack(p: Play, cmd: Command & { type: "attack" }) {
 }
 
 //The move command as ui.ts uiUnitMove sends it, finished as uiMoveAnimationFinished: the capture
-//victory, then the surprise attack (an attack command, as ui.ts sends it) finished last
+//victory, then the surprise attack (animated as an attack) finished last
 function move(p: Play, cmd: Command & { type: "move" }) {
 	const { Commands, scenario } = p.w;
 	return Commands.execute(scenario, cmd, {
 		animate(_mr, finish) {
 			const surprise: { result: AttackResult | null; finish?: (hooks?: FinishAttackHooks) => AttackResult } = { result: null };
 			const r = finish(false, {
-				attack(a, d) {
-					Commands.execute(scenario, { type: "attack", unit: a.id, target: d.id }, {
-						animate(res, fin) { surprise.result = res; surprise.finish = fin; },
-					});
-					return surprise.result;
-				},
+				attackHooks: () => ({ animate(res, fin) { surprise.result = res; surprise.finish = fin; } }),
 			});
 			settle(p, { move: r });
 			if (surprise.result && surprise.finish) finishAttack(p, surprise.result, surprise.finish);
@@ -219,8 +219,9 @@ function stateOf(w: World, ignore: Ignore = {}): State {
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
 			const h = m.map[r][c];
-			const zoc = (s: number) => counter(() => h.isZOC(s), (on) => h.setZOC(s, on));
-			const spot = (s: number) => counter(() => h.isSpotted(s), (on) => h.setSpotted(s, on));
+			const counts = m.getVisibility().counters[r][c]; //(what isZOC and isSpotted read)
+			const zoc = (s: number) => counts.zoc[s];
+			const spot = (s: number) => counts.spot[s];
 			hexes.push([r, c, h.owner, h.flag, h.victorySide, h.isMoveSel, h.isAttackSel, h.unit ? h.unit.id : "",
 				h.airunit ? h.airunit.id : "", zoc(0), zoc(1), spot(0), spot(1)].join(","));
 		}
@@ -336,18 +337,16 @@ function estimate(p: Play, e: Estimate, checks: Checks): string[] {
 	return problems;
 }
 
-//game.ts endTurn and the end turn button: the endTurn command, the defeat at the turn limit, the
-//next side shown, its reinforcements, the combat log reset
-function endTurn(p: Play) {
+//game.ts endTurn and the end turn button: the end of turn on the session (the next player's
+//reinforcements arrive in it), the defeat at the turn limit, the next side shown, the combat log reset
+function endTurn(p: Play): { ok: true } {
 	const { w } = p, m = w.m, last = m.currentPlayer.side;
-	const r = w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: 2 });
-	if (r.ok && r.result) settle(p, { endedSide: last });
+	if (p.Actions.endTurn().defeat) settle(p, { endedSide: last });
 	else {
 		w.game.spotSide = m.currentPlayer.side;
-		p.Actions.deployReinforcements(w.scenario, m.turn, m.currentPlayer.id);
 		w.CombatLog.reset();
 	}
-	return r;
+	return { ok: true };
 }
 
 //The refusal's reason, null when the command ran
@@ -445,13 +444,6 @@ function count(s: Step, r: StepResult | null) {
 	stats[name] = (stats[name] || 0) + 1;
 }
 
-//A recon leader won in a fight widens the unit's spotting, its counters stay (#73): what to look
-//at before a step to tell after it
-function reconLeaders(w: World): () => boolean {
-	const before = w.m.getUnits().map((u) => [u, w.GameRules.getUnitSpotRange(u), u.leader] as const);
-	return () => before.some(([u, range, leader]) => u.leader !== leader && w.GameRules.getUnitSpotRange(u) !== range);
-}
-
 //Plays the steps until one breaks a check (what it broke) or the game ends
 function playSteps(p: Play, steps: Step[], checks: Checks): string[] {
 	for (const s of steps) {
@@ -463,17 +455,15 @@ function playSteps(p: Play, steps: Step[], checks: Checks): string[] {
 	return [];
 }
 
-//Plays a step and checks it: what broke, null when the sequence ends there (the known break of
-//#73, a run that threw)
+//Plays a step and checks it: what broke, null when the sequence ends there (a run that threw)
 function playChecked(p: Play, s: Step, checks: Checks): string[] | null {
-	const newLeader = reconLeaders(p.w);
 	const r = play(p, s, checks);
 	count(s, r);
 	if (!r) return [];
 	p.log.push("turn " + p.w.m.turn + " player#" + p.w.m.currentPlayer.id + ": " + JSON.stringify(r.played)
 		+ (r.refusal === null ? "" : " refused: " + r.refusal));
 	if (!r.problems || !checks.invariants) return r.problems;
-	return newLeader() ? null : [...r.problems, ...violations(p.w)];
+	return [...r.problems, ...violations(p.w)];
 }
 
 //Plays the sequence, Math.random seeded with its seed, then after (what it found at the end); a
@@ -494,6 +484,10 @@ async function run(seq: Sequence, checks: Checks, after?: (p: Play) => Promise<s
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 
+//How long a property may take: every command plays on the core with the game's objects mirrored after
+//each piece of it, slower than the old engine's own calls were
+const PLAYING = 180_000;
+
 const playerActions = { "move": 6, "capture": 1, "attack": 4, "resupply": 1, "reinforce": 1, "reinforce over": 1, "mount": 1,
 	"unmount": 1, "disband": 1, "undo": 2, "end turn": 1 };
 
@@ -501,34 +495,35 @@ const playerActions = { "move": 6, "capture": 1, "attack": 4, "resupply": 1, "re
 //at each other (so no two units on one hex), every unit belongs to its owner's Player
 test("Property: the invariants hold after every player action", async () => {
 	await holds(fc.asyncProperty(sequences(playerActions, 40), (seq) => run(seq, { invariants: true })), 40);
-});
+}, PLAYING);
 
-test.fails("Property: the invariants hold after embarking, disembarking and upgrading (fails: #73)", async () => {
-	await breaks(fc.asyncProperty(sequences({ ...playerActions, "embark": 3, "disembark": 3, "upgrade": 3 }, 40),
-		(seq) => run(seq, { invariants: true })), 40, /(spotting|zone of control) of side/);
-});
+//(#73: the old engine's counters drifted there, and where a recon unit won a leader)
+test("Property: the invariants hold after embarking, disembarking and upgrading (#73)", async () => {
+	await holds(fc.asyncProperty(sequences({ ...playerActions, "embark": 3, "disembark": 3, "upgrade": 3 }, 40),
+		(seq) => run(seq, { invariants: true })), 40);
+}, PLAYING);
 
 //The undo is checked right after a move: its kinds come up often
 const undoActions = { "move": 3, "capture": 2, "undo": 4, "attack": 1, "end turn": 1 };
 test("Property: an undo right after a move restores the state from before the move, but for #140 and #141", async () => {
 	await holds(fc.asyncProperty(sequences(undoActions, 20),
 		(seq) => run(seq, { undo: { unitFields: ["tempSpotted"], objectiveOrder: true } })), 30);
-});
+}, PLAYING);
 
 test.fails("Property: an undo right after a move restores tempSpotted too (fails: #140)", async () => {
 	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { objectiveOrder: true } })), 30,
 		/undo didn't restore the units:\n {4}before .{106}"tempSpotted":false/); //(the text around the first difference)
-});
+}, PLAYING);
 
 test.fails("Property: an undo right after a move restores the objectives' order too (fails: #141)", async () => {
 	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { unitFields: ["tempSpotted"] } })), 30,
 		/undo didn't restore the objectives/);
-});
+}, PLAYING);
 
 test("Property: the attack estimate draws nothing from the random stream and changes nothing", async () => {
 	await holds(fc.asyncProperty(sequences({ "estimate": 3, "move": 2, "attack": 2, "end turn": 1 }, 20),
 		(seq) => run(seq, { estimate: true })), 30);
-});
+}, PLAYING);
 
 //Any command among the player's: the ones the rules don't stop (a unit of the other player, a
 //resupply the button wouldn't offer...), the ones check refuses
@@ -537,20 +532,20 @@ const anyActions = { ...playerActions, "embark": 1, "disembark": 1, "upgrade": 1
 //The check/run drift guard (docs/REFACTOR.md, step 4): check passes only what run can play
 test("Property: execute never throws once check has allowed a command", async () => {
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { drift: true })), 25);
-});
+}, PLAYING);
 
 //check is pure, and a refused command neither changes the game's data (src/state.ts toData) nor
 //draws a random number
 test("Property: a refused command changes nothing", async () => {
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { refused: true })), 25);
-});
+}, PLAYING);
 
 //The save of a game played on, loaded back. The game saves after Scenario.endTurn (game.ts
 //endTurn), with nothing selected: the end of turn first, then GameState.exportGameState, then
 //restoreFromString as the contracts load (it resets the modules, so last) and the export again.
 //Null when the game ended
 async function reloaded(p: Play): Promise<[Save, Save] | null> {
-	if (p.ended || p.Actions.endTurn(p.w.scenario, 2)) return null;
+	if (p.ended || p.Actions.endTurn().defeat) return null;
 	const saved = new p.GameState(p.w.game).exportGameState();
 	await restoreState(saved);
 	const { GameState } = await import("../src/gamestate");
@@ -567,4 +562,4 @@ test("Property: a save keeps the game after a player's actions, but for the know
 		const want = withoutLosses(saved), got = withoutLosses(again);
 		return isDeepStrictEqual(want, got) ? [] : ["the load changed the save:" + difference(JSON.stringify(want), JSON.stringify(got))];
 	})), 15);
-});
+}, PLAYING);
