@@ -158,7 +158,8 @@ export function orderOf(g: Pick<OldGame, "actionType" | "UIBuilder">, a: AIActio
 	switch (a.type) {
 		case A.move: return { command: { type: "move", unit: id(p[0]), to: { row: p[1].row, col: p[1].col } } };
 		case A.attack:
-			if (!p[0] || !p[1]) return { view: { type: "stuck", reason: "an attack without its unit (#80)" } };
+			if (!p[0] || !p[1]) return { view: { type: "stuck", reason: "an attack without its unit (#80)", unit: p[0] ? p[0].id : null,
+				target: p[1] ? p[1].id : null } };
 			return { command: { type: "attack", unit: p[0].id, target: p[1].id } };
 		case A.resupply: return { command: { type: "resupply", unit: id(p[0]) } };
 		case A.reinforce: return { command: { type: "reinforce", unit: id(p[0]) } };

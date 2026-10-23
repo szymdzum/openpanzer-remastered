@@ -24,8 +24,9 @@ export type ViewEvent =
 	| { type: "message"; text: string; at: Position }
 	| { type: "viewport"; at: Position }
 	| { type: "mainMenu" }
-	//The old game stops here for good (the tutorial's #80): no more actions, no end of turn
-	| { type: "stuck"; reason: string };
+	//The old game stops here for good (the tutorial's #80): no more actions, no end of turn. The attack
+	//it got stuck on, its unit and target (null: none)
+	| { type: "stuck"; reason: string; unit?: UnitId | null; target?: UnitId | null };
 
 //One thing to do: a command to step, or something to show
 export type Order = { command: Command } | { view: ViewEvent };

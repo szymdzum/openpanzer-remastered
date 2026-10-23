@@ -65,7 +65,7 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts", "src/aiscripted.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/actions.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coreplay.ts", "src/core/*.ts", "src/core/commands/*.ts"],
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coreplay.ts", "src/coresession.ts", "src/core/*.ts", "src/core/commands/*.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -80,7 +80,7 @@ export default defineConfig({
 				"src/commands.ts": { statements: 97, branches: 92, functions: 98, lines: 97 },
 				"src/context.ts": { statements: 87, branches: 100, functions: 85, lines: 87 },
 				"src/equipment.ts": { statements: 84, branches: 71, functions: 68, lines: 85 },
-				"src/game.ts": { statements: 75, branches: 61, functions: 75, lines: 77 },
+				"src/game.ts": { statements: 90, branches: 84, functions: 83, lines: 92 },
 				"src/gamerules.ts": { statements: 98, branches: 97, functions: 98, lines: 98 },
 				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
 				"src/leaders.ts": { statements: 90, branches: 81, functions: 71, lines: 91 },
@@ -127,6 +127,7 @@ export default defineConfig({
 				"src/core/commands/units.ts": { statements: 88, branches: 77, functions: 95, lines: 96 },
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 				"src/coreplay.ts": { statements: 90, branches: 68, functions: 96, lines: 93 },
+				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/mirror.ts": { statements: 90, branches: 78, functions: 97, lines: 93 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 			},

@@ -188,7 +188,7 @@ function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
 //The end of the current player's turn, the next player's turn start and plan, the defeat at the turn
 //limit, the save point (saved: what a screen does there, in the old game's order: it shows the units the
 //AI deployed at its turn start, then saves), the side shown, the reinforcements
-export function endTurn(s: Session, saved?: (started: StartedTurn | null) => void): Advance {
+export function endTurn(s: Session, saved?: (started: StartedTurn | null, events: GameEvent[]) => void): Advance {
 	const player = s.world.state.turn.currentPlayer, side = s.world.state.players[player].side;
 	const r = step(s.world, { type: "endTurn" });
 	if ("refusal" in r) throw new Error("the end of turn is never refused");
@@ -200,7 +200,7 @@ export function endTurn(s: Session, saved?: (started: StartedTurn | null) => voi
 		return { kind: "endTurn", player, events: r.events, started, arrived: [] };
 	}
 	s.saved = s.world;
-	if (saved) saved(started);
+	if (saved) saved(started, r.events);
 	s.world = { ...s.world, spotSide: shownSide(s) };
 	const arrived = arriveReinforcements(s.world);
 	s.world = arrived.world;

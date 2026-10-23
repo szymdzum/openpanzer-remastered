@@ -14,7 +14,7 @@
  */
 
 import { actionType, playerSide, playerType } from "./prototypes";
-import { AI, type AIAction, type AIActionParam } from "./ai";
+import { AI, type AIAction, type AIActionParam, type AIDriver } from "./ai";
 import type { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import { UIBuilder } from "./uibuilder";
@@ -35,7 +35,16 @@ export class AIScripted {
 	declare buildActions: () => void;
 	declare getAction: () => AIAction;
 
+	declare static driver: AIDriver | null; //the running game's (AI.driver), assigned below
+
 	constructor(player: Player, map: GameMap) {
+		if (AIScripted.driver !== null) {
+			const driver = AIScripted.driver;
+			this.getAction = function() { return driver.getAction(); };
+			this.buildActions = function() {};
+			driver.join(player);
+			return;
+		}
 		var actionList: AIAction[] = [];
 		var units: TutorialUnits = { axis: {}, allies: {} };
 
@@ -256,3 +265,5 @@ export class AIScripted {
 		}
 	}
 }
+
+AIScripted.driver = null;
