@@ -187,7 +187,7 @@ function move(p: Play, cmd: Command & { type: "move" }) {
 	return Commands.execute(scenario, cmd, {
 		animate(_mr, finish) {
 			const surprise: { result: AttackResult | null; finish?: (hooks?: FinishAttackHooks) => AttackResult } = { result: null };
-			const r = finish(false, {
+			const r = finish({
 				attackHooks: () => ({ animate(res, fin) { surprise.result = res; surprise.finish = fin; } }),
 			});
 			settle(p, { move: r });

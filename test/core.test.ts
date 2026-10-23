@@ -17,7 +17,7 @@ import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
 import { begin, resume, step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import { mapSize } from "../src/core/newgame";
-import type { CheckpointInput, Contribution, World } from "../src/core/types";
+import type { Contribution, World } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { handWorld } from "./coreworld";
 
@@ -201,8 +201,8 @@ function hiddenPair() {
 	] }), 99);
 }
 
-//begin, then resume from each checkpoint with input
-function byCheckpoints(w: World, cmd: Command, input: CheckpointInput = {}) {
+//begin, then resume from each checkpoint
+function byCheckpoints(w: World, cmd: Command) {
 	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error(b.refusal.reason);
 	const checkpoints: string[] = [];
@@ -210,7 +210,7 @@ function byCheckpoints(w: World, cmd: Command, input: CheckpointInput = {}) {
 	const events = b.events.slice();
 	while (checkpoint !== null) {
 		checkpoints.push(checkpoint.next);
-		const r = resume(world, checkpoint, input);
+		const r = resume(world, checkpoint);
 		({ world, checkpoint } = r);
 		events.push(...r.events);
 	}
@@ -227,11 +227,21 @@ test("A move waits for the screen once moved, an attack once fired and once the 
 	expect(JSON.stringify([phased.world.state, phased.events])).toBe(JSON.stringify([whole.world.state, whole.events]));
 });
 
-test("The surprise attack hits the unit the air mode picks: the person's toggle (#77), off for a program", () => {
-	const target = (input: CheckpointInput) => byCheckpoints(hiddenPair(), { type: "move", unit: 0, to: { row: 4, col: 5 } }, input)
-		.events.filter((e) => e.type === "fight").map((e) => e.type === "fight" && e.defender.unit);
-	expect(target({})).toEqual([1]);
-	expect(target({ airMode: true })).toEqual([2]);
+//A Me-109 flies into a hex where a 7TP and a P.11 hide: the P.11 stops it, an aircraft as it is, and the
+//surprise attack hits the P.11, not the tank under it. A 7TP drives to a hex where a Pz IIA and a Me-109
+//hide: the tank stops it and is hit. No screen's air mode picks either (the old game read the person's toggle,
+//also for the AI's moves)
+test("The surprise attack hits the hidden unit of the mover's kind, the one that stopped it (#77)", () => {
+	const target = (w: World, cmd: Command) => byCheckpoints(w, cmd).events.filter((e) => e.type === "fight" && !e.support)
+		.map((e) => e.type === "fight" && e.defender.unit);
+	expect(target(hiddenPair(), { type: "move", unit: 0, to: { row: 4, col: 5 } })).toEqual([2]);
+	const underFighter = withRng(handWorld({ rows: 8, cols: 8, units: [
+		{ eqid: TP7, owner: 1, row: 4, col: 1 },
+		{ eqid: PZ_IIA, owner: 0, row: 4, col: 4 },
+		{ eqid: ME_109, owner: 0, row: 4, col: 4 },
+	] }), 99);
+	underFighter.state.turn.currentPlayer = 1;
+	expect(target(underFighter, { type: "move", unit: 0, to: { row: 4, col: 4 } })).toEqual([1]);
 });
 
 //Two human players: a defender pushed back by an attack is the other player's unit, and the retreat

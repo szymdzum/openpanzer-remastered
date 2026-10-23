@@ -20,7 +20,7 @@ import { disembark, embark, mount, unmount } from "./commands/transport";
 import { endTurn } from "./commands/turn";
 import { undo } from "./commands/undo";
 import { buy, deploy, disband, sell, upgrade, upgradeUndeployed } from "./commands/units";
-import type { Checkpoint, CheckpointInput, CommandHandler, World } from "./types";
+import type { Checkpoint, CommandHandler, World } from "./types";
 
 //The handlers by command type, typed by a mapped type: a type without its handler, or a misspelled
 //one, doesn't compile
@@ -74,10 +74,10 @@ export interface Resumed {
 	checkpoint: Checkpoint | null;
 }
 
-//Goes on from a checkpoint to the next one, with what the screen says there. w is the world at the
-//checkpoint, or one made again from the screen's objects (which the screen may have changed meanwhile)
-export function resume(w: World, cp: Checkpoint, input: CheckpointInput = {}): Resumed {
+//Goes on from a checkpoint to the next one. w is the world at the checkpoint, or one made again from
+//the screen's objects (which the screen may have changed meanwhile)
+export function resume(w: World, cp: Checkpoint): Resumed {
 	const d = beginDraft(w);
-	const checkpoint = resumeFrom(d, cp, input);
+	const checkpoint = resumeFrom(d, cp);
 	return { world: finishDraft(d), events: d.events, checkpoint };
 }

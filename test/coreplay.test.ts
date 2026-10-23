@@ -104,9 +104,9 @@ class Play {
 		endTurn(this);
 	}
 
-	//ui.ts uiUnitMove and uiMoveAnimationFinished: the finish with the air mode, the surprise attack
-	//animated (its finish after the move's), the capture, the victory
-	move(cmd: Command & { type: "move" }, airMode: boolean) {
+	//ui.ts uiUnitMove and uiMoveAnimationFinished: the finish, the surprise attack animated (its finish
+	//after the move's), the capture, the victory
+	move(cmd: Command & { type: "move" }) {
 		const m = this.w.m, unit = m.getUnitById(cmd.unit);
 		const finishHooks = {
 			onSurprised: (c: Cell, u: Unit) => this.tell(`surprised ${cellName(c)} ${unitName(u)}`),
@@ -115,16 +115,16 @@ class Play {
 			attackHooks: (a: Unit, d: Unit) => this.attackHooks(a, d, true),
 		};
 		return this.execute(cmd, {
-			animate: (mr: movementResults, finish: (air: boolean, hooks: unknown) => unknown) => {
+			animate: (mr: movementResults, finish: (hooks: unknown) => unknown) => {
 				this.tell(`moved ${unitName(unit)} ${moveStory(mr)} hexes ${m.getCurrentMoveRange().length} current ${unitName(m.currentUnit)}`);
-				finish(airMode, finishHooks);
+				finish(finishHooks);
 			},
 		});
 	}
 
-	run(cmd: Command, airMode: boolean) {
+	run(cmd: Command) {
 		if (cmd.type === "endTurn") return this.endTurn();
-		const r = cmd.type === "move" ? this.move(cmd, airMode)
+		const r = cmd.type === "move" ? this.move(cmd)
 			: cmd.type === "attack" ? this.execute(cmd, this.attackHooks(this.w.m.getUnitById(cmd.unit), this.w.m.getUnitById(cmd.target), false))
 				: this.execute(cmd);
 		const result = (r as { result?: unknown }).result;
@@ -209,7 +209,7 @@ async function play(seq: Sequence): Promise<string[]> {
 		click(w, seq.steps[i]);
 		p.story = [];
 		count(cmd.type);
-		p.run(cmd, seq.steps[i].any % 2 === 1);
+		p.run(cmd);
 		steps.push(createHash("sha1").update(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ") + "\n" + snapshot(w))
 			.digest("hex").slice(0, 12));
 	}

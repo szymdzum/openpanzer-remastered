@@ -194,8 +194,3 @@ export type Checkpoint =
 	//The destroyed units are gone: next, the retreat or the surrender, and the elimination victory
 	| { next: "end"; attack: AttackStart; attacker: UnitState | null };
 
-//What the screen says at a checkpoint: the air mode the surprise attack picks its target with (the
-//person's toggle, #77; off for a program)
-export interface CheckpointInput {
-	airMode?: boolean;
-}

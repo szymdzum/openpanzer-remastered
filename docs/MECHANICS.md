@@ -98,7 +98,9 @@ then assault, then overrun with tanks.
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
   fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
   move (`getMoveRange`): a hidden enemy's zone doesn't. Air units ignore ZOC.
-- Moving into a hidden enemy is a surprise: the combat goes badly and the move ends.
+- Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
+  attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
+  ground unit), whatever the screen's air mode shows.
 - Recon can split its movement over several moves in a turn.
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
 - A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank

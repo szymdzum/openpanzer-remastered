@@ -27,7 +27,7 @@ import type { Controller, Order, ViewEvent } from "./controller";
 import type { GameEvent } from "./events";
 import { begin, resume, step } from "./step";
 import { arriveReinforcements } from "./turn";
-import type { Checkpoint, CheckpointInput, World } from "./types";
+import type { Checkpoint, World } from "./types";
 import { sideOf, unitById } from "./world";
 
 //How a game ended: a side won, the side on the screen played its last turn, or the old game got stuck
@@ -167,9 +167,9 @@ export function play(s: Session, cmd: Command): Phase {
 	return { events: r.events, refusal: null, checkpoint: r.checkpoint };
 }
 
-//Plays on from a checkpoint, with what the screen says there (the air mode of a surprise attack, #77)
-export function playOn(s: Session, cp: Checkpoint, input: CheckpointInput = {}): Phase {
-	const r = resume(s.world, cp, input);
+//Plays on from a checkpoint, once the screen has shown it
+export function playOn(s: Session, cp: Checkpoint): Phase {
+	const r = resume(s.world, cp);
 	s.world = r.world;
 	s.ended = s.ended || victoryIn(s.world, r.events);
 	return { events: r.events, refusal: null, checkpoint: r.checkpoint };

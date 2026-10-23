@@ -290,7 +290,7 @@ function runEngineContract(env) {
 
 	// A retreat's move finish (Commands.finishRetreat): its capture and victory, no surprise
 	function retreatFinish(u, mr) {
-		return (airMode, hooks) => {
+		return (hooks) => {
 			C.finishRetreat(u, mr, hooks);
 			return { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
 		};
@@ -301,7 +301,7 @@ function runEngineContract(env) {
 	function moveFinished(u, mr, finish) {
 		let surprise = null, pending = null, pendingFinish = null, victory = null;
 		if (finish) {
-			const res = finish(false, {
+			const res = finish({
 				attackHooks(a, d) {
 					return { animate(r, fin) { pending = resolved(a, d, r); pendingFinish = fin; } };
 				},

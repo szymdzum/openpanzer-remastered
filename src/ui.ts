@@ -415,7 +415,7 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	var animated = false;
 
 	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells }, {
-		animate: function(mr: movementResults, finish: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult) {
+		animate: function(mr: movementResults, finish: (hooks?: FinishMoveHooks) => MoveResult) {
 			var moveAnimationCBData: MoveAnimationCBData = {
 				unit: unit,
 				moveResults: mr,
@@ -445,7 +445,7 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 
 //Called when move animation finishes. finish: the move command's, the retreat's end for a retreat
 function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
-	finish?: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult | void) {
+	finish?: (hooks?: FinishMoveHooks) => MoveResult | void) {
 	var mr = moveAnimationCBData.moveResults;
 	var unit = moveAnimationCBData.unit;
 	var r = getRenderRange(unit);
@@ -454,9 +454,8 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 	R.render(p.row, p.col, r);
 
 	if (!finish)
-		finish = function(_airMode: boolean | number, hooks?: FinishMoveHooks) { Commands.finishRetreat(unit, mr, hooks); };
-	//The surprise attack's target is picked by uiSettings.airMode (#77)
-	finish(uiSettings.airMode, {
+		finish = function(hooks?: FinishMoveHooks) { Commands.finishRetreat(unit, mr, hooks); };
+	finish({
 		onSurprised: function(cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
 		attackHooks: uiAttackHooks, //the surprise attack is animated as an attack, its finish runs when its animation ends
 		onCapture: function(u: Unit) { uiShowAlert(p.row, p.col, "Captured", u.player.side == game.spotSide || game.spotSide == 2); },

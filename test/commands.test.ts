@@ -95,18 +95,18 @@ test("A move goes where the unit can get to, along the cells given or its move r
 
 test("A move finishes when the caller's animation ends, or at once", () => {
 	const inf = unitAt(3, 3), to = reachable(inf);
-	let finish: ((airMode: boolean) => unknown) | null = null;
+	let finish: (() => unknown) | null = null;
 	let captured = 0, animated: unknown = null;
 	const r = execute(scenario, { type: "move", unit: inf.id, to: to }, {
 		animate(mr, f) {
 			expect(inf.getPos()).toEqual(to); //moved already, finished later
 			animated = mr;
-			finish = (airMode) => f(airMode, { onCapture() { captured++; } });
+			finish = () => f({ onCapture() { captured++; } });
 		},
 	});
 	expect(r.ok).toBe(true);
 	expect(finish).not.toBeNull();
-	const res = finish!(false) as { move: unknown; surprise: unknown };
+	const res = finish!() as { move: unknown; surprise: unknown };
 	expect(r.ok && res.move === r.result && animated === r.result).toBe(true);
 	expect([res.surprise, captured]).toEqual([null, 0]);
 

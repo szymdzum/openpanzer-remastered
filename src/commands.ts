@@ -25,7 +25,7 @@
  * reach the next command's world.
  */
 
-import { Cell, type combatResults, movementResults, type Supply, uiSettings, unitClass } from "./prototypes";
+import { Cell, type combatResults, movMethod, movementResults, type Supply, uiSettings, unitClass } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import { engineContext, touched } from "./context";
 import type { ReinforceResults } from "./map";
@@ -135,11 +135,10 @@ export interface FinishMoveHooks {
 	onVictory?(side: number): void;
 }
 
-//A move command's hooks: animate gets the move and the finish to call when it ends, with the air mode
-//of that moment (the hidden unit a surprise attack hits, #77). Without animate it finishes at once
-//(air mode off) with finish's hooks, the surprise attack with surprise's
+//A move command's hooks: animate gets the move and the finish to call when it ends. Without animate it
+//finishes at once with finish's hooks, the surprise attack with surprise's
 export interface MoveCommandHooks {
-	animate?(mr: movementResults, finish: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult): void;
+	animate?(mr: movementResults, finish: (hooks?: FinishMoveHooks) => MoveResult): void;
 	finish?: FinishMoveHooks;
 	surprise?: FinishAttackHooks;
 }
@@ -323,11 +322,11 @@ function move(scenario: Scenario, w: World, cmd: CommandOf<"move">, h: MoveComma
 	const cp = b.checkpoint as MoveCheckpoint;
 	const mr = movementOf(b.events, cmd.unit, cp);
 	if (cp.win) mr.isVictorySide = unit.player.side;
-	const finish = (airMode: boolean | number, fh?: FinishMoveHooks) => finishMove(scenario, unit, mr, cp, airMode, fh);
+	const finish = (fh?: FinishMoveHooks) => finishMove(scenario, unit, mr, cp, fh);
 	if (h.animate) {
 		h.animate(mr, finish);
 	} else {
-		const res = finish(false, h.finish);
+		const res = finish(h.finish);
 		if (res.surprise !== null && res.surprise.attack !== null) (res.surprise.attack as Finishing).finish(h.surprise);
 	}
 	return mr;
@@ -339,34 +338,34 @@ type MoveCheckpoint = Extract<Checkpoint, { next: "surprise" }>;
 //An attack's result with the finish that ends it
 type Finishing = AttackResult & { finish(hooks?: FinishAttackHooks): AttackResult };
 
-//The old Actions.finishMove: the surprise attack on the hidden unit the air mode picks (its finish is the
-//caller's: the UI's when its animation ends, a headless caller's after this), the capture and the victory
-function finishMove(scenario: Scenario, unit: Unit, mr: movementResults, cp: MoveCheckpoint, airMode: boolean | number,
-	fh?: FinishMoveHooks): MoveResult {
+//The old Actions.finishMove: the surprise attack on the hidden unit that stopped the move (its finish is
+//the caller's: the UI's when its animation ends, a headless caller's after this), the capture and the
+//victory
+function finishMove(scenario: Scenario, unit: Unit, mr: movementResults, cp: MoveCheckpoint, fh?: FinishMoveHooks): MoveResult {
 	const h = fh || {};
 	const result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
-	if (cp.surprise !== null) result.surprise = surprise(scenario, unit, cp, airMode, h);
+	if (cp.surprise !== null) result.surprise = surprise(scenario, unit, cp, h);
 	else mirror(scenario, resume(worldNow(scenario), cp).world);
 	if (mr.isCapture && h.onCapture) h.onCapture(unit);
 	if (mr.isVictorySide >= 0 && h.onVictory) h.onVictory(mr.isVictorySide);
 	return result;
 }
 
-//The surprise attack: told, its target the unit the air mode shows first that the mover can attack,
-//its shots as an attack's, animated by the target's hooks; the mover no longer surprised
-function surprise(scenario: Scenario, unit: Unit, cp: MoveCheckpoint, airMode: boolean | number,
-	h: FinishMoveHooks): MoveResult["surprise"] {
+//The surprise attack: told, its target the unit of the mover's kind first (the one that stopped it, #77)
+//that the mover can attack, its shots as an attack's, animated by the target's hooks; the mover no
+//longer surprised
+function surprise(scenario: Scenario, unit: Unit, cp: MoveCheckpoint, h: FinishMoveHooks): MoveResult["surprise"] {
 	const cell = new Cell(cp.surprise.row, cp.surprise.col);
 	if (h.onSurprised) h.onSurprised(cell, unit);
-	const target = scenario.map.map[cell.row][cell.col].getAttackableUnit(unit, airMode);
+	const target = scenario.map.map[cell.row][cell.col].getAttackableUnit(unit, unit.unitData().movmethod === movMethod.air);
 	if (target === null) {
-		mirror(scenario, resume(worldNow(scenario), cp, { airMode: !!airMode }).world);
+		mirror(scenario, resume(worldNow(scenario), cp).world);
 		return { cell, target, attack: null };
 	}
 	const ah = h.attackHooks ? h.attackHooks(unit, target) : {};
 	if (ah.onStart) ah.onStart();
 	const w = worldNow(scenario), sides = sidesOf(unit, target), estimate = estimateOf(w, unit, target);
-	const r = resume(w, cp, { airMode: !!airMode });
+	const r = resume(w, cp);
 	mirror(scenario, r.world);
 	if (!r.events.some((e) => e.type === "fight" && !e.support && e.defender.unit === target.id))
 		throw new Error("Commands: the surprise attack's target isn't the screen's");
