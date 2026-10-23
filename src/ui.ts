@@ -36,6 +36,7 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
+import { outcome } from "./core/turn";
 import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
@@ -1379,6 +1380,15 @@ function uiTurnInfo() {
 
 function uiMessage(title: string, message: string, cbfunc?: () => void) { UIBuilder.message(title, message, cbfunc); }
 
+//The turn limit reached by the side that played here: the core's outcome says whether it held out (#231)
+function uiTurnLimitMessage() {
+	const s = game.session, end = s.ended;
+	if (end !== null && end.kind === "turnLimit" && outcome(s.world, { endedSide: end.side }).winner === end.side)
+		uiMessage("VICTORY", "<br><br>You held the objectives to the end");
+	else
+		uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
+}
+
 //Centers the screen on a map cell
 function uiSetCellOnViewPort(cell: Cell | null) {
 	if (!cell || typeof cell === "undefined")
@@ -1773,7 +1783,7 @@ function uiScaleMap(level: number) {
 						CombatLog.reset();
 						game.endTurn();
 						if (game.gameEnded && game.gameStarted) {
-							uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
+							uiTurnLimitMessage();
 						} else {
 							countries = map.getCountriesBySide(game.spotSide);
 							UIBuilder.setDefaultUserSelections();
