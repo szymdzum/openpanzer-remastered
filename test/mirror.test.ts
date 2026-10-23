@@ -57,8 +57,8 @@ function advanceSynced(x: Mirror, s: Session): boolean {
 	if (order === null) {
 		const ended = endTurn(s, () => {
 			x.applyData(s.world);
-			count("save points");
-			expect(x.difference(s.world), what + " at the save point").toBe("");
+			count("turn starts");
+			expect(x.difference(s.world), what + " at the turn start").toBe("");
 		});
 		synced(x, s.world, what);
 		return s.ended === null && ended.kind === "endTurn";
@@ -201,11 +201,11 @@ test("The equipment lists sorted for the purchase window leave the world's lists
 	expect(x.o.Equipment.equipmentIndexes[country].unitclass![uclass].join()).toBe(before);
 });
 
-test("The pieces played cover the checkpoints, the save point and new units", () => {
+test("The pieces played cover the checkpoints, the turn starts and new units", () => {
 	if (process.env.FC_STATS) console.log(JSON.stringify(stats));
 	expect(stats["checkpoint surprise"]).toBeGreaterThan(10);
 	expect(stats["checkpoint cleanUp"]).toBeGreaterThan(10);
-	expect(stats["save points"]).toBeGreaterThan(10);
+	expect(stats["turn starts"]).toBeGreaterThan(10);
 	expect(stats["units placed"]).toBeGreaterThan(0);
 	expect(stats.commands).toBeGreaterThan(100);
 });

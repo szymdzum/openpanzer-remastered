@@ -414,6 +414,31 @@ test("GameState restores a save from a file, and refuses a file that isn't one",
 	expect(done).toEqual(["fail", "done"]);
 });
 
+//#93: the save the game writes at a turn's start (the local save) is written once that turn's
+//reinforcements have arrived, so a reload during the turn has them (they arrive only once)
+test("The turn-start save has the reinforcements that arrived that turn (#93)", async () => {
+	const game = await playing("ruscam09-t2.json.gz");
+	const { Game } = await import("../src/game");
+	Object.assign(game.ui, { showAlert() {} });
+	game.setupGameState = new Game().setupGameState; //Game's own: it starts the session the turns end on
+	const old = game.scenario;
+	game.state.restoreFromString(readFixture("engine", "ruscam09-t2.json.gz").state);
+	await loadedAfter(old);
+	const { MAJOR_VERSION } = await import("../src/prototypes");
+	const pending = async () => (JSON.parse(await exportGame()) as SaveFile).state.reinforcements.length;
+	let arrived = 0;
+	for (let i = 0; i < 12 && arrived === 0 && !game.gameEnded; i++) {
+		const before = await pending();
+		game.endTurn();
+		arrived = before - await pending();
+	}
+	expect(arrived, "reinforcements arrived").toBeGreaterThan(0);
+	const local = JSON.parse(localStorage.getItem("openpanzer-game-" + MAJOR_VERSION)) as SaveFile;
+	const now = JSON.parse(await exportGame()) as SaveFile;
+	expect([local.state.reinforcements.length, local.state.units.length]).toEqual([now.state.reinforcements.length, now.state.units.length]);
+	expect(local).toEqual(now);
+});
+
 //A fake GitHub gists API: reply answers each request GameState sends to it, at once; the other
 //requests (the equipment files) go through. Returns the function that takes it away
 function fakeGists(reply: (method: string, url: string, body: string) => { status: number; body: unknown }) {

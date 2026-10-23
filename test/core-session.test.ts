@@ -33,14 +33,14 @@ function scripted(player: number, orders: Order[], start?: (w: World) => World):
 	};
 }
 
-test("In a new game the first player's AI ends its first turn at once; the next one plans before its reinforcements arrive (#94), saved before them (#93)", () => {
+test("In a new game the first player's AI ends its first turn at once; the next one plans before its reinforcements arrive (#94), saved after them (#93)", () => {
 	const w = farApart();
 	const { id: _id, row: _row, col: _col, ...tp } = w.state.units[1];
 	const s = startSession({ ...w, state: { ...w.state, reinforcements: [{ turn: 1, row: 8, col: 8, unit: tp }] } }, ai);
 	const first = advance(s);
 	expect(first).toMatchObject({ kind: "endTurn", player: 0, started: { player: 1 } });
 	expect(first.kind === "endTurn" && first.arrived.map((e) => e.type)).toEqual(["arrived"]);
-	expect([s.saved.state.units.length, s.world.state.units.length]).toEqual([2, 3]);
+	expect([s.saved.state.units.length, s.world.state.units.length]).toEqual([3, 3]);
 	//The reinforcement (unit 2) isn't in the plan of the turn it arrived on
 	const turn = playTurn(s);
 	expect(turn[turn.length - 1]).toMatchObject({ kind: "endTurn", player: 1 });
@@ -102,12 +102,12 @@ test("A screen asks for the next order, shows the state, then plays it checkpoin
 	expect([nextOrder(s), play(s, { type: "resupply", unit: 9 })]).toEqual([null, { events: [], refusal: { reason: "no such unit" }, checkpoint: null }]);
 });
 
-test("The end of turn stops at the save point for the screen: the AI's turn started and planned, its reinforcements not yet there", () => {
+test("The end of turn stops for the screen where the AI's turn started and planned, its reinforcements not yet there; the save point is after them (#93)", () => {
 	const w = farApart();
 	const { id: _id, row: _row, col: _col, ...tp } = w.state.units[1];
 	const s = startSession({ ...w, state: { ...w.state, reinforcements: [{ turn: 1, row: 8, col: 8, unit: tp }] } }, ai);
 	const seen: [StartedTurn | null, number][] = [];
 	const ended = endTurn(s, (started) => { seen.push([started, s.world.state.units.length]); });
 	expect(seen).toEqual([[{ player: 1, type: playerType.aiLocal, commands: [], events: [], view: [] }, 2]]);
-	expect([ended.kind === "endTurn" && ended.arrived.length, s.world.state.units.length, s.saved.state.units.length]).toEqual([1, 3, 2]);
+	expect([ended.kind === "endTurn" && ended.arrived.length, s.world.state.units.length, s.saved.state.units.length]).toEqual([1, 3, 3]);
 });

@@ -10,9 +10,10 @@
  * refused one changes nothing, as the old game's action did nothing), until it has none left. Then
  * the end of turn, and in the old game's order (Map.endTurn, Game.endTurn):
  *   the end of turn step -> the next player's controller starts and plans its turn -> the defeat at
- *   the turn limit -> [the save point] -> the side the screen shows -> the reinforcements arrive
- * Kept: the AI plans before its reinforcements arrive (#94), the save comes before them (#93), and the
- * turn limit ends the game only for a side that plays on this screen (localSide, Game's getLocalSide).
+ *   the turn limit -> [the screen's turn start] -> the side the screen shows -> the reinforcements
+ *   arrive -> [the save point: after them, #93]
+ * Kept: the AI plans before its reinforcements arrive (#94), and the turn limit ends the game only for a
+ * side that plays on this screen (localSide, Game's getLocalSide).
  * The game ends at a victory (a capture of the last objective, or a side with no unit left after an
  * attack), at the turn limit of a side on the screen, or where the old game got stuck (#80).
  *
@@ -49,7 +50,7 @@ export interface Session {
 	//What the controllers asked of the screen when they joined (the tutorial loaded on its last turn
 	//opens the main menu)
 	joined: ViewEvent[];
-	//The world at the last save point (Game.endTurn's save: before the reinforcements, #93)
+	//The world at the last save point (Game.endTurn's save: after the reinforcements, #93)
 	saved: World | null;
 	ended: SessionEnd | null;
 }
@@ -186,9 +187,9 @@ function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
 }
 
 //The end of the current player's turn, the next player's turn start and plan, the defeat at the turn
-//limit, the save point (saved: what a screen does there, in the old game's order: it shows the units the
-//AI deployed at its turn start, then saves), the side shown, the reinforcements
-export function endTurn(s: Session, saved?: (started: StartedTurn | null, events: GameEvent[]) => void): Advance {
+//limit, the screen's turn start (shown: what a screen does there, in the old game's order: it shows the
+//units the AI deployed at its turn start), the side shown, the reinforcements, the save point (#93)
+export function endTurn(s: Session, shown?: (started: StartedTurn | null, events: GameEvent[]) => void): Advance {
 	const player = s.world.state.turn.currentPlayer, side = s.world.state.players[player].side;
 	const r = step(s.world, { type: "endTurn" });
 	if ("refusal" in r) throw new Error("the end of turn is never refused");
@@ -199,11 +200,10 @@ export function endTurn(s: Session, saved?: (started: StartedTurn | null, events
 		s.ended = { kind: "turnLimit", side };
 		return { kind: "endTurn", player, events: r.events, started, arrived: [] };
 	}
-	s.saved = s.world;
-	if (saved) saved(started, r.events);
+	if (shown) shown(started, r.events);
 	s.world = { ...s.world, spotSide: shownSide(s) };
 	const arrived = arriveReinforcements(s.world);
-	s.world = arrived.world;
+	s.world = s.saved = arrived.world;
 	return { kind: "endTurn", player, events: r.events, started, arrived: arrived.events };
 }
 

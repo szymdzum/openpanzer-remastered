@@ -6,8 +6,8 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * The end of turn itself is a command (commands/turn.ts). The reinforcements arrive after it, as a
- * step of their own (arriveReinforcements): between the two the old game saves (#93 kept) and an AI
- * player plans its turn (#94 kept), so its reinforcements don't act on the turn they arrive.
+ * step of their own (arriveReinforcements): between the two an AI player plans its turn (#94 kept), so
+ * its reinforcements don't act on the turn they arrive. The game saves after them (#93).
  */
 
 import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "../prototypes";
