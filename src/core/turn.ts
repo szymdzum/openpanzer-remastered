@@ -12,7 +12,7 @@
 
 import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
-import { beginDraft, emit, finishDraft, place, writeUnit } from "./draft";
+import { beginDraft, emit, finishDraft, place, playerAt, writeUnit } from "./draft";
 import type { GameEvent } from "./events";
 import { reinforcementDeployPosition } from "./movement";
 import type { Draft, OffMapUnit, UnitId, UnitState, World } from "./types";
@@ -91,9 +91,9 @@ export type OutcomeKind = "capture" | "elimination" | "turnLimit";
 
 export interface Outcome {
 	kind: OutcomeKind;
-	winner: number; //the side that won, -1 at the turn limit (nobody wins it)
+	winner: number; //the side that won, -1 at a turn limit nobody wins
 	loser: number; //the side that lost
-	rating: ScenarioOutcome; //the winner's rating by the turn, "lose" at the turn limit
+	rating: ScenarioOutcome; //the winner's rating by the turn, "lose" at a turn limit nobody wins
 }
 
 //Whether the game is over, who won and why (the old engine's Actions.checkOutcome): a capture that took the side's
@@ -109,8 +109,20 @@ export function outcome(w: World, last: LastPlayed = {}): Outcome | null {
 	else if (!alive(playerSide.allies)) winner = playerSide.axis;
 	if (winner >= 0) return { kind: "elimination", winner, loser: ~winner & 1, rating: victoryRating(w) };
 	if (last.endedSide !== undefined && last.endedSide >= 0 && reachedTurnLimit(w, last.endedSide))
-		return { kind: "turnLimit", winner: -1, loser: last.endedSide, rating: "lose" };
+		return turnLimitOutcome(w, last.endedSide);
 	return null;
+}
+
+//At the turn limit neither side took all its objectives: the side that holds more of them held out and
+//wins, a defender included (the old game made the side that ended its last turn lose whatever it held,
+//#231); with as many each, the side that ended its last turn loses, as it did
+function turnLimitOutcome(w: World, endedSide: number): Outcome {
+	const held = [0, 0];
+	for (const h of w.state.map.hexes)
+		if (h.victorySide !== -1 && h.owner !== -1) held[playerAt(w, h.owner).side]++;
+	if (held[0] === held[1]) return { kind: "turnLimit", winner: -1, loser: endedSide, rating: "lose" };
+	const winner = held[0] > held[1] ? 0 : 1;
+	return { kind: "turnLimit", winner, loser: ~winner & 1, rating: victoryRating(w) };
 }
 
 //The current player's reinforcements up to this turn arrive (Actions.deployReinforcements), in the
