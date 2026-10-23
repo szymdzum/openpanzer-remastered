@@ -23,7 +23,7 @@ import type { Command } from "../src/commands";
 import { createWorld } from "../src/core/create";
 import { type HandUnit, handWorld } from "./coreworld";
 
-const PZ_IIA = 140, TP7 = 273, INFANTERIE = 115, ME_109 = 159, P11 = 280, PSW_222 = 117;
+const PZ_IIA = 140, TP7 = 273, INFANTERIE = 115, WZ97 = 264, ME_109 = 159, P11 = 280, PSW_222 = 117;
 
 //A Pz IIA on clear ground next to a 7TP entrenched (2) in a forest
 function forestFight() {
@@ -100,6 +100,23 @@ test("The estimate is the dice's expected kills rounded once, PG2's integer divi
 		const kills = strength * hitChance(last("attacker", "aav") - last("defender", "ddv"), 15);
 		const losses = strength * hitChance(last("defender", "dav") - last("attacker", "adv"), 15);
 		expect([cr.kills, cr.losses], "strength " + strength).toEqual([Math.floor(kills + 0.5), Math.floor(losses + 0.5)]);
+	}
+});
+
+test("The attack's estimate counts as kills only the target's losses, not the support fire's on the attacker (#87)", () => {
+	//a Pz IIA next to a 7TP in the open, a Polish 75mm A wz.97 next to the tank: it fires in support,
+	//the tank fires back at it, and those hits fall on the gun, not on the 7TP
+	const w = handWorld({ rows: 6, cols: 6, units: [
+		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2 },
+		{ eqid: TP7, owner: 1, row: 2, col: 3 },
+		{ eqid: WZ97, owner: 1, row: 3, col: 2, tempSpotted: true },
+	] });
+	const tank = unitById(w, 0), target = unitById(w, 1), gun = unitById(w, 2);
+	const alone = attackResult(w, tank, target, null), support = attackResult(w, gun, tank, null);
+	expect(support.losses).toBeGreaterThan(0); //the tank's return fire on the gun
+	for (const withHidden of [false, true]) {
+		const cr = combatResult(w, tank, target, withHidden, null);
+		expect([cr.kills, cr.losses], "with hidden units: " + withHidden).toEqual([alone.kills, alone.losses + support.kills]);
 	}
 });
 
