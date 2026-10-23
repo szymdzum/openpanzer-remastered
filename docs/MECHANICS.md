@@ -216,7 +216,8 @@ src/core/aiscore.ts.
 `AI` (ai.ts) plans the whole turn once, at its start, by scoring options. It doesn't search
 moves ahead and doesn't react to combat results during the turn.
 
-1. Buys units with the prestige over a reserve of 1000, 30% of it for aircraft.
+1. Buys units with the prestige over a reserve of 1000, 30% of it for aircraft; infantry and
+   towed guns with a ground transport when the budget left pays for one.
 2. Deploys undeployed core units.
 3. Orders its units: artillery, fortifications, combat aircraft and warships first. They attack
    what they can reach that turn, not to open the way for an assault (#233, #234).
