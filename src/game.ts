@@ -30,7 +30,7 @@ import { OSGlue } from "./osglue";
 import { Commands } from "./commands";
 import { GameRules } from "./gamerules";
 import { coreDriver, endGameTurn, removeDestroyed, startGameSession } from "./coresession";
-import { buildOnCore, carryPlayer, prototypeAwarded } from "./coreload";
+import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./coreload";
 import { applyData, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
 import { endCampaignScenario, scenarioEnded } from "./core/campaign";
@@ -492,6 +492,7 @@ export { game };
 //(src/coreload.ts)
 AI.driver = coreDriver;
 ScenarioLoader.build = buildOnCore;
+ScenarioLoader.coreCountries = carriedCountries;
 GameMap.removeDestroyed = removeDestroyed;
 
 //What the engine reads of the game (src/context.ts): this game's fields, read at the moment the

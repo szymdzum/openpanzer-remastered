@@ -13,10 +13,11 @@
  */
 
 import { MAJOR_VERSION, type UISettings, uiSettings } from "./prototypes";
-import { Equipment } from "./equipment";
+import { Equipment, type EquipmentPlayerCountries } from "./equipment";
 import { isChromeApp } from "./dom";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
+import { coreCountries } from "./core/campaign";
 import type { Game } from "./game";
 import { game } from "./session";
 import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./savegame";
@@ -258,14 +259,19 @@ export class GameState {
 			return true;
 		}
 
-		//Creates the scenario and loads the equipment of all players and supporting countries
+		//Creates the scenario and loads the equipment of all players and supporting countries, and of
+		//their core units' countries (#182: by the units' flags, no equipment is loaded to ask)
 		function loadGameState(read: ReadSave, onDone: () => void) {
 			const { data, state } = read.save;
 			Game.scenario = new Scenario(state.scenario.file);
 			if (data.equipment)
 				Equipment.name = data.equipment;
 
-			Equipment.addPlayersEquipment(state.players, onEquipmentLoaded.bind(null, read, onDone));
+			const players: EquipmentPlayerCountries[] = state.players.slice();
+			for (const p of state.players)
+				for (const country of coreCountries(p, state.units, {}))
+					players.push({ country, supportCountries: [] });
+			Equipment.addPlayersEquipment(players, onEquipmentLoaded.bind(null, read, onDone));
 		}
 
 		//Called once for each equipment file, the game is rebuilt after the last one

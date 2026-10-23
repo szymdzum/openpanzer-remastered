@@ -26,6 +26,8 @@ export const scenarioPath = "resources/scenarios/data/";
 export class ScenarioLoader {
 	//Who makes the game once its files are in (src/coreload.ts, set by game.ts)
 	declare static build: (scen: Scenario, xmlData: Document, imageSize: [number, number]) => void;
+	//The countries of the core units a campaign carries in, loaded beside the players' (src/coreload.ts)
+	declare static coreCountries: () => number[];
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;
 
@@ -81,12 +83,13 @@ export class ScenarioLoader {
 		}
 
 		//The map image's size gives the map's (the scenario's rows and cols are only an upper limit),
-		//then the equipment of the players' countries and their supporting ones
+		//then the equipment of the players' countries and their supporting ones, and a campaign's core units'
 		function loadMapImage(xmlData: Document, src: string) {
 			const img = new Image();
 			img.src = src;
 			img.onload = function() {
-				const players = playerCountries(xmlData);
+				const players = playerCountries(xmlData).concat(ScenarioLoader.coreCountries()
+					.map((country) => ({ country, supportCountries: [] as number[] })));
 				const imageSize: [number, number] = [img.width, img.height];
 				Equipment.addPlayersEquipment(players, function() {
 					if (--Equipment.equipmentToLoad) //called after each file, the last one makes the game

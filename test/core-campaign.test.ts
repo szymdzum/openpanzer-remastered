@@ -8,12 +8,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
-import { difference, GAME_DIR, setupOf } from "./corefiles";
-import { awardedPrototype, endCampaignScenario, type CampaignScenarioData, scenarioEnded } from "../src/core/campaign";
+import { difference, GAME_DIR, readEquipment, setupOf } from "./corefiles";
+import { awardedPrototype, coreCountries, endCampaignScenario, type CampaignScenarioData, scenarioEnded } from "../src/core/campaign";
 import { createWorld } from "../src/core/create";
 import { newGame } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/scenario";
 import type { CampaignState, SavedGame } from "../src/state";
+import type { CoreUnit, EquipmentTable, OffMapUnit, PlayerState, UnitState } from "../src/core/types";
 import type { CommandsAPI } from "../src/commands";
 
 type Game = Awaited<ReturnType<typeof freshGame>>;
@@ -111,18 +112,17 @@ async function playCampaign(index: number, seen: Seen): Promise<string> {
 }
 
 //A scenario played (playScenario), ended with outcome on both engines and the next one started:
-//"" when they agree and the campaign goes on, "end" when it ended (or stopped, #182, on both), else
-//what differs
+//"" when they agree and the campaign goes on, "end" when it ended (or threw on both), else what differs
 async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], seen: Seen): Promise<string> {
 	playScenario(game, (await import("../src/equipment")).Equipment.equipment, (await import("../src/commands")).Commands);
 	const ended = data();
 	shownPrototypes.length = 0;
 	const oldThrew = threw(() => game.continueCampaign(outcome));
 	let n: ReturnType<typeof endCampaignScenario> = null;
+	const equipment = loadedEquipment(ended);
 	const coreThrew = threw(() => {
-		n = endCampaignScenario(createWorld(ended, setupOf(game.scenario.file, null).equipment), outcome, scenarios);
+		n = endCampaignScenario(createWorld(ended, equipment), outcome, scenarios);
 	});
-	//(kept #182: a core unit of a country the scenario didn't load stops the campaign)
 	if (oldThrew || coreThrew) {
 		seen.threw++;
 		return oldThrew === coreThrew ? "end" : outcome + ": only one engine threw";
@@ -130,7 +130,7 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 	const oldNext = game.gameEnded ? null : game.campaign.getCurrentScenario();
 	if ((n.next === null) !== (oldNext === null)) return outcome + ": the campaign's end differs";
 	//The scenario as it stays until the next one loads: its campaign player sent to HQ in place
-	const between = scenarioEnded(createWorld(ended, setupOf(game.scenario.file, null).equipment), outcome, scenarios, n.campaign);
+	const between = scenarioEnded(createWorld(ended, equipment), outcome, scenarios, n.campaign);
 	const left = data();
 	if (JSON.stringify(left.state) !== JSON.stringify(between)) return outcome + ": the scenario left behind:" + difference(JSON.stringify(left.state), JSON.stringify(between));
 	seen.left++;
@@ -141,8 +141,15 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 	const before = game.scenario;
 	game.newScenario(oldNext.scenario, oldNext.intro);
 	await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, oldNext.scenario);
-	const got = newGame({ ...setupOf(n.next.scenario, ended.state.rng, n.campaign, n.next.intro), carried: n.player });
+	const got = newGame({ ...setupOf(n.next.scenario, ended.state.rng, n.campaign, n.next.intro, coreCountries(n.player, [], equipment)),
+		carried: n.player });
 	return prototypeProblem(n.campaign, got.state, seen) || compared(`after ${outcome}, ${n.next.scenario}`, data(), got);
+}
+
+//The equipment a game has loaded: its state's lists name the files (by file, the country + 1)
+function loadedEquipment(saved: SavedGame) {
+	const countries = Object.keys(saved.state.equipment.indexes).map((file) => +file - 1);
+	return readEquipment(saved.data.equipment, countries).equipment;
 }
 
 //The prototype the game's message showed and the one the core says it gave, "" when the same
@@ -165,6 +172,7 @@ test("Every campaign starts, ends its scenarios and carries its player on as the
 	expect(seen.carried).toBeGreaterThan(20);
 	expect(seen.prototypes).toBeGreaterThan(2);
 	expect(seen.left).toBeGreaterThan(20);
+	expect(seen.threw, "no scenario's end threw (#182)").toBe(0);
 	if (process.env.FC_STATS) fs.writeSync(2, JSON.stringify(seen) + "\n");
 }, 600_000);
 
@@ -191,3 +199,38 @@ test("A campaign player whose core units all fell starts the next scenario with 
 	await next();
 	expect(game.getCampaignPlayer().getCoreUnitList()).toEqual([]);
 }, 60_000);
+
+//#182: wdkass.xml, the United States World Campaign's first scenario, makes a United Kingdom unit (the
+//supporting country's, eqid 373) a core unit; a loss leads to wdoakridge.xml, whose players don't
+//load the United Kingdom's equipment. The scenario loads the equipment of the core units it brings in,
+//so the unit plays there and goes to HQ at its end, refilled
+test("A campaign's core unit of a country the next scenario doesn't load plays there and goes to HQ (#182)", async () => {
+	const { game } = await oldCampaign(campaignlist.findIndex((c) => c.file === "campus.json"), 1);
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { Equipment } = await import("../src/equipment");
+	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
+	const british = () => game.getCampaignPlayer().getCoreUnitList().find((u) => u.eqid === 373);
+	expect(british(), "wdkass makes the British unit a core unit").toBeDefined();
+	game.continueCampaign("lose");
+	const before = game.scenario, scenario = game.campaign.getCurrentScenario();
+	expect(scenario.scenario).toBe("wdoakridge.xml");
+	game.newScenario(scenario.scenario, scenario.intro);
+	await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, scenario.scenario);
+	expect(british(), "carried into wdoakridge").toBeDefined();
+	expect(Equipment.equipment[373], "its equipment loaded").toBeDefined();
+	british().ammo = 0;
+	touched();
+	game.continueCampaign("victory");
+	expect(british().ammo).toBe(Equipment.equipment[373].ammo);
+}, 60_000);
+
+//#182: the countries a scenario loads for the core units: by the unit's equipment file when the table
+//has it, else by its flag; a transport's too; no country for the generic file (0) or no flag
+test("A player's core units name the equipment countries they need, by equipment or by flag (#182)", () => {
+	const unit = (eqid: number, flag: number, transport: number | null = null) =>
+		({ eqid, flag, transport: transport === null ? null : { eqid: transport, ammo: 0, fuel: 0 } }) as OffMapUnit;
+	const equipment = { 10: { country: 23 }, 11: { country: 0 } } as unknown as EquipmentTable;
+	const onMap = { ...unit(10, 8), id: 4 } as UnitState;
+	const core: CoreUnit[] = [{ onMap: 4 }, { onMap: 99 }, { reserve: unit(500, 16, 11) }, { lost: unit(501, 0) }, { reserve: unit(502, 10, 503) }];
+	expect(coreCountries({ core } as PlayerState, [onMap], equipment)).toEqual([22, 15, 9]);
+});
