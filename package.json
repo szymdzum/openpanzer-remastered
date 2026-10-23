@@ -16,6 +16,7 @@
 		"test:mutation": "TZ=Europe/Warsaw OPENPANZER_GAME_DIR=$PWD/game nice -n 10 stryker run",
 		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
 		"record": "test/contracts/record.sh",
+		"arena": "ARENA=1 TZ=Europe/Warsaw vitest run test/arena.test.ts -t 'The AI arena'",
 		"lint": "oxlint --type-aware --deny-warnings src test",
 		"gate": "npm run -s check && npm run -s lint && npm run -s fallow && npm run -s test:coverage",
 		"prepare": "lefthook install",
