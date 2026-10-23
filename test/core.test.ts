@@ -121,6 +121,23 @@ test("A move pays the hexes it enters, not the one it leaves: a recon car's 3 ro
 	expect(unitById(again.world, 0)).toMatchObject({ row: 4, col: 7, moveLeft: car.moveLeft - 6, fuel: car.fuel - 6 });
 });
 
+//A strip of land in the sea: the tank at 4,4, clear at 3,5, 4,5 and 6,5, a forest at 5,5
+function landStrip() {
+	const land = (r: number, c: number) => (r === 3 && c === 5) || (r === 4 && c === 5) || (r === 6 && c === 5);
+	return handWorld({ rows: 9, cols: 9, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 4, moveLeft: 3 }],
+		terrain: (r, c) => r === 4 && c === 4 || land(r, c) ? terrainType.Clear : r === 5 && c === 5 ? terrainType.Forest : terrainType.Ocean });
+}
+
+test("A hex next to the unit costs only its own entry, whatever its neighbours cost: 3 points reach clear, forest, clear (#167)", () => {
+	const w = landStrip();
+	const cells = moveRange(w, unitById(w, 0));
+	const at = (r: number, c: number) => cells.find((x) => x.row === r && x.col === c);
+	expect(at(4, 5)).toMatchObject({ cin: 0, cout: 1 }); //entered from the unit's hex, though the sea next to it costs 255
+	expect(at(5, 5)).toMatchObject({ cin: 1, cout: 3 });
+	expect(at(6, 5)).toMatchObject({ cin: 3, canMove: true });
+	expect(pathTo(w, unitById(w, 0), { row: 6, col: 5 }).map((p) => [p.row, p.col])).toEqual([[4, 4], [4, 5], [5, 5], [6, 5]]);
+});
+
 test("A hidden enemy's hex is in the move range: the move ends in a surprise", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 },

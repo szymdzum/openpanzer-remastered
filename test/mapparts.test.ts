@@ -55,3 +55,22 @@ test("looking up a unit id that isn't on the map gives null", async () => {
 	expect(scenario.map.getUnitById(1e6)).toBeNull();
 	expect(scenario.map.getPlayers()[0].addCoreUnit(null)).toBe(false);
 });
+
+test("an enemy on a hex the attacker's side doesn't spot can be attacked only after it fired from hiding", async () => {
+	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
+	const { uiSettings } = await import("../src/prototypes");
+	const { GameRules } = await import("../src/gamerules");
+	const noFOW = uiSettings.noFOW;
+	uiSettings.noFOW = false;
+	const units = scenario.map.getUnits();
+	const atk = units.find((u) => u.player.id === scenario.map.currentPlayer.id && units.some((t) => GameRules.canInitiateAttack(u, t)))!;
+	const target = units.find((t) => t.player.side !== atk.player.side && GameRules.canInitiateAttack(atk, t))!;
+	const h = scenario.map.map[target.getPos().row][target.getPos().col];
+	for (let n = 0; h.isSpotted(atk.player.side) && n < 100; n++) h.setSpotted(atk.player.side, false);
+	const airMode = target === h.airunit;
+	target.tempSpotted = false;
+	expect(h.getAttackableUnit(atk, airMode)).toBeNull();
+	target.tempSpotted = true;
+	expect(h.getAttackableUnit(atk, airMode)).toBe(target);
+	uiSettings.noFOW = noFOW;
+});
