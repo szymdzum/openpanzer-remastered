@@ -26,14 +26,14 @@ export interface MoveOutcome {
 //by default its move range now). It stops before a hidden enemy (surprised, unless a leader sees it
 //coming), takes the hex at the end of the path, pays the path's cost, faces where it went and
 //spots. A human player's unit can take it back when it spotted nothing new and wasn't surprised
-//(D5). A retreat is such a move too
+//(D5). A retreat is such a move too, but leaves nothing to undo: its player didn't make it (#171)
 export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { row: number; col: number; cost: number }[] | null,
 	retreat = false): MoveOutcome {
 	const start = unitById(d, id);
 	const path = cells !== null ? shortestPath(start, to, cells) : pathTo(d, start, to);
 	if (path.length === 0) return { surprise: null, win: false };
-	const human = playerAt(d, start.owner).type === playerType.humanLocal;
-	const undo: UndoState | null = human ? newUndo(start) : null;
+	const undoable = !retreat && playerAt(d, start.owner).type === playerType.humanLocal;
+	const undo: UndoState | null = undoable ? newUndo(start) : null;
 	const capturer = canCapture(d, start);
 	const walked = walk(d, start, path);
 	const last = walked.passed[walked.passed.length - 1];
@@ -45,7 +45,7 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { r
 	payMove(d, writeUnit(d, id), walked.cost);
 	const spotted = relocate(d, id, last, (u) => { u.facing = directionTo(start.row, start.col, last.row, last.col); });
 	if (walked.surprise !== null) emit(d, { type: "surprised", unit: id, at: walked.surprise });
-	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && human ? undo : null;
+	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && undoable ? undo : null;
 	return { surprise: walked.surprise, win };
 }
 
