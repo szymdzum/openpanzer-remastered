@@ -1,14 +1,14 @@
 //Random command sequences on the engine fixtures, for the property tests that play them
-//(test/core-steps.test.ts against the old engine, test/mirror.test.ts on the objects as a mirror): each
-//pick a kind of command, its numbers picking the unit and the command among those the old engine offers
-//the current player (read from its objects), or any command at all
+//(test/mirror.test.ts on the objects as a mirror): each pick a kind of command, its numbers picking the
+//unit and the command among those the game offers the current player (read from its objects), or any
+//command at all
 import fc from "fast-check";
 import { fixtures } from "./contracts";
 import type { load } from "./invariants";
 import type { Unit } from "../src/unit";
 import type { Command } from "../src/commands";
 
-//The old engine's modules of a restored fixture (test/invariants.ts load)
+//The game's modules of a restored fixture (test/invariants.ts load)
 type World = Awaited<ReturnType<typeof load>>;
 
 const kinds = { move: 8, capture: 2, attack: 6, resupply: 1, reinforce: 1, overstrength: 1, mount: 1, unmount: 1, embark: 1,
@@ -26,7 +26,7 @@ export const sequences: fc.Arbitrary<Sequence> = fc.record({
 	}), { maxLength: 40, size: "max" }),
 });
 
-//The commands of a kind the engine offers the current player's unit u (none: it has none)
+//The commands of a kind the game offers the current player's unit u (none: it has none)
 type Offer = (w: World, u: Unit) => Command[];
 const one = (rule: (w: World, u: Unit) => boolean, cmd: (u: Unit) => Command): Offer => (w, u) => rule(w, u) ? [cmd(u)] : [];
 const moves = (w: World, u: Unit) => w.GameRules.getMoveRange(w.m, u).filter((c) => c.canMove);
@@ -76,9 +76,11 @@ const playerOffers: Partial<Record<Kind, (w: World) => Command[]>> = {
 	sell: (w) => w.m.currentPlayer.getCoreUnitList().map((_u, index) => ({ type: "sell", index })),
 };
 
-//The current player's side's deployment hexes with no unit
+//The current player's side's deployment hexes with no unit, row by row
 export function freeDeployHexes(w: World) {
-	return w.m.getDeployHexes(w.m.currentPlayer.side).filter((c) => !w.m.map[c.row][c.col].unit && !w.m.map[c.row][c.col].airunit);
+	const m = w.m, side = m.currentPlayer.side;
+	return m.map.flat().filter((h) => h.isDeployment > -1 && m.getPlayer(h.isDeployment).side === side && !h.unit && !h.airunit)
+		.map((h) => h.getPos());
 }
 
 //Any command at all from the pick's numbers, its ids and cells near the fixture's: most are refused,

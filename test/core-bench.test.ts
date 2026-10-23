@@ -1,8 +1,10 @@
-//How fast the new core answers the AI's hot queries against the old engine (docs/CORE.md): the move
-//range of every unit that can move and the combat estimate of every unit on what it can attack, on each engine
-//fixture, and what building the world from toData costs; and how fast its step plays a move and an
-//attack against the old engine's command, and an end of turn with its reinforcements. Off unless BENCH=1 (timings on a shared machine aren't a
-//test): BENCH=1 npx vitest run test/core-bench.test.ts prints the tables
+//How fast the core answers (docs/CORE.md), on each engine fixture: the AI's hot queries (the move
+//range of every unit that can move, the combat estimate of every unit on what it can attack) and what
+//building the world from toData costs; a move and an attack played by the core's step and by the
+//game's command (the world made from the objects, the objects updated after); an end of turn; an AI
+//turn; and the screen's rules (src/gamerules.ts) the render loop and a click ask. Off unless BENCH=1
+//(timings on a shared machine aren't a test): BENCH=1 npx vitest run test/core-bench.test.ts prints
+//the tables
 import fs from "node:fs";
 import { test } from "vitest";
 import { fixtures } from "./contracts";
@@ -27,8 +29,8 @@ function time(reps: number, f: () => void): number {
 	return best * 1000;
 }
 
-test.runIf(!!process.env.BENCH)("Benchmark: the core's move range and combat estimate against the old engine", async () => {
-	const rows: string[] = ["fixture, units that can move | move range old/core µs | estimate old/core µs | world from toData µs"];
+test.runIf(!!process.env.BENCH)("Benchmark: the core's move range and combat estimate", async () => {
+	const rows: string[] = ["fixture, units that can move | move range µs | estimate µs | world from toData µs"];
 	for (const name of fixtures("engine")) {
 		const w = await load(name);
 		const { toData } = await import("../src/state");
@@ -44,19 +46,17 @@ test.runIf(!!process.env.BENCH)("Benchmark: the core's move range and combat est
 				if (t) pairs.push([u, t]);
 			}
 		const per = (n: number, x: number) => n ? (x / n).toFixed(1) : "-";
-		const moveOld = time(3, () => { for (const u of movers) GR.getMoveRange(m, u); });
-		const moveCore = time(3, () => { for (const u of movers) moveRange(world, core(u)); });
-		const estOld = time(3, () => { for (const [a, d] of pairs) GR.calculateCombatResults(a, d, m.getUnits(), true, true); });
-		const estCore = time(3, () => { for (const [a, d] of pairs) combatResult(world, core(a), core(d), true, null); });
+		const move = time(3, () => { for (const u of movers) moveRange(world, core(u)); });
+		const estimate = time(3, () => { for (const [a, d] of pairs) combatResult(world, core(a), core(d), true, null); });
 		const build = time(3, () => createWorld(toData(w.scenario), w.Equipment.equipment));
-		rows.push(`${name} ${movers.length} | ${per(movers.length, moveOld)} / ${per(movers.length, moveCore)}`
-			+ ` | ${per(pairs.length, estOld)} / ${per(pairs.length, estCore)} (${pairs.length} pairs) | ${build.toFixed(0)}`);
+		rows.push(`${name} ${movers.length} | ${per(movers.length, move)} | ${per(pairs.length, estimate)} (${pairs.length} pairs)`
+			+ ` | ${build.toFixed(0)}`);
 	}
 	fs.writeSync(2, rows.join("\n") + "\n"); //(past Vitest, which keeps a passing test's console)
 }, 600_000);
 
 //The commands played in a row, each unit once: a move to the first hex of its range, or an attack
-//on the first unit it can attack, as the old engine offers them at the start
+//on the first unit it can attack, as the game offers them at the start
 async function commandsOf(name: string, kind: "move" | "attack"): Promise<Command[]> {
 	const { m, GameRules: GR } = await load(name);
 	const cmds: Command[] = [];
@@ -77,10 +77,10 @@ async function commandsOf(name: string, kind: "move" | "attack"): Promise<Comman
 	return cmds;
 }
 
-//The best of 5 rounds of the commands played in a row, per command in µs: the old engine's (the
+//The best of 5 rounds of the commands played in a row, per command in µs: the game's command (the
 //fixture loaded again before each round, not timed) and the core's step (from the same start)
 async function timeCommands(name: string, cmds: Command[]): Promise<[number, number]> {
-	let old = Infinity, core = Infinity;
+	let played = Infinity, core = Infinity;
 	for (let round = 0; round < 5; round++) {
 		const w = await load(name);
 		const { toData } = await import("../src/state");
@@ -94,115 +94,93 @@ async function timeCommands(name: string, cmds: Command[]): Promise<[number, num
 		core = Math.min(core, performance.now() - t);
 		t = performance.now();
 		for (const cmd of cmds) w.Commands.execute(w.scenario, cmd);
-		old = Math.min(old, performance.now() - t);
+		played = Math.min(played, performance.now() - t);
 	}
-	return [old * 1000 / cmds.length, core * 1000 / cmds.length];
+	return [played * 1000 / cmds.length, core * 1000 / cmds.length];
 }
 
-test.runIf(!!process.env.BENCH)("Benchmark: the core's step against the old engine's command, move and attack", async () => {
-	const rows: string[] = ["fixture | moves: old/core µs per command | attacks: old/core µs per command"];
+test.runIf(!!process.env.BENCH)("Benchmark: the game's command against the core's step, move and attack", async () => {
+	const rows: string[] = ["fixture | moves: game/core µs per command | attacks: game/core µs per command"];
 	for (const name of fixtures("engine")) {
 		const moves = await commandsOf(name, "move"), attacks = await commandsOf(name, "attack");
-		const [mo, mc] = moves.length ? await timeCommands(name, moves) : [0, 0];
-		const [ao, ac] = attacks.length ? await timeCommands(name, attacks) : [0, 0];
-		rows.push(`${name} | ${moves.length}: ${mo.toFixed(0)} / ${mc.toFixed(0)} | ${attacks.length}: ${ao.toFixed(0)} / ${ac.toFixed(0)}`);
+		const [mg, mc] = moves.length ? await timeCommands(name, moves) : [0, 0];
+		const [ag, ac] = attacks.length ? await timeCommands(name, attacks) : [0, 0];
+		rows.push(`${name} | ${moves.length}: ${mg.toFixed(0)} / ${mc.toFixed(0)} | ${attacks.length}: ${ag.toFixed(0)} / ${ac.toFixed(0)}`);
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
-//Two rounds of turns ended on each fixture, each with the reinforcements that arrive: the old engine's
-//command and Actions.deployReinforcements (the fixture loaded again before each round, not timed; no
-//player plans) against the core's step and arriveReinforcements, per end of turn in µs, best of 5
-test.runIf(!!process.env.BENCH)("Benchmark: the core's end of turn against the old engine's", async () => {
-	const rows: string[] = ["fixture, units | end of turn old/core µs"];
+//Two rounds of turns ended on each fixture, each with the reinforcements that arrive (no player
+//plans): the core's step and arriveReinforcements, per end of turn in µs, best of 5
+test.runIf(!!process.env.BENCH)("Benchmark: the core's end of turn", async () => {
+	const rows: string[] = ["fixture, units | end of turn µs"];
 	for (const name of fixtures("engine")) {
-		let old = Infinity, core = Infinity, units = 0, n = 0;
+		let core = Infinity, units = 0, n = 0;
 		for (let round = 0; round < 5; round++) {
 			const w = await load(name);
 			const { toData } = await import("../src/state");
-			const { Actions } = await import("../src/actions");
 			let world = createWorld(toData(w.scenario, w.game), w.Equipment.equipment, { spotSide: 0 });
 			units = world.state.units.length;
 			n = 2 * world.state.players.length;
-			let t = performance.now();
+			const t = performance.now();
 			for (let i = 0; i < n; i++) {
 				const r = step(world, { type: "endTurn" });
 				if (r.ok) world = arriveReinforcements(r.world).world;
 			}
 			core = Math.min(core, performance.now() - t);
-			w.game.spotSide = 0;
-			t = performance.now();
-			for (let i = 0; i < n; i++) {
-				w.Commands.execute(w.scenario, { type: "endTurn" }, { localSide: -1 });
-				Actions.deployReinforcements(w.scenario, w.m.turn, w.m.currentPlayer.id);
-			}
-			old = Math.min(old, performance.now() - t);
 		}
-		rows.push(`${name} ${units} | ${(old * 1000 / n).toFixed(0)} / ${(core * 1000 / n).toFixed(0)}`);
+		rows.push(`${name} ${units} | ${(core * 1000 / n).toFixed(0)}`);
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
-//An AI turn on each fixture, every player the AI (test/aigames.ts, src/core/session.ts): the plan of the
-//current player's turn alone, then the turn played to its end (its orders, the end of turn, the next
-//player's turn start and plan, the reinforcements), the old game as Game plays it against the core's
-//session, in ms, best of 5 (the fixture loaded again before each round, not timed)
-test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core against the old AI", async () => {
-	const { startFixture, oldAdvance, planLoadedTurn } = await import("./aigames");
+//An AI turn on each fixture, every player the AI (src/core/session.ts): the plan of the current
+//player's turn alone, then the turn played to its end (its orders, the end of turn, the next player's
+//turn start and plan, the reinforcements), in ms, best of 5
+test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core", async () => {
 	const { aiController } = await import("../src/core/ai");
 	const { startSession, playTurn } = await import("../src/core/session");
-	const rows: string[] = ["fixture, orders | plan old/core ms | turn old/core ms"];
+	const rows: string[] = ["fixture, orders | plan ms | turn ms"];
 	for (const name of fixtures("engine").filter((f) => !f.startsWith("scripted"))) {
-		const best = { planOld: Infinity, planCore: Infinity, turnOld: Infinity, turnCore: Infinity };
+		const best = { plan: Infinity, turn: Infinity };
 		let orders = 0;
 		for (let round = 0; round < 5; round++) {
-			const g = await startFixture(name, round + 1);
-			const w = createWorld(g.toData(g.game.scenario, g.game), g.Equipment.equipment, { spotSide: -1 });
+			const w = await load(name);
+			const { toData } = await import("../src/state");
+			const saved = toData(w.scenario, w.game);
+			saved.state.players.forEach((p) => { p.type = w.playerType.aiLocal; });
+			const world = createWorld(saved, w.Equipment.equipment, { spotSide: -1 });
 			let t = performance.now();
-			const s = startSession(w, (type, player) => type === g.playerType.aiLocal ? aiController(player) : null, { loaded: true, localSide: -1 });
-			best.planCore = Math.min(best.planCore, performance.now() - t);
-			t = performance.now();
-			planLoadedTurn(g);
-			best.planOld = Math.min(best.planOld, performance.now() - t);
+			const s = startSession(world, (_type, player) => aiController(player), { loaded: true, localSide: -1 });
+			best.plan = Math.min(best.plan, performance.now() - t);
 			t = performance.now();
 			orders = playTurn(s).length - 1;
-			best.turnCore = Math.min(best.turnCore, performance.now() - t);
-			t = performance.now();
-			while (oldAdvance(g).kind === "order");
-			best.turnOld = Math.min(best.turnOld, performance.now() - t);
+			best.turn = Math.min(best.turn, performance.now() - t);
 		}
-		const ms = (x: number) => x.toFixed(1);
-		rows.push(`${name} ${orders} | ${ms(best.planOld)} / ${ms(best.planCore)} | ${ms(best.turnOld)} / ${ms(best.turnCore)}`);
+		rows.push(`${name} ${orders} | ${best.plan.toFixed(1)} | ${best.turn.toFixed(1)}`);
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
-//The screen's rules in the running game (src/corerules.ts): what the render loop asks of every unit it
+//The screen's rules in the running game (src/gamerules.ts): what the render loop asks of every unit it
 //draws (the unit's own rules: its move range, ammo, fuel, ground, the bridge it stands on) and what a
 //click asks of the map (the move and attack hexes, the estimate under the attack cursor, the context
-//buttons), each on the world made from the objects at the call, against the old GameRules
-test.runIf(!!process.env.BENCH)("Benchmark: the screen's rules on the core against the old engine's", async () => {
-	const rows: string[] = ["fixture, units | render loop per unit old/core µs | move+attack hexes old/core µs | estimate old/core µs | context buttons old/core µs"];
+//buttons), each on the world made from the objects at the call
+test.runIf(!!process.env.BENCH)("Benchmark: the screen's rules on the core", async () => {
+	const rows: string[] = ["fixture, units | render loop per unit µs | move+attack hexes µs | estimate µs | context buttons µs"];
 	for (const name of fixtures("engine")) {
 		const w = await load(name);
-		const { CoreRules } = await import("../src/corerules");
-		const { setEngineContext, engineContext } = await import("../src/context");
-		setEngineContext({ ...engineContext, host: () => w.game });
-		const { m, GameRules: GR } = w;
+		const { m, GameRules: R } = w;
 		const units = m.getUnits().filter((u) => u.getPos());
-		const pair = units.flatMap((a) => units.filter((d) => a.player.side !== d.player.side && GR.isInAttackRange(a, d)).map((d) => [a, d]))[0];
-		type R = typeof CoreRules;
+		const pair = units.flatMap((a) => units.filter((d) => a.player.side !== d.player.side && R.isInAttackRange(a, d)).map((d) => [a, d]))[0];
 		let sink = 0;
-		const loop = (R: R) => () => { for (const u of units) sink += R.getUnitMoveRange(u) + +R.unitUsesAmmo(u) + +R.unitUsesFuel(u) + +R.isGround(u) + +R.isBridgeForSide(u.getHex(), 0); };
-		const hexes = (R: R) => () => { R.getMoveRange(m, units[0]); R.getUnitAttackCells(m.map, units[0], m.rows, m.cols); };
-		const estimate = (R: R) => () => { if (pair) R.calculateCombatResults(pair[0], pair[1], m.getUnits(), false, true); };
-		const buttons = (R: R) => () => { const u = units[0]; R.canMount(u); R.canEmbark(m.map, u); R.canDisembark(m.map, u); R.canResupply(m.map, u); R.canReinforce(m.map, u); };
-		const old = GR as unknown as R;
-		const per = (x: number) => (x / units.length).toFixed(2);
-		rows.push(`${name} ${units.length} | ${per(time(20, loop(old)))} / ${per(time(20, loop(CoreRules)))}`
-			+ ` | ${time(10, hexes(old)).toFixed(0)} / ${time(10, hexes(CoreRules)).toFixed(0)}`
-			+ ` | ${time(10, estimate(old)).toFixed(0)} / ${time(10, estimate(CoreRules)).toFixed(0)}`
-			+ ` | ${time(10, buttons(old)).toFixed(0)} / ${time(10, buttons(CoreRules)).toFixed(0)}`);
+		const loop = () => { for (const u of units) sink += R.getUnitMoveRange(u) + +R.unitUsesAmmo(u) + +R.unitUsesFuel(u) + +R.isGround(u) + +R.isBridgeForSide(u.getHex(), 0); };
+		const hexes = () => { R.getMoveRange(m, units[0]); R.getUnitAttackCells(m.map, units[0], m.rows, m.cols); };
+		const estimate = () => { if (pair) R.calculateCombatResults(pair[0], pair[1], m.getUnits(), false, true); };
+		const buttons = () => { const u = units[0]; R.canMount(u); R.canEmbark(m.map, u); R.canDisembark(m.map, u); R.canResupply(m.map, u); R.canReinforce(m.map, u); };
+		rows.push(`${name} ${units.length} | ${(time(20, loop) / units.length).toFixed(2)} | ${time(10, hexes).toFixed(0)}`
+			+ ` | ${time(10, estimate).toFixed(0)} | ${time(10, buttons).toFixed(0)}`);
+		if (sink < 0) rows.push("");
 	}
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);

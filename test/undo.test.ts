@@ -8,6 +8,7 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 	const scenario = await restoreState(readFixture("engine", "ruscam09-t2.json.gz").state);
 	const { GameRules } = await import("../src/gamerules");
 	const { playerType } = await import("../src/prototypes");
+	const { Commands } = await import("../src/commands");
 	const map = scenario.map;
 	const player = map.currentPlayer;
 	player.type = playerType.humanLocal;
@@ -19,9 +20,9 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 		const cell = GameRules.getMoveRange(map, u)[0];
 		if (!cell) continue;
 		map.selectUnit(u);
-		map.moveUnit(u, cell.row, cell.col);
+		Commands.execute(scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } });
 		if (!map.canUndoMove(u)) continue;
-		map.undoLastMove();
+		Commands.execute(scenario, { type: "undo", unit: u.id });
 		expect(u.player).toBe(player);
 		const strength = u.strength;
 		u.strength = 5;
@@ -31,7 +32,7 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 	expect(unit, "a unit whose move can be undone and which can reinforce").not.toBeNull();
 
 	const prestige = player.prestige;
-	const r = map.reinforceUnit(unit, false);
-	expect(r.strength).toBeGreaterThan(0);
+	const r = Commands.execute(scenario, { type: "reinforce", unit: unit!.id });
+	expect(r.ok && r.result.strength).toBeGreaterThan(0);
 	expect(player.prestige).toBeLessThan(prestige);
 });

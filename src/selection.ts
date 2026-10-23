@@ -10,17 +10,12 @@
  * when the caller passes them (GameMap.moveUnit's cells).
  */
 
-import { GameRules, type GameRulesModule } from "./gamerules";
+import { GameRules } from "./gamerules";
 import type { Cell } from "./prototypes";
 import type { GameMap } from "./map";
 import type { Unit } from "./unit";
 
-//The rules the selection's hexes come from: the old engine's, the core's in the running game (Game.init:
-//src/corerules.ts, #137)
-export type SelectionRules = Pick<GameRulesModule, "getMoveRange" | "getUnitAttackCells">;
-
 export class MapSelection {
-	declare static rules: SelectionRules;
 	declare map: GameMap;
 	//selected hexes for current unit move destinations: extendedCells from the move range, plain
 	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
@@ -95,7 +90,7 @@ export class MapSelection {
 
 	setMoveRange(unit: Unit) {
 		this.clearMove();
-		var c = MapSelection.rules.getMoveRange(this.map, unit);
+		var c = GameRules.getMoveRange(this.map, unit);
 
 		//Both canPass and canMove cells for the shortest path, only canMove ones shown on the map
 		for (var i = 0; i < c.length; i++)
@@ -104,7 +99,7 @@ export class MapSelection {
 
 	setAttackRange(unit: Unit) {
 		this.clearAttack();
-		var c = MapSelection.rules.getUnitAttackCells(this.map.map, unit, this.map.rows, this.map.cols);
+		var c = GameRules.getUnitAttackCells(this.map.map, unit, this.map.rows, this.map.cols);
 
 		for (var i = 0; i < c.length; i++) {
 			this.attackSelected.push(c[i]);
@@ -112,5 +107,3 @@ export class MapSelection {
 		}
 	}
 }
-
-MapSelection.rules = GameRules;

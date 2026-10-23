@@ -5,7 +5,8 @@
 //state, and they play on as the ones it was read from
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
-import { mulberry32 } from "./lifecycle";
+import { freshGame, mulberry32, startState, until } from "./lifecycle";
+import { coreEngine } from "./coreengine";
 import { contractStateString, stateStringFromData, viewOf } from "./statedata";
 
 //The fixture restored as the contracts restore it, with its modules
@@ -106,21 +107,20 @@ async function commandOf(): Promise<(a: AIAction) => Command | null> {
 }
 
 //The AI plays every player of the restored fixture for 2 turns with Math.random and the streams
-//seeded, the players' handlers stubbed (the driver plans): after(step) after every action and end of
-//turn
+//seeded, on the game's session (test/coreengine.ts: each player's AI, the end of turn with its
+//reinforcements): after(step) after every action and end of turn
 async function playAI(r: Restored, seed: number, after: (step: string) => void) {
-	const { AI } = await import("../src/ai");
 	const { Commands } = await import("../src/commands");
 	const command = await commandOf();
 	const m = r.scenario.map;
-	(r.game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {} };
-	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
+	(r.game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {}, showAlert() {}, mainMenuButton() {} };
+	const engine = await coreEngine();
 	const realRandom = Math.random;
 	Math.random = mulberry32(seed);
 	r.Rng.seed(seed);
 	try {
 		for (let t = 0; t < 2 * m.getPlayers().length; t++) {
-			const ai = new AI(m.currentPlayer, m);
+			const ai = new engine.AI(m.currentPlayer, m);
 			ai.buildActions();
 			after("turn " + m.turn + " purchases");
 			for (let n = 0, a = ai.getAction(); a && n < 500; n++, a = ai.getAction()) {
@@ -128,8 +128,7 @@ async function playAI(r: Restored, seed: number, after: (step: string) => void) 
 				if (c) Commands.execute(r.scenario, c);
 				after("turn " + m.turn + " action " + n);
 			}
-			const ended = Commands.execute(r.scenario, { type: "endTurn" }, { localSide: 2 });
-			if (ended.ok && ended.result) break;
+			if (engine.Actions.endTurn().defeat) break;
 			r.game.spotSide = m.currentPlayer.side;
 			after("turn " + m.turn + " end");
 		}
@@ -175,19 +174,22 @@ test("fromData keeps the last move undoable, and the undo puts back what it did"
 	const { fromData } = await import("../src/state");
 	const { GameRules } = await import("../src/gamerules");
 	const { playerType } = await import("../src/prototypes");
+	const { Commands } = await import("../src/commands");
 	const m = r.scenario.map;
 	m.currentPlayer.type = playerType.humanLocal;
-	const u = m.getUnits().find((x) => x.player === m.currentPlayer && x.getPos() && GameRules.getMoveRange(m, x).length > 0
-		&& (() => { const c = GameRules.getMoveRange(m, x)[0]; m.moveUnit(x, c.row, c.col); return m.canUndoMove(x); })());
+	const move = (x: import("../src/unit").Unit, c: { row: number; col: number }) =>
+		Commands.execute(r.scenario, { type: "move", unit: x.id, to: { row: c.row, col: c.col } });
+	const u = m.getUnits().find((x) => x.player === m.currentPlayer && x.getPos() && GameRules.getMoveRange(m, x).some((c) => c.canMove)
+		&& (() => { move(x, GameRules.getMoveRange(m, x).find((c) => c.canMove)); return m.canUndoMove(x); })());
 	expect(u, "a unit whose move can be undone").toBeTruthy();
 	const moved = r.toData(r.scenario, r.game);
 	expect(moved.state.turn.undoable).toMatchObject({ unit: u.id });
-	m.undoLastMove();
+	Commands.execute(r.scenario, { type: "undo", unit: u.id });
 	const undone = r.toData(r.scenario, r.game);
 	r.scenario = r.game.scenario = fromData(moved, r.game);
 	const v = r.scenario.map.getUnitById(u.id);
 	expect(r.scenario.map.canUndoMove(v)).toBe(true);
-	r.scenario.map.undoLastMove();
+	Commands.execute(r.scenario, { type: "undo", unit: v.id });
 	expect(r.toData(r.scenario, r.game)).toEqual(undone);
 });
 
@@ -217,19 +219,28 @@ test("toData of a game whose campaign is still loading has no campaign scenario 
 	expect(saved.state.campaign).toMatchObject({ id: 0, scenario: -1 });
 });
 
-//#72: removeNonCampaignUnits takes units off without their zone of control and spotting. fromData
-//counts the counters again from the units (D10), so the phantom ones are gone: the old engine's
-//counters aren't reproduced. A fix of #72 flips this
-test.fails("fromData keeps the counters a removal left behind (fails: #72)", async () => {
-	const r = await restored("wdmillazzo-t0.json.gz");
-	const { fromData } = await import("../src/state");
-	const m = r.scenario.map;
-	const before = m.getUnits().length;
-	for (const p of m.getPlayers()) m.removeNonCampaignUnits(p);
-	expect(m.getUnits().length, "no unit stood on a deployment hex").toBeLessThan(before);
-	const view = viewOf(m, r.game.spotSide);
-	const restoredScenario = fromData(r.toData(r.scenario, r.game), r.game);
-	expect(viewOf(restoredScenario.map, r.game.spotSide)).toEqual(view);
+//#72: the old engine took a campaign's removed units off without their zone of control and spotting,
+//which stayed until a reload. The game starts a campaign's scenario on the core now (src/coreload.ts):
+//its counters are its units' sight, the units it took off have none left
+test("A campaign's next scenario starts with no zone of control or spotting of the units it took off (#72)", async () => {
+	const game = await freshGame();
+	await startState(game, "campaign:0:1");
+	const { UIBuilder } = await import("../src/uibuilder");
+	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
+	const before = game.scenario;
+	game.continueCampaign("victory");
+	const next = game.campaign.getCurrentScenario(); //(the campaign's screen asks for it)
+	game.newScenario(next.scenario, next.intro);
+	await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, "the next scenario");
+	const { toData } = await import("../src/state");
+	const { createWorld } = await import("../src/core/create");
+	const { Equipment } = await import("../src/equipment");
+	const m = game.scenario.map, w = createWorld(toData(game.scenario, game), Equipment.equipment);
+	expect(game.scenario.file, "the campaign's next scenario").not.toBe(before.file);
+	const counters = viewOf(m, game.spotSide).hexes.map((h) => h.split(",").slice(2).join(","));
+	const sight = counters.map((_h, i) => [w.sight.zoc[0][i], w.sight.zoc[1][i], w.sight.spot[0][i], w.sight.spot[1][i]].map((n) => +(n > 0)).join(","));
+	expect(counters).toEqual(sight);
+	expect(m.getUnits().length, "the scenario's own units on the player's deployment hexes taken off").toBeGreaterThan(0);
 });
 
 function firstDifference(want: string, got: string): string {

@@ -153,10 +153,6 @@ export let movTableMud =
 [2, 1, 1, 1, 3, 1, 3, 2, 1, 255, 254, 2, 1, 1, 255, 255, 3, 1] //All Terrain Leg (Mountain)
 ];
 
-//The default movement table it will be changed on scenario depending on weather conditions
-export let movTable = movTableDry;
-//Scenario.setMoveTable sets it (other modules can't assign an imported variable)
-export function setMovTable(table: number[][]) { movTable = table; }
 
 //Lookup table used for rotation of animations for a certain direction
 //Our animations are by default facing North table gives the radians for rotate
@@ -422,41 +418,24 @@ export class Cell {
 		this.col = col;
 	}
 }
-//used for movement and attack range cells
-//extendedCell.prototype = new Cell() and Cell.call(this, row, col) of the original became extends/super
-export class extendedCell extends Cell {
-	declare range: number;
-	declare cin: number;
-	declare cout: number;
-	declare cost: number;
-	declare canMove: boolean;
-	declare canPass: boolean;
-
-	constructor(row: number, col: number) {
-		super(row, col);
-		this.range = 0; //the range that this cell is from a selected cell
-		this.cin = 0;   //the cost to enter the cell
-		this.cout = 0;  //the cost to exit the cell = cin + cell cost
-		this.cost = 0;  //terrain cost
-		this.canMove = false; //if the movement is allowed on this cell after cost calculations
-		this.canPass = false; //if friendly units can pass thru this cell
-	}
+//A movement or attack range cell (the core's MoveCell, src/core/movement.ts): its range from the
+//selected unit, the cost to enter and to leave it, its terrain cost, whether the unit can stop and pass
+//there
+export interface extendedCell extends Cell {
+	range: number;
+	cin: number;
+	cout: number;
+	cost: number;
+	canMove: boolean;
+	canPass: boolean;
 }
 
-//used for shortest path calculations
-//pathCell.prototype = new Cell() and Cell.call(this, cell.row, cell.col) of the original became extends/super
-export class pathCell extends Cell {
-	declare cost: number;
-	declare prev: pathCell | null;
-	declare dist: number;
-	declare isVisible: boolean; //set by map.js moveUnit on the cells the enemy sees, render reads it
-
-	constructor(cell: Cell) {
-		super(cell.row, cell.col);
-		this.cost = 1;
-		this.prev = null;
-		this.dist = Infinity;
-	}
+//A cell of a path (the core's shortest path), the cell before it as prev
+export interface pathCell extends Cell {
+	cost: number;
+	prev: pathCell | null;
+	dist: number;
+	isVisible?: boolean; //on the cells of a move the enemy sees, render reads it
 }
 
 export class movementResults {
@@ -475,32 +454,21 @@ export class movementResults {
 	}
 }
 
-export class combatResults {
-	declare kills: number;
-	declare losses: number;
-	declare atkSuppress: number;
-	declare defSuppress: number;
-	declare atkExpGained: number;
-	declare defExpGained: number;
-	declare defcanfire: boolean;
-	declare atkLeaderGain: boolean;
-	declare defLeaderGain: boolean;
-	declare isOverrun: boolean;
-	declare isRugged: boolean;
-
-	constructor() {
-		this.kills = 0;
-		this.losses = 0;
-		this.atkSuppress = 0;
-		this.defSuppress = 0;
-		this.atkExpGained = 0;
-		this.defExpGained = 0;
-		this.defcanfire = true;
-		this.atkLeaderGain = false;
-		this.defLeaderGain = false;
-		this.isOverrun = false; //Tank overrun
-		this.isRugged = false; //Infantry rugged defense
-	}
+//An attack's results (the core's, src/core/combat.ts): the losses and the suppression of both sides,
+//the experience gained, whether the defender fired back, the leaders gained, an overrun (a tank's) or
+//a rugged defense (infantry's)
+export interface combatResults {
+	kills: number;
+	losses: number;
+	atkSuppress: number;
+	defSuppress: number;
+	atkExpGained: number;
+	defExpGained: number;
+	defcanfire: boolean;
+	atkLeaderGain: boolean;
+	defLeaderGain: boolean;
+	isOverrun: boolean;
+	isRugged: boolean;
 }
 
 export class Supply {

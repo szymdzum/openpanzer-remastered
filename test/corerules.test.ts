@@ -1,11 +1,16 @@
-//The rules the screen asks of the running game, answered by the core (src/corerules.ts, #137), against
-//the old engine's GameRules: on every engine fixture, as it is and after the units moved and fought a
-//little (random commands, test/commandgen.ts), every unit's own rules (air, ground, train, fuel and
-//ammo, ranges, costs and upgrade costs, bridges), its move and attack hexes and whether it can mount,
-//embark, disembark, resupply and reinforce, and for every pair of units in range the attack's estimate
+//The rules the screen asks of the running game (src/gamerules.ts, #137): on engine fixtures after the
+//units moved and fought a little (random commands, test/commandgen.ts, played as the game plays them),
+//every unit's own rules (air, ground, train, fuel and ammo, ranges, costs and upgrade costs, bridges),
+//its move and attack hexes and whether it can mount, embark, disembark, resupply and reinforce, and for
+//every pair of units in range the attack's estimate. Until the old engine went (#137) its GameRules gave
+//the same answers on the same states; the hashes of the answers then (test/corerules.json.gz) pin them
+import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+import { createHash } from "node:crypto";
 import fc from "fast-check";
 import { expect, test } from "vitest";
-import { commandOf, type Sequence, sequences } from "./commandgen";
+import { commandOf, sequences } from "./commandgen";
 import { load } from "./invariants";
 
 type World = Awaited<ReturnType<typeof load>>;
@@ -13,11 +18,9 @@ type World = Awaited<ReturnType<typeof load>>;
 const stats: Record<string, number> = {};
 const count = (what: string, n = 1) => { stats[what] = (stats[what] || 0) + n; };
 
-//What each side says of a unit, as text, and of the pairs
-async function answers(w: World, rules: "old" | "core"): Promise<string[]> {
-	const { CoreRules } = await import("../src/corerules");
-	const R = rules === "old" ? w.GameRules : CoreRules;
-	const m = w.m, out: string[] = [];
+//What the rules say of every unit, as text, and of the pairs
+function answers(w: World): string[] {
+	const R = w.GameRules, m = w.m, out: string[] = [];
 	const eqids = Object.keys(w.Equipment.equipment).map(Number).slice(0, 40);
 	for (const u of m.getUnits()) {
 		const hex = u.getHex();
@@ -39,21 +42,25 @@ async function answers(w: World, rules: "old" | "core"): Promise<string[]> {
 	return out;
 }
 
-async function same(seq: Sequence) {
-	const w = await load(seq.fixture);
-	const { setEngineContext, engineContext } = await import("../src/context");
-	setEngineContext({ ...engineContext, host: () => w.game });
-	w.Rng.game.state = seq.seed >>> 0;
-	for (const pick of seq.steps) {
-		const cmd = commandOf(w, pick);
-		if (cmd !== null && cmd.type !== "endTurn") w.Commands.execute(w.scenario, cmd);
-	}
-	const old = await answers(w, "old"), core = await answers(w, "core");
-	expect(core).toEqual(old);
-}
+//The hashes recorded, by sample (UPDATE_CONTRACTS=1 writes them again, in a commit that names the issue
+//it fixes)
+const pinned = path.join(__dirname, "corerules.json.gz");
+const recorded = () => JSON.parse(zlib.gunzipSync(fs.readFileSync(pinned)).toString("utf8")) as string[];
 
-test("The rules the screen asks answer the same on the core as on the old engine", async () => {
-	await fc.assert(fc.asyncProperty(sequences, same), { seed: 4, numRuns: process.env.FC_RUNS ? Number(process.env.FC_RUNS) : 20 });
+test("The rules the screen asks answer as the old engine's did", async () => {
+	const want = recorded(), got: string[] = [];
+	for (const seq of fc.sample(sequences, { seed: 4, numRuns: want.length })) {
+		const w = await load(seq.fixture);
+		const { setEngineContext, engineContext } = await import("../src/context");
+		setEngineContext({ ...engineContext, host: () => w.game });
+		w.Rng.game.state = seq.seed >>> 0;
+		for (const pick of seq.steps) {
+			const cmd = commandOf(w, pick);
+			if (cmd !== null && cmd.type !== "endTurn") w.Commands.execute(w.scenario, cmd);
+		}
+		got.push(createHash("sha1").update(JSON.stringify(answers(w))).digest("hex").slice(0, 12));
+	}
+	if (process.env.UPDATE_CONTRACTS) fs.writeFileSync(pinned, zlib.gzipSync(JSON.stringify(got), { level: 9 }));
+	else expect(got).toEqual(want);
 	expect(stats.pairs).toBeGreaterThan(50);
-	if (process.env.FC_STATS) console.log(JSON.stringify(stats));
 }, 300_000);

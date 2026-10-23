@@ -109,18 +109,20 @@ A refactor must leave both identical. A deliberate change shows exactly what it 
 The contract tests check the engine in seconds, without a browser: Vitest restores 13 game
 states recorded on the reference and replays the reference's calls on them.
 
-    npm test                     # 3 contracts on 15 states and the engine tests, about 9 seconds
+    npm test                     # 2 contracts on 15 states and the engine tests
     npm run test:coverage        # the same, with what they run of the engine (coverage/)
     npm run record <module>      # record a contract again on the reference
 
-- `gamerules`: every rule (movement, combat, supply, experience) on every unit and unit pair
-- `unit`: every Unit method on a copy of every unit
-- `engine`: the AI plays every player for 2 turns through Map, Unit, GameRules, Leaders and
-  Scenario, with random player actions of every kind mixed in (embarking and undo included),
-  a hash of the whole state after each step; then the campaign functions, the saved game, the
-  combat log and the equipment data. Its results are the remaster's since the AI draws from its
-  own stream (#126); the reference's AI draws between the dice, so recording it again there
-  records the old stream
+- `gamerules`: every rule (movement, combat, supply, experience) on every unit and unit pair, asked
+  of the game's GameRules on the core
+- `engine`: the AI plays every player for 2 turns through the game's commands and its session on
+  the core, with random player actions of every kind mixed in (embarking and undo included), a
+  hash of the whole state after each step; then the saved game, the combat log and the equipment
+  data. Its results are the remaster's since the AI draws from its own stream (#126) and since the
+  game runs on the core (#137: the spotting and zone of control follow the units, #72, #73); on the
+  reference the same driver plays the old engine's functions
+- (`unit`, every Unit method, went with the old engine's Unit in #137: the core's units are plain
+  state, their rules played through the commands)
 
 A bug fixed on purpose changes a contract, and the reference still has the bug: `UPDATE_CONTRACTS=1
 npm test` writes the remaster's results into the fixtures (the recorded states stay). Do it only in

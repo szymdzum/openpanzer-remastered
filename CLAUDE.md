@@ -61,9 +61,11 @@ canvas pixels on purpose.
 
 - Opening braces on the same line (`function f() {`, `} else {`). Tabs. Comments say why, in
   plain English, like the surrounding ones.
-- Engine modules (`actions`, `gamerules`, `map` and its parts, `unit`, `ai`, `scenario`...) don't
-  import UI modules (`ui`, `uibuilder`, `render`, `animation`, `dom`) or `game`: they read the
-  game through `src/context.ts`. The linter and `test/headless.test.ts` check it.
+- Engine modules (the core in `src/core/`, `commands`, `mirror`, `gamerules`, `map` and its parts,
+  `unit`, `ai`, `scenario`...) don't import UI modules (`ui`, `uibuilder`, `render`, `animation`,
+  `dom`) or `game`: they read the game through `src/context.ts`. The game plays on the core
+  (docs/CORE.md); the objects (GameMap, Unit, Player) mirror its state for the UI and the harness
+  (src/mirror.ts). The linter and `test/headless.test.ts` check it.
 - `src/` has no unused code and no import cycles; CI runs `fallow dead-code` on the whole tree.
   Keep it that way: the UI reads the running game through `src/session.ts`, not `game.ts`.
 - `npm run fallow` (fallow audit against main) fails on what a change adds: an unused file, a new

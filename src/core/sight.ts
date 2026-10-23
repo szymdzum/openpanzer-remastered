@@ -10,7 +10,7 @@ import { leaderType } from "../prototypes";
 import { adjacent, cellsInRange } from "./geometry";
 import type { Position, Sight, UnitState, World } from "./types";
 import { hasLeader, isAir } from "./units";
-import { emptySight, hexIndex, isSpotted, onMap, sideOf, unitAt, unitData } from "./world";
+import { emptySight, hexIndex, onMap, sideOf, unitData } from "./world";
 
 export function unitSpotRange(w: World, u: UnitState): number {
 	let range = unitData(w, u).spotrange;
@@ -45,18 +45,4 @@ export function computeSight(w: World): Sight {
 		for (const c of spotCells(w, u)) sight.spot[side][hexIndex(w, c.row, c.col)]++;
 	}
 	return sight;
-}
-
-//The enemy units u spots that its side doesn't see yet: they become tempSpotted when it arrives
-//(GameRules.setSpotRange). The ground unit of a hex with two
-export function newlySpotted(w: World, u: UnitState): UnitState[] {
-	const side = sideOf(w, u);
-	const spotted: UnitState[] = [];
-	for (const c of spotCells(w, u)) {
-		const hex = hexIndex(w, c.row, c.col);
-		if (isSpotted(w, hex, side)) continue;
-		const other = unitAt(w, hex, false);
-		if (other !== null && sideOf(w, other) !== side) spotted.push(other);
-	}
-	return spotted;
 }

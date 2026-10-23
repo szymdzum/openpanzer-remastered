@@ -5,19 +5,14 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * Every hex counts the units of side 0 and 1 that have it in their zone of control and in their
- * spotting range. GameMap.allocMap makes the counters here and gives each Hex its own (Hex.isZOC,
- * isSpotted, setZOC and setSpotted read and switch them, GameRules.setZOCRange and setSpotRange
- * call those). GameMap switches a unit's zone of control and spotting through here, at the points
- * it always did: on when a unit is placed or arrives, off before it leaves or is removed.
- *
- * The counters are kept by hand and drift (#72, #73): an off with nothing to remove is dropped (a
- * counter doesn't go below 0), and nothing re-applies a unit whose spotting range or air status
- * changed between its on and its off.
+ * spotting range. GameMap.allocMap makes the counters here and gives each Hex its own (Hex.isZOC and
+ * isSpotted read them for the screen). They hold the core's sight, computed from the units (docs/
+ * STATE.md D10): the game's objects get it after each command (src/mirror.ts). The harness switches
+ * them by hand when it moves units by hand (GameRules.setZOCRange and setSpotRange, Hex.setZOC and
+ * setSpotted); a counter doesn't go below 0.
  */
 
-import { GameRules } from "./gamerules";
 import type { GameMap } from "./map";
-import type { Unit } from "./unit";
 
 //The counters of one hex, by side
 export class HexCounters {
@@ -47,18 +42,6 @@ export class MapVisibility {
 			for (let j = 0; j < cols; j++)
 				this.counters[i][j] = new HexCounters();
 		}
-	}
-
-	//A unit's zone of control, then its spotting, on or off. Returns the enemy units it spotted
-	//for the first time (on), from GameRules.setSpotRange
-	setUnit(unit: Unit, on: boolean): number {
-		GameRules.setZOCRange(this.map.map, unit, on, this.map.rows, this.map.cols);
-		return GameRules.setSpotRange(this.map.map, unit, on, this.map.rows, this.map.cols);
-	}
-
-	//Only a unit's spotting, on or off (mounting changes the spotting range)
-	setSpotting(unit: Unit, on: boolean): number {
-		return GameRules.setSpotRange(this.map.map, unit, on, this.map.rows, this.map.cols);
 	}
 
 	//Switches one side's counter on (+1) or off (-1), counters don't go below 0

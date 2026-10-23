@@ -10,7 +10,7 @@
  * The players keep a handler (Player.handler, an AI or an AIScripted): its getAction asks the session
  * for the current player's next order and hands it out as the old action (harness/replay.js wraps it
  * to hash the state there), and Game.processAction plays it as before, its commands on the core
- * (src/coreplay.ts). A handler made while the game runs (the replay makes every player the AI) joins
+ * (src/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
  * the session with its controller. The session's world is made again from the objects before each
  * call, so what the screen and the harness wrote into them is in it.
  */
@@ -18,8 +18,9 @@
 import { actionType, type Cell, playerType, uiSettings } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import type { AIAction, AIDriver } from "./ai";
-import type { Player } from "./map";
+import type { GameMap, Player } from "./map";
 import { applyData, mirrorDifference, unitObject, worldOf } from "./mirror";
+import { beginDraft, finishDraft, removeUnit } from "./core/draft";
 import { aiController } from "./core/ai";
 import { tutorialController } from "./core/tutorial";
 import type { Command } from "./commands";
@@ -173,4 +174,13 @@ function arrived(game: Game, events: GameEvent[]) {
 			game.ui.showAlert(e.at.row, e.at.col, "Reinforced!", game.spotSide === u.player.side);
 	}
 	if (any) game.ui.handleReinforcementDeployment();
+}
+
+//GameMap.updateUnitList: the units marked destroyed off the map (the harness takes a side's units away
+//so), each counted as lost in a campaign's dossier, as the old cleanup did
+export function removeDestroyed(m: GameMap) {
+	const w = worldOf(running.scenario, running, { spotSide: running.spotSide, noFOW: !!uiSettings.noFOW });
+	const d = beginDraft(w);
+	for (const u of m.getUnits().filter((x) => x.destroyed)) removeUnit(d, u.id, true);
+	applyData(running.scenario, finishDraft(d), running);
 }

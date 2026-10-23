@@ -1,12 +1,12 @@
 // @vitest-environment node
 //The new core's rules on hand-built situations (docs/CORE.md, #133): each test reads like the rule
-//it tests. That the core answers as the old engine does is test/core-contract.test.ts's and
-//test/core-differential.test.ts's
+//it tests. That the core answers as the old engine did is the contracts' (test/core-contract.test.ts,
+//test/engine.test.ts; test/core-differential.test.ts's until #137)
 import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
-import { type Cell, type extendedCell, leaderType, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
+import { type Cell, leaderType, movTableDry, movTableMud, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
@@ -133,7 +133,8 @@ test("Column 0 is out of every other column's range (#69)", () => {
 	expect(attackCells(w, unitById(w, 0))).toEqual([]);
 });
 
-//The commands (src/core/step.ts, #134): that they play as the old engine's is test/core-steps.test.ts's
+//The commands (src/core/step.ts, #134): that they play as the old engine's was test/core-steps.test.ts's
+//until #137, the engine contract's since
 
 test("A step leaves the world it was given as it was", () => {
 	const w = forestFight();
@@ -335,8 +336,51 @@ function withRng<W extends { state: object }>(w: W, seed: number): W {
 	return { ...w, state: { ...w.state, rng: { game: seed, ai: 7 } } };
 }
 
-test("Property: the path search with its heap finds the old engine's paths, ties broken the same", async () => {
-	const { GameRules } = await import("../src/gamerules");
+//The old engine's path search (GameRules.getShortestPath until #137), kept as the heap's oracle: the
+//open cell nearest the start, the later of equally near ones, its neighbours relaxed, until the end
+type Open = { row: number; col: number; cost: number; dist: number; prev: Open | null };
+
+//(the old isAdjacent: x is the row, y the column)
+const oldIsAdjacent = (x1: number, y1: number, x2: number, y2: number) => (y1 === y2 && Math.abs(x1 - x2) === 1)
+	|| (Math.abs(y1 - y2) === 1 && (x1 - 1 + (y1 % 2) === x2 || x1 + (y1 % 2) === x2));
+
+//The open cell nearest the start, the later of equally near ones (-1: none reached)
+function nearestOpen(open: Open[]): number {
+	let idx = 0;
+	for (let i = 1; i < open.length; i++) if (open[i].dist !== Infinity && open[i].dist <= open[idx].dist) idx = i;
+	return open[idx].dist === Infinity ? -1 : idx;
+}
+
+function oldShortestPath(start: Cell, end: Cell, list: { row: number; col: number; cost: number }[]): Open[] {
+	const open: Open[] = [{ row: start.row, col: start.col, cost: 1, dist: 0, prev: null }];
+	open[0].prev = open[0];
+	for (const c of list) open.push({ row: c.row, col: c.col, cost: c.cost, dist: Infinity, prev: null });
+	for (let idx = nearestOpen(open); idx >= 0; idx = open.length ? nearestOpen(open) : -1) {
+		const min = open[idx];
+		relax(min, open);
+		if (min.row === end.row && min.col === end.col) return pathBack(min, start);
+		open.splice(idx, 1);
+	}
+	return [];
+}
+
+//The neighbours of min nearer the start through it
+function relax(min: Open, open: Open[]) {
+	for (const o of open)
+		if (oldIsAdjacent(min.row, min.col, o.row, o.col) && (o.dist === Infinity || min.dist + min.cost < o.dist))
+			Object.assign(o, { dist: min.dist + min.cost, prev: min });
+}
+
+//The path to cell from the start, by the cells before it
+function pathBack(cell: Open, start: Cell): Open[] {
+	const path: Open[] = [];
+	for (let t = cell; ; t = t.prev) {
+		path.unshift(t);
+		if (t.row === start.row && t.col === start.col) return path;
+	}
+}
+
+test("Property: the path search with its heap finds the old engine's paths, ties broken the same", () => {
 	const grid: Cell[] = [];
 	for (let r = 0; r < 6; r++) for (let c = 0; c < 6; c++) grid.push({ row: r, col: c } as Cell);
 	const cell = fc.constantFrom(...grid);
@@ -344,7 +388,7 @@ test("Property: the path search with its heap finds the old engine's paths, ties
 	const cells = fc.shuffledSubarray(grid, { minLength: 20 }).chain((list) => fc.tuple(...list.map((c) =>
 		fc.constantFrom(1, 1, 1, 2, 254).map((cost) => ({ row: c.row, col: c.col, cost })))));
 	fc.assert(fc.property(cell, cell, cells, (start, end, list) => {
-		const old = GameRules.getShortestPath(start, end, list as extendedCell[]);
+		const old = oldShortestPath(start, end, list);
 		expect(shortestPath(start, end, list)).toEqual(old.map((p) => ({ row: p.row, col: p.col, cost: p.cost, dist: p.dist })));
 	}), { seed: 134, numRuns: 2000 });
 });

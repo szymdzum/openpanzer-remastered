@@ -28,7 +28,7 @@ import {
 import { hexstyle, tooltipColor, tooltipStyle } from "./style";
 import { moveSoundByMoveMethod, soundData } from "./sound";
 import { attackAnimationByClass } from "./animation";
-import { CoreRules } from "./corerules";
+import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { Player, ReinforceResults } from "./map";
 import { type MoveAnimationCBData, Render } from "./render";
@@ -36,9 +36,8 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { Actions, type AttackResult, type FinishAttackHooks, type FinishMoveHooks, type MoveResult } from "./actions";
-import type { AttackCommandHooks, CommandType, Executed, ResultOf } from "./commands";
-import { CorePlay, type CoreFinishMoveHooks } from "./coreplay";
+import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
+	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
 //bundle: game.ts types `new UI(game)` through its UIConstructor
@@ -235,7 +234,7 @@ export function UI(this: UI, game: Game) {
 			updateStatusBarLocation(row, col);
 
 		//Set the airMode depending on current unit automatically
-		uiSettings.airMode = CoreRules.isAir(map.currentUnit);
+		uiSettings.airMode = GameRules.isAir(map.currentUnit);
 		toggleButton($("air"), uiSettings.airMode);
 		updateUnitContextWindow(map.currentUnit); //Update after an action not only on select/deselect
 		return false;
@@ -340,7 +339,7 @@ function handleKeyboard(e: KeyboardEvent) {
 //handle unit deployment
 function handleUnitDeployment(row: number, col: number) {
 	var deployUnit = $<EqUserSelElement>("eqUserSel").deployunit;
-	if (resultOf(CorePlay.execute(game.scenario, { type: "deploy", index: deployUnit, to: { row: row, col: col } }), false)) {
+	if (resultOf(Commands.execute(game.scenario, { type: "deploy", index: deployUnit, to: { row: row, col: col } }), false)) {
 		R.cacheImages(function() { R.render(row, col, 1); });
 		handleUnitDeselect();
 		updateEquipmentWindow($<EqUserSelElement>("eqUserSel").eqclass);
@@ -408,15 +407,15 @@ function uiUnitSelect(unit: Unit | null) {
 //without it the move finds its path in the unit's move range
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	var mm = unit.unitData().movmethod;
-	if (CoreRules.isTrain(unit))
+	if (GameRules.isTrain(unit))
 		mm = movMethod.tracked; //Trains use the tracked move sound
 	//Save render properties before moving
 	var r = getRenderRange(unit);
 	var oldpos = unit.getPos();
 	var animated = false;
 
-	var moved = CorePlay.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells }, {
-		animate: function(mr: movementResults, finish: (airMode: boolean | number, hooks?: CoreFinishMoveHooks) => MoveResult) {
+	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells }, {
+		animate: function(mr: movementResults, finish: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult) {
 			var moveAnimationCBData: MoveAnimationCBData = {
 				unit: unit,
 				moveResults: mr,
@@ -444,9 +443,9 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	return animated;
 }
 
-//Called when move animation finishes. finish: the move command's, Actions.finishMove for a retreat
+//Called when move animation finishes. finish: the move command's, the retreat's end for a retreat
 function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
-	finish?: (airMode: boolean | number, hooks?: CoreFinishMoveHooks) => MoveResult) {
+	finish?: (airMode: boolean | number, hooks?: FinishMoveHooks) => MoveResult | void) {
 	var mr = moveAnimationCBData.moveResults;
 	var unit = moveAnimationCBData.unit;
 	var r = getRenderRange(unit);
@@ -455,7 +454,7 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 	R.render(p.row, p.col, r);
 
 	if (!finish)
-		finish = function(airMode: boolean | number, hooks?: CoreFinishMoveHooks) { return Actions.finishMove(map, unit, mr, airMode, hooks as FinishMoveHooks); };
+		finish = function(_airMode: boolean | number, hooks?: FinishMoveHooks) { Commands.finishRetreat(unit, mr, hooks); };
 	//The surprise attack's target is picked by uiSettings.airMode (#77)
 	finish(uiSettings.airMode, {
 		onSurprised: function(cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
@@ -502,9 +501,9 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number) {
 }
 
 //handle attack performed by attacking unit on the unit it attacks: the attack command, the combat itself is
-//Actions.resolveAttack's. Null when it can't attack it (a unit isn't on the map)
+//the command's. Null when it can't attack it (a unit isn't on the map)
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
-	return resultOf(CorePlay.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
+	return resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
 		uiAttackHooks(attackingUnit, enemyUnit)), null);
 }
 
@@ -560,15 +559,14 @@ function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks
 	};
 }
 
-//Called when attack animation finishes, the rest of the combat is the attack command's finish
-//(Actions.finishAttack)
+//Called when attack animation finishes: the rest of the combat is the attack command's finish
 function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finish: (hooks?: FinishAttackHooks) => AttackResult) {
 	var tmp: number, moveAnimationCBData: MoveAnimationCBData;
 
 	var result = animationCBData.result;
 	var a = result.attacking;
 	var d = result.defending;
-	var renderRange = CoreRules.getUnitAttackRange(a.unit);
+	var renderRange = GameRules.getUnitAttackRange(a.unit);
 
 	finish({
 		onLosses: function() {
@@ -681,7 +679,7 @@ function updateUnitContextWindow(u?: Unit) {
 	clearTag("unit-context");
 
 	if (u && u.player && u.player.id == map.currentPlayer.id) {
-		if (CoreRules.canMount(u)) {
+		if (GameRules.canMount(u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -691,7 +689,7 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.mount = true;
 		}
 
-		if (CoreRules.canEmbark(map.map, u) || CoreRules.canDisembark(map.map, u)) {
+		if (GameRules.canEmbark(map.map, u) || GameRules.canDisembark(map.map, u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -701,7 +699,7 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.embark = true;
 		}
 
-		if (CoreRules.canResupply(map.map, u)) {
+		if (GameRules.canResupply(map.map, u)) {
 			nbuttons++;
 			div = addTag("unit-context", "div");
 			div.className = "smallButtonSubMenu";
@@ -711,8 +709,8 @@ function updateUnitContextWindow(u?: Unit) {
 			contextButtons.resupply = true;
 		}
 
-		if (map.currentPlayer.prestige >= CoreRules.calculateUnitCostPerStrength(u)) {
-			if (CoreRules.canReinforce(map.map, u, false)) {
+		if (map.currentPlayer.prestige >= GameRules.calculateUnitCostPerStrength(u)) {
+			if (GameRules.canReinforce(map.map, u, false)) {
 				nbuttons++;
 				div = addTag("unit-context", "div");
 				div.className = "smallButtonSubMenu";
@@ -721,7 +719,7 @@ function updateUnitContextWindow(u?: Unit) {
 				div.onclick = function() { unitContextButton("reinforce", u); };
 				contextButtons.reinforce = true;
 			}
-			if (CoreRules.canReinforce(map.map, u, true)) {
+			if (GameRules.canReinforce(map.map, u, true)) {
 				nbuttons++;
 				div = addTag("unit-context", "div");
 				div.className = "smallButtonSubMenu";
@@ -788,7 +786,7 @@ function updateUnitInfoWindow(u: UIUnitOrEntry) {
 		else
 			uinfo = u.unitData();
 		ammo = u.getAmmo();
-		if (CoreRules.unitUsesFuel(u))
+		if (GameRules.unitUsesFuel(u))
 			fuel = u.getFuel();
 		exp = u.experience;
 		ent = u.entrenchment;
@@ -929,22 +927,22 @@ function unitContextButton(action: string, unit: Unit) {
 
 	switch (action) {
 		case "mount": { //Can get a bigger range on mount
-			CorePlay.execute(game.scenario, { type: unit.isMounted ? "unmount" : "mount", unit: unit.id });
+			Commands.execute(game.scenario, { type: unit.isMounted ? "unmount" : "mount", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
 		case "embark": {
 			if (unit.carrier > 0) {
-				CorePlay.execute(game.scenario, { type: "disembark", unit: unit.id });
+				Commands.execute(game.scenario, { type: "disembark", unit: unit.id });
 				refreshRender = true;
 			} else {
-				if (resultOf(CorePlay.execute(game.scenario, { type: "embark", unit: unit.id }), false))
+				if (resultOf(Commands.execute(game.scenario, { type: "embark", unit: unit.id }), false))
 					refreshRender = true;
 			}
 			break;
 		}
 		case "resupply": { //same location same range
-			ret = resultOf(CorePlay.execute(game.scenario, { type: "resupply", unit: unit.id }), new Supply(0, 0));
+			ret = resultOf(Commands.execute(game.scenario, { type: "resupply", unit: unit.id }), new Supply(0, 0));
 			pos = unit.getPos();
 			text = "";
 			if (ret.ammo > 0) text += "+" + ret.ammo + " ammo ";
@@ -959,7 +957,7 @@ function unitContextButton(action: string, unit: Unit) {
 		case "reinforce": { //same location same range
 			overstrength = (action == "overstrength");
 			//the result takes the render range variable, the old range is lost
-			r = resultOf(CorePlay.execute(game.scenario, { type: "reinforce", unit: unit.id, overstrength: overstrength }),
+			r = resultOf(Commands.execute(game.scenario, { type: "reinforce", unit: unit.id, overstrength: overstrength }),
 				{ strength: 0, ammo: 0, fuel: 0 });
 			pos = unit.getPos();
 			text = "";
@@ -973,7 +971,7 @@ function unitContextButton(action: string, unit: Unit) {
 			break;
 		}
 		case "undo": { //new location different range
-			CorePlay.execute(game.scenario, { type: "undo", unit: unit.id });
+			Commands.execute(game.scenario, { type: "undo", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
@@ -1070,7 +1068,7 @@ function updateEquipmentWindow(eqclass?: number) {
 			//Automatically set transport on transport list if user has not selected a new transport
 			//Check if user selected equipment unit for upgrade can be transported
 			if (u.transport !== null && $<EqUserSelElement>("eqUserSel").eqtransport == -1
-				&& ($<EqUserSelElement>("eqUserSel").equnit == -1 || CoreRules.isTransportable($<EqUserSelElement>("eqUserSel").equnit)))
+				&& ($<EqUserSelElement>("eqUserSel").equnit == -1 || GameRules.isTransportable($<EqUserSelElement>("eqUserSel").equnit)))
 				$<EqUserSelElement>("eqUserSel").eqtransport = u.transport.eqid;
 
 			div.setAttribute("selectedUnit", ud.name); //apply the .eqUnitBox[selectedUnit] css style to make unit appear selected
@@ -1169,7 +1167,7 @@ function updateEquipmentWindow(eqclass?: number) {
 	//Add the transport to the list if unit can be transported
 	eqTransportSelected = $<EqUserSelElement>("eqUserSel").eqtransport;
 	hasTransportSelected = false;
-	if (CoreRules.isTransportable(eqUnitSelected) || eqTransportSelected > 0) {
+	if (GameRules.isTransportable(eqUnitSelected) || eqTransportSelected > 0) {
 		eu = Equipment.equipment[eqUnitSelected];
 		eqUnitList = Equipment.getCountryEquipmentByClass(unitClass.groundTransport, country, sortProperty, sortOrder);
 
@@ -1248,11 +1246,11 @@ function updateEquipmentCosts() {
 			eqcountry = Equipment.equipment[eqUnitSelected].country - 1;
 			if (eqclass == unitClass.flak) eqclass = unitClass.airDefence;
 			if (uclass == eqclass && ucountry == eqcountry)
-				upCost = CoreRules.calculateUpgradeCosts(unit, eqUnitSelected, eqTransportSelected);
+				upCost = GameRules.calculateUpgradeCosts(unit, eqUnitSelected, eqTransportSelected);
 		}
 		//In campaigns only core units can be sold
 		if (game.campaign == null || unit.isCore)
-			sellCost = CoreRules.calculateUnitSellCost(unit);
+			sellCost = GameRules.calculateUnitSellCost(unit);
 	}
 
 	//-1 cost: can't be bought
@@ -1266,7 +1264,7 @@ function updateEquipmentCosts() {
 		else if (game.campaign !== null && game.campaign.country !== eqcountry)
 			buyCost = -1;
 		else
-			buyCost = CoreRules.calculateUnitCosts(eqUnitSelected, eqTransportSelected);
+			buyCost = GameRules.calculateUnitCosts(eqUnitSelected, eqTransportSelected);
 	}
 
 	UIBuilder.showEquipmentCosts(prestige, buyCost, upCost, sellCost);
@@ -1341,7 +1339,7 @@ function uiAddUnitBox(parentTagName: string, u: UIUnitOrEntry) {
 			icons.className = "eqUnitBoxIconsMenu";
 			if (!u.hasFired) status += ">";
 			if (!u.hasMoved) status += "|";
-			if ((CoreRules.unitUsesFuel(u) && u.fuel < 5) || u.ammo < 2)
+			if ((GameRules.unitUsesFuel(u) && u.fuel < 5) || u.ammo < 2)
 				status += ";";
 		} else {
 			icons.className = "eqUnitBoxIcons";
@@ -1440,8 +1438,8 @@ function getRenderRange(unit: Unit | null) {
 	if (unit === null)
 		return 0;
 
-	var range = CoreRules.getUnitMoveRange(unit);
-	var r = CoreRules.getUnitAttackRange(unit);
+	var range = GameRules.getUnitMoveRange(unit);
+	var r = GameRules.getUnitAttackRange(unit);
 	if (r > range) range = r;
 	r = unit.unitData().spotrange;
 	if (r > range) range = r;
@@ -1592,9 +1590,9 @@ function uiScaleMap(level: number) {
 				var unit = hex.getUnit(uiSettings.airMode);
 				if (unit && unit.player.side == side && text == null) {
 					var id = "gsttu" + unit.id;
-					if (CoreRules.unitLowAmmo(unit, 1))
+					if (GameRules.unitLowAmmo(unit, 1))
 						this.showSmallToolTip("No Ammo", row, col, 0, id);
-					if (CoreRules.unitLowFuel(unit, 1))
+					if (GameRules.unitLowFuel(unit, 1))
 						this.showSmallToolTip("No Fuel", row, col, 0, id);
 				}
 			}
@@ -1706,7 +1704,7 @@ function uiScaleMap(level: number) {
 		switch (id) {
 			case "air": {
 				//Leaving air mode deselects an air unit
-				if (uiSettings.airMode && CoreRules.isAir(map.currentUnit))
+				if (uiSettings.airMode && GameRules.isAir(map.currentUnit))
 					handleUnitDeselect();
 				uiSettings.airMode = !uiSettings.airMode;
 				toggleButton($("air"), uiSettings.airMode);
@@ -1842,7 +1840,7 @@ function uiScaleMap(level: number) {
 				if (typeof eqTransport === "undefined" || (eqTransport as number | string) == "")
 					eqTransport = -1;
 
-				CorePlay.execute(game.scenario, { type: "buy", eqid: eqUnit, transport: eqTransport });
+				Commands.execute(game.scenario, { type: "buy", eqid: eqUnit, transport: eqTransport });
 				updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 				break;
 			}
@@ -1859,11 +1857,11 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Upgrade an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (resultOf(CorePlay.execute(game.scenario, { type: "upgradeUndeployed", index: deployId, eqid: eqUnit,
+					if (resultOf(Commands.execute(game.scenario, { type: "upgradeUndeployed", index: deployId, eqid: eqUnit,
 						transport: eqTransport }), false))
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
 				} else { //Upgrade a unit already on map
-					if (resultOf(CorePlay.execute(game.scenario, { type: "upgrade", unit: unitId, eqid: eqUnit, transport: eqTransport }), false)) {
+					if (resultOf(Commands.execute(game.scenario, { type: "upgrade", unit: unitId, eqid: eqUnit, transport: eqTransport }), false)) {
 						R.cacheImages(function() { R.render(); }); //Need to cache new image
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 					}
@@ -1879,10 +1877,10 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Sell an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (resultOf(CorePlay.execute(game.scenario, { type: "sell", index: deployId }), false))
+					if (resultOf(Commands.execute(game.scenario, { type: "sell", index: deployId }), false))
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
 				} else { //Disband a unit on map
-					if (resultOf(CorePlay.execute(game.scenario, { type: "disband", unit: unitId }), false)) {
+					if (resultOf(Commands.execute(game.scenario, { type: "disband", unit: unitId }), false)) {
 						R.cacheImages(function() { R.render(); });
 						$<EqUserSelElement>("eqUserSel").userunit = -1;
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);

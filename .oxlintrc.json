@@ -162,7 +162,6 @@
 				"src/undo.ts",
 				"src/unit.ts",
 				"test/contracts/engine.contract.js",
-				"test/contracts/unit.contract.js",
 				"test/headless.test.ts",
 				"test/invariants.test.ts",
 				"test/outcome.test.ts"

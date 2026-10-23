@@ -1,20 +1,21 @@
-//The running game's turns on the core's session (src/coresession.ts, #137) against the old engine's: a
-//game of AI players played through Game itself (processTurn, processAIActions, processAction and
-//endTurn), its UI a stand-in that finishes the move and the attack at once as the UI's animations do
-//at their end (the commands on the core, src/coreplay.ts, in both), once with the old AI and the old
-//end of turn (a Game nobody inits) and once on the session (Game.init's drivers). Every action the
-//handlers hand out is recorded as harness/replay.js records it (its getAction wrapped), with the state
-//then, and every end of turn, then a game saved in the middle of an AI's turn and loaded, played on: the same actions, the same states, the same combat log, image cache and
-//what the screen was asked to do
+//The running game's turns on the core's session (src/coresession.ts, #137): a game of AI players played
+//through Game itself (processTurn, processAIActions, processAction and endTurn), its UI a stand-in
+//that finishes the move and the attack at once as the UI's animations do at their end. Every action
+//the handlers hand out is recorded as harness/replay.js records it (its getAction wrapped), with the
+//state then, and every end of turn, then a game saved in the middle of an AI's turn and loaded, played
+//on, and a campaign's next scenario: the actions, the states, the combat log, the image cache and what
+//the screen was asked to do. Until the old engine went (#137) the same game played on it gave the same
+//record step by step; the record's hashes then (test/gameturn.json.gz) pin it since
+import fs from "node:fs";
+import path from "node:path";
+import zlib from "node:zlib";
+import { createHash } from "node:crypto";
 import { expect, test } from "vitest";
 import { freshGame, mulberry32, startState, until } from "./lifecycle";
-import { difference } from "./aigames";
 import type { Game } from "../src/game";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
 import type { AIAction } from "../src/ai";
-
-type Mode = "old" | "core";
 
 //harness/replay.sh's items: a few in CI, all with CORE_ALL_ITEMS=1
 const ITEMS = process.env.CORE_ALL_ITEMS
@@ -33,32 +34,23 @@ function describe(a: AIAction | null) {
 }
 
 //The game played: what each step recorded
-async function play(item: string, mode: Mode): Promise<string[]> {
+async function play(item: string): Promise<string[]> {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
-	const { AIScripted } = await import("../src/aiscripted");
-	const { coreDriver } = await import("../src/coresession");
-	const { CorePlay } = await import("../src/coreplay");
+	const { Commands } = await import("../src/commands");
 	const { UIBuilder } = await import("../src/uibuilder");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
 	const { CombatLog } = await import("../src/combatlog");
 	const { playerType } = await import("../src/prototypes");
 	const { GameState } = await import("../src/gamestate");
-	const { buildOnCore } = await import("../src/coreload");
-	const { ScenarioLoader } = await import("../src/scenarioloader");
-	if (mode === "core") {
-		AI.driver = AIScripted.driver = coreDriver;
-		ScenarioLoader.build = buildOnCore;
-	}
-	AI.onUnitsDeployed = () => { game.ui.handleReinforcementDeployment(); }; //(Game.init)
 	const seed = item.length * 7919;
 	Rng.seed(seed);
 	Math.random = mulberry32(seed);
 	const screen: string[] = [];
 	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {}, showCampaignEnd() {},
 		showPrototypeAwardMessage(eqid: number) { screen.push("prototype " + eqid); } });
-	game.ui = stand(game, CorePlay, screen) as unknown as Game["ui"];
+	game.ui = stand(game, Commands, screen) as unknown as Game["ui"];
 	await startState(game, item.startsWith("campaign:") ? item + ":0" : item, [1, 1, 1, 1]);
 	const trace: string[] = [];
 	const map = () => game.scenario.map;
@@ -129,7 +121,7 @@ async function play(item: string, mode: Mode): Promise<string[]> {
 
 //The UI as Game calls it: the move and the attack finished at once (their animation's end), the rest
 //recorded or nothing
-function stand(game: Game, CorePlay: typeof import("../src/coreplay").CorePlay, screen: string[]) {
+function stand(game: Game, Commands: typeof import("../src/commands").Commands, screen: string[]) {
 	const finishAttack = (fin: (h?: object) => unknown) => {
 		fin({});
 		game.waitUIAnimation = false;
@@ -137,7 +129,7 @@ function stand(game: Game, CorePlay: typeof import("../src/coreplay").CorePlay, 
 	const attackHooks = () => ({ animate: (_r: unknown, fin: (h?: object) => unknown) => finishAttack(fin) });
 	return {
 		uiUnitMove(unit: Unit, row: number, col: number) {
-			const r = CorePlay.execute(game.scenario, { type: "move", unit: unit.id, to: { row, col } }, {
+			const r = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row, col } }, {
 				animate: (_mr, finish) => {
 					finish(false, { attackHooks });
 					game.waitUIAnimation = false;
@@ -146,7 +138,7 @@ function stand(game: Game, CorePlay: typeof import("../src/coreplay").CorePlay, 
 			return r.ok;
 		},
 		uiUnitAttack(a: Unit, d: Unit) {
-			const r = CorePlay.execute(game.scenario, { type: "attack", unit: a.id, target: d.id }, attackHooks());
+			const r = Commands.execute(game.scenario, { type: "attack", unit: a.id, target: d.id }, attackHooks());
 			return r.ok;
 		},
 		uiUnitSelect(u: Unit | null) {
@@ -165,28 +157,49 @@ function stand(game: Game, CorePlay: typeof import("../src/coreplay").CorePlay, 
 	};
 }
 
-test.each(ITEMS)("Game plays %s on the core's session as on the old engine, action by action", async (item) => {
-	const old = await play(item, "old"), core = await play(item, "core");
-	expect(old.length).toBeGreaterThan(10);
-	if (process.env.FC_STATS) console.log(item, old.length, old.filter((t) => t.startsWith("end of turn")).length, old.some((t) => t.startsWith("restored")));
-	for (let i = 0; i < Math.max(old.length, core.length); i++)
-		if (old[i] !== core[i]) throw new Error(`${item}, step ${i}: ${(old[i] || "").split("\n")[0]}${difference(old[i] || "", core[i] || "")}`);
+//The record's steps as hashes, with the first line of each; a run of the same step is one (a campaign's
+//next scenario has no handler for the player the replay made the AI: the turn loop throws at every tick)
+function hashes(trace: string[]): { hash: string; line: string }[] {
+	const out: { hash: string; line: string }[] = [];
+	let n = 0;
+	for (const t of trace) {
+		const hash = createHash("sha1").update(t).digest("hex").slice(0, 12);
+		if (out.length && out[out.length - 1].hash === hash) { n++; continue; }
+		if (n > 1) out.push({ hash: "×" + n, line: "" });
+		out.push({ hash, line: t.split("\n")[0] });
+		n = 1;
+	}
+	if (n > 1) out.push({ hash: "×" + n, line: "" });
+	return out;
+}
+
+//The hashes recorded (UPDATE_CONTRACTS=1 writes them again, in a commit that names the issue it fixes,
+//as the contracts')
+const pinned = path.join(__dirname, "gameturn.json.gz");
+const recorded = () => JSON.parse(zlib.gunzipSync(fs.readFileSync(pinned)).toString("utf8")) as Record<string, string[]>;
+
+test.each(ITEMS)("Game plays %s on the core's session as it did beside the old engine, action by action", async (item) => {
+	const trace = await play(item), got = hashes(trace);
+	expect(trace.length).toBeGreaterThan(10);
+	if (process.env.UPDATE_CONTRACTS) {
+		fs.writeFileSync(pinned, zlib.gzipSync(JSON.stringify({ ...recorded(), [item]: got.map((g) => g.hash) }), { level: 9 }));
+		return;
+	}
+	const want = recorded()[item];
+	expect(want, item + " recorded").toBeDefined();
+	const i = want.findIndex((h, k) => !got[k] || got[k].hash !== h);
+	expect(i === -1 && got.length === want.length ? "" : `${item}, step ${i}: ${got[i] ? got[i].line : "none"}`).toBe("");
 }, 120_000);
 
-test("On the core the handlers plan nothing themselves: they hand out the session's orders", async () => {
+test("The handlers plan nothing themselves: they hand out the session's orders", async () => {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
 	const { AIScripted } = await import("../src/aiscripted");
-	const { coreDriver } = await import("../src/coresession");
-	AI.driver = AIScripted.driver = coreDriver;
 	await startState(game, "scripted:tutorial.xml", [2, 2, 2, 2]);
 	const p = game.scenario.map.getPlayers()[0];
 	const ai = new AI(p, game.scenario.map), scripted = new AIScripted(p, game.scenario.map);
 	ai.buildActions();
-	ai.startTurn();
-	ai.planTurn();
 	scripted.buildActions();
-	expect(ai.getEvaluator()).toBeNull();
 	const { actionType } = await import("../src/prototypes");
 	//(the tutorial's first message of turn 1, then its second: both handlers ask the same session)
 	expect([scripted.getAction().type, ai.getAction().type]).toEqual([actionType.message, actionType.message]);

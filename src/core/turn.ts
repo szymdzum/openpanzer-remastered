@@ -10,7 +10,6 @@
  * player plans its turn (#94 kept), so its reinforcements don't act on the turn they arrive.
  */
 
-import type { Outcome } from "../actions";
 import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
 import { beginDraft, emit, finishDraft, place, writeUnit } from "./draft";
@@ -88,7 +87,18 @@ export interface LastPlayed {
 	endedSide?: number;
 }
 
-//Whether the game is over, who won and why (Actions.checkOutcome): a capture that took the side's
+//How a game ended: a side took all its objectives (capture), a side has no units left
+//(elimination), a side played its last turn (turnLimit)
+export type OutcomeKind = "capture" | "elimination" | "turnLimit";
+
+export interface Outcome {
+	kind: OutcomeKind;
+	winner: number; //the side that won, -1 at the turn limit (nobody wins it)
+	loser: number; //the side that lost
+	rating: ScenarioOutcome; //the winner's rating by the turn, "lose" at the turn limit
+}
+
+//Whether the game is over, who won and why (the old engine's Actions.checkOutcome): a capture that took the side's
 //last objective, a side with no unit on the map (kept #115: its units waiting to deploy don't count;
 //axis first, so with none on either side the allies win), the ended side's turn limit. Null when
 //the game goes on

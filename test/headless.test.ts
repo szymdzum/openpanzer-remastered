@@ -1,60 +1,34 @@
 // @vitest-environment node
-//The engine without a browser: GameRules, Map, Unit, the AI, Scenario, Actions and Commands load in Node, with
-//no DOM, and a game can drive them through their seams: the random numbers (src/rng.ts, the AI's
-//rng), the engine context (src/context.ts), the turn driver (GameMap.onPlayerTurn) and the AI split
-//into startTurn, planTurn and its evaluator. On a small map built by hand (test/smallgame.ts)
+//The engine without a browser: the core, GameRules, Map, Unit, Scenario, Commands and the game's mirror
+//load in Node, with no DOM, and a game drives them through their seams: the random streams
+//(src/rng.ts), the engine context (src/context.ts). On a small map built by hand (test/smallgame.ts)
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { Rng } from "../src/rng";
-import { type EngineContext, engineContext, setEngineContext } from "../src/context";
+import { engineContext, setEngineContext } from "../src/context";
 import { GameRules } from "../src/gamerules";
-import { GameMap, Player } from "../src/map";
+import { GameMap } from "../src/map";
 import { Unit } from "../src/unit";
-import { AI, type AIAction, type AIOptions, type AIPlan, createAIEvaluator } from "../src/ai";
 import { Scenario } from "../src/scenario";
-import { Actions } from "../src/actions";
 import { Commands } from "../src/commands";
-import { aiDefaultConfig, unitClass } from "../src/prototypes";
+import { applyData, worldOf } from "../src/mirror";
+import { startSession } from "../src/core/session";
 import { smallGame } from "./smallgame";
 
 const root = path.resolve(__dirname, "..");
 
-function mulberry32(seed: number): () => number {
-	return () => {
-		seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-		let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-		t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-		return ((t ^ t >>> 14) >>> 0) / 4294967296;
-	};
-}
-
-const realRandom = Math.random, aiState = Rng.ai.state, defaultContext = engineContext, defaultTurnDriver = GameMap.onPlayerTurn;
+const realRandom = Math.random, gameState = Rng.game.state, defaultContext = engineContext;
 afterEach(() => {
 	Math.random = realRandom;
-	Rng.source = null;
-	Rng.ai.state = aiState;
+	Rng.game.state = gameState;
 	setEngineContext(defaultContext);
-	GameMap.onPlayerTurn = defaultTurnDriver;
 });
-
-const describeActions = (actions: AIAction[]) => actions.map((a) => a.type + ":" + a.param.map((x) =>
-	x instanceof Unit ? "unit#" + x.id : x && typeof x === "object" ? x.row + "," + x.col : String(x)).join(" "));
-
-//Plans the AI player's turn on a fresh small game, its actions as strings
-function planAI(options?: AIOptions): string[] {
-	const { map, players } = smallGame();
-	const ai = new AI(players[1], map, options);
-	ai.buildActions();
-	const actions: AIAction[] = [];
-	for (let a = ai.getAction(); a !== null; a = ai.getAction()) actions.push(a);
-	return describeActions(actions);
-}
 
 test("The engine modules load without a DOM", () => {
 	expect(typeof window).toBe("undefined");
 	expect(typeof document).toBe("undefined");
-	for (const m of [GameRules, GameMap, Unit, AI, Scenario, Actions, Commands, Rng])
+	for (const m of [GameRules, GameMap, Unit, Scenario, Commands, Rng, applyData, worldOf, startSession])
 		expect(m).toBeTruthy();
 });
 
@@ -68,8 +42,9 @@ test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => 
 		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm))
 			if (!i[1]) visit(i[2]);
 	};
-	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "actions", "commands", "leaders", "rng", "context", "state", "savegame"]) visit(m);
-	const ui = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "aiscripted", "osglue", "main"];
+	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame", "mirror"]) visit(m);
+	const ui = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "aiscripted", "osglue", "main",
+		"coresession", "coreload"];
 	expect([...reached].filter((m) => ui.includes(m))).toEqual([]);
 });
 
@@ -82,114 +57,29 @@ test("game.ts starts no timer and no listener while it loads, main.ts does", () 
 	expect(main).toMatch(/^window\.addEventListener\("load", game\.gameStart\);$/m);
 });
 
-//Rng reads Math.random at each draw when no source is set: seeding Math.random (the harness,
-//record.js, the contracts) seeds the dice and the leaders, as before the seam. The AI has its own
-//stream (#126)
-test("The engine's random numbers come from Rng: Math.random at the call, or the source set", () => {
-	Math.random = mulberry32(7);
-	const fromMath = [GameRules.rollDice(1, 6), GameRules.rollDice(0, 100), Rng.random()];
-	Math.random = realRandom;
-	Rng.source = mulberry32(7);
-	expect([GameRules.rollDice(1, 6), GameRules.rollDice(0, 100), Rng.random()]).toEqual(fromMath);
+//The dice draw from the game stream: Math.random at each draw while it isn't seeded (a test that seeds
+//Math.random seeds them, as the harness and record.js do), its own numbers once it is (#126)
+test("The dice come from the game stream: Math.random until it is seeded", () => {
+	Rng.game.state = null;
+	const seq = [0.5, 0.25, 0.75];
+	Math.random = () => seq.shift();
+	expect([GameRules.rollDice(1, 6), GameRules.rollDice(0, 100), GameRules.rollDice(1, 4)]).toEqual([4, 25, 4]);
+	Rng.seed(7);
+	const seeded = [GameRules.rollDice(1, 6), GameRules.rollDice(0, 100)];
+	Rng.seed(7);
+	expect([GameRules.rollDice(1, 6), GameRules.rollDice(0, 100)]).toEqual(seeded);
 });
 
-test("The AI plans the same turn with the same random numbers, whichever way they come", () => {
-	const seeded = planAI({ rng: mulberry32(3) });
-	expect(seeded.length).toBeGreaterThan(0);
-	expect(planAI({ rng: mulberry32(3) })).toEqual(seeded);
-	//Without an rng, its own stream: Rng.ai at the same state plans the same turn
-	Rng.ai.state = 3;
-	expect(planAI()).toEqual(seeded);
-	//The draws are the AI's own: the dice's stream (Math.random, the source) untouched
-	let draws = 0;
-	const rng = mulberry32(3);
-	Math.random = () => { throw new Error("Math.random drawn"); };
-	Rng.source = () => { throw new Error("the dice's stream drawn"); };
-	expect(planAI({ rng: () => { draws++; return rng(); } })).toEqual(seeded);
-	expect(draws).toBeGreaterThan(100);
-	Rng.ai.state = 3;
-	expect(planAI()).toEqual(seeded);
-	expect(Rng.ai.state).not.toBe(3);
-});
-
-test("The AI takes its settings: aiDefaultConfig is the bundle's AI", () => {
-	const seeded = planAI({ rng: mulberry32(3) });
-	expect(planAI({ rng: mulberry32(3), config: aiDefaultConfig })).toEqual(seeded);
-	//Never attacking: no attack in the plan
-	const timid = planAI({ rng: mulberry32(3), config: { ...aiDefaultConfig, attackLossesThreshold: -1e9 } });
-	expect(timid.filter((a) => a.startsWith("1:"))).toEqual([]);
-});
-
-test("buildActions is startTurn then planTurn; the evaluator scores on the AI's plan", () => {
-	const { map, players } = smallGame();
-	const ai = new AI(players[1], map, { rng: mulberry32(3) });
-	ai.startTurn();
-	ai.planTurn();
-	const actions: AIAction[] = [];
-	for (let a = ai.getAction(); a !== null; a = ai.getAction()) actions.push(a);
-	expect(describeActions(actions)).toEqual(planAI({ rng: mulberry32(3) }));
-
-	//A score draws once from rng: with a constant rng (factor randomFactor[4], 1) it is the plain score
-	const unit = map.getUnits().find((u) => u.owner == 1 && u.unitData().uclass == unitClass.infantry)!;
-	const plan: AIPlan = { enemyUnits: {}, takenPositions: [], freedPositions: [], defendObjectives: [], objectives: [] };
-	let draws = 0;
-	const evaluator = createAIEvaluator(players[1], map, plan, aiDefaultConfig, () => { draws++; return 0.5; });
-	const cell = { ...unit.getPos(), canMove: true };
-	const score = evaluator.getCellScore(unit, cell);
-	expect(draws).toBe(1);
-	expect(evaluator.getCellScore(unit, cell)).toBe(score);
-	expect(ai.getEvaluator().getObjectiveScore(cell).cell).toEqual(map.sidesVictoryHexes[1][0]);
-});
-
-test("Map.endTurn hands the next player's turn to the turn driver", () => {
-	const { map, players } = smallGame();
-	const calls: [GameMap, Player][] = [];
-	GameMap.onPlayerTurn = (p, m) => { calls.push([m, p]); };
-	map.endTurn();
-	expect(calls).toEqual([[map, players[1]]]);
-
-	//The default plans an AI player's turn there
-	GameMap.onPlayerTurn = defaultTurnDriver;
-	const { map: map2, players: players2 } = smallGame();
-	const ai = new AI(players2[1], map2, { rng: mulberry32(3) });
-	players2[1].handler = ai;
-	map2.endTurn();
-	expect(ai.getAction()).not.toBeNull();
-});
-
-test("The engine reads the game through the context, at the moment it needs it", () => {
-	//Without a game: no scenario, no campaign, no side shown, no host for the state
+//GameRules reads the world the context gives at the call (the game's objects then): what a screen
+//wrote into them is in the answer
+test("The rules read the game through the context, at the moment they ask", () => {
 	expect([defaultContext.scenario(), defaultContext.campaign(), defaultContext.campaignPlayer(), defaultContext.spotSide(),
 		defaultContext.host()]).toEqual([null, null, null, -1, null]);
-	const { map, players } = smallGame();
-	let spotSide = 0;
-	let campaignReads = 0;
-	const context: EngineContext = {
-		scenario: () => ({ map } as unknown as Scenario),
-		campaign: () => { campaignReads++; return null; },
-		campaignPlayer: () => null,
-		spotSide: () => spotSide,
-		host: () => null,
-	};
-	setEngineContext(context);
-
-	//Unit.copy takes the player from the context's scenario map, by owner: the map's own player (#68)
-	const unit = map.getUnits().find((u) => u.owner == 1)!;
-	const copy = new Unit(unit.eqid);
-	copy.copy(unit);
-	expect(copy.player).toBe(players[1]);
-
-	//unitEndTurn hides a unit whose hex the side shown doesn't spot, read at the call
-	const enemy = map.getUnits().find((u) => u.owner == 1 && !u.getHex()!.isSpotted(0))!;
-	enemy.tempSpotted = true;
-	spotSide = 1;
-	enemy.unitEndTurn();
-	expect(enemy.tempSpotted).toBe(true);
-	spotSide = 0;
-	enemy.unitEndTurn();
-	expect(enemy.tempSpotted).toBe(false);
-
-	//The score coefficient asks for the campaign
-	players[0].updateScore(10);
-	expect(campaignReads).toBe(1);
+	expect(() => defaultContext.world()).toThrow("no game");
+	const { map } = smallGame();
+	const tank = map.getUnits().find((u) => u.eqid === 142)!;
+	const range = GameRules.getMoveRange(map, tank).filter((c) => c.canMove).length;
+	expect(range).toBeGreaterThan(0);
+	tank.hasMoved = true;
+	expect(GameRules.getMoveRange(map, tank).filter((c) => c.canMove).length).toBe(0);
 });

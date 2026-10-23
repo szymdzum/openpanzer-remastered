@@ -1,115 +1,66 @@
 //What must hold on every game state, whatever was played, as test/invariants.test.ts and
 //test/properties.test.ts check it: the spotting and zone of control counters of every hex equal a
-//recomputation from the units, hexes and units point at each other, every unit belongs to its
-//owner's Player
+//recomputation from the units (the core's sight of the game's state), hexes and units point at each
+//other, every unit belongs to its owner's Player
 import { readFixture, restoreState } from "./contracts";
+import { coreEngine } from "./coreengine";
+import { createWorld } from "../src/core/create";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
 
-//The modules of the restored state (restoreState resets them for every fixture)
+//The modules of the restored state (restoreState resets them for every fixture), with the game's
+//session the engine contract plays on (test/coreengine.ts): its players and end of turn
 export async function load(name: string) {
 	const fixture = readFixture("engine", name);
 	const scenario = await restoreState(fixture.state);
 	const { GameRules } = await import("../src/gamerules");
-	const { Leaders } = await import("../src/leaders");
 	const { CombatLog } = await import("../src/combatlog");
 	const { Equipment } = await import("../src/equipment");
-	const { AI } = await import("../src/ai");
 	const { Commands } = await import("../src/commands");
 	const { Rng } = await import("../src/rng");
 	const { game } = await import("../src/game");
+	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
-	//The engine calls into the UI in one place: the AI after deploying its purchases
-	(game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {} };
+	//What the session asks of the screen
+	(game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {}, showAlert() {}, mainMenuButton() {} };
+	const engine = await coreEngine();
 	const m = scenario.map;
-	//Map.endTurn asks an AI player's handler for actions: the driver builds them itself
-	m.getPlayers().forEach((p) => { p.handler = { buildActions() {} } as typeof p.handler; });
-	return { scenario, m, GameRules, Leaders, CombatLog, Equipment, AI, Commands, Rng, game, ...prototypes };
+	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),
+		...prototypes };
 }
-//The old engine's modules of a restored fixture (the core's World is src/core/types.ts's)
-export type OldWorld = Awaited<ReturnType<typeof load>>;
+//The game's modules of a restored fixture (the core's World is src/core/types.ts's)
+export type Restored = Awaited<ReturnType<typeof load>>;
 
 export const unitName = (u: Unit) => "unit#" + u.id;
 export const cellName = (c: Cell) => c.row + "," + c.col;
 export const hexName = (h: Hex | null) => h ? cellName(h.getPos()) : "no hex";
 
-//A hex's counter: the counters are private, a hex only says whether one is above 0. Counted by
-//switching it off until it reads 0, then on again as many times
-export function counter(isSet: () => boolean, set: (on: boolean) => void): number {
-	let n = 0;
-	while (isSet() && n < 1000) { set(false); n++; }
-	for (let i = 0; i < n; i++) set(true);
-	return n;
-}
-
-//Every unit's zone of control and spotting put on an empty board with the game's own per-unit
-//functions: a board hex counts what the game adds, and claims to be spotted already, so
-//setSpotRange marks no unit as newly spotted
+//Every unit's zone of control and spotting, counted per hex from the units: the core's sight of the
+//game's state now (toData), as the screen should show it
 export function recompute(w: Board) {
-	const { m, GameRules } = w;
+	const { m } = w;
+	const sight = createWorld(w.toData(w.scenario, w.game), w.Equipment.equipment).sight;
 	const board: { zoc: number[]; spot: number[] }[][] = [];
-	const shadow: Hex[][] = [];
 	for (let r = 0; r < m.rows; r++) {
 		board.push([]);
-		shadow.push([]);
 		for (let c = 0; c < m.cols; c++) {
-			const b = { zoc: [0, 0], spot: [0, 0] };
-			board[r].push(b);
-			shadow[r].push({
-				setZOC: (side: number, on: boolean) => { if (on) b.zoc[side]++; },
-				setSpotted: (side: number, on: boolean) => { if (on) b.spot[side]++; },
-				isSpotted: () => true,
-				getUnit: (): Unit | null => null,
-			} as unknown as Hex);
+			const i = r * m.cols + c;
+			board[r].push({ zoc: [sight.zoc[0][i], sight.zoc[1][i]], spot: [sight.spot[0][i], sight.spot[1][i]] });
 		}
-	}
-	for (const u of m.getUnits()) {
-		if (!u.getPos()) continue;
-		GameRules.setZOCRange(shadow, u, true, m.rows, m.cols);
-		GameRules.setSpotRange(shadow, u, true, m.rows, m.cols);
 	}
 	return board;
 }
 
-//What the counters' checks read of the old engine: its map and its rules
-export type Board = Pick<OldWorld, "m" | "GameRules">;
-
-//Whether the old engine's counters equal the sight given, count for count
-export function countersEqual(w: Board, spot: (side: number, i: number) => number, zoc: (side: number, i: number) => number): boolean {
-	const counters = w.m.getBoard().visibility.counters;
-	for (let r = 0; r < w.m.rows; r++)
-		for (let c = 0; c < w.m.cols; c++)
-			for (const side of [0, 1]) {
-				const i = r * w.m.cols + c;
-				if (counters[r][c].spot[side] !== spot(side, i) || counters[r][c].zoc[side] !== zoc(side, i)) return false;
-			}
-	return true;
-}
-
-//The old engine's counters as its units make them
-export function resync(w: Board) {
-	const board = recompute(w), counters = w.m.getBoard().visibility.counters;
-	for (let r = 0; r < w.m.rows; r++)
-		for (let c = 0; c < w.m.cols; c++) {
-			counters[r][c].spot = board[r][c].spot.slice();
-			counters[r][c].zoc = board[r][c].zoc.slice();
-		}
-}
-
-//The old engine's counters drifted from its own units (#72, #73)
-export function drifted(w: Board): boolean {
-	const board = recompute(w);
-	return !countersEqual(w, (side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].spot[side],
-		(side, i) => board[(i / w.m.cols) >> 0][i % w.m.cols].zoc[side]);
-}
+//What the counters' checks read of the game: its map, its state and its equipment
+export type Board = Pick<Restored, "m" | "scenario" | "game" | "toData" | "Equipment">;
 
 type Add = (kind: string, text: string) => void;
 
 //What doesn't hold, a few of each kind. Units in offMap aren't checked for being on their hex
-export function violations(w: OldWorld, offMap: Set<Unit> = new Set()): string[] {
+export function violations(w: Restored, offMap: Set<Unit> = new Set()): string[] {
 	if (w.uiSettings.noFOW) return ["fog of war is off: the spotting counters can't be read"];
 	const out: string[] = [];
 	const kinds: Record<string, number> = {};
@@ -122,7 +73,7 @@ export function violations(w: OldWorld, offMap: Set<Unit> = new Set()): string[]
 	for (let r = 0; r < w.m.rows; r++)
 		for (let c = 0; c < w.m.cols; c++) {
 			hexUnitViolations(w, w.m.map[r][c], add);
-			counterViolations(w.m.map[r][c], board[r][c], add);
+			counterViolations(w.m.map[r][c], w.m.getVisibility().counters[r][c], board[r][c], add);
 		}
 	for (const [kind, n] of Object.entries(kinds))
 		if (n > 3) out.push(`(${n - 3} more ${kind})`);
@@ -130,7 +81,7 @@ export function violations(w: OldWorld, offMap: Set<Unit> = new Set()): string[]
 }
 
 //Every unit once in the unit list, with its owner's player, on the hex it says it is on
-function unitViolations(w: OldWorld, offMap: Set<Unit>, add: Add) {
+function unitViolations(w: Restored, offMap: Set<Unit>, add: Add) {
 	const { m } = w;
 	const ids = new Set<number>();
 	for (const u of m.getUnits()) {
@@ -147,7 +98,7 @@ function unitViolations(w: OldWorld, offMap: Set<Unit>, add: Add) {
 }
 
 //The units a hex holds are on it and in the unit list
-function hexUnitViolations(w: OldWorld, h: Hex, add: Add) {
+function hexUnitViolations(w: Restored, h: Hex, add: Add) {
 	for (const [slot, u] of [["unit", h.unit], ["airunit", h.airunit]] as const) {
 		if (!u) continue;
 		if (u.getHex() !== h) add("hex unit", cellName(h.getPos()) + "." + slot + " is " + unitName(u) + ", which is on " + hexName(u.getHex()));
@@ -155,14 +106,15 @@ function hexUnitViolations(w: OldWorld, h: Hex, add: Add) {
 	}
 }
 
-//A hex's counters against the recomputed ones
-function counterViolations(h: Hex, want: { zoc: number[]; spot: number[] }, add: Add) {
+//A hex's counters (the ones its isZOC and isSpotted read) against the recomputed ones
+type Counts = { zoc: number[]; spot: number[] };
+function counterViolations(h: Hex, has: Counts, want: Counts, add: Add) {
 	const { row: r, col: c } = h.getPos();
 	for (const side of [0, 1]) {
-		const zoc = counter(() => h.isZOC(side), (on) => h.setZOC(side, on));
+		const zoc = has.zoc[side];
 		if (zoc !== want.zoc[side])
 			add("zoc", `${r},${c} zone of control of side ${side}: ${zoc} instead of ${want.zoc[side]}`);
-		const spot = counter(() => h.isSpotted(side), (on) => h.setSpotted(side, on));
+		const spot = has.spot[side];
 		if (spot !== want.spot[side])
 			add("spot", `${r},${c} spotting of side ${side}: ${spot} instead of ${want.spot[side]}`);
 	}

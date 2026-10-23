@@ -23,7 +23,8 @@ import type { GameMap, Player } from "./map";
 import type { Reinforcement, Scenario } from "./scenario";
 import { Rng } from "./rng";
 import {
-	type CampaignHost, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, setUnitFields, toData, type UnitState
+	type CampaignHost, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, setUnitFields, toData, type UnitState,
+	writeSight
 } from "./state";
 import { createWorld } from "./core/create";
 import type { Sight, World } from "./core/types";
@@ -60,7 +61,7 @@ export function worldOf(scenario: Scenario, host: CampaignHost | null, inputs: M
 
 //The old counters, count for count
 function countersOf(m: GameMap): Sight {
-	const counters = m.getBoard().visibility.counters, n = m.rows * m.cols;
+	const counters = m.getVisibility().counters, n = m.rows * m.cols;
 	const sight: Sight = { spot: [new Uint16Array(n), new Uint16Array(n)], zoc: [new Uint16Array(n), new Uint16Array(n)] };
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++)
@@ -71,19 +72,41 @@ function countersOf(m: GameMap): Sight {
 	return sight;
 }
 
-//Where the objects differ from the world's state, "" when they don't (the same toData, the same counters)
+//Where the objects differ from the world's state, "" when they don't (the same toData, as JSON, the
+//same counters)
 export function mirrorDifference(scenario: Scenario, w: World, host: CampaignHost | null): string {
-	const want = JSON.stringify(w.state), got = JSON.stringify(toData(scenario, host).state);
-	if (want !== got) {
+	const saved = toData(scenario, host).state;
+	if (!sameData(w.state, saved)) {
+		const want = JSON.stringify(w.state), got = JSON.stringify(saved);
 		let d = 0;
 		while (d < want.length && want[d] === got[d]) d++;
-		return "the objects' state differs from the world's at " + d + ": " + got.slice(Math.max(0, d - 80), d + 80);
+		if (d < want.length || d < got.length)
+			return "the objects' state differs from the world's at " + d + ": " + got.slice(Math.max(0, d - 80), d + 80);
 	}
 	const counters = countersOf(scenario.map);
 	for (const side of [0, 1])
-		if (counters.spot[side].join() !== w.sight.spot[side].join() || counters.zoc[side].join() !== w.sight.zoc[side].join())
+		if (!sameCounts(counters.spot[side], w.sight.spot[side]) || !sameCounts(counters.zoc[side], w.sight.zoc[side]))
 			return "the counters differ from the world's sight";
 	return "";
+}
+
+//Whether two plain data trees are the same, keys in the same order (what their JSON compares): a
+//quick look, without the strings; where it says no, the JSON decides
+function sameData(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	const isTree = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null;
+	return isTree(a) && isTree(b) && Array.isArray(a) === Array.isArray(b) && sameTree(a, b);
+}
+
+function sameTree(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+	const ka = Object.keys(a), kb = Object.keys(b);
+	return ka.length === kb.length && ka.every((k, i) => k === kb[i] && sameData(a[k], b[k]));
+}
+
+function sameCounts(a: Uint16Array, b: Uint16Array): boolean {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+	return true;
 }
 
 //The objects updated in place to the world's state (and its sight into the counters)
@@ -101,7 +124,7 @@ export function applyData(scenario: Scenario, w: World, host: CampaignHost | nul
 	m.getBoard().uniqueID = s.nextUnitId;
 	applyUndo(m, w);
 	applyReinforcements(scenario, w);
-	applySight(m, w.sight);
+	writeSight(m, w.sight);
 	if (s.rng !== null) {
 		Rng.game.state = s.rng.game;
 		Rng.ai.state = s.rng.ai;
@@ -307,16 +330,6 @@ function keptEntries(have: Reinforcement[], want: { row: number; col: number; un
 		kept.push(have[i++]);
 	}
 	return kept;
-}
-
-function applySight(m: GameMap, sight: Sight) {
-	const counters = m.getBoard().visibility.counters;
-	for (let r = 0; r < m.rows; r++)
-		for (let c = 0; c < m.cols; c++)
-			for (const side of [0, 1]) {
-				counters[r][c].spot[side] = sight.spot[side][r * m.cols + c];
-				counters[r][c].zoc[side] = sight.zoc[side][r * m.cols + c];
-			}
 }
 
 //The equipment lists by country and class as the state has them, in place: the purchase window holds

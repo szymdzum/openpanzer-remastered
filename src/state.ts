@@ -31,6 +31,8 @@ import { type GameMap, Player, type PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
 import { Rng } from "./rng";
 import type { Campaign } from "./campaign";
+import { createWorld } from "./core/create";
+import type { Sight } from "./core/types";
 
 export type UnitId = number;
 export type PlayerId = number;
@@ -403,6 +405,7 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null, into?: Sc
 		m.currentPlayer = m.getPlayer(state.turn.currentPlayer);
 
 	placeUnits(m, state);
+	writeSight(m, createWorld(saved, Equipment.equipment).sight);
 	state.players.forEach((p, i) => players[i].setCoreUnitList(p.core.map((c) => coreUnit(m, c))));
 	for (const r of state.reinforcements)
 		scenario.addReinforcement(r.turn, r.row, r.col, newUnit(r.unit, -1));
@@ -416,8 +419,18 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null, into?: Sc
 	if (host)
 		campaignFromData(host, state.campaign, scenario);
 	scenario.isLoaded = true;
-	scenario.setMoveTable();
 	return scenario;
+}
+
+//The hexes' counters to a sight (the core's, computed from the units): what the screen reads
+export function writeSight(m: GameMap, sight: Sight) {
+	const counters = m.getVisibility().counters;
+	for (let r = 0; r < m.rows; r++)
+		for (let c = 0; c < m.cols; c++)
+			for (const side of [0, 1]) {
+				counters[r][c].spot[side] = sight.spot[side][r * m.cols + c];
+				counters[r][c].zoc[side] = sight.zoc[side][r * m.cols + c];
+			}
 }
 
 function newPlayer(s: PlayerState): Player {
@@ -440,6 +453,9 @@ function newPlayer(s: PlayerState): Player {
 //A unit's objects from its state, with id (the unit list's own, or -1 off the map)
 function newUnit(s: OffMapUnit, id: UnitId): Unit {
 	const u = new Unit(s.eqid);
+	//(the state's eqid even where the equipment loaded hasn't it: a campaign's unit carried from a
+	//scenario of another equipment, which Unit's constructor would take for its first key)
+	u.eqid = s.eqid;
 	u.id = id;
 	setUnitFields(u, s);
 	return u;
@@ -463,7 +479,11 @@ export function setUnitFields(u: Unit, s: OffMapUnit) {
 	if (s.transport === null) {
 		u.transport = null;
 	} else {
-		if (u.transport === null || u.transport.eqid !== s.transport.eqid) u.transport = new Transport(s.transport.eqid);
+		if (u.transport === null || u.transport.eqid !== s.transport.eqid) {
+			//(as Unit.setTransport did it: the field goes last, the objects' JSON as the old game's)
+			delete u.transport;
+			u.transport = new Transport(s.transport.eqid);
+		}
 		u.transport.copy(s.transport as Transport);
 	}
 	u.carrier = s.carrier;

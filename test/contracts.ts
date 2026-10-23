@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { vi } from "vitest";
+import { coreEngine } from "./coreengine";
 
 export interface ContractFixture {
 	file: string;
@@ -59,23 +60,22 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const { GameRules } = await import("../src/gamerules");
 	const { Equipment } = await import("../src/equipment");
 	const { Unit } = await import("../src/unit");
-	const { AI } = await import("../src/ai");
-	const { AIScripted } = await import("../src/aiscripted");
 	const { GameState } = await import("../src/gamestate");
 	const { CombatLog } = await import("../src/combatlog");
 	const { game } = await import("../src/game");
-	const { Actions } = await import("../src/actions");
 	const { Commands } = await import("../src/commands");
 	const { toData } = await import("../src/state");
 	const { Rng } = await import("../src/rng");
 	const { terrainType, leaderType, actionType, playerType, unitClass } = await import("../src/prototypes");
-	const env: ContractEnv = { GameRules, Equipment, Unit, AI, AIScripted, GameState, CombatLog, game, terrainType,
-		leaderType, actionType, playerType, unitClass, scenario, map: scenario.map, fuzzRounds: fixture.fuzzRounds, Actions, Commands,
-		toData, Rng, ...(typeof extra === "function" ? {} : extra) };
-	if (typeof extra === "function")
-		Object.assign(env, extra(env));
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
+	//(the engine's players, end of turn and outcome on the game's session)
+	const engine = module === "engine" ? await coreEngine() : {};
+	const env: ContractEnv = { GameRules, Equipment, Unit, GameState, CombatLog, game, terrainType,
+		leaderType, actionType, playerType, unitClass, scenario, map: scenario.map, fuzzRounds: fixture.fuzzRounds, Commands,
+		toData, Rng, ...engine, ...(typeof extra === "function" ? {} : extra) };
+	if (typeof extra === "function")
+		Object.assign(env, extra(env));
 	if (c.apply && fixture.setup !== undefined && fixture.setup !== null)
 		c.apply(env, fixture.setup);
 	const actual = c.run(env);

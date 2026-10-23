@@ -25,17 +25,23 @@
 //   removed, the selection refreshed, retreat or surrender, then the elimination victory (a side
 //   without units loses). A victory or a defeat ends the game: no more actions and turns
 //
-// Here the attack (resolveAttack, finishAttack), the move's finish (finishMove) and the end of turn
-// are the game's own, src/actions.ts (env.Actions), with the driver's hooks where the UI has its
-// own (the selection refresh, the victories). The player's actions (the AI's and the random ones:
-// move, attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband,
-// end turn) go through the game's command entry, src/commands.ts (env.Commands), as the game sends
-// them: the move's and the attack's finish through the command's animate hook, at once. The end of the game (`ended`) is then what
-// checkOutcome says after each attack's and move's finish and after a defeat at the turn limit;
-// the victories the hooks report are recorded as before. On the reference, which has no
-// actions.ts, the driver runs its copy of the same sequence and ends the game at the victories
-// themselves, so record.sh records the same results. env.outcomes, when a test passes an array,
-// gets [index of the step, checkOutcome's result] for every call (test/outcome.test.ts).
+// Here the game plays on its core (#137). The player's actions (the AI's and the random ones: move,
+// attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband) go through
+// the game's command entry, src/commands.ts (env.Commands), as the game sends them: the move's and
+// the attack's finish (a surprise attack's too) through the command's animate hook, at once, with the
+// driver's hooks where the UI has its own (the selection refresh, the victories). The end of turn is
+// the game's on its session (env.Actions.endTurn, test/coreengine.ts: src/coresession.ts's, the
+// reinforcements arrive in it), the players are the session's controllers (env.AI: the AI, the
+// tutorial; a human player's stand-in plays outside it). The end of the game (`ended`) is then what
+// checkOutcome (the core's outcome) says after each attack's and move's finish and after a defeat at
+// the turn limit; the victories the hooks report are recorded as before. On the reference, which has
+// none of these, the driver runs its copy of the same sequence and ends the game at the victories
+// themselves. What the game no longer has as a function (the old engine's campaign functions, the
+// prototype queries) is checked on the reference only: here its check records GONE; the few the drills
+// need (a unit put anywhere, a side's units taken off, the deployment hexes) are done as they did it.
+// env.outcomes,
+// when a test passes an array, gets [index of the step, checkOutcome's result] for every call
+// (test/outcome.test.ts).
 //
 // Where the driver still differs from the game, and why:
 // - Synchronous. In the game an attack's second half runs when its animation ends. For an AI
@@ -76,12 +82,15 @@ function contractApply(env, captured) {
 	env.Equipment.equipmentIndexes = JSON.parse(captured);
 }
 
+// What a check records where the game no longer has the function it calls (the old engine's, #137)
+const GONE = "gone";
+
 function runEngineContract(env) {
 	const GR = env.GameRules, m = env.map, A = env.actionType, CL = env.CombatLog, PT = env.playerType;
 	const sc = env.scenario, game = env.game, UC = env.unitClass;
-	// The game's src/actions.ts: the attack, the move's finish and the end of turn run through it.
-	// The reference has none (record.sh runs this driver there), it runs the copy of the sequence
-	// below: the same calls in the same order, so both record the same results
+	// The game's end of turn and outcome on its core (test/coreengine.ts). The reference has none
+	// (record.sh runs this driver there), it runs the copy of the sequence below: the same calls in the
+	// same order
 	const X = env.Actions;
 	// The game's command entry (src/commands.ts), with the same feature check: the reference has
 	// none, the driver then calls the engine functions the commands call
@@ -202,10 +211,6 @@ function runEngineContract(env) {
 			attacker: contractUnitState(a), defender: contractUnitState(d), res };
 	}
 	function resolveAttack(a, d) {
-		if (X) {
-			const res = X.resolveAttack(m, a, d);
-			return res ? resolved(a, d, res) : null;
-		}
 		if (!a.getPos() || !d.getPos()) return null;
 		const aOld = a.strength, dOld = d.strength;
 		let cr = GR.calculateAttackResults(a, d, true);
@@ -237,16 +242,17 @@ function runEngineContract(env) {
 	// ui.js uiAttackAnimationFinished without animations and alerts. finish: the attack command's
 	function finishAttack(r, finish) {
 		const a = r.a, d = r.d;
-		if (X) {
+		if (finish) {
 			const victory = [];
-			const res = (finish || ((hooks) => X.finishAttack(m, r.res, hooks)))({
+			const res = finish({
 				afterCleanup() { refreshSelection(a, d); },
 				onVictory(side) { victory.push(win(side, "elimination")); },
 			});
 			settle();
 			const retreat = res.retreatMove ? { mr: res.retreatMove } : res.surrender ? "surrender" : null;
 			// The retreat's move animation ends after this
-			if (res.retreatMove) Object.assign(retreat, moveFinished(d, res.retreatMove), { unit: contractUnitState(d) });
+			if (res.retreatMove) Object.assign(retreat, moveFinished(d, res.retreatMove, retreatFinish(d, res.retreatMove)),
+				{ unit: contractUnitState(d) });
 			return { cr: r.cr, support: r.support, stopped: r.stopped, attacker: r.attacker, defender: r.defender,
 				retreat, victory, outcome: outcome() };
 		}
@@ -282,18 +288,28 @@ function runEngineContract(env) {
 		return r ? finishAttack(r) : "no position";
 	}
 
+	// A retreat's move finish (Commands.finishRetreat): its capture and victory, no surprise
+	function retreatFinish(u, mr) {
+		return (airMode, hooks) => {
+			C.finishRetreat(u, mr, hooks);
+			return { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
+		};
+	}
+
 	// ui.js uiMoveAnimationFinished: the surprise attack (its second half after the rest), the
 	// capture victory. finish: the move command's
 	function moveFinished(u, mr, finish) {
-		let surprise = null, pending = null, victory = null;
-		if (X) {
-			const res = (finish || ((airMode, hooks) => X.finishMove(m, u, mr, airMode, hooks)))(false, {
-				attack(a, d) { pending = resolveAttack(a, d); return pending ? pending.res : null; },
+		let surprise = null, pending = null, pendingFinish = null, victory = null;
+		if (finish) {
+			const res = finish(false, {
+				attackHooks(a, d) {
+					return { animate(r, fin) { pending = resolved(a, d, r); pendingFinish = fin; } };
+				},
 				onVictory(side) { victory = win(side, "capture"); },
 			});
 			settle({ move: res });
 			if (res.surprise) surprise = res.surprise.target ? (pending ? null : "no position") : "nothing to attack";
-			if (pending) surprise = finishAttack(pending);
+			if (pending) surprise = finishAttack(pending, pendingFinish);
 			return { surprise, victory };
 		}
 		if (u.isSurprised && mr.surpriseCell) {
@@ -308,15 +324,17 @@ function runEngineContract(env) {
 	}
 
 	// game.js processAction (move): the move range, then ui.js uiUnitMove. The command refuses a move
-	// with no path, which the engine plays as an empty move: recorded as the engine's
+	// with no path (the AI orders some), which the game then doesn't play; the old engine played it as
+	// an empty move
 	function move(u, cell) {
 		m.setMoveRange(u);
 		let mr = null, after = null;
-		if (C)
-			C.execute(sc, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, {
+		if (C) {
+			const r = C.execute(sc, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, {
 				animate(res, finish) { mr = res; after = moveFinished(u, mr, finish); },
 			});
-		if (!mr) {
+			if (!r.ok) return { refused: r.refusal.reason, unit: contractUnitState(u), outcome: outcome() };
+		} else {
 			mr = m.moveUnit(u, cell.row, cell.col);
 			after = moveFinished(u, mr);
 		}
@@ -440,8 +458,22 @@ function runEngineContract(env) {
 			check("player disband", ctx + " unit#" + u.id, () => [command({ type: "disband", unit: u.id }, () => m.disbandUnit(u.id), false), hash()]);
 		}
 		const row = pick(m.rows), col = pick(m.cols), eqid = eqids[pick(eqids.length)];
+		// (the game has no such function any more: test/coreengine.ts puts the unit on as it did)
+		const deployNew = m.deployNewUnitByEqId ? (...a) => m.deployNewUnitByEqId(...a) : X.deployNewUnitByEqId;
 		if (!m.map[row][col].unit && !m.map[row][col].airunit)
-			check("deployNewUnitByEqId", ctx + " " + eqid + " at " + row + "," + col, () => [m.deployNewUnitByEqId(eqid, row, col, player.id), hash()]);
+			check("deployNewUnitByEqId", ctx + " " + eqid + " at " + row + "," + col, () => [deployNew(eqid, row, col, player.id), hash()]);
+	}
+
+	// Map.getDeployHexes: the deployment hexes of the side's players, row by row
+	function deployHexes(side) {
+		if (m.getDeployHexes) return m.getDeployHexes(side);
+		const c = [];
+		for (let i = 0; i < m.rows; i++)
+			for (let j = 0; j < m.cols; j++) {
+				const id = m.map[i][j].isDeployment;
+				if (id > -1 && players.find((p) => p.id == id).side == side) c.push(m.map[i][j].getPos());
+			}
+		return c;
 	}
 
 	function queries(ctx) {
@@ -451,24 +483,27 @@ function runEngineContract(env) {
 				countries: [m.getCountriesBySide(0), m.getCountriesBySide(1)],
 				byCountry: players.map((p) => m.getPlayersByCountry(p.country).map((x) => x.id)),
 				players: players.map((p) => [p.getCountryName(), p.getSideName(), p.hasUndeployedUnits()]),
-				deploy: [m.getDeployHexes(0), m.getDeployHexes(1)],
+				deploy: [deployHexes(0), deployHexes(1)],
 				images: m.getUnitImagesList(),
 			};
 		});
-		check("scenario queries", ctx, () => players.map((p) => [sc.getPrototypeUnitsAvailable(p.country),
-			sc.getRandomPrototype(p.country), sc.getBalancedPrestige(p.side)]));
-		// The defeat and victory checks at the turn limit
+		// (every check stays, gone where the game has no such function: check seeds the streams by its
+		// place in the list)
+		check("scenario queries", ctx, () => sc.getPrototypeUnitsAvailable ? players.map((p) => [sc.getPrototypeUnitsAvailable(p.country),
+			sc.getRandomPrototype(p.country), sc.getBalancedPrestige(p.side)]) : GONE);
+		// The defeat and victory checks at the turn limit (Scenario.checkDefeat, the core's on this repo)
+		const checkDefeat = X ? X.checkDefeat : (side, local) => sc.checkDefeat(side, local);
 		check("turn limit", ctx, () => {
 			const turn = m.turn;
 			m.turn = m.maxTurns;
-			try { return [sc.checkDefeat(0, 2), sc.checkDefeat(1, 2), sc.checkDefeat(0, 0), sc.checkDefeat(1, 1), sc.checkVictory()]; }
+			try { return [checkDefeat(0, 2), checkDefeat(1, 2), checkDefeat(0, 0), checkDefeat(1, 1), sc.checkVictory()]; }
 			finally { m.turn = turn; }
 		});
 	}
 
 	// The campaign side of Map and Player, each step on every player in turn as a campaign does
 	function campaign() {
-		for (const p of players) check("buildCoreUnitList", "player#" + p.id, () => [m.buildCoreUnitList(p), hash()]);
+		for (const p of players) check("buildCoreUnitList", "player#" + p.id, () => m.buildCoreUnitList ? [m.buildCoreUnitList(p), hash()] : GONE);
 		for (const p of players) check("dossier", "player#" + p.id, () => {
 			p.initDossier();
 			const u = m.getUnits().find((x) => x.player.id == p.id);
@@ -479,9 +514,10 @@ function runEngineContract(env) {
 			return [p.dossier, other ? other.dossier : null];
 		});
 		// (a copy of the list, as the saved list the game passes: the function adds to the player's)
-		for (const p of players) check("restoreCoreUnitList", "player#" + p.id, () => [m.restoreCoreUnitList(p, p.getCoreUnitList().slice()), hash()]);
-		for (const p of players) check("removeNonCampaignUnits", "player#" + p.id, () => [m.removeNonCampaignUnits(p), hash()]);
-		for (const p of players) check("setPlayerToHQ", "player#" + p.id, () => [p.setPlayerToHQ(), hash()]);
+		for (const p of players) check("restoreCoreUnitList", "player#" + p.id, () => m.restoreCoreUnitList
+			? [m.restoreCoreUnitList(p, p.getCoreUnitList().slice()), hash()] : GONE);
+		for (const p of players) check("removeNonCampaignUnits", "player#" + p.id, () => m.removeNonCampaignUnits ? [m.removeNonCampaignUnits(p), hash()] : GONE);
+		for (const p of players) check("setPlayerToHQ", "player#" + p.id, () => p.setPlayerToHQ ? [p.setPlayerToHQ(), hash()] : GONE);
 		for (const p of players) check("removeUndeployedCoreUnit", "player#" + p.id, () => [p.removeUndeployedCoreUnit(0), hash()]);
 	}
 
@@ -679,7 +715,8 @@ function runEngineContract(env) {
 		});
 	}
 
-	// The move costs on frozen and muddy ground (Scenario.setMoveTable), the towed units first
+	// The move costs on frozen and muddy ground (Scenario.setMoveTable; the core reads the ground), the
+	// towed units first
 	function groundDrill(player, ctx) {
 		const units = ownUnits(player).filter((u) => GR.isGround(u));
 		const towed = units.filter((u) => u.unitData().movmethod == 4); // movMethod.towed
@@ -689,13 +726,13 @@ function runEngineContract(env) {
 		try {
 			for (const g of [0, 1, 2]) { // dry, frozen, mud
 				sc.ground = g;
-				sc.setMoveTable();
+				if (sc.setMoveTable) sc.setMoveTable();
 				check("ground drill", ctx + " ground " + g, () => sample.map((u) => [u.id, GR.getMoveRange(m, u),
 					GR.getRetreatPosition(m.map, u, m.rows, m.cols)]));
 			}
 		} finally {
 			sc.ground = ground;
-			sc.setMoveTable();
+			if (sc.setMoveTable) sc.setMoveTable();
 		}
 		check("ground drill", ctx + " back", hash);
 	}
@@ -725,11 +762,14 @@ function runEngineContract(env) {
 	function endTurn(player, ctx) {
 		check("endTurn", ctx, () => {
 			const lastSide = player.side, human = player.type == PT.humanLocal;
-			let defeat;
-			// Map.endTurn: the next AI player plans its turn here
-			if (C) defeat = C.execute(sc, { type: "endTurn" }, { localSide }).result;
-			else if (X) defeat = X.endTurn(sc, localSide);
-			else {
+			let defeat, turnEnd = null;
+			// Map.endTurn: the next AI player plans its turn here. On this repo the game's end of turn on
+			// its session: the reinforcements arrive in it, after the side shown is set
+			alerts = [];
+			if (X) {
+				turnEnd = X.endTurn(sc, localSide);
+				defeat = turnEnd.defeat;
+			} else {
 				sc.endTurn();
 				defeat = sc.checkDefeat(lastSide, localSide);
 			}
@@ -739,12 +779,14 @@ function runEngineContract(env) {
 				else if (!ended) ended = { side: lastSide, kind: "turn limit", outcome: "lose" };
 			} else {
 				setCurrentSide();
-				const turn = m.turn, id = m.currentPlayer.id;
-				const waiting = sc.getReinforcements(turn, id).map((r) => r.id);
-				alerts = [];
-				const r = game.deployReinforcements(turn, id);
-				const left = sc.getReinforcements(turn, id).map((x) => x.id);
-				deployed = [r, waiting.filter((x) => left.indexOf(x) < 0), alerts];
+				if (X) deployed = [turnEnd.arrived, alerts];
+				else {
+					const turn = m.turn, id = m.currentPlayer.id;
+					const waiting = sc.getReinforcements(turn, id).map((r) => r.id);
+					const r = game.deployReinforcements(turn, id);
+					const left = sc.getReinforcements(turn, id).map((x) => x.id);
+					deployed = [r, waiting.filter((x) => left.indexOf(x) < 0), alerts];
+				}
 				log = logHash();
 				if (human) {
 					CL.reset();
@@ -799,7 +841,12 @@ function runEngineContract(env) {
 		check("combat log", "", () => contractSerialize(CL.log));
 		check("equipment data", "", () => contractHash(contractSerialize(eqids.map((id) => env.Equipment.equipment[id]))));
 		campaign();
-		check("removeAllSideUnits", "", () => [m.removeAllSideUnits(0), m.removeAllSideUnits(1), hash()]);
+		// Map.removeAllSideUnits: every unit of the side destroyed and taken off
+		const removeAll = m.removeAllSideUnits ? (side) => m.removeAllSideUnits(side) : (side) => {
+			for (const u of m.getUnits()) if (u.player.side == side) u.destroyed = true;
+			m.updateUnitList();
+		};
+		check("removeAllSideUnits", "", () => [removeAll(0), removeAll(1), hash()]);
 	} finally {
 		game.ui = realUI;
 		game.spotSide = realSpotSide;

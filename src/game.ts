@@ -21,18 +21,15 @@ import { defined } from "./dom";
 import { AI, type AIAction } from "./ai";
 import { AIScripted } from "./aiscripted";
 import type { Unit } from "./unit";
-import { Player } from "./map";
+import { GameMap, Player } from "./map";
 import { Scenario, type ScenarioOutcome } from "./scenario";
 import { Campaign, type CampaignScenario } from "./campaign";
 import { UIBuilder } from "./uibuilder";
 import { UI } from "./ui";
 import { OSGlue } from "./osglue";
-import { Actions } from "./actions";
 import { Commands } from "./commands";
-import { CorePlay } from "./coreplay";
-import { CoreRules } from "./corerules";
-import { MapSelection } from "./selection";
-import { coreDriver, endGameTurn, startGameSession } from "./coresession";
+import { GameRules } from "./gamerules";
+import { coreDriver, endGameTurn, removeDestroyed, startGameSession } from "./coresession";
 import { buildOnCore, carryPlayer, prototypeAwarded } from "./coreload";
 import { applyData, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
@@ -74,7 +71,6 @@ export class Game {
 	declare getCampaignProgress: () => CampaignProgress;
 	declare setCampaignProgress: (progress: CampaignProgress, scenario: Scenario) => void;
 	declare setCurrentSide: () => void;
-	declare deployReinforcements: (turn: number, playerId: number) => boolean;
 	declare cleanup: () => void;
 
 	declare static defaultScenario: string;
@@ -101,14 +97,8 @@ export class Game {
 		let shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
 		let isCampaignStart = false; //First scenario of a campaign: set prestige, dossier and core units
 
-		//Restores the last saved game, or starts the default scenario if there is none. The game plays on
-		//the core (#137): its programs are the session's controllers (a test that doesn't init plays the
-		//old engine's)
+		//Restores the last saved game, or starts the default scenario if there is none
 		this.init = function() {
-			AI.onUnitsDeployed = function() { game.ui.handleReinforcementDeployment(); };
-			AI.driver = AIScripted.driver = coreDriver;
-			ScenarioLoader.build = buildOnCore;
-			MapSelection.rules = CoreRules;
 			this.state = new GameState(this);
 			this.state.restore(this.onScenarioLoadFinished.bind(this, null, true),
 				this.newScenario.bind(this, "failRestore"));
@@ -146,24 +136,11 @@ export class Game {
 			}
 		}
 
+		//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
+		//shown, the reinforcements; or the defeat at the turn limit, only for a side that plays here
 		this.endTurn = function() {
 			this.waitUIAnimation = false;
-			if (this.session !== null) {
-				if (endGameTurn(this)) defeated(this);
-				return;
-			}
-
-			//Check if game ended in defeat only for human players
-			const ended = Commands.execute(this.scenario, { type: "endTurn" }, { localSide: localPlayingSide });
-			if (ended.ok && ended.result) {
-				defeated(this);
-			} else {
-				this.state.save(); //with the campaign's progress
-
-				//Set the new visible side on map
-				this.setCurrentSide();
-				this.deployReinforcements(this.scenario.map.turn, this.scenario.map.currentPlayer.id);
-			}
+			if (endGameTurn(this)) defeated(this);
 		}
 
 		//The side that ended its turn lost at the turn limit (only a side that plays on this screen): in a
@@ -185,7 +162,7 @@ export class Game {
 			setupPlayers(this, true);
 			localPlayingSide = getLocalSide(this.scenario.map.getPlayers());
 			this.setCurrentSide();
-			startLoadedTurn(this, true);
+			startGameSession(this, true, localPlayingSide);
 
 			this.gameStarted = true;
 			needScenarioLoad = this.gameEnded = false;
@@ -223,25 +200,18 @@ export class Game {
 			const players = this.scenario.map.getPlayers();
 			localPlayingSide = getLocalSide(players);
 			this.setCurrentSide();
-			startLoadedTurn(this, isRestore);
+			startGameSession(this, isRestore, localPlayingSide);
 
 			this.waitUIAnimation = false;
 			this.gameStarted = true;
 			needScenarioLoad = this.gameEnded = false;
 
-			if (this.campaign !== null) {
-				startCampaignScenario(this, isRestore);
-			} else {
+			//(the scenario's start gave the players their prestige and a campaign's start its player: the core's
+			//newGame, src/coreload.ts)
+			if (this.campaign === null)
 				this.scenario.showStatistics();
-				//New single scenarios balance players prestige, the tutorial keeps its own (on the core the
-				//scenario's start did)
-				if (!isRestore && this.scenario.file !== "tutorial.xml" && AI.driver === null) {
-					for (let i = 0; i < players.length; i++) {
-						const p = players[i];
-						p.prestige = this.scenario.getBalancedPrestige(p.side);
-					}
-				}
-			}
+			else if (!isRestore && prototypeAwarded !== null)
+				UIBuilder.showPrototypeAwardMessage(prototypeAwarded);
 
 			this.state.save();
 
@@ -270,28 +240,13 @@ export class Game {
 
 		//endType (endGameType) is only given on a loss, it picks the loss reason text
 		this.continueCampaign = function(outcomeType: ScenarioOutcome, endType?: string) {
-			if (this.session !== null) {
-				endScenarioOnCore(this, outcomeType);
-				nextScenario(this, outcomeType, endType);
-				return;
-			}
-			//Add prestige for finishing scenario
-			campaignPlayer.prestige += this.campaign.getOutcomePrestige(outcomeType);
-			campaignPlayer.addOutcomeToDossier(outcomeType, this.scenario.name);
-			OSGlue.reportScore(campaignPlayer.score);
-			campaignPlayer.setPlayerToHQ(); //reset player and it's core units
-			//Save campaign player //TODO delete/new ?
-			savedPlayer.supportCountries = [];
-			savedPlayer.prestigePerTurn = [];
-			savedPlayer.copy(campaignPlayer);
-			shouldRemoveNonCampaignUnits = true;
-			isCampaignStart = false;
+			endScenario(this, outcomeType);
 			nextScenario(this, outcomeType, endType);
 		}
 
-		//On the core (src/core/campaign.ts): the player carried into the next scenario, and the scenario as
-		//the old game left it until the next one loads (its player sent to HQ in place)
-		function endScenarioOnCore(game: Game, outcomeType: ScenarioOutcome) {
+		//The scenario's end (src/core/campaign.ts): the player carried into the next scenario, and the
+		//scenario as the old game left it until the next one loads (its player sent to HQ in place)
+		function endScenario(game: Game, outcomeType: ScenarioOutcome) {
 			const w = worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
 			const ended = endCampaignScenario(w, outcomeType, game.campaign.getCampaignData());
 			carryPlayer(ended.player);
@@ -357,27 +312,6 @@ export class Game {
 				this.spotSide = localPlayingSide;
 		}
 
-		//Deploys the reinforcements of player playerId for this turn, returns false if there are none
-		this.deployReinforcements = function(turn: number, playerId: number) {
-			const self = this;
-			const deployed = Actions.deployReinforcements(this.scenario, turn, playerId, function(cell: Cell) {
-				if (self.scenario.map.map[cell.row][cell.col].isSpotted(self.spotSide)) {
-					const side = self.scenario.map.getPlayer(playerId).side;
-					let isOwn = false;
-					if (self.spotSide == side)
-						isOwn = true;
-					self.ui.showAlert(cell.row, cell.col, "Reinforced!", isOwn);
-				}
-			});
-
-			if (deployed === null)
-				return false;
-			if (deployed.length > 0)
-				game.ui.handleReinforcementDeployment();
-
-			return true; //also when none of them could be deployed
-		}
-
 		this.cleanup = function() {
 			this.state.clear();
 
@@ -422,11 +356,11 @@ export class Game {
 			return true;
 		}
 
-		//The campaign player carried from the scenario before, or saved when the campaign starts. On the
-		//core the scenario's start carried it already (src/coreload.ts): the saved player is the one the
-		//file had, before the campaign's start
+		//The campaign player: the scenario's start carried it already (src/coreload.ts). Saved when the
+		//campaign starts, as the file had it before the campaign's start; a load during the campaign copies
+		//the saved one over it (kept #196)
 		function carryCampaignPlayer(p: Player, isRestore: boolean) {
-			const started = AI.driver !== null && !isRestore;
+			const started = !isRestore;
 			if (savedPlayer === null) { //Campaign just started save player from scenario settings
 				savedPlayer = new Player();
 				savedPlayer.copy(p);
@@ -465,26 +399,26 @@ export class Game {
 				}
 				case actionType.attack: {
 					game.waitUIAnimation = true;
-					if (CoreRules.isInAttackRange(p[0] as Unit, p[1] as Unit) && game.ui.uiUnitAttack(p[0] as Unit, p[1] as Unit))
+					if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit) && game.ui.uiUnitAttack(p[0] as Unit, p[1] as Unit))
 						game.ui.uiSetUnitOnViewPort(p[0] as Unit);
 					else
 						game.waitUIAnimation = false;
 					break;
 				}
 				case actionType.resupply: {
-					CorePlay.execute(game.scenario, { type: "resupply", unit: unitId(p[0] as Unit) });
+					Commands.execute(game.scenario, { type: "resupply", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.reinforce: {
-					CorePlay.execute(game.scenario, { type: "reinforce", unit: unitId(p[0] as Unit) });
+					Commands.execute(game.scenario, { type: "reinforce", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.mount: {
-					CorePlay.execute(game.scenario, { type: "mount", unit: unitId(p[0] as Unit) });
+					Commands.execute(game.scenario, { type: "mount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.umount: {
-					CorePlay.execute(game.scenario, { type: "unmount", unit: unitId(p[0] as Unit) });
+					Commands.execute(game.scenario, { type: "unmount", unit: unitId(p[0] as Unit) });
 					break;
 				}
 				case actionType.upgrade: {
@@ -521,51 +455,6 @@ export class Game {
 			return true;
 		}
 
-		//A campaign's scenario loaded: the first one sets the campaign player's prestige, dossier and
-		//core units, a later one removes the scenario's own units on the deployment hexes, and a
-		//brilliant victory before awards a prototype unit. Not a restored one: the save was made after
-		//(its progress is the save's, #128), a prototype still to award waits for the next scenario
-		function startCampaignScenario(game: Game, isRestore: boolean) {
-			if (isRestore)
-				return;
-			if (AI.driver !== null) { //On the core the scenario's start did it (src/coreload.ts): its message
-				if (prototypeAwarded !== null)
-					UIBuilder.showPrototypeAwardMessage(prototypeAwarded);
-				return;
-			}
-			if (isCampaignStart) { //Only for first scenario
-				campaignPlayer.prestige = game.campaign.startprestige;
-				campaignPlayer.initDossier();
-				game.scenario.map.buildCoreUnitList(campaignPlayer);
-			}
-			if (shouldRemoveNonCampaignUnits)
-				game.scenario.map.removeNonCampaignUnits(campaignPlayer);
-			if (shouldAwardPrototype) {
-				const protoId = game.scenario.getRandomPrototype(campaignPlayer.country + 1);
-				if (typeof protoId !== "undefined" && protoId > 0) {
-					campaignPlayer.acquireUnit(protoId, 0);
-					shouldAwardPrototype = false;
-					UIBuilder.showPrototypeAwardMessage(protoId);
-				}
-			}
-		}
-
-		//The players' programs start: on the core, the session (its controllers join, a loaded game's AI
-		//plans the turn again). On the old engine, a game loaded on an AI player's turn (#71): the AI plans
-		//the turn again, its plan isn't saved (docs/STATE.md D6). Its turn's start (the purchases and the
-		//deployment) was before the save. The scripted AI queues its turn when it's made (setupPlayers)
-		function startLoadedTurn(game: Game, loaded: boolean) {
-			if (AI.driver !== null) {
-				startGameSession(game, loaded, localPlayingSide);
-				return;
-			}
-			if (!loaded)
-				return;
-			const player = game.scenario.map.currentPlayer;
-			if (player && player.type == playerType.aiLocal)
-				(player.handler as AI).planTurn();
-		}
-
 		//Returns which sides are played by players on this computer
 		//will return -1 no local sides, 0 side 0, 1 side 1, 2 both sides
 		//are playing on local computer (hotseat mode). Scripted AI sides count as local
@@ -598,6 +487,12 @@ Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenari
 setGame(new Game());
 export { game };
 
+//The programs are the session's controllers (src/coresession.ts) and the scenarios start on the core
+//(src/coreload.ts)
+AI.driver = coreDriver;
+ScenarioLoader.build = buildOnCore;
+GameMap.removeDestroyed = removeDestroyed;
+
 //What the engine reads of the game (src/context.ts): this game's fields, read at the moment the
 //engine needs them, so what a harness or a test assigns to game.* is seen as before
 setEngineContext({
@@ -605,7 +500,8 @@ setEngineContext({
 	campaign: function() { return game.campaign; },
 	campaignPlayer: function() { return game.getCampaignPlayer(); },
 	spotSide: function() { return game.spotSide; },
-	host: function() { return game; }
+	host: function() { return game; },
+	world: function() { return worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW }); }
 });
 
 export function gameStart() {
