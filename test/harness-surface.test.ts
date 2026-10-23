@@ -36,8 +36,8 @@ async function exposed(): Promise<Map<string, unknown>> {
 //lookups: harness.js ENTITIES, common.js). Kept as a list, so a renamed export shows here
 const harnessExports = [
 	"$", "AI", "AIScripted", "Actions", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
-	"Hex", "Leaders", "NATIVE_PLATFORM", "Player", "Render", "Rng", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
-	"Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
+	"Hex", "NATIVE_PLATFORM", "Player", "Render", "Rng", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
+	"UNIT_MAX_EXPERIENCE", "Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
 	"makeHidden", "makeVisible", "playerType", "terrainType", "toData", "uiSettings", "unitClass", "unitClassNames",
 ];
 

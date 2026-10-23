@@ -140,13 +140,13 @@ const steps = [
 		check(def.destroyed, "defender gone");
 	}],
 	["attack with a new leader for the attacker", async () => {
-		const real = Leaders.generateLeaderWithChance;
-		Leaders.generateLeaderWithChance = () => 9;
+		// a unit at the experience cap gets a leader from its next fight (the engine rolls it, so the
+		// old engine and the core give the same one)
 		const inf = U(43), def = U(70);
+		inf.experience = UNIT_MAX_EXPERIENCE;
 		setupDuel(inf, def);
 		attackClick(inf, def);
 		await finish();
-		Leaders.generateLeaderWithChance = real;
 		{ const al = alerts(); check(al.indexOf("New Leader") >= 0, "New Leader alert in " + al); }
 	}],
 	["move onto a hidden enemy: surprised and attacked", async () => {
@@ -192,11 +192,10 @@ const steps = [
 	}],
 	["deselect, end turn: the AI attacks with leaders for both sides", async () => {
 		clickHex(20, 30);
-		window.__realLeader = Leaders.generateLeaderWithChance;
-		Leaders.generateLeaderWithChance = () => 10;
+		// every unit without a leader at the experience cap: the AI's attacks give leaders to both sides
+		for (const u of M().getUnits()) if (u.leader === -1) u.experience = UNIT_MAX_EXPERIENCE;
 		endTurn();
 		await finish();
-		Leaders.generateLeaderWithChance = window.__realLeader;
 		check(M().currentPlayer.id === 0 && M().turn === 2, "back to the human on turn 2");
 	}],
 	["move onto the last victory hex: victory", async () => {
