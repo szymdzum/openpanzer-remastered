@@ -7,6 +7,8 @@ iy = "iy"             # render.ts coordinates
 ba = "ba"             # harness/diff-traces.js: baseline arrays
 PN = "PN"
 ligh = "ligh"         # it22ligh.xml, a scenario file the tests load
+Buro = "Buro"         # Michael Buro, cited in docs/ai/foundations.md
+Dota = "Dota"         # the game (OpenAI Five), docs/ai/foundations.md
 
 [files]
 extend-exclude = ["game/", "reference/", "public/", "dist/", "dist-*/", "coverage/", "reports/", "harness/out/", "test/contracts/**/*.gz", "test/mapsizes.json", "package-lock.json", "*.svg", "docs/design/",
