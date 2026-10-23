@@ -260,7 +260,7 @@ After the cleanup, `src/` and `test/` were reformatted to put opening braces on 
 (and `} else`): one formatting-only commit, listed in `.git-blame-ignore-revs`, every file's
 syntax tree checked identical before and after. New code uses that style.
 
-### 4. The core for extension — next
+### 4. The core for extension — A to C done (2026-10-23); D next
 
 **What must stay the same is the gameplay, not the code** ("better without being different" is
 about the game). The rules' results, the dice and the AI's decisions stay; field order,
@@ -281,21 +281,21 @@ loses data, and verification tied to all of it.
 
 **Stages.** Each an issue with its evidence:
 
-| Stage | Step | Issue | After |
-|---|---|---|---|
-| A | One command entry, `execute(game, command)`, for every player action | #119 | |
-| A | Property-based tests (fast-check): invariants over random command sequences | #125 | |
-| B | Design the state as data: the shape of `toData`, the new core and the save | #132 | |
-| B | `toData` and `fromData` on the old engine, for the harness and the contracts | #127 | #132 |
-| B | A versioned, lossless save format on `toData` | #128 | #127 |
-| B | Separate random streams: cosmetics, then the AI, off the dice's stream | #126 | |
-| C | The new core beside the old engine (tracking issue) | #129 | A, B |
-| C1 | State and pure queries; the ruleset (#116) and the combat steps (#118) born here | #133 | |
-| C2 | Command handlers, checked by differential tests | #134 | C1 |
-| C3 | The turn and the scenario and campaign lifecycle | #135 | C2 |
-| C4 | The AI and the scripted opponent as controllers (#121) | #136 | C3 |
-| C5 | The switch; the old engine removed | #137 | C4 |
-| D | The new UI (the war room mockups) on the core's events; the old UI removed | #130 | C5 |
+| Stage | Step | Issue | After | Status |
+|---|---|---|---|---|
+| A | One command entry, `execute(game, command)`, for every player action | #119 | | done |
+| A | Property-based tests (fast-check): invariants over random command sequences | #125 | | done |
+| B | Design the state as data: the shape of `toData`, the new core and the save | #132 | | done |
+| B | `toData` and `fromData` on the old engine, for the harness and the contracts | #127 | #132 | done |
+| B | A versioned, lossless save format on `toData` | #128 | #127 | done |
+| B | Separate random streams: cosmetics, then the AI, off the dice's stream | #126 | | done |
+| C | The new core beside the old engine (tracking issue) | #129 | A, B | done |
+| C1 | State and pure queries; the ruleset (#116) and the combat steps (#118) born here | #133 | | done |
+| C2 | Command handlers, checked by differential tests | #134 | C1 | done |
+| C3 | The turn and the scenario and campaign lifecycle | #135 | C2 | done |
+| C4 | The AI and the scripted opponent as controllers (#121) | #136 | C3 | done |
+| C5 | The switch; the old engine removed | #137 | C4 | done |
+| D | The new UI (the war room mockups) on the core's events; the old UI removed | #130 | C5 | next |
 
 - **A, refactors on the current engine** (contracts and verify unchanged). Only what stage C
   needs: the commands are the API through which the tests drive the old engine as the oracle,
@@ -615,19 +615,20 @@ previous ones.
 Each its own commit, naming its issue, re-recorded with `UPDATE_CONTRACTS=1`, checked by the
 invariant tests:
 
-1. Undo keeps the real player (#68).
-2. AI purchases stop mutating the shared equipment lists (#22).
-3. `tempSpotted` by the unit's own side (#75): done. The AI's fog leaks (#17).
-4. The counter drift (#72, #73).
+1. Undo keeps the real player (#68). Done.
+2. AI purchases stop mutating the shared equipment lists (#22). Open.
+3. `tempSpotted` by the unit's own side (#75): done. The AI's fog leaks (#17): open.
+4. The counter drift (#72, #73). Done: sight is derived from the units (C5).
 5. A guard on the move's destination, the AI stacking (#74). Done.
-6. Close the surprise and input race (#58).
-7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126).
+6. Close the surprise and input race (#58). Open; goes with the new UI (#130).
+7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126). Done.
 8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128). Done, with #142, #149
    and #150.
-9. The campaign load as a state machine with a load token (#64, #61).
-10. A remaster ruleset next to the classic one (step 4, #133), so the mechanics gaps
-    (#1-#4, #14, #18) don't re-record the classic contracts (#53).
-11. Then the arena (#46) and the AI issues measured in it.
+9. The campaign load as a state machine with a load token (#64, #61). Open.
+10. A remaster ruleset next to the classic one (#53), so the mechanics gaps (#1-#4, #14, #18)
+    don't re-record the classic contracts. The Ruleset exists (C1, src/core/rules.ts); the flags
+    come with the first rule that differs. Open.
+11. Then the arena (#46) and the AI issues measured in it (docs/ai/). Open.
 
 ## Rules and traps
 
