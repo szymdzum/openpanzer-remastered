@@ -131,3 +131,35 @@ test("After a move along a turning path the unit faces the way the engine set, n
 	expect(unit.getPos()).toEqual({ row: to.row, col: to.col });
 	expect(unit.facing).toBe(straight(from, to));
 }, 60_000);
+
+test("Selling the last unit of the core list from the deployment window picks another undeployed unit (#208)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { Commands } = await import("../src/commands");
+	const { Equipment } = await import("../src/equipment");
+	const { touched } = await import("../src/context");
+	const map = game.scenario.map;
+	const p = map.currentPlayer;
+	p.prestige = 100_000;
+	touched();
+	//A tank bought, then an infantry: the infantry is the last of the core list
+	const country = p.country + 1, year = game.scenario.date.getFullYear();
+	for (const uclass of [2, 1]) {
+		const eqid = Equipment.getCountryEquipmentByClass(uclass, country).find((id) => Equipment.equipment[id].yearavailable <= year
+			&& Equipment.equipment[id].yearexpired >= year)!;
+		expect(Commands.execute(game.scenario, { type: "buy", eqid, transport: -1 })).toEqual({ ok: true, result: true });
+	}
+	const core = p.getCoreUnitList();
+	const tank = core[core.length - 2], infantry = core[core.length - 1];
+	ui.toggleUnitsAndEquipmentWindow(true);
+	const row = [...document.querySelectorAll<HTMLElement & { unitid: number }>("#unitlist > div")]
+		.find((r) => r.unitid === core.length - 1)!;
+	row.click();
+	const sel = document.querySelector<EqUserSelElement>("#eqUserSel")!;
+	expect(sel.deployunit).toBe(core.length - 1);
+	ui.equipmentWindowButtons("sell");
+	expect(p.getCoreUnitList()).not.toContain(infantry);
+	//The window is built again, the tank left to deploy and picked
+	const shown = [...document.querySelectorAll<HTMLElement & { unitid: number }>("#unitlist > div")];
+	expect(shown.map((r) => p.getCoreUnitList()[r.unitid])).toEqual([tank]);
+	expect(p.getCoreUnitList()[sel.deployunit]).toBe(tank);
+}, 60_000);
