@@ -290,11 +290,90 @@ markings) carry over to the next vehicles.
 `art/units/render.py scene` saves a `.blend` with the model, the game's camera and the light, to
 look round in the Blender app (numpad 0 looks through the game's camera).
 
+## Pilot: infantry (October 2026), parked
+
+The second pilot: the German Infanterie (`jk467`) and the Soviet 43 Strelkovy (`le126`), one
+figure, the side frame only. **Conclusion: the tanks are promising, the infantry so-so.** It is
+parked; what was learnt is below, the scripts are in `art/units/` (`soldier.py`,
+`mixamo_soldier.py`).
+
+### The old infantry
+
+Three figures in a triangle, about 23-30 px tall each at 1x: drawn at about 21 px a metre, nearly
+three times the tanks' scale. They are not kneeling: they advance, leaning into a stride, the
+weapon held low and level in front, the German rifles with a bright bayonet tip (a bayonet
+charge); the Soviets carry PPSh submachine guns. Their colours are dark and warm (brightness 0.2-0.5), the
+helmets grey (German) or olive (Soviet). Some strips are not 80×50: `jk467` is 82×53 a frame.
+
+![Old infantry frames 2, 4 and 6 at 8x: German (top), Soviet (bottom)](assets-pilot/infantry-old.png)
+
+### First try: a built figure (MPFB 2)
+
+[MPFB 2](https://static.makehumancommunity.org/mpfb/faq/use_in_closed_source.html) (MakeHuman
+in Blender, CC0 base mesh, an automatic rig) gives the body; `soldier.py` poses it by script
+(where the hands, knees and feet go, the bones turned to reach them) and adds a helmet
+(Stahlhelm, SSh-40 as surfaces of revolution) and a rifle. Two rounds of independent review
+fixed the helmet (it read as a pith helmet: a 45-degree brim the same all round) and the pose
+(the rifle at the chest, the head nodding, the left hand short of the rifle). The figure ended up
+stocky, in the old strips' colours, the Stahlhelm told from the SSh-40 at 1x.
+
+![MPFB figure: old (left), new 1x and @2x; Germany top, USSR bottom](assets-pilot/infantry-mpfb.png)
+
+It still looked wrong: the hands are lumps (the fingers stay spread), the body a bare mannequin,
+the boots blocks. A pose made by numbers has nothing to be checked against, unlike the tank,
+which was measured on a scale drawing; each review round only moved the numbers.
+
+### Second try: a Mixamo character and motion capture
+
+A Mixamo character in WW2 uniform (Ch49: tunic, webbing, boots, natural hands) in Mixamo
+animations recorded on a person, through `mixamo_soldier.py`: the pose taken whole, our rifle put
+through the two hands, a bayonet, the figure re-centred on its hips. Mixamo's terms allow the
+characters and animations in games but not sharing the raw files, so the FBX files stay out of
+Git (`art/units/mixamo/`, downloaded by hand).
+
+- **Rifle Aiming Idle** (aiming standing): a natural pose, but standing and aiming, not the
+  charge.
+- **Rifle Run** holds the rifle across the chest, muzzle up. Gluing its legs to the aiming arms
+  (bone by bone, the upper body turned and levelled) broke the body: the head sank into the
+  chest, the rifle went through it. Animations are to be taken whole.
+- **Idle** (standing ready, the rifle low and level in front) is the closest to the old figures'
+  arms. In it the rifle runs across the body: seen from 22.5 degrees above, a level rifle
+  angled away from the camera reads as pointing up, so the figure is turned until the rifle, not
+  the body, points the frame's way, and the upper chest bowed a few degrees to level it.
+- **Dressing**: the tunic and trousers multiplied to the old strip's field grey (their folds,
+  seams and webbing stay), made matt; the M1 helmet pulled in under our Stahlhelm, a lighter grey
+  so that it shows at 1x (`NATION=germany`).
+
+![Mixamo figure dressed as German (top) and plain (bottom), old frame at left](assets-pilot/infantry-mixamo.png)
+
+![The dressed Mixamo figure](assets-pilot/infantry-mixamo-model.png)
+
+### Why parked
+
+At 1x the figure reads as a soldier with a level rifle and a grey helmet, but it does not look
+good next to the old ones: it stands square to the camera in a wide, still stance where they
+lean into a stride; the rifle is three planks; the Mixamo body is one character for every
+nation. Getting it right needs an animation of a charge or a fast walk with the rifle forward
+(Mixamo's Pro Rifle Pack may have one), then the Soviet dress (khaki, SSh-40, a PPSh), the three
+figures, the nine frames. Cheaper choices for now: keep the old infantry, whose 25-30 px figures
+hold up, with the @2x files `scripts/upscale-assets.sh` already makes; spend the 3D pipeline on
+rigid things with scale drawings (vehicles, guns: the leFH 18 next).
+
+### Other routes looked at
+
+| Route | Why not (now) |
+|---|---|
+| CMU motion capture (free) | no kneel-and-aim found, licence unclear (some copies NC), quality uneven |
+| Paid mocap packs (e.g. MCO Rifle, about 6 $) | possible; Mixamo covers the same for free |
+| Wargame miniatures (STL) | sculpted poses and gear per nation, closest to SSI's photographed models, but one mesh to paint and "personal use" licences |
+| AI image to 3D (TRELLIS.2) | needs about 24 GB of memory, the laptop has 16 |
+| Pose from a photo (SMPL, HMR) | research-only licences |
+
 ## Plan
 
-1. Unit pilot: done for the Panzer IV H (above), modelled from a drawing rather than taken from
-   Spring: 1944, and seen in the game. Next: a way to ship the strips, then the other Panzer IV
-   variants (F2, G, J), which share most of the parts.
+1. Unit pilots: the Panzer IV H (above), modelled from a drawing rather than taken from Spring:
+   1944, and seen in the game: promising. The infantry: so-so, parked. Next: a way to ship the
+   strips, the leFH 18, the other Panzer IV variants (F2, G, J), which share most of the parts.
 2. Map pilot: one map through Real-ESRGAN with the "anti-plastic" pass, compared 1:1, the grid
    check.
 3. After the pilots, before going on: a style guide (camera angle, light, outline, palette,
