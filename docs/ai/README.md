@@ -9,6 +9,7 @@ for whoever changes the AI.
 | [how-it-plays.md](how-it-plays.md) | The turn, the scores, the settings: the AI as the code runs it (src/core/ai.ts, src/core/aiscore.ts) |
 | [weak-attacker.md](weak-attacker.md) | Why it attacks weakly, with the numbers that cause it |
 | [playtests/2026-10-23-ostpreussen.md](playtests/2026-10-23-ostpreussen.md) | Games played against it, turn by turn, with what they found |
+| [playtests/2026-10-23-ostpreussen-germany.md](playtests/2026-10-23-ostpreussen-germany.md) | A full game as Germany against the Polish AI: a tactical victory at the turn limit with 2 of 5 objectives |
 | [arena.md](arena.md) | The AI arena: games played headless against the AI and a scripted general, the measures, the baseline |
 | [foundations.md](foundations.md) | How game AI opponents are built (utility, influence maps, search, learning, language models) and a path for this one |
 | [remastered-design.md](remastered-design.md) | A proposal for the remaster's own AI, designed from scratch: layers, the language-model commander, tests, order of work |
