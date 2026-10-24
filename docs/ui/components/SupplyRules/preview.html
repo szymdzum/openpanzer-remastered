@@ -1,0 +1,41 @@
+<!-- @dsCard group="Screens · In game" height=580 width=1000 subtitle="Where to resupply and reinforce: the divisors the engine applies, with real numbers for one tank" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+.pm-rules{width:1000px;padding:28px 32px 32px;background:var(--panel);box-sizing:border-box}
+.pm-rules h2{margin:0;font:700 22px/26px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.pm-rules .sub{margin:4px 0 18px;font-size:13px;line-height:18px;color:var(--ink-muted)}
+.pm-rules table{width:100%;border-collapse:collapse;border:1px solid var(--line-strong)}
+.pm-rules th{padding:10px 14px;text-align:left;font:600 11px/14px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-muted);background:var(--panel-sunken);border-bottom:1px solid var(--line-strong)}
+.pm-rules th[scope=row]{width:200px;font:700 13px/18px var(--font-ui);letter-spacing:0;text-transform:none;color:var(--ink);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pm-rules td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top;background:var(--panel-raised);display:table-cell}
+.pm-rules td + td{border-left:1px solid var(--line)}
+.pm-rules td span{display:block}
+.pm-rules td .div{font:700 11px/14px var(--font-mono);color:var(--ink-muted)}
+.pm-rules td .g{font:700 20px/26px var(--font-mono)}
+.pm-rules td .g small{font-size:11px;font-weight:400;color:var(--ink-muted)}
+.pm-rules td .s{font:400 12px/16px var(--font-mono)}
+.pm-rules td .c{margin-top:2px;font:700 12px/16px var(--font-mono)}
+.pm-rules td.best{box-shadow:inset 4px 0 0 var(--ok)}
+.pm-rules .notes{display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;margin-top:18px;font-size:13px;line-height:18px}
+.pm-rules .notes div{display:flex;gap:8px}
+.pm-rules .notes .i{flex:none;margin-top:2px}
+</style>
+<div class="pm pm-rules">
+  <h2>Where to resupply</h2>
+  <p class="sub">Pz IIIE at 6/10, ammo 5/14, fuel 20/47. Reinforcing costs 28 prestige a point and refills ammo and fuel by the same rule. Values from <code>getResupplyValue</code> and <code>getReinforceValue</code>.</p>
+  <table>
+    <thead><tr><th></th><th>In a city</th><th>Outside a city</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">No enemy next to it</th><td class="best"><span class="div">full</span><span class="g">+4 <small>strength</small></span><span class="s">+9 ammo · +27 fuel</span><span class="c pm-prestige">112</span></td><td class=""><span class="div">÷1.3</span><span class="g">+3 <small>strength</small></span><span class="s">+7 ammo · +21 fuel</span><span class="c pm-prestige">84</span></td></tr>
+      <tr><th scope="row">1 or 2 enemies next to it</th><td class=""><span class="div">÷1.5</span><span class="g">+3 <small>strength</small></span><span class="s">+6 ammo · +18 fuel</span><span class="c pm-prestige">84</span></td><td class=""><span class="div">÷1.3 ÷1.5</span><span class="g">+2 <small>strength</small></span><span class="s">+5 ammo · +14 fuel</span><span class="c pm-prestige">56</span></td></tr>
+      <tr><th scope="row">3 or more enemies</th><td class=""><span class="div">÷3</span><span class="g">+1 <small>strength</small></span><span class="s">+3 ammo · +9 fuel</span><span class="c pm-prestige">28</span></td><td class=""><span class="div">÷1.3 ÷3</span><span class="g">+1 <small>strength</small></span><span class="s">+2 ammo · +7 fuel</span><span class="c pm-prestige">28</span></td></tr>
+    </tbody>
+  </table>
+  <div class="notes">
+    <div><svg class="i sm" aria-hidden="true"><use href="#pm-clock"/></svg><span>Either action ends the unit's turn. It needs a unit that hasn't moved or fired, and works once a turn.</span></div>
+    <div><svg class="i sm" aria-hidden="true"><use href="#pm-fighter"/></svg><span>Aircraft next to an airfield, and ships out of port, always get everything, enemies or not.</span></div>
+    <div><svg class="i sm" aria-hidden="true"><use href="#pm-objective"/></svg><span>At the start of a turn, units idle in a city with no enemy next to them are resupplied for free.</span></div>
+    <div><svg class="i sm" aria-hidden="true"><use href="#pm-low"/></svg><span>Today a unit with full ammo still gets +1 ammo, and infantry +1 fuel (#95). The menu shows what is missing, not that +1.</span></div>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

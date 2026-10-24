@@ -1,0 +1,1 @@
+The equipment window on an iPad in landscape. It takes the full screen. The class tabs scroll sideways, the grid drops to 3 columns, and the comparison column stays on the right. All controls are 44px or more, and the footer drops the "Upgrading" note to fit the actions.

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Controls" height=300 width=900 subtitle="Primary, secondary, icon, ghost and danger, with hot, pressed, disabled and focus states" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="padding:24px;background:var(--panel);display:grid;gap:18px">
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <button class="pm-btn primary lg"><svg class="i " aria-hidden="true"><use href="#pm-end-turn"/></svg>End turn</button>
+    <button class="pm-btn primary"><svg class="i sm" aria-hidden="true"><use href="#pm-depot"/></svg>Buy new <span class="cost">276</span></button>
+    <button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-upgrade"/></svg>Upgrade <span class="cost">60</span></button>
+    <button class="pm-btn">Back</button>
+    <button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    <button class="pm-btn ghost"><svg class="i sm" aria-hidden="true"><use href="#pm-help"/></svg>Help</button>
+    <button class="pm-btn danger"><svg class="i sm" aria-hidden="true"><use href="#pm-disband"/></svg>Disband</button>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <span class="pm-label" style="width:72px">States</span>
+    <button class="pm-btn">Default</button>
+    <button class="pm-btn is-hot">Hot</button>
+    <button class="pm-btn is-down">Pressed</button>
+    <button class="pm-btn is-focus">Focus</button>
+    <button class="pm-btn" disabled>Disabled</button>
+    <button class="pm-btn primary is-hot">Primary hot</button>
+    <button class="pm-btn primary is-focus">Primary focus</button>
+    <button class="pm-btn primary" disabled>Primary off</button>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

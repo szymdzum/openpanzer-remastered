@@ -1,0 +1,17 @@
+<!-- @dsCard group="Screens · Menus" height=768 width=1366 subtitle="Message dialog (#ui-message) as a scenario briefing over the map at 1366×768" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1366">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  <div class="pm-scrim" style="z-index:250"></div>
+  <section id="ui-message" class="pm-window" style="left:283px;top:84px;width:800px;height:600px;z-index:var(--z-message)" role="dialog" aria-labelledby="title">
+    <div class="hd"><div><div class="pm-label">Briefing · Turn 1</div><h1 id="title" class="pm-display" style="font-size:24px;line-height:28px">Panzer-Verbaende Ostpreussen</h1></div><span class="grow"></span><span class="pm-stamp lg">Secret</span></div>
+    <div id="message" class="bd pm-typed" style="padding-top:18px;overflow:hidden"><p>In July 1939, the OKH decided to create a unique unit in preparation for the assault on Poland. This unit was officially designated as Panzer-Verbaende Ostpreussen, better known as Panzer Division Kempf. The division was composed of both Heer and Waffen SS units.</p><p>The official explanation for moving the unit into Ostpreussen in July 1939 was that it would participate at the Tannenberg Celebration to commemorate Hindenberg's victory at the Tannenberg in WW1.</p><p>After negotiations between Germany and Poland broke down, Pz Division Kempf units crossed the border into Poland on August 26th 06h00. At the last minute the order to attack was postponed and it wasn't until 09h00 that all the units had been recalled to their assembly points.</p><p>Negotiations to prevent hostilities between Poland and Germany fell through for a final time on August 30th and German units crossed the border a second time on September 1st 04h45.</p></div>
+    <div class="ft"><span class="pm-muted" style="font-size:13px"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg></span><span class="pm-muted" style="font-size:13px">Germany · 1 September 1939</span><span class="grow"></span><button id="uiokbut" class="pm-btn primary lg">Understood</button></div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

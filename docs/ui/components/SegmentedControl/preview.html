@@ -1,0 +1,10 @@
+<!-- @dsCard group="Controls" height=160 width=900 subtitle="Sort, filter and transport choice" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="padding:24px;background:var(--panel);display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+  <div class="pm-seg" role="group" aria-label="Sort by"><button class="is-on">Cost</button><button>Soft atk</button><button>Hard atk</button><button>Defence</button></div>
+  <div class="pm-seg" role="group" aria-label="Difficulty"><button>Historical</button><button class="is-on">Tactical</button><button>Operational</button></div>
+  <div class="pm-seg" role="group" aria-label="Theme"><button class="is-on"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Paper</button><button><svg class="i sm" aria-hidden="true"><use href="#pm-overcast"/></svg>Blackout</button><button>System</button></div>
+  <div class="pm-seg"><button class="is-on">Self-propelled</button><button disabled>Opel Blitz</button></div>
+</div>
+<script>window.PM && PM.mount();</script>

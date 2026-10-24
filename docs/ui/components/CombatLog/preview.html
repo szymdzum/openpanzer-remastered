@@ -1,0 +1,37 @@
+<!-- @dsCard group="Screens · In game" height=1080 width=1920 subtitle="Combat log and turn summary (#combatLog) at 1920×1080" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1920">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1.1765)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  <div class="pm-scrim"></div>
+  <section id="combatLog" class="pm-window pm-log" style="left:460px;top:70px;width:1000px;height:940px" role="dialog" aria-label="Turn report">
+    <div class="hd"><div><div class="pm-label">Ciechanów · 06 Sep 1939</div><h1 class="pm-display">Turn 3 report</h1></div><span class="grow"></span><div class="pm-seg" role="group"><button class="is-on">All</button><button>Combat</button><button>Supply</button></div><button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
+    <div class="bd" style="padding-top:16px">
+      <div class="summary">
+        <div><span class="pm-label">Objectives left</span><span class="n">4</span></div>
+        <div><span class="pm-label">Turns to brilliant</span><span class="n">10</span></div>
+        <div><span class="pm-label">Score</span><span class="n">412</span></div>
+        <div><span class="pm-label">Prestige</span><span class="n pm-prestige">3,056 <span style="font-size:13px">+50</span></span></div>
+      </div>
+      <div class="sec"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg>Unit combat report<span class="c">3</span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-160px 0"></span><span class="txt"><b>1st Panzer</b> (Pz IIA) attacked a Polish <b>7TP</b> near Mława. Inflicted <b>1</b> casualty, gained <b>+12</b> experience. Unit is low on ammo, <b>1/8</b> remaining.</span><span class="res"><span class="pm-critical">−4</span><span class="pm-muted" style="font-size:11px">6 left</span></span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-320px 0"></span><span class="txt"><b>4th Panzer</b> (Pz 35(t)) attacked Polish <b>Piechota</b> at Grudusk. Inflicted <b>3</b> casualties; <b>2</b> entrenchments destroyed, <b>1</b> remaining.</span><span class="res"><span class="pm-critical">−1</span><span class="pm-muted" style="font-size:11px">9 left</span></span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-640px 0"></span><span class="txt">Polish <b>7TP</b> attacked your <b>9th Panzer</b> (Pz IA). Lost <b>2</b> strength with <b>6</b> surviving.</span><span class="res"><span class="pm-critical">−2</span><span class="pm-muted" style="font-size:11px">enemy turn</span></span></div>
+      <div class="sec"><svg class="i sm" aria-hidden="true"><use href="#pm-resupply"/></svg>Resupply report<span class="c">2</span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-0px 0"></span><span class="txt"><b>2nd Panzer</b> (Pz IA) resupplied: fuel <b>45/45</b>, ammo <b>4/4</b>.</span><span class="res"><span class="pm-ok">Full</span></span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-560px 0"></span><span class="txt"><b>8th Panzer</b> (Pz IVC) could not resupply: <b>adjacent to enemy</b>.</span><span class="res"><span class="pm-low" style="display:flex;gap:4px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-low"/></svg>Fuel 9/51</span></span></div>
+      <div class="sec"><svg class="i sm" aria-hidden="true"><use href="#pm-reinforce"/></svg>Reinforcements report<span class="c">1</span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-80px 0"></span><span class="txt"><b>3rd Panzer</b> (Pz IB) reinforced by <b>3</b> to <b>10/10</b>.</span><span class="res"><span class="pm-prestige">−48</span></span></div>
+      <div class="sec"><svg class="i sm" aria-hidden="true"><use href="#pm-leader"/></svg>Unit leaders report<span class="c">1</span></div>
+      <div class="pm-entry"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-400px 0"></span><span class="txt"><b>5th Panzer</b> (Pz 38(t)A) gained a leader: <b>Tank Killer</b>, +1 hard attack.</span><span class="res"><span class="pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span></div>
+      <div class="sec"><svg class="i sm" aria-hidden="true"><use href="#pm-objective"/></svg>Objectives report<span class="c">1</span></div>
+      <div class="pm-entry"><span class="ico"><svg class="i lg" aria-hidden="true"><use href="#pm-objective"/></svg></span><span class="txt"><b>Mława</b> captured by 4th Panzer. 4 objectives left to conquer.</span><span class="res"><span class="pm-prestige">+50</span></span></div>
+    </div>
+    <div class="ft"><span class="pm-muted" style="font-size:13px">Tap an entry to center the map on it.</span><span class="grow"></span><button class="pm-btn primary">Continue</button></div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

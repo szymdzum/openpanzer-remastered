@@ -1,0 +1,10 @@
+<!-- @dsCard group="Controls" height=150 width=900 subtitle="On, off and disabled, as used in the settings window" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="padding:24px;background:var(--panel);display:flex;gap:40px;align-items:center">
+  <button class="pm-toggle" role="switch" aria-checked="true" aria-label="Quick animations"><span class="track"></span></button>
+  <button class="pm-toggle" role="switch" aria-checked="false" aria-label="Disable fog of war"><span class="track"></span></button>
+  <button class="pm-toggle" role="switch" aria-checked="true" disabled aria-label="Locked"><span class="track"></span></button>
+  <span class="pm-muted" style="font-size:13px">The track carries ON or OFF in type, so the state never depends on color.</span>
+</div>
+<script>window.PM && PM.mount();</script>

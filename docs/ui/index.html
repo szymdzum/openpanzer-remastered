@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panzer Marshal UI</title>
+<!-- The design system's previews, live: npm run dev, then /docs/ui/. Each preview is a fragment;
+     it runs in an iframe with tokens.css, components/bundle.css and components/bundle.js. -->
+<style>
+	:root { color-scheme: light dark; --bg: #f3efe4; --ink: #211c13; --muted: #5d5340; --line: #cbbf9f; --on: #e6dbbd; }
+	@media (prefers-color-scheme: dark) { :root { --bg: #17190f; --ink: #ece6d2; --muted: #aaa892; --line: #3f443a; --on: #2f3424; } }
+	body { margin: 0; display: grid; grid-template-columns: 280px 1fr; height: 100vh; background: var(--bg); color: var(--ink); font: 14px/20px system-ui, sans-serif; }
+	nav { overflow: auto; border-right: 1px solid var(--line); padding: 12px 0; }
+	nav h2 { margin: 14px 16px 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+	nav button { display: block; width: 100%; text-align: left; padding: 5px 16px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+	nav button[aria-current] { background: var(--on); font-weight: 600; }
+	main { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+	header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+	header p { margin: 0; flex: 1; color: var(--muted); }
+	header a, header select { font: inherit; color: inherit; }
+	.stage { overflow: auto; padding: 16px; }
+	iframe { border: 0; display: block; background: #fff; transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<nav id="list" aria-label="Components"></nav>
+<main>
+	<header>
+		<strong id="title"></strong>
+		<p id="sub"></p>
+		<a id="readme" href="#">README</a>
+		<label>Theme <select id="theme"><option value="paper">Paper</option><option value="blackout">Blackout</option></select></label>
+		<label>Fit <input id="fit" type="checkbox" checked></label>
+	</header>
+	<div class="stage" id="stage"><iframe id="frame" title="Preview"></iframe></div>
+</main>
+<script type="module">
+	const [list, tokens, css, js] = await Promise.all([
+		fetch("components.json").then((r) => r.json()),
+		fetch("tokens.css").then((r) => r.text()),
+		fetch("components/bundle.css").then((r) => r.text()),
+		fetch("components/bundle.js").then((r) => r.text()),
+	]);
+	const base = location.href.replace(/[^/]*$/, "");
+	const $ = (id) => document.getElementById(id);
+	let current = null;
+
+	async function show(c) {
+		current = c;
+		const body = await fetch(`components/${c.name}/preview.html`).then((r) => r.text());
+		$("frame").srcdoc = `<!doctype html><html data-theme="${$("theme").value}"><head><meta charset="utf-8"><base href="${base}"><style>body{margin:0}${tokens}${css}</style><script>${js}<\/script></head><body>${body}</body></html>`;
+		$("frame").width = c.width;
+		$("frame").height = c.height;
+		fit();
+		$("title").textContent = c.name;
+		$("sub").textContent = c.subtitle;
+		$("readme").href = `components/${c.name}/README.md`;
+		$("readme").hidden = !c.readme;
+		for (const b of $("list").querySelectorAll("button")) b.toggleAttribute("aria-current", b.dataset.name === c.name);
+		history.replaceState(null, "", `#${c.name}`);
+	}
+	function fit() {
+		if (!current) return;
+		const k = $("fit").checked ? Math.min(1, ($("stage").clientWidth - 32) / current.width) : 1;
+		$("frame").style.transform = `scale(${k})`;
+		$("frame").style.marginBottom = `${current.height * (k - 1)}px`;
+	}
+
+	const groups = Map.groupBy(list, (c) => c.group);
+	for (const [group, items] of groups) {
+		$("list").insertAdjacentHTML("beforeend", `<h2>${group}</h2>`);
+		for (const c of items) {
+			const b = document.createElement("button");
+			b.textContent = c.name;
+			b.dataset.name = c.name;
+			b.onclick = () => show(c);
+			$("list").append(b);
+		}
+	}
+	$("theme").onchange = () => current && show(current);
+	$("fit").onchange = fit;
+	addEventListener("resize", fit);
+	addEventListener("hashchange", () => {
+		const c = list.find((x) => x.name === location.hash.slice(1));
+		if (c && c !== current) show(c);
+	});
+	await show(list.find((c) => c.name === location.hash.slice(1)) || list.find((c) => c.name === "HudDesktop") || list[0]);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!-- @dsCard group="Screens · In game" height=800 width=700 subtitle="Combat odds v2: overrun, rugged defense, a costly close combat and a safe bombardment, with the reasons and what happens next" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<div class="pm" style="padding:20px;background:var(--panel-sunken);display:grid;grid-template-columns:repeat(2,300px);gap:20px;justify-content:center;align-items:start">
+<div class="pm-panel static pm-odds v2" role="tooltip">
+    <div class="head"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg><span class="t">Attack 7TP</span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="where">Open ground · adjacent</div>
+    <div class="vs">
+      <span>Pz 38(t)A <span class="pm-muted">· yours</span></span><span class="pm-data">10 → 10</span><span class="bar" aria-hidden="true"><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i></span>
+      <span>7TP <span class="pm-muted">· Polish</span></span><span class="pm-data">3 → 0</span><span class="bar" aria-hidden="true"><i class="loss"></i><i class="loss"></i><i class="loss"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    </div>
+    <div class="verdict good"><svg class="i sm" aria-hidden="true"><use href="#pm-ok"/></svg>Overrun</div>
+    <div class="why"><div><svg class="i sm" aria-hidden="true"><use href="#pm-clock"/></svg><span>You fire first: initiative 7 against 6</span><span class="fx up">+1 atk</span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-tank"/></svg><span>Hard attack 7 against ground defence 7</span><span class="fx "></span></div></div>
+    <div class="next"><span class="pm-tag good">Destroyed</span><span class="pm-tag good">No return fire</span><span class="pm-tag good">+1 move</span><span class="pm-tag good">Can attack again</span></div>
+    <div class="commit">Click to attack · Esc to cancel</div>
+  </div>
+<div class="pm-panel static pm-odds v2" role="tooltip">
+    <div class="head"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg><span class="t">Attack 38 Piechota</span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="where">City · entrenched 4 · 2 bars of experience</div>
+    <div class="vs">
+      <span>Pz IIA <span class="pm-muted">· yours</span></span><span class="pm-data">10 → 4</span><span class="bar" aria-hidden="true"><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="sup"></i></span>
+      <span>38 Piechota <span class="pm-muted">· Polish</span></span><span class="pm-data">9 → 8</span><span class="bar" aria-hidden="true"><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="loss"></i><i></i></span>
+    </div>
+    <div class="verdict bad"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>Rugged defense</div>
+    <div class="why"><div><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg><span class="key">Your defence drops to 0 and your attack is halved</span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrenchment counts twice: infantry in a city against tanks</span><span class="fx dn">+8 def</span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-scenario"/></svg><span>Defending in a city</span><span class="fx dn">+4 def</span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-artillery"/></svg><span>Support fire from 75mm A wz.97 before you attack</span><span class="fx dn">−1</span></div></div>
+    <div class="advice">Bring the entrenchment down first: shell it with artillery or bomb it. Every hit takes a level.</div>
+    <div class="commit">Click to attack anyway · Esc to cancel</div>
+  </div>
+<div class="pm-panel static pm-odds v2" role="tooltip">
+    <div class="head"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg><span class="t">Attack 38 Piechota</span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="where">Forest · entrenched 2</div>
+    <div class="vs">
+      <span>Infanterie <span class="pm-muted">· yours</span></span><span class="pm-data">10 → 6</span><span class="bar" aria-hidden="true"><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i></span>
+      <span>38 Piechota <span class="pm-muted">· Polish</span></span><span class="pm-data">10 → 4</span><span class="bar" aria-hidden="true"><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i></span>
+    </div>
+    <div class="verdict warn"><svg class="i sm" aria-hidden="true"><use href="#pm-low"/></svg>Costly win</div>
+    <div class="why"><div><svg class="i sm" aria-hidden="true"><use href="#pm-infantry"/></svg><span>Close combat in a forest: both sides use close defence</span><span class="fx "></span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrenched 2</span><span class="fx dn">+2 def</span></div></div>
+    <div class="next"><span class="pm-tag good">Retreats one hex</span><span class="pm-tag ">Entrenchment −1 per hit</span></div>
+    <div class="commit">Click to attack · Esc to cancel</div>
+  </div>
+<div class="pm-panel static pm-odds v2" role="tooltip">
+    <div class="head"><svg class="i sm" aria-hidden="true"><use href="#pm-artillery"/></svg><span class="t">Bombard 7TP</span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="where">Range 3 of 5 · entrenched 2</div>
+    <div class="vs">
+      <span>10.5 leFH18 <span class="pm-muted">· yours</span></span><span class="pm-data">10 → 10</span><span class="bar" aria-hidden="true"><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i></span>
+      <span>7TP <span class="pm-muted">· Polish</span></span><span class="pm-data">8 → 7</span><span class="bar" aria-hidden="true"><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="loss"></i><i></i><i></i></span>
+    </div>
+    <div class="verdict good"><svg class="i sm" aria-hidden="true"><use href="#pm-ok"/></svg>No return fire</div>
+    <div class="why"><div><svg class="i sm" aria-hidden="true"><use href="#pm-artillery"/></svg><span>From range: the target can't fire back and no support fire answers</span><span class="fx "></span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-info"/></svg><span>Artillery hits on 19 or more instead of 15</span><span class="fx "></span></div></div>
+    <div class="next"><span class="pm-tag good">Entrenchment 2 → 1</span><span class="pm-tag good">−2 defence for the next attack this turn</span></div>
+    <div class="commit">Click to fire · Esc to cancel</div>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

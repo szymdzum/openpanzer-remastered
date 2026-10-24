@@ -1,0 +1,54 @@
+<!-- @dsCard group="Screens · Tablet" height=1180 width=820 subtitle="iPad portrait: equipment full screen, grid on top and the comparison below" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage ipad-p">
+  <section id="equipment" class="pm-window pm-eq" style="inset:0;border-radius:0" role="dialog" aria-label="Equipment">
+    
+    <div class="hd">
+      <div><h1 class="pm-display">Equipment</h1><div class="sub">Germany · September 1939</div></div>
+      <span class="pm-stamp">Requisition</span>
+      <span class="grow"></span>
+      <button id="eqSelCountryButton" class="pm-btn"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<svg class="i sm" aria-hidden="true"><use href="#pm-chevron-down"/></svg></button>
+      <span id="currentPrestige" class="pm-prestige pm-data" style="font-size:18px"><svg class="i " aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
+      <button id="eqCloseBut" class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div style="overflow:hidden">
+    <nav id="eqSelClass" class="pm-tabs" role="tablist" style="padding-right:0;width:max-content">
+      <button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-infantry"/></svg>Infantry<span class="n">12</span></button><button class="pm-tab is-on" role="tab" aria-selected="true"><svg class="i " aria-hidden="true"><use href="#pm-tank"/></svg>Tank<span class="n">8</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-recon"/></svg>Recon<span class="n">6</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-antitank"/></svg>Anti-tank<span class="n">7</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-artillery"/></svg>Artillery<span class="n">5</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-antiair"/></svg>Anti-air<span class="n">4</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-fighter"/></svg>Fighter<span class="n">3</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-bomber"/></svg>Bomber<span class="n">2</span></button><button class="pm-tab" role="tab" aria-selected="false" disabled><svg class="i " aria-hidden="true"><use href="#pm-naval"/></svg>Naval<span class="n">0</span></button>
+    </nav></div>
+    
+    <div style="display:grid;grid-template-rows:auto 1fr;gap:12px;padding:12px 16px;min-height:0;flex:1">
+        <div class="tools">
+          <span class="pm-label">Sort</span>
+          <div class="pm-seg" role="group" aria-label="Sort by"><button class="is-on">Cost</button><button>Soft atk</button><button>Hard atk</button><button>Defence</button></div>
+          <button id="eqSortOrderBut" class="pm-btn icon" aria-label="Reverse order"><svg class="i sm" aria-hidden="true"><use href="#pm-sort"/></svg></button>
+          <span class="grow"></span>
+          <span class="pm-muted" style="font-size:13px">8 models in service</span>
+        </div>
+        <div id="eqUnitList" class="pm-grid" style="grid-template-columns:repeat(4,1fr);grid-auto-rows:140px" role="listbox">
+          <div class="pm-card" role="option" aria-selected="false"><span class="yr">1934</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-0px 0"></span><span class="nm">Pz IA</span><span class="meta"><span class="c">180</span><span>HA 1</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1935</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-80px 0"></span><span class="nm">Pz IB</span><span class="meta"><span class="c">192</span><span>HA 1</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1935</span><span class="cur">Current</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-160px 0"></span><span class="nm">Pz IIA</span><span class="meta"><span class="c">216</span><span>HA 3</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1938</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-240px 0"></span><span class="nm">Pz IID</span><span class="meta"><span class="c">240</span><span>HA 3</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1939</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-320px 0"></span><span class="nm">Pz 35(t)</span><span class="meta"><span class="c">276</span><span>HA 6</span></span></div><div class="pm-card is-on" role="option" aria-selected="true"><span class="yr">1939</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-400px 0"></span><span class="nm">Pz 38(t)A</span><span class="meta"><span class="c">276</span><span>HA 7</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1939</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-480px 0"></span><span class="nm">Pz IIIE</span><span class="meta"><span class="c">288</span><span>HA 7</span></span></div><div class="pm-card" role="option" aria-selected="false"><span class="yr">1939</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-560px 0"></span><span class="nm">Pz IVC</span><span class="meta"><span class="c">312</span><span>HA 6</span></span></div>
+        </div></div>
+    <div style="border-top:1px solid var(--line-strong);display:grid;grid-template-columns:1fr 1fr">
+      <aside class="detail" style="border-left:0;grid-column:1 / -1;grid-template-columns:1fr 1fr;column-gap:24px;padding:16px 24px">
+        <div class="top"><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-400px 0"></span><div><h2 class="pm-title">Pz 38(t)A</h2><div class="pm-muted" style="font-size:13px">Tank · in service from 1939</div></div></div>
+        <div class="pm-cmp">
+          <span class="hdr">Stat</span><span class="hdr" style="text-align:right">38(t)</span><span class="hdr"></span><span class="hdr" style="text-align:right">vs IIA</span>
+          <span>Soft attack</span><span class="n">6</span><span class="bar"><b style="width:40%"></b></span><span class="d up">+1</span><span>Hard attack</span><span class="n">7</span><span class="bar"><b style="width:47%"></b></span><span class="d up">+4</span><span>Ground def</span><span class="n">8</span><span class="bar"><b style="width:53%"></b></span><span class="d up">+1</span><span>Air def</span><span class="n">8</span><span class="bar"><b style="width:53%"></b></span><span class="d ">=</span><span>Close def</span><span class="n">2</span><span class="bar"><b style="width:13%"></b></span><span class="d ">=</span><span>Initiative</span><span class="n">7</span><span class="bar"><b style="width:47%"></b></span><span class="d ">=</span><span>Movement</span><span class="n">5</span><span class="bar"><b style="width:50%"></b></span><span class="d ">=</span><span>Spotting</span><span class="n">2</span><span class="bar"><b style="width:40%"></b></span><span class="d ">=</span><span>Fuel</span><span class="n">55</span><span class="bar"><b style="width:92%"></b></span><span class="d up">+5</span><span>Ammo</span><span class="n">10</span><span class="bar"><b style="width:67%"></b></span><span class="d up">+2</span>
+        </div>
+        <div id="eqTransportList" style="display:grid;gap:6px">
+          <span class="pm-label">Transport</span>
+          <div class="pm-seg"><button class="is-on">Self-propelled</button><button disabled>Opel Blitz</button><button disabled>SdKfz 251</button></div>
+          <span class="pm-muted" style="font-size:12px;line-height:16px">Tanks move on their own tracks. Trucks and halftracks are offered for infantry and towed guns.</span>
+        </div>
+      </aside></div>
+    
+    <div id="eqActionsContainer" class="ft">
+      
+      <span class="grow"></span>
+      <span class="after">After upgrade <b>2,996</b></span>
+      <button id="eqSellBut" class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-coin"/></svg>Sell <span class="cost">108</span></button>
+      <button id="eqUpgradeBut" class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-upgrade"/></svg>Upgrade <span class="cost">60</span></button>
+      <button id="eqNewBut" class="pm-btn primary"><svg class="i sm" aria-hidden="true"><use href="#pm-depot"/></svg>Buy new <span class="cost">276</span></button>
+    </div>
+  </section></div>
+<script>window.PM && PM.mount();</script>
