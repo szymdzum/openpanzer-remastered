@@ -9,7 +9,7 @@ import type { World } from "../src/core/types";
 import { gameInputs, worldOf } from "../src/mirror";
 import { newGameRules, playerType, uiSettings } from "../src/prototypes";
 import { game } from "../src/session";
-import { answer, type Answer, type Args, flagInt, flagRules, type Front, parseArgs, resultOf, runOn, UsageError } from "./commands";
+import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageResultOf, parseArgs, runOn, UsageError } from "./commands";
 import { status } from "./board";
 import { SIDES } from "./known";
 import { changes } from "./report";
@@ -82,10 +82,11 @@ const front: Front = {
 		return null;
 	},
 	report: () => report,
-	result: () => resultOf(world(), game.session ? game.session.ended : null),
+	result: () => pageResultOf(world(), game.session ? game.session.ended : null, game.gameEnded, humanSide()),
 };
 
-//The start menu and the scenario's message would cover the map
+//The scenario's opening message would cover the map: closed once, after "new". Never on a later call: the
+//message shown then may be the end of the game, whose OK opens the main menu (#311)
 function uncover() {
 	for (const id of ["uiokbut"]) {
 		const b = document.getElementById(id);
@@ -123,7 +124,6 @@ async function handle(argv: string[]): Promise<Answer> {
 	const args = parseArgs(argv);
 	if (args.words[0] === "new") return newGame(args);
 	if (!playing()) throw new UsageError("no game on the page: start one with \"new\"");
-	uncover();
 	return runOn(args, front);
 }
 

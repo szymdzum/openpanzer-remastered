@@ -188,9 +188,15 @@ const refusalOf = (w: World, side: number, cmd: Command) => unseenTarget(w, side
 const told = (before: World, after: World, side: number, events: GameEvent[] | null) =>
 	events === null ? changes(before, after, side) : describe(after, before, side, events);
 
+//Nothing is played once the game is over: the answer says how it ended (#311)
+const overRefusal = (front: Front): Refusal | null => front.result() === null ? null : { reason: "the game is over" };
+
+const refusedAnswer = (c: Call, cmd: Command, refusal: Refusal) =>
+	answer([`refused: ${refusal.reason}`, ...gameOver(c.front)], { command: cmd, refusal });
+
 async function actAnswer(c: Call): Promise<Answer> {
-	const cmd = commandOf(c.w, c.side, c.x, c.flags), refused = refusalOf(c.w, c.side, cmd);
-	if (refused) return answer([`refused: ${refused.reason}`], { command: cmd, refusal: refused });
+	const cmd = commandOf(c.w, c.side, c.x, c.flags), refused = overRefusal(c.front) ?? refusalOf(c.w, c.side, cmd);
+	if (refused) return refusedAnswer(c, cmd, refused);
 	const r = await c.front.act(cmd);
 	if (r.refusal) return answer([`refused: ${r.refusal.reason}`], { command: cmd, refusal: r.refusal });
 	const after = c.front.world(), u = "unit" in cmd ? unitById(after, cmd.unit) : null;
@@ -199,6 +205,8 @@ async function actAnswer(c: Call): Promise<Answer> {
 }
 
 async function endAnswer(c: Call): Promise<Answer> {
+	const over = overRefusal(c.front);
+	if (over) return answer([`refused: ${over.reason}`, ...gameOver(c.front)], { events: null, refusal: over });
 	if (!c.front.humanTurn()) throw new UsageError("not your turn");
 	const events = await c.front.end(), after = c.front.world();
 	return answer([...told(c.w, after, c.side, events), ...status(after, c.side), ...gameOver(c.front)], { events });
@@ -237,8 +245,8 @@ function reportAnswer(c: Call): Answer {
 }
 
 function checkAnswer(c: Call): Answer {
-	const cmd = commandOf(c.w, c.side, c.x.slice(1), c.flags), refusal = refusalOf(c.w, c.side, cmd);
-	return answer([refusal === null ? "allowed" : `refused: ${refusal.reason}`], { command: cmd, refusal });
+	const cmd = commandOf(c.w, c.side, c.x.slice(1), c.flags), refusal = overRefusal(c.front) ?? refusalOf(c.w, c.side, cmd);
+	return refusal === null ? answer(["allowed"], { command: cmd, refusal }) : refusedAnswer(c, cmd, refusal);
 }
 
 //The commands on a game
@@ -274,6 +282,15 @@ export function resultOf(w: World, end: SessionEnd | null): Outcome | null {
 	if (end === null || end.kind === "stuck") return null;
 	if (end.kind === "turnLimit") return outcome(w, { endedSide: end.side });
 	return outcome(w, end.how === "capture" ? { victorySide: end.side } : {});
+}
+
+//How a game on the page ended: the screen plays the person's commands on its own objects, not through
+//the session, so a capture or an elimination the person won ends the screen's game (screenEnded) and
+//not the session's: the person's side won it (#311)
+export function pageResultOf(w: World, end: SessionEnd | null, screenEnded: boolean, side: number): Outcome | null {
+	const r = resultOf(w, end);
+	if (r !== null || !screenEnded) return r;
+	return outcome(w) ?? outcome(w, { victorySide: side });
 }
 
 //The side a new game gives the person, and its dice

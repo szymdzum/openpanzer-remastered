@@ -33,6 +33,10 @@ animation, and for the AI's turn, before it answers. It doesn't know a turn's ev
 changed between the world before and after: the units the side saw moved, worn, gone or new, the
 victory hexes taken, the prestige. Without the variable the dev server and the page are as before.
 The page's dice are its own: `--seed` is headless only.
+The page closes the scenario's opening message after `new`, never a later one: the end of the game's
+message stays up (its OK opens the main menu). Once the game is over, in both modes, `status` says who won,
+how and the rating (`GAME OVER: Axis wins (capture, briliant)`), and every action, `check` and `end` are
+refused with it (#311).
 
 ## Headless
 
