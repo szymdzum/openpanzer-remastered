@@ -158,3 +158,39 @@ test("A move onto a hex whose terrain stops it uses the fuel of the points left,
 	//the fuel minus the 6 points left, not plus the terrain's 254
 	expect(m.fuelLeft).toBe(40 - 6);
 }, 60_000);
+
+test("A bomber attacks a ground unit from over it, not from the next hex, as on the screen (#285)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1");
+	await call("move 1 0,15");
+	//the Do-17 at 4,7 (range 1) can reach the bunker at 2,15: from over it only
+	const before = await call("attackers 14");
+	expect(before).toContain("#20 Do-17Z-1 @4,7 on #14 Bunker @2,15 from 2,15");
+	expect(before).not.toMatch(/#20 [^\n]* from 2,14/);
+	await call("move 20 2,14");
+	expect(await call("attackers 14")).not.toContain("#20 ");
+	expect(await call("check attack 20 14")).toBe("refused: not a target from here");
+	expect(await call("attack 20 14")).toBe("refused: not a target from here");
+	expect(unitById(world(open(readSave(file))), 20).hasFired).toBe(false);
+	//over it, it can
+	const over = caller(tmpGame());
+	await over("new drpzop01.xml --seed 1");
+	await over("move 1 0,15");
+	await over("move 20 2,15");
+	expect(await over("check attack 20 14")).toBe("allowed");
+	expect(await over("attack 20 14")).not.toMatch(/^refused/);
+}, 60_000);
+
+test("A unit with no air attack can't attack an aircraft next to it, as on the screen (#285)", async () => {
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --side 1 --seed 1");
+	//the Me-109B-2 #78 over 2,20, after the Axis's first turn: the machine guns at 1,21 can hit it, the
+	//infantry next to it (#5 at 1,19) and below it (#15) have no air attack
+	const by = await call("attackers 78");
+	expect(by).toContain("#7 7,92mm wz.08 @1,21 on #78 Me-109B-2 @2,20 from 1,21");
+	expect(by).not.toContain("#5 ");
+	expect(by).not.toContain("#15 ");
+	expect(await call("targets 5")).not.toContain("#78 ");
+	expect(await call("check attack 5 78")).toBe("refused: not a target from here");
+	expect(await call("attack 5 78")).toBe("refused: not a target from here");
+}, 60_000);

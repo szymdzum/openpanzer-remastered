@@ -68,6 +68,11 @@ const canAttack = (w: World, u: UnitState, t: UnitState) =>
 export const targetsOf = (w: World, u: UnitState): UnitState[] =>
 	attackCells(w, u).flatMap((c) => unitsOnHex(w, c)).filter((t) => canAttack(w, u, t));
 
+//Whether t is one of the screen's targets of u where it stands: the core's check of an attack asks only
+//the distance, as the AI's attacks do, so an aircraft of range 1 would hit a ground unit from the next
+//hex, which the screen allows only from over it (#285)
+export const isTarget = (w: World, u: UnitState, t: UnitState) => targetsOf(w, u).some((x) => x.id === t.id);
+
 //The known world after u moves to a hex, or why it can't
 function movedTo(kw: World, u: UnitState, to: Position): { world: World } | { refusal: string } {
 	if (u.row === to.row && u.col === to.col) return { world: kw };
@@ -99,8 +104,9 @@ export function targets(w: World, side: number, id: number, from?: Position): { 
 //The estimate after u moves to a hex and attacks t from there, null when it can't
 function estimateFrom(kw: World, u: UnitState, t: UnitState, c: MoveCell): Estimate | null {
 	const at = movedTo(kw, u, c);
-	if ("refusal" in at || check(at.world, { type: "attack", unit: u.id, target: t.id }) !== null) return null;
-	return estimate(at.world, unitById(at.world, u.id), unitById(at.world, t.id));
+	if ("refusal" in at) return null;
+	const moved = unitById(at.world, u.id), target = unitById(at.world, t.id);
+	return isTarget(at.world, moved, target) ? estimate(at.world, moved, target) : null;
 }
 
 const worth = (e: Estimate) => e.kills - e.losses;
@@ -116,7 +122,7 @@ function bestAfterMove(w: World, kw: World, u: UnitState, t: UnitState): Estimat
 
 const ready = (kw: World, side: number, u: UnitState) => sideOf(kw, u) === side && !u.hasFired && ammoOf(u) > 0;
 const attackOf = (w: World, kw: World, u: UnitState, t: UnitState) =>
-	check(kw, { type: "attack", unit: u.id, target: t.id }) === null ? estimate(kw, u, t) : bestAfterMove(w, kw, u, t);
+	isTarget(kw, u, t) ? estimate(kw, u, t) : bestAfterMove(w, kw, u, t);
 
 //Which of side's units can attack a target this turn: from where they stand, or after a move (the hex
 //with the best estimate), the best first
