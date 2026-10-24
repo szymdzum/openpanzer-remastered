@@ -1,0 +1,1 @@
+The equipment window on an iPad in portrait. The grid sits on top with 4 columns. The comparison and transport sit below it in two columns, so the picked model's stats stay visible while you scroll the grid.

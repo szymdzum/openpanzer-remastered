@@ -1,0 +1,15 @@
+<!-- @dsCard group="Controls" height=300 width=900 subtitle="The HUD panel and the modal window with header and footer" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="position:relative;padding:24px;height:300px;background:var(--panel-sunken)">
+  <div class="pm-panel static" style="width:300px;padding:16px 20px;display:inline-block;vertical-align:top;margin-right:24px">
+    <div class="pm-label">HUD panel</div>
+    <p style="margin-top:6px">Opaque <b>panel</b> with a line-strong edge, an inner ruled line and a static shadow. No blur over the map.</p>
+  </div>
+  <div class="pm-window static" style="width:500px;display:inline-flex;vertical-align:top">
+    <div class="hd"><h1 class="pm-display" style="font-size:22px;line-height:26px">Window title</h1><span class="pm-stamp">Secret</span><span class="grow"></span><button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
+    <div class="bd" style="padding-top:12px;padding-bottom:12px"><span class="pm-muted">Body. The header, body and footer are separated by ruled lines.</span></div>
+    <div class="ft"><span class="grow"></span><button class="pm-btn">Back</button><button class="pm-btn primary">OK</button></div>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

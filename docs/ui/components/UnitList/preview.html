@@ -1,0 +1,39 @@
+<!-- @dsCard group="Screens · In game" height=300 width=1366 subtitle="Unit list (#container-unitlist) as a strip under the status bar" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage" style="width:1366px;height:300px">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  
+  <header id="statusbar" class="pm-panel pm-status" role="status" style="">
+    <div class="row">
+      <span class="pm-side"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<span class="chip" aria-hidden="true"></span></span>
+      <span class="pm-sep"></span>
+      <span class="cell"><span class="pm-label">Turn</span>3/17</span>
+      <span class="cell">06 Sep 1939</span>
+      <span class="cell" title="Weather"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Fair</span>
+      <span class="cell" title="Ground"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span>
+      <span class="grow"></span>
+      <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
+      <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+    <div class="msg"><b>Pz IIA</b> 1st Panzer · 3 of 5 moves left · hex 9,4 near Neidenburg</div>
+  </header>
+  
+  <section id="container-unitlist" class="pm-panel pm-unitlist" style="left:233px;top:96px;width:900px" aria-label="Your units">
+    <div class="hd">
+      <span class="pm-label">Units</span><span class="pm-data">24</span>
+      <span class="pm-muted" style="font-size:12px">2 moved · 3 low on supply</span>
+      <span class="grow"></span>
+      <div class="pm-seg" role="group" aria-label="Filter"><button class="is-on">All</button><button>Can move</button><button>Low supply</button></div>
+      <button class="pm-btn icon ghost" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div id="hscroll-unitlist" class="pm-strip">
+      <div class="pm-ucard is-on"><span class="pm-badge">10</span><span class="flags"><span class="pm-low"><svg class="i " aria-hidden="true"><use href="#pm-fuel"/></svg></span><span class="pm-critical"><svg class="i " aria-hidden="true"><use href="#pm-ammo"/></svg></span></span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-160px 0"></span><span class="nm">Pz IIA</span><span class="pm-muted" style="font-size:11px;line-height:14px">1st Pz</span></div><div class="pm-ucard"><span class="pm-badge">10</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-0px 0"></span><span class="nm">Pz IA</span><span class="pm-muted" style="font-size:11px;line-height:14px">2nd Pz</span></div><div class="pm-ucard"><span class="pm-badge">9</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-80px 0"></span><span class="nm">Pz IB</span><span class="pm-muted" style="font-size:11px;line-height:14px">3rd Pz</span></div><div class="pm-ucard is-done"><span class="pm-badge">10</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-320px 0"></span><span class="nm">Pz 35(t)</span><span class="pm-muted" style="font-size:11px;line-height:14px">4th Pz · moved</span></div><div class="pm-ucard"><span class="pm-badge">7</span><span class="flags"><span class="pm-critical"><svg class="i " aria-hidden="true"><use href="#pm-ammo"/></svg></span></span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-400px 0"></span><span class="nm">Pz 38(t)A</span><span class="pm-muted" style="font-size:11px;line-height:14px">5th Pz</span></div><div class="pm-ucard"><span class="pm-badge">10</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-240px 0"></span><span class="nm">Pz IID</span><span class="pm-muted" style="font-size:11px;line-height:14px">6th Pz</span></div><div class="pm-ucard is-done"><span class="pm-badge">10</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-480px 0"></span><span class="nm">Pz IIIE</span><span class="pm-muted" style="font-size:11px;line-height:14px">7th Pz · moved</span></div><div class="pm-ucard"><span class="pm-badge">4</span><span class="flags"><span class="pm-critical"><svg class="i " aria-hidden="true"><use href="#pm-fuel"/></svg></span></span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-560px 0"></span><span class="nm">Pz IVC</span><span class="pm-muted" style="font-size:11px;line-height:14px">8th Pz</span></div><div class="pm-ucard"><span class="pm-badge">10</span><span class="spr" style="background-image:url(assets/units-sheet.png);background-position:-0px 0"></span><span class="nm">Pz IA</span><span class="pm-muted" style="font-size:11px;line-height:14px">9th Pz</span></div>
+    </div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

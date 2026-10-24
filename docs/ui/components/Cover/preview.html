@@ -1,0 +1,42 @@
+<!-- @dsCard height=288 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&family=Libre+Franklin:wght@400&display=swap">
+<style>
+  .cv { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--panel); }
+  .cv svg { position: absolute; inset: 0; }
+  .axis { fill: var(--axis); } .allied { fill: var(--allied); } .accent { fill: var(--accent); } .ink { fill: var(--ink); } .tint { fill: var(--panel-sunken); }
+  .hex { fill: none; stroke: var(--panel); stroke-width: 3; }
+  .tx { position: absolute; left: 48px; bottom: 36px; max-width: 420px; }
+  .tx h1 { margin: 0; font: 700 96px/.95 var(--font-display); color: var(--ink); letter-spacing: -.01em; }
+  .tx p { margin: 16px 0 0; font: 400 14px/20px var(--font-ui); color: var(--ink-muted); }
+</style>
+<div class="cv">
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <!-- blocks: axis 192x288, accent 120x144, ink 120x144, allied 168x192, panel-sunken 168x96 (multiples of space-6 = 24px), square corners per radius-paper
+         arrangement: flush modular grid from x=480 bleeding off the top, bottom and right edges; the two side colours take the largest blocks
+         pattern: literal motif, the map hex, chosen because the battlefield is a hex map and the map is the hero; a diagonal band of hexes cut out in panel
+         steps and radii: hex-w 60px, hex-h 50px, column step 45px, offset rows 25px, stroke 3px like hex-select -->
+    <rect class="axis" x="480" y="0" width="192" height="288"/>
+    <rect class="accent" x="672" y="0" width="120" height="144"/>
+    <rect class="ink" x="672" y="144" width="120" height="144"/>
+    <rect class="tint" x="792" y="0" width="168" height="96"/>
+    <rect class="allied" x="792" y="96" width="168" height="192"/>
+    <polygon class="hex" points="510,225 525,200 555,200 570,225 555,250 525,250"/>
+    <polygon class="hex" points="510,275 525,250 555,250 570,275 555,300 525,300"/>
+    <polygon class="hex" points="555,200 570,175 600,175 615,200 600,225 570,225"/>
+    <polygon class="hex" points="555,250 570,225 600,225 615,250 600,275 570,275"/>
+    <polygon class="hex" points="600,125 615,100 645,100 660,125 645,150 615,150"/>
+    <polygon class="hex" points="600,175 615,150 645,150 660,175 645,200 615,200"/>
+    <polygon class="hex" points="645,100 660,75 690,75 705,100 690,125 660,125"/>
+    <polygon class="hex" points="645,150 660,125 690,125 705,150 690,175 660,175"/>
+    <polygon class="hex" points="690,75 705,50 735,50 750,75 735,100 705,100"/>
+    <polygon class="hex" points="690,125 705,100 735,100 750,125 735,150 705,150"/>
+    <polygon class="hex" points="735,50 750,25 780,25 795,50 780,75 750,75"/>
+    <polygon class="hex" points="735,100 750,75 780,75 795,100 780,125 750,125"/>
+    <polygon class="hex" points="780,25 795,0 825,0 840,25 825,50 795,50"/>
+    <polygon class="hex" points="780,75 795,50 825,50 840,75 825,100 795,100"/>
+    <polygon class="hex" points="825,0 840,-25 870,-25 885,0 870,25 840,25"/>
+    <polygon class="hex" points="825,50 840,25 870,25 885,50 870,75 840,75"/>
+    <polygon class="hex" points="870,25 885,0 915,0 930,25 915,50 885,50"/>
+  </svg>
+  <div class="tx"><h1>Panzer<br>Marshal</h1><p>Field-command chrome for a hex-map war game.</p></div>
+</div>
