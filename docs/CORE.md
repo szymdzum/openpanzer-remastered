@@ -217,7 +217,9 @@ reinforcements, per end of turn (2026-10-22, a loaded laptop): old engine 27-116
 `newGame(setup)` (newgame.ts) is ScenarioLoader and Game.newScenario together: `{ data, state }` from
 a scenario file read as plain data (`ScenarioFile`, by scenariofile.ts's `readScenarioFile` from the
 parsed XML document), the map image's size, the equipment of the countries `equipmentCountries`
-names with their lists by unit class as their files have them (keyed by file, the country + 1),
+names with their lists by unit class as their files have them (keyed by file, the country + 1) and
+of the other files that hold the equipment of the file's units (`fileEquipment`, without their lists:
+#286, a unit of a file not loaded became the first equipment loaded),
 the AI asked for (`uiSettings.isAI`), the random streams and the campaign. The files are read by
 the caller: the core turns what they hold into the state, in the old loader's order:
 - the map's size from the image, cut to the file's; the victory turns (a campaign's difficulty adds
