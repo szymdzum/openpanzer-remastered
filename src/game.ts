@@ -92,6 +92,7 @@ export class Game {
 		var campaignPlayer: Player = null; //Player that plays campaign locally
 		var savedPlayer: Player = null; //Saved copy of the campaign player used between campaign scenarios
 		let needScenarioLoad = false; //If a new scenario should be loaded during campaign progress
+		let nextScenarioLoading = false; //The campaign's next scenario asked for and loading (#64)
 		let scenData: CampaignScenario = null; //campaign scenario data passed for delayed load during campaign progress
 		let shouldRemoveNonCampaignUnits = false; //If we should remove scenario only units from campaign scenarios
 		let shouldAwardPrototype = false; //A brilliant victory awards a prototype unit in the next scenario
@@ -109,7 +110,12 @@ export class Game {
 			if (!game.gameStarted || game.gameEnded)
 				return;
 			if (scenData !== null && needScenarioLoad && game.uiMessageClicked) { //Load next scenario in campaign chain
-				game.newScenario(scenData.scenario, scenData.intro);
+				//Asked once: the ticks while it loads would start it over through the loader's shared
+				//scenario, each load adding the players again (#64)
+				if (!nextScenarioLoading) {
+					nextScenarioLoading = true;
+					game.newScenario(scenData.scenario, scenData.intro);
+				}
 			} else {
 				const player = game.scenario.map.currentPlayer;
 				//No current player also goes on to process AI actions
@@ -283,6 +289,7 @@ export class Game {
 			} else {
 				UIBuilder.message(outcomeNames[outcomeType], outcomeText);
 				needScenarioLoad = true; //Wait for user to click to continue to next scenario
+				nextScenarioLoading = false;
 				if (outcomeType == "briliant")
 					shouldAwardPrototype = true;
 			}

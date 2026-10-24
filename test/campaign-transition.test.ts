@@ -99,3 +99,28 @@ test("A campaign's core units waiting at HQ keep no id of the scenario before (#
 	expect(waiting.length, "core units not deployed yet").toBeGreaterThan(0);
 	expect(waiting.map((u) => u.id)).toEqual(waiting.map(() => -1));
 });
+
+//#64: the turn loop asked for the next scenario on every tick until it had loaded, each load starting
+//over the one before through the loader's shared scenario: the players three times over. The loop
+//asks for it once
+test("A campaign's next scenario loads once however many ticks of the turn loop pass while it loads (#64)", async () => {
+	const game = await campaign(0);
+	let loads = 0;
+	const finished = game.onScenarioLoadFinished;
+	game.onScenarioLoadFinished = function(this: Game, ...args: Parameters<Game["onScenarioLoadFinished"]>) {
+		loads++;
+		finished.apply(this, args);
+	};
+	const before = game.scenario;
+	game.continueCampaign("victory");
+	game.uiMessageClicked = true;
+	for (let tick = 0; tick < 50 && loads === 0; tick++) {
+		game.processTurn();
+		await Promise.resolve(); //(a step of the load between two ticks)
+	}
+	await until(() => game.scenario !== before && game.scenario !== null && game.scenario.isLoaded && game.gameStarted, "the next scenario");
+	await new Promise((r) => setTimeout(r, 50));
+	expect(loads).toBe(1);
+	expect(game.scenario.map.getPlayers().length).toBe((await data(game)).state.players.length);
+	expect(game.scenario.map.getPlayers().map((p) => p.country)).toEqual([7, 13]);
+});
