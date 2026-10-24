@@ -280,3 +280,15 @@ test("On the page, an enemy attack that costs only the attacker, and the side's 
 		"attack: Allies 38 Piechota #4 @1,18 10->7 on Axis Psw 231(8) #1 @1,10 10->10"]);
 	expect(fights.take()).toEqual([]);
 }, 60_000);
+
+test("A hex off the map is refused with the map's size, in hex and wherever a command takes a cell (#309)", async () => {
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --seed 1");
+	const size = "the map is 32 rows by 37 columns (0-31, 0-36)";
+	await expect(call("hex 32,5")).rejects.toThrow(`no hex 32,5: ${size}`);
+	await expect(call("hex 5,37")).rejects.toThrow(`no hex 5,37: ${size}`);
+	await expect(call("move 1 40,1")).rejects.toThrow(`no hex 40,1: ${size}`);
+	await expect(call("targets 3 --from 40,1")).rejects.toThrow(`no hex 40,1: ${size}`);
+	await expect(call("attackers 99,99")).rejects.toThrow(`no hex 99,99: ${size}`);
+	expect(await call("hex 31,36")).toMatch(/^31,36: /);
+}, 60_000);
