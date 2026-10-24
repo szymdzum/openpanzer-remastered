@@ -159,9 +159,9 @@ test("A move onto a hex whose terrain stops it uses the fuel of the points left,
 	expect(m.fuelLeft).toBe(40 - 6);
 }, 60_000);
 
-test("A bomber attacks a ground unit from over it, not from the next hex, as on the screen (#285)", async () => {
+test("In the classic rules a bomber attacks a ground unit from over it, not from the next hex, as on the screen (#285)", async () => {
 	const file = tmpGame(), call = caller(file);
-	await call("new drpzop01.xml --seed 1");
+	await call("new drpzop01.xml --seed 1 --rules classic");
 	await call("move 1 0,15");
 	//the Do-17 at 4,7 (range 1) can reach the bunker at 2,15: from over it only
 	const before = await call("attackers 14");
@@ -174,14 +174,26 @@ test("A bomber attacks a ground unit from over it, not from the next hex, as on 
 	expect(unitById(world(open(readGameFile(file))), 20).hasFired).toBe(false);
 	//over it, it can
 	const over = caller(tmpGame());
-	await over("new drpzop01.xml --seed 1");
+	await over("new drpzop01.xml --seed 1 --rules classic");
 	await over("move 1 0,15");
 	await over("move 20 2,15");
 	expect(await over("check attack 20 14")).toBe("allowed");
 	expect(await over("attack 20 14")).not.toMatch(/^refused/);
 }, 60_000);
 
-test("A unit with no air attack can't attack an aircraft next to it, as on the screen (#285)", async () => {
+test("In the remaster rules a bomber attacks a ground unit from the next hex too, as in PG2 (#285)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1");
+	await call("move 1 0,15");
+	expect(await call("attackers 14")).toMatch(/#20 Do-17Z-1 @4,7 on #14 Bunker @2,15 from 2,1[45]/);
+	await call("move 20 2,14");
+	expect(await call("attackers 14")).toContain("#20 Do-17Z-1 @2,14 on #14 Bunker @2,15 from 2,14");
+	expect(await call("check attack 20 14")).toBe("allowed");
+	expect(await call("attack 20 14")).not.toMatch(/^refused/);
+	expect(unitById(world(open(readGameFile(file))), 20).hasFired).toBe(true);
+}, 60_000);
+
+test("A unit with no air attack can't attack an aircraft next to it, as on the screen; in the remaster rules the core refuses it too (#285)", async () => {
 	const call = caller(tmpGame());
 	await call("new drpzop01.xml --side 1 --seed 1");
 	//the Me-109B-2 #78 over 2,20, after the Axis's first turn: the machine guns at 1,21 can hit it, the

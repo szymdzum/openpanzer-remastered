@@ -65,6 +65,13 @@ export interface Ruleset {
 	classLeaders: number[];
 	//The steps that make an attack's values, in order (combat.ts)
 	combat: CombatStep[];
+	//An aircraft of range 1 attacks a ground unit on the next hex too, as in PG2, not only the one below
+	//it (attack.ts attackCells, #285): false in the classic rules, as the original's screen
+	airAttacksNextHex: boolean;
+	//The core's check of an attack takes only a target the attacker's side sees and the unit can start
+	//an attack on, as the screen lists them (#285): false in the classic rules, where it asks only the
+	//distance, as the original AI's attacks did
+	checkTargets: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

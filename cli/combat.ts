@@ -68,9 +68,10 @@ const canAttack = (w: World, u: UnitState, t: UnitState) =>
 export const targetsOf = (w: World, u: UnitState): UnitState[] =>
 	attackCells(w, u).flatMap((c) => unitsOnHex(w, c)).filter((t) => canAttack(w, u, t));
 
-//Whether t is one of the screen's targets of u where it stands: the core's check of an attack asks only
-//the distance, as the AI's attacks do, so an aircraft of range 1 would hit a ground unit from the next
-//hex, which the screen allows only from over it (#285)
+//Whether t is one of the screen's targets of u where it stands. In the classic rules the core's check of
+//an attack asks only the distance, as the AI's attacks do, so a unit with no air attack would hit an
+//aircraft, and an aircraft of range 1 a ground unit from the next hex, which the screen allows only from
+//over it; in the remaster's the core's check refuses them itself (#285)
 export const isTarget = (w: World, u: UnitState, t: UnitState) => targetsOf(w, u).some((x) => x.id === t.id);
 
 //The known world after u moves to a hex, or why it can't

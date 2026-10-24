@@ -40,6 +40,8 @@ export const classicRules: Ruleset = {
 	leaders,
 	classLeaders: leaders.map((list) => list.length ? list[0] : -1),
 	combat: classicCombat,
+	airAttacksNextHex: false,
+	checkTargets: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -48,6 +50,10 @@ export const classicRules: Ruleset = {
 export const remasterRules: Ruleset = {
 	...classicRules,
 	name: "remaster",
+	//An aircraft hits a ground unit on the next hex as in PG2, for a person and the AI alike, and the
+	//core refuses an attack the screen doesn't list (#285)
+	airAttacksNextHex: true,
+	checkTargets: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)
