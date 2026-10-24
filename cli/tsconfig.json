@@ -1,0 +1,11 @@
+{
+	// The command-line player (npm run check): the game's flags, with Node's types
+	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"lib": ["es2022", "dom"],
+		"module": "esnext",
+		"target": "es2022"
+	},
+	"include": ["**/*.ts", "../types/**/*.d.ts"]
+}
