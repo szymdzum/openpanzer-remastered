@@ -44,11 +44,22 @@ events as text, `files.ts` the game's files (shared with the tests' test/corefil
 
 ## The side's view
 
-Everything is shown as the person's side sees it. An enemy unit appears only on a hex the side
-spots, or for the turn it was seen (it fired, a move came next to it). Every preview runs on the
-**known world**: the state with the enemy units the side doesn't see taken off the map, the sight
-computed again. A preview of a move or of an attack from another hex can't reveal a hidden unit,
-and its estimate counts the support fire the side sees, as the attack cursor does.
+The program learns what the screen shows a person, no more:
+
+- An enemy unit appears only on a hex the side spots, or for the turn it was seen (it fired, a move
+  came next to it). A unit the side doesn't see can't be attacked by its id, and the answer is the
+  one a missing unit gets ("no such target"): the screen can't click it, but the core's check doesn't
+  ask.
+- A move's range (`moves`, `check move`, the hexes `targets --from` and `attackers` move to) is the
+  screen's: computed on the game, as the highlight is. As in the original, a zone of control stops a
+  move on a hex the side spots whoever casts it, a hidden unit too, so the range can end next to a
+  unit the side doesn't see; the screen shows the same (#282).
+- An estimate runs on the **known world**: the state with the enemy units the side doesn't see taken
+  off the map, the sight computed again. It counts the support fire the side sees, as the attack
+  cursor does, and a preview from another hex can't reveal a hidden unit.
+- The enemy's turn is told as the side saw it: its fights against the side's units, the moves it saw,
+  the captures (the screen shows a captured flag in the fog too), not the enemy's purchases,
+  upgrades or leaders.
 
 ## What it answers
 
@@ -70,7 +81,10 @@ The actions are the core's commands (src/commands.ts): `move`, `attack`, `mount`
 `resupply`, `reinforce [--over]`, `embark`, `disembark`, `undo`, `buy`, `deploy`, `upgrade`,
 `disband`, and `end`, which ends the turn and plays the AI's.
 
-## What it leaves out
+## What differs from the screen, what it leaves out
 
 - Hotseat and two programs: the person plays one side, the AI the other.
+- The AI's first turn in a new game: unlike the game on the screen (where the old game's AI ended it
+  at once), the AI playing the first side starts it as every other, with its purchases and
+  deployment, as the arena does (cli/game.ts startFirstTurn).
 - Campaigns: a single scenario of the list.

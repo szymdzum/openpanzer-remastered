@@ -2,8 +2,9 @@
 //program, the AI or the scripted general (general.ts), and what each side achieved. The same scenario
 //and seeds before and after a change to the AI say, with numbers, whether it plays better.
 //
-//Unlike the game, the first player plans and plays its first turn: the old game's AI ended it at once
-//when it started a new scenario (session.ts), which costs an attacker a turn the arena doesn't measure.
+//Unlike the game, the first player starts and plays its first turn, its purchases and deployment
+//included (cli/game.ts startFirstTurn): the old game's AI ended it at once when it started a new scenario
+//(session.ts), which costs an attacker a turn the arena doesn't measure.
 import { aiController } from "../../src/core/ai";
 import { createWorld } from "../../src/core/create";
 import { newGame } from "../../src/core/newgame";
@@ -13,6 +14,7 @@ import { victoryRating } from "../../src/core/turn";
 import type { World } from "../../src/core/types";
 import { sideOf } from "../../src/core/world";
 import { playerType } from "../../src/prototypes";
+import { startFirstTurn } from "../../cli/game";
 import { setupOf } from "../corefiles";
 import { generalController } from "./general";
 
@@ -78,7 +80,9 @@ function sessionOf(match: Match): Session {
 	for (const p of created.state.players) p.type = playerType.aiLocal;
 	const world = createWorld(created, setup.equipment, { spotSide: -1 });
 	const controllerOf = (p: number) => match.sides[world.state.players[p].side] === "general" ? generalController(p) : aiController(p);
-	return startSession(world, (_type, p) => controllerOf(p), { loaded: true, localSide: -1 });
+	const s = startSession(world, (_type, p) => controllerOf(p), { localSide: -1 });
+	startFirstTurn(s);
+	return s;
 }
 
 //An order played: 1 for a command; a refused one counted against its side

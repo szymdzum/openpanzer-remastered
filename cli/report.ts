@@ -11,6 +11,7 @@ interface View {
 	after: World;
 	before: World;
 	side: number;
+	actor: number;		//the side whose turn the events are of (turnStarted changes it)
 	unit: (id: number) => UnitState | null;
 	name: (id: number) => string;
 	mine: (id: number) => boolean;
@@ -55,7 +56,7 @@ const FORMAT: Formatters = {
 	retreated: (e, v) => `${v.name(e.unit)} retreated from ${cell(e.from)} to ${cell(e.to)}`,
 	surrendered: (e, v) => `${v.name(e.unit)} surrendered at ${cell(e.at)}`,
 	attackStopped: (e, v) => `${v.name(e.unit)}'s attack stopped`,
-	leader: (e, v) => `${v.name(e.unit)} got a leader (${e.leader})`,
+	leader: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} got a leader (${e.leader})`),
 	resupplied: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} resupplied: +${e.supply.ammo} ammo, +${e.supply.fuel} fuel`),
 	reinforced: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} reinforced +${e.strength}`),
 	mounted: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} mounted`),
@@ -66,7 +67,7 @@ const FORMAT: Formatters = {
 	undone: (e, v) => `${v.name(e.unit)} back to ${cell(e.to)}`,
 	deployed: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} deployed at ${cell(e.at)}`),
 	bought: (e, v) => sideOfPlayer(v.after, e.player) === v.side ? `bought ${v.after.equipment[e.eqid].name} for ${e.cost}` : "",
-	upgraded: (e, v) => `upgraded to ${v.after.equipment[e.eqid].name} for ${e.cost}`,
+	upgraded: (e, v) => v.actor === v.side ? `upgraded to ${v.after.equipment[e.eqid].name} for ${e.cost}` : "",
 	disbanded: (e, v) => `${v.name(e.unit)} disbanded, +${e.prestige}`,
 	turnStarted: (e, v) => `-- ${SIDES[sideOfPlayer(v.after, e.player)]} turn ${e.turn} --`,
 	turnLimit: (e) => `${SIDES[e.side]} played its last turn`,
@@ -78,15 +79,20 @@ function viewOf(after: World, before: World, side: number): View {
 		const u = unit(id);
 		return u ? `${SIDES[sideOf(before, u)]} #${id} ${own(before, u).name}` : `#${id}`;
 	};
-	return { after, before, side, unit, name, mine: (id) => unit(id) !== null && sideOf(before, unit(id)) === side };
+	const actor = sideOfPlayer(before, before.state.turn.currentPlayer);
+	return { after, before, side, actor, unit, name, mine: (id) => unit(id) !== null && sideOf(before, unit(id)) === side };
 }
 
 const format = (e: GameEvent, v: View) => (FORMAT[e.type] as ((x: GameEvent, y: View) => string) | undefined)?.(e, v) ?? "";
 
 //Events as text from side's view; before: the world before them, for the units they destroyed
 export function describe(after: World, before: World, side: number, events: GameEvent[]): string[] {
-	const v = viewOf(after, before, side);
-	return events.map((e) => format(e, v)).filter(Boolean);
+	const v = viewOf(after, before, side), lines: string[] = [];
+	for (const e of events) {
+		if (e.type === "turnStarted") v.actor = sideOfPlayer(after, e.player);
+		lines.push(format(e, v));
+	}
+	return lines.filter(Boolean);
 }
 
 //What changed between two worlds, from side's view, for a turn whose events aren't known (the page

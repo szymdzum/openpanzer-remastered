@@ -11,7 +11,7 @@ import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
 import { parseArgs } from "../cli/commands";
 import { run } from "../cli/play";
-import { changes } from "../cli/report";
+import { changes, describe } from "../cli/report";
 import { sideOf, unitById } from "../src/core/world";
 
 const AXIS = 0;
@@ -105,4 +105,45 @@ test("What changed between two worlds, as the page's front tells a turn it plays
 	playCommand(g, { type: "move", unit: 1, to: { row: 0, col: 15 } });
 	expect(changes(before, world(g), AXIS)).toEqual([
 		"Axis #1 Psw 231(8) 1,10 -> 0,15", "Allies #4 38 Piechota seen at 1,18", "Allies #14 Bunker seen at 2,15", "prestige 3056 -> 2420"]);
+}, 60_000);
+
+const tmpGame = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), "openpanzer-cli-")), "game.json");
+const caller = (file: string) => async (line: string) => (await run(parseArgs(line.split(" ")), file)).lines.join("\n");
+
+test("An enemy the side doesn't see can't be attacked by its id: the answer is a missing unit's (#279)", async () => {
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --seed 1");
+	//the TKS #28 at 6,13 is hidden from the Axis on turn 1, in the sFH 18 #21's range
+	await expect(call("unit 28")).rejects.toThrow("no unit #28 you see");
+	const missing = await call("check attack 21 999");
+	expect(await call("check attack 21 28")).toBe(missing);
+	expect(await call("attack 21 28")).toBe(missing);
+}, 60_000);
+
+test("The moves are the screen's move range, and a move's check agrees with them (#279)", async () => {
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --seed 1");
+	//the Psw 231(8) at 1,10: 2,14 is spotted and in the hidden bunker's zone of control (2,15), which stops
+	//a move there, as the screen's range has it: 2,15 isn't in reach
+	const range = await call("moves 1");
+	expect(range).toContain("2,14 cost 10 fuel left 48 (the move stops here)");
+	expect(range).not.toContain("2,15 ");
+	expect(await call("check move 1 2,14")).toBe("allowed");
+	expect(await call("check move 1 2,15")).toBe("refused: can't get there");
+	expect(await call("move 1 2,14")).toContain("#1 Psw 231(8) @2,14 | Recon | str 10 | ammo 8/8 | fuel 48/55 | ent 0 | xp 7 | moves 0/10");
+}, 60_000);
+
+test("The AI playing the first side buys and deploys on its first turn, as on every other (#279)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --side 1 --seed 1");
+	const axis = readSave(file).state.players.find((p) => p.side === AXIS);
+	expect(axis.prestige).toBeLessThan(3056);
+	expect(axis.core.length).toBeGreaterThan(0);
+}, 60_000);
+
+test("The report keeps the enemy's leaders and upgrades to itself (#279)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1)), w = world(g);
+	expect(describe(w, w, AXIS, [{ type: "leader", unit: 4, leader: 1 }])).toEqual([]);
+	expect(describe(w, w, AXIS, [{ type: "turnStarted", player: 1, turn: 1, date: "", dayTurn: 0 },
+		{ type: "upgraded", unit: null, index: 0, eqid: 270, transport: -1, cost: 10 }])).toEqual(["-- Allies turn 1 --"]);
 }, 60_000);
