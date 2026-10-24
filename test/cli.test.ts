@@ -243,3 +243,15 @@ test("A mounted unit shows its own ammo and fuel, its transport's beside them (#
 	expect(await call("hex 2,6")).toContain(line);
 	expect(await call("supply")).toContain("#8 Sturmpioniere @2,6 | str 10 | ammo 5/7 | mounted on Opel Blitz (ammo 4/4, fuel 55/55)");
 }, 60_000);
+
+test("Attackers list every hex a unit can attack the target from after a move, not only the best (#308)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1));
+	playCommand(g, { type: "move", unit: 1, to: { row: 0, col: 15 } });
+	//the bunker at 2,15: the SS infanterie #3 at 1,12 reaches three of its neighbours, 2,14 the best
+	const a = attackers(world(g), AXIS, 14).estimates.find((e) => e.attacker === 3);
+	expect([a.from, ...a.also.map((e) => e.from)]).toEqual(["2,14", "3,14", "1,15"]);
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --seed 1");
+	await call("move 1 0,15");
+	expect(await call("attackers 14")).toContain("#3 SS Infanterie @1,12 on #14 Bunker @2,15 from 2,14: kills 5, losses 0, surrenders; also from 3,14, 1,15");
+}, 60_000);
