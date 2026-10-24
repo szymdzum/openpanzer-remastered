@@ -624,7 +624,8 @@ invariant tests:
 7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126). Done.
 8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128). Done, with #142, #149
    and #150.
-9. The campaign load as a state machine with a load token (#64, #61). Open.
+9. The campaign load (#64, #61). Done without a load token: the turn loop asks for the next
+   scenario once, and its save stays until the next scenario's replaces it.
 10. A remaster ruleset next to the classic one (#53), so the mechanics gaps (#1-#4, #14, #18)
     don't re-record the classic contracts. The Ruleset exists (C1, src/core/rules.ts); the flags
     come with the first rule that differs. Open.
