@@ -73,6 +73,8 @@ export async function freshGame(): Promise<Game> {
 //loaded
 export async function startState(game: Game, item: string, isAI = [0, 0, 0, 0]) {
 	const { uiSettings } = await import("../src/prototypes");
+	//New games play the original's rules, which the contracts pin, as the harness has them (#53)
+	uiSettings.classicRules = true;
 	Math.random = mulberry32(1);
 	const old = game.scenario;
 	if (item.startsWith("campaign:")) {

@@ -40,12 +40,18 @@ export const classicRules: Ruleset = {
 	leaders,
 	classLeaders: leaders.map((list) => list.length ? list[0] : -1),
 	combat: classicCombat,
-	ai: { config: aiDefaultConfig },
+	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
 //The remaster's rules: the classic ones until a change lands here, each measured in the AI arena
 //(docs/ai/arena.md)
-export const remasterRules: Ruleset = { ...classicRules, name: "remaster" };
+export const remasterRules: Ruleset = {
+	...classicRules,
+	name: "remaster",
+	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: the side that
+	//must take objectives gets none of the bonus for staying, the defender all of it (#235)
+	ai: { ...classicRules.ai, attackerEntrenchment: 0 },
+};
 
 //The ruleset of a name; a name it doesn't know (a save from before #53) plays the classic rules
 export const rulesetNamed = (name: string | undefined): Ruleset => name === remasterRules.name ? remasterRules : classicRules;

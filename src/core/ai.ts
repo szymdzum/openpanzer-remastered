@@ -27,7 +27,7 @@ import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
 import type { Controller, Played } from "./controller";
 import { playerAt } from "./draft";
-import { adjacent } from "./geometry";
+import { adjacent, distance } from "./geometry";
 import type { GameEvent } from "./events";
 import { moveRange } from "./movement";
 import { check, step } from "./step";
@@ -70,6 +70,14 @@ export function aiController(player: number, options: AIControllerOptions = {}):
 			return cmd === undefined ? null : { command: cmd };
 		},
 	};
+}
+
+//The side attacks while it has more objectives still to take than the enemy: it can't win at the turn
+//limit by holding what it has (the side holding more objectives wins there, #231), so it must move. The
+//roles follow the game: an attacker that has taken enough to lead defends what it holds, and the
+//defender that has lost the lead attacks to win it back
+export function isAttacker(w: World, side: number): boolean {
+	return w.state.objectives[side].length > w.state.objectives[~side & 1].length;
 }
 
 //The AI's stream where the state has it (null: the state's streams aren't seeded, Math.random)
@@ -249,6 +257,9 @@ interface Planning {
 	s: Scorer;
 	queue: Command[];
 	prestigeLeft: number;
+	//The share of the bonus for staying entrenched its units keep away from the enemy: the rules' for a side
+	//that attacks, all of it for one that defends (#235)
+	stayShare: number;
 }
 
 //AI.planTurn: the AI's units, artillery, fortifications, air and naval combat units first, each given
@@ -257,7 +268,8 @@ interface Planning {
 function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number) {
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
-	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft };
+	const stayShare = isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
+	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
 		if (u.owner !== player) continue;
@@ -336,7 +348,7 @@ function moveUnit(t: Planning, a: AIUnit) {
 	const moving = !(a.didMove || a.didResupplyReinforce);
 	const cells = moving ? moveRange(s.w, u) : [];
 	const mounted = moving ? mountedCells(s.w, u, cells) : [];
-	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted);
+	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted, t.stayShare);
 	if (to === null) {
 		a.noMove = true;
 		return;
@@ -362,6 +374,16 @@ function mountedCells(w: World, u: UnitState, cells: MoveCell[]): MoveCell[] {
 		&& !nextToSeenEnemy(w, u, m));
 }
 
+//How near a seen enemy unit an attacker's unit counts as in contact: what one move of the enemy reaches
+const CONTACT = 3;
+
+//An enemy unit the side sees within range hexes of the unit
+function nearSeenEnemy(w: World, u: UnitState, range: number): boolean {
+	const side = sideOf(w, u);
+	return w.state.units.some((other) => sideOf(w, other) !== side && distance(u.row, u.col, other.row, other.col) <= range
+		&& (isSpotted(w, hexIndex(w, other.row, other.col), side) || other.tempSpotted));
+}
+
 function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 	const side = sideOf(w, u);
 	return adjacent(cell.row, cell.col).some((c) => {
@@ -376,8 +398,8 @@ function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 //objective; a hex with the objective it nears (less for an air unit, none for a ship), the cell's own
 //score first: a taken hex isn't scored further. A hex is scored for the unit standing there, not its
 //transport: it gets off it at the round's end
-function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[]): { cell: Position; mounted: boolean } | null {
-	let best = stayScore(s, u);
+function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number): { cell: Position; mounted: boolean } | null {
+	let best = stayScore(s, u, stayShare);
 	const nearing = isSea(s.w, u) ? 0 : isAir(s.w, u) ? 0.3 : 1;
 	let bestCell: MoveCell | null = null;
 	for (const c of [...cells, ...mounted]) {
@@ -393,12 +415,15 @@ function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[
 	return bestCell === null ? null : { cell: { row: bestCell.row, col: bestCell.col }, mounted: mounted.includes(bestCell) };
 }
 
-//Staying where it stands: the hex, for a ground unit its objective, its entrenchment, its attacks
-function stayScore(s: Scorer, u: UnitState): number {
+//Staying where it stands: the hex, for a ground unit its objective, its entrenchment, its attacks. Away
+//from the enemy an attacker's unit keeps only a share of its entrenchment's worth: the holes it dug far
+//from the front don't hold it back (#235); in contact it keeps them all, to hold the line it reached
+function stayScore(s: Scorer, u: UnitState, stayShare: number): number {
 	const pos = { row: u.row, col: u.col };
 	let score = cellScore(s, u, pos, true);
 	if (isGround(s.w, u)) score += objectiveScore(s, pos).score;
-	score += u.entrenchment * s.config.entrenchmentScore;
+	const share = stayShare === 1 || nearSeenEnemy(s.w, u, CONTACT) ? 1 : stayShare;
+	score += u.entrenchment * s.config.entrenchmentScore * share;
 	return score + attackPotential(s, u, pos);
 }
 
