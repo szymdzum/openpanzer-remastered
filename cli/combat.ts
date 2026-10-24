@@ -51,9 +51,18 @@ export function estimateLine(w: World, e: Estimate): string {
 		...NOTES.map((n) => n(e)).filter(Boolean)].join(", ");
 }
 
-export function attackerLine(w: World, e: Estimate): string {
-	const u = unitById(w, e.attacker);
-	return `${u ? label(w, u) : "#" + e.attacker} on ` + estimateLine(w, e);
+//An attacker's estimate with the other hexes it can attack from after a move (#308)
+export interface AttackerEstimate extends Estimate {
+	also: Estimate[];
+}
+
+//Another hex an attacker can attack from: its estimate only when it differs from the best's
+const sameAs = (a: Estimate, b: Estimate) => a.kills === b.kills && a.losses === b.losses && a.outcome === b.outcome;
+const otherHex = (best: Estimate) => (e: Estimate) => sameAs(e, best) ? e.from : `${e.from} (kills ${e.kills}, losses ${e.losses}, ${e.outcome})`;
+
+export function attackerLine(w: World, e: AttackerEstimate): string {
+	const u = unitById(w, e.attacker), also = e.also.map(otherHex(e));
+	return `${u ? label(w, u) : "#" + e.attacker} on ` + estimateLine(w, e) + (also.length ? `; also from ${also.join(", ")}` : "");
 }
 
 const unitsOnHex = (w: World, c: Position) => {
@@ -111,23 +120,28 @@ function estimateFrom(kw: World, u: UnitState, t: UnitState, c: MoveCell): Estim
 }
 
 const worth = (e: Estimate) => e.kills - e.losses;
-const better = (a: Estimate | null, b: Estimate | null) => b === null || (a !== null && worth(a) > worth(b)) ? a : b;
 
-//The best hex of its move range u can move to and attack t from this turn
-function bestAfterMove(w: World, kw: World, u: UnitState, t: UnitState): Estimate | null {
-	if (u.hasMoved) return null;
+//Every hex of its move range u can move to and attack t from this turn, the best estimate first
+function afterMove(w: World, kw: World, u: UnitState, t: UnitState): Estimate[] {
+	if (u.hasMoved) return [];
 	const reach = unitAttackRange(kw, u);
 	return reachable(w, u).filter((c) => distance(c.row, c.col, t.row, t.col) <= reach)
-		.reduce((best: Estimate | null, c) => better(estimateFrom(kw, u, t, c), best), null);
+		.map((c) => estimateFrom(kw, u, t, c)).filter((e) => e !== null).sort((a, b) => worth(b) - worth(a));
 }
 
 const ready = (kw: World, side: number, u: UnitState) => sideOf(kw, u) === side && !u.hasFired && ammoOf(u) > 0;
-const attackOf = (w: World, kw: World, u: UnitState, t: UnitState) =>
-	isTarget(kw, u, t) ? estimate(kw, u, t) : bestAfterMove(w, kw, u, t);
+
+//u's attack on t: from where it stands, else from the best hex it can move to, with the other hexes
+function attackOf(w: World, kw: World, u: UnitState, t: UnitState): AttackerEstimate | null {
+	if (isTarget(kw, u, t)) return { ...estimate(kw, u, t), also: [] };
+	const [best, ...also] = afterMove(w, kw, u, t);
+	return best ? { ...best, also } : null;
+}
 
 //Which of side's units can attack a target this turn: from where they stand, or after a move (the hex
-//with the best estimate), the best first
-export function attackers(w: World, side: number, targetId: number): { estimates: Estimate[]; note: string } {
+//with the best estimate, then every other hex it can attack from: a target's approaches, #308), the
+//best first
+export function attackers(w: World, side: number, targetId: number): { estimates: AttackerEstimate[]; note: string } {
 	const kw = knownWorld(w, side), t = unitById(kw, targetId);
 	if (!t || sideOf(kw, t) === side) return { estimates: [], note: `#${targetId} is not an enemy unit you see` };
 	const estimates = kw.state.units.filter((u) => ready(kw, side, u)).map((u) => attackOf(w, kw, u, t)).filter((e) => e !== null)
