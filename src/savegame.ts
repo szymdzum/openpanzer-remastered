@@ -18,6 +18,9 @@
 import { Equipment } from "./equipment";
 import type { PlayerDossier } from "./map";
 import type { RulesetName } from "./core/types";
+import { createWorld } from "./core/create";
+import { withoutDestroyed } from "./core/fight";
+import { rulesetNamed } from "./core/rules";
 import { Scenario } from "./scenario";
 import {
 	campaignFromData, type CampaignHost, type CampaignState, type CoreUnit, fromData, type GameState, type HexState, type OffMapUnit,
@@ -79,8 +82,8 @@ export function readSaveObject(o: unknown): ReadSave | null {
 	return null;
 }
 
-//The scenario of a save, with its players, units and the rest of the state: the equipment of the
-//players' countries is loaded already. A campaign's part comes once the campaign is loaded,
+//The scenario of a save, with its players, units and the rest of the state, without the units it holds
+//destroyed (#290): the equipment of the players' countries is loaded already. A campaign's part comes once the campaign is loaded,
 //campaignFromSave
 export function scenarioFromSave(read: ReadSave): Scenario {
 	const data = { ...read.save.data };
@@ -90,7 +93,9 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 		data.description = new Scenario(state.scenario.file).getDescription();
 	if (unknown("equipment"))
 		state.equipment = { indexes: Equipment.equipmentIndexes };
-	return fromData({ data, state });
+	//(a unit the save holds with no strength left comes off the map, #290)
+	const w = withoutDestroyed(createWorld({ data, state }, Equipment.equipment, { rules: rulesetNamed(read.save.rules) }));
+	return fromData({ data, state: w.state });
 }
 
 //The campaign's part of a save, once host's campaign is loaded: its scenario and Game's progress

@@ -16,7 +16,7 @@ import { scoreGains, UNIT_MAX_EXPERIENCE, unitClass } from "../prototypes";
 import { nextRandom, type RngStream } from "../rng";
 import { attackableUnit, supportFireUnits } from "./attack";
 import { attackResult, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
-import { addScore, changeUnit, emit, playerAt, removeUnit, spotOff, spotOn, writeUnit } from "./draft";
+import { addScore, beginDraft, changeUnit, emit, finishDraft, playerAt, removeUnit, spotOff, spotOn, writeUnit } from "./draft";
 import type { Fighter, FighterState } from "./events";
 import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
@@ -201,6 +201,17 @@ export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 	for (const u of [atk, def, ...d.state.units.filter((x) => x !== atk && x !== def)])
 		if (u !== null && u.strength <= 0) destroy(d, u);
 	return atk;
+}
+
+//A loaded game without the units on the map that have no strength left (#290): a save written while an
+//attack's animation ran (the original's race, ours until #58) holds them, and nothing else takes them off,
+//so one stood on its hex for good. Taken off as the attack's cleanup would have, a loss in a campaign's
+//dossier; the world as it is when there is none
+export function withoutDestroyed(w: World): World {
+	if (!w.state.units.some((u) => u.strength <= 0)) return w;
+	const d = beginDraft(w);
+	for (const u of d.state.units.filter((x) => x.strength <= 0)) destroy(d, u);
+	return finishDraft(d);
 }
 
 //After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
