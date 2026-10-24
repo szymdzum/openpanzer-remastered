@@ -204,7 +204,8 @@ export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 }
 
 //After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
-//no unit left loses (#92: when both have none, both win)
+//no unit left loses. When both have none the game ends once, as outcome() says: the axis checked first,
+//the allies win (#92: the old game told a victory for each side, and a campaign ended the scenario twice)
 export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null) {
 	const def = unitById(d, start.defender);
 	if (atk !== null && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
@@ -216,8 +217,8 @@ export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null) {
 			emit(d, { type: "surrendered", unit: def.id, at: { row: def.row, col: def.col } });
 		}
 	}
-	for (const side of [0, 1])
-		if (!d.state.units.some((u) => sideOf(d, u) === side)) emit(d, { type: "victory", side: ~side & 1, kind: "elimination" });
+	const side = [0, 1].find((x) => !d.state.units.some((u) => sideOf(d, u) === x));
+	if (side !== undefined) emit(d, { type: "victory", side: ~side & 1, kind: "elimination" });
 }
 
 function destroy(d: Draft, u: UnitState) {
