@@ -48,8 +48,9 @@ export const classicRules: Ruleset = {
 export const remasterRules: Ruleset = {
 	...classicRules,
 	name: "remaster",
-	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: the side that
-	//must take objectives gets none of the bonus for staying, the defender all of it (#235)
+	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
+	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
+	//it (#235)
 	ai: { ...classicRules.ai, attackerEntrenchment: 0 },
 };
 

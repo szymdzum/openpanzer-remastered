@@ -60,7 +60,9 @@ expected to die isn't attacked again.
 | Attack potential: the scores of every attack possible from there | sum |
 
 Air units score only the first three rows and a third of the objective pull. Staying scores the
-same hex parts plus **+50 per entrenchment level**. Every score is multiplied by a random factor
+same hex parts plus **+50 per entrenchment level**; in the remaster's rules a side that attacks
+(more objectives still to take than the enemy) gets none of it for a unit with no enemy it sees within
+3 hexes (#235). Every score is multiplied by a random factor
 from 0.8 to 1.2, drawn from the AI's stream.
 
 ## Scoring an attack
@@ -83,7 +85,8 @@ from 0.8 to 1.2, drawn from the AI's stream.
 - Look at the turn limit or the victory turns (#232).
 - Pick a target for the turn and attack it in order, artillery then air then assault (#233).
 - Move artillery to support the next attack (#234).
-- Distinguish attacking from defending: the entrenchment bonus applies to both (#235).
+- Distinguish attacking from defending: the entrenchment bonus applies to both (#235; the
+  remaster's rules take it from an attacker's units away from the enemy).
 - Withdraw damaged units, or seek out weak valuable ones (#6).
 - Garrison its own objectives before the player takes them (#5).
 - Think about the player's next turn.

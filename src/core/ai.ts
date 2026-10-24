@@ -76,9 +76,12 @@ export function aiController(player: number, options: AIControllerOptions = {}):
 //limit by holding what it has (the side holding more objectives wins there, #231), so it must move. The
 //roles follow the game: an attacker that has taken enough to lead defends what it holds, and the
 //defender that has lost the lead attacks to win it back
-export function isAttacker(w: World, side: number): boolean {
+function isAttacker(w: World, side: number): boolean {
 	return w.state.objectives[side].length > w.state.objectives[~side & 1].length;
 }
+
+//The share of the bonus for staying entrenched the side's units keep away from the enemy (#235)
+const stayShareOf = (w: World, side: number): number => isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
 
 //The AI's stream where the state has it (null: the state's streams aren't seeded, Math.random)
 function aiStream(w: World): RngStream {
@@ -268,8 +271,7 @@ interface Planning {
 function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number) {
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
-	const stayShare = isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
-	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare };
+	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side) };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
 		if (u.owner !== player) continue;
@@ -398,7 +400,8 @@ function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 //objective; a hex with the objective it nears (less for an air unit, none for a ship), the cell's own
 //score first: a taken hex isn't scored further. A hex is scored for the unit standing there, not its
 //transport: it gets off it at the round's end
-function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number): { cell: Position; mounted: boolean } | null {
+function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number)
+	: { cell: Position; mounted: boolean } | null {
 	let best = stayScore(s, u, stayShare);
 	const nearing = isSea(s.w, u) ? 0 : isAir(s.w, u) ? 0.3 : 1;
 	let bestCell: MoveCell | null = null;

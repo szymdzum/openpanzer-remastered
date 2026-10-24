@@ -20,13 +20,13 @@ function planned(w: World, player: number): Command[] {
 }
 
 //A German infantry dug in five levels deep, ten hexes north of a German objective Poland holds, a 7TP
-//far off on the other side, and Poland's own objectives to take: none (Germany attacks) or three
+//far off on the other side (or where given), and Poland's own objectives to take: none (Germany attacks) or three
 //(Poland attacks, Germany defends)
-function entrenchedInfantry(rules: Ruleset, polishObjectives: number, ai: number): World {
+function entrenchedInfantry(rules: Ruleset, polishObjectives: number, ai: number, tank = { row: 14, col: 14 }): World {
 	const w = handWorld({ rows: 16, cols: 16, units: [
 		{ eqid: INFANTERIE, owner: 0, row: 2, col: 2, entrenchment: 5 },
-		{ eqid: TP7, owner: 1, row: 14, col: 14 },
-	] }, germanyPoland, { rules });
+		{ eqid: TP7, owner: 1, ...tank },
+	] }, germanyPoland, { rules, noFOW: true });
 	w.state.rng = { game: 1, ai };
 	const objective = w.state.map.hexes[12 * 16 + 2];
 	objective.victorySide = 0;
@@ -53,4 +53,11 @@ test("A defender's entrenched unit stays dug in, in the remaster as in the class
 		expect(moves(planned(entrenchedInfantry(classicRules, 3, ai), 0)), "classic, ai " + ai).toBe(false);
 		expect(moves(planned(entrenchedInfantry(remasterRules, 3, ai), 0)), "remaster, ai " + ai).toBe(false);
 	}
+});
+
+test("An attacker's entrenched unit in contact with the enemy stays dug in, in the remaster as in the classic rules (#235)", () => {
+	//The 7TP three hexes off, to the side away from the objective
+	for (const ai of [1, 2, 3, 4, 5])
+		for (const rules of [classicRules, remasterRules])
+			expect(moves(planned(entrenchedInfantry(rules, 0, ai, { row: 0, col: 5 }), 0)), rules.name + ", ai " + ai).toBe(false);
 });
