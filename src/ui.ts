@@ -477,26 +477,40 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 	game.waitUIAnimation = surprise;
 }
 
-//A side has won by capturing all victory hexes (or by destroying all the enemy units)
+//A side has won by capturing all its victory hexes
 function uiMoveVictory(side: number) {
+	uiVictory(side, endGameType.moveCapture);
+}
+
+//A side has won because the other has no unit left
+function uiEliminationVictory(side: number) {
+	uiVictory(side, endGameType.noEnemyLeft);
+}
+
+//The scenario won by side, how (an endGameType value): told as a defeat to a person who played the
+//other side only, with the winner's country and score (#76: the old game asked whose turn it was, so a
+//person whose last unit fell attacking was told they won, and it always said the hexes were captured)
+function uiVictory(side: number, how: string) {
 	var victoryType = game.scenario.checkVictory();
 	if (game.campaign !== null) {
 		if (game.getCampaignPlayer().side == side)
-			game.continueCampaign(victoryType, endGameType.moveCapture);
+			game.continueCampaign(victoryType, how);
 		else
-			game.continueCampaign("lose", endGameType.moveCapture);
+			game.continueCampaign("lose", how);
 	} else {
 		var title, text;
-		if (map.currentPlayer.type != playerType.humanLocal) {
+		var winner = map.getPlayers().find(function(p) { return p.side == side; }) || map.currentPlayer;
+		if (game.session.localSide == (~side & 1)) {
 			title = "DEFEAT";
 			text = "You have lost ! Your enemy ";
 		} else {
 			title = outcomeNames[victoryType];
 			text = "You have won this scenario ! ";
 		}
-		uiMessage(title, "<br/><br/><br/><br/>" + text + map.currentPlayer.getCountryName() + " on "
-			+ sideNames[side] + " side wins by capturing all victory hexes with a final score of <b>"
-			+ map.currentPlayer.score + "</b>. ", function() { game.ui.mainMenuButton("options"); });
+		var reason = how == endGameType.noEnemyLeft ? "destroying all the enemy units" : "capturing all victory hexes";
+		uiMessage(title, "<br/><br/><br/><br/>" + text + winner.getCountryName() + " on "
+			+ sideNames[side] + " side wins by " + reason + " with a final score of <b>"
+			+ winner.score + "</b>. ", function() { game.ui.mainMenuButton("options"); });
 
 		game.gameEnded = true;
 	}
@@ -636,7 +650,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 			R.runAnimation(null);
 		},
 		//A side without units left loses
-		onVictory: uiMoveVictory
+		onVictory: uiEliminationVictory
 	});
 
 	if (result.destroyed.length > 0 || result.retreat !== null || result.surrender)
