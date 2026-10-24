@@ -34,6 +34,7 @@ or naval attack). Each side defends with ground defense (air defense against air
 | Defender in a city | defender +4 dv |
 | A side standing in a river or stream without a road | the other side +4 av and +4 dv |
 | Defender is artillery | attacker +3 dv |
+| A ship and a submarine fight | the side that isn't the submarine uses its close defense (#88: the original only did it when the submarine attacked) |
 | Entrenchment | + its level to dv (see below) |
 | Infantry defending in close terrain, attacked by tanks, recon, anti-tank... (not infantry, artillery, air or naval) | entrenchment counts twice |
 | Experience | +1 av and dv per 100 experience |
