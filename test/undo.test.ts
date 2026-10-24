@@ -37,3 +37,31 @@ test("After an undo the unit still belongs to its player, and a reinforcement co
 	expect(r.ok && r.result.strength).toBeGreaterThan(0);
 	expect(player.prestige).toBeLessThan(prestige);
 });
+
+//A German infantry (115, spotting 2 hexes) two hexes from a Polish gun (264) it sees, on a hand-built
+//map: it moves out of sight of the gun, then the move is taken back. The gun is as it was, seen but not
+//marked as having shown itself. The original's undo moved the unit back as a move, so its spotting
+//marked every enemy unit around its old hex as seen until the round's end, as if they had fired: they
+//stayed visible and attackable through the fog (#140)
+test("An undo leaves the enemy units the unit sees again as they were, not marked seen (#140)", async () => {
+	const { handWorld } = await import("./coreworld");
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { step } = await import("../src/core/step");
+	const { isSpotted, unitById } = await import("../src/core/world");
+	for (const rules of [classicRules, remasterRules]) {
+		const w = handWorld({ rows: 8, cols: 8, units: [
+			{ eqid: 115, owner: 0, row: 3, col: 4 },
+			{ eqid: 264, owner: 1, row: 3, col: 6 },
+		] }, undefined, { rules });
+		expect(isSpotted(w, 3 * 8 + 6, 0)).toBe(true);
+		const moved = step(w, { type: "move", unit: 0, to: { row: 3, col: 1 } });
+		if (moved.ok === false) throw new Error(moved.refusal.reason);
+		expect(isSpotted(moved.world, 3 * 8 + 6, 0)).toBe(false);
+		expect(moved.world.state.turn.undoable).not.toBeNull();
+		const undone = step(moved.world, { type: "undo", unit: 0 });
+		if (undone.ok === false) throw new Error(undone.refusal.reason);
+		expect(isSpotted(undone.world, 3 * 8 + 6, 0), rules.name).toBe(true);
+		expect(unitById(undone.world, 1), rules.name).toEqual(unitById(w, 1));
+		expect(undone.world.state.units, rules.name).toEqual(w.state.units);
+	}
+});

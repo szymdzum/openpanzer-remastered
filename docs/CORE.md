@@ -161,8 +161,8 @@ once on one draft; test/core-steps.test.ts played each of its commands both ways
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
 reinforcement, an upgrade or a disband; a retreat leaves nothing to undo, and an undo takes back only
 a unit of the player whose turn it is (#171: the old engine let the attacker's player undo the enemy's
-retreat). The undo plays the old single slot back, #140 and #141 included; the states before are the
-caller's.
+retreat). The undo plays the old single slot back, #141 included (the enemy units the unit sees again
+are left as they were, #140: the original marked them seen); the states before are the caller's.
 
 **The move's hex.** A move can end on a hex that holds no unit of the mover's kind (a ground or naval
 unit, or an air unit: an aircraft stops over a tank), or an enemy one its side doesn't see, which

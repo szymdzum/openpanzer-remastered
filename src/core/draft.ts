@@ -165,8 +165,9 @@ function countCells(d: Draft, counts: [Uint16Array, Uint16Array], u: UnitState, 
 }
 
 //Moves a unit to a hex (MapBoard.relocate): its sight off, the hexes, change (the facing, the undo's
-//fields), its sight on. The enemy units it spotted for the first time
-export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitState) => void): UnitId[] {
+//fields), its sight on. The enemy units it spotted for the first time, marked seen; with mark false
+//(the undo, #140) none: the units it sees again are left as they are
+export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitState) => void, mark = true): UnitId[] {
 	const u = writeUnit(d, id);
 	sightOff(d, u);
 	leaveHex(d, u.row * d.state.map.cols + u.col, id);
@@ -174,7 +175,10 @@ export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitSta
 	u.row = to.row;
 	u.col = to.col;
 	enterHex(d, to.row * d.state.map.cols + to.col, u);
-	return sightOn(d, u);
+	if (mark) return sightOn(d, u);
+	countCells(d, d.sight.zoc, u, zocCells(d, u), 1);
+	countCells(d, d.sight.spot, u, spotCells(d, u), 1);
+	return [];
 }
 
 //Changes a unit where the old engine left its counters as they were (#73: an embark, an upgrade, a

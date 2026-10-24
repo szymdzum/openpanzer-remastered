@@ -502,18 +502,12 @@ test("Property: the invariants hold after embarking, disembarking and upgrading 
 
 //The undo is checked right after a move: its kinds come up often
 const undoActions = { "move": 3, "capture": 2, "undo": 4, "attack": 1, "end turn": 1 };
-test("Property: an undo right after a move restores the state from before the move, but for #140 and #141", async () => {
-	await holds(fc.asyncProperty(sequences(undoActions, 20),
-		(seq) => run(seq, { undo: { unitFields: ["tempSpotted"], objectiveOrder: true } })), 30);
-});
-
-test.fails("Property: an undo right after a move restores tempSpotted too (fails: #140)", async () => {
-	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { objectiveOrder: true } })), 30,
-		/undo didn't restore the units:\n {4}before .{106}"tempSpotted":false/); //(the text around the first difference)
+test("Property: an undo right after a move restores the state from before the move, tempSpotted included (#140), but for #141", async () => {
+	await holds(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { objectiveOrder: true } })), 30);
 });
 
 test.fails("Property: an undo right after a move restores the objectives' order too (fails: #141)", async () => {
-	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { unitFields: ["tempSpotted"] } })), 30,
+	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: {} })), 30,
 		/undo didn't restore the objectives/);
 });
 
