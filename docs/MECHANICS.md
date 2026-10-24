@@ -176,9 +176,15 @@ still reinforce.
   outcome and a brilliant victory can give a prototype unit (at least 200 prestige worth).
 - A side with no unit left on the map loses (elimination). The remaster's rules (#115): as in PG2, not
   while it has units waiting to deploy (bought, or a campaign's core units) or reinforcements to come.
-- At the turn limit, when neither side took all its objectives, the side holding more of them
-  wins (a defender that held out); with as many each, the side that ended its last turn loses
-  (#231). In a campaign, running out of turns is a defeat, which can end the campaign.
+- The turn limit, when neither side took all its objectives. In the original (the classic rules)
+  the side that ended its last turn loses, whatever it holds, and the game ends at the last turn of a
+  side that plays on the screen; in a campaign that is a defeat, which can end the campaign. The
+  remaster's rules play PG2's (#256): the attacker, the side that had more objectives to take at the
+  scenario's start, loses unless it took them all, and the defender wins by holding out, a tactical
+  victory (the rating of the last turn), in a campaign too. The game ends once both sides have played
+  their last turn, so the attacker plays all its turns. With as many objectives each at the start
+  (50 of the 376 scenarios), or a save from before the start was kept, the side holding more
+  objectives wins (#231); with as many each, nobody does.
 
 ## Weather
 

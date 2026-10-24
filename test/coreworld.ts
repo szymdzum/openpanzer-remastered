@@ -32,6 +32,7 @@ export interface HandMap {
 	terrain?: (row: number, col: number) => number;	//Clear everywhere
 	road?: (row: number, col: number) => number;	//none
 	ground?: number;		//dry
+	startObjectives?: [number, number];	//the objectives each side had to take at the start: unknown (#256)
 	units: HandUnit[];
 }
 
@@ -39,7 +40,8 @@ export interface HandMap {
 //in the order given with ids 0, 1...
 export function handWorld(map: HandMap, equipment: EquipmentTable = germanyPoland, options: WorldOptions = {}): World {
 	const { rows, cols } = map;
-	const data: ScenarioData = { name: "hand", description: "", equipment: "eqp-adlerkorps", image: "", hexes: [] };
+	const data: ScenarioData = { name: "hand", description: "", equipment: "eqp-adlerkorps", image: "", startObjectives: map.startObjectives || null,
+		hexes: [] };
 	const state: GameState = {
 		version: 1,
 		scenario: { file: "hand.xml", date: "1939-09-01T00:00:00.000Z", turnsPerDay: 2, dayTurn: 0, atmospheric: 0,

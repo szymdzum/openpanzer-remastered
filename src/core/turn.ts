@@ -71,11 +71,32 @@ export function reachedTurnLimit(w: World, side: number): boolean {
 
 //How well the winner did by the turn it won on (Scenario.checkVictory)
 export function victoryRating(w: World): ScenarioOutcome {
-	const turn = w.state.turn.turn, by = w.state.scenario.victoryTurns;
+	return ratingOn(w, w.state.turn.turn);
+}
+
+function ratingOn(w: World, turn: number): ScenarioOutcome {
+	const by = w.state.scenario.victoryTurns;
 	if (turn <= by[0]) return "briliant";
 	if (turn <= by[1]) return "victory";
 	if (turn <= by[2]) return "tactical";
 	return "lose";
+}
+
+//The side attacking: the one that had more objectives to take at the scenario's start (#256). -1 when
+//both had as many, or the save is from before they were kept
+export function attackerSide(w: World): number {
+	const n = w.data.startObjectives;
+	if (n === null || n[0] === n[1]) return -1;
+	return n[0] > n[1] ? 0 : 1;
+}
+
+//Whether the turn limit side just reached ends the game. In the remaster rules once both sides have played
+//their last turn, whichever side plays on the screen: the attacker plays all its turns (#256). In the classic
+//rules at the last turn of a side that plays on the screen (Game's local side, 2 for both), as the old game
+//asked only for it
+export function endsAtTurnLimit(w: World, side: number, localSide: number): boolean {
+	if (w.rules.defenderHoldsOut) return reachedTurnLimit(w, 0) && reachedTurnLimit(w, 1);
+	return localSide === 2 || localSide === side;
 }
 
 //What just happened, for the outcomes the state alone doesn't show: the side a move's capture made
@@ -112,16 +133,30 @@ export function outcome(w: World, last: LastPlayed = {}): Outcome | null {
 	return null;
 }
 
-//At the turn limit neither side took all its objectives: the side that holds more of them held out and
-//wins, a defender included (the old game made the side that ended its last turn lose whatever it held,
-//#231); with as many each, the side that ended its last turn loses, as it did
-function turnLimitOutcome(w: World, endedSide: number): Outcome {
+//At the turn limit neither side took all its objectives (a capture of the last one ends the game). In the
+//classic rules the side that ended its last turn loses whatever it holds, and nobody wins, as in the
+//original. In the remaster's, PG2's rule (#256): the attacker didn't take all its objectives, it loses, and
+//the defender that held out wins, rated by the last turn. With no attacker (as many objectives each at the
+//start, or a save from before they were kept) the side holding more objectives wins (#231); with as many
+//each, nobody, and the side that ended its last turn loses
+export function turnLimitOutcome(w: World, endedSide: number): Outcome {
+	if (!w.rules.defenderHoldsOut) return { kind: "turnLimit", winner: -1, loser: endedSide, rating: "lose" };
+	const rating = ratingOn(w, Math.min(w.state.turn.turn, w.state.scenario.maxTurns));
+	const attacker = attackerSide(w);
+	if (attacker >= 0) return { kind: "turnLimit", winner: ~attacker & 1, loser: attacker, rating };
 	const held = [0, 0];
 	for (const h of w.state.map.hexes)
 		if (h.victorySide !== -1 && h.owner !== -1) held[playerAt(w, h.owner).side]++;
 	if (held[0] === held[1]) return { kind: "turnLimit", winner: -1, loser: endedSide, rating: "lose" };
 	const winner = held[0] > held[1] ? 0 : 1;
-	return { kind: "turnLimit", winner, loser: ~winner & 1, rating: victoryRating(w) };
+	return { kind: "turnLimit", winner, loser: ~winner & 1, rating };
+}
+
+//What the turn limit gives side: its rating when it won there, a loss otherwise (a campaign's outcome for
+//its player)
+export function turnLimitResult(w: World, endedSide: number, side: number): ScenarioOutcome {
+	const o = turnLimitOutcome(w, endedSide);
+	return o.winner === side ? o.rating : "lose";
 }
 
 //The current player's reinforcements up to this turn arrive (Actions.deployReinforcements), in the

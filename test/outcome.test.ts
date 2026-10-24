@@ -1,6 +1,7 @@
 //The core's outcome (src/core/turn.ts, the old Actions.checkOutcome) at the turn limit: the side's last
-//turn played, whichever side, and the side holding more objectives wins it (#231; the capture and
-//wipe-out drills are test/engine.test.ts's, on the engine contract's run)
+//turn played, whichever side. In the classic rules the side that ended it loses, as in the original; in the
+//remaster's the attacker loses unless it took all its objectives, the defender holding out wins (#256)
+//(the capture and wipe-out drills are test/engine.test.ts's, on the engine contract's run)
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 
@@ -34,21 +35,15 @@ test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name
 	expect(defeats, "defeats at the turn limit").toBeGreaterThan(0);
 });
 
-//The outcome at the turn limit when side ended its last turn: the side holding more objectives wins
-//(#231), with as many each the side that ended loses
-function turnLimitOf(scenario: Awaited<ReturnType<typeof restoreState>>) {
-	const held = [0, 0];
-	for (const row of scenario.map.map)
-		for (const h of row)
-			if (h.victorySide !== -1 && h.owner !== -1) held[scenario.map.getPlayer(h.owner).side]++;
-	const holder = held[0] === held[1] ? -1 : held[0] > held[1] ? 0 : 1;
-	return (side: number) => holder === -1 ? { kind: "turnLimit", winner: -1, loser: side, rating: "lose" }
-		: { kind: "turnLimit", winner: holder, loser: ~holder & 1, rating: scenario.checkVictory() };
+//The outcome at the turn limit when side ended its last turn, in the classic rules the fixtures play by:
+//the side that ended loses, nobody wins, whatever each holds (#256: the original's rule)
+function turnLimitOf(_scenario: Awaited<ReturnType<typeof restoreState>>) {
+	return (side: number) => ({ kind: "turnLimit", winner: -1, loser: side, rating: "lose" });
 }
 
-//Panzer-Verbaende Ostpreussen played to its last turn as Poland, the objectives held against the German
-//AI: the old game told Poland "DEFEAT" (#231)
-test("At the turn limit the side holding more objectives wins, a defender who held them included (#231)", async () => {
+//Panzer-Verbaende Ostpreussen at its last turn, the objectives Polish but one: #231 made the side holding more
+//win in every game; the classic rules went back to the original's (#256)
+test("In the classic rules the side that ended its last turn loses at the turn limit, whatever it holds, as in the original (#256)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
 	const { game } = await import("../src/game");
 	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
@@ -61,9 +56,87 @@ test("At the turn limit the side holding more objectives wins, a defender who he
 	m.turn = m.maxTurns;
 	m.getPlayers().forEach((p) => { p.playedTurn = m.maxTurns; });
 	const world = worldOf(scenario, game, gameInputs(game));
-	expect(objectives.length).toBeGreaterThan(2);
-	expect(outcome(world, { endedSide: 1 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });
-	expect(outcome(world, { endedSide: 0 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });
+	expect([world.rules.name, objectives.length]).toEqual(["classic", 7]);
+	expect(outcome(world, { endedSide: 1 })).toEqual({ kind: "turnLimit", winner: -1, loser: 1, rating: "lose" });
+	expect(outcome(world, { endedSide: 0 })).toEqual({ kind: "turnLimit", winner: -1, loser: 0, rating: "lose" });
+});
+
+//A Pz IIA (player 0) and a 7TP (player 1) on the hand-built map at the turn limit (turn 1, both sides played
+//it), three objectives: A (0,5) and B (0,6) for the attacker to take, C (11,5) for the defender. The attacker
+//took A: it holds A and C, the defender only B. starts: the objectives each side had to take at the start
+async function turnLimitWorld(rules: import("../src/core/types").Ruleset, attacker: number, starts?: [number, number]) {
+	const { handWorld } = await import("./coreworld");
+	const { createWorld } = await import("../src/core/create");
+	const defender = ~attacker & 1;
+	const w = handWorld({ rows: 12, cols: 12, units: [{ eqid: 140, owner: 0, row: 4, col: 4 }, { eqid: 273, owner: 1, row: 8, col: 8 }],
+		startObjectives: starts || (attacker === 0 ? [2, 1] : [1, 2]) });
+	const s = structuredClone(w.state);
+	const objective = (row: number, col: number, owner: number, taker: number) => {
+		s.map.hexes[row * 12 + col] = { ...s.map.hexes[row * 12 + col], owner, victorySide: taker };
+		s.objectives[taker].push({ row, col });
+	};
+	objective(0, 6, defender, attacker);	//B, still the defender's
+	objective(11, 5, attacker, defender);	//C, the attacker's own
+	objective(0, 5, attacker, defender);	//A, taken: the defender's to take back
+	s.scenario = { ...s.scenario, maxTurns: 1, victoryTurns: [0, 0, 1] };
+	s.players = s.players.map((p) => ({ ...p, playedTurn: 1 }));
+	return createWorld({ data: w.data, state: s }, w.equipment, { rules });
+}
+
+//The playtest of Panzer-Verbaende Ostpreussen (#256): Germany took 2 of its 5 objectives and won at the turn
+//limit by holding more than Poland. PG2's rule: the attacker must take them all
+test("In the remaster rules the attacker that didn't take all its objectives loses at the turn limit, the defender that held out wins (#256)", async () => {
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { attackerSide, outcome } = await import("../src/core/turn");
+	for (const attacker of [0, 1]) {
+		const defender = ~attacker & 1;
+		const w = await turnLimitWorld(remasterRules, attacker);
+		expect(attackerSide(w)).toBe(attacker);
+		for (const ended of [0, 1])
+			expect(outcome(w, { endedSide: ended }), `attacker ${attacker}, ended ${ended}`)
+				.toEqual({ kind: "turnLimit", winner: defender, loser: attacker, rating: "tactical" });
+		expect(outcome(await turnLimitWorld(classicRules, attacker), { endedSide: attacker }))
+			.toEqual({ kind: "turnLimit", winner: -1, loser: attacker, rating: "lose" });
+	}
+});
+
+test("With no attacker in the remaster rules, as many objectives each at the start or a save from before they were kept, the side holding more wins at the turn limit (#256, #231)", async () => {
+	const { remasterRules } = await import("../src/core/rules");
+	const { attackerSide, outcome } = await import("../src/core/turn");
+	for (const known of [true, false])
+		for (const holder of [0, 1]) {
+			const w = await turnLimitWorld(remasterRules, holder, [2, 2]);
+			const unknown = known ? w : { ...w, data: { ...w.data, startObjectives: null } };
+			expect(attackerSide(unknown)).toBe(-1);
+			expect(outcome(unknown, { endedSide: 1 })).toEqual({ kind: "turnLimit", winner: holder, loser: ~holder & 1, rating: "tactical" });
+		}
+});
+
+test("In a campaign the defender that held out to the turn limit wins its scenario in the remaster rules and loses it in the classic ones (#256)", async () => {
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { turnLimitResult } = await import("../src/core/turn");
+	const remaster = await turnLimitWorld(remasterRules, 0), classic = await turnLimitWorld(classicRules, 0);
+	expect([turnLimitResult(remaster, 1, 1), turnLimitResult(remaster, 1, 0)]).toEqual(["tactical", "lose"]);
+	expect([turnLimitResult(classic, 1, 1), turnLimitResult(classic, 1, 0)]).toEqual(["lose", "lose"]);
+});
+
+//A person defending on side 0 against the AI's side 1: the old game ended at the person's last turn, before
+//the attacker's (and made the person lose)
+test("In the remaster rules the game ends at the turn limit once both sides have played their last turn, whichever side plays on the screen (#256)", async () => {
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { advance, startSession } = await import("../src/core/session");
+	for (const local of [0, 1, 2]) {
+		const start = await turnLimitWorld(remasterRules, 1);
+		const unplayed = { ...start, state: { ...start.state, players: start.state.players.map((p) => ({ ...p, playedTurn: 0 })) } };
+		const s = startSession(unplayed, () => null, { localSide: local });
+		advance(s);
+		expect(s.ended, "local " + local).toBeNull();
+		advance(s);
+		expect(s.ended, "local " + local).toEqual({ kind: "turnLimit", side: 1 });
+		const classic = startSession({ ...unplayed, rules: classicRules }, () => null, { localSide: local });
+		advance(classic);
+		expect(classic.ended, "classic, local " + local).toEqual(local === 1 ? null : { kind: "turnLimit", side: 0 });
+	}
 });
 
 //A German tank and a Soviet tank, the last unit of each side, both at strength 1 on the small game: an
@@ -135,4 +208,20 @@ test("In the remaster rules a side with units waiting to deploy or arrive isn't 
 				.toEqual(eliminated ? [{ type: "victory", side: 0, kind: "elimination" }] : []);
 			expect(outcome(r.world), label).toEqual(eliminated ? { kind: "elimination", winner: 0, loser: 1, rating: "briliant" } : null);
 		}
+});
+
+//The attacker must be known all game (#256): the objectives' lists change with every capture
+test("A new game keeps how many objectives each side had to take at the start, and its save keeps them; a save from before has none (#256)", async () => {
+	const { setupOf } = await import("./corefiles");
+	const { newGame } = await import("../src/core/newgame");
+	const { readSaveObject, SAVE_VERSION } = await import("../src/savegame");
+	const created = newGame(setupOf("drpzop01.xml", { game: 1, ai: 2 }));
+	const keys = ["name", "description", "equipment", "image", "startObjectives", "hexes"];
+	expect([created.data.startObjectives, Object.keys(created.data)]).toEqual([[5, 2], keys]);
+	const saved = (version: number, data: object) => readSaveObject(JSON.parse(JSON.stringify({ version, rules: "remaster", data,
+		state: created.state })))?.save;
+	expect(saved(SAVE_VERSION, created.data)?.data.startObjectives).toEqual([5, 2]);
+	const { startObjectives: _start, ...before } = created.data;
+	const old = saved(2, before);
+	expect([old?.version, old?.rules, old?.data.startObjectives, Object.keys(old?.data || {})]).toEqual([3, "remaster", null, keys]);
 });

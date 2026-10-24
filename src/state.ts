@@ -49,6 +49,9 @@ export interface ScenarioData {
 	description: string;
 	equipment: string;		//the equipment set (Scenario.eqp); absent when imported from a save without it
 	image: string;			//the map image (GameMap.terrainImage)
+	//How many objectives each side had to take at the scenario's start: the side with more attacks (#256).
+	//Null in a save from before it was kept
+	startObjectives: [number, number] | null;
 	hexes: HexData[];		//flat, index row * cols + col (the size is the state's, MapState)
 }
 
@@ -250,7 +253,7 @@ export function toData(scenario: Scenario, host?: CampaignHost | null): SavedGam
 	const m = scenario.map;
 	const units = m.getUnits();
 	const data: ScenarioData = { name: scenario.name, description: scenario.getDescription(), equipment: scenario.eqp,
-		image: m.terrainImage, hexes: [] };
+		image: m.terrainImage, startObjectives: startObjectivesOf(scenario), hexes: [] };
 	const hexes: HexState[] = [];
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
@@ -281,7 +284,8 @@ export function toData(scenario: Scenario, host?: CampaignHost | null): SavedGam
 //where they are, the rest made as toData makes it and compared
 export function savedAs(scenario: Scenario, host: CampaignHost | null, saved: SavedGame): boolean {
 	const m = scenario.map, units = m.getUnits(), { data, state } = saved;
-	if (!sameItems([data.name, data.description, data.equipment, data.image, state.map.rows, state.map.cols, state.map.lastRowPartial,
+	if (!sameData(data.startObjectives, startObjectivesOf(scenario))
+		|| !sameItems([data.name, data.description, data.equipment, data.image, state.map.rows, state.map.cols, state.map.lastRowPartial,
 		state.map.lastColPartial, state.units.length, state.nextUnitId, state.players.length], [scenario.name, scenario.getDescription(),
 		scenario.eqp, m.terrainImage, m.rows, m.cols, m.isLastRowPartial, m.isLastColPartial, units.length, m.getBoard().uniqueID,
 		m.getPlayers().length]) || !sameHexes(m, saved))
@@ -397,6 +401,11 @@ function scenarioState(scenario: Scenario): GameState["scenario"] {
 	};
 }
 
+function startObjectivesOf(scenario: Scenario): ScenarioData["startObjectives"] {
+	const n = scenario.getStartObjectives();
+	return n === null ? null : [n[0], n[1]];
+}
+
 function turnState(m: GameMap): GameState["turn"] {
 	return { turn: m.turn, currentPlayer: m.currentPlayer ? m.currentPlayer.id : -1, undoable: undoState(m) };
 }
@@ -502,6 +511,7 @@ export function fromData(saved: SavedGame, host?: CampaignHost | null, into?: Sc
 	touched();
 	scenario.name = data.name;
 	scenario.setDescription(data.description);
+	scenario.setStartObjectives(data.startObjectives ? [data.startObjectives[0], data.startObjectives[1]] : null);
 	scenario.maxTurns = s.maxTurns;
 	scenario.date = new Date(s.date);
 	scenario.atmosferic = s.atmospheric;

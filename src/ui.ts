@@ -36,7 +36,7 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { outcome } from "./core/turn";
+import { attackerSide, turnLimitOutcome } from "./core/turn";
 import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
@@ -60,6 +60,7 @@ export interface UI {
 	equipmentWindowButtons(id: string): void;
 	updateEquipmentWindow(eqclass?: number): void;
 	uiEndTurnInfo(): void;
+	uiTurnLimitMessage(): void;
 	uiSetUnitOnViewPort(unit: Unit | null): boolean;
 	uiSetCellOnViewPort(cell: Cell | null): boolean;
 	scaleMap(level: number): void; //the map scale slider passes its value string, coerced in the arithmetic
@@ -1450,13 +1451,23 @@ function uiTurnInfo() {
 
 function uiMessage(title: string, message: string, cbfunc?: () => void) { UIBuilder.message(title, message, cbfunc); }
 
-//The turn limit reached by the side that played here: the core's outcome says whether it held out (#231)
+//The game ended at the turn limit, told to the side that plays here (src/core/turn.ts turnLimitOutcome). In
+//the classic rules the side that ended its last turn lost, as the original said. In the remaster's the
+//defender that held out wins and the attacker that didn't take all its objectives loses (#256); with no
+//attacker the side holding more objectives wins (#231)
 function uiTurnLimitMessage() {
-	const s = game.session, end = s.ended;
-	if (end !== null && end.kind === "turnLimit" && outcome(s.world, { endedSide: end.side }).winner === end.side)
-		uiMessage("VICTORY", "<br><br>You held the objectives to the end");
-	else
-		uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
+	const s = game.session, end = s.ended, w = s.world;
+	const o = turnLimitOutcome(w, end !== null && end.kind === "turnLimit" ? end.side : -1);
+	if (o.winner === -1) {
+		if (w.rules.defenderHoldsOut) uiMessage("DRAW", "<br><br>Neither side holds more objectives");
+		else uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
+		return;
+	}
+	const heldOut = attackerSide(w) === o.loser;
+	const held = heldOut ? " held the objectives to the end" : " held more objectives to the end";
+	if (s.localSide === 2) uiMessage(outcomeNames[o.rating], "<br><br>The " + sideNames[o.winner] + " side" + held);
+	else if (s.localSide === o.winner) uiMessage(outcomeNames[o.rating], "<br><br>You" + held);
+	else uiMessage("DEFEAT", "<br><br>" + (heldOut ? "You didn't capture all the objectives in time" : "The enemy held more objectives to the end"));
 }
 
 //Centers the screen on a map cell
@@ -1971,6 +1982,9 @@ function uiScaleMap(level: number) {
 		R.render(); //Full page render when changing player/side
 		uiEndTurnInfo();
 	};
+
+	//Called from game when the AI's last turn ended the game (#256)
+	this.uiTurnLimitMessage = uiTurnLimitMessage;
 
 	//Centers unit on player screen
 	this.uiSetUnitOnViewPort = function(unit: Unit | null) {

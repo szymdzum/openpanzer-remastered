@@ -12,10 +12,11 @@
  *   the end of turn step -> the next player's controller starts and plans its turn -> the defeat at
  *   the turn limit -> [the screen's turn start] -> the side the screen shows -> the reinforcements
  *   arrive -> [the save point: after them, #93]
- * Kept: the AI plans before its reinforcements arrive (#94), and the turn limit ends the game only for a
- * side that plays on this screen (localSide, Game's getLocalSide).
+ * Kept: the AI plans before its reinforcements arrive (#94), and in the classic rules the turn limit ends
+ * the game only for a side that plays on this screen (localSide, Game's getLocalSide); in the remaster's
+ * once both sides have played their last turn (#256).
  * The game ends at a victory (a capture of the last objective, or a side with no unit left after an
- * attack), at the turn limit of a side on the screen, or where the old game got stuck (#80).
+ * attack), at the turn limit (turn.ts endsAtTurnLimit), or where the old game got stuck (#80).
  *
  * A player only a person plays (human, remote) has no controller here: its turns end at once. A new
  * game whose first player is the AI starts that player's turn as on every later one, its purchases,
@@ -29,11 +30,12 @@ import { playerType } from "../prototypes";
 import type { Controller, Order, ViewEvent } from "./controller";
 import type { GameEvent } from "./events";
 import { begin, resume, step } from "./step";
-import { arriveReinforcements } from "./turn";
+import { arriveReinforcements, endsAtTurnLimit } from "./turn";
 import type { Checkpoint, World } from "./types";
 import { sideOf, unitById } from "./world";
 
-//How a game ended: a side won, the side on the screen played its last turn, or the old game got stuck
+//How a game ended: a side won, the turn limit (side: the side whose last turn ended it), or the old game
+//got stuck
 export type SessionEnd =
 	| { kind: "victory"; side: number; how: "capture" | "elimination" }
 	| { kind: "turnLimit"; side: number }
@@ -204,7 +206,7 @@ export function endTurn(s: Session, shown?: (started: StartedTurn | null, events
 	s.world = r.world;
 	const started = startTurn(s);
 	const limit = r.events.some((e) => e.type === "turnLimit" && e.side === side);
-	if (limit && (s.localSide === 2 || s.localSide === side)) {
+	if (limit && endsAtTurnLimit(s.world, side, s.localSide)) {
 		s.ended = { kind: "turnLimit", side };
 		return { kind: "endTurn", player, events: r.events, started, arrived: [] };
 	}

@@ -7,8 +7,9 @@
  *
  * A save is { version, rules, data, state } (docs/STATE.md D3, D11): the rules the game plays by (#53),
  * toData's scenario data and state (src/state.ts), plain JSON and self-contained, the scenario file
- * isn't read again. readSave reads one back, a save of version 1 (before the rules were chosen: the
- * classic ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
+ * isn't read again. readSave reads one back, a save of version 2 (before the objectives each side had
+ * to take at the start were kept, #256: unknown) or 1 (before the rules were chosen too: the classic
+ * ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
  * objects): what that save had is kept, what it never stored is listed as unknown, and the load
  * keeps the game's own there (the equipment lists as loaded, the random streams where they are,
  * the campaign's progress), as loading it always did. GameState (src/gamestate.ts) reads and
@@ -27,7 +28,7 @@ import {
 	offMapUnit, type PlayerState, type Position, type ReinforcementState, type ScenarioData, type ScenarioState, toData, type UnitState
 } from "./state";
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 export interface SaveFile {
 	version: typeof SAVE_VERSION;
@@ -73,13 +74,26 @@ export function readSaveObject(o: unknown): ReadSave | null {
 		return null;
 	const s = o as Partial<SaveFile> & Partial<GameStateExport>;
 	if (s.version === SAVE_VERSION && s.data && s.state)
-		return { save: { ...s, rules: s.rules === "remaster" ? "remaster" : "classic" } as SaveFile, unknown: [] };
-	//(version 1 had no rules: its games played the classic ones)
-	if ((s.version as number) === 1 && s.data && s.state)
-		return { save: { version: SAVE_VERSION, rules: "classic", data: s.data, state: s.state }, unknown: [] };
+		return { save: { ...s, rules: rulesOf(s) } as SaveFile, unknown: [] };
+	//(version 2 didn't keep the objectives at the start, #256; version 1 had no rules either: its games played
+	//the classic ones)
+	const version = s.version as number;
+	if ((version === 1 || version === 2) && s.data && s.state)
+		return { save: { version: SAVE_VERSION, rules: version === 1 ? "classic" : rulesOf(s), data: withoutStartObjectives(s.data),
+			state: s.state }, unknown: [] };
 	if (s.version === undefined && s.scenario && s.scenario.file && s.players)
 		return importSave(s as GameStateExport);
 	return null;
+}
+
+const rulesOf = (s: Partial<SaveFile>): RulesetName => s.rules === "remaster" ? "remaster" : "classic";
+
+//The scenario data of a save from before the objectives at the scenario's start were kept: unknown, in
+//their place before the hexes. The turn limit and the captures play by the rules for a game whose
+//attacker isn't known then (src/core/turn.ts attackerSide, #256)
+function withoutStartObjectives(data: ScenarioData): ScenarioData {
+	const { hexes, ...rest } = data;
+	return { ...rest, startObjectives: null, hexes };
 }
 
 //The scenario of a save, with its players, units and the rest of the state, without the units it holds
@@ -195,7 +209,7 @@ export function importSave(old: GameStateExport): ReadSave {
 	const unknown: UnknownPart[] = ["description", "equipment", "rng", "campaignProgress", "undo", "reserves", "nextUnitId"];
 	if (c)
 		unknown.push("startPrestige");
-	const data: ScenarioData = { name: s.name, description: "", equipment: s.eqp, image: m.terrainImage, hexes: [] };
+	const data: ScenarioData = { name: s.name, description: "", equipment: s.eqp, image: m.terrainImage, startObjectives: null, hexes: [] };
 	const { hexes, units, renumbered } = importMap(old, data);
 	const players = old.players.map(playerOf);
 	const player = c ? players.find((p) => p.country === c.country) : null;

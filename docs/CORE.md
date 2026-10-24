@@ -208,7 +208,11 @@ sends it.
 `outcome(world, last?)` is Actions.checkOutcome: a capture that took the side's last objective
 (`last.victorySide`, the move's `victory` event), a side with no unit left (axis first; the classic
 rules count only the units on the map, the remaster's also the units waiting to deploy or to arrive, #115), the ended side's turn limit (`last.endedSide`). The
-rating is Scenario.checkVictory's, by the turn.
+rating is Scenario.checkVictory's, by the turn. At the turn limit (`turnLimitOutcome`) the classic rules
+make the side that ended its last turn lose, nobody winning, as the original; the remaster's play PG2's
+rule (#256): the attacker (`attackerSide`, the side with more objectives to take at the start,
+`data.startObjectives`) loses and the defender wins, rated by the last turn; with no attacker the side
+holding more objectives wins (#231).
 
 `BENCH=1` (test/core-bench.test.ts), two rounds of turns ended on each engine fixture, each with its
 reinforcements, per end of turn (2026-10-22, a loaded laptop): old engine 27-116 µs, core 12-97 µs
@@ -339,8 +343,9 @@ controller or, when it has none left, the end of turn:
     -> [the save point: Session.saved, #93]
 
 The game ends at a victory (the step's `victory`, or a retreat that took its side's last objective:
-the old game finished the retreat's move after the attack), at the turn limit of a side that plays on
-this screen (Game's getLocalSide, computed once when the game starts, or given), or where a
+the old game finished the retreat's move after the attack), at the turn limit (`endsAtTurnLimit`: in
+the classic rules of a side that plays on this screen, Game's getLocalSide, computed once when the game
+starts, or given; in the remaster's once both sides have played their last turn, #256), or where a
 controller says the old game got stuck. A controller that hands its player over at its turn start
 is replaced at once by the one the player's new type gets (none for a person); at the join it stays,
 as Game.setupPlayers set the scripted handler after its constructor had handed the player over (it

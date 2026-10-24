@@ -10,7 +10,7 @@ import { rulesetNamed } from "../../src/core/rules";
 import { newGame } from "../../src/core/newgame";
 import type { GameEvent } from "../../src/core/events";
 import { type Advance, advance, type Session, startSession } from "../../src/core/session";
-import { victoryRating } from "../../src/core/turn";
+import { outcome, victoryRating } from "../../src/core/turn";
 import type { RulesetName, World } from "../../src/core/types";
 import { sideOf } from "../../src/core/world";
 import { playerType } from "../../src/prototypes";
@@ -56,20 +56,21 @@ export function playMatch(match: Match): GameResult {
 	const sides: [SideResult, SideResult] = [side(match.sides[0]), side(match.sides[1])];
 	const maxTurns = Math.min(match.turns || Infinity, s.world.state.scenario.maxTurns);
 	const owners = new Map<number, number>();	//unit id -> side, for the units an event names after they are gone
-	let orders = 0;
+	let orders = 0, endedSide = -1;
 	remember(s.world, owners);
 	for (let n = 0; n < 200_000 && s.ended === null && s.world.state.turn.turn <= maxTurns; n++) {
 		const turn = s.world.state.turn.turn;
 		const a = advance(s);
 		if (a.kind === "ended") break;
 		if (a.kind === "order") orders += ordered(match, sides, s.world, a);
+		else endedSide = s.world.state.players[a.player].side;
 		tally(sides, owners, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
 		remember(s.world, owners);
 	}
 	const held = objectivesHeld(s.world);
 	sides[0].objectivesHeld = held[0];
 	sides[1].objectivesHeld = held[1];
-	return { match, turns: Math.min(s.world.state.turn.turn, maxTurns), ...endOf(s, held), sides, orders,
+	return { match, turns: Math.min(s.world.state.turn.turn, maxTurns), ...endOf(s, endedSide), sides, orders,
 		ms: Math.round(performance.now() - t0) };
 }
 
@@ -109,12 +110,15 @@ function tally(sides: SideResult[], owners: Map<number, number>, turn: number, e
 	}
 }
 
-//How the game ended: a victory, stuck, or the turn limit, which the side holding more objectives wins (#231)
-function endOf(s: Session, held: [number, number]): Pick<GameResult, "end" | "winner" | "rating"> {
+//How the game ended: a victory, stuck, or the turn limit, as the core's outcome has it (src/core/turn.ts): in
+//the remaster rules the attacker loses unless it took all its objectives (#256), in the classic ones nobody
+//wins. A game cut short of the turn limit (Match.turns) has no winner
+function endOf(s: Session, endedSide: number): Pick<GameResult, "end" | "winner" | "rating"> {
 	if (s.ended !== null && s.ended.kind === "victory") return { end: s.ended.how, winner: s.ended.side, rating: victoryRating(s.world) };
 	if (s.ended !== null && s.ended.kind === "stuck") return { end: "stuck", winner: -1, rating: "" };
-	if (held[0] === held[1]) return { end: "turnLimit", winner: -1, rating: "" };
-	return { end: "turnLimit", winner: held[0] > held[1] ? 0 : 1, rating: "held" };
+	const o = outcome(s.world, { endedSide });
+	if (o === null || o.winner < 0) return { end: "turnLimit", winner: -1, rating: "" };
+	return { end: "turnLimit", winner: o.winner, rating: o.rating };
 }
 
 function side(player: Player): SideResult {

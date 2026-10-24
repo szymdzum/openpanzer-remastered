@@ -55,6 +55,8 @@ export class Scenario {
 	declare checkVictory: () => ScenarioOutcome;
 	declare getDescription: () => string;
 	declare setDescription: (str: string) => void;
+	declare getStartObjectives: () => [number, number] | null;
+	declare setStartObjectives: (n: [number, number] | null) => void;
 	declare showStatistics: () => void;
 
 	constructor(scenFile?: string) {
@@ -75,6 +77,9 @@ export class Scenario {
 		this.eqp = "eqp-adlerkorps"; //equipment set used by the scenario
 
 		let description = "";
+		//How many objectives each side had to take at the start (#256): in the closure as the description, so
+		//the harness's walk of the objects compares with the original's, which has none
+		let startObjectives: [number, number] | null = null;
 		let loadCallback: () => void = null;
 
 		if (typeof scenFile !== "undefined") {
@@ -118,6 +123,8 @@ export class Scenario {
 
 		this.getDescription = function() { return description; }
 		this.setDescription = function(str: string) { description = str; }
+		this.getStartObjectives = function() { return startObjectives; }
+		this.setStartObjectives = function(n: [number, number] | null) { startObjectives = n; }
 
 		this.showStatistics = function() {};
 	}

@@ -34,6 +34,7 @@ import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./
 import { applyData, gameInputs, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
 import { endCampaignScenario, scenarioEnded } from "./core/campaign";
+import { turnLimitResult } from "./core/turn";
 import type { Session } from "./core/session";
 import type { RulesetName } from "./core/types";
 import { setEngineContext, touched } from "./context";
@@ -152,6 +153,8 @@ export class Game {
 					setTimeout(function() {
 						if (!game.gameEnded)
 							game.ui.uiEndTurnInfo();
+						else if (game.campaign === null && game.session?.ended?.kind === "turnLimit") //(the remaster's ends after the AI's last turn too, #256)
+							game.ui.uiTurnLimitMessage();
 					}, 2500);
 					return;
 				}
@@ -159,19 +162,22 @@ export class Game {
 		}
 
 		//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
-		//shown, the reinforcements; or the defeat at the turn limit, only for a side that plays here
+		//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit)
 		this.endTurn = function() {
 			this.waitUIAnimation = false;
-			if (endGameTurn(this)) defeated(this);
+			if (endGameTurn(this)) turnLimitReached(this);
 		}
 
-		//The side that ended its turn lost at the turn limit (only a side that plays on this screen): in a
-		//campaign the outcome is lost and the next scenario follows, a single scenario ends
-		function defeated(game: Game) {
-			if (game.campaign !== null)
-				game.continueCampaign("lose", endGameType.noTurnsLeft);
-			else
+		//The game ended at the turn limit: in a campaign the scenario's outcome for the campaign player and the
+		//next scenario (in the classic rules a loss; in the remaster's a defender that held out wins, #256), a
+		//single scenario ends (the screen tells who won)
+		function turnLimitReached(game: Game) {
+			if (game.campaign === null) {
 				game.gameEnded = true;
+				return;
+			}
+			const s = game.session, end = s.ended as { side: number };
+			game.continueCampaign(turnLimitResult(s.world, end.side, game.getCampaignPlayer().side), endGameType.noTurnsLeft);
 		}
 
 		this.loop = 0; //the turn loop's interval: src/main.ts starts it, not the module's loading
