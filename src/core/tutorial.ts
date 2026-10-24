@@ -36,10 +36,14 @@ type Named = Record<Name, UnitId | null>;
 //A unit an action names: one of the picked ones, or the one on a hex when the turn is built
 type Who = Name | readonly [number, number];
 
+//A message said only when the city (8,15) is as it says (#269): the dice can leave its defender standing
+//after turn 3's four attacks, which skips the tank's capture
+type City = "free" | "held" | "taken";
+
 //One action of the script; noFuel empties the unit's fuel when the turn is built, so the resupply
 //after it has something to do. {prestige} in a message is the prestige icon
 type Step =
-	| readonly ["message", string, number, number]
+	| readonly ["message", string, number, number, City?]
 	| readonly ["select" | "mount" | "reinforce" | "resupply" | "noFuel", Who]
 	| readonly ["move", Who, number, number]
 	| readonly ["attack", Who, Who]
@@ -117,9 +121,10 @@ const AXIS_TURN_3: Step[] = [
 	["message", "Infantry units are usually good at defending cities, as they force attacker in close combat <span class='statsGlyph'>6</span> instead of normal ground combat defense <span class='statsGlyph'>5</span>. Other terrain types (shown right of the top bar) influence combat differently for each unit type.", 8, 15],
 	["attack", [9, 14], "inf1"],
 	["attack", [7, 15], "inf1"],
-	["message", "Since the unit defending the city was destroyed or retreated because of heavy casualties we can now move one of our units to capture this objective and get our prestige reward.", 8, 15],
+	["message", "Since the unit defending the city was destroyed or retreated because of heavy casualties we can now move one of our units to capture this objective and get our prestige reward.", 8, 15, "free"],
+	["message", "The city's defender held against all our attacks, so our tank can't move in. It will attack the defender too; if the city still holds, it is yours to take once you get control of the army.", 8, 15, "held"],
 	["move", AT.pz2, 8, 15],
-	["message", "The city is now ours, and it's flag changed to your flag. This objective capture also increased your prestige by 150&nbsp;{prestige}. You can check prestige, score, remaining turns  and objectives by clicking anywhere on the top bar.", 8, 15],
+	["message", "The city is now ours, and it's flag changed to your flag. This objective capture also increased your prestige by 150&nbsp;{prestige}. You can check prestige, score, remaining turns  and objectives by clicking anywhere on the top bar.", 8, 15, "taken"],
 	["attack", AT.pz2, "inf1"],
 	["message", "This is the last remaining primary objective. Let's gamble and try capturing it without trying to spot enemy. Capturing objectives in early turns gives a better score.", 16, 8],
 	["select", AT.recon2],
@@ -183,6 +188,7 @@ interface Queued {
 	target: UnitId | null;
 	at: Position | null;
 	text: string;
+	city: City | null;	//a message's condition
 }
 
 //The scripted player
@@ -217,11 +223,19 @@ export function tutorialController(player: number): Controller {
 //on a unit gone or out of reach, a move into a hex an enemy is seen on are skipped (the old game got
 //stuck on an attack without its unit for good, #80)
 function playable(w: World, q: Queued, player: number): boolean {
-	if (q.step === "message" || q.step === "select") return true;
+	if (q.step === "message") return q.city === null || cityIs(w, q.city, player);
+	if (q.step === "select") return true;
 	const u = onMap(w, q.unit);
 	if (u === null || u.owner !== player) return false;
 	if (q.step === "attack") return inReach(w, u, q.target);
 	return q.step !== "move" || !enemySeenOn(w, q.at, player);
+}
+
+//The city taken by the player, held by an enemy unit, or free of one (not taken yet)
+function cityIs(w: World, city: City, player: number): boolean {
+	const hex = hexIndex(w, 8, 15), there = unitAt(w, hex, false);
+	if (city === "taken") return w.state.map.hexes[hex].owner === player;
+	return (there !== null && there.owner !== player) === (city === "held");
 }
 
 function inReach(w: World, u: UnitState, target: UnitId | null): boolean {
@@ -267,8 +281,8 @@ function buildTurn(w: World, player: number, named: Named): { world: World; queu
 }
 
 function queued(s: Exclude<Step, readonly ["mainMenu"]>, who: (x: Who) => UnitId | null): Queued {
-	const q: Queued = { step: s[0], unit: null, target: null, at: null, text: "" };
-	if (s[0] === "message") return { ...q, text: s[1], at: { row: s[2], col: s[3] } };
+	const q: Queued = { step: s[0], unit: null, target: null, at: null, text: "", city: null };
+	if (s[0] === "message") return { ...q, text: s[1], at: { row: s[2], col: s[3] }, city: s[4] || null };
 	q.unit = who(s[1]);
 	if (s[0] === "move") q.at = { row: s[2], col: s[3] };
 	if (s[0] === "attack") q.target = who(s[2]);
