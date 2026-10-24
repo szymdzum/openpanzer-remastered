@@ -43,6 +43,7 @@ export const classicRules: Ruleset = {
 	airAttacksNextHex: false,
 	checkTargets: false,
 	deployOnOwnTowns: false,
+	waitingUnitsFight: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -57,6 +58,8 @@ export const remasterRules: Ruleset = {
 	checkTargets: true,
 	//A side with no deployment hex deploys what it buys on its own cities, airfields and ports (#302)
 	deployOnOwnTowns: true,
+	//A side with units waiting to deploy or to arrive isn't eliminated (#115)
+	waitingUnitsFight: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

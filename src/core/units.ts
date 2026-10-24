@@ -97,3 +97,14 @@ export function isTransportable(w: World, eqid: number): boolean {
 	if (eqid === undefined || eqid < 1) return false;
 	return w.equipment[eqid].groundweight !== 0;
 }
+
+//The side still has units to fight with: one on the map or, in the remaster's rules, one waiting to
+//deploy (a reserve unit of one of its players) or to arrive (a reinforcement) (#115: the original counted
+//only the units on the map, so a side whose units all waited to deploy was eliminated)
+export function sideHasUnits(w: World, side: number): boolean {
+	const s = w.state;
+	if (s.units.some((u) => sideOf(w, u) === side)) return true;
+	if (!w.rules.waitingUnitsFight) return false;
+	return s.players.some((p) => p.side === side && p.core.some((c) => "reserve" in c))
+		|| s.reinforcements.some((r) => s.players[r.unit.owner].side === side);
+}

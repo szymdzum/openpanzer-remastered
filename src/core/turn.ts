@@ -16,7 +16,7 @@ import { beginDraft, emit, finishDraft, place, playerAt, writeUnit } from "./dra
 import type { GameEvent } from "./events";
 import { reinforcementDeployPosition } from "./movement";
 import type { Draft, OffMapUnit, UnitId, UnitState, World } from "./types";
-import { canEntrench } from "./units";
+import { canEntrench, sideHasUnits } from "./units";
 import { hexIndex, isSpotted, sideOf, unitData } from "./world";
 
 //Unit.unitEndTurn: entrenchment, the movement points and the turn's flags back, and a unit its enemy
@@ -97,16 +97,15 @@ export interface Outcome {
 }
 
 //Whether the game is over, who won and why (the old engine's Actions.checkOutcome): a capture that took the side's
-//last objective, a side with no unit on the map (kept #115: its units waiting to deploy don't count;
-//axis first, so with none on either side the allies win), the ended side's turn limit. Null when
-//the game goes on
+//last objective, a side with no unit left (sideHasUnits: in the classic rules its units waiting to deploy
+//don't count, #115; axis first, so with none on either side the allies win), the ended side's turn
+//limit. Null when the game goes on
 export function outcome(w: World, last: LastPlayed = {}): Outcome | null {
 	if (last.victorySide !== undefined && last.victorySide >= 0)
 		return { kind: "capture", winner: last.victorySide, loser: ~last.victorySide & 1, rating: victoryRating(w) };
-	const alive = (side: number) => w.state.units.some((u) => sideOf(w, u) === side);
 	let winner = -1;
-	if (!alive(playerSide.axis)) winner = playerSide.allies;
-	else if (!alive(playerSide.allies)) winner = playerSide.axis;
+	if (!sideHasUnits(w, playerSide.axis)) winner = playerSide.allies;
+	else if (!sideHasUnits(w, playerSide.allies)) winner = playerSide.axis;
 	if (winner >= 0) return { kind: "elimination", winner, loser: ~winner & 1, rating: victoryRating(w) };
 	if (last.endedSide !== undefined && last.endedSide >= 0 && reachedTurnLimit(w, last.endedSide))
 		return turnLimitOutcome(w, last.endedSide);

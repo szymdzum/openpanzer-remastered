@@ -76,6 +76,10 @@ export interface Ruleset {
 	//an airfield, a ship on a port) with no enemy it sees on it or next to it (deployment.ts, #302): false
 	//in the classic rules, where it can't buy (#60)
 	deployOnOwnTowns: boolean;
+	//A side whose units on the map are all gone isn't eliminated while it has units waiting to deploy (its
+	//players' reserve) or to arrive (its reinforcements), as in PG2 (#115): false in the classic rules,
+	//where only the units on the map count
+	waitingUnitsFight: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

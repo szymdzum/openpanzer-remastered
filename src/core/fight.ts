@@ -22,7 +22,7 @@ import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import { moveUnit } from "./moves";
 import type { AttackStart, CombatResult, Contribution, Draft, Position, UnitId, UnitState, World } from "./types";
-import { isAir } from "./units";
+import { isAir, sideHasUnits } from "./units";
 import { currentEqid, hexIndex, sideOf, unitById } from "./world";
 
 //A unit that gained an experience level gets a leader when its roll (its level to 10) is above this
@@ -228,7 +228,7 @@ export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null) {
 			emit(d, { type: "surrendered", unit: def.id, at: { row: def.row, col: def.col } });
 		}
 	}
-	const side = [0, 1].find((x) => !d.state.units.some((u) => sideOf(d, u) === x));
+	const side = [0, 1].find((x) => !sideHasUnits(d, x));
 	if (side !== undefined) emit(d, { type: "victory", side: ~side & 1, kind: "elimination" });
 }
 

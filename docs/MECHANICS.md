@@ -168,6 +168,8 @@ still reinforce.
 - Victory: hold all the side's victory hexes (gold flags) before the turn limit. The sooner,
   the better: brilliant, victory or tactical, set per scenario. A campaign branches on the
   outcome and a brilliant victory can give a prototype unit (at least 200 prestige worth).
+- A side with no unit left on the map loses (elimination). The remaster's rules (#115): as in PG2, not
+  while it has units waiting to deploy (bought, or a campaign's core units) or reinforcements to come.
 - At the turn limit, when neither side took all its objectives, the side holding more of them
   wins (a defender that held out); with as many each, the side that ended its last turn loses
   (#231). In a campaign, running out of turns is a defeat, which can end the campaign.

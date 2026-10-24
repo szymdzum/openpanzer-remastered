@@ -204,8 +204,8 @@ them). The session (C4, C5) plays the two with the controller's turn start in be
 sends it.
 
 `outcome(world, last?)` is Actions.checkOutcome: a capture that took the side's last objective
-(`last.victorySide`, the move's `victory` event), a side with no unit on the map (#115 kept: units
-waiting to deploy don't count; axis first), the ended side's turn limit (`last.endedSide`). The
+(`last.victorySide`, the move's `victory` event), a side with no unit left (axis first; the classic
+rules count only the units on the map, the remaster's also the units waiting to deploy or to arrive, #115), the ended side's turn limit (`last.endedSide`). The
 rating is Scenario.checkVictory's, by the turn.
 
 `BENCH=1` (test/core-bench.test.ts), two rounds of turns ended on each engine fixture, each with its
