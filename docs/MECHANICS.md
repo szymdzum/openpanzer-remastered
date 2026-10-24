@@ -174,6 +174,12 @@ still reinforce.
 - Victory: hold all the side's victory hexes (gold flags) before the turn limit. The sooner,
   the better: brilliant, victory or tactical, set per scenario. A campaign branches on the
   outcome and a brilliant victory can give a prototype unit (at least 200 prestige worth).
+  Each victory hex is on the list of the side that has to take it, so a side whose list is empty
+  holds them all and wins. In the original (the classic rules) that includes a defender that had
+  none to take at the start (21 of the 376 scenarios have such a side) and retakes the one it lost.
+  The remaster's rules (#91): only a side that had objectives to take at the start wins by capture,
+  as PG2 gives each side victory hexes of its own in the enemy's hands; a defender that had none wins
+  by holding out (#256).
 - A side with no unit left on the map loses (elimination). The remaster's rules (#115): as in PG2, not
   while it has units waiting to deploy (bought, or a campaign's core units) or reinforcements to come.
 - The turn limit, when neither side took all its objectives. In the original (the classic rules)

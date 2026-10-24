@@ -225,3 +225,47 @@ test("A new game keeps how many objectives each side had to take at the start, a
 	const old = saved(2, before);
 	expect([old?.version, old?.rules, old?.data.startObjectives, Object.keys(old?.data || {})]).toEqual([3, "remaster", null, keys]);
 });
+
+//The hand-built map: Germany (side 0) had two objectives to take, G (0,6) and H (5,5), Poland none (the
+//start's counts given, or unknown). Germany took H; Poland's 7TP next to it retakes it
+async function retaking(rules: import("../src/core/types").Ruleset, starts: [number, number] | null) {
+	const { handWorld } = await import("./coreworld");
+	const { createWorld } = await import("../src/core/create");
+	const w = handWorld({ rows: 12, cols: 12, units: [{ eqid: 140, owner: 0, row: 2, col: 2 }, { eqid: 273, owner: 1, row: 6, col: 5 }] });
+	const s = structuredClone(w.state);
+	s.map.hexes[6] = { ...s.map.hexes[6], owner: 1, victorySide: 0 };	//(0,6)
+	s.map.hexes[5 * 12 + 5] = { ...s.map.hexes[5 * 12 + 5], owner: 0, victorySide: 1 };
+	s.objectives = [[{ row: 0, col: 6 }], [{ row: 5, col: 5 }]];
+	s.turn = { ...s.turn, currentPlayer: 1 };
+	return createWorld({ data: { ...w.data, startObjectives: starts }, state: s }, w.equipment, { rules });
+}
+
+//The original let a side win by capture whenever its list of objectives to take was empty: a defender that
+//had none at the start won the scenario by retaking the one objective it had lost. PG2 gives a victory by
+//capture only to a side with victory hexes of its own to take (its editor wants each side to have one in
+//the enemy's hands at the start); a defender that had none wins by holding out (#256)
+test("In the remaster rules a defender that had no objectives to take at the start doesn't win by retaking one it lost (#91)", async () => {
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { step } = await import("../src/core/step");
+	const { outcome } = await import("../src/core/turn");
+	for (const [rules, starts, wins] of [[remasterRules, [2, 0], false], [classicRules, [2, 0], true], [remasterRules, null, true]] as const) {
+		const label = `${rules.name}, ${JSON.stringify(starts)}`;
+		const r = step(await retaking(rules, starts && [starts[0], starts[1]]), { type: "move", unit: 1, to: { row: 5, col: 5 } });
+		if (r.ok === false) throw new Error(r.refusal.reason);
+		expect(r.events.find((e) => e.type === "captured"), label).toMatchObject({ objective: true, win: wins });
+		expect(r.events.filter((e) => e.type === "victory"), label).toEqual(wins ? [{ type: "victory", side: 1, kind: "capture" }] : []);
+		expect(r.world.state.objectives, label).toEqual([[{ row: 0, col: 6 }, { row: 5, col: 5 }], []]);
+		expect(outcome(r.world), label).toBeNull();
+	}
+});
+
+test("In the remaster rules a side that had objectives to take at the start still wins by taking them all (#91)", async () => {
+	const { remasterRules } = await import("../src/core/rules");
+	const { step } = await import("../src/core/step");
+	for (const starts of [[1, 1], [2, 1]] as [number, number][]) {
+		const w = await retaking(remasterRules, starts);
+		const r = step(w, { type: "move", unit: 1, to: { row: 5, col: 5 } });
+		if (r.ok === false) throw new Error(r.refusal.reason);
+		expect(r.events.filter((e) => e.type === "victory"), JSON.stringify(starts)).toEqual([{ type: "victory", side: 1, kind: "capture" }]);
+	}
+});

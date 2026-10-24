@@ -206,7 +206,8 @@ them). The session (C4, C5) plays the two with the controller's turn start in be
 sends it.
 
 `outcome(world, last?)` is Actions.checkOutcome: a capture that took the side's last objective
-(`last.victorySide`, the move's `victory` event), a side with no unit left (axis first; the classic
+(`last.victorySide`, the move's `victory` event; in the remaster rules only for a side that had
+objectives to take at the start, `winsByCapture`, #91), a side with no unit left (axis first; the classic
 rules count only the units on the map, the remaster's also the units waiting to deploy or to arrive, #115), the ended side's turn limit (`last.endedSide`). The
 rating is Scenario.checkVictory's, by the turn. At the turn limit (`turnLimitOutcome`) the classic rules
 make the side that ended its last turn lose, nobody winning, as the original; the remaster's play PG2's

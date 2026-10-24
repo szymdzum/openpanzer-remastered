@@ -12,6 +12,7 @@ import type { PathStep } from "./events";
 import { directionTo } from "./geometry";
 import { canPassInto, disembarkPositions, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState } from "./types";
+import { winsByCapture } from "./turn";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isSpotted, unitById, unitData } from "./world";
 
@@ -133,7 +134,8 @@ function burn(d: Draft, u: UnitState, used: number) {
 
 //Map.captureHex: a hex with an owner or a flag not of the unit's side becomes its player's, a flag
 //(not an objective) and an objective give prestige (twice with a liberator) and score, an objective
-//leaves the side's list. What changed goes in undo. Whether the side has no objective left
+//leaves the side's list. What changed goes in undo. Whether the side won: it has no objective left (and in
+//the remaster rules had some to take at the start, #91)
 function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): boolean {
 	const hex = hexIndex(d, at.row, at.col), h = d.state.map.hexes[hex], u = unitById(d, id);
 	const player = playerAt(d, u.owner);
@@ -145,7 +147,7 @@ function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): bo
 	if (w.flag !== -1) w.flag = player.country;
 	if (objective) w.victorySide = ~player.side & 1; //now the enemy's to take back
 	const index = d.state.objectives[player.side].findIndex((c) => c.row === at.row && c.col === at.col);
-	const win = objective && updateVictorySides(d, player.side, at);
+	const win = objective && updateVictorySides(d, player.side, at) && winsByCapture(d, player.side);
 	const taken = gains(flag, objective, hasLeader(d, u, leaderType.liberator) ? 2 : 1);
 	if (undo !== null) recordCapture(undo, old, taken, objective, index);
 	writePlayer(d, player.id).prestige += taken.prestige;

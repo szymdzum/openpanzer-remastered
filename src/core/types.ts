@@ -88,6 +88,10 @@ export interface Ruleset {
 	//both sides have played their last turn. False in the classic rules, where the side that ended its last
 	//turn loses whatever it holds, and the game ends at the last turn of a side that plays on the screen
 	defenderHoldsOut: boolean;
+	//A capture of a side's last objective wins only for a side that had objectives to take at the start
+	//(turn.ts winsByCapture, #91), as PG2 gives every side victory hexes of its own to take: false in the
+	//classic rules, where a defender that had none wins by retaking the one it lost
+	captureNeedsObjectives: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

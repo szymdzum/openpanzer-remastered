@@ -46,6 +46,7 @@ export const classicRules: Ruleset = {
 	waitingUnitsFight: false,
 	wholeLeaderList: false,
 	defenderHoldsOut: false,
+	captureNeedsObjectives: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -67,6 +68,8 @@ export const remasterRules: Ruleset = {
 	//At the turn limit the attacker that didn't take all its objectives loses and the defender that held out
 	//wins, once both sides have played their last turn (#256)
 	defenderHoldsOut: true,
+	//A defender that had no objective to take at the start doesn't win by retaking one it lost (#91)
+	captureNeedsObjectives: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)
