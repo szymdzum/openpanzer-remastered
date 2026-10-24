@@ -78,6 +78,7 @@ sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
     npm run gate         # what CI runs: types, lint, fallow, tests with coverage
     npm run fallow       # what a change adds against main: unused code, cycles, duplicates, complexity
     npm run build        # dist/: the bundled game with its assets; npm run preview serves it
+    npm run -s play -- help  # a scenario played from the terminal against the AI (docs/CLI.md)
 
 - `src/` the game as TypeScript ES modules, `src/main.ts` is the entry
 - `game/` the 3.2.14 build with all the assets (the page has `<base href="/game/">`), images,

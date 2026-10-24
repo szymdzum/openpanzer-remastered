@@ -1,0 +1,121 @@
+//Attacks as the command-line player previews them (#279), on the known world: the core's estimate (no
+//dice), the support fire it counted, what the attack would do, from where a unit stands or a hex it can
+//move to first, and which units can hit a target this turn
+import { attackCells, canInitiateAttack, supportFireUnits, unitAttackRange } from "../src/core/attack";
+import { combatResult, shouldDefenderRetreat } from "../src/core/combat";
+import { distance } from "../src/core/geometry";
+import { moveRange, retreatPosition } from "../src/core/movement";
+import { check, step } from "../src/core/step";
+import type { MoveCell, Position, UnitState, World } from "../src/core/types";
+import { ammoOf, hexIndex, sideOf, unitById } from "../src/core/world";
+import { cell, knownWorld, label } from "./known";
+
+export interface Estimate {
+	attacker: number;
+	target: number;
+	from: string;
+	kills: number;
+	losses: number;
+	support: string[];
+	rugged: boolean;
+	overrun: boolean;
+	outcome: "destroyed" | "surrenders" | "retreats" | "holds";
+	attackerDestroyed: boolean;
+}
+
+//What the kills do to the defender: destroy it, make it retreat, or surrender with nowhere to go
+function outcomeOf(w: World, atk: UnitState, def: UnitState, kills: number): Estimate["outcome"] {
+	if (def.strength - kills <= 0) return "destroyed";
+	if (!shouldDefenderRetreat(w, atk, { ...def, strength: def.strength - kills }, def.strength)) return "holds";
+	return retreatPosition(w, def) === null ? "surrenders" : "retreats";
+}
+
+//The attack's estimate as the attack cursor and the AI have it, with the support fire the side sees
+export function estimate(w: World, atk: UnitState, def: UnitState): Estimate {
+	const cr = combatResult(w, atk, def, false, null);
+	return { attacker: atk.id, target: def.id, from: cell(atk), kills: cr.kills, losses: cr.losses,
+		support: supportFireUnits(w, atk, def).map((s) => label(w, s)), rugged: cr.isRugged, overrun: cr.isOverrun,
+		outcome: outcomeOf(w, atk, def, cr.kills), attackerDestroyed: cr.losses >= atk.strength };
+}
+
+const NOTES: ((e: Estimate) => string)[] = [
+	(e) => e.attackerDestroyed ? "ATTACKER DESTROYED" : "",
+	(e) => e.rugged ? "RUGGED DEFENSE" : "",
+	(e) => e.overrun ? "overrun" : "",
+	(e) => e.support.length ? `support fire from ${e.support.join("; ")}` : "",
+];
+
+export function estimateLine(w: World, e: Estimate): string {
+	const t = unitById(w, e.target);
+	return [`${t ? label(w, t) : "#" + e.target} from ${e.from}: kills ${e.kills}, losses ${e.losses}, ${e.outcome}`,
+		...NOTES.map((n) => n(e)).filter(Boolean)].join(", ");
+}
+
+export function attackerLine(w: World, e: Estimate): string {
+	const u = unitById(w, e.attacker);
+	return `${u ? label(w, u) : "#" + e.attacker} on ` + estimateLine(w, e);
+}
+
+const unitsOnHex = (w: World, c: Position) => {
+	const h = w.state.map.hexes[hexIndex(w, c.row, c.col)];
+	return [h.unit, h.air].filter((id) => id !== null).map((id) => unitById(w, id));
+};
+
+const canAttack = (w: World, u: UnitState, t: UnitState) =>
+	canInitiateAttack(w, u, t) && check(w, { type: "attack", unit: u.id, target: t.id }) === null;
+
+//The enemy units u can attack from where it stands in w
+export const targetsOf = (w: World, u: UnitState): UnitState[] =>
+	attackCells(w, u).flatMap((c) => unitsOnHex(w, c)).filter((t) => canAttack(w, u, t));
+
+//The known world after u moves to a hex, or why it can't
+function movedTo(kw: World, u: UnitState, to: Position): { world: World } | { refusal: string } {
+	if (u.row === to.row && u.col === to.col) return { world: kw };
+	const r = step(kw, { type: "move", unit: u.id, to });
+	if ("refusal" in r) return { refusal: r.refusal.reason };
+	const moved = unitById(r.world, u.id);
+	return moved.row === to.row && moved.col === to.col ? { world: r.world } : { refusal: `the move stops at ${cell(moved)}` };
+}
+
+//What a unit of side's can attack, from where it stands or from a hex it moves to first
+export function targets(w: World, side: number, id: number, from?: Position): { estimates: Estimate[]; note: string } {
+	const kw = knownWorld(w, side), u = unitById(kw, id);
+	if (!u || sideOf(kw, u) !== side) return { estimates: [], note: `#${id} is not your unit` };
+	const at = movedTo(kw, u, from || u);
+	if ("refusal" in at) return { estimates: [], note: `can't get to ${cell(from)}: ${at.refusal}` };
+	const moved = unitById(at.world, id);
+	const estimates = targetsOf(at.world, moved).map((t) => estimate(at.world, moved, t));
+	return { estimates, note: estimates.length ? "" : `no target from ${cell(moved)}` + (moved.hasFired ? " (it has fired, or moved on its transport)" : "") };
+}
+
+//The estimate after u moves to a hex and attacks t from there, null when it can't
+function estimateFrom(kw: World, u: UnitState, t: UnitState, c: MoveCell): Estimate | null {
+	const at = movedTo(kw, u, c);
+	if ("refusal" in at || check(at.world, { type: "attack", unit: u.id, target: t.id }) !== null) return null;
+	return estimate(at.world, unitById(at.world, u.id), unitById(at.world, t.id));
+}
+
+const worth = (e: Estimate) => e.kills - e.losses;
+const better = (a: Estimate | null, b: Estimate | null) => b === null || (a !== null && worth(a) > worth(b)) ? a : b;
+
+//The best hex u can move to and attack t from this turn
+function bestAfterMove(kw: World, u: UnitState, t: UnitState): Estimate | null {
+	if (u.hasMoved) return null;
+	const reach = unitAttackRange(kw, u);
+	return moveRange(kw, u).filter((c) => c.canMove && distance(c.row, c.col, t.row, t.col) <= reach)
+		.reduce((best: Estimate | null, c) => better(estimateFrom(kw, u, t, c), best), null);
+}
+
+const ready = (kw: World, side: number, u: UnitState) => sideOf(kw, u) === side && !u.hasFired && ammoOf(u) > 0;
+const attackOf = (kw: World, u: UnitState, t: UnitState) =>
+	check(kw, { type: "attack", unit: u.id, target: t.id }) === null ? estimate(kw, u, t) : bestAfterMove(kw, u, t);
+
+//Which of side's units can attack a target this turn: from where they stand, or after a move (the hex
+//with the best estimate), the best first
+export function attackers(w: World, side: number, targetId: number): { estimates: Estimate[]; note: string } {
+	const kw = knownWorld(w, side), t = unitById(kw, targetId);
+	if (!t || sideOf(kw, t) === side) return { estimates: [], note: `#${targetId} is not an enemy unit you see` };
+	const estimates = kw.state.units.filter((u) => ready(kw, side, u)).map((u) => attackOf(kw, u, t)).filter((e) => e !== null)
+		.sort((a, b) => worth(b) - worth(a));
+	return { estimates, note: estimates.length ? "" : "none of your units can reach it this turn" };
+}
