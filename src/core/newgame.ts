@@ -97,8 +97,8 @@ export interface GameSetup {
 	description: string;		//the scenario list's, or the campaign's intro
 	scenario: ScenarioFile;
 	imageSize: [number, number];	//the map image's width and height: they size the map
-	equipment: EquipmentTable;	//of the countries equipmentCountries names
-	indexes: EquipmentState["indexes"];	//their equipment lists by unit class, as loaded
+	equipment: EquipmentTable;	//of every country file of the set: a scenario's units aren't all its countries' (#286)
+	indexes: EquipmentState["indexes"];	//the equipment lists by unit class of the countries equipmentCountries names
 	isAI: number[];			//by player id (uiSettings.isAI): 1 the AI, 2 the scripted AI; ignored in a campaign
 	rng: RngStreams | null;		//where the streams are; null: the game stream reads Math.random
 	campaign: CampaignState | null;
@@ -122,6 +122,35 @@ export function equipmentCountries(file: ScenarioFile, core: number[] = []): num
 }
 
 const supportCountries = (p: FilePlayer) => p.support.filter((c) => c > 0);
+
+//The equipment a scenario file's units are (theirs, their transports' and carriers'), which isn't all of
+//its players' countries' (#286): the files those are in load beside the countries' (Equipment.addUnitsEquipment)
+export function fileEquipment(file: ScenarioFile): number[] {
+	const eqids: (number | null)[] = [];
+	const add = (u: FileUnit) => eqids.push(u.eqid, u.transport, u.carrier);
+	for (const h of file.hexes) h.units.forEach(add);
+	for (const r of file.reinforcements) add(r.unit);
+	return usedEquipment(eqids);
+}
+
+//The equipment a game's units are, on the map, in the reinforcements and in the players' core lists (#286)
+export function stateEquipment(state: GameState): number[] {
+	const eqids: (number | null)[] = [];
+	//(a negative carrier is the carrier being left)
+	const add = (u: OffMapUnit) => eqids.push(u.eqid, u.transport === null ? null : u.transport.eqid, Math.abs(u.carrier));
+	state.units.forEach(add);
+	for (const r of state.reinforcements) add(r.unit);
+	for (const p of state.players)
+		for (const c of p.core) if (!("onMap" in c)) add("reserve" in c ? c.reserve : c.lost);
+	return usedEquipment(eqids);
+}
+
+//The ids of the list that are equipment (no transport or carrier: null or 0), once each
+function usedEquipment(eqids: (number | null)[]): number[] {
+	const used: number[] = [];
+	for (const id of eqids) if (id !== null && id > 0 && used.indexOf(id) < 0) used.push(id);
+	return used;
+}
 
 //The map's size from its image (ScenarioLoader.loadMapImage): hexes 60 and 30 pixels wide in turn,
 //50 high; a last column or row cut in half by the image is partial. The file's size is an upper limit

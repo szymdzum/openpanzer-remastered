@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { equipmentCountries, type GameSetup } from "../src/core/newgame";
+import { equipmentCountries, fileEquipment, type GameSetup } from "../src/core/newgame";
 import { readScenarioFile } from "../src/core/scenariofile";
 import type { EquipmentTable } from "../src/core/types";
 import type { EquipmentCountryFile } from "../src/equipment";
@@ -36,18 +36,31 @@ export const mapSizes = (): Record<string, [number, number]> =>
 	JSON.parse(fs.readFileSync(path.resolve(HERE, "../test/mapsizes.json"), "utf8")) as Record<string, [number, number]>;
 
 //The equipment of a set's country files and their lists by unit class, as Equipment loads them (by
-//file: the country + 1)
-export function readEquipment(set: string, countries: number[]): { equipment: EquipmentTable; indexes: EquipmentState["indexes"] } {
+//file: the country + 1); then, for the units alone, the other files that have equipment ids of units
+//not loaded yet (Equipment.addUnitsEquipment, #286)
+export function readEquipment(set: string, countries: number[], units: number[] = []): { equipment: EquipmentTable;
+	indexes: EquipmentState["indexes"]; } {
 	const equipment: { [eqid: string]: EquipmentEntry } = {}, indexes: EquipmentState["indexes"] = {};
-	for (const c of countries) {
-		const file = path.join(GAME_DIR, "resources/equipment", set, "equipment-country-" + (c + 1) + ".json");
-		const e = JSON.parse(fs.readFileSync(file, "utf8")) as EquipmentCountryFile;
-		indexes[c + 1] = e.indexes;
+	const read = (file: number) => JSON.parse(fs.readFileSync(equipmentFile(set, file), "utf8")) as EquipmentCountryFile;
+	const add = (e: EquipmentCountryFile) => {
 		for (const [eqid, values] of Object.entries(e.units))
 			equipment[eqid] = Object.fromEntries(e.parsehints.map((k, i) => [k, values[i]])) as unknown as EquipmentEntry;
+	};
+	for (const c of countries) {
+		const e = read(c + 1);
+		indexes[c + 1] = e.indexes;
+		add(e);
+	}
+	const missing = units.filter((id) => equipment[id] === undefined);
+	for (let file = 0; missing.length && fs.existsSync(equipmentFile(set, file)); file++) {
+		if (indexes[file] !== undefined) continue;
+		const e = read(file);
+		if (missing.some((id) => e.units[id] !== undefined)) add(e);
 	}
 	return { equipment, indexes };
 }
+
+const equipmentFile = (set: string, file: number) => path.join(GAME_DIR, "resources/equipment", set, "equipment-country-" + file + ".json");
 
 //What the core starts a scenario file of the list from; core: the countries of the core units a
 //campaign carries in (coreCountries); parser: the DOMParser (the page's, jsdom's in Node)
@@ -57,5 +70,5 @@ export function setupOf(file: string, rng: GameSetup["rng"], campaign: GameSetup
 	const entry = scenarioList().find((e) => e[0] === file);
 	return { file, name: entry ? entry[1] : "", description: description ?? (entry ? entry[2] : ""),
 		scenario, imageSize: mapSizes()[scenario.image], isAI: [0, 0, 0, 0], rng, campaign,
-		...readEquipment(scenario.equipment || "eqp-adlerkorps", equipmentCountries(scenario, core)) };
+		...readEquipment(scenario.equipment || "eqp-adlerkorps", equipmentCountries(scenario, core), fileEquipment(scenario)) };
 }

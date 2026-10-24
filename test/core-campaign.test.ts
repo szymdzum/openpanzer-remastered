@@ -11,7 +11,7 @@ import { freshGame, startState, until } from "./lifecycle";
 import { difference, GAME_DIR, readEquipment, setupOf } from "./corefiles";
 import { awardedPrototype, coreCountries, endCampaignScenario, type CampaignScenarioData, scenarioEnded } from "../src/core/campaign";
 import { createWorld } from "../src/core/create";
-import { newGame } from "../src/core/newgame";
+import { newGame, stateEquipment } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/scenario";
 import type { CampaignState, SavedGame } from "../src/state";
 import type { CoreUnit, EquipmentTable, OffMapUnit, PlayerState, UnitState } from "../src/core/types";
@@ -149,7 +149,7 @@ async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scena
 //The equipment a game has loaded: its state's lists name the files (by file, the country + 1)
 function loadedEquipment(saved: SavedGame) {
 	const countries = Object.keys(saved.state.equipment.indexes).map((file) => +file - 1);
-	return readEquipment(saved.data.equipment, countries).equipment;
+	return readEquipment(saved.data.equipment, countries, stateEquipment(saved.state)).equipment;
 }
 
 //The prototype the game's message showed and the one the core says it gave, "" when the same

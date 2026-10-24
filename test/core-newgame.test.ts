@@ -56,3 +56,16 @@ test("A scenario started against the AI, or the scripted tutorial, starts the sa
 		expect(got === want ? "" : difference(want, got), file + " " + isAI.join()).toBe("");
 	}
 }, 300_000);
+
+test("A unit whose equipment is in a country file the scenario's players don't load is still that unit (#286)", async () => {
+	//pc1indi.xml (eqp-pacific): player 0's Afghan units are in the Arab Countries' file, which no player
+	//of the scenario has; they started as the first equipment loaded, a Light Cruiser
+	const setup = setupOf("pc1indi.xml", { ...SEEDS }), eqids = (us: { eqid: number }[]) => us.map((u) => u.eqid).sort((a, b) => a - b);
+	const filed = [...setup.scenario.hexes.flatMap((h) => h.units), ...setup.scenario.reinforcements.map((r) => r.unit)]
+		.filter((u) => u.eqid >= 0 && u.owner >= 0);
+	const { state } = newGame(setup);
+	expect(eqids([...state.units, ...state.reinforcements.map((r) => r.unit)])).toEqual(eqids(filed));
+	const game = await freshGame();
+	await startState(game, "pc1indi.xml");
+	expect(eqids(game.scenario.map.getUnits())).toEqual(eqids(state.units));
+}, 60_000);
