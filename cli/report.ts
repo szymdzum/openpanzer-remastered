@@ -3,7 +3,7 @@
 import type { Fighter, GameEvent } from "../src/core/events";
 import type { CombatResult, UnitState, World } from "../src/core/types";
 import { hexIndex, isSpotted, sideOf, unitById } from "../src/core/world";
-import { cell, own, SIDES, sideOfPlayer } from "./known";
+import { cell, own, playerOfSide, positionOf, seen, SIDES, sideOfPlayer } from "./known";
 
 //What a formatter reads: the worlds after and before the events (a destroyed unit is only in the one
 //before), the side, and a unit's name and whether it is the side's
@@ -87,4 +87,45 @@ const format = (e: GameEvent, v: View) => (FORMAT[e.type] as ((x: GameEvent, y: 
 export function describe(after: World, before: World, side: number, events: GameEvent[]): string[] {
 	const v = viewOf(after, before, side);
 	return events.map((e) => format(e, v)).filter(Boolean);
+}
+
+//What changed between two worlds, from side's view, for a turn whose events aren't known (the page
+//plays it on the screen): its units and the enemy's it saw, moved, worn, gone or new, and the victory
+//hexes that changed hands
+export function changes(before: World, after: World, side: number): string[] {
+	const v = viewOf(after, before, side);
+	return [
+		...before.state.units.filter((u) => seen(before, side, u)).map((u) => unitChange(v, u)),
+		...after.state.units.filter((u) => seen(after, side, u) && !wasSeen(before, side, u.id)).map((u) => newcomer(v, u)),
+		...after.state.map.hexes.map((h, i) => ownerChange(v, i, h.owner)),
+		prestigeChange(v),
+	].filter(Boolean);
+}
+
+//A unit the side didn't see before: its own deployed or arrived, the enemy's come into sight
+const newcomer = (v: View, u: UnitState) => `${v.name(u.id)} ${v.mine(u.id) ? "arrived" : "seen"} at ${cell(u)}`;
+
+function prestigeChange(v: View): string {
+	const was = playerOfSide(v.before, v.side).prestige, now = playerOfSide(v.after, v.side).prestige;
+	return was === now ? "" : `prestige ${was} -> ${now}`;
+}
+
+const wasSeen = (w: World, side: number, id: number) => {
+	const u = unitById(w, id);
+	return u !== null && seen(w, side, u);
+};
+
+function unitChange(v: View, u: UnitState): string {
+	const now = unitById(v.after, u.id);
+	if (now === null) return `${v.name(u.id)} gone from ${cell(u)} (destroyed)`;
+	if (!seen(v.after, v.side, now)) return `${v.name(u.id)} out of sight (last at ${cell(u)})`;
+	const went = now.row !== u.row || now.col !== u.col ? ` ${cell(u)} -> ${cell(now)}` : "";
+	const worn = now.strength !== u.strength ? ` str ${u.strength} -> ${now.strength}` : "";
+	return went || worn ? `${v.name(u.id)}${went}${worn}` : "";
+}
+
+function ownerChange(v: View, i: number, owner: number): string {
+	const was = v.before.state.map.hexes[i].owner;
+	if (owner === was || v.after.state.map.hexes[i].victorySide < 0 || owner < 0) return "";
+	return `${SIDES[sideOfPlayer(v.after, owner)]} took the victory hex ${cell(positionOf(v.after, i))}`;
 }

@@ -46,9 +46,45 @@ function copyGameAssets(): Plugin {
 	};
 }
 
+//Dev server only, with OPENPANZER_CLI set ("npm run play:live"): the command-line player's bridge
+//(#279). A call to POST /__cli (cli/play.ts --live) goes to the game's page over the dev server's
+//websocket, the page plays it (cli/page.ts, added to index.html) and its answer comes back. Without the
+//variable nothing changes: the page and its requests stay as the harness replays them
+function cliBridge(): Plugin {
+	const on = !!process.env.OPENPANZER_CLI;
+	const waiting = new Map<number, (reply: unknown) => void>();
+	let next = 0;
+	return {
+		name: "cli-bridge",
+		apply: "serve",
+		transformIndexHtml: () => on ? [{ tag: "script", attrs: { type: "module", src: "/cli/page.ts" }, injectTo: "body" }] : [],
+		configureServer(server) {
+			if (!on) return;
+			server.ws.on("cli:response", (data: { id: number }) => {
+				waiting.get(data.id)?.(data);
+				waiting.delete(data.id);
+			});
+			server.middlewares.use("/__cli", (req, res) => {
+				let body = "";
+				req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+				req.on("end", () => {
+					const id = next++;
+					const reply = (data: unknown) => {
+						res.setHeader("Content-Type", "application/json");
+						res.end(JSON.stringify(data));
+					};
+					if (server.ws.clients.size === 0) return reply({ error: "no game page is open: open the dev server's page first" });
+					waiting.set(id, reply);
+					server.ws.send({ type: "custom", event: "cli:request", data: { id, argv: JSON.parse(body) as string[] } });
+				});
+			});
+		},
+	};
+}
+
 export default defineConfig({
 	oxc: false, //types are blanked out by blankTypes
-	plugins: [blankTypes(), harnessSetters(), copyGameAssets()],
+	plugins: [blankTypes(), harnessSetters(), copyGameAssets(), cliBridge()],
 	optimizeDeps: { noDiscovery: true }, //no dependencies (and game/ has pages of its own)
 	test: {
 		//the game's modules need a DOM; the page is served from /game/ like index.html
