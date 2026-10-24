@@ -687,3 +687,28 @@ test("A unit bought outside a campaign gets the other side's average experience,
 	expect(bought(250, 2)).toBe(125);
 	expect(bought(0, 0)).toBe(0); //(0 / 0 is NaN)
 });
+
+//A German destroyer (129: Zerstorer 1934, close defense 3, ground defense 7) and a Soviet submarine (1863:
+//S, close defense 1, ground defense 5) next to each other at sea: a ship and a submarine fight at close
+//range, so the one that isn't the submarine defends with its close defense, whichever attacks. The
+//original set it for a submarine defender, then overwrote it with the ground defense (#88)
+test("A ship attacking a submarine defends with its close defense, as a ship a submarine attacks does (#88)", async () => {
+	const { equipmentOf } = await import("./coreworld");
+	const { remasterRules } = await import("../src/core/rules");
+	const DESTROYER = 129, SUBMARINE = 1863;
+	const defense = (rules: typeof classicRules, atk: number, def: number) => {
+		const w = handWorld({ rows: 6, cols: 6, terrain: () => terrainType.Ocean, units: [
+			{ eqid: atk, owner: 0, row: 2, col: 2 },
+			{ eqid: def, owner: 1, row: 2, col: 3 },
+		] }, equipmentOf([8, 20]), { rules });
+		const record: Contribution[] = [];
+		attackResult(w, unitById(w, 0), unitById(w, 1), null, record);
+		const set = (side: string) => record.filter((r) => r.side === side && r.field === side.charAt(0) + "dv"
+			&& (r.name === "attacker's type" || r.name === "defender's type"));
+		return { attacker: set("attacker").slice(-1)[0].after, defender: set("defender").slice(-1)[0].after };
+	};
+	for (const rules of [classicRules, remasterRules]) {
+		expect(defense(rules, DESTROYER, SUBMARINE), rules.name).toEqual({ attacker: 3, defender: 5 });
+		expect(defense(rules, SUBMARINE, DESTROYER), rules.name).toEqual({ attacker: 5, defender: 3 });
+	}
+});

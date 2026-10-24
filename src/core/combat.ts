@@ -92,8 +92,6 @@ export const classicCombat: CombatStep[] = [
 			case unitType.sea:
 				change(f, name, "defender", "dav", d.navalatk);
 				change(f, name, "defender", "ddv", d.grounddef);
-				//kept bug #88: the next step overwrites it
-				if (d.uclass === unitClass.submarine) change(f, name, "attacker", "adv", f.aData.closedef);
 				break;
 		}
 	} },
@@ -116,7 +114,10 @@ export const classicCombat: CombatStep[] = [
 			case unitType.sea:
 				change(f, name, "attacker", "aav", a.navalatk);
 				change(f, name, "attacker", "adv", a.grounddef);
+				//a ship and a submarine fight at close range: the one that isn't the submarine uses its close
+				//defense (#88: the original set the attacker's in the step before, which this one overwrote)
 				if (a.uclass === unitClass.submarine) change(f, name, "defender", "ddv", f.dData.closedef);
+				if (f.dData.uclass === unitClass.submarine && f.aType === unitType.sea) change(f, name, "attacker", "adv", a.closedef);
 				break;
 		}
 	} },
