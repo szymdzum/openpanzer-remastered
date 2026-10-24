@@ -11,7 +11,7 @@ import type { ScenarioOutcome } from "../src/scenario";
 
 type Game = Awaited<ReturnType<typeof freshGame>>;
 
-const SAVE = "openpanzer-game-3.2";
+const SAVE = "openpanzer-game-3.2"; //(GameState's save name, MAJOR_VERSION 3.2)
 
 async function silenced(game: Game) {
 	const { UIBuilder } = await import("../src/uibuilder");
@@ -123,4 +123,22 @@ test("A campaign's next scenario loads once however many ticks of the turn loop 
 	expect(loads).toBe(1);
 	expect(game.scenario.map.getPlayers().length).toBe((await data(game)).state.players.length);
 	expect(game.scenario.map.getPlayers().map((p) => p.country)).toEqual([7, 13]);
+});
+
+//#64: the next scenario's load deleted the save first and wrote the new one only once it had loaded:
+//closing the game meanwhile, or a load that failed, lost the campaign. The save stays until the next
+//scenario's replaces it
+test("The campaign's save stays while its next scenario loads, until the next scenario's replaces it (#64)", async () => {
+	const game = await campaign(0);
+	const first = localStorage.getItem(SAVE);
+	expect(first, "the first scenario saved").not.toBeNull();
+	const before = game.scenario;
+	game.continueCampaign("victory");
+	game.uiMessageClicked = true;
+	game.processTurn();
+	expect(localStorage.getItem(SAVE), "the save while the next scenario loads").toBe(first);
+	await until(() => game.scenario !== before && game.scenario !== null && game.scenario.isLoaded && game.gameStarted, "the next scenario");
+	const saved = JSON.parse(localStorage.getItem(SAVE)) as SavedGame;
+	expect(saved.state.scenario.file, "the next scenario's save").toBe(game.scenario.file);
+	expect(game.scenario.file).not.toBe(before.file);
 });

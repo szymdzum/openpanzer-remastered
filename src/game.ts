@@ -71,7 +71,7 @@ export class Game {
 	declare getCampaignProgress: () => CampaignProgress;
 	declare setCampaignProgress: (progress: CampaignProgress, scenario: Scenario) => void;
 	declare setCurrentSide: () => void;
-	declare cleanup: () => void;
+	declare cleanup: (keepSave?: boolean) => void;
 
 	declare static defaultScenario: string;
 	declare static defaultScenarioAI: number[];
@@ -179,7 +179,7 @@ export class Game {
 			startGameSession(this, true, localPlayingSide);
 
 			this.gameStarted = true;
-			needScenarioLoad = this.gameEnded = false;
+			needScenarioLoad = nextScenarioLoading = this.gameEnded = false;
 
 			this.state.save();
 			this.ui.setNewScenario();
@@ -193,7 +193,9 @@ export class Game {
 				scenFile = Game.defaultScenario;
 			}
 
-			this.cleanup();
+			//(a campaign's next scenario keeps the save of the one before until its own replaces it: closing
+			//the game while it loads, or a load that fails, doesn't lose the campaign #64)
+			this.cleanup(nextScenarioLoading);
 
 			this.scenario = new Scenario(scenFile);
 			this.scenario.load(this.onScenarioLoadFinished.bind(this, scenIntro, false));
@@ -218,7 +220,7 @@ export class Game {
 
 			this.waitUIAnimation = false;
 			this.gameStarted = true;
-			needScenarioLoad = this.gameEnded = false;
+			needScenarioLoad = nextScenarioLoading = this.gameEnded = false;
 
 			//(the scenario's start gave the players their prestige and a campaign's start its player: the core's
 			//newGame, src/coreload.ts)
@@ -327,8 +329,9 @@ export class Game {
 				this.spotSide = localPlayingSide;
 		}
 
-		this.cleanup = function() {
-			this.state.clear();
+		this.cleanup = function(keepSave = false) {
+			if (!keepSave)
+				this.state.clear();
 
 			//Cleanup old state
 			if (this.scenario && this.scenario.map !== null) {
