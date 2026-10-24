@@ -6,7 +6,7 @@ import { moveRange, pathTo, terrainCost, unitMoveRange } from "../src/core/movem
 import { canReinforce, canResupply, reinforceValue, resupplyValue } from "../src/core/supply";
 import type { MoveCell, UnitState, World } from "../src/core/types";
 import { canMount, canUnmount } from "../src/core/units";
-import { ammoOf, fuelOf, movesLeft, sideOf, unitById, unitData } from "../src/core/world";
+import { fuelOf, movesLeft, sideOf, unitById, unitData } from "../src/core/world";
 import { OVERSTRENGTH_PENALTY, unitClassNames } from "../src/prototypes";
 import { targetsOf } from "./combat";
 import { cell, label, own } from "./known";
@@ -25,15 +25,20 @@ const ABILITIES: [string, (w: World, u: UnitState) => boolean][] = [
 
 const DONE: [keyof UnitState, string][] = [["hasMoved", "moved"], ["hasFired", "fired"], ["hasResupplied", "supplied"]];
 
-function fuelPart(w: World, u: UnitState): string[] {
-	const d = unitData(w, u);
-	return d.fuel > 0 ? [`fuel ${fuelOf(u)}/${d.fuel}`] : [];
+//The unit's own ammo and fuel against its own full load, also while it is mounted or embarked: the core's
+//ammoOf and fuelOf give the transport's then, the ones a move or a fight uses (#306)
+function loadPart(w: World, u: UnitState, mine: boolean): string[] {
+	const d = own(w, u);
+	return [`ammo ${u.ammo}/${d.ammo}`, ...(mine && d.fuel > 0 ? [`fuel ${u.fuel}/${d.fuel}`] : [])];
 }
 
-function carriedPart(w: World, u: UnitState): string[] {
+//The transport, and while mounted what it carries (its ammo when it has any, its fuel for the side's own)
+function carriedPart(w: World, u: UnitState, mine: boolean): string[] {
 	if (u.transport === null) return [];
-	const name = w.equipment[u.transport.eqid].name;
-	return [u.isMounted ? `mounted on ${name}` : `transport ${name}`];
+	const t = w.equipment[u.transport.eqid];
+	if (!u.isMounted) return [`transport ${t.name}`];
+	const load = [...(t.ammo > 0 ? [`ammo ${u.transport.ammo}/${t.ammo}`] : []), ...(mine && t.fuel > 0 ? [`fuel ${u.transport.fuel}/${t.fuel}`] : [])];
+	return [`mounted on ${t.name}` + (load.length ? ` (${load.join(", ")})` : "")];
 }
 
 function ownPart(w: World, u: UnitState): string[] {
@@ -45,8 +50,8 @@ function ownPart(w: World, u: UnitState): string[] {
 //A unit as one line; mine: the side's own, with its moves, flags and what it can still do (w: the known
 //world, for its attacks)
 export function unitLine(w: World, u: UnitState, mine: boolean): string {
-	return [label(w, u), unitClassNames[own(w, u).uclass], `str ${u.strength}`, `ammo ${ammoOf(u)}/${unitData(w, u).ammo}`,
-		...(mine ? fuelPart(w, u) : []), `ent ${u.entrenchment}`, `xp ${u.experience}`, ...carriedPart(w, u),
+	return [label(w, u), unitClassNames[own(w, u).uclass], `str ${u.strength}`, ...loadPart(w, u, mine),
+		`ent ${u.entrenchment}`, `xp ${u.experience}`, ...carriedPart(w, u, mine),
 		...(u.leader >= 0 ? [`leader ${u.leader}`] : []), ...(mine ? ownPart(w, u) : [])].join(" | ");
 }
 
@@ -84,10 +89,12 @@ export function moves(w: World, side: number, id: number): { cells: MoveTo[]; no
 export const moveLine = (m: MoveTo) => `${m.cell} cost ${m.cost}` + (m.fuelLeft === null ? "" : ` fuel left ${m.fuelLeft}`)
 	+ (m.stops ? " (the move stops here)" : "");
 
-const short = (w: World, u: UnitState) => {
-	const d = unitData(w, u);
-	return ammoOf(u) < d.ammo || (d.fuel > 0 && fuelOf(u) < d.fuel) || u.strength < 10;
-};
+//A load below its full one (no fuel to carry: never short of it)
+const below = (load: { ammo: number; fuel: number }, full: EquipmentEntry) => load.ammo < full.ammo || (full.fuel > 0 && load.fuel < full.fuel);
+
+//Short of strength, of its own ammo or fuel, or of its transport's while mounted
+const short = (w: World, u: UnitState) => u.strength < 10 || below(u, own(w, u))
+	|| (u.isMounted && u.transport !== null && below(u.transport, w.equipment[u.transport.eqid]));
 
 function resupplyPart(w: World, u: UnitState): string {
 	if (!canResupply(w, u)) return "can't resupply now";
@@ -105,7 +112,7 @@ function reinforcePart(w: World, u: UnitState): string[] {
 //What side's units are short of, and what a resupply or a reinforcement gives where they stand now
 export function supply(w: World, side: number): string[] {
 	const out = w.state.units.filter((u) => sideOf(w, u) === side && short(w, u))
-		.map((u) => [label(w, u), `str ${u.strength}`, `ammo ${ammoOf(u)}/${unitData(w, u).ammo}`, ...fuelPart(w, u),
+		.map((u) => [label(w, u), `str ${u.strength}`, ...loadPart(w, u, true), ...(u.isMounted ? carriedPart(w, u, true) : []),
 			resupplyPart(w, u), ...reinforcePart(w, u)].join(" | "));
 	return out.length ? out : ["every unit is full"];
 }

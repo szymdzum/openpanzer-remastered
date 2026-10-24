@@ -228,3 +228,18 @@ test("On the page, a capture the screen played ends the game though the session 
 	//the screen's game ended (game.gameEnded), its session didn't: the person's side took the last objective
 	expect(pageResultOf(world(g), null, true, AXIS)).toEqual({ kind: "capture", winner: AXIS, loser: 1, rating: "briliant" });
 }, 60_000);
+
+test("A mounted unit shows its own ammo and fuel, its transport's beside them (#306)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1");
+	//the Sturmpioniere #8 at 2,6 (ammo 7) on its Opel Blitz (ammo 4, fuel 55), down to 5 ammo
+	const save = readGameFile(file);
+	save.state.units.find((u) => u.id === 8).ammo = 5;
+	fs.writeFileSync(file, JSON.stringify(save));
+	await call("mount 8");
+	const line = "#8 Sturmpioniere @2,6 | Infantry | str 10 | ammo 5/7 | ent 0 | xp 98 | mounted on Opel Blitz (ammo 4/4, fuel 55/55)";
+	expect(await call("units")).toContain(line);
+	expect(await call("unit 8")).toContain(line);
+	expect(await call("hex 2,6")).toContain(line);
+	expect(await call("supply")).toContain("#8 Sturmpioniere @2,6 | str 10 | ammo 5/7 | mounted on Opel Blitz (ammo 4/4, fuel 55/55)");
+}, 60_000);
