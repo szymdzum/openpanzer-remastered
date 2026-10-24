@@ -209,3 +209,34 @@ function playedToHandOver(s: Session): { refused: string[]; places: Record<numbe
 	}
 	return { refused, places };
 }
+
+//The tutorial on both sides started by the core, the streams given: what each message of turn 3 says
+//about the city (8,15) and whether the city was the axis' when it said it
+async function cityMessages(seed: number): Promise<[string, boolean][]> {
+	const { setupOf } = await import("./corefiles");
+	const { newGame } = await import("../src/core/newgame");
+	const { playerType } = await import("../src/prototypes");
+	const setup = { ...setupOf("tutorial.xml", { game: seed, ai: seed + 7 }), isAI: [2, 2, 2, 2] };
+	const s = startSession(createWorld(newGame(setup), setup.equipment), (type, player) => type === playerType.aiLocal
+		? aiController(player) : type === playerType.aiScripted ? tutorialController(player) : null, { fresh: true });
+	const said: [string, boolean][] = [];
+	while (s.ended === null && s.world.state.turn.turn <= 3) {
+		const a = advance(s);
+		if (a.kind !== "order" || !("view" in a.order) || a.order.view.type !== "message" || s.world.state.turn.turn !== 3) continue;
+		const city = s.world.state.map.hexes[8 * s.world.state.map.cols + 15];
+		if (/city/i.test(a.order.view.text)) said.push([a.order.view.text.slice(0, 40), city.owner === a.player]);
+	}
+	return said;
+}
+
+//Seeds 106 and 143: the city's defender survives the artillery's and the three infantry's attacks, and the
+//tank's capture is skipped (an enemy holds the hex); seed 1: it falls and the tank takes the city
+test("The tutorial says the city is ours only once the tank took it, and that its defender held when it did (#269)", async () => {
+	const ours = "The city is now ours, and it's flag chan", held = "The city's defender held against all our";
+	for (const seed of [1, 106, 143]) {
+		const said = await cityMessages(seed), texts = said.map(([t]) => t);
+		for (const [text, owned] of said) if (text === ours) expect(owned, "seed " + seed).toBe(true);
+		expect(texts.includes(ours) !== texts.includes(held), "seed " + seed + ": " + texts.join(" | ")).toBe(true);
+		expect(texts.includes(held), "seed " + seed).toBe(seed !== 1);
+	}
+}, 120_000);
