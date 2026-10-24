@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { endHumanTurn, isHumanTurn, newSave, open, playCommand, readGameFile, world, writeGameFile } from "../cli/game";
-import { status } from "../cli/board";
+import { map, status } from "../cli/board";
 import { attackers, targets } from "../cli/combat";
 import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
@@ -16,6 +16,7 @@ import { fightRecorder } from "../cli/fightlog";
 import { CombatLog } from "../src/combatlog";
 import type { Unit } from "../src/unit";
 import { sideOf, unitById } from "../src/core/world";
+import { terrainNames, terrainType } from "../src/prototypes";
 
 const AXIS = 0;
 const seenEnemies = (g: ReturnType<typeof open>) =>
@@ -291,4 +292,19 @@ test("A hex off the map is refused with the map's size, in hex and wherever a co
 	await expect(call("targets 3 --from 40,1")).rejects.toThrow(`no hex 40,1: ${size}`);
 	await expect(call("attackers 99,99")).rejects.toThrow(`no hex 99,99: ${size}`);
 	expect(await call("hex 31,36")).toMatch(/^31,36: /);
+}, 60_000);
+
+test("Every terrain the map draws has its own character in the legend, bocage not the bunker's b (#310)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1)), w = world(g);
+	const drawn = terrainNames.map((name, t) => {
+		//hex 0,0 (clear, no road, no unit) drawn as each terrain
+		const hexes = w.data.hexes.slice();
+		hexes[0] = { ...hexes[0], terrain: t, road: 0 };
+		const lines = map({ ...w, data: { ...w.data, hexes } }, AXIS, [0, 0], [0, 0], false);
+		const char = lines[2].slice(4, 5);
+		expect(lines.join("\n")).toContain(`${char} ${name.toLowerCase()}`);
+		return char;
+	});
+	expect(new Set(drawn).size).toBe(terrainNames.length);
+	expect(drawn[terrainType.Bocage]).not.toBe("b");
 }, 60_000);
