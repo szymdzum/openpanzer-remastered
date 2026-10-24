@@ -144,13 +144,22 @@ function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): bo
 	w.owner = player.id;
 	if (w.flag !== -1) w.flag = player.country;
 	if (objective) w.victorySide = ~player.side & 1; //now the enemy's to take back
+	const index = d.state.objectives[player.side].findIndex((c) => c.row === at.row && c.col === at.col);
 	const win = objective && updateVictorySides(d, player.side, at);
 	const taken = gains(flag, objective, hasLeader(d, u, leaderType.liberator) ? 2 : 1);
-	if (undo !== null) Object.assign(undo, old, { prestigeGain: taken.prestige, scoreGain: taken.score });
+	if (undo !== null) recordCapture(undo, old, taken, objective, index);
 	writePlayer(d, player.id).prestige += taken.prestige;
 	addScore(d, player.id, taken.score);
 	emit(d, { type: "captured", unit: id, at: { row: at.row, col: at.col }, flag, objective, ...taken, win });
 	return win;
+}
+
+//What a capture changed, for the undo: the hex, the gains, and where an objective taken was in its
+//side's list, to put it back there (#141)
+function recordCapture(undo: UndoState, old: ReturnType<typeof undoFields>, taken: ReturnType<typeof gains>, objective: boolean,
+	index: number) {
+	Object.assign(undo, old, { prestigeGain: taken.prestige, scoreGain: taken.score });
+	if (objective && index >= 0) undo.objectiveIndex = index;
 }
 
 //What a capture changes of a hex, for the undo: its owner, its flag and objective when it has them
@@ -174,7 +183,7 @@ function gains(flag: boolean, objective: boolean, times: number): { prestige: nu
 }
 
 //Map.updateVictorySides: the hex leaves side's objectives and joins the other side's, at the end of
-//its list (#141 on an undo). Whether side has none left
+//its list (the undo puts it back in its place, #141). Whether side has none left
 export function updateVictorySides(d: Draft, side: number, cell: Position): boolean {
 	const own = writeObjectives(d, side);
 	let removed = 0;

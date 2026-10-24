@@ -7,7 +7,7 @@
  */
 
 import type { CommandOf } from "../../commands";
-import { addScore, emit, playerAt, relocate, writeHex, writePlayer } from "../draft";
+import { addScore, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer } from "../draft";
 import { reselect, updateVictorySides } from "../moves";
 import type { CommandHandler } from "../types";
 import { hexIndex, unitById } from "../world";
@@ -15,8 +15,8 @@ import { unitCheck } from "./common";
 
 //Map.undoLastMove: the unit as it was before the move, back where it stood, spotting from there again
 //without marking the enemy units it sees there as seen: they are as they were before the move (#140:
-//the original marked them, as if they had fired), the hex it took given back (#141: at the end of its
-//side's list), the prestige and score taken back
+//the original marked them, as if they had fired), the hex it took given back, an objective in its
+//place in its side's list (#141: the original put it at the end), the prestige and score taken back
 //Only the current player's own unit (#171)
 export const undo: CommandHandler<CommandOf<"undo">> = {
 	check(w, cmd) {
@@ -41,6 +41,10 @@ export const undo: CommandHandler<CommandOf<"undo">> = {
 		if (slot.oldVictorySide !== null) {
 			updateVictorySides(d, ~player.side & 1, from);
 			writeHex(d, hex).victorySide = slot.oldVictorySide;
+			//(a save from before #141 has no index: the objective stays at the end)
+			const own = writeObjectives(d, player.side), last = own.length - 1;
+			if (slot.objectiveIndex !== undefined && last >= 0 && own[last].row === from.row && own[last].col === from.col)
+				own.splice(slot.objectiveIndex, 0, ...own.splice(last, 1));
 		}
 		writePlayer(d, player.id).prestige -= slot.prestigeGain;
 		addScore(d, player.id, -slot.scoreGain);

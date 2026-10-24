@@ -20,6 +20,7 @@ export class UndoSlot {
 	declare oldVictorySide: number; //If an objective was captured
 	declare prestigeGain: number; //If player got any prestige
 	declare scoreGain: number; //If player got any score
+	declare objectiveIndex: number; //Where the objective captured was in its side's list (#141), null for none
 
 	constructor() {
 		this.unit = null;
@@ -29,11 +30,12 @@ export class UndoSlot {
 		this.oldVictorySide = null;
 		this.prestigeGain = 0;
 		this.scoreGain = 0;
+		this.objectiveIndex = null;
 	}
 
 	clear() {
 		this.unit = this.savedUnit = null;
-		this.oldVictorySide = this.oldOwner = this.oldFlag = null;
+		this.oldVictorySide = this.oldOwner = this.oldFlag = this.objectiveIndex = null;
 		this.prestigeGain = this.scoreGain = 0;
 	}
 

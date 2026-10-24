@@ -161,8 +161,10 @@ once on one draft; test/core-steps.test.ts played each of its commands both ways
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
 reinforcement, an upgrade or a disband; a retreat leaves nothing to undo, and an undo takes back only
 a unit of the player whose turn it is (#171: the old engine let the attacker's player undo the enemy's
-retreat). The undo plays the old single slot back, #141 included (the enemy units the unit sees again
-are left as they were, #140: the original marked them seen); the states before are the caller's.
+retreat). The undo plays the old single slot back, but the enemy units the unit sees again are left
+as they were (#140: the original marked them seen) and an objective taken goes back in its place in
+its side's list (#141: the original put it at the end; the slot keeps its index); the states before
+are the caller's.
 
 **The move's hex.** A move can end on a hex that holds no unit of the mover's kind (a ground or naval
 unit, or an air unit: an aircraft stops over a tank), or an enemy one its side doesn't see, which
@@ -298,8 +300,7 @@ mounted, so its towed guns never moved). It buys a unit a transport carries with
 its country's ground transports that carries it, is in service and fits the budget left (#224: the old AI
 bought none). Its reinforcements are budgeted with the prestige left after its purchases (#21: the
 old AI took it before them). Kept: #17 (the attacks count the hidden units' support fire),
-the objectives in their list's order (D7, so #141's order
-after an undo). Its settings are `aiDefaultConfig`
+the objectives in their list's order (D7). Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 
 **The tutorial** (tutorial.ts) is src/aiscripted.ts's script without the UI, both sides of
