@@ -1,9 +1,13 @@
 # The command-line player
 
-A scenario played from the terminal against the AI (#279): the core (docs/CORE.md) plays headless, a
-person or a program (an LLM general, #45) sends the commands a screen would and reads the game as
-text or JSON. No browser, no dev server: a playtest can't be broken by a page reload or a stuck
-animation, and a turn of the AI takes well under a second.
+A scenario played from the terminal against the AI (#279): a person or a program (an LLM general, #45)
+sends the commands a screen would and reads the game as text or JSON, the same commands in two ways:
+
+- **Headless** (the default): the core (docs/CORE.md) plays without a browser from a save file. A
+  turn of the AI takes well under a second: for the arena, tests, a program playing many games.
+- **Live** (`--live`): the game plays on its page, as a person sees it. The program's moves and
+  attacks go through the screen's own actions with their animations, its end of turn through the
+  button, and the AI then plays its turn on the screen. A person watches the program play.
 
     npm run -s play -- help
     npm run -s play -- new drpzop01.xml --seed 7      # Panzer-Verbaende Ostpreussen, you play the Axis
@@ -12,6 +16,24 @@ animation, and a turn of the AI takes well under a second.
     npm run -s play -- attackers 2,20                  # who can hit the defender of 2,20, from where
     npm run -s play -- move 1 0,15
     npm run -s play -- end                             # the AI plays its turn, the report follows
+
+## Live, on the game's page
+
+    npm run play:live                                  # the dev server with the bridge, port 8644
+    # open http://127.0.0.1:8644/ in a browser (the page is the game's screen)
+    npm run -s play -- new drpzop01.xml --live         # or OPENPANZER_LIVE=http://127.0.0.1:8644 for every call
+    npm run -s play -- move 1 0,15 --live              # the move is animated on the page, then the answer
+
+`npm run play:live` is the dev server with `OPENPANZER_CLI=1`: its `cliBridge` (vite.config.mts) adds
+cli/page.ts to the page and takes a call's words at `POST /__cli`, hands them to the page over the dev
+server's websocket and its answer back. The page plays them on the running game (its core world,
+src/mirror.ts) and answers with the same commands as headless; it waits for a move's or an attack's
+animation, and for the AI's turn, before it answers. It doesn't know a turn's events, so it tells what
+changed between the world before and after: the units the side saw moved, worn, gone or new, the
+victory hexes taken, the prestige. Without the variable the dev server and the page are as before.
+The page's dice are its own: `--seed` is headless only.
+
+## Headless
 
 Each call loads the game from a JSON file (`.play/game.json`, `--game FILE` or `$OPENPANZER_PLAY`),
 answers or plays, and saves it: the core's state is plain data (docs/STATE.md) with its random
@@ -50,7 +72,5 @@ The actions are the core's commands (src/commands.ts): `move`, `attack`, `mount`
 
 ## What it leaves out
 
-- A view for a person watching: the browser stays the screen; a replay of the same commands there
-  is a later step.
 - Hotseat and two programs: the person plays one side, the AI the other.
 - Campaigns: a single scenario of the list.

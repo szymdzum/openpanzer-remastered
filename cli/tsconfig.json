@@ -2,7 +2,7 @@
 	// The command-line player (npm run check): the game's flags, with Node's types
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"types": ["node"],
+		"types": ["node", "vite/client"],
 		"lib": ["es2022", "dom"],
 		"module": "esnext",
 		"target": "es2022"

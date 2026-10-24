@@ -9,10 +9,12 @@ import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
 import { equipmentCountries, newGame } from "../src/core/newgame";
 import { type Advance, advance, endTurn, play, playOn, type Session, startSession } from "../src/core/session";
-import { outcome, type Outcome } from "../src/core/turn";
+import type { Outcome } from "../src/core/turn";
 import type { GameState, ScenarioData, World } from "../src/core/types";
 import { playerType } from "../src/prototypes";
+import { type Front, resultOf } from "./commands";
 import { readEquipment, setupOf } from "./files";
+import { describe } from "./report";
 
 //What a save holds: the core's data and state, and what a call needs to rebuild the world and the
 //session around them. report: the enemy's last turn, for the person's side to read
@@ -120,10 +122,27 @@ export function endHumanTurn(g: Game): GameEvent[] {
 	return events;
 }
 
-//How the game ended, by the core's outcome: a capture, an elimination or the turn limit
-export function result(g: Game): Outcome | null {
-	const end = g.session.ended;
-	if (end === null || end.kind === "stuck") return null;
-	if (end.kind === "turnLimit") return outcome(world(g), { endedSide: end.side });
-	return outcome(world(g), end.how === "capture" ? { victorySide: end.side } : {});
+//How the game ended, by the core's outcome
+export const result = (g: Game): Outcome | null => resultOf(world(g), g.session.ended);
+
+//The headless front of the commands (commands.ts): the game of a save, saved again after each command
+//that played
+export function fileFront(g: Game, file: string): Front {
+	return {
+		world: () => world(g),
+		side: g.side,
+		humanTurn: () => isHumanTurn(g),
+		act: (cmd) => {
+			const r = playCommand(g, cmd);
+			if (r.refusal === null) writeSave(file, g);
+			return Promise.resolve(r);
+		},
+		end: () => {
+			const events = endHumanTurn(g);
+			writeSave(file, g);
+			return Promise.resolve(events);
+		},
+		report: () => describe(world(g), world(g), g.side, g.save.report),
+		result: () => result(g),
+	};
 }

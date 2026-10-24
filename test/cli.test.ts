@@ -9,7 +9,9 @@ import { status } from "../cli/board";
 import { attackers, targets } from "../cli/combat";
 import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
-import { parseArgs, run } from "../cli/play";
+import { parseArgs } from "../cli/commands";
+import { run } from "../cli/play";
+import { changes } from "../cli/report";
 import { sideOf, unitById } from "../src/core/world";
 
 const AXIS = 0;
@@ -95,3 +97,12 @@ test("Every command answers, from a new game to the enemy's turn report (#279)",
 	expect((await call("status")).split("\n")[0]).toContain("turn 2/17");
 	await expect(call("fly 1 2,2")).rejects.toThrow('unknown command "fly"');
 }, 120_000);
+
+test("What changed between two worlds, as the page's front tells a turn it plays on the screen (#279)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1));
+	const before = world(g);
+	playCommand(g, { type: "buy", eqid: 749, transport: -1 });
+	playCommand(g, { type: "move", unit: 1, to: { row: 0, col: 15 } });
+	expect(changes(before, world(g), AXIS)).toEqual([
+		"Axis #1 Psw 231(8) 1,10 -> 0,15", "Allies #4 38 Piechota seen at 1,18", "Allies #14 Bunker seen at 2,15", "prestige 3056 -> 2420"]);
+}, 60_000);
