@@ -65,3 +65,31 @@ test("At the turn limit the side holding more objectives wins, a defender who he
 	expect(outcome(world, { endedSide: 1 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });
 	expect(outcome(world, { endedSide: 0 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });
 });
+
+//A German tank and a Soviet tank, the last unit of each side, both at strength 1 on the small game: an
+//attack that destroys both. The old game ran the victory once for each side, so a campaign ended the
+//scenario twice, its prestige counted twice and the next scenario loaded twice (#92)
+test("When an attack destroys the last unit of both sides the game ends once, as the outcome says (#92)", async () => {
+	const { smallGameData } = await import("./smallgame");
+	const { createWorld } = await import("../src/core/create");
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { step } = await import("../src/core/step");
+	const { outcome } = await import("../src/core/turn");
+	const { Equipment } = await import("../src/equipment");
+	for (const rules of [classicRules, remasterRules]) {
+		let both = 0;
+		for (let seed = 1; seed <= 300; seed++) {
+			const saved = smallGameData([[142, 0, 4, 4], [511, 1, 4, 5]]);
+			saved.state.units.forEach((u) => { u.strength = 1; });
+			saved.state.rng = { game: seed, ai: 2 };
+			const r = step(createWorld(saved, Equipment.equipment, { rules }), { type: "attack", unit: 0, target: 1 });
+			if (r.ok === false) throw new Error(r.refusal.reason);
+			if (r.world.state.units.length > 0) continue;
+			both++;
+			const victories = r.events.filter((e) => e.type === "victory");
+			expect(victories, rules.name + " seed " + seed).toEqual([{ type: "victory", side: 1, kind: "elimination" }]);
+			expect(outcome(r.world)).toMatchObject({ kind: "elimination", winner: 1 });
+		}
+		expect(both, rules.name).toBeGreaterThan(0);
+	}
+});

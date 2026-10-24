@@ -140,7 +140,7 @@ combat steps' record, #118), `attackStopped`, `dismounted`, `leader`, `destroyed
 **The attack** (`fight.ts`) is the old engine's sequence: the estimate (no draw) decides an overrun,
 the support fire shots one by one unless the attacker is surprised or overruns, the attack unless
 the attacker is destroyed or its losses stopped it, then the finish (the destroyed units off the map,
-the attacker first; retreat or surrender; a side with no unit left loses, both when both, #92).
+the attacker first; retreat or surrender; a side with no unit left loses; when both have none, one victory, the allies', as `outcome` says, #92).
 Each shot is `resolveFight`, which reads the state and draws from the game stream (the attacker's
 dice, the defender's, then the attacker's leader roll and the defender's: `generateLeaderWithChance`
 draws even when no level was gained), then `applyFight`, which changes it. The preview (#7) can
