@@ -242,8 +242,29 @@ test("Undo takes back the unit's last move", () => {
 	expect(inf.hasMoved).toBe(false);
 });
 
+//A unit bought where its side has no free deployment hex would wait in the reserve for the whole
+//game, its prestige gone (#60): the purchase is refused. An air unit takes a hex's air slot, a
+//ground unit its ground one; the units already waiting in the reserve don't hold a hex (deploy lets
+//any of them take any free one)
+test("A unit can be bought only while its side has a free deployment hex for it (#60)", () => {
+	const p = players[0], fighter = Equipment.getCountryEquipmentByClass(unitClass.fighter, 8)[0];
+	p.prestige = 5000;
+	expect(refusal({ type: "buy", eqid: 115, transport: -1 })).toBe("no free deployment hex");
+	map.map[1][1].isDeployment = 1; //the enemy's
+	expect(refusal({ type: "buy", eqid: 115, transport: -1 })).toBe("no free deployment hex");
+	map.map[3][3].isDeployment = 0; //under German infantry: free for an aircraft only
+	expect(refusal({ type: "buy", eqid: 115, transport: -1 })).toBe("no free deployment hex");
+	expect(refusal({ type: "buy", eqid: fighter, transport: -1 })).toBeNull();
+	map.map[1][1].isDeployment = 0;
+	expect(refusal({ type: "buy", eqid: 115, transport: -1 })).toBeNull();
+	expect(execute(scenario, { type: "buy", eqid: 115, transport: -1 })).toEqual({ ok: true, result: true });
+	expect(p.prestige).toBe(5000 - GameRules.calculateUnitCosts(115, -1));
+	expect(refusal({ type: "buy", eqid: 115, transport: -1 })).toBeNull();
+});
+
 test("Buy, upgrade, deploy and sell a core unit; upgrade and disband one on the map", () => {
 	const p = players[0];
+	map.map[1][1].isDeployment = 0;
 	p.prestige = 0;
 	expect(refusal({ type: "buy", eqid: 0, transport: -1 })).toBe("no such equipment");
 	expect(refusal({ type: "buy", eqid: 999999, transport: -1 })).toBe("no such equipment");
@@ -261,6 +282,7 @@ test("Buy, upgrade, deploy and sell a core unit; upgrade and disband one on the 
 
 	//Deploy it on a deployment hex of its side
 	expect(refusal({ type: "deploy", index: 1, to: { row: 1, col: 1 } })).toBe("no such unit");
+	map.map[1][1].isDeployment = -1;
 	expect(refusal({ type: "deploy", index: 0, to: { row: 1, col: 1 } })).toBe("not a deployment hex");
 	expect(refusal({ type: "deploy", index: 0, to: { row: 12, col: 1 } })).toBe("off the map");
 	map.map[1][1].isDeployment = 1;

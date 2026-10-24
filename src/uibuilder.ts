@@ -61,7 +61,7 @@ export interface UIBuilderModule {
 	buildEquipmentWindow(): void;
 	buildEquipmentSortOptions(): void;
 	buildUnitInfoWindow(): void;
-	showEquipmentCosts(prestige: number, buyCost: number, upCost: number, sellCost: number): void;
+	showEquipmentCosts(prestige: number, buyCost: number, upCost: number, sellCost: number, buyRefusal: string): void;
 	showAttackInfo(atkunit: Unit, defunit: Unit): void;
 	showAIStatus(isPlaying: boolean): void;
 	scaleUI(scale: number | string): void;
@@ -753,7 +753,16 @@ UIBuilder.buildUnitInfoWindow = function() {
 	}
 };
 
-UIBuilder.showEquipmentCosts = function(prestige: number, buyCost: number, upCost: number, sellCost: number) {
+//Why the core refuses an affordable purchase, in place of its buy button, as the lack of prestige is
+//shown ("": it doesn't)
+function showBuyRefusal(reason: string) {
+	if (reason === "") return;
+	$('eqNewText').innerHTML = "<span style='color:#BB7575'>Can't buy: " + reason + ".</span>";
+	$('eqNewBut').style.display = "none";
+	$('eqNewCost').textContent = "";
+}
+
+UIBuilder.showEquipmentCosts = function(prestige: number, buyCost: number, upCost: number, sellCost: number, buyRefusal: string) {
 	var diff: number;
 
 	if (buyCost > 0 && buyCost <= prestige) {
@@ -770,6 +779,7 @@ UIBuilder.showEquipmentCosts = function(prestige: number, buyCost: number, upCos
 		$('eqNewBut').style.display = "none";
 		$('eqNewCost').textContent = "";
 	}
+	showBuyRefusal(buyRefusal);
 
 	if (upCost > 0 && upCost <= prestige) {
 		$('eqUpgradeText').innerHTML = " Upgrade ";
