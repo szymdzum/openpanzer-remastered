@@ -2,7 +2,7 @@
 //can still do, where it can move and at what cost, what it is short of and what a resupply or a
 //reinforcement gives where it stands
 import { costPerStrength } from "../src/core/costs";
-import { moveRange, pathTo, terrainCost } from "../src/core/movement";
+import { moveRange, pathTo, terrainCost, unitMoveRange } from "../src/core/movement";
 import { canReinforce, canResupply, reinforceValue, resupplyValue } from "../src/core/supply";
 import type { MoveCell, UnitState, World } from "../src/core/types";
 import { canMount, canUnmount } from "../src/core/units";
@@ -52,14 +52,22 @@ export function unitLine(w: World, u: UnitState, mine: boolean): string {
 
 export interface MoveTo { cell: string; cost: number; fuelLeft: number | null; stops: boolean }
 
+//The fuel a hex that stops the move takes after the path's cost before it, as the core's stopCost pays
+//it (src/core/moves.ts): a zone of control its terrain (#214), a terrain that takes every point (254: an
+//A of the tables) the points left (#284)
+function stopFuel(w: World, u: UnitState, c: MoveCell, before: number): number {
+	const terrain = terrainCost(w, u, c);
+	return terrain >= 254 ? Math.max(unitMoveRange(w, u) - before, 1) : terrain;
+}
+
 //What a move to c costs: a path cell's dist is the cost before it, the move pays it and the last hex.
 //A hex that takes every point left (254: the terrain, or a zone of control on a hex the side spots)
-//stops the move there: the points left go, the fuel pays its terrain (#214)
+//stops the move there: the points left go, the fuel pays what stopFuel says
 function moveTo(w: World, u: UnitState, c: MoveCell): MoveTo {
 	const path = pathTo(w, u, c), last = path[path.length - 1];
 	const stops = last !== undefined && last.cost >= 254, before = last ? last.dist : 0;
 	const cost = stops ? movesLeft(w, u) : before + (last ? last.cost : 0);
-	const fuel = unitData(w, u).fuel > 0 ? fuelOf(u) - (stops ? before + terrainCost(w, u, c) : cost) : null;
+	const fuel = unitData(w, u).fuel > 0 ? fuelOf(u) - (stops ? before + stopFuel(w, u, c, before) : cost) : null;
 	return { cell: cell(c), cost, fuelLeft: fuel, stops };
 }
 

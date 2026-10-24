@@ -147,3 +147,14 @@ test("The report keeps the enemy's leaders and upgrades to itself (#279)", async
 	expect(describe(w, w, AXIS, [{ type: "turnStarted", player: 1, turn: 1, date: "", dayTurn: 0 },
 		{ type: "upgraded", unit: null, index: 0, eqid: 270, transport: -1, cost: 10 }])).toEqual(["-- Allies turn 1 --"]);
 }, 60_000);
+
+test("A move onto a hex whose terrain stops it uses the fuel of the points left, as the move pays (#284)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1));
+	//the Kfz 13 at 12,3 (fuel 40, 6 points): 9,4 takes every point left
+	const m = moves(world(g), AXIS, 53).cells.find((c) => c.cell === "9,4");
+	expect(m).toMatchObject({ cost: 6, stops: true });
+	expect(playCommand(g, { type: "move", unit: 53, to: { row: 9, col: 4 } }).refusal).toBeNull();
+	expect(unitById(world(g), 53).fuel).toBe(m.fuelLeft);
+	//the fuel minus the 6 points left, not plus the terrain's 254
+	expect(m.fuelLeft).toBe(40 - 6);
+}, 60_000);
