@@ -15,6 +15,7 @@ import { Commands } from "../src/commands";
 import { applyData, worldOf } from "../src/mirror";
 import { startSession } from "../src/core/session";
 import { smallGame } from "./smallgame";
+import { classicRules } from "../src/core/rules";
 
 const root = path.resolve(__dirname, "..");
 
@@ -82,4 +83,23 @@ test("The rules read the game through the context, at the moment they ask", () =
 	expect(range).toBeGreaterThan(0);
 	tank.hasMoved = true;
 	expect(GameRules.getMoveRange(map, tank).filter((c) => c.canMove).length).toBe(0);
+});
+
+//A save written while an attack's animation ran holds the destroyed unit on its hex (#58): the Soviet
+//infantry at 7,7 with strength -2. The load takes it off, and the German tank at 4,4 then moves there
+test("A save's unit with no strength left isn't on the map after the load (#290)", async () => {
+	const { smallGameData } = await import("./smallgame");
+	const { readSaveObject, scenarioFromSave, SAVE_VERSION } = await import("../src/savegame");
+	const saved = smallGameData();
+	saved.state.units[4].strength = -2;
+	const read = readSaveObject({ version: SAVE_VERSION, rules: "classic", ...saved });
+	const scenario = scenarioFromSave(read), m = scenario.map;
+	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0,
+		rules: () => "classic", host: () => null, world: () => worldOf(scenario, null, { spotSide: 0, noFOW: false, rules: classicRules }) });
+	expect(m.getUnits().map((u) => u.id)).not.toContain(4);
+	expect(m.map[7][7].unit).toBeNull();
+	const tank = m.getUnitById(1);
+	expect(Commands.check(scenario, { type: "move", unit: 1, to: { row: 7, col: 7 } })).toBeNull();
+	Commands.execute(scenario, { type: "move", unit: 1, to: { row: 7, col: 7 } });
+	expect(tank.getPos()).toEqual({ row: 7, col: 7 });
 });
