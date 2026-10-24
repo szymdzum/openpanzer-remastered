@@ -9,7 +9,7 @@ import { status } from "../cli/board";
 import { attackers, targets } from "../cli/combat";
 import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
-import { parseArgs } from "../cli/commands";
+import { pageResultOf, parseArgs } from "../cli/commands";
 import { run } from "../cli/play";
 import { changes, describe } from "../cli/report";
 import { sideOf, unitById } from "../src/core/world";
@@ -205,4 +205,26 @@ test("A unit with no air attack can't attack an aircraft next to it, as on the s
 	expect(await call("targets 5")).not.toContain("#78 ");
 	expect(await call("check attack 5 78")).toBe("refused: not a target from here");
 	expect(await call("attack 5 78")).toBe("refused: not a target from here");
+}, 60_000);
+
+test("The capture of the last objective ends the game: status says who won and how, and nothing plays on (#311)", async () => {
+	const call = caller(tmpGame());
+	await call("new dragrom10.xml --seed 1");
+	//the Axis has two victory hexes to take, each a move away
+	await call("move 1 5,6");
+	const over = "GAME OVER: Axis wins (capture, briliant)";
+	expect(await call("move 2 6,11")).toContain(over);
+	expect(await call("status")).toContain(over);
+	expect(await call("check move 3 11,4")).toBe(`refused: the game is over\n${over}`);
+	expect(await call("move 3 11,4")).toBe(`refused: the game is over\n${over}`);
+	expect(await call("end")).toBe(`refused: the game is over\n${over}`);
+}, 60_000);
+
+test("On the page, a capture the screen played ends the game though the session doesn't know it (#311)", async () => {
+	const g = open(await newSave("dragrom10.xml", [AXIS], 1));
+	playCommand(g, { type: "move", unit: 1, to: { row: 5, col: 6 } });
+	expect(pageResultOf(world(g), null, false, AXIS)).toBeNull();
+	playCommand(g, { type: "move", unit: 2, to: { row: 6, col: 11 } });
+	//the screen's game ended (game.gameEnded), its session didn't: the person's side took the last objective
+	expect(pageResultOf(world(g), null, true, AXIS)).toEqual({ kind: "capture", winner: AXIS, loser: 1, rating: "briliant" });
 }, 60_000);

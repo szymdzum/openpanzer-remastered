@@ -8,7 +8,7 @@ import { aiController } from "../src/core/ai";
 import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
 import { equipmentCountries, newGame } from "../src/core/newgame";
-import { type Advance, advance, endTurn, play, playOn, type Session, startSession } from "../src/core/session";
+import { type Advance, advance, endTurn, play, playOn, type Session, type SessionEnd, startSession } from "../src/core/session";
 import type { Outcome } from "../src/core/turn";
 import { rulesetNamed } from "../src/core/rules";
 import type { GameState, RulesetName, ScenarioData, World } from "../src/core/types";
@@ -28,6 +28,7 @@ export interface Save {
 	data: ScenarioData;
 	state: GameState;
 	report: GameEvent[];
+	ended?: SessionEnd | null;	//how the game ended, kept for the calls after its end (#311)
 }
 
 //A game loaded for a call: the session, the side the person plays (the first of its sides) and the save
@@ -58,6 +59,7 @@ export function open(save: Save, fresh = false): Game {
 	const side = save.humanSides[0];
 	const world = createWorld({ data: save.data, state: save.state }, equipment, { spotSide: side, rules: rulesetNamed(save.rules) });
 	const session = startSession(world, aiFor, { loaded: !fresh, fresh, localSide: save.humanSides.length > 1 ? 2 : side });
+	session.ended = save.ended ?? null;
 	return { save, session, side };
 }
 
@@ -71,6 +73,7 @@ export function readGameFile(file: string): Save {
 export function writeGameFile(file: string, g: Game) {
 	g.save.data = g.session.world.data;
 	g.save.state = g.session.world.state;
+	g.save.ended = g.session.ended;
 	fs.mkdirSync(path.dirname(file), { recursive: true });
 	fs.writeFileSync(file, JSON.stringify(g.save));
 }
