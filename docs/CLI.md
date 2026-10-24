@@ -76,7 +76,7 @@ The program learns what the screen shows a person, no more:
 | Command | What |
 |---|---|
 | `status` | turn and limit, the victory turns, prestige, every victory hex with who holds it and who has to take it, what the turn limit would decide now (#256) |
-| `units [--ready]`, `enemies`, `unit ID` | strength, ammo and fuel against the full load, moves, entrenchment, experience, the transport, what the unit has done and can still do |
+| `units [--ready]`, `enemies`, `unit ID` | strength, ammo and fuel against the full load (a mounted unit's own, its transport's beside them, #306), moves, entrenchment, experience, the transport, what the unit has done and can still do |
 | `map [R0-R1 C0-C1] [--zoc]` | two characters a hex: the terrain, the unit (yours in capitals); `--zoc` marks the seen enemies' zones of control |
 | `hex R,C` | terrain, road, owner, objective, deployment, the units there, who of yours can attack the enemy on it |
 | `moves ID` | the hexes in reach with the move's cost (the points and the fuel it pays), the ones in a zone of control and the ones that take every point left |
