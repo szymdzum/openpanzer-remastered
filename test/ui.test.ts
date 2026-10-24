@@ -414,3 +414,18 @@ test("After a surrender the attacker's move hexes no longer count the surrendere
 	expect(cells(map.getCurrentMoveRange())).toContain(d.row + "," + d.col);
 	expect(cells(map.getCurrentMoveRange())).toEqual(cells(GameRules.getMoveRange(map, atk)));
 }, 60_000);
+
+test("The scenario info button of the combat log shows the description, and closing it brings the log back (#24)", async () => {
+	const { game } = await uiGame("drpzop01.xml");
+	const shown = (id: string) => !["", "none"].includes(document.getElementById(id)!.style.display);
+	document.getElementById("statusbar")!.click();
+	expect(shown("combatLog")).toBe(true);
+	const info = Array.from(document.querySelectorAll<HTMLElement>("#combatLog .combatLogInfoButton")).find((e) => e.textContent === "g")!;
+	info.click();
+	//The message box is drawn under the log: the log steps aside while the description shows
+	expect([shown("ui-message"), shown("combatLog")]).toEqual([true, false]);
+	expect(document.getElementById("message")!.innerHTML).toBe(game.scenario.getDescription());
+	document.getElementById("uiokbut")!.click();
+	expect([shown("ui-message"), shown("combatLog")]).toEqual([false, true]);
+	expect(document.getElementById("combatLogButton")!.getAttribute("selected")).toBe("on");
+}, 60_000);
