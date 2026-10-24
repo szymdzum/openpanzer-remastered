@@ -171,8 +171,9 @@ function unseenTarget(w: World, side: number, cmd: Command): Refusal | null {
 	return t === null || !seen(w, side, t) ? { reason: "no such target" } : null;
 }
 
-//An attack the core allows on a unit the screen doesn't list as a target of the attacker's (an aircraft
-//of range 1 on a ground unit from the next hex, #285) is refused as the screen can't click it
+//An attack the core allows on a unit the screen doesn't list as a target of the attacker's (in the classic
+//rules: an aircraft of range 1 on a ground unit from the next hex, #285) is refused as the screen can't
+//click it
 function notATarget(w: World, side: number, cmd: Command): Refusal | null {
 	if (cmd.type !== "attack") return null;
 	const kw = knownWorld(w, side);

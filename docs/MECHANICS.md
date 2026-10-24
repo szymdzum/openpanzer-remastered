@@ -46,6 +46,14 @@ or naval attack). Each side defends with ground defense (air defense against air
 **Initiative** compares the two units' equipment initiative. The higher side (attacker on a
 tie) gets +4 defense and +min(4, difference) attack. In practice: it takes fewer losses.
 
+**Who can attack whom.** A unit fires on an enemy it sees within its gun range (range 0 is the
+next hex), if it can start an attack on it: only a unit with an air attack fires on an aircraft
+(`canInitiateAttack`). On the screen an aircraft of range 1 hits a ground unit only on the hex below
+it, an aircraft on the next hex; the original's AI checks only the distance, so its aircraft hit a
+ground unit on the next hex when an aircraft shares that hex. The remaster's rules (#285): as in PG2
+("attacking from above", or from the next hex) an aircraft hits a ground unit below it or on the next
+hex, for a person and the AI alike, and the core refuses an attack the screen doesn't list.
+
 **The defender fires back** only when attacked from an adjacent hex (ships in gun range also
 fire back at ships), and only if it can attack that target type and has ammo.
 

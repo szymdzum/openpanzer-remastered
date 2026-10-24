@@ -56,24 +56,29 @@ export function attackCells(w: World, u: UnitState): Position[] {
 	if (u.hasFired || ammoOf(u) <= 0) return [];
 	const range = unitAttackRange(w, u);
 	const air = isAir(w, u);
+	const groundAnywhere = hitsGroundAnywhere(w, air, range);
 	const cells = cellsInRange(u.row, u.col, range, w.state.map.rows, w.state.map.cols);
 	cells.push({ row: u.row, col: u.col });
 
 	const allowed: Position[] = [];
 	for (const cell of cells) {
 		const below = cell.row === u.row && cell.col === u.col;
-		for (let n = timesListed(w, u, hexIndex(w, cell.row, cell.col), below, air, range); n > 0; n--)
+		for (let n = timesListed(w, u, hexIndex(w, cell.row, cell.col), below, air, groundAnywhere); n > 0; n--)
 			allowed.push(cell);
 	}
 	return allowed;
 }
 
-//How many times attackCells lists a hex: once for a ground target (an air unit with range 1 only
-//below it), once for an air target (an air unit only an air one)
-function timesListed(w: World, u: UnitState, hex: number, below: boolean, air: boolean, range: number): number {
+//Whether u hits a ground unit on any hex in its range: an aircraft of range 1 only below it, but on the
+//next hex too in the remaster's rules, as in PG2 (#285)
+const hitsGroundAnywhere = (w: World, air: boolean, range: number) => !air || range > 1 || w.rules.airAttacksNextHex;
+
+//How many times attackCells lists a hex: once for a ground target (groundAnywhere: on any hex in range,
+//else only below), once for an air target (an air unit only an air one)
+function timesListed(w: World, u: UnitState, hex: number, below: boolean, air: boolean, groundAnywhere: boolean): number {
 	let n = 0;
 	if (attackableUnit(w, u, hex, false) !== null) {
-		if (!air || range > 1) return 1;
+		if (groundAnywhere) return 1;
 		if (below) n++;
 	}
 	const target = attackableUnit(w, u, hex, true);
@@ -84,6 +89,16 @@ function timesListed(w: World, u: UnitState, hex: number, below: boolean, air: b
 export function isInAttackRange(w: World, u: UnitState, target: UnitState): boolean {
 	if (u.row < 0 || target.row < 0) return false;
 	return distance(u.row, u.col, target.row, target.col) <= unitAttackRange(w, u);
+}
+
+//Whether target is one of the screen's targets of u where it stands (attackCells), whether u can still
+//fire or not: in range, a unit u's side sees and u can start an attack on, and for an aircraft of range
+//1 a ground unit only below it unless the rules let it hit the next hex
+export function isTargetFrom(w: World, u: UnitState, target: UnitState): boolean {
+	if (!isInAttackRange(w, u, target)) return false;
+	if (!canTarget(w, u, target, isSpotted(w, hexIndex(w, target.row, target.col), sideOf(w, u)))) return false;
+	const below = u.row === target.row && u.col === target.col;
+	return below || isAir(w, target) || hitsGroundAnywhere(w, isAir(w, u), unitAttackRange(w, u));
 }
 
 //The units that fire on the attacker when it attacks def from next to it: def's side's artillery

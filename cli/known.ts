@@ -21,11 +21,12 @@ export function seen(w: World, side: number, u: UnitState): boolean {
 const unhide = (h: HexState, hidden: Set<number>): HexState =>
 	({ ...h, unit: hidden.has(h.unit) ? null : h.unit, air: hidden.has(h.air) ? null : h.air });
 
-//The world as side knows it: the enemy units it doesn't see taken off the map, the sight computed again
+//The world as side knows it: the enemy units it doesn't see taken off the map, the sight computed again,
+//on the rules the game plays by
 export function knownWorld(w: World, side: number): World {
 	const hidden = new Set(w.state.units.filter((u) => !seen(w, side, u)).map((u) => u.id));
 	if (hidden.size === 0) return w;
 	const state: GameState = { ...w.state, units: w.state.units.filter((u) => !hidden.has(u.id)),
 		map: { ...w.state.map, hexes: w.state.map.hexes.map((h) => unhide(h, hidden)) } };
-	return createWorld({ data: w.data, state }, w.equipment, { spotSide: w.spotSide, noFOW: w.noFOW });
+	return createWorld({ data: w.data, state }, w.equipment, { rules: w.rules, spotSide: w.spotSide, noFOW: w.noFOW });
 }

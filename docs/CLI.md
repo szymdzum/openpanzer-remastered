@@ -51,10 +51,11 @@ The program learns what the screen shows a person, no more:
   came next to it). A unit the side doesn't see can't be attacked by its id, and the answer is the
   one a missing unit gets ("no such target"): the screen can't click it, but the core's check doesn't
   ask.
-- An attack (`attack`, `check attack`, `attackers`, `targets`) is on the screen's targets: an
-  aircraft of range 1 hits a ground unit only from over it, not from the next hex, and a unit with no
-  air attack can't hit an aircraft, though the core's check (the AI's) asks only the distance (#285).
-  Another is refused: "not a target from here".
+- An attack (`attack`, `check attack`, `attackers`, `targets`) is on the screen's targets: a unit with
+  no air attack can't hit an aircraft, and in the classic rules an aircraft of range 1 hits a ground
+  unit only from over it, not from the next hex (in the remaster's from the next hex too, as in PG2),
+  though the classic core's check (the AI's) asks only the distance (#285). Another is refused: "not a
+  target from here".
 - A move's range (`moves`, `check move`, the hexes `targets --from` and `attackers` move to) is the
   screen's: computed on the game, as the highlight is. As in the original, a zone of control stops a
   move on a hex the side spots whoever casts it, a hidden unit too, so the range can end next to a
