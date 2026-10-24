@@ -108,9 +108,11 @@ then assault, then overrun with tanks.
   the points (254 in the tables: mountains, rivers...) takes any left, at least one, and ends the
   move (#205): it uses all of them, in points and fuel (#214).
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
-  fortifications included (`setZOCRange`). Entering a spotted hex in the enemy's ZOC stops the
-  move (`getMoveRange`): a hidden enemy's zone doesn't. The hex costs its terrain, and the unit,
-  recon included, has no points left (#214). Air units ignore ZOC.
+  fortifications included (`setZOCRange`). Entering a hex the mover's side spots that is in the
+  enemy's ZOC stops the move (`getMoveRange`), whether or not the side sees the unit casting the
+  zone: a hidden enemy's zone stops it too, as in the original (#282), so the move range can end
+  next to a unit the player doesn't see. A hex the side doesn't spot doesn't stop it. The hex costs
+  its terrain, and the unit, recon included, has no points left (#214). Air units ignore ZOC.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
   attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
   ground unit), whatever the screen's air mode shows.
