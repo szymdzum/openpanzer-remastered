@@ -12,7 +12,7 @@ import { isAir } from "../src/core/units";
 import { hexIndex, sideOf, unitById } from "../src/core/world";
 import { unitClassNames } from "../src/prototypes";
 import { hex, map, reserve, shop, status } from "./board";
-import { attackerLine, attackers, estimateLine, targets } from "./combat";
+import { attackerLine, attackers, estimateLine, isTarget, targets } from "./combat";
 import { knownWorld, SIDES, seen } from "./known";
 import { changes, describe } from "./report";
 import { moveLine, moves, supply, unitLine } from "./units";
@@ -169,17 +169,25 @@ function unseenTarget(w: World, side: number, cmd: Command): Refusal | null {
 	return t === null || !seen(w, side, t) ? { reason: "no such target" } : null;
 }
 
+//An attack the core allows on a unit the screen doesn't list as a target of the attacker's (an aircraft
+//of range 1 on a ground unit from the next hex, #285) is refused as the screen can't click it
+function notATarget(w: World, side: number, cmd: Command): Refusal | null {
+	if (cmd.type !== "attack") return null;
+	const kw = knownWorld(w, side);
+	return isTarget(kw, unitById(kw, cmd.unit), unitById(kw, cmd.target)) ? null : { reason: "not a target from here" };
+}
+
 //Why a command is refused, as the side may know it: the target it sees, then the core's check (the
-//screen's own: a move's range is the one the screen shows)
-const refusalOf = (w: World, side: number, cmd: Command) => unseenTarget(w, side, cmd) ?? check(w, cmd);
+//screen's own: a move's range is the one the screen shows), then the screen's targets
+const refusalOf = (w: World, side: number, cmd: Command) => unseenTarget(w, side, cmd) ?? check(w, cmd) ?? notATarget(w, side, cmd);
 
 //What a command or a turn did: its events as text, or what changed when they aren't known
 const told = (before: World, after: World, side: number, events: GameEvent[] | null) =>
 	events === null ? changes(before, after, side) : describe(after, before, side, events);
 
 async function actAnswer(c: Call): Promise<Answer> {
-	const cmd = commandOf(c.w, c.side, c.x, c.flags), hidden = unseenTarget(c.w, c.side, cmd);
-	if (hidden) return answer([`refused: ${hidden.reason}`], { command: cmd, refusal: hidden });
+	const cmd = commandOf(c.w, c.side, c.x, c.flags), refused = refusalOf(c.w, c.side, cmd);
+	if (refused) return answer([`refused: ${refused.reason}`], { command: cmd, refusal: refused });
 	const r = await c.front.act(cmd);
 	if (r.refusal) return answer([`refused: ${r.refusal.reason}`], { command: cmd, refusal: r.refusal });
 	const after = c.front.world(), u = "unit" in cmd ? unitById(after, cmd.unit) : null;
