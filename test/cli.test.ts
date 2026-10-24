@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, test } from "vitest";
-import { endHumanTurn, isHumanTurn, newSave, open, playCommand, readSave, world, writeSave } from "../cli/game";
+import { endHumanTurn, isHumanTurn, newSave, open, playCommand, readGameFile, world, writeGameFile } from "../cli/game";
 import { status } from "../cli/board";
 import { attackers, targets } from "../cli/combat";
 import { knownWorld, seen } from "../cli/known";
@@ -64,8 +64,8 @@ test("The end of turn plays the AI's turn and the save plays on from where it st
 	expect(events.some((e) => e.type === "turnStarted" && e.turn === 2)).toBe(true);
 	expect(isHumanTurn(g)).toBe(true);
 	expect(world(g).state.turn.turn).toBe(2);
-	writeSave(file, g);
-	const again = open(readSave(file));
+	writeGameFile(file, g);
+	const again = open(readGameFile(file));
 	expect(world(again).state).toEqual(world(g).state);
 	expect(again.save.report.length).toBe(events.length);
 }, 60_000);
@@ -74,7 +74,7 @@ test("Every command answers, from a new game to the enemy's turn report (#279)",
 	const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "openpanzer-cli-")), "game.json");
 	const call = async (line: string) => (await run(parseArgs(line.split(" ")), file)).lines.join("\n");
 	expect(await call("scenarios")).toContain("drpzop01.xml  Panzer-Verbaende Ostpreussen");
-	expect(await call("new drpzop01.xml --seed 1")).toContain("you play Axis, seed 1");
+	expect(await call("new drpzop01.xml --seed 1")).toContain("you play Axis, remaster rules, seed 1");
 	expect(await call("units")).toContain("#1 Psw 231(8) @1,10 | Recon | str 10 | ammo 8/8 | fuel 55/55 | ent 0 | xp 7 | moves 10/10 | can: move");
 	expect(await call("enemies")).toBe("#58 Fortification @13,6 | Fortification | str 8 | ammo 10/10 | ent 0 | xp 69");
 	expect(await call("map 0-3 8-13")).toContain("  1 . .T$RrB.I. ");
@@ -136,7 +136,7 @@ test("The moves are the screen's move range, and a move's check agrees with them
 test("The AI playing the first side buys and deploys on its first turn, as on every other (#279)", async () => {
 	const file = tmpGame(), call = caller(file);
 	await call("new drpzop01.xml --side 1 --seed 1");
-	const axis = readSave(file).state.players.find((p) => p.side === AXIS);
+	const axis = readGameFile(file).state.players.find((p) => p.side === AXIS);
 	expect(axis.prestige).toBeLessThan(3056);
 	expect(axis.core.length).toBeGreaterThan(0);
 }, 60_000);
@@ -171,7 +171,7 @@ test("A bomber attacks a ground unit from over it, not from the next hex, as on 
 	expect(await call("attackers 14")).not.toContain("#20 ");
 	expect(await call("check attack 20 14")).toBe("refused: not a target from here");
 	expect(await call("attack 20 14")).toBe("refused: not a target from here");
-	expect(unitById(world(open(readSave(file))), 20).hasFired).toBe(false);
+	expect(unitById(world(open(readGameFile(file))), 20).hasFired).toBe(false);
 	//over it, it can
 	const over = caller(tmpGame());
 	await over("new drpzop01.xml --seed 1");

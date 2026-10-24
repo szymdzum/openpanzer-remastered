@@ -15,11 +15,11 @@
  * stepWorld), so what the screen and the harness wrote into them is in it.
  */
 
-import { actionType, type Cell, playerType, uiSettings } from "./prototypes";
+import { actionType, type Cell, playerType } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import type { AIAction, AIDriver } from "./ai";
 import type { GameMap, Player } from "./map";
-import { applyData, checkedDifference, stepWorld, unitObject, worldOf } from "./mirror";
+import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "./mirror";
 import { beginDraft, finishDraft, removeUnit } from "./core/draft";
 import { aiController } from "./core/ai";
 import { tutorialController } from "./core/tutorial";
@@ -42,7 +42,7 @@ function controllerFor(type: number, player: number): Controller | null {
 //The game's world now, of its objects, with the side shown and the fog of war
 function synced(game: Game): Session {
 	const s = game.session;
-	s.world = stepWorld(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+	s.world = stepWorld(game.scenario, game, gameInputs(game));
 	return s;
 }
 
@@ -64,7 +64,7 @@ function show(game: Game, views: ViewEvent[]) {
 //join in the players' order, and the AI whose turn a loaded game is on plans it again (#71)
 export function startGameSession(game: Game, loaded: boolean, localSide: number) {
 	game.session = null;
-	const w = worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+	const w = worldOf(game.scenario, game, gameInputs(game));
 	game.session = startSession(w, controllerFor, { loaded, localSide });
 	mirrored(game);
 	show(game, game.session.joined);
@@ -178,7 +178,7 @@ function arrived(game: Game, events: GameEvent[]) {
 //GameMap.updateUnitList: the units marked destroyed off the map (the harness takes a side's units away
 //so), each counted as lost in a campaign's dossier, as the old cleanup did
 export function removeDestroyed(m: GameMap) {
-	const w = worldOf(running.scenario, running, { spotSide: running.spotSide, noFOW: !!uiSettings.noFOW });
+	const w = worldOf(running.scenario, running, gameInputs(running));
 	const d = beginDraft(w);
 	for (const u of m.getUnits().filter((x) => x.destroyed)) removeUnit(d, u.id, true);
 	applyData(running.scenario, finishDraft(d), running);

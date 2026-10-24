@@ -175,8 +175,11 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 
 ## The save (#128)
 
-`src/savegame.ts` writes and reads the save: `{ version: 1, data: ScenarioData, state: GameState }`,
-toData's output with the format's version first (D3, D11). Every save path writes it: the local
+`src/savegame.ts` writes and reads the save: `{ version: 2, rules, data: ScenarioData, state: GameState }`,
+toData's output with the format's version first (D3, D11) and the rules the game plays by (#53:
+`"classic"` or `"remaster"`, src/core/rules.ts). The rules sit beside the state, not in it: they don't
+change during a game, and the state the contracts hash stays the same. Version 1 had no rules: such a
+save, and one of the format before, plays the classic ones it was played by. Every save path writes it: the local
 save (one item, `openpanzer-game-<major version>`, where the format before had three: the scenario,
 its players and the campaign's progress), which the game writes at the end of a turn and when a
 scenario starts or is loaded, the file export and the cloud save. The settings stay an item of

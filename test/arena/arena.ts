@@ -7,11 +7,12 @@
 //(session.ts), which costs an attacker a turn the arena doesn't measure.
 import { aiController } from "../../src/core/ai";
 import { createWorld } from "../../src/core/create";
+import { rulesetNamed } from "../../src/core/rules";
 import { newGame } from "../../src/core/newgame";
 import type { GameEvent } from "../../src/core/events";
 import { type Advance, advance, type Session, startSession } from "../../src/core/session";
 import { victoryRating } from "../../src/core/turn";
-import type { World } from "../../src/core/types";
+import type { RulesetName, World } from "../../src/core/types";
 import { sideOf } from "../../src/core/world";
 import { playerType } from "../../src/prototypes";
 import { startFirstTurn } from "../../cli/game";
@@ -25,6 +26,7 @@ export interface Match {
 	sides: [Player, Player];	//who plays side 0 (axis) and side 1 (allies)
 	seed: number;
 	turns?: number;		//the last turn to play, when not the scenario's
+	rules?: RulesetName;	//the rules it plays by, the remaster's when not given (#53)
 }
 
 //What a side did in one game
@@ -75,10 +77,10 @@ export function playMatch(match: Match): GameResult {
 
 //The scenario started as the game starts it, every player the AI or the general
 function sessionOf(match: Match): Session {
-	const setup = setupOf(match.file, { game: match.seed, ai: match.seed + 7919 });
+	const setup = { ...setupOf(match.file, { game: match.seed, ai: match.seed + 7919 }), rules: rulesetNamed(match.rules || "remaster") };
 	const created = newGame(setup);
 	for (const p of created.state.players) p.type = playerType.aiLocal;
-	const world = createWorld(created, setup.equipment, { spotSide: -1 });
+	const world = createWorld(created, setup.equipment, { spotSide: -1, rules: setup.rules });
 	const controllerOf = (p: number) => match.sides[world.state.players[p].side] === "general" ? generalController(p) : aiController(p);
 	const s = startSession(world, (_type, p) => controllerOf(p), { localSide: -1 });
 	startFirstTurn(s);

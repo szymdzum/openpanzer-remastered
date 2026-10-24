@@ -19,7 +19,7 @@
  * applyData writes the world's sight into the hexes' counters, which the screen reads.
  */
 
-import { Cell } from "./prototypes";
+import { Cell, uiSettings } from "./prototypes";
 import { Equipment, type EquipmentIndexes } from "./equipment";
 import { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
@@ -31,13 +31,19 @@ import {
 } from "./state";
 import { objectWrites } from "./context";
 import { createWorld } from "./core/create";
-import type { Sight, World } from "./core/types";
+import { rulesetNamed } from "./core/rules";
+import type { Ruleset, RulesetName, Sight, World } from "./core/types";
 
-//What the world takes beside the objects: the side the screen shows, the fog of war
+//What the world takes beside the objects: the side the screen shows, the fog of war, the rules
 export interface MirrorInputs {
 	spotSide: number;
 	noFOW: boolean;
+	rules: Ruleset;
 }
+
+//The inputs of a game's world: the side it shows, the fog of war setting, the rules it plays by
+export const gameInputs = (g: { spotSide: number; rules: RulesetName }): MirrorInputs =>
+	({ spotSide: g.spotSide, noFOW: !!uiSettings.noFOW, rules: rulesetNamed(g.rules) });
 
 //Every unit object a map has held, by id: an order can name a unit gone from the map (the old AI's
 //plan held the object), and a replay describes it as it was
@@ -75,7 +81,7 @@ interface Kept {
 //What the world of the objects is made of beside them: the game, the side shown, the fog of war, the
 //equipment
 function madeOf(scenario: Scenario, host: CampaignHost | null, inputs: MirrorInputs): unknown[] {
-	return [scenario, scenario.map, host, inputs.spotSide, inputs.noFOW, Equipment.equipment, Equipment.equipmentIndexes];
+	return [scenario, scenario.map, host, inputs.spotSide, inputs.noFOW, inputs.rules, Equipment.equipment, Equipment.equipmentIndexes];
 }
 
 //What says the objects are still the world's: the writes announced (touched), the streams
@@ -146,7 +152,7 @@ export function worldOf(scenario: Scenario, host: CampaignHost | null, inputs: M
 	}
 	if (mirrorOptions.checks && trusted(scenario, host, inputs) !== null) throw unannounced(scenario, host, k.world);
 	const w = createWorld(toData(scenario, host), Equipment.equipment, { spotSide: inputs.spotSide, noFOW: inputs.noFOW,
-		destroyed: destroyedUnits(scenario.map) });
+		rules: inputs.rules, destroyed: destroyedUnits(scenario.map) });
 	keep(scenario, host, inputs, w);
 	return w;
 }
@@ -248,7 +254,7 @@ export function applyData(scenario: Scenario, w: World, host: CampaignHost | nul
 	//(the world the objects mirror now, as worldOf would make it: toData of them is w's state)
 	const destroyed = destroyedUnits(m);
 	keep(scenario, host, w, () => createWorld({ data: w.data, state: s }, Equipment.equipment, { spotSide: w.spotSide, noFOW: w.noFOW,
-		destroyed }));
+		rules: w.rules, destroyed }));
 }
 
 function applyScenario(scenario: Scenario, w: World) {

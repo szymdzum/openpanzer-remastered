@@ -10,7 +10,8 @@ import type { GameEvent } from "../src/core/events";
 import { equipmentCountries, newGame } from "../src/core/newgame";
 import { type Advance, advance, endTurn, play, playOn, type Session, startSession } from "../src/core/session";
 import type { Outcome } from "../src/core/turn";
-import type { GameState, ScenarioData, World } from "../src/core/types";
+import { rulesetNamed } from "../src/core/rules";
+import type { GameState, RulesetName, ScenarioData, World } from "../src/core/types";
 import { playerType } from "../src/prototypes";
 import { type Front, resultOf } from "./commands";
 import { readEquipment, setupOf } from "./files";
@@ -21,6 +22,7 @@ import { describe } from "./report";
 export interface Save {
 	format: "openpanzer-cli/1";
 	file: string;
+	rules?: RulesetName;		//the rules the game plays by (#53); a save from before them plays the classic ones
 	countries: number[];
 	humanSides: number[];
 	data: ScenarioData;
@@ -36,13 +38,13 @@ export interface Game {
 }
 
 //A new game of a scenario file, the person playing humanSides and the AI the others; seed: the game's
-//dice (the AI's stream is seed + 7919, as the arena seeds it)
-export async function newSave(file: string, humanSides: number[], seed: number): Promise<Save> {
+//dice (the AI's stream is seed + 7919, as the arena seeds it); rules: the remaster's unless the classic ones
+export async function newSave(file: string, humanSides: number[], seed: number, rules: RulesetName = "remaster"): Promise<Save> {
 	const { JSDOM } = await import("jsdom");
 	const setup = setupOf(file, { game: seed, ai: seed + 7919 }, null, undefined, [], new new JSDOM().window.DOMParser());
-	const created = newGame(setup);
+	const created = newGame({ ...setup, rules: rulesetNamed(rules) });
 	for (const p of created.state.players) p.type = humanSides.includes(p.side) ? playerType.humanLocal : playerType.aiLocal;
-	return { format: "openpanzer-cli/1", file, countries: equipmentCountries(setup.scenario, []), humanSides,
+	return { format: "openpanzer-cli/1", file, rules, countries: equipmentCountries(setup.scenario, []), humanSides,
 		data: created.data, state: created.state, report: [] };
 }
 
@@ -54,7 +56,7 @@ const aiFor = (type: number, player: number) => type === playerType.aiLocal ? ai
 export function open(save: Save, fresh = false): Game {
 	const { equipment } = readEquipment(save.data.equipment || "eqp-adlerkorps", save.countries);
 	const side = save.humanSides[0];
-	const world = createWorld({ data: save.data, state: save.state }, equipment, { spotSide: side });
+	const world = createWorld({ data: save.data, state: save.state }, equipment, { spotSide: side, rules: rulesetNamed(save.rules) });
 	const session = startSession(world, aiFor, { loaded: !fresh, localSide: save.humanSides.length > 1 ? 2 : side });
 	return { save, session, side };
 }
@@ -70,14 +72,14 @@ export function startFirstTurn(s: Session): GameEvent[] {
 	return played.events;
 }
 
-export function readSave(file: string): Save {
+export function readGameFile(file: string): Save {
 	if (!fs.existsSync(file)) throw new Error(`no game at ${file}: start one with "new"`);
 	const save = JSON.parse(fs.readFileSync(file, "utf8")) as Save;
 	if (save.format !== "openpanzer-cli/1") throw new Error(`${file} is not a command-line game`);
 	return save;
 }
 
-export function writeSave(file: string, g: Game) {
+export function writeGameFile(file: string, g: Game) {
 	g.save.data = g.session.world.data;
 	g.save.state = g.session.world.state;
 	fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -147,12 +149,12 @@ export function fileFront(g: Game, file: string): Front {
 		humanTurn: () => isHumanTurn(g),
 		act: (cmd) => {
 			const r = playCommand(g, cmd);
-			if (r.refusal === null) writeSave(file, g);
+			if (r.refusal === null) writeGameFile(file, g);
 			return Promise.resolve(r);
 		},
 		end: () => {
 			const events = endHumanTurn(g);
-			writeSave(file, g);
+			writeGameFile(file, g);
 			return Promise.resolve(events);
 		},
 		report: () => describe(world(g), world(g), g.side, g.save.report),

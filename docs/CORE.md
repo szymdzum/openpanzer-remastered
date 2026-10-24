@@ -21,7 +21,7 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `data` | the scenario's static data, `ScenarioData` (D3) | `toData`, later the save |
 | `state` | the game, `GameState` | `toData`, later the steps |
 | `equipment` | the equipment table by eqid (`EquipmentEntry`) | loaded once, read-only |
-| `rules` | the `Ruleset` | `classicRules`: today's game |
+| `rules` | the `Ruleset` | `classicRules` (today's game, the contracts') or `remasterRules`, the default for new games (#53); the game's choice, named in the save |
 | `noFOW` | the fog of war off: every hex is spotted | an option, not state (D6) |
 | `spotSide` | the side the screen shows (-1 none); the rules no longer read it since #75 | an input, not state (D6) |
 | `destroyed` | units an attack destroyed whose removal hasn't run yet | empty: only the contract's adapter sets it (the step removes a unit where the old engine did) |
@@ -36,7 +36,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | Module | Has |
 |---|---|
 | `world.ts` | `World`, `createWorld`, the unit index, hex access, the unit's current equipment, moves, ammo and fuel |
-| `rules.ts` | `Ruleset` and `classicRules`: the movement tables by ground condition (no global `movTable`, #116), the class leaders, the combat steps |
+| `rules.ts` | `Ruleset`, `classicRules` and `remasterRules` (#53): the movement tables by ground condition (no global `movTable`, #116), the class leaders, the combat steps |
 | `geometry.ts` | distance, adjacency, cells in range, directions, the partial edge hexes |
 | `equipment.ts` | the equipment's attribute bits: bridge, ignores entrenchment, which targets a unit can start an attack on |
 | `units.ts` | the predicates: air, sea, ground, train, leaders, enemies, fuel and ammo, mount, entrench, capture |

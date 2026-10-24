@@ -59,7 +59,7 @@ export class GameState {
 
 		//The game with its campaign's progress
 		this.save = function() {
-			saveItem(saveName.game, writeSave(Game.scenario, Game));
+			saveItem(saveName.game, writeSave(Game.scenario, Game, Game.rules));
 		}
 
 		//Saves the game as a public gist on GitHub. inputElement holds the gist id to overwrite,
@@ -203,7 +203,7 @@ export class GameState {
 
 		//Returns the game (src/savegame.ts) as a JSON string
 		this.exportGameState = function() {
-			return JSON.stringify(writeSave(Game.scenario, Game));
+			return JSON.stringify(writeSave(Game.scenario, Game, Game.rules));
 		}
 
 		//Private functions
@@ -263,6 +263,7 @@ export class GameState {
 		//their core units' countries (#182: by the units' flags, no equipment is loaded to ask)
 		function loadGameState(read: ReadSave, onDone: () => void) {
 			const { data, state } = read.save;
+			Game.rules = read.save.rules;
 			Game.scenario = new Scenario(state.scenario.file);
 			if (data.equipment)
 				Equipment.name = data.equipment;
@@ -344,6 +345,7 @@ export class GameState {
 			uiSettings.shownEndTurnTip = s.shownEndTurnTip;
 			uiSettings.showDetailInfoToolTips = s.showDetailInfoToolTips || false;
 			uiSettings.showHiddenVictoryHexes = s.showHiddenVictoryHexes || false;
+			uiSettings.classicRules = s.classicRules || false;
 
 			uiSettings.lastCloudSave = [];
 			if (s.hasOwnProperty("lastCloudSave"))

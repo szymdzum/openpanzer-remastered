@@ -2,21 +2,21 @@
 //against the AI, headless from a save file, or with --live on the game's page with its animations.
 //npm run -s play -- help
 import path from "node:path";
-import { type Answer, answer, type Args, flagInt, HELP, parseArgs, runOn, UsageError } from "./commands";
+import { type Answer, answer, type Args, flagInt, flagRules, HELP, parseArgs, runOn, UsageError } from "./commands";
 import { scenarioList } from "./files";
-import { fileFront, isHumanTurn, newSave, open, playAI, readSave, startFirstTurn, world, writeSave } from "./game";
+import { fileFront, isHumanTurn, newSave, open, playAI, readGameFile, startFirstTurn, world, writeGameFile } from "./game";
 import { SIDES } from "./known";
 import { describe } from "./report";
 import { status } from "./board";
 
 async function newGameAnswer(args: Args, file: string): Promise<Answer> {
-	const side = flagInt(args, "side", 0), seed = flagInt(args, "seed", Date.now() % 100000);
-	const g = open(await newSave(args.words[1], [side], seed), true), before = world(g);
+	const side = flagInt(args, "side", 0), seed = flagInt(args, "seed", Date.now() % 100000), rules = flagRules(args, "remaster");
+	const g = open(await newSave(args.words[1], [side], seed, rules), true), before = world(g);
 	//(a new game whose first player is the AI: it plays its first turn, its purchases included)
 	g.save.report = isHumanTurn(g) ? [] : [...startFirstTurn(g.session), ...playAI(g)];
-	writeSave(file, g);
-	return answer([`new game of ${args.words[1]}, you play ${SIDES[side]}, seed ${seed}, saved in ${file}`,
-		...describe(world(g), before, side, g.save.report), ...status(world(g), side)], { file, side, seed });
+	writeGameFile(file, g);
+	return answer([`new game of ${args.words[1]}, you play ${SIDES[side]}, ${rules} rules, seed ${seed}, saved in ${file}`,
+		...describe(world(g), before, side, g.save.report), ...status(world(g), side)], { file, side, seed, rules });
 }
 
 function scenariosAnswer(): Answer {
@@ -35,7 +35,7 @@ const NO_GAME: { [verb: string]: (args: Args, file: string) => Answer | Promise<
 export function run(args: Args, file: string): Promise<Answer> {
 	const verb = args.words[0] ?? "help";
 	if (NO_GAME[verb]) return Promise.resolve(NO_GAME[verb](args, file));
-	return runOn(args, fileFront(open(readSave(file)), file));
+	return runOn(args, fileFront(open(readGameFile(file)), file));
 }
 
 //A call played on the game's page: the dev server started with "npm run play:live" hands it to the page

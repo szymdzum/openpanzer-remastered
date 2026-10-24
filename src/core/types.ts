@@ -48,8 +48,11 @@ export interface Sight {
 	zoc: [Uint16Array, Uint16Array];
 }
 
+//The rulesets a game can play by (src/core/rules.ts)
+export type RulesetName = "classic" | "remaster";
+
 export interface Ruleset {
-	name: string;
+	name: RulesetName;
 	//The movement cost tables by ground condition (dry, frozen, mud): a row per movMethod, a cost
 	//per terrainType and the road last. 254 stops the move (the hex can be entered), 255 can't
 	//be entered

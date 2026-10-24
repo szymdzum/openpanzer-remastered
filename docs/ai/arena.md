@@ -10,7 +10,12 @@ npm run arena                                        # Panzer-Verbaende Ostpreus
 ARENA_SEEDS=20 ARENA_FILES=drpzop01.xml,dr9fr03.xml npm run arena
 ARENA_OUT=/tmp/arena.json npm run arena              # every game's result as JSON
 ARENA_DEBUG=1 npm run arena                          # prints any order of the general's the core refused
+ARENA_RULES=classic npm run arena                    # the classic rules; the remaster's by default (#53)
 ```
+
+The AI's changes go into the remaster's rules (#53, src/core/rules.ts): a change is measured by the
+arena on the remaster's rules before and after it, and `ARENA_RULES=classic` gives the classic AI the
+contracts pin, for a comparison.
 
 It is a Vitest test (test/arena.test.ts) that runs only with `ARENA=1`, which the script sets. A
 game takes a second or two; the default run, 4 matchups of 10 games, about two minutes. One short

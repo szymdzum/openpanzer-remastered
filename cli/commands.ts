@@ -7,7 +7,7 @@ import type { GameEvent } from "../src/core/events";
 import { check } from "../src/core/step";
 import type { SessionEnd } from "../src/core/session";
 import { outcome, type Outcome } from "../src/core/turn";
-import type { Position, World } from "../src/core/types";
+import type { Position, RulesetName, World } from "../src/core/types";
 import { isAir } from "../src/core/units";
 import { hexIndex, sideOf, unitById } from "../src/core/world";
 import { unitClassNames } from "../src/prototypes";
@@ -36,7 +36,9 @@ The game is saved in FILE (default .play/game.json, or $OPENPANZER_PLAY). Cells 
 
 Start
   scenarios                          the scenario files and names
-  new FILE [--side 0|1] [--seed N]   a new game of a scenario file, you on side 0 (Axis) by default
+  new FILE [--side 0|1] [--seed N] [--rules classic|remaster]
+                                     a new game of a scenario file, you on side 0 (Axis) by default,
+                                     the remaster's rules unless classic (on the page: the settings')
 
 Look (your side's view: enemies only where you see them)
   status                             turn, limits, prestige, victory hexes, the turn limit's verdict now
@@ -61,7 +63,7 @@ Act
 
 export interface Args { words: string[]; flags: Map<string, string | true> }
 
-const VALUED = ["--game", "--side", "--seed", "--from"];
+const VALUED = ["--game", "--side", "--seed", "--from", "--rules"];
 
 export function parseArgs(argv: string[]): Args {
 	const words: string[] = [], flags = new Map<string, string | true>();
@@ -275,3 +277,11 @@ export function resultOf(w: World, end: SessionEnd | null): Outcome | null {
 
 //The side a new game gives the person, and its dice
 export const flagInt = (args: Args, name: string, fallback: number) => args.flags.has(name) ? intOf(args.flags.get(name) as string, name) : fallback;
+
+//The rules a new game plays by: --rules classic or remaster (#53), else fallback
+export function flagRules(args: Args, fallback: RulesetName): RulesetName {
+	const r = args.flags.get("rules");
+	if (r === undefined) return fallback;
+	if (r !== "classic" && r !== "remaster") throw new UsageError(`--rules is classic or remaster, got "${String(r)}"`);
+	return r;
+}

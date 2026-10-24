@@ -8,7 +8,7 @@ import { vi } from "vitest";
 export async function coreEngine() {
 	const { game } = await import("../src/game");
 	const { startGameSession, endGameTurn } = await import("../src/coresession");
-	const { applyData, mirrorDifference, unitObject, stepWorld } = await import("../src/mirror");
+	const { applyData, gameInputs, mirrorDifference, unitObject, stepWorld } = await import("../src/mirror");
 	const { aiController } = await import("../src/core/ai");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	const { AI } = await import("../src/ai");
@@ -16,7 +16,7 @@ export async function coreEngine() {
 	const { CombatLog } = await import("../src/combatlog");
 	const { GameRules } = await import("../src/gamerules");
 	const { Unit } = await import("../src/unit");
-	const { actionType, playerType, uiSettings } = await import("../src/prototypes");
+	const { actionType, playerType } = await import("../src/prototypes");
 	type Player = import("../src/map").Player;
 	type GameMap = import("../src/map").GameMap;
 	type Order = import("../src/core/controller").Order;
@@ -24,7 +24,7 @@ export async function coreEngine() {
 	type World = import("../src/core/types").World;
 	type AIAction = import("../src/ai").AIAction;
 
-	const worldNow = () => stepWorld(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+	const worldNow = () => stepWorld(game.scenario, game, gameInputs(game));
 	const mirror = (w: World) => {
 		applyData(game.scenario, w, game);
 		const difference = mirrorDifference(game.scenario, w, game);

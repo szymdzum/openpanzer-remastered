@@ -13,7 +13,7 @@
  */
 
 import {
-	DEBUG_CAMPAIGN, difficultyType, outcomeNames, sideNames, type UISettings, uiSettings, unitClassNames,
+	DEBUG_CAMPAIGN, difficultyType, newGameRules, outcomeNames, sideNames, type UISettings, uiSettings, unitClassNames,
 	VERSION
 } from "./prototypes";
 import { Equipment } from "./equipment";
@@ -192,7 +192,7 @@ UIBuilder.buildStartMenu = function() {
 			["useRetina", "Zoom to full device resolution"], ["hdGraphics", "High resolution map and units"],
 			["markOwnUnits", "Mark own units on map"],
 			["markEnemyUnits", "Mark enemy strength in red"], ["showDetailInfoToolTips", "Show optional objectives tooltips"],
-			["showHiddenVictoryHexes", "Show hidden victory hexes"]];
+			["showHiddenVictoryHexes", "Show hidden victory hexes"], ["classicRules", "New games play the classic rules"]];
 
 	var i: number, b: number, div: HTMLElement, container: HTMLElement;
 	var exitFunction = getDesktopExitFunction();
@@ -367,6 +367,7 @@ UIBuilder.buildStartMenu = function() {
 		var s = ($('smScen') as UIBuilderScenarioMenu).selectedScenario;
 		if (!s)	return;
 		game.campaign = null; //New scenario delete campaign
+		game.rules = newGameRules();
 		game.newScenario(scenariolist[s][0], (scenariolist[s] as UIBuilderScenarioEntry)[2]);
 		makeHidden('gameToolTip');
 		makeHidden('smScen');

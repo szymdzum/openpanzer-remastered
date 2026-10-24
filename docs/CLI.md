@@ -11,6 +11,7 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 
     npm run -s play -- help
     npm run -s play -- new drpzop01.xml --seed 7      # Panzer-Verbaende Ostpreussen, you play the Axis
+    npm run -s play -- new drpzop01.xml --rules classic   # the classic rules (#53); the remaster's by default
     npm run -s play -- status
     npm run -s play -- map 0-8 8-24 --zoc
     npm run -s play -- attackers 2,20                  # who can hit the defender of 2,20, from where

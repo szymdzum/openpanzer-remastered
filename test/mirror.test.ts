@@ -25,8 +25,8 @@ const count = (what: string) => { stats[what] = (stats[what] || 0) + 1; };
 
 async function mirrorOf(name: string) {
 	const o = await load(name);
-	const { worldOf, applyData, mirrorDifference, unitObject } = await import("../src/mirror");
-	const inputs = { spotSide: o.game.spotSide, noFOW: false };
+	const { worldOf, applyData, gameInputs, mirrorDifference, unitObject } = await import("../src/mirror");
+	const inputs = gameInputs(o.game);
 	return { o, inputs, worldOf: () => worldOf(o.scenario, o.game, inputs), applyData: (w: World) => applyData(o.scenario, w, o.game),
 		difference: (w: World) => mirrorDifference(o.scenario, w, o.game), unitObject: (id: number) => unitObject(o.m, id) };
 }
