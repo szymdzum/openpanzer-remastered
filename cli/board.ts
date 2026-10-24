@@ -1,11 +1,12 @@
 //The scenario as the command-line player shows it (#279): the turn and the victory hexes, the map as
 //text, one hex in detail, what can be bought and deployed
 import { unitCost } from "../src/core/costs";
+import { deploymentHexes } from "../src/core/deployment";
 import type { HexState, Position, UnitState, World } from "../src/core/types";
 import type { HexData } from "../src/state";
 import { isTransportable } from "../src/core/units";
 import { hexIndex, isSpotted, isZOC, sideOf, unitById } from "../src/core/world";
-import { groundConditionNames, terrainNames, unitClass, unitClassNames, weatherConditionNames } from "../src/prototypes";
+import { groundConditionNames, terrainNames, terrainType, unitClass, unitClassNames, weatherConditionNames } from "../src/prototypes";
 import { attackerLine, attackers } from "./combat";
 import { cell, knownWorld, label, own, playerOfSide, positionOf, seen, SIDES, sideOfPlayer } from "./known";
 import { unitLine } from "./units";
@@ -149,11 +150,20 @@ function deploymentHex(w: World, i: number): string {
 	return h.air === null ? cell(positionOf(w, i)) + " (aircraft only)" : "";
 }
 
-//Side's core units waiting to deploy (their index for "deploy"), and its free deployment hexes
+//A town a side without deployment hexes deploys on in the remaster's rules (#302), free for what it takes
+function townHex(w: World, i: number): string {
+	const h = w.state.map.hexes[i], terrain = w.data.hexes[i].terrain;
+	const what = terrain === terrainType.Airfield ? "airfield: aircraft" : terrain === terrainType.Port ? "port: ships" : "city";
+	return (terrain === terrainType.Airfield ? h.air : h.unit) === null ? `${cell(positionOf(w, i))} (${what})` : "";
+}
+
+//Side's core units waiting to deploy (their index for "deploy"), and its free deployment hexes (in the
+//remaster's rules a side with none, its towns)
 export function reserve(w: World, side: number): string[] {
 	const p = playerOfSide(w, side);
 	const waiting = p.core.map((c, i) => "reserve" in c ? `${i} ${w.equipment[c.reserve.eqid].name}`
 		+ (c.reserve.transport ? ` (${w.equipment[c.reserve.transport.eqid].name})` : "") : "").filter(Boolean);
-	const free = w.data.hexes.map((d, i) => d.deployment >= 0 && sideOfPlayer(w, d.deployment) === side ? deploymentHex(w, i) : "").filter(Boolean);
+	const ownHex = (i: number) => w.data.hexes[i].deployment >= 0 && sideOfPlayer(w, w.data.hexes[i].deployment) === side;
+	const free = deploymentHexes(w, side).map((i) => ownHex(i) ? deploymentHex(w, i) : townHex(w, i)).filter(Boolean);
 	return [waiting.length ? "to deploy (index name):" : "nothing to deploy", ...waiting, "free deployment hexes: " + free.join(", ")];
 }

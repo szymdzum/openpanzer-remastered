@@ -170,3 +170,24 @@ What it says:
 - A first version took the bonus from every unit of an attacker, in contact too: over 40 seeds
   Germany's AI won 19 of 40 against the AI (21 before) and lost 6.9 units per objective in both
   matchups. Units in contact left their line one at a time and were destroyed.
+
+## The remaster: a side without deployment hexes deploys on its towns (#302), 24 October 2026
+
+Pacific, Indochina (pc1long.xml): Japan (axis) attacks with its deployment hexes, France (allies)
+has none, so before #302 it bought nothing the whole game (#60, #287). 40 seeds a matchup, remaster
+rules, on main after #285 part 2, before and after.
+
+| France (allies) | wins | first objective, turn (games) | objectives taken | held at the end | units lost | destroyed |
+|---|---|---|---|---|---|---|
+| AI vs AI, before | 38/40 | 8.1 (38/40) | 2.0 | 4.3 | 5.0 | 14.1 |
+| AI vs AI, after | 37/40 | 7.0 (38/40) | 1.9 | 4.1 | 7.7 | 13.7 |
+| AI vs the general, before | 35/40 | 8.5 (37/40) | 1.4 | 3.8 | 14.8 | 6.5 |
+| AI vs the general, after | 39/40 | 7.1 (38/40) | 1.6 | 3.9 | 16.6 | 6.1 |
+| the general vs the AI, before | 31/40 | 14.1 (21/40) | 0.7 | 2.8 | 7.2 | 14.0 |
+| the general vs the AI, after | 37/40 | 13.0 (18/40) | 0.6 | 3.0 | 6.8 | 14.3 |
+
+What it says: the French side now spends its prestige on units it deploys on its cities and
+airfields, and with them takes its first objective a turn earlier against either Japanese player;
+with the general it wins 37 of 40 against Japan's AI (31 before). It loses more units (7.7 against
+5.0 in AI vs AI): more of them are on the map. The scenario was already France's: Japan's AI wins 2
+to 9 of 40 before and 3 after.

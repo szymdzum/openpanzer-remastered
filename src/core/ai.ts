@@ -26,7 +26,7 @@ import { nextRandom, type RngStream } from "../rng";
 import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
 import type { Controller, Played } from "./controller";
-import { playerAt } from "./draft";
+import { deploymentHexes } from "./deployment";
 import { adjacent, distance } from "./geometry";
 import type { GameEvent } from "./events";
 import { moveRange } from "./movement";
@@ -124,16 +124,11 @@ function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 	return { world, commands, events, view: [] };
 }
 
-//Map.getDeployHexes: the deployment hexes of the side's players, row by row
+//Map.getDeployHexes: the deployment hexes of the side's players, row by row (in the remaster's rules a
+//side with none deploys on its own towns, #302)
 function deployHexes(w: World, side: number): Position[] {
-	const cells: Position[] = [];
-	const { rows, cols } = w.state.map;
-	for (let row = 0; row < rows; row++)
-		for (let col = 0; col < cols; col++) {
-			const deployment = w.data.hexes[row * cols + col].deployment;
-			if (deployment > -1 && playerAt(w, deployment).side === side) cells.push({ row, col });
-		}
-	return cells;
+	const cols = w.state.map.cols;
+	return deploymentHexes(w, side).map((hex) => ({ row: Math.floor(hex / cols), col: hex % cols }));
 }
 
 //What the AI buys with the prestige over its reserve, part of it for air units (none under 300), in
