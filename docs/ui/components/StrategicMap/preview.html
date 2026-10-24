@@ -1,0 +1,77 @@
+<!-- @dsCard group="Screens · In game" height=1080 width=1920 subtitle="Strategic map at 1920×1080: the whole Ciechanow map, units as side chips, objectives as large plaques" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+.pm-scene{position:absolute;left:0;top:0;width:1632px;height:1577px;transform-origin:0 0;background:url(assets/map-ciechanow-full.jpg) no-repeat;font-family:"Libre Franklin",Arial,sans-serif}
+.pm-scene .ov{position:absolute;inset:0;overflow:visible}
+.pm-scene .spr{position:absolute;width:80px;height:50px;background-image:url(assets/units1939.png);background-repeat:no-repeat}
+.pm-scene .spr.dim{opacity:.45;filter:saturate(.4)}
+.pm-scene .spr.air:not(.dim){filter:drop-shadow(0 9px 2px rgba(0,0,0,.45))}
+.pm-scene .mk{position:absolute;transform:translateX(-50%);height:11px;display:flex}
+.pm-scene .mk b{position:relative;padding:0 3px;height:11px;font:700 9px/11px Arial,sans-serif;color:#fff;background:#4f6b80;border:.5px solid rgba(0,0,0,.75)}
+.pm-scene .mk.en b{background:#9c3b22;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 50%,calc(100% - 3px) 100%,3px 100%,0 50%);padding:0 5px;border:0}
+.pm-scene .rd{position:absolute;right:100%;top:1px;height:9px;margin-right:1px;display:flex;gap:1px;align-items:center;padding:0 1.5px;background:rgba(20,22,15,.75)}
+.pm-scene .rd svg{width:7px;height:7px;display:block}
+.pm-scene .ent{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:1px}
+.pm-scene .ent i{width:5px;height:3px;border-radius:1.5px;background:#c8b27a;border:.5px solid #2b2519}
+.pm-scene .lab{position:absolute;transform:translateX(-50%);display:flex;align-items:center;gap:3px;height:15px;padding:0 5px;font:700 9px/15px "Courier Prime","Courier New",monospace;letter-spacing:.04em;text-transform:uppercase;color:#211c13;background:#e8dfc8;border:1px solid #2b2519;box-shadow:inset 0 -2px 0 var(--side),0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
+.pm-scene .lab:not(.obj){height:13px;line-height:13px;font-size:8px;background:#d9ceb2;border-color:#574c39}
+.pm-scene .lab.ax{--side:#4f6b80}.pm-scene .lab.al{--side:#9c3b22}
+.pm-scene .lab .star{width:8px;height:8px;background:#b48a2c;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pm-scene .lab .rw{margin-left:3px;color:#6b4f12}
+.pm-scene .hexnote{position:absolute;transform:translateX(-50%);font:700 9px/1 "Courier Prime","Courier New",monospace;padding:2px 4px 1px;white-space:nowrap;border:1px solid #2b2519;color:#a1221a;background:#f4eedd}
+
+.pm-scene .chip{position:absolute;transform:translate(-50%,-50%);width:38px;height:26px;display:grid;place-items:center;background:#4f6b80;border:2px solid #14160f;box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.pm-scene .chip.en{background:#9c3b22;clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%);border:0;width:42px}
+.pm-scene .chip .mark{width:18px;height:18px}
+.pm-scene .chip.moved{opacity:.55}
+.pm-scene .vplq{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;height:40px;padding:0 10px 0 12px;font:700 22px/40px "Courier Prime","Courier New",monospace;text-transform:uppercase;color:#211c13;background:#e8dfc8;border:2px solid #2b2519;box-shadow:inset 0 -6px 0 var(--side),0 3px 6px rgba(0,0,0,.5);white-space:nowrap;z-index:2}
+.pm-scene .vplq.ax{--side:#4f6b80}.pm-scene .vplq.al{--side:#9c3b22}
+.pm-scene .vplq .star{width:20px;height:20px;background:#b48a2c;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pm-scene .vplq .mark{width:22px;height:22px}
+.pm-stratkey{position:absolute;left:var(--space-3);bottom:var(--space-3);width:300px;z-index:var(--z-hud)}
+.pm-stratkey .hd{padding:var(--space-3) var(--space-4) var(--space-2);border-bottom:1px solid var(--line)}
+.pm-stratkey .hd h2{margin:2px 0 0;font:700 18px/22px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+.pm-stratkey .k{display:grid;grid-template-columns:44px 1fr;gap:8px 10px;align-items:center;padding:var(--space-3) var(--space-4);font-size:13px;line-height:17px}
+.pm-stratkey .k .sw{justify-self:center;display:grid;place-items:center;width:30px;height:20px;background:var(--axis);border:2px solid #14160f}
+.pm-stratkey .k .sw .mark{width:14px;height:14px}
+.pm-stratkey .k .sw.en{background:var(--allied);border:0;clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 50%,calc(100% - 6px) 100%,6px 100%,0 50%);width:34px}
+.pm-stratkey .k .sw.moved{opacity:.55}
+.pm-stratkey .k .sw.obj{width:30px;height:20px;background:#e8dfc8;border:1px solid #2b2519;box-shadow:inset 0 -3px 0 var(--allied)}
+.pm-stratkey .ft{padding:var(--space-2) var(--space-4) var(--space-3);border-top:1px solid var(--line);font:400 12px/16px var(--font-mono);color:var(--ink-muted)}
+</style>
+<div class="pm pm-stage s1920">
+  <div class="pm-scene" style="transform:translate(408px,84px) scale(0.6277742549143944)" aria-hidden="true"><div class="chip" style="left:435px;top:0px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:795px;top:50px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:435px;top:100px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:525px;top:100px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:885px;top:100px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:525px;top:150px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:1110px;top:175px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:75px;top:200px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:120px;top:225px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:345px;top:200px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:1290px;top:225px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:75px;top:250px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:345px;top:250px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:885px;top:250px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:930px;top:275px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:1020px;top:275px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:840px;top:325px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:885px;top:300px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:930px;top:325px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip moved" style="left:570px;top:375px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:660px;top:375px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:930px;top:375px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:120px;top:475px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:165px;top:450px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip" style="left:120px;top:525px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="chip en" style="left:165px;top:500px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></div><div class="chip en" style="left:255px;top:600px"><svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></div><div class="vplq ax" style="left:435px;top:50px"><i class="star"></i>Neidenburg<svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="vplq ax" style="left:75px;top:450px"><i class="star"></i>Soldau<svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></div><div class="vplq al" style="left:525px;top:750px"><i class="star"></i>Mlawa<svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></div><div class="vplq al" style="left:1425px;top:900px"><i class="star"></i>Przasnysz<svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></div><div class="vplq al" style="left:1020px;top:1425px"><i class="star"></i>Ciechanow<svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></div></div>
+  
+  <header id="statusbar" class="pm-panel pm-status" role="status">
+    <div class="row">
+      <span class="pm-side"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<span class="chip" aria-hidden="true"></span></span>
+      <span class="pm-sep"></span>
+      <span class="cell"><span class="pm-label">Turn</span>1/17</span>
+      <span class="cell">05 Sep 1939</span>
+      <span class="cell" title="Weather"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Fair</span>
+      <span class="cell" title="Ground"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span>
+      <span class="grow"></span>
+      <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
+      <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+    <div class="msg"><b>Strategic map</b> · ground layer · click a place to zoom in there</div>
+  </header>
+  
+  <nav id="menu" class="pm-rail" aria-label="Game menu">
+    <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg></button></div>
+    <div id="slidemenu" class="group"><button id="buy" class="pm-btn icon" aria-label="Buy and upgrade" title="Buy and upgrade (B)"><svg class="i " aria-hidden="true"><use href="#pm-depot"/></svg></button><button id="hex" class="pm-btn icon" aria-label="Hex grid" title="Hex grid (H)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-grid"/></svg></button><button id="air" class="pm-btn icon" aria-label="Air layer" title="Air layer (A)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-air"/></svg></button><button id="zoom" class="pm-btn icon is-on" aria-label="Strategic map" title="Strategic map (Z)" aria-pressed="true"><svg class="i " aria-hidden="true"><use href="#pm-map"/></svg></button><button id="options" class="pm-btn icon" aria-label="Options" title="Options (Esc)"><svg class="i " aria-hidden="true"><use href="#pm-menu"/></svg></button></div>
+    <div class="group"><button id="mainmenu" class="pm-btn icon is-on" aria-label="Hide menu" aria-expanded="true" aria-controls="slidemenu"><svg class="i " aria-hidden="true"><use href="#pm-chevron-down"/></svg></button></div>
+  </nav>
+  <button id="endturn" class="pm-btn primary lg pm-endturn"><svg class="i " aria-hidden="true"><use href="#pm-end-turn"/></svg>End turn</button>
+  <aside class="pm-panel pm-stratkey" aria-label="Strategic map key">
+    <div class="hd"><div class="pm-label">Ciechanow · whole map</div><h2>Strategic map</h2></div>
+    <div class="k">
+      <span class="sw"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></span><span>Your unit, 25 on the ground layer</span>
+      <span class="sw moved"><svg class="mark " aria-hidden="true"><use href="#pm-flag-de"/></svg></span><span>Has moved this turn</span>
+      <span class="sw en"><svg class="mark " aria-hidden="true"><use href="#pm-flag-pl"/></svg></span><span>Enemy unit you can see, 2 now</span>
+      <span class="sw obj"></span><span>Objective, with its holder's bar and flag</span>
+    </div>
+    <div class="ft">Air layer on: aircraft instead of ground units. A click on the map zooms back in there.</div>
+  </aside>
+</div>
+<script>window.PM && PM.mount();</script>

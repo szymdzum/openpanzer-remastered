@@ -1,0 +1,46 @@
+<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="End-of-scenario dossier (#dossier) at 1920×1080 with medal, outcome stamp, casualties and campaign medal record" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1920">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1.1765)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  <div class="pm-scrim"></div>
+  <section id="dossier" class="pm-window" style="left:410px;top:150px;width:1100px;height:780px" role="dialog" aria-labelledby="dossierTitle">
+    <div class="hd"><div><div class="pm-label" id="dossierCampaign">Fall Weiss 8 Armee · scenario 1 of 4</div><h1 id="dossierTitle" class="pm-display">After-action report</h1></div><span class="grow"></span><button id="dossierCloseBut" class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
+    <div class="bd" style="display:grid;grid-template-columns:300px 1fr;gap:32px;padding-top:24px">
+      <div style="display:grid;justify-items:center;align-content:start;gap:16px;padding:24px 16px;background:var(--panel-raised);border:1px solid var(--line)">
+        <svg width="128" height="192" viewBox="0 0 64 96" aria-hidden="true" style="overflow:visible"><path d="M14 0h36v34L32 46 14 34z" fill="#1f3c88"/><path d="M24 0h16v40l-8 6-8-6z" fill="#f4f1ea"/><path d="M29 0h6v44l-3 2-3-2z" fill="#c8102e"/><circle cx="32" cy="66" r="24" fill="#c9a227" stroke="#7a5c00" stroke-width="3"/><circle cx="32" cy="66" r="17" fill="none" stroke="#7a5c00" stroke-width="1.5"/><path d="M32 53l3.8 7.8 8.6 1.2-6.2 6 1.5 8.5L32 72.5l-7.7 4 1.5-8.5-6.2-6 8.6-1.2z" fill="#7a5c00"/></svg>
+        <span class="pm-stamp lg">Brilliant victory</span>
+        <div class="pm-muted" style="text-align:center;font-size:13px">All objectives taken on turn 11 of 13.</div>
+      </div>
+      <div style="display:grid;align-content:start;gap:20px">
+        <div id="dossierInfo" class="pm-typed"><p>Ciechanów taken. The Mława line is turned and the road to Warsaw lies open. The 1st Panzer distinguished itself at the Narew crossing.</p></div>
+        <div class="pm-facts">
+          <div><span class="pm-label">Turns used</span><span class="n">11/13</span></div>
+          <div><span class="pm-label">Prestige earned</span><span class="n pm-prestige">+1,240</span></div>
+          <div id="dossierCasualties"><span class="pm-label">Casualties inflicted</span><span class="n">412</span></div>
+          <div><span class="pm-label">Casualties taken</span><span class="n pm-critical">87</span></div>
+        </div>
+        <div>
+          <div class="pm-label" style="margin-bottom:6px">Enemy destroyed by class</div>
+          <div id="dossierClasses" class="pm-stats cols6"><div><span class="k">Infantry</span><span class="n">14</span></div><div><span class="k">Tank</span><span class="n">6</span></div><div><span class="k">Recon</span><span class="n">3</span></div><div><span class="k">Anti-tank</span><span class="n">4</span></div><div><span class="k">Artillery</span><span class="n">5</span></div><div><span class="k">Aircraft</span><span class="n">2</span></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div id="dossierLostCore" class="pm-row" style="cursor:default"><svg class="i " aria-hidden="true"><use href="#pm-casualty"/></svg><span><span class="t">Core units lost</span><br><span class="m">Pz IB (3rd Pz) at Mława</span></span><span class="r pm-data pm-critical">1</span></div>
+          <div id="dossierLostAux" class="pm-row" style="cursor:default"><svg class="i " aria-hidden="true"><use href="#pm-casualty"/></svg><span><span class="t">Auxiliary units lost</span><br><span class="m">Infanterie, Pionier</span></span><span class="r pm-data pm-critical">2</span></div>
+        </div>
+        <div>
+          <div class="pm-label" style="margin-bottom:8px">Campaign medal record</div>
+          <div id="dossierMedals" style="display:flex;gap:28px;align-items:flex-end">
+            <div style="display:grid;justify-items:center;gap:6px;"><svg width="64" height="96" viewBox="0 0 64 96" aria-label="Brilliant"><path d="M14 0h36v34L32 46 14 34z" fill="#1f3c88"/><path d="M24 0h16v40l-8 6-8-6z" fill="#f4f1ea"/><path d="M29 0h6v44l-3 2-3-2z" fill="#c8102e"/><circle cx="32" cy="66" r="24" fill="#c9a227" stroke="#7a5c00" stroke-width="3"/><circle cx="32" cy="66" r="17" fill="none" stroke="#7a5c00" stroke-width="1.5"/><path d="M32 53l3.8 7.8 8.6 1.2-6.2 6 1.5 8.5L32 72.5l-7.7 4 1.5-8.5-6.2-6 8.6-1.2z" fill="#7a5c00"/></svg><span class="pm-label">Brilliant · 1</span></div><div style="display:grid;justify-items:center;gap:6px;opacity:.45"><svg width="64" height="96" viewBox="0 0 64 96" aria-label="Victory"><path d="M14 0h36v34L32 46 14 34z" fill="#1f3c88"/><path d="M24 0h16v40l-8 6-8-6z" fill="#f4f1ea"/><path d="M29 0h6v44l-3 2-3-2z" fill="#c8102e"/><circle cx="32" cy="66" r="24" fill="#c9ccd1" stroke="#6b7078" stroke-width="3"/><circle cx="32" cy="66" r="17" fill="none" stroke="#6b7078" stroke-width="1.5"/><path d="M32 53l3.8 7.8 8.6 1.2-6.2 6 1.5 8.5L32 72.5l-7.7 4 1.5-8.5-6.2-6 8.6-1.2z" fill="#6b7078"/></svg><span class="pm-label">Victory · 0</span></div><div style="display:grid;justify-items:center;gap:6px;opacity:.45"><svg width="64" height="96" viewBox="0 0 64 96" aria-label="Tactical"><path d="M14 0h36v34L32 46 14 34z" fill="#1f3c88"/><path d="M24 0h16v40l-8 6-8-6z" fill="#f4f1ea"/><path d="M29 0h6v44l-3 2-3-2z" fill="#c8102e"/><circle cx="32" cy="66" r="24" fill="#b87333" stroke="#6b3d12" stroke-width="3"/><circle cx="32" cy="66" r="17" fill="none" stroke="#6b3d12" stroke-width="1.5"/><path d="M32 53l3.8 7.8 8.6 1.2-6.2 6 1.5 8.5L32 72.5l-7.7 4 1.5-8.5-6.2-6 8.6-1.2z" fill="#6b3d12"/></svg><span class="pm-label">Tactical · 0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ft"><span class="pm-muted" style="font-size:13px">Next: Bzura counterattack · 9 September 1939</span><span class="grow"></span><button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-save"/></svg>Save</button><button class="pm-btn primary lg">Continue campaign<svg class="i sm" aria-hidden="true"><use href="#pm-arrow-right"/></svg></button></div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

@@ -1,0 +1,33 @@
+<!-- @dsCard group="Screens · Tablet" height=1180 width=820 subtitle="iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage ipad-p">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(-60px,0px) scale(1.135)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"><polygon class="sel" points="314,193 329,168 359,168 374,193 359,218 329,218"/></svg>
+    
+  </div>
+  <div class="pm-scrim"></div>
+  <section id="unit-info" class="pm-window" style="left:0;right:0;bottom:0;height:640px;border-radius:0" aria-label="Selected unit">
+    <div style="display:grid;place-items:center;padding:8px 0 0"><span style="width:48px;height:5px;background:var(--line)"></span></div>
+    <div class="hd" style="padding-top:8px"><svg class="mark lg" aria-hidden="true"><use href="#pm-flag-de"/></svg><div><h1 class="pm-title" style="font-size:24px;line-height:28px">Pz IIA</h1><div class="sub">1st Panzer · Tank · Core · 120 XP</div></div><span class="grow"></span><span class="pm-stars" aria-label="Experience 2 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span><button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
+    <div class="bd" style="display:grid;gap:18px;padding-top:16px;align-content:start">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+        <div>
+      <div class="pm-meter ok"><svg class="i sm" aria-hidden="true"><use href="#pm-strength"/></svg><span>Strength</span><span class="v">10/10</span><span class="track"><b style="width:100%"></b></span></div>
+      <div class="pm-meter low"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg><span>Fuel<span class="st">Low</span></span><span class="v">18/50</span><span class="track"><b style="width:36%"></b></span></div>
+      <div class="pm-meter critical"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg><span>Ammo<span class="st">Critical</span></span><span class="v">1/8</span><span class="track"><b style="width:12%"></b></span></div>
+      <div class="pm-meter"><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrench</span><span class="v">0</span><span class="track"><b style="width:0"></b></span></div></div>
+        <div style="display:grid;align-content:start;gap:8px"><div class="pm-label">Leader</div><div class="pm-muted" style="display:flex;gap:8px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-leader"/></svg>No leader yet. Leaders are earned after 3 stars of experience.</div><div class="pm-label" style="margin-top:6px">Transport</div><div style="display:flex;gap:8px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-tank"/></svg>Self-propelled · tracked</div></div>
+      </div>
+      <div class="pm-stats cols6"><div><span class="k">Soft atk</span><span class="n">5</span></div><div><span class="k">Hard atk</span><span class="n">3</span></div><div><span class="k">Air atk</span><span class="n">0</span></div><div><span class="k">Naval atk</span><span class="n">1</span></div><div><span class="k">Gnd def</span><span class="n">7</span></div><div><span class="k">Air def</span><span class="n">8</span></div><div><span class="k">Close def</span><span class="n">2</span></div><div><span class="k">Initiative</span><span class="n">7</span></div><div><span class="k">Range</span><span class="n">1</span></div><div><span class="k">Spotting</span><span class="n">2</span></div><div><span class="k">Move</span><span class="n">5</span></div><div><span class="k">Exp</span><span class="n">120</span></div></div>
+      <div>
+        <div class="pm-label" style="margin-bottom:8px">Actions</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <button class="pm-btn" disabled style="min-height:56px;justify-content:flex-start"><svg class="i " aria-hidden="true"><use href="#pm-resupply"/></svg>Supply<span class="pm-muted" style="margin-left:auto;font:400 11px var(--font-mono);text-transform:none">moved</span></button><button class="pm-btn" disabled style="min-height:56px;justify-content:flex-start"><svg class="i " aria-hidden="true"><use href="#pm-reinforce"/></svg>Reinforce<span class="pm-muted" style="margin-left:auto;font:400 11px var(--font-mono);text-transform:none">full</span></button><button class="pm-btn" style="min-height:56px;justify-content:flex-start"><svg class="i " aria-hidden="true"><use href="#pm-undo"/></svg>Undo move<span class="pm-muted" style="margin-left:auto;font:400 11px var(--font-mono);text-transform:none">to 9,2</span></button><button class="pm-btn" style="min-height:56px;justify-content:flex-start"><svg class="i " aria-hidden="true"><use href="#pm-arrow-right"/></svg>Next unit</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

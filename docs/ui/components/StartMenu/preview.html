@@ -1,0 +1,32 @@
+<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="Start menu at 1920×1080: wordmark, new game, continue, load, settings, credits, over a slowly panning photograph" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1920" id="startmenu">
+  <div class="pm-photo" style="background-image:url(assets/startmenu-1.jpg)"></div>
+  <div class="pm-photo-tint"></div>
+  <section id="smMain" class="pm-window" style="left:96px;top:96px;bottom:96px;width:520px;z-index:var(--z-message)">
+    <div style="padding:48px 40px 24px">
+      <div class="pm-label" style="margin-bottom:10px">Operational command · Remastered</div>
+      <h1 id="smLogo" class="pm-wordmark">Panzer<br>Marshal</h1>
+      <div class="pm-hr" style="margin:24px 0 0"></div>
+    </div>
+    <nav class="pm-menu" style="padding:0 40px">
+      <button class="pm-btn primary lg"><svg class="i " aria-hidden="true"><use href="#pm-play"/></svg>Continue<span class="k">Ciechanów · turn 3/17</span></button>
+      <div class="pm-label" style="margin:14px 0 2px">New game</div>
+      <button class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-campaign"/></svg>Campaign<span class="k">17 campaigns</span></button>
+      <button class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-scenario"/></svg>Scenario<span class="k">404 scenarios</span></button>
+      <button class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-help"/></svg>Tutorial<span class="k">Minorca · 1939</span></button>
+      <div class="pm-label" style="margin:14px 0 2px">Game</div>
+      <button class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-load"/></svg>Load game<span class="k">file or cloud</span></button>
+      <button class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-settings"/></svg>Settings</button>
+    </nav>
+    <span class="grow"></span>
+    <div id="smCredits" style="display:flex;align-items:center;gap:8px;padding:16px 28px 20px 40px;border-top:1px solid var(--line)">
+      <span class="pm-muted" style="font-size:12px;line-height:16px">Version 3.2.14 · © Nicu Pavel and contributors<br>Photograph: US Coast Guard, 6 June 1944</span>
+      <span class="grow"></span>
+      <button class="pm-btn icon ghost" aria-label="Help"><svg class="i " aria-hidden="true"><use href="#pm-help"/></svg></button>
+      <button class="pm-btn icon ghost" aria-label="Report an issue"><svg class="i " aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

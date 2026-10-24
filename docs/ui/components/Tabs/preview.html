@@ -1,0 +1,15 @@
+<!-- @dsCard group="Controls" height=220 width=900 subtitle="Icon tabs with counts, as in the equipment class filter, and text tabs" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="padding:16px 0 20px;background:var(--panel);display:grid;gap:20px">
+  
+    <nav id="eqSelClass" class="pm-tabs" role="tablist" style="">
+      <button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-infantry"/></svg>Infantry<span class="n">12</span></button><button class="pm-tab is-on" role="tab" aria-selected="true"><svg class="i " aria-hidden="true"><use href="#pm-tank"/></svg>Tank<span class="n">8</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-recon"/></svg>Recon<span class="n">6</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-antitank"/></svg>Anti-tank<span class="n">7</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-artillery"/></svg>Artillery<span class="n">5</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-antiair"/></svg>Anti-air<span class="n">4</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-fighter"/></svg>Fighter<span class="n">3</span></button><button class="pm-tab" role="tab" aria-selected="false"><svg class="i " aria-hidden="true"><use href="#pm-bomber"/></svg>Bomber<span class="n">2</span></button><button class="pm-tab" role="tab" aria-selected="false" disabled><svg class="i " aria-hidden="true"><use href="#pm-naval"/></svg>Naval<span class="n">0</span></button>
+    </nav>
+  <nav class="pm-tabs text" role="tablist">
+    <button class="pm-tab is-on" role="tab"><svg class="i sm" aria-hidden="true"><use href="#pm-campaign"/></svg>Campaigns</button>
+    <button class="pm-tab" role="tab"><svg class="i sm" aria-hidden="true"><use href="#pm-scenario"/></svg>Scenarios</button>
+    <button class="pm-tab" role="tab"><svg class="i sm" aria-hidden="true"><use href="#pm-load"/></svg>Saved games</button>
+  </nav>
+</div>
+<script>window.PM && PM.mount();</script>

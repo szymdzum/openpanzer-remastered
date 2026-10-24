@@ -1,0 +1,44 @@
+<!-- @dsCard group="Screens · In game" height=768 width=1366 subtitle="Hex tooltip, unit pins (low fuel, low ammo, out of supply), button tooltip and the AI status indicator" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1366">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  
+  <header id="statusbar" class="pm-panel pm-status" role="status" style="">
+    <div class="row">
+      <span class="pm-side"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<span class="chip" aria-hidden="true"></span></span>
+      <span class="pm-sep"></span>
+      <span class="cell"><span class="pm-label">Turn</span>3/17</span>
+      <span class="cell">06 Sep 1939</span>
+      <span class="cell" title="Weather"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Fair</span>
+      <span class="cell" title="Ground"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span>
+      <span class="grow"></span>
+      <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
+      <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+    <div class="msg"><b>Pz IIA</b> 1st Panzer · 3 of 5 moves left · hex 9,4 near Neidenburg</div>
+  </header>
+  <div id="gameToolTip" class="pm-tip" style="left:920px;top:79px;width:270px">
+    <div class="hd"><svg class="i sm" aria-hidden="true"><use href="#pm-objective"/></svg>Janon<span class="grow"></span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="pm-muted">City · victory hex · held by Poland</div>
+    <div class="pm-hr" style="margin:8px 0"></div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:12px"><span>Defence</span><span class="pm-data">+3 entrench</span><span>Move cost</span><span class="pm-data">1</span><span>Supply</span><span class="pm-data">Yes</span></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:8px"><button id="gameToolTipOk" class="pm-btn" style="min-height:36px">OK</button></div>
+  </div>
+  <span class="pm-pin low" style="left:218px;top:362px"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg>Low fuel</span>
+  <span class="pm-pin critical" style="left:44px;top:440px"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg>No ammo</span>
+  <span class="pm-pin critical" style="left:212px;top:540px"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>Out of supply</span>
+  
+  <nav id="menu" class="pm-rail" aria-label="Game menu" style="">
+    <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg></button></div>
+    <div id="slidemenu" class="group"><button id="buy" class="pm-btn icon" aria-label="Buy and upgrade" title="Buy and upgrade (B)"><svg class="i " aria-hidden="true"><use href="#pm-depot"/></svg></button><button id="hex" class="pm-btn icon" aria-label="Hex grid" title="Hex grid (H)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-grid"/></svg></button><button id="air" class="pm-btn icon" aria-label="Air layer" title="Air layer (A)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-air"/></svg></button><button id="zoom" class="pm-btn icon" aria-label="Strategic map" title="Strategic map (Z)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-map"/></svg></button><button id="options" class="pm-btn icon" aria-label="Options" title="Options (Esc)"><svg class="i " aria-hidden="true"><use href="#pm-menu"/></svg></button></div>
+    <div class="group"><button id="mainmenu" class="pm-btn icon is-on" aria-label="Hide menu" aria-expanded="true" aria-controls="slidemenu"><svg class="i " aria-hidden="true"><use href="#pm-chevron-down"/></svg></button></div>
+  </nav>
+  <div class="pm-tip right" style="right:76px;top:350px;padding:8px 12px;font-size:12px;line-height:16px;white-space:nowrap"><b>Strategic map</b> <span class="pm-muted pm-data" style="font-size:11px">Z</span></div>
+  <div class="pm-ai" id="aiStatus" style="left:50%;transform:translateX(-50%);bottom:24px"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg><span class="dot" aria-hidden="true"></span>Poland is moving · 14 of 38 units</div>
+</div>
+<script>window.PM && PM.mount();</script>

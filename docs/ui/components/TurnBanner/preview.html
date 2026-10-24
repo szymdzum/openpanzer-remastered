@@ -1,0 +1,130 @@
+<!-- @dsCard group="Screens · In game" height=1180 width=820 subtitle="The short turn report (#combatLog) through a scenario: early, late, last turn, Blackout" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+.pm-scene{position:absolute;left:0;top:0;width:1632px;height:1577px;transform-origin:0 0;background:url(assets/map-ciechanow-full.jpg) no-repeat;image-rendering:auto;font-family:"Libre Franklin",Arial,sans-serif}
+.pm-scene .ov{position:absolute;inset:0;overflow:visible}
+.pm-scene .spr{position:absolute;width:80px;height:50px;background-image:url(assets/units-sheet2.png);background-repeat:no-repeat}
+.pm-scene .spr.ghost{opacity:.55}
+.pm-scene .mk{position:absolute;transform:translateX(-50%);height:11px;display:flex}
+.pm-scene .mk b{position:relative;padding:0 3px;height:11px;font:700 9px/11px Arial,sans-serif;color:#fff;background:#4f6b80;border:.5px solid rgba(0,0,0,.75)}
+.pm-scene .mk.en b{background:#9c3b22;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 50%,calc(100% - 3px) 100%,3px 100%,0 50%);padding:0 5px;border:0}
+.pm-scene .rd{position:absolute;right:100%;top:1px;height:9px;margin-right:1px;display:flex;gap:1px;align-items:center;padding:0 1.5px;background:rgba(20,22,15,.75)}
+.pm-scene .rd svg{width:7px;height:7px;display:block}
+.pm-scene .vet{display:flex;flex-direction:column-reverse;gap:.8px;margin-left:2px;padding:1px;background:rgba(20,22,15,.75);height:11px}
+.pm-scene .vet i{display:block;width:5px;height:1.4px;background:#d9a441}
+.pm-scene .sup{display:flex;align-items:center;margin-left:2px;padding:0 1.5px;height:11px;background:rgba(20,22,15,.75)}
+.pm-scene .sup svg{width:6px;height:8px;display:block}
+.pm-scene .sup.low svg{fill:#f2a93b}.pm-scene .sup.critical svg{fill:#ff5a45}
+.pm-scene .ent{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:1px}
+.pm-scene .ent i{width:5px;height:3px;border-radius:1.5px;background:#c8b27a;border:.5px solid #2b2519}
+.pm-scene .lab{position:absolute;transform:translateX(-50%);display:flex;align-items:center;gap:3px;height:15px;padding:0 5px;font:700 9px/15px "Courier Prime","Courier New",monospace;letter-spacing:.04em;text-transform:uppercase;color:#211c13;background:#e8dfc8;border:1px solid #2b2519;box-shadow:inset 0 -2px 0 var(--side),0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
+.pm-scene .lab:not(.obj){height:13px;line-height:13px;font-size:8px;background:#d9ceb2;border-color:#574c39}
+.pm-scene .lab.ax{--side:#4f6b80}.pm-scene .lab.al{--side:#9c3b22}
+.pm-scene .lab .star{width:8px;height:8px;background:#b48a2c;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pm-scene .lab .rw{margin-left:3px;color:#6b4f12}
+.pm-scene .hexnote{position:absolute;transform:translateX(-50%);font:700 9px/1 "Courier Prime","Courier New",monospace;padding:2px 4px 1px;white-space:nowrap;border:1px solid #2b2519;color:#211c13;background:#f4eedd}
+.pm-scene .hexnote.crit{color:#fff;background:#a1221a}
+</style>
+<div class="pm pm-bstates">
+  <div class="pm-bstate"><div class="cap"><b>Early turn</b><span>Every outcome still open. The track shows turn 4 of 17 and the three deadlines.</span></div>
+  <section id="combatLog" class="pm-panel pm-turn" style="position:relative" aria-label="Turn 4 of 17">
+    <div class="hd">
+      <div><div class="pm-label">06 Sep 1939 · Ciechanow</div><h2 class="pm-display">Turn 4 of 17</h2></div>
+      <span class="grow"></span>
+      <button class="pm-btn" aria-label="Briefing"><svg class="i sm" aria-hidden="true"><use href="#pm-info"/></svg></button>
+      <button class="pm-btn" aria-label="Dossier"><svg class="i sm" aria-hidden="true"><use href="#pm-medal"/></svg></button>
+      <button class="pm-btn icon ghost" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div class="grid">
+      <div class="cell obj"><span class="pm-label">Objectives</span><span class="n">3<span class="u"> left</span></span></div>
+      <div class="cell vic"><span class="pm-label">Turns to win</span><span class="w"><b>10</b> for Brilliant · 12 Victory · 14 Tactical</span><div class="track" aria-hidden="true">
+      <span class="past" style="width:20.59%"></span>
+      <span class="tier" style="left:76.47%"><i></i>B</span><span class="tier" style="left:88.24%"><i></i>V</span><span class="tier" style="left:100.00%"><i></i>T</span>
+      <span class="now" style="left:20.59%"></span>
+    </div></div>
+      <div class="cell"><span class="pm-label">Prestige</span><span class="n pm-prestige">3,056<span class="u"> +5 next</span></span></div>
+      <div class="cell"><span class="pm-label">Ground</span><span class="n sm"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span></div>
+    </div>
+    <div class="ft">
+      <span class="pm-label" style="white-space:nowrap">Enemy turn</span><span class="ev"><span class="pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg></span>2 of your units attacked</span><span class="ev"><span class="pm-critical">−5</span>strength lost</span><span class="ev"><span class="pm-ok"><svg class="i sm" aria-hidden="true"><use href="#pm-resupply"/></svg></span>3 resupplied</span>
+      <span class="grow"></span>
+      <button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg>Turn report</button>
+    </div>
+  </section></div>
+  <div class="pm-bstate"><div class="cap"><b>Late turn</b><span>Brilliant has passed: its tick goes grey and drops out of the words.</span></div>
+  <section id="combatLog" class="pm-panel pm-turn" style="position:relative" aria-label="Turn 14 of 17">
+    <div class="hd">
+      <div><div class="pm-label">11 Sep 1939 · Ciechanow</div><h2 class="pm-display">Turn 14 of 17</h2></div>
+      <span class="grow"></span>
+      <button class="pm-btn" aria-label="Briefing"><svg class="i sm" aria-hidden="true"><use href="#pm-info"/></svg></button>
+      <button class="pm-btn" aria-label="Dossier"><svg class="i sm" aria-hidden="true"><use href="#pm-medal"/></svg></button>
+      <button class="pm-btn icon ghost" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div class="grid">
+      <div class="cell obj"><span class="pm-label">Objectives</span><span class="n">2<span class="u"> left</span></span></div>
+      <div class="cell vic"><span class="pm-label">Turns to win</span><span class="w"><b>2</b> for Victory · 4 Tactical</span><div class="track" aria-hidden="true">
+      <span class="past" style="width:79.41%"></span>
+      <span class="tier gone" style="left:76.47%"><i></i>B</span><span class="tier" style="left:88.24%"><i></i>V</span><span class="tier" style="left:100.00%"><i></i>T</span>
+      <span class="now" style="left:79.41%"></span>
+    </div></div>
+      <div class="cell"><span class="pm-label">Prestige</span><span class="n pm-prestige">3,056<span class="u"> +5 next</span></span></div>
+      <div class="cell"><span class="pm-label">Ground</span><span class="n sm"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span></div>
+    </div>
+    <div class="ft">
+      <span class="pm-label" style="white-space:nowrap">Enemy turn</span><span class="ev"><span class="pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-objective"/></svg></span>Wieczfnia lost</span><span class="ev"><span class="pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg></span>4 of your units attacked</span>
+      <span class="grow"></span>
+      <button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg>Turn report</button>
+    </div>
+  </section></div>
+  <div class="pm-bstate"><div class="cap"><b>Last turn</b><span>One turn left for the last outcome: the cell turns critical and says what is at stake.</span></div>
+  <section id="combatLog" class="pm-panel pm-turn last" style="position:relative" aria-label="Turn 17 of 17">
+    <div class="hd">
+      <div><div class="pm-label">13 Sep 1939 · Ciechanow</div><h2 class="pm-display">Turn 17 of 17</h2></div>
+      <span class="grow"></span>
+      <button class="pm-btn" aria-label="Briefing"><svg class="i sm" aria-hidden="true"><use href="#pm-info"/></svg></button>
+      <button class="pm-btn" aria-label="Dossier"><svg class="i sm" aria-hidden="true"><use href="#pm-medal"/></svg></button>
+      <button class="pm-btn icon ghost" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div class="grid">
+      <div class="cell obj"><span class="pm-label">Objectives</span><span class="n">2<span class="u"> left</span></span></div>
+      <div class="cell vic crit"><span class="pm-label">Last turn</span><span class="w">Take them this turn for <b>Tactical</b> victory</span><div class="track" aria-hidden="true">
+      <span class="past" style="width:97.06%"></span>
+      <span class="tier gone" style="left:76.47%"><i></i>B</span><span class="tier gone" style="left:88.24%"><i></i>V</span><span class="tier" style="left:100.00%"><i></i>T</span>
+      <span class="now" style="left:97.06%"></span>
+    </div></div>
+      <div class="cell"><span class="pm-label">Prestige</span><span class="n pm-prestige">3,056<span class="u"> +5 next</span></span></div>
+      <div class="cell"><span class="pm-label">Ground</span><span class="n sm"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span></div>
+    </div>
+    <div class="ft">
+      <span class="pm-label" style="white-space:nowrap">Enemy turn</span><span class="ev"><span class="pm-muted"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg></span>All quiet on this front</span>
+      <span class="grow"></span>
+      <button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg>Turn report</button>
+    </div>
+  </section></div>
+  <div class="pm-bstate"><div class="cap"><b>Blackout, single scenario</b><span>No dossier button outside a campaign.</span></div>
+  <section id="combatLog" class="pm-panel pm-turn" data-theme="blackout" style="position:relative" aria-label="Turn 4 of 17">
+    <div class="hd">
+      <div><div class="pm-label">06 Sep 1939 · Ciechanow</div><h2 class="pm-display">Turn 4 of 17</h2></div>
+      <span class="grow"></span>
+      <button class="pm-btn" aria-label="Briefing"><svg class="i sm" aria-hidden="true"><use href="#pm-info"/></svg></button>
+      
+      <button class="pm-btn icon ghost" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button>
+    </div>
+    <div class="grid">
+      <div class="cell obj"><span class="pm-label">Objectives</span><span class="n">3<span class="u"> left</span></span></div>
+      <div class="cell vic"><span class="pm-label">Turns to win</span><span class="w"><b>10</b> for Brilliant · 12 Victory · 14 Tactical</span><div class="track" aria-hidden="true">
+      <span class="past" style="width:20.59%"></span>
+      <span class="tier" style="left:76.47%"><i></i>B</span><span class="tier" style="left:88.24%"><i></i>V</span><span class="tier" style="left:100.00%"><i></i>T</span>
+      <span class="now" style="left:20.59%"></span>
+    </div></div>
+      <div class="cell"><span class="pm-label">Prestige</span><span class="n pm-prestige">3,056<span class="u"> +5 next</span></span></div>
+      <div class="cell"><span class="pm-label">Ground</span><span class="n sm"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span></div>
+    </div>
+    <div class="ft">
+      <span class="pm-label" style="white-space:nowrap">Enemy turn</span><span class="ev"><span class="pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg></span>2 of your units attacked</span><span class="ev"><span class="pm-critical">−5</span>strength lost</span><span class="ev"><span class="pm-ok"><svg class="i sm" aria-hidden="true"><use href="#pm-resupply"/></svg></span>3 resupplied</span>
+      <span class="grow"></span>
+      <button class="pm-btn"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg>Turn report</button>
+    </div>
+  </section></div>
+</div>
+<script>window.PM && PM.mount();</script>

@@ -1,0 +1,20 @@
+<!-- @dsCard group="Controls" height=260 width=900 subtitle="Supply meters in ok, low and critical, experience stars and strength badges" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm" style="padding:24px;background:var(--panel);display:flex;gap:40px;align-items:flex-start">
+  <div style="width:180px">
+      <div class="pm-meter ok"><svg class="i sm" aria-hidden="true"><use href="#pm-strength"/></svg><span>Strength</span><span class="v">10/10</span><span class="track"><b style="width:100%"></b></span></div>
+      <div class="pm-meter low"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg><span>Fuel<span class="st">Low</span></span><span class="v">18/50</span><span class="track"><b style="width:36%"></b></span></div>
+      <div class="pm-meter critical"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg><span>Ammo<span class="st">Critical</span></span><span class="v">1/8</span><span class="track"><b style="width:12%"></b></span></div>
+      <div class="pm-meter"><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrench</span><span class="v">0</span><span class="track"><b style="width:0"></b></span></div></div>
+  <div style="display:grid;gap:14px">
+    <div><span class="pm-stars" aria-label="Experience 0 of 5"><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span> <span class="pm-muted" style="font-size:12px;margin-left:8px">Green</span></div>
+    <div><span class="pm-stars" aria-label="Experience 2 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span> <span class="pm-muted" style="font-size:12px;margin-left:8px">Experienced</span></div>
+    <div><span class="pm-stars" aria-label="Experience 5 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span> <span class="pm-muted" style="font-size:12px;margin-left:8px">Elite</span></div>
+  </div>
+  <div style="display:grid;gap:12px">
+    <span style="display:flex;gap:8px;align-items:center"><span class="pm-badge">10</span><span class="pm-badge allied">8</span><span class="pm-badge neutral">5</span></span>
+    <span style="display:flex;gap:8px;align-items:center"><span class="pm-tag pm-low"><svg class="i sm" aria-hidden="true"><use href="#pm-low"/></svg>Low fuel</span><span class="pm-tag pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>No ammo</span></span>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

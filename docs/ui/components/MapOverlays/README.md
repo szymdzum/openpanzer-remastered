@@ -1,0 +1,24 @@
+The map layer: everything the renderer draws over the painted map and under the unit sprites, so a player can read the rules of the next move from the map itself.
+
+All of it is canvas (`src/render.ts`), not HTML. The colours are fixed: they sit on the map's own olive and khaki, so they don't change between the Paper and Blackout themes. Every line has a dark under-stroke (`#1d170b` at 55%) so it reads on grass, fields, snow and water alike.
+
+**Draw order**, bottom to top: fog, the move area tint, the area outline, the enemy zone bars, attack targets, support fire lines, the selection, the move path, then the sprites and their markers, then plaques and tags.
+
+| Overlay | How it looks | Where the engine has it |
+| --- | --- | --- |
+| Selected | 3px brass `#f0b44a` over a 5.5px dark outline | `map.currentUnit` |
+| Move area | `rgba(244,238,221,.16)` tint on each hex, one 2px `#f4eedd` outline round the whole area (edges whose neighbour is outside it) | `GameRules.getMoveRange`: `canMove` cells, `hex.isMoveSel` |
+| Can move, can't see | the same hexes hatched at 45° instead of tinted: a hidden enemy there is an ambush | a move cell where `!hex.isSpotted(side)` |
+| Enemy zone | a 3px red `#ff6a4d` bar on the edge facing the enemy, on area hexes next to a spotted enemy: you can enter, the move ends there | cost 254 from `hex.isZOC(enemySide)` on a spotted hex. A hidden enemy's zone stops nothing: no bar |
+| Move path | a dotted `#f4eedd` route from hex centre to hex centre, a dot per step. It ends in a ring with "N left" in the moves left, or in a red stop square with "stops: enemy zone" when the last hex is in a zone | the path the move would take; moves left from `getMovesLeft` and the cell's `cout` |
+| Can attack | dashed 2.4px `#ff6a4d` with a 12% red fill. Hover or the first tap opens the odds preview | `hex.isAttackSel` |
+| Support fire | a dashed red arc with an arrowhead from each enemy gun to the attacker's hex, and "support fire" at the gun. The gun's hex gets a thin dotted outline | `GameRules.getSupportFireUnits(attacker, defender)`, spotted units only, as the estimate counts them |
+| Fog of war | a flat `rgba(20,22,15,.42)` wash on every hex the local side doesn't see | `!hex.isSpotted(game.spotSide)`. Today nothing marks it, `uiSettings.markFOW` is never read |
+| Entrenched | one sandbag (5×3, khaki `#c8b27a`) per level, under the strength plate | `unit.entrenchment` |
+| Hit this turn | a red tag after the plate with the defence lost, "−2" per hit | `unit.hits`; each hit is −2 defence for later attacks this turn (not artillery, forts or ships) |
+| Objective | a paper plaque with a brass star, the name and "+150"; the bottom bar in the owner's side colour | `hex.victorySide != -1`, owner from `hex.owner` |
+| Town | a smaller, greyer plaque without a star, "+50" | a flag hex that isn't a victory hex |
+
+Rules for the move area and path come straight from the engine, not from distance: roads make it longer, rivers end it, mud and frozen ground change it, friends can be passed but not stopped on. Never draw a path the engine wouldn't take.
+
+The consumer provides, per render: the selected unit, its move cells with their costs, the attack cells, the spotted set of the local side, the zone of each hex, the support fire units for the hovered target, and per hex the flag, owner and victory side.

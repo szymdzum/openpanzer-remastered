@@ -1,0 +1,29 @@
+<!-- @dsCard group="Screens · In game" height=150 width=900 subtitle="Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage" style="width:900px;height:150px">
+  
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(-300px,-40px) scale(1)" aria-hidden="true">
+    <svg class="hexes" width="1632" height="1040"></svg>
+    
+  </div>
+  
+  <header id="statusbar" class="pm-panel pm-status" role="status" style="top:16px">
+    <div class="row">
+      <span class="pm-side"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<span class="chip" aria-hidden="true"></span></span>
+      <span class="pm-sep"></span>
+      <span class="cell"><span class="pm-label">Turn</span>3/17</span>
+      <span class="cell">06 Sep 1939</span>
+      <span class="cell" title="Weather"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Fair</span>
+      <span class="cell" title="Ground"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span>
+      <span class="grow"></span>
+      <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
+      <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+    <div class="msg"><b>Pz IIA</b> 1st Panzer · 3 of 5 moves left · hex 9,4 near Neidenburg</div>
+  </header>
+  <div class="pm-panel" style="left:90px;bottom:10px;padding:6px 12px;display:flex;gap:16px;font:700 12px/1 var(--font-mono);text-transform:uppercase">
+    <span style="display:flex;gap:6px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-overcast"/></svg>Overcast</span><span style="display:flex;gap:6px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-rain"/></svg>Rain</span><span style="display:flex;gap:6px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-snow"/></svg>Snow</span><span class="pm-sep"></span><span style="display:flex;gap:6px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-mud"/></svg>Mud</span><span style="display:flex;gap:6px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-frozen"/></svg>Frozen</span>
+  </div>
+</div>
+<script>window.PM && PM.mount();</script>

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Screens · In game" height=680 width=760 subtitle="Game menu (#menu): the game's own buttons, open and folded, and the labelled rail for touch" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage" style="width:760px;height:680px">
+  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(-900px,-160px) scale(1)" aria-hidden="true"><svg class="hexes" width="1632" height="1040"></svg></div>
+  <div style="position:absolute;left:40px;top:28px;width:200px;font-size:13px;line-height:18px;color:#f4eedd;text-shadow:0 1px 2px #000"><b style="display:block;font:700 13px/18px var(--font-display);letter-spacing:.08em;text-transform:uppercase">Open</b>Desktop default. Hex grid on.</div>
+  <nav class="pm-rail" aria-label="Game menu" style="right:auto;left:40px;top:110px;transform:none">
+    <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg></button></div>
+    <div id="slidemenu" class="group"><button id="buy" class="pm-btn icon" aria-label="Buy and upgrade" title="Buy and upgrade (B)"><svg class="i " aria-hidden="true"><use href="#pm-depot"/></svg></button><button id="hex" class="pm-btn icon is-on" aria-label="Hex grid" title="Hex grid (H)" aria-pressed="true"><svg class="i " aria-hidden="true"><use href="#pm-grid"/></svg></button><button id="air" class="pm-btn icon" aria-label="Air layer" title="Air layer (A)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-air"/></svg></button><button id="zoom" class="pm-btn icon" aria-label="Strategic map" title="Strategic map (Z)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-map"/></svg></button><button id="options" class="pm-btn icon" aria-label="Options" title="Options (Esc)"><svg class="i " aria-hidden="true"><use href="#pm-menu"/></svg></button></div>
+    <div class="group"><button id="mainmenu" class="pm-btn icon is-on" aria-label="Hide menu" aria-expanded="true" aria-controls="slidemenu"><svg class="i " aria-hidden="true"><use href="#pm-chevron-down"/></svg></button></div>
+  </nav>
+  <div style="position:absolute;left:250px;top:28px;width:200px;font-size:13px;line-height:18px;color:#f4eedd;text-shadow:0 1px 2px #000"><b style="display:block;font:700 13px/18px var(--font-display);letter-spacing:.08em;text-transform:uppercase">Folded</b>Menu hides the slide group, as #mainmenu does today.</div>
+  <nav class="pm-rail" aria-label="Game menu" style="right:auto;left:250px;top:110px;transform:none">
+    <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg></button></div>
+    
+    <div class="group"><button id="mainmenu" class="pm-btn icon" aria-label="Show menu" aria-expanded="false" aria-controls="slidemenu"><svg class="i " aria-hidden="true"><use href="#pm-chevron-down"/></svg></button></div>
+  </nav>
+  <div style="position:absolute;left:460px;top:28px;width:200px;font-size:13px;line-height:18px;color:#f4eedd;text-shadow:0 1px 2px #000"><b style="display:block;font:700 13px/18px var(--font-display);letter-spacing:.08em;text-transform:uppercase">Labelled</b>Touch, or labels on.</div>
+  <nav class="pm-rail labels" aria-label="Game menu" style="right:auto;left:460px;top:110px;transform:none">
+    <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg>Inspect unit</button></div>
+    <div id="slidemenu" class="group"><button id="buy" class="pm-btn icon" aria-label="Buy and upgrade" title="Buy and upgrade (B)"><svg class="i " aria-hidden="true"><use href="#pm-depot"/></svg>Buy and upgrade</button><button id="hex" class="pm-btn icon" aria-label="Hex grid" title="Hex grid (H)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-grid"/></svg>Hex grid</button><button id="air" class="pm-btn icon" aria-label="Air layer" title="Air layer (A)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-air"/></svg>Air layer</button><button id="zoom" class="pm-btn icon" aria-label="Strategic map" title="Strategic map (Z)" aria-pressed="false"><svg class="i " aria-hidden="true"><use href="#pm-map"/></svg>Strategic map</button><button id="options" class="pm-btn icon" aria-label="Options" title="Options (Esc)"><svg class="i " aria-hidden="true"><use href="#pm-menu"/></svg>Options</button></div>
+    <div class="group"><button id="mainmenu" class="pm-btn icon is-on" aria-label="Hide menu" aria-expanded="true" aria-controls="slidemenu"><svg class="i " aria-hidden="true"><use href="#pm-chevron-down"/></svg>Less</button></div>
+  </nav>
+  <button id="endturn" class="pm-btn primary lg pm-endturn" style="right:40px"><svg class="i " aria-hidden="true"><use href="#pm-end-turn"/></svg>End turn</button>
+</div>
+<script>window.PM && PM.mount();</script>

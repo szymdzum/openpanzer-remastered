@@ -1,0 +1,81 @@
+/* Generated from tokens.json by scripts/ui-design.mjs. Do not edit. */
+:root, [data-theme="paper"] {
+	--panel: #e8dfc8;
+	--panel-raised: #f4eedd;
+	--panel-sunken: #d9ceb2;
+	--line: #b3a37f;
+	--line-strong: #2b2519;
+	--ink: #211c13;
+	--ink-muted: #574c39;
+	--accent: #b48a2c;
+	--on-accent: #1d170b;
+	--accent-ink: #6b4f12;
+	--axis: #4f6b80;
+	--axis-ink: #344c5e;
+	--allied: #9c3b22;
+	--allied-ink: #86311b;
+	--neutral-side: #7c735f;
+	--on-side: #ffffff;
+	--ok: #1f5a4f;
+	--low: #7a4c00;
+	--critical: #a1221a;
+	--focus: #1d3fb0;
+	--hex-select: #f2c94c;
+	--hex-target: #e2492f;
+	--scrim: rgba(20, 17, 10, 0.45);
+	--photo-tint: rgba(232, 223, 200, 0.18);
+	--shadow-panel: 0 2px 0 rgba(43, 37, 25, 0.35), 0 6px 14px rgba(20, 17, 10, 0.35);
+	--shadow-window: 0 3px 0 rgba(43, 37, 25, 0.4), 0 18px 40px rgba(20, 17, 10, 0.45);
+}
+[data-theme="blackout"] {
+	--panel: #23271b;
+	--panel-raised: #2f3424;
+	--panel-sunken: #14160f;
+	--line: #3f443a;
+	--line-strong: #6b7160;
+	--ink: #ece6d2;
+	--ink-muted: #aaa892;
+	--accent: #d9a441;
+	--on-accent: #1b1204;
+	--accent-ink: #e6b85c;
+	--axis: #8db1c9;
+	--axis-ink: #a3c2d6;
+	--allied: #e0835f;
+	--allied-ink: #eb977a;
+	--neutral-side: #b5ad95;
+	--on-side: #11130f;
+	--ok: #7fd3b0;
+	--low: #f2c84b;
+	--critical: #ff7a66;
+	--focus: #f7e08a;
+	--hex-select: #f0b44a;
+	--hex-target: #ff7a66;
+	--scrim: rgba(8, 9, 6, 0.6);
+	--photo-tint: rgba(20, 22, 15, 0.55);
+	--shadow-panel: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.45);
+	--shadow-window: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+:root {
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-6: 24px;
+	--space-8: 32px;
+	--radius-paper: 2px;
+	--radius-none: 0px;
+	--radius-round: 50%;
+	--hit-target: 44px;
+	--icon: 20px;
+	--rail-w: 48px;
+	--hex-w: 60px;
+	--hex-h: 50px;
+	--z-map-overlay: 5;
+	--z-hud: 100;
+	--z-context: 150;
+	--z-window: 200;
+	--z-message: 300;
+	--font-display: "Zilla Slab", Rockwell, Georgia, serif;
+	--font-ui: "Libre Franklin", "Franklin Gothic Medium", Arial, sans-serif;
+	--font-mono: "Courier Prime", "Courier New", monospace;
+}

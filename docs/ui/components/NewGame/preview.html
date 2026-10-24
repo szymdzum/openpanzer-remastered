@@ -1,0 +1,43 @@
+<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="Start menu on a first run: no Continue, the three new-game choices with what each one is, Campaign as the primary action" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+.pm-choices{display:flex;flex-direction:column;gap:var(--space-2)}
+.pm-choice{display:grid;grid-template-columns:24px 1fr auto;gap:4px 14px;align-items:center;padding:14px var(--space-4) 14px;text-align:left;background:var(--panel-raised);border:1px solid var(--line-strong);border-radius:var(--radius-paper);color:var(--ink);cursor:pointer;font:inherit}
+.pm-choice .t{font:600 14px/18px var(--font-ui);letter-spacing:.06em;text-transform:uppercase}
+.pm-choice .k{font:700 11px/1 var(--font-mono);color:var(--ink-muted)}
+.pm-choice .d{grid-column:2 / 4;font-size:13px;line-height:18px;color:var(--ink-muted)}
+.pm-choice.primary{background:var(--accent);color:var(--on-accent);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.pm-choice.primary .k,.pm-choice.primary .d{color:var(--on-accent)}
+</style>
+<div class="pm pm-stage s1920" id="startmenu">
+  <div class="pm-photo" style="background-image:url(assets/startmenu-1.jpg)"></div>
+  <div class="pm-photo-tint"></div>
+  <section id="smMain" class="pm-window" style="left:96px;top:96px;bottom:96px;width:560px;z-index:var(--z-message)">
+    <div style="padding:48px 40px 20px">
+      <div class="pm-label" style="margin-bottom:10px">Operational command · Remastered</div>
+      <h1 id="smLogo" class="pm-wordmark">Panzer<br>Marshal</h1>
+      <div class="pm-hr" style="margin:24px 0 0"></div>
+    </div>
+    <div id="smNewGame" style="padding:0 40px">
+      <div class="pm-label" style="margin:0 0 8px">New game</div>
+      <div id="smNewGameContent" class="pm-choices">
+        <button id="newcampaign" class="pm-choice primary"><svg class="i " aria-hidden="true"><use href="#pm-campaign"/></svg><span class="t">Campaign</span><span class="k">17 campaigns</span><span class="d">A run of scenarios. Your units keep their experience and leaders; how fast you take the objectives decides the next battle.</span></button>
+        <button id="newscenario" class="pm-choice"><svg class="i " aria-hidden="true"><use href="#pm-scenario"/></svg><span class="t">Scenario</span><span class="k">404 scenarios</span><span class="d">One battle on its own. Good for learning a map or trying another plan.</span></button>
+        <button id="tutorial" class="pm-choice"><svg class="i " aria-hidden="true"><use href="#pm-help"/></svg><span class="t">Tutorial</span><span class="k">Minorca · 1939</span><span class="d">The computer plays the first turns to show the basics, then hands you command.</span></button>
+      </div>
+      <div class="pm-label" style="margin:20px 0 8px">Game</div>
+      <nav class="pm-menu">
+        <button id="saveload" class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-load"/></svg>Load game<span class="k">from a file or the cloud</span></button>
+        <button id="settings" class="pm-btn lg"><svg class="i " aria-hidden="true"><use href="#pm-settings"/></svg>Settings</button>
+      </nav>
+    </div>
+    <span class="grow"></span>
+    <div id="smCredits" style="display:flex;align-items:center;gap:8px;padding:16px 28px 20px 40px;border-top:1px solid var(--line)">
+      <span class="pm-muted" style="font-size:12px;line-height:16px">Version 3.2.14 · © Nicu Pavel and contributors<br>Photograph: US Coast Guard, 6 June 1944</span>
+      <span class="grow"></span>
+      <button class="pm-btn icon ghost" aria-label="Help"><svg class="i " aria-hidden="true"><use href="#pm-help"/></svg></button>
+      <button class="pm-btn icon ghost" aria-label="Report an issue"><svg class="i " aria-hidden="true"><use href="#pm-document"/></svg></button>
+    </div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>

@@ -1,0 +1,26 @@
+<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="Settings at 1920×1080: theme switch, interface sliders and gameplay toggles" -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+
+<div class="pm pm-stage s1920">
+  <div class="pm-photo" style="background-image:url(assets/startmenu-1.jpg);animation:none"></div><div class="pm-photo-tint"></div><div class="pm-scrim"></div>
+  <section id="smSettings" class="pm-window" style="left:440px;top:170px;width:1040px;height:740px" role="dialog" aria-label="Settings">
+    <div class="hd"><h1 class="pm-display">Settings</h1><span class="grow"></span><button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
+    <div id="smSettingsContainer" class="bd" style="display:grid;grid-template-columns:1fr 1fr;gap:0 48px;padding-top:12px">
+      <div>
+        <div class="pm-label" style="margin:12px 0 4px">Appearance</div>
+        <div class="pm-setting"><span class="t">Theme<div class="h">Paper for daylight, Blackout for long night sessions.</div></span><div class="pm-seg" role="group" aria-label="Theme"><button class="is-on"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Paper</button><button><svg class="i sm" aria-hidden="true"><use href="#pm-overcast"/></svg>Blackout</button><button>System</button></div></div>
+        <div class="pm-setting"><span class="t">Interface width</span><input class="pm-range" type="range" min="800" max="1920" value="1366" style="--val:51%" aria-label="Interface width"><span class="val">1366</span></div>
+        <div class="pm-setting"><span class="t">Interface scale</span><input class="pm-range" type="range" min="0.5" max="3" step="0.1" value="1" style="--val:20%" aria-label="Interface scale"><span class="val">1.0×</span></div>
+        <div class="pm-setting"><span class="t">Game map scale</span><input class="pm-range" type="range" min="1" max="3" step="0.1" value="1" style="--val:0%" aria-label="Game map scale"><span class="val">1.0×</span></div>
+        <div class="pm-label" style="margin:24px 0 4px">Sound</div>
+        <div class="pm-setting"><span class="t">Mute unit combat sounds</span><button id="muteUnitSounds" class="pm-toggle" role="switch" aria-checked="false"><span class="track"></span></button></div>
+      </div>
+      <div>
+        <div class="pm-label" style="margin:12px 0 4px">Map and gameplay</div>
+        <div class="pm-setting"><span class="t">Show terrain with hex grid</span><button id="showGridTerrain" class="pm-toggle" role="switch" aria-checked="true"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Quick combat and move animations</span><button id="quickAnimation" class="pm-toggle" role="switch" aria-checked="true"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Disable fog of war<div class="h">Reveals every enemy unit. Scores are not affected.</div></span><button id="noFOW" class="pm-toggle" role="switch" aria-checked="false"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Zoom to full device resolution<div class="h">Needs a reload.</div></span><button id="useRetina" class="pm-toggle" role="switch" aria-checked="true"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Mark own units on map</span><button id="markOwnUnits" class="pm-toggle" role="switch" aria-checked="true"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Mark enemy strength in red</span><button id="markEnemyUnits" class="pm-toggle" role="switch" aria-checked="false"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Show optional objectives tooltips</span><button id="showDetailInfoToolTips" class="pm-toggle" role="switch" aria-checked="true"><span class="track"></span></button></div><div class="pm-setting"><span class="t">Show hidden victory hexes</span><button id="showHiddenVictoryHexes" class="pm-toggle" role="switch" aria-checked="false"><span class="track"></span></button></div>
+      </div>
+    </div>
+    <div class="ft"><span class="pm-muted" style="font-size:13px">Changes apply at once.</span><span class="grow"></span><button id="smSetOkBut" class="pm-btn primary">Done</button></div>
+  </section>
+</div>
+<script>window.PM && PM.mount();</script>
