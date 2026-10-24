@@ -11,7 +11,7 @@ against the AI had been dull in the earlier games.
 **Result: all nine objectives held on turn 25, a capture victory with a tactical rating** (the
 victory turns are 20, 23 and 28; a capture rates by the turn it happens, src/core/turn.ts:73).
 Holding a majority at turn 28 would also have been tactical: under the remaster rules only taking
-everything by turn 20 or 23 rates higher. The capture move broke the page (#311).
+everything by turn 20 or 23 rates higher. The game showed its "Tactical Victory" message, and the command-line player's next call clicked it away into the main menu (#311); the owner's screen recording shows both.
 
 Poland held 3 of 9 objectives at the start (Piątek, the Polish Bridgehead, Tum), 8 by turn 5, 7
 after the German counteroffensive, and all 9 on turn 25. Prestige went from 2408 to 357; about 2600
@@ -104,7 +104,7 @@ The gaps, filed:
 - #308: `attackers` gives one hex per unit.
 - #309: `hex` off the map throws.
 - #310: bocage drawn as `b`, missing from the legend and also the bunker letter.
-- #311: capturing the last objective broke the page; the CLI didn't report the game over.
+- #311: every call on the page clicks the shown message's OK (`uncover`), so the next call after the capture closed the victory message into the main menu; nothing reported the game over.
 
 Not filed: `check mount` doesn't warn that a mounted move can't be undone; in the classic game that is
 the rule, but a line in `check` would have saved a turn-3 mistake.
