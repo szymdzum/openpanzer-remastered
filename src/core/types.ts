@@ -7,6 +7,7 @@
  */
 
 import type { Command, Refusal } from "../commands";
+import type { AIConfig } from "../prototypes";
 import type { RngStream } from "../rng";
 import type { GameState, Position, ScenarioData, UnitId, UnitState } from "../state";
 import type { GameEvent } from "./events";
@@ -64,6 +65,14 @@ export interface Ruleset {
 	classLeaders: number[];
 	//The steps that make an attack's values, in order (combat.ts)
 	combat: CombatStep[];
+	//How the computer player plays (ai.ts)
+	ai: AIRules;
+}
+
+//The computer player's rules: its settings (aiDefaultConfig, the bundle's, in the classic rules) and
+//the switches of the remaster's changes to its play, each off in the classic rules
+export interface AIRules {
+	config: AIConfig;
 }
 
 //A hex of a move range (extendedCell): its distance from the unit, the cost to enter it (cin) and
