@@ -61,12 +61,15 @@ function show(game: Game, views: ViewEvent[]) {
 }
 
 //The session of a scenario whose players were just set up (Game.setupPlayers): their controllers
-//join in the players' order, and the AI whose turn a loaded game is on plans it again (#71)
+//join in the players' order; in a new game the AI moving first starts its turn, its purchases and
+//deployment mirrored before the screen draws the new map (its moves the turn loop then animates as on
+//every turn, #292), and the AI whose turn a loaded game is on plans it again (#71)
 export function startGameSession(game: Game, loaded: boolean, localSide: number) {
 	game.session = null;
 	const w = worldOf(game.scenario, game, gameInputs(game));
-	game.session = startSession(w, controllerFor, { loaded, localSide });
+	game.session = startSession(w, controllerFor, { loaded, fresh: !loaded, localSide });
 	mirrored(game);
+	if (game.session.first !== null) show(game, game.session.first.view);
 	show(game, game.session.joined);
 }
 

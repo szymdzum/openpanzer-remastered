@@ -89,7 +89,4 @@ The actions are the core's commands (src/commands.ts): `move`, `attack`, `mount`
 ## What differs from the screen, what it leaves out
 
 - Hotseat and two programs: the person plays one side, the AI the other.
-- The AI's first turn in a new game: unlike the game on the screen (where the old game's AI ended it
-  at once), the AI playing the first side starts it as every other, with its purchases and
-  deployment, as the arena does (cli/game.ts startFirstTurn).
 - Campaigns: a single scenario of the list.

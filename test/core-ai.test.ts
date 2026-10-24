@@ -146,9 +146,11 @@ test.each(fixtures("engine"))("The core's AI plays %s as the old AI did, turn by
 const replayItems = ["drpzop01.xml", "drstu02.xml", "dr9fr03.xml", "campaign:0",
 	...scenariolist.filter((s) => s.length > 1).flatMap((s, i) => i % 40 === 20 ? [s[0]] : []), "campaign:10", "scripted:tutorial.xml"];
 
+//(the game started the turn of the AI moving first, #292: the session taking the game over plans it, as
+//a game loaded on that turn does, #71; a person moving first, a campaign's, has no turn started)
 test.each(replayItems)("The core's AI and tutorial play %s from its start as the old ones did, AI against AI", async (item) => {
 	const { o, localSide } = await startItem(item, item.length * 7919);
-	same(item, played(sessionOf(o, localSide, false), item.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS));
+	same(item, played(sessionOf(o, localSide, o.game.session.first !== null), item.startsWith("scripted") ? TUTORIAL_ROUNDS : ROUNDS));
 }, 120_000);
 
 //Turns 3 to 5 with its units where its script puts them (the fuel emptied and the main menu opened

@@ -4,7 +4,7 @@
 import path from "node:path";
 import { type Answer, answer, type Args, flagInt, flagRules, HELP, parseArgs, runOn, UsageError } from "./commands";
 import { scenarioList } from "./files";
-import { fileFront, isHumanTurn, newSave, open, playAI, readGameFile, startFirstTurn, world, writeGameFile } from "./game";
+import { fileFront, isHumanTurn, newSave, open, playAI, readGameFile, world, writeGameFile } from "./game";
 import { SIDES } from "./known";
 import { describe } from "./report";
 import { status } from "./board";
@@ -13,7 +13,8 @@ async function newGameAnswer(args: Args, file: string): Promise<Answer> {
 	const side = flagInt(args, "side", 0), seed = flagInt(args, "seed", Date.now() % 100000), rules = flagRules(args, "remaster");
 	const g = open(await newSave(args.words[1], [side], seed, rules), true), before = world(g);
 	//(a new game whose first player is the AI: it plays its first turn, its purchases included)
-	g.save.report = isHumanTurn(g) ? [] : [...startFirstTurn(g.session), ...playAI(g)];
+	const first = g.session.first;
+	g.save.report = isHumanTurn(g) ? [] : [...first === null ? [] : first.events, ...playAI(g)];
 	writeGameFile(file, g);
 	return answer([`new game of ${args.words[1]}, you play ${SIDES[side]}, ${rules} rules, seed ${seed}, saved in ${file}`,
 		...describe(world(g), before, side, g.save.report), ...status(world(g), side)], { file, side, seed, rules });

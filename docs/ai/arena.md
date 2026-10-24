@@ -26,12 +26,10 @@ core changes.
 
 Each game is a new scenario started as the game starts it (newGame, src/core/newgame.ts), seeded
 with the seed (the game stream) and the seed + 7919 (the AI's stream), every player made a program
-and played on the core's session (src/core/session.ts) to the turn limit or a victory. Two things
-differ from a game on the screen:
+and played on the core's session (src/core/session.ts) to the turn limit or a victory. The first player
+plays its first turn, its turn start (purchases, deployment) included, as on the screen (#292). One
+thing differs from a game on the screen:
 
-- The first player plays its first turn, its turn start (purchases, deployment) included
-  (cli/game.ts startFirstTurn). In a new game the old game's AI ended its first turn at once
-  (session.ts), which costs an attacker a turn the arena doesn't want to measure.
 - No side plays on the screen, so the turn limit ends no one's game early: every player plays its
   last turn, then the side holding more objectives wins, as the end screen has it since #231. A
   tie is a draw.
