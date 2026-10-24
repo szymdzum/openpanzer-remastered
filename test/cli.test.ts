@@ -26,7 +26,7 @@ test("A new game shows the side's victory hexes and only the enemy units it sees
 	const g = open(await newSave("drpzop01.xml", [AXIS], 1));
 	expect(isHumanTurn(g)).toBe(true);
 	const s = status(world(g), AXIS).join("\n");
-	expect(s).toContain("2,20 Janon: held by Allies, Axis to take");
+	expect(s).toContain("2,20 Janow: held by Allies, Axis to take");
 	expect(s).toContain("1,10 Neidenburg: held by Axis, Allies to take");
 	expect(s).toContain("Axis holds 2, Allies 5");
 	//the known world has the enemy units the side sees, not the others
