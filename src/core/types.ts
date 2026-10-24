@@ -83,6 +83,11 @@ export interface Ruleset {
 	//A unit's new leader can be any of its class's list but the class leader (#78): false in the classic
 	//rules, where the roll leaves out the list's last two
 	wholeLeaderList: boolean;
+	//At the turn limit the attacker, the side that had more objectives to take at the start, loses unless it
+	//took them all, and the defender wins by holding out, as in PG2 (turn.ts, #256); the game ends there once
+	//both sides have played their last turn. False in the classic rules, where the side that ended its last
+	//turn loses whatever it holds, and the game ends at the last turn of a side that plays on the screen
+	defenderHoldsOut: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

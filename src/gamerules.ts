@@ -112,7 +112,7 @@ let equipmentWorld: World | null = null;
 
 function bare(): World {
 	if (equipmentWorld === null || equipmentWorld.equipment !== Equipment.equipment)
-		equipmentWorld = createWorld({ data: { name: "", description: "", equipment: "", image: "", hexes: [] },
+		equipmentWorld = createWorld({ data: { name: "", description: "", equipment: "", image: "", startObjectives: null, hexes: [] },
 			state: { units: [], map: { rows: 0, cols: 0, hexes: [] } } as unknown as World["state"] }, Equipment.equipment, { sight: emptySight(0) });
 	return equipmentWorld;
 }

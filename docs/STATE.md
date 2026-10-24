@@ -139,8 +139,17 @@ The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are s
 builds the old engine's objects again (the equipment and the campaign loaded already). What
 #127 spelled out, and where the old engine made the sketch above more precise:
 
-- **`ScenarioData`**: the scenario's name and description, the equipment set, the map image, and
-  per hex the terrain, the roads, the name and the deployment player.
+- **`ScenarioData`**: the scenario's name and description, the equipment set, the map image,
+  `startObjectives` (below) and per hex the terrain, the roads, the name and the deployment player.
+- **`startObjectives`** (#256): how many objectives each side had to take at the scenario's start,
+  `[side 0, side 1]`, set by `newGame` once the hexes are loaded. The side with more is the attacker
+  (src/core/turn.ts `attackerSide`): in the remaster rules it loses at the turn limit unless it took
+  them all. The lists of `objectives` can't tell it later, they change with every capture. It is
+  static data, not state: it doesn't change during a scenario, a step never writes it, and the state
+  the contracts and the harness hash stays the same. Null in a save from before it (version 2 and
+  older, and the format before): such a game has no attacker, and the turn limit goes to the side
+  holding more objectives (#231). The old engine's Scenario keeps it in a closure, as the
+  description, so the harness's walk of the objects still compares with the original's.
 - **`CampaignState`**: the campaign's index in the campaign list and its data file, the index of
   the scenario played, the campaign player's country, the difficulty, the starting prestige, and
   `progress`, the three flags Game keeps in its closure between scenarios (`isStart`,
@@ -176,11 +185,13 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 
 ## The save (#128)
 
-`src/savegame.ts` writes and reads the save: `{ version: 2, rules, data: ScenarioData, state: GameState }`,
+`src/savegame.ts` writes and reads the save: `{ version: 3, rules, data: ScenarioData, state: GameState }`,
 toData's output with the format's version first (D3, D11) and the rules the game plays by (#53:
 `"classic"` or `"remaster"`, src/core/rules.ts). The rules sit beside the state, not in it: they don't
 change during a game, and the state the contracts hash stays the same. Version 1 had no rules: such a
-save, and one of the format before, plays the classic ones it was played by. Every save path writes it: the local
+save, and one of the format before, plays the classic ones it was played by. Version 2 had no
+`startObjectives` (#256): a save of version 1 or 2 loads with them null, in their place before the
+hexes. Every save path writes it: the local
 save (one item, `openpanzer-game-<major version>`, where the format before had three: the scenario,
 its players and the campaign's progress), which the game writes at the end of a turn and when a
 scenario starts or is loaded, the file export and the cloud save. The settings stay an item of

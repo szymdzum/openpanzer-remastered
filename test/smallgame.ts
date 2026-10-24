@@ -63,7 +63,7 @@ export function smallGameData(units = smallGameUnits): SavedGame {
 		if (e.movmethod === 5) hexes[row * SIZE + col].air = id; //movMethod.air
 		else hexes[row * SIZE + col].unit = id;
 	});
-	const data = { name: "small", description: "", equipment: "eqp-adlerkorps", image: "",
+	const data: SavedGame["data"] = { name: "small", description: "", equipment: "eqp-adlerkorps", image: "", startObjectives: [1, 1],
 		hexes: hexes.map(() => ({ terrain: 0, road: 0, name: "", deployment: -1 })) };
 	return { data, state };
 }

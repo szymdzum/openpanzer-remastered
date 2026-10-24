@@ -4,13 +4,13 @@
 import { expect, test, vi } from "vitest";
 import { readFixture, restoreState } from "./contracts";
 
-test("The remaster's rules are the classic ones but for the AI's play, who attacks whom, where a side deploys, when it is eliminated and the leaders it wins, under their own name (#53, #235, #285, #302, #115, #78)", async () => {
+test("The remaster's rules are the classic ones but for the AI's play, who attacks whom, where a side deploys, when it is eliminated, the leaders it wins and the turn limit, under their own name (#53, #235, #285, #302, #115, #78, #256)", async () => {
 	const { classicRules, remasterRules, rulesetNamed } = await import("../src/core/rules");
 	expect(remasterRules.name).toBe("remaster");
 	expect({ ...remasterRules, name: "classic", ai: classicRules.ai, airAttacksNextHex: false, checkTargets: false,
-		deployOnOwnTowns: false, waitingUnitsFight: false, wholeLeaderList: false }).toEqual(classicRules);
+		deployOnOwnTowns: false, waitingUnitsFight: false, wholeLeaderList: false, defenderHoldsOut: false }).toEqual(classicRules);
 	expect([remasterRules.airAttacksNextHex, remasterRules.checkTargets, remasterRules.deployOnOwnTowns, remasterRules.waitingUnitsFight,
-		remasterRules.wholeLeaderList]).toEqual([true, true, true, true, true]);
+		remasterRules.wholeLeaderList, remasterRules.defenderHoldsOut]).toEqual([true, true, true, true, true, true]);
 	expect(remasterRules.ai.config).toBe(classicRules.ai.config);
 	expect([rulesetNamed("remaster"), rulesetNamed("classic"), rulesetNamed(undefined), rulesetNamed("pg2")])
 		.toEqual([remasterRules, classicRules, classicRules, classicRules]);
@@ -34,7 +34,8 @@ test("A new game plays the remaster's rules unless the settings ask for the clas
 test("A save names its game's rules; a save of version 1 or of the format before plays the classic ones (#53)", async () => {
 	const { readSave } = await import("../src/savegame");
 	const read = (o: unknown) => readSave(JSON.stringify(o))?.save;
-	expect(read({ version: 1, data: { name: "a" }, state: { turn: 3 } })).toEqual({ version: 2, rules: "classic", data: { name: "a" }, state: { turn: 3 } });
+	expect(read({ version: 1, data: { name: "a" }, state: { turn: 3 } }))
+		.toEqual({ version: 3, rules: "classic", data: { name: "a", startObjectives: null }, state: { turn: 3 } });
 	expect(read({ version: 2, rules: "remaster", data: {}, state: {} })?.rules).toBe("remaster");
 	expect(read({ version: 2, rules: "pg2", data: {}, state: {} })?.rules).toBe("classic");
 	expect(readSave(readFixture("engine", "drpzop01-t0.json.gz").state)?.save.rules).toBe("classic");
@@ -47,7 +48,7 @@ test("A game saved and loaded plays on by the same rules (#53)", async () => {
 	expect(game.rules).toBe("classic");
 	game.rules = "remaster";
 	const saved = new GameState(game).exportGameState();
-	expect(JSON.parse(saved)).toMatchObject({ version: 2, rules: "remaster" });
+	expect(JSON.parse(saved)).toMatchObject({ version: 3, rules: "remaster" });
 	await restoreState(saved);
 	const loaded = (await import("../src/game")).game;
 	expect(loaded.rules).toBe("remaster");

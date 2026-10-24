@@ -4,6 +4,7 @@ import { unitCost } from "../src/core/costs";
 import { deploymentHexes } from "../src/core/deployment";
 import type { HexState, Position, UnitState, World } from "../src/core/types";
 import type { HexData } from "../src/state";
+import { attackerSide, turnLimitOutcome } from "../src/core/turn";
 import { isTransportable } from "../src/core/units";
 import { hexIndex, isSpotted, isZOC, sideOf, unitById } from "../src/core/world";
 import { groundConditionNames, terrainNames, terrainType, unitClass, unitClassNames, weatherConditionNames } from "../src/prototypes";
@@ -24,12 +25,16 @@ function objectiveLine(w: World, side: number, h: HexState, i: number): string {
 		+ (taker < 0 ? "" : `, ${SIDES[taker]} to take`) + (g && seen(w, side, g) ? ` (${label(w, g)})` : "");
 }
 
-//What the turn limit would decide now (src/core/turn.ts turnLimitOutcome, #256): the side holding more
-//victory hexes wins
+//What the turn limit would decide now (src/core/turn.ts turnLimitOutcome): in the classic rules the side
+//that ends its last turn loses; in the remaster's the attacker loses unless it took all its objectives
+//(#256), with no attacker the side holding more victory hexes wins (#231)
 function verdict(w: World): string {
 	const held = [0, 1].map((s) => victoryHexes(w).filter(({ h }) => holder(w, h) === s).length);
-	const who = held[0] === held[1] ? "a tie: the side that ended its turn loses" : `${SIDES[held[0] > held[1] ? 0 : 1]} wins`;
-	return `at the turn limit now: ${SIDES[0]} holds ${held[0]}, ${SIDES[1]} ${held[1]} -> ${who}`;
+	const holding = `${SIDES[0]} holds ${held[0]}, ${SIDES[1]} ${held[1]}`;
+	if (!w.rules.defenderHoldsOut) return `at the turn limit: ${holding} -> the side that ends its last turn loses (classic rules)`;
+	const attacker = attackerSide(w), o = turnLimitOutcome(w, -1);
+	const who = o.winner < 0 ? "nobody wins" : `${SIDES[o.winner]} wins`;
+	return `at the turn limit now: ${holding}` + (attacker < 0 ? "" : `, ${SIDES[attacker]} attacks`) + ` -> ${who}`;
 }
 
 //The scenario's state for side: the turn, the limits, the prestige, every victory hex and the verdict

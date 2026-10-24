@@ -198,6 +198,8 @@ export function newGame(g: GameSetup): { data: ScenarioData; state: GameState } 
 	const d = beginDraft(createWorld({ data, state }, g.equipment, { rules: g.rules }));
 	for (const h of f.hexes) loadHex(d, g, h);
 	const s = finishDraft(d).state;
+	//(how many objectives each side has to take now, kept for the game: the side with more attacks, #256)
+	data.startObjectives = [s.objectives[0].length, s.objectives[1].length];
 	initialScores(s);
 	if (g.campaign === null) return { data, state: singleScenario(g, s) };
 	//(a campaign's start on a draft too: it removes units and draws the prototype)
@@ -213,7 +215,7 @@ function emptyGame(g: GameSetup): { data: ScenarioData; state: GameState } {
 	const turns = f.turns.slice();
 	turns[2] = Math.round(turns[2] * (g.campaign !== null ? difficultyModifiers[g.campaign.difficulty].extraTurns : 1));
 	const data: ScenarioData = { name: g.name, description: g.description, equipment: f.equipment || DEFAULT_EQUIPMENT,
-		image: f.image, hexes: [] };
+		image: f.image, startObjectives: null, hexes: [] };
 	const state: GameState = {
 		version: 1,
 		scenario: { file: g.file, date: new Date(Date.parse(f.date)).toISOString(), turnsPerDay: (f.dayTurns || 1) * 2,

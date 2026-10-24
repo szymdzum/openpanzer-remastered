@@ -31,14 +31,18 @@ plays its first turn, its turn start (purchases, deployment) included, as on the
 thing differs from a game on the screen:
 
 - No side plays on the screen, so the turn limit ends no one's game early: every player plays its
-  last turn, then the side holding more objectives wins, as the end screen has it since #231. A
-  tie is a draw.
+  last turn, then the core's outcome decides, as the end screen does (src/core/turn.ts). In the
+  remaster rules (#256) the attacker, the side that had more objectives to take at the start, loses
+  unless it took them all, and the defender wins by holding out; with as many objectives each at the
+  start, the side holding more wins (#231) and a tie is a draw. In the classic rules nobody wins at the
+  turn limit. The tables before 25 October counted the side holding more objectives as the winner in
+  every game.
 
 ## The measures, per side
 
 | Measure | What it says |
 |---|---|
-| wins | games won: a capture of every objective, the enemy wiped out, or more objectives held at the turn limit ("held") |
+| wins | games won: a capture of every objective, the enemy wiped out, or the turn limit's outcome (the defender that held out, #256) |
 | first objective, turn (games) | the mean turn of the side's first capture of an objective, over the games where it took one |
 | objectives taken | captures of objectives per game, retaking included |
 | held at the end | objectives the side holds after the last turn |
