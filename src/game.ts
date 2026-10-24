@@ -84,7 +84,7 @@ export class Game {
 
 		this.gameStarted = false; //Game not yet fully initialised
 		this.gameEnded = false; //Game ended in victory or defeat
-		this.waitUIAnimation = false; //Wait for animation to finish before processing next AI action
+		this.waitUIAnimation = false; //A move or an attack still playing: the next AI action and the end turn button wait
 		this.spotSide = -1; //currently visible side on map
 		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window //TODO change to event
 

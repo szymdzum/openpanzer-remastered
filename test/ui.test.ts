@@ -299,3 +299,38 @@ test("The AI's next action waits for the retreat its attack caused to end (#248)
 	await until(() => !wait && !defender.hasAnimation, "the attack and the retreat");
 	expect(cleared).toEqual([false]);
 }, 60_000);
+
+//A unit the player's attack destroys leaves the map when the attack's animation ends. The end turn
+//button clicked twice before then ended the turn and saved the unit, strength 0 or less, on its hex: a
+//reload put it back there, where it blocks moves and captures for the rest of the game (#58)
+test("The player's end of turn waits for the attack's animation: no destroyed unit is saved on its hex (#58)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { touched } = await import("../src/context");
+	const { MAJOR_VERSION, uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const human = map.currentPlayer, turn = map.turn;
+	let pair: [Unit, Unit] | undefined;
+	for (const a of map.getUnits().filter((u) => u.player.id === human.id))
+		for (const d of map.getUnits().filter((u) => GameRules.isEnemy(a, u)))
+			if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
+	const [attacker, defender] = pair!;
+	defender.strength = 1;
+	touched();
+	const at = defender.getPos();
+	const endTurn = () => {
+		ui.mainMenuButton("endturn");
+		ui.mainMenuButton("endturn"); //the second click confirms
+	};
+	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
+	endTurn();
+	expect([map.currentPlayer, map.turn]).toEqual([human, turn]);
+	await until(() => !game.waitUIAnimation, "the attack animation");
+	expect(map.getUnits()).not.toContain(defender);
+	endTurn();
+	expect(map.currentPlayer).not.toBe(human);
+	const saved = JSON.parse(localStorage.getItem("openpanzer-game-" + MAJOR_VERSION)!) as import("../src/savegame").SaveFile;
+	expect(saved.state.units.filter((u) => u.strength <= 0)).toEqual([]);
+	expect(saved.state.map.hexes[at.row * saved.state.map.cols + at.col].unit).not.toBe(defender.id);
+}, 60_000);
