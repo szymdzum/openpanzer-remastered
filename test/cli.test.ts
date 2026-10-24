@@ -308,3 +308,25 @@ test("Every terrain the map draws has its own character in the legend, bocage no
 	expect(new Set(drawn).size).toBe(terrainNames.length);
 	expect(drawn[terrainType.Bocage]).not.toBe("b");
 }, 60_000);
+
+test("In the classic rules a fighter next to an enemy aircraft over a ground unit can attack the aircraft only, as on the screen (#305)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1 --rules classic");
+	//the Me-109E-3 #22 put at 2,19, next to the Polish infantry #15 at 2,20 with the Polish aircraft #76 over it
+	const save = readGameFile(file), cols = save.state.map.cols, hexes = save.state.map.hexes;
+	const put = (id: number, row: number, col: number) => {
+		const u = save.state.units.find((x) => x.id === id);
+		hexes[u.row * cols + u.col].air = null;
+		hexes[row * cols + col].air = id;
+		Object.assign(u, { row, col });
+	};
+	put(22, 2, 19);
+	put(76, 2, 20);
+	fs.writeFileSync(file, JSON.stringify(save));
+	const listed = await call("targets 22");
+	expect(listed).toMatch(/^#76 [^\n]* @2,20 from 2,19: /);
+	expect(listed).not.toContain("#15 ");
+	expect(await call("attackers 15")).not.toContain("#22 ");
+	expect(await call("check attack 22 15")).toBe("refused: not a target from here");
+	expect(await call("check attack 22 76")).toBe("allowed");
+}, 60_000);

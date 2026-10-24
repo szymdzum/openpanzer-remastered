@@ -1,12 +1,13 @@
 //Attacks as the command-line player previews them (#279), on the known world: the core's estimate (no
 //dice), the support fire it counted, what the attack would do, from where a unit stands or a hex it can
 //move to first, and which units can hit a target this turn
-import { attackCells, canInitiateAttack, supportFireUnits, unitAttackRange } from "../src/core/attack";
+import { attackableUnit, attackCells, canInitiateAttack, supportFireUnits, unitAttackRange } from "../src/core/attack";
 import { combatResult, shouldDefenderRetreat } from "../src/core/combat";
 import { distance } from "../src/core/geometry";
 import { moveRange, retreatPosition } from "../src/core/movement";
 import { check, step } from "../src/core/step";
 import type { MoveCell, Position, UnitState, World } from "../src/core/types";
+import { isAir } from "../src/core/units";
 import { ammoOf, hexIndex, sideOf, unitById } from "../src/core/world";
 import { cell, knownWorld, label } from "./known";
 
@@ -65,17 +66,19 @@ export function attackerLine(w: World, e: AttackerEstimate): string {
 	return `${u ? label(w, u) : "#" + e.attacker} on ` + estimateLine(w, e) + (also.length ? `; also from ${also.join(", ")}` : "");
 }
 
-const unitsOnHex = (w: World, c: Position) => {
-	const h = w.state.map.hexes[hexIndex(w, c.row, c.col)];
-	return [h.unit, h.air].filter((id) => id !== null).map((id) => unitById(w, id));
-};
+//The units of a hex the screen lists that a click there attacks (Hex.getAttackableUnit) in the air
+//mode the person can set: an aircraft selected keeps it on, a ground unit attacks in either. Not every
+//unit of the hex: in the classic rules a fighter next to an enemy aircraft over a ground unit can't
+//hit the ground unit, though the core's check asks only the distance (#305)
+const screenTargets = (w: World, u: UnitState, c: Position) =>
+	(isAir(w, u) ? [true] : [false, true]).map((airMode) => attackableUnit(w, u, hexIndex(w, c.row, c.col), airMode)).filter((t) => t !== null);
 
 const canAttack = (w: World, u: UnitState, t: UnitState) =>
 	canInitiateAttack(w, u, t) && check(w, { type: "attack", unit: u.id, target: t.id }) === null;
 
 //The enemy units u can attack from where it stands in w
 export const targetsOf = (w: World, u: UnitState): UnitState[] =>
-	attackCells(w, u).flatMap((c) => unitsOnHex(w, c)).filter((t) => canAttack(w, u, t));
+	[...new Map(attackCells(w, u).flatMap((c) => screenTargets(w, u, c)).map((t) => [t.id, t])).values()].filter((t) => canAttack(w, u, t));
 
 //Whether t is one of the screen's targets of u where it stands. In the classic rules the core's check of
 //an attack asks only the distance, as the AI's attacks do, so a unit with no air attack would hit an
