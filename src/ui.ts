@@ -407,6 +407,9 @@ function uiUnitSelect(unit: Unit | null) {
 //cells: the shown move range the player clicked in (it can be the disembark hexes or older than the state),
 //without it the move finds its path in the unit's move range
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
+	//Waited for until the move's finish (uiMoveAnimationFinished): the AI's next action, the player's end of
+	//turn (#58)
+	game.waitUIAnimation = true;
 	var mm = unit.unitData().movmethod;
 	if (GameRules.isTrain(unit))
 		mm = movMethod.tracked; //Trains use the tracked move sound
@@ -511,9 +514,13 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number) {
 
 //handle attack performed by attacking unit on the unit it attacks: the attack command, the combat itself is
 //the command's. Null when it can't attack it (a unit isn't on the map)
+//The attack is waited for until its finish (uiAttackAnimationFinished), as a move is
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
-	return resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
+	game.waitUIAnimation = true;
+	const result = resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
 		uiAttackHooks(attackingUnit, enemyUnit)), null);
+	if (result === null) game.waitUIAnimation = false;
+	return result;
 }
 
 //The attack command's hooks: the info on the status bar, the hits animated as the combat goes (their
@@ -638,6 +645,23 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 
 	game.waitUIAnimation = retreating;
 	uiTurnInfo();
+}
+
+//The end turn button's first click: it asks to be clicked again, until its animation ends
+function askEndTurnConfirmation(endTurnButton: HTMLElement) {
+	endTurnButton.innerHTML = "1";
+	if (!uiSettings.shownEndTurnTip)
+		UIBuilder.uiToolTipAtElement(endTurnButton, "Tap again to confirm End Turn", 1);
+	//Added again at every first click, never removed
+	var resetConfirmation = function(this: HTMLElement) {
+		this.removeAttribute("confirmation");
+		endTurnButton.innerHTML = "t";
+		if (!uiSettings.shownEndTurnTip)
+			UIBuilder.uiToolTipAtElement(endTurnButton, "Tap twice to confirm End Turn", 1);
+	};
+	endTurnButton.setAttribute("confirmation", "on");
+	endTurnButton.addEventListener("animationend", resetConfirmation, false);
+	endTurnButton.addEventListener("webkitAnimationEnd", resetConfirmation, false);
 }
 
 //Bouncing text over a map hex
@@ -1761,22 +1785,14 @@ function uiScaleMap(level: number) {
 				break;
 			}
 			case "endturn": {
+				//Not while the player's move or attack plays: its finish takes the units it destroyed off the
+				//map, and the turn's end would save them and hand the next player a map they still stand on (#58)
+				if (game.waitUIAnimation)
+					break;
 				//The first click asks for confirmation until the button animation ends
 				var endTurnButton = $("endturn");
 				if (endTurnButton.getAttribute("confirmation") == null) {
-					endTurnButton.innerHTML = "1";
-					if (!uiSettings.shownEndTurnTip)
-						UIBuilder.uiToolTipAtElement(endTurnButton, "Tap again to confirm End Turn", 1);
-					//Added again at every first click, never removed
-					var resetConfirmation = function(this: HTMLElement) {
-						this.removeAttribute("confirmation");
-						endTurnButton.innerHTML = "t";
-						if (!uiSettings.shownEndTurnTip)
-							UIBuilder.uiToolTipAtElement(endTurnButton, "Tap twice to confirm End Turn", 1);
-					};
-					endTurnButton.setAttribute("confirmation", "on");
-					endTurnButton.addEventListener("animationend", resetConfirmation, false);
-					endTurnButton.addEventListener("webkitAnimationEnd", resetConfirmation, false);
+					askEndTurnConfirmation(endTurnButton);
 				} else {
 					endTurnButton.innerHTML = "t";
 					endTurnButton.removeAttribute("confirmation");
