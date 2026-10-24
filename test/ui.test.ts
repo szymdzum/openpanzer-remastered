@@ -379,3 +379,38 @@ test("An elimination is told to the person as a defeat or a win by its side, by 
 	expect(told[1][0]).not.toBe("DEFEAT");
 	expect(told[1][1]).toContain("You have won this scenario ! " + country(0) + " on Axis side wins by destroying all the enemy units");
 }, 60_000);
+
+//The selected attacker's attack makes its defender surrender: the move hexes shown, which the next move
+//goes along, are made again without the surrendered unit, as after a unit destroyed. The old game
+//refreshed them before the surrender, so they kept the unit's hex out of reach and its zone of control
+//(#89). The harness's surrender drill (harness/ui/ui-attack.js) with the game's objects
+test("After a surrender the attacker's move hexes no longer count the surrendered unit (#89)", async () => {
+	const { game, ui } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+	const { GameRules } = await import("../src/gamerules");
+	const { touched } = await import("../src/context");
+	const { terrainType, uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const free = (row: number, col: number) => GameRules.getAdjacent(row, col).filter((c) => c.row > 0 && c.col > 0
+		&& c.row < map.rows - 1 && c.col < map.cols - 1 && !map.map[c.row][c.col].unit && !map.map[c.row][c.col].airunit
+		&& map.map[c.row][c.col].terrain !== terrainType.Ocean && map.map[c.row][c.col].terrain !== terrainType.River);
+	const atk = map.getUnitById(40), def = map.getUnitById(72);
+	const d = def.getPos(), f = free(d.row, d.col)[0], from = atk.getPos();
+	map.map[from.row][from.col].delUnit(atk);
+	map.map[f.row][f.col].setUnit(atk);
+	def.tempSpotted = true;
+	def.strength = 12; def.entrenchment = 0; atk.strength = 15; atk.experience = 500;
+	for (const c of free(d.row, d.col)) map.map[c.row][c.col].terrain = terrainType.Ocean;
+	touched();
+	map.selectUnit(atk);
+	const { Commands } = await import("../src/commands");
+	const execute = vi.spyOn(Commands, "execute");
+	game.waitUIAnimation = true;
+	expect(ui.uiUnitAttack(atk, def)).toBe(true);
+	await until(() => !game.waitUIAnimation, "the attack");
+	const r = execute.mock.results[0].value as { result: AttackResult };
+	expect([r.result.surrender, def.destroyed, map.currentUnit, atk.hasMoved]).toEqual([true, true, atk, false]);
+	const cells = (list: { row: number; col: number }[]) => list.map((c) => c.row + "," + c.col).sort();
+	expect(cells(map.getCurrentMoveRange())).toContain(d.row + "," + d.col);
+	expect(cells(map.getCurrentMoveRange())).toEqual(cells(GameRules.getMoveRange(map, atk)));
+}, 60_000);

@@ -648,6 +648,12 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 			uiShowAlert(cell.row - 0.2, cell.col - 0.6, "Surrender ", false);
 			R.addAnimation(cell.row, cell.col, "explosion");
 			R.runAnimation(null);
+			//The surrendered unit is off the map only now, after the refresh above: the selected unit's move
+			//hexes, which its next move goes along, made again without it and its zone of control (#89)
+			if (map.currentUnit !== null && !map.currentUnit.hasMoved) {
+				map.setMoveRange(map.currentUnit);
+				renderRange = Math.max(renderRange, getRenderRange(map.currentUnit));
+			}
 		},
 		//A side without units left loses
 		onVictory: uiEliminationVictory
