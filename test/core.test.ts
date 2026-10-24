@@ -712,3 +712,28 @@ test("A ship attacking a submarine defends with its close defense, as a ship a s
 		expect(defense(rules, SUBMARINE, DESTROYER), rules.name).toEqual({ attacker: 5, defender: 3 });
 	}
 });
+
+//The leader a unit wins comes from its class's list, the class leader aside: the original's roll left out
+//the list's last two (infiltration tactics and liberator for the ground classes, fire discipline for
+//the guns, first strike for the fighters), which only a scenario could give (#78). The classic rules
+//keep its roll; in the remaster's every leader of the list can come up, by a single draw as before
+test("In the remaster rules a unit can win any leader of its class's list, the last two included (#78)", async () => {
+	const { newLeader } = await import("../src/core/fight");
+	const { remasterRules } = await import("../src/core/rules");
+	for (const rules of [classicRules, remasterRules]) {
+		const w = handWorld({ rows: 2, cols: 2, units: [] }, undefined, { rules });
+		rules.leaders.forEach((list, uclass) => {
+			if (list.length < 2) return;
+			const rolled = new Set<number>();
+			const rng = { state: 1 };
+			for (let i = 0; i < 400; i++) {
+				const once = { state: rng.state };
+				nextRandom(once);
+				rolled.add(newLeader(w, uclass, rng));
+				expect(rng.state, "one draw").toBe(once.state);
+			}
+			const expected = rules === classicRules ? list.slice(1, -2) : list.slice(1);
+			expect([...rolled].sort((a, b) => a - b), rules.name + " class " + uclass).toEqual([...expected].sort((a, b) => a - b));
+		});
+	}
+});
