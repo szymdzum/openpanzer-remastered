@@ -11,9 +11,14 @@ import { Equipment } from "../src/equipment";
 import { aiDefaultConfig, unitClass } from "../src/prototypes";
 import { smallGameData } from "./smallgame";
 
+//The small game with a free deployment hex for the Soviet side, at 10,9
+function withDeployment(saved = smallGameData()) {
+	saved.data.hexes[10 * saved.state.map.cols + 9].deployment = 1;
+	return saved;
+}
+
 //The AI's purchases on its turn with prestige, under config
-function boughtWith(prestige: number, config = aiDefaultConfig) {
-	const saved = smallGameData();
+function boughtWith(prestige: number, config = aiDefaultConfig, saved = withDeployment()) {
 	saved.state.players[1].prestige = prestige;
 	saved.state.turn.currentPlayer = 1;
 	const w = createWorld(saved, Equipment.equipment);
@@ -62,7 +67,7 @@ test("The AI buys a tank without a transport (#224)", () => {
 //its price range, not yet built), but only for this purchase: the country's lists stay whole, for its
 //later turns and for the player's equipment window
 test("The AI's purchases leave the country's equipment lists as they were (#22)", () => {
-	const saved = smallGameData();
+	const saved = withDeployment();
 	const before = structuredClone(saved.state.equipment.indexes);
 	saved.state.players[1].prestige = aiDefaultConfig.prestigeReserve + 3000;
 	saved.state.turn.currentPlayer = 1;
@@ -74,7 +79,7 @@ test("The AI's purchases leave the country's equipment lists as they were (#22)"
 //The prestige the purchases spent is gone: the AI plans its reinforcements with what is left after
 //them, each as much strength as the prestige still left pays for, up to what the hex gives
 test("The AI budgets its reinforcements with the prestige left after its purchases (#21)", () => {
-	const saved = smallGameData();
+	const saved = withDeployment();
 	for (const u of saved.state.units) if (u.owner === 1) u.strength = 2;
 	saved.state.players[1].prestige = 600;
 	saved.state.turn.currentPlayer = 1;
@@ -95,3 +100,4 @@ test("The AI budgets its reinforcements with the prestige left after its purchas
 		budget -= strength * perStrength;
 	}
 });
+

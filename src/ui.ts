@@ -1256,6 +1256,15 @@ function unitListSorter(coreFirst: boolean) {
 	};
 }
 
+//Why the core refuses to buy a unit that can be bought (cost over 0) and is affordable, "" when it
+//doesn't: the side may have no free deployment hex to put it on (#60)
+function buyRefusal(cost: number, prestige: number, eqid: number, transport: number): string {
+	if (!(cost > 0) || cost > prestige) return "";
+	const refused = Commands.check(game.scenario, { type: "buy", eqid,
+		transport: typeof transport === "undefined" || (transport as number | string) === "" ? -1 : transport });
+	return refused === null ? "" : refused.reason;
+}
+
 //Updates the costs of user selected units in equipment window
 function updateEquipmentCosts() {
 	var userUnitSelected = $<EqUserSelElement>("eqUserSel").userunit; //unit already on map
@@ -1306,7 +1315,8 @@ function updateEquipmentCosts() {
 			buyCost = GameRules.calculateUnitCosts(eqUnitSelected, eqTransportSelected);
 	}
 
-	UIBuilder.showEquipmentCosts(prestige, buyCost, upCost, sellCost);
+	UIBuilder.showEquipmentCosts(prestige, buyCost, upCost, sellCost, buyRefusal(buyCost, prestige, eqUnitSelected,
+		eqTransportSelected));
 }
 
 function updateStatusBarLocation(row: number, col: number) {

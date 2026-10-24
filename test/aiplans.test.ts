@@ -211,6 +211,7 @@ function purchases(groundPurchaseClasses: number[]) {
 	saved.state.scenario.date = "1943-07-01T00:00:00.000Z";
 	saved.state.players[1].prestige = 3000;
 	saved.state.turn.currentPlayer = 1;
+	saved.data.hexes[10 * saved.state.map.cols + 9].deployment = 1; //somewhere to deploy them (#287)
 	const ai = aiController(1, { config: { ...aiDefaultConfig, groundPurchaseClasses } });
 	const w = worldOf(saved);
 	ai.join(w);

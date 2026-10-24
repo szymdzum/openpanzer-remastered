@@ -6,7 +6,7 @@
  */
 
 import type { CommandOf, Refusal } from "../../commands";
-import { terrainType, unitClass } from "../../prototypes";
+import { movMethod, terrainType, unitClass } from "../../prototypes";
 import { sellCost, unitCost, upgradeCost } from "../costs";
 import { changeUnit, emit, place, removeUnit, writePlayer } from "../draft";
 import type { CoreUnit, Draft, CommandHandler, OffMapUnit, World } from "../types";
@@ -76,6 +76,18 @@ function upgradeEntry(d: Draft, player: number, c: CoreUnit, index: number | nul
 	emit(d, { type: "upgraded", unit: "onMap" in c ? c.onMap : null, index, eqid, transport, cost });
 }
 
+//A deployment hex of the current player's side
+function ownDeployment(w: World, hex: number): boolean {
+	const deployment = w.data.hexes[hex].deployment;
+	return deployment >= 0 && playerAt(w, deployment).side === currentPlayer(w).side;
+}
+
+//The hex's air slot free for an air unit, its ground slot for any other
+function freeFor(w: World, hex: number, air: boolean): boolean {
+	const h = w.state.map.hexes[hex];
+	return air ? h.air === null : h.unit === null;
+}
+
 //On a free deployment hex of the player's side (the UI's click, Map.deployPlayerUnit): a ground
 //unit on the ocean embarks on its country's naval transport
 export const deploy: CommandHandler<CommandOf<"deploy">> = {
@@ -84,10 +96,9 @@ export const deploy: CommandHandler<CommandOf<"deploy">> = {
 		if (c === null) return refuse("no such unit");
 		if (!("reserve" in c)) return refuse("already deployed");
 		if (!onMap(w, cmd.to.row, cmd.to.col)) return refuse("off the map");
-		const hex = hexIndex(w, cmd.to.row, cmd.to.col), deployment = w.data.hexes[hex].deployment;
-		if (deployment < 0 || playerAt(w, deployment).side !== currentPlayer(w).side) return refuse("not a deployment hex");
-		const h = w.state.map.hexes[hex];
-		return (isAir(w, asUnit(c.reserve)) ? h.air !== null : h.unit !== null) ? refuse("the hex is taken") : null;
+		const hex = hexIndex(w, cmd.to.row, cmd.to.col);
+		if (!ownDeployment(w, hex)) return refuse("not a deployment hex");
+		return freeFor(w, hex, isAir(w, asUnit(c.reserve))) ? null : refuse("the hex is taken");
 	},
 	run(d, cmd) {
 		const p = currentPlayer(d);
@@ -104,11 +115,15 @@ export const deploy: CommandHandler<CommandOf<"deploy">> = {
 };
 
 //A new core unit, off the map until deployed (Player.buyUnit): outside a campaign it gets the other
-//side's average experience
+//side's average experience. Only while the side has a deployment hex free for it (#60): the original
+//sold units to a side with none, which waited in its reserve for the whole game. The units already in
+//the reserve don't hold a hex, as deploy lets any of them take any free one
 export const buy: CommandHandler<CommandOf<"buy">> = {
 	check(w, cmd) {
 		if (!(cmd.eqid > 0) || !known(w, cmd.eqid) || !known(w, cmd.transport)) return refuse("no such equipment");
-		return unitCost(w, cmd.eqid, cmd.transport) > currentPlayer(w).prestige ? refuse("not enough prestige") : null;
+		if (unitCost(w, cmd.eqid, cmd.transport) > currentPlayer(w).prestige) return refuse("not enough prestige");
+		const air = w.equipment[cmd.eqid].movmethod === movMethod.air;
+		return w.data.hexes.some((_h, hex) => ownDeployment(w, hex) && freeFor(w, hex, air)) ? null : refuse("no free deployment hex");
 	},
 	run(d, cmd) {
 		const p = writePlayer(d, d.state.turn.currentPlayer), e = d.equipment[cmd.eqid];

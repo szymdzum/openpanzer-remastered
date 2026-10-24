@@ -678,6 +678,7 @@ test("The half hexes of the edges: the first row's even columns, a partial last 
 test("A unit bought outside a campaign gets the other side's average experience, none when that side had no unit", () => {
 	const w = handWorld({ rows: 4, cols: 4, units: [] });
 	w.state.players[0].prestige = 10000;
+	w.data.hexes[0].deployment = 0; //somewhere to deploy it (#60)
 	const bought = (exp: number, count: number) => {
 		w.state.scenario.expPerSide = [{ exp: 0, count: 0 }, { exp, count }];
 		const p = played(step(w, { type: "buy", eqid: PZ_IIA, transport: -1 })).world.state.players[0];
