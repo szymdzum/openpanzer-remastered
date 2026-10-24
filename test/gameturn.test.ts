@@ -231,3 +231,32 @@ test("The AI plays its resupplies, reinforcements and mounts within one tick of 
 	game.processTurn();
 	expect(handed).toEqual([actionType.resupply, actionType.reinforce, actionType.mount, actionType.umount, actionType.select]);
 });
+
+//A new game whose first player is the AI: on the screen it plays its first turn as every later one, its
+//purchases, deployment and plan, its moves and attacks handed out to the turn loop (#292: it ended that
+//turn at once, a turn of the scenario lost)
+test("A new game's first player, the AI, plays its first turn on the screen (#292)", async () => {
+	const game = await freshGame();
+	const { Commands } = await import("../src/commands");
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { actionType } = await import("../src/prototypes");
+	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {} });
+	game.ui = stand(game, Commands, []) as unknown as Game["ui"];
+	await startState(game, "drpzop01.xml", [1, 0, 0, 0]);
+	const map = game.scenario.map, first = map.currentPlayer;
+	expect([map.turn, first.id]).toEqual([1, 0]);
+	const handed: number[] = [];
+	const getAction = first.handler.getAction.bind(first.handler);
+	first.handler.getAction = () => {
+		const a = getAction();
+		if (a) handed.push(a.type);
+		return a;
+	};
+	game.uiMessageClicked = true;
+	for (let tick = 0; tick < 500 && map.currentPlayer === first; tick++) {
+		game.waitUIAnimation = false;
+		game.processTurn();
+	}
+	expect(map.currentPlayer).not.toBe(first);
+	expect(handed.filter((t) => t === actionType.move || t === actionType.attack).length).toBeGreaterThan(0);
+});

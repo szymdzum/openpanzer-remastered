@@ -17,9 +17,11 @@
  * The game ends at a victory (a capture of the last objective, or a side with no unit left after an
  * attack), at the turn limit of a side on the screen, or where the old game got stuck (#80).
  *
- * A player only a person plays (human, remote) has no controller here: its turns end at once. In a
- * new game the first player's controller doesn't start its turn: the old game's AI planned nothing
- * then and ended its first turn at once (a game loaded on an AI's turn plans it again, #71).
+ * A player only a person plays (human, remote) has no controller here: its turns end at once. A new
+ * game whose first player is the AI starts that player's turn as on every later one, its purchases,
+ * deployment and plan (the option fresh, Session.first; the old game's AI planned nothing then and ended its first turn
+ * at once, #292). The scripted tutorial's script plays its first turn itself. A game loaded on an AI's
+ * turn plans it again (#71).
  */
 
 import type { Command, Refusal } from "../commands";
@@ -50,6 +52,8 @@ export interface Session {
 	//What the controllers asked of the screen when they joined (the tutorial loaded on its last turn
 	//opens the main menu)
 	joined: ViewEvent[];
+	//The first player's turn start in a new game, when the AI plays it (#292)
+	first: StartedTurn | null;
 	//The world at the last save point (Game.endTurn's save: after the reinforcements, #93)
 	saved: World | null;
 	ended: SessionEnd | null;
@@ -76,21 +80,25 @@ const isProgram = (type: number) => type === playerType.aiLocal || type === play
 
 export interface SessionOptions {
 	loaded?: boolean;	//a game loaded on an AI player's turn, which plans it again (#71)
+	fresh?: boolean;	//a new game, whose first player, when the AI plays it, starts its turn (#292)
 	localSide?: number;	//the sides on this screen, when not the players' types' (Game counts them when the game loads)
 }
 
 //Game.setupPlayers and the rest of a scenario's start: the controllers by the players' types, each
-//joining in the players' order, the side the screen shows
+//joining in the players' order, the side the screen shows; in a new game the AI moving first starts its
+//turn (first), in a loaded one the AI whose turn it is plans it again
 export function startSession(w: World, controllerFor: ControllerFor, options: SessionOptions = {}): Session {
 	const players = w.state.players;
 	const localSide = options.localSide === undefined ? localSideOf(w) : options.localSide;
 	const s: Session = { world: w, localSide, controllerFor, controllers: players.map((): Controller | null => null),
-		joined: [], saved: null, ended: null };
+		joined: [], first: null, saved: null, ended: null };
 	players.forEach((p) => join(s, p.id, p.type));
 	s.world = { ...s.world, spotSide: shownSide(s) };
 	const current = s.world.state.turn.currentPlayer;
 	if (options.loaded && current >= 0 && players[current].type === playerType.aiLocal && s.controllers[current] !== null)
 		s.world = s.controllers[current].plan(s.world);
+	else if (options.fresh && current >= 0 && players[current].type === playerType.aiLocal)
+		s.first = startTurn(s);
 	return s;
 }
 

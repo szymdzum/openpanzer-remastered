@@ -51,25 +51,14 @@ export async function newSave(file: string, humanSides: number[], seed: number, 
 const aiFor = (type: number, player: number) => type === playerType.aiLocal ? aiController(player) : null;
 
 //The game of a save: the world, the session with the AI's controllers, the person's side shown. fresh:
-//a new game, whose first player starts its turn (startFirstTurn); otherwise a game loaded on the AI's
-//turn has it plan again (#71)
+//a new game, whose first player, the AI, starts its turn there as the screen's does (#292); otherwise a
+//game loaded on the AI's turn has it plan again (#71)
 export function open(save: Save, fresh = false): Game {
 	const { equipment } = readEquipment(save.data.equipment || "eqp-adlerkorps", save.countries);
 	const side = save.humanSides[0];
 	const world = createWorld({ data: save.data, state: save.state }, equipment, { spotSide: side, rules: rulesetNamed(save.rules) });
-	const session = startSession(world, aiFor, { loaded: !fresh, localSide: save.humanSides.length > 1 ? 2 : side });
+	const session = startSession(world, aiFor, { loaded: !fresh, fresh, localSide: save.humanSides.length > 1 ? 2 : side });
 	return { save, session, side };
-}
-
-//A new game's first player, when the AI plays it, starts its turn as on every later one: its purchases
-//and deployment, then its plan. The old game's AI ended its first turn at once (session.ts); the arena
-//and the command-line player let it play it whole. The turn start's events
-export function startFirstTurn(s: Session): GameEvent[] {
-	const p = s.world.state.turn.currentPlayer, c = p < 0 ? null : s.controllers[p];
-	if (c === null || s.world.state.players[p].type !== playerType.aiLocal) return [];
-	const played = c.startTurn(s.world);
-	s.world = c.plan(played.world);
-	return played.events;
 }
 
 export function readGameFile(file: string): Save {

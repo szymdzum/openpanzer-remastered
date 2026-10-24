@@ -341,9 +341,10 @@ this screen (Game's getLocalSide, computed once when the game starts, or given),
 controller says the old game got stuck. A controller that hands its player over at its turn start
 is replaced at once by the one the player's new type gets (none for a person); at the join it stays,
 as Game.setupPlayers set the scripted handler after its constructor had handed the player over (it
-hands it over again at its next turn start). Kept: in a new game the first player's AI doesn't start its turn
-(the old game made it without planning: it ends its first turn at once); a game loaded on an AI's
-turn has it plan again (#71). `playTurn(s)` plays a turn to its end.
+hands it over again at its next turn start). In a new game (`fresh`) the first player's AI starts
+its turn as on every later one, its purchases, deployment and plan (`s.first`; the old game made it
+without planning and it ended its first turn at once, #292); a game loaded on an AI's turn has it
+plan again (#71). `playTurn(s)` plays a turn to its end.
 
 A screen plays the same session one piece at a time (#137): `nextOrder(s)` asks the current player's
 controller for its order without playing it (the replay hashes the state there), `play(s, command)`
