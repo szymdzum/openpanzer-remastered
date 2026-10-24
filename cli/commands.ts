@@ -249,9 +249,17 @@ function reportAnswer(c: Call): Answer {
 	return answer(lines.length ? lines : ["nothing to report"]);
 }
 
+//What an allowed action leaves the unit unable to do this turn, said beside "allowed": a unit that moves
+//on its transport can't attack or get off it after the move (the Bzura playtest's turn 3)
+function caveat(w: World, cmd: Command): string {
+	const u = "unit" in cmd ? unitById(w, cmd.unit) : null;
+	if (cmd.type === "mount") return " (once it moves on its transport it can't attack or unmount this turn)";
+	return cmd.type === "move" && u !== null && u.isMounted ? " (on its transport: it can't attack or unmount after this move)" : "";
+}
+
 function checkAnswer(c: Call): Answer {
 	const cmd = commandOf(c.w, c.side, c.x.slice(1), c.flags), refusal = overRefusal(c.front) ?? refusalOf(c.w, c.side, cmd);
-	return refusal === null ? answer(["allowed"], { command: cmd, refusal }) : refusedAnswer(c, cmd, refusal);
+	return refusal === null ? answer(["allowed" + caveat(c.w, cmd)], { command: cmd, refusal }) : refusedAnswer(c, cmd, refusal);
 }
 
 //The commands on a game

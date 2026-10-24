@@ -87,7 +87,7 @@ The program learns what the screen shows a person, no more:
 | `supply` | the units short of ammo, fuel or strength, and what a resupply or a reinforcement gives where they stand, at what cost |
 | `shop [CLASS]`, `reserve` | what can be bought (the purchase screen's list: the country's equipment in service this year) with its transports; the units waiting to deploy and the free deployment hexes (in the remaster's rules, for a side with none, its free cities, airfields and ports away from the enemy, #302) |
 | `report` | the enemy's last turn as the side saw it |
-| `check ACTION` | whether an action is allowed, or the core's reason, without playing it |
+| `check ACTION` | whether an action is allowed, or the core's reason, without playing it; beside "allowed", that a unit moving on its transport can't attack or unmount after the move |
 
 The actions are the core's commands (src/commands.ts): `move`, `attack`, `mount`, `unmount`,
 `resupply`, `reinforce [--over]`, `embark`, `disembark`, `undo`, `buy`, `deploy`, `upgrade`,
