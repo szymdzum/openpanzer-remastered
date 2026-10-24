@@ -12,11 +12,23 @@ import { oldExport } from "./saves";
 
 //The reference's export with the deliberate fixes to the loading since: in a campaign, a player of
 //another country than the campaign's (the AI's) gets the scenario file's prestige per turn, not the
-//difficulty's minimum (#15)
+//difficulty's minimum (#15); a unit whose equipment is in a country file the players don't have is
+//that equipment, not the first one loaded (#286: the reference's eqid is then the key, a string)
 function withFixes(reference: string): string {
 	const state = JSON.parse(reference) as OldExport;
-	if (state.campaign === null) return reference;
-	const filePlayers = setupOf(state.scenario.file, null).scenario.players;
+	const setup = setupOf(state.scenario.file, null);
+	state.scenario.map.map.forEach((row, r) => row.forEach((hex, c) => {
+		for (const u of [hex.unit, hex.airunit]) {
+			if (!u || typeof u.eqid !== "string") continue;
+			const other = [hex.unit, hex.airunit].find((x) => x && x !== u);
+			const filed = setup.scenario.hexes.find((h) => h.row === r && h.col === c).units
+				.find((f) => !other || f.eqid !== other.eqid);
+			const e = setup.equipment[filed.eqid];
+			Object.assign(u, { eqid: filed.eqid, moveLeft: e.movpoints, ammo: e.ammo, fuel: e.fuel });
+		}
+	}));
+	if (state.campaign === null) return JSON.stringify(state);
+	const filePlayers = setup.scenario.players;
 	state.players.forEach((p, i) => {
 		if (p.country === state.campaign.country) return;
 		p.prestigePerTurn = filePlayers[i].prestigePerTurn.slice();
@@ -26,9 +38,16 @@ function withFixes(reference: string): string {
 }
 
 interface OldExport {
-	scenario: { file: string };
+	scenario: { file: string; map: { map: { unit?: OldUnit | null; airunit?: OldUnit | null }[][] } };
 	players: { country: number; prestige: number; prestigePerTurn: number[] }[];
 	campaign: { country: number } | null;
+}
+
+interface OldUnit {
+	eqid: number | string;
+	moveLeft: number;
+	ammo: number;
+	fuel: number;
 }
 
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one

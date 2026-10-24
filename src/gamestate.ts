@@ -18,6 +18,7 @@ import { isChromeApp } from "./dom";
 import { Scenario } from "./scenario";
 import { Campaign } from "./campaign";
 import { coreCountries } from "./core/campaign";
+import { stateEquipment } from "./core/newgame";
 import type { Game } from "./game";
 import { game } from "./session";
 import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./savegame";
@@ -275,11 +276,15 @@ export class GameState {
 			Equipment.addPlayersEquipment(players, onEquipmentLoaded.bind(null, read, onDone));
 		}
 
-		//Called once for each equipment file, the game is rebuilt after the last one
+		//Called once for each equipment file, the game is rebuilt after the last one, and after the files
+		//of the units' equipment the countries don't have (#286)
 		function onEquipmentLoaded(read: ReadSave, onDone: () => void) {
 			if (--Equipment.equipmentToLoad)
 				return;
+			Equipment.addUnitsEquipment(stateEquipment(read.save.state), () => rebuild(read, onDone));
+		}
 
+		function rebuild(read: ReadSave, onDone: () => void) {
 			Game.scenario = scenarioFromSave(read);
 
 			//Restore campaign state: campaigns are found by file, the id is the fallback

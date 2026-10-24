@@ -7,7 +7,7 @@ import type { Command, Refusal } from "../src/commands";
 import { aiController } from "../src/core/ai";
 import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
-import { equipmentCountries, newGame } from "../src/core/newgame";
+import { equipmentCountries, newGame, stateEquipment } from "../src/core/newgame";
 import { type Advance, advance, endTurn, play, playOn, type Session, type SessionEnd, startSession } from "../src/core/session";
 import type { Outcome } from "../src/core/turn";
 import { rulesetNamed } from "../src/core/rules";
@@ -55,7 +55,7 @@ const aiFor = (type: number, player: number) => type === playerType.aiLocal ? ai
 //a new game, whose first player, the AI, starts its turn there as the screen's does (#292); otherwise a
 //game loaded on the AI's turn has it plan again (#71)
 export function open(save: Save, fresh = false): Game {
-	const { equipment } = readEquipment(save.data.equipment || "eqp-adlerkorps", save.countries);
+	const { equipment } = readEquipment(save.data.equipment || "eqp-adlerkorps", save.countries, stateEquipment(save.state));
 	const side = save.humanSides[0];
 	const world = createWorld({ data: save.data, state: save.state }, equipment, { spotSide: side, rules: rulesetNamed(save.rules) });
 	const session = startSession(world, aiFor, { loaded: !fresh, fresh, localSide: save.humanSides.length > 1 ? 2 : side });

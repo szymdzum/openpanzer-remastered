@@ -46,7 +46,8 @@ export interface EquipmentModule {
 	resetEquipment(): void;
 	addPlayersEquipment(players: EquipmentPlayerCountries[], callback: () => void): void;
 	addCountryEquipment(country: number, callback: () => void): void;
-	parseCountryEquipment(country: number, e: EquipmentCountryFile): boolean;
+	addUnitsEquipment(eqids: number[], callback: () => void): void;
+	parseCountryEquipment(country: number, e: EquipmentCountryFile, lists?: boolean): boolean;
 	getCountryEquipmentByClass(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean): number[];
 	isPurchasable(eqid: number): boolean;
 }
@@ -115,8 +116,32 @@ Equipment.addCountryEquipment = function(country: number, callback: () => void) 
 	loadEquipment(country + 1, callback); //TODO fix indexes
 }
 
-Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile) {
-	Equipment.equipmentIndexes[country] = e.indexes;
+//Loads the country files of the set that have the equipment ids given not loaded yet, for the units alone
+//(#286): a scenario's units aren't all of its players' countries', and a unit whose equipment wasn't
+//loaded became the first one loaded (a Light Cruiser in eqp-pacific). Their lists by unit class aren't
+//the game's: what can be bought stays the players' countries'. The other files load and are dropped.
+//callback is called once, after the last file; at once when every id is loaded
+Equipment.addUnitsEquipment = function(eqids: number[], callback: () => void) {
+	const missing = eqids.filter((id) => typeof Equipment.equipment[id] === "undefined");
+	const files: number[] = [];
+	for (let file = 0; file <= Equipment.countryNames[Equipment.name].length; file++)
+		if (typeof Equipment.equipmentIndexes[file] === "undefined") files.push(file);
+	if (!missing.length || !files.length)
+		return callback();
+	let toLoad = files.length;
+	for (const file of files)
+		requestEquipment(file, function(e: EquipmentCountryFile | null) {
+			if (e !== null && missing.some((id) => e.units.hasOwnProperty(id)))
+				Equipment.parseCountryEquipment(file, e, false);
+			if (--toLoad === 0)
+				callback();
+		});
+}
+
+//lists: false for a file loaded for its units alone (addUnitsEquipment)
+Equipment.parseCountryEquipment = function(country: number, e: EquipmentCountryFile, lists = true) {
+	if (lists)
+		Equipment.equipmentIndexes[country] = e.indexes;
 	for (const u in e.units) {
 		//TODO Without this defined the retained size of each object is much bigger
 		//See: https://code.google.com/p/v8/issues/detail?id=2547
@@ -173,15 +198,21 @@ Equipment.isPurchasable = function(eqid: number) {
 //Loads a country equipment file from the current equipment set, callback is called after
 //the request finished, also when it failed
 function loadEquipment(country: number, callback: () => void): void {
+	requestEquipment(country, function(e: EquipmentCountryFile | null) {
+		if (e !== null)
+			Equipment.parseCountryEquipment(country, e);
+		callback();
+	});
+}
+
+//Requests a country equipment file of the current equipment set: onDone gets it, null when it failed
+function requestEquipment(country: number, onDone: (e: EquipmentCountryFile | null) => void): void {
 	const jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
 	const req = new XMLHttpRequest();
 
 	req.onload = function() {
-		if (req.readyState === 4) {
-			if (req.status === 200 || req.status === 0)
-				Equipment.parseCountryEquipment(country, JSON.parse(req.responseText));
-			callback();
-		}
+		if (req.readyState === 4)
+			onDone(req.status === 200 || req.status === 0 ? JSON.parse(req.responseText) as EquipmentCountryFile : null);
 	}
 	req.open("GET", jsonFile, true);
 	req.send(null);
