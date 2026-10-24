@@ -42,6 +42,7 @@ export const classicRules: Ruleset = {
 	combat: classicCombat,
 	airAttacksNextHex: false,
 	checkTargets: false,
+	deployOnOwnTowns: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -54,6 +55,8 @@ export const remasterRules: Ruleset = {
 	//core refuses an attack the screen doesn't list (#285)
 	airAttacksNextHex: true,
 	checkTargets: true,
+	//A side with no deployment hex deploys what it buys on its own cities, airfields and ports (#302)
+	deployOnOwnTowns: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

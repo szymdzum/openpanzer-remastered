@@ -4,11 +4,12 @@
 import { expect, test, vi } from "vitest";
 import { readFixture, restoreState } from "./contracts";
 
-test("The remaster's rules are the classic ones but for the AI's play and who attacks whom, under their own name (#53, #235, #285)", async () => {
+test("The remaster's rules are the classic ones but for the AI's play and who attacks whom and where a side deploys, under their own name (#53, #235, #285, #302)", async () => {
 	const { classicRules, remasterRules, rulesetNamed } = await import("../src/core/rules");
 	expect(remasterRules.name).toBe("remaster");
-	expect({ ...remasterRules, name: "classic", ai: classicRules.ai, airAttacksNextHex: false, checkTargets: false }).toEqual(classicRules);
-	expect([remasterRules.airAttacksNextHex, remasterRules.checkTargets]).toEqual([true, true]);
+	expect({ ...remasterRules, name: "classic", ai: classicRules.ai, airAttacksNextHex: false, checkTargets: false,
+		deployOnOwnTowns: false }).toEqual(classicRules);
+	expect([remasterRules.airAttacksNextHex, remasterRules.checkTargets, remasterRules.deployOnOwnTowns]).toEqual([true, true, true]);
 	expect(remasterRules.ai.config).toBe(classicRules.ai.config);
 	expect([rulesetNamed("remaster"), rulesetNamed("classic"), rulesetNamed(undefined), rulesetNamed("pg2")])
 		.toEqual([remasterRules, classicRules, classicRules, classicRules]);

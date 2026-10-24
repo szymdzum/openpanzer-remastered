@@ -160,6 +160,11 @@ still reinforce.
 - Prestige buys and upgrades units and pays for reinforcements. It comes from captured flags
   (50), objectives (150), the scenario's turn gains and the scenario outcome.
 - Unit cost is the PG2 equipment cost x 12 (`CURRENCY_MULTIPLIER`), plus its transport.
+- A bought unit waits in the reserve and deploys on a free deployment hex of its side's, which the
+  scenario sets. A purchase is refused while the side has no free one for it (#60): 185 sides of the
+  376 scenarios have none. The remaster's rules (#302): a side with no deployment hex deploys a ground
+  unit on a city it owns, an aircraft on an airfield, a ship on a port, with no enemy unit it sees on
+  it or next to it, for a person and the AI alike; it can buy while one is free for the unit.
 - Victory: hold all the side's victory hexes (gold flags) before the turn limit. The sooner,
   the better: brilliant, victory or tactical, set per scenario. A campaign branches on the
   outcome and a brilliant victory can give a prototype unit (at least 200 prestige worth).

@@ -26,6 +26,24 @@ import type { GameMap, Hex, UnitImagesList } from "./map";
 import { UIBuilder } from "./uibuilder";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
+import { engineContext } from "./context";
+import { deploymentHexes } from "./core/deployment";
+
+//The hexes the current player deploys on in deploy mode, by index (row * cols + col): in the remaster's
+//rules a side with no deployment hex deploys on its own towns (#302). Null out of deploy mode, and in
+//the classic rules, where the screen marks the hexes the scenario made its side's (Hex.isDeployment)
+export function remasterDeployHexes(): Set<number> | null {
+	if (!uiSettings.deployMode || game.rules !== "remaster") return null;
+	const w = engineContext.world();
+	return new Set(deploymentHexes(w, w.state.players[w.state.turn.currentPlayer].side));
+}
+
+//Whether the current player deploys on the hex at row, col (remaster: remasterDeployHexes)
+export function deploysOn(map: GameMap, row: number, col: number, remaster: Set<number> | null): boolean {
+	if (remaster !== null) return remaster.has(row * map.cols + col);
+	const hex = map.map[row][col];
+	return hex.isDeployment > -1 && map.getPlayer(hex.isDeployment).side == map.currentPlayer.side;
+}
 
 //What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
 export interface MoveAnimationCBData {
@@ -205,6 +223,7 @@ export class Render {
 			var epos = cellToScreen(clearZone.erow, clearZone.ecol, false);
 
 			c.clearRect(spos.x, spos.y, epos.x - spos.x, epos.y - spos.y);
+			var deployAt = remasterDeployHexes();
 
 			for (var row = renderZone.srow; row < renderZone.erow; row++) {
 				//we space the hexagons on each line next column being on the row below
@@ -225,8 +244,7 @@ export class Render {
 					}
 
 					//Show deployment hexes of the current player side on deploy mode
-					if (uiSettings.deployMode && hex.isDeployment > -1
-						&& map.getPlayer(hex.isDeployment).side == map.currentPlayer.side)
+					if (uiSettings.deployMode && deploysOn(map, row, col, deployAt))
 						drawHex(c, x0, y0, hexstyle.deploy);
 
 					//Strategic map: only flags, of the units and of the victory hexes

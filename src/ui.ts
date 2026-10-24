@@ -31,7 +31,7 @@ import { attackAnimationByClass } from "./animation";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { Player, ReinforceResults } from "./map";
-import { type MoveAnimationCBData, Render } from "./render";
+import { deploysOn, type MoveAnimationCBData, remasterDeployHexes, Render } from "./render";
 import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
@@ -216,8 +216,7 @@ export function UI(this: UI, game: Game) {
 						} else
 							selected = handleUnitSelect(row, col);
 		} else { //No unit on clicked hex
-			if (uiSettings.deployMode && hex.isDeployment > -1
-					&& map.getPlayer(hex.isDeployment).side == map.currentPlayer.side)
+			if (uiSettings.deployMode && deploysOn(map, row, col, remasterDeployHexes()))
 				handleUnitDeployment(row, col); //Allow deployment on deployment hexes if on same side
 			else
 				//move to an empty allowed hex, currentUnit is checked for null after it's used

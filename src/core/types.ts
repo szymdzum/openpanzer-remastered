@@ -72,6 +72,10 @@ export interface Ruleset {
 	//an attack on, as the screen lists them (#285): false in the classic rules, where it asks only the
 	//distance, as the original AI's attacks did
 	checkTargets: boolean;
+	//A side the scenario gave no deployment hex deploys a unit it bought on a city it owns (an aircraft on
+	//an airfield, a ship on a port) with no enemy it sees on it or next to it (deployment.ts, #302): false
+	//in the classic rules, where it can't buy (#60)
+	deployOnOwnTowns: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }
