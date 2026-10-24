@@ -90,6 +90,14 @@ export function attackerSide(w: World): number {
 	return n[0] > n[1] ? 0 : 1;
 }
 
+//Whether side wins by holding every objective after its capture. In the remaster rules only a side that had
+//objectives to take at the start (#91: the original made a defender that had none win by retaking the one it
+//had lost); with the start unknown (a save from before it was kept, #256) any side, as in the classic rules
+export function winsByCapture(w: World, side: number): boolean {
+	const n = w.data.startObjectives;
+	return !w.rules.captureNeedsObjectives || n === null || n[side] > 0;
+}
+
 //Whether the turn limit side just reached ends the game. In the remaster rules once both sides have played
 //their last turn, whichever side plays on the screen: the attacker plays all its turns (#256). In the classic
 //rules at the last turn of a side that plays on the screen (Game's local side, 2 for both), as the old game

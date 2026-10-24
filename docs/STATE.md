@@ -144,7 +144,7 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 - **`startObjectives`** (#256): how many objectives each side had to take at the scenario's start,
   `[side 0, side 1]`, set by `newGame` once the hexes are loaded. The side with more is the attacker
   (src/core/turn.ts `attackerSide`): in the remaster rules it loses at the turn limit unless it took
-  them all. The lists of `objectives` can't tell it later, they change with every capture. It is
+  them all, and a side that had none wins only by holding out, not by capture (#91). The lists of `objectives` can't tell it later, they change with every capture. It is
   static data, not state: it doesn't change during a scenario, a step never writes it, and the state
   the contracts and the harness hash stays the same. Null in a save from before it (version 2 and
   older, and the format before): such a game has no attacker, and the turn limit goes to the side
