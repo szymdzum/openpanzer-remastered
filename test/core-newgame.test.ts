@@ -69,3 +69,14 @@ test("A unit whose equipment is in a country file the scenario's players don't l
 	await startState(game, "pc1indi.xml");
 	expect(eqids(game.scenario.map.getUnits())).toEqual(eqids(state.units));
 }, 60_000);
+
+//Panzer-Verbaende Ostpreussen (drpzop01.xml) is built on SSI's map of PG2's Ciechanow scenario (map_12.png,
+//ciechan.xml) and keeps its town names hex for hex (#268: it called Ciechanow "Niedzborz" and Janow "Janon")
+test("Panzer-Verbaende Ostpreussen names its towns as the Ciechanow map it is built on does (#268)", () => {
+	const names = (file: string) => new Map(setupOf(file, null).scenario.hexes.filter((h) => h.name)
+		.map((h) => [h.row + "," + h.col, h.name]));
+	const ssi = names("ciechan.xml"), ours = names("drpzop01.xml");
+	const different = [...ours].filter(([at, name]) => ssi.has(at) && ssi.get(at) !== name).map(([at, name]) => `${at} ${name}`);
+	expect(different).toEqual([]);
+	expect(ours.get("28,23")).toBe("Ciechanow");
+});

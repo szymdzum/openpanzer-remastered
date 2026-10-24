@@ -13,10 +13,13 @@ import { oldExport } from "./saves";
 //The reference's export with the deliberate fixes to the loading since: in a campaign, a player of
 //another country than the campaign's (the AI's) gets the scenario file's prestige per turn, not the
 //difficulty's minimum (#15); a unit whose equipment is in a country file the players don't have is
-//that equipment, not the first one loaded (#286: the reference's eqid is then the key, a string)
+//that equipment, not the first one loaded (#286: the reference's eqid is then the key, a string); a hex's
+//name is the file's (#268 corrected town names of drpzop01.xml)
 function withFixes(reference: string): string {
 	const state = JSON.parse(reference) as OldExport;
 	const setup = setupOf(state.scenario.file, null);
+	for (const h of setup.scenario.hexes)
+		if (h.name !== null) state.scenario.map.map[h.row][h.col].name = h.name;
 	state.scenario.map.map.forEach((row, r) => row.forEach((hex, c) => {
 		for (const u of [hex.unit, hex.airunit]) {
 			if (!u || typeof u.eqid !== "string") continue;
@@ -38,7 +41,7 @@ function withFixes(reference: string): string {
 }
 
 interface OldExport {
-	scenario: { file: string; map: { map: { unit?: OldUnit | null; airunit?: OldUnit | null }[][] } };
+	scenario: { file: string; map: { map: { name: string; unit?: OldUnit | null; airunit?: OldUnit | null }[][] } };
 	players: { country: number; prestige: number; prestigePerTurn: number[] }[];
 	campaign: { country: number } | null;
 }
