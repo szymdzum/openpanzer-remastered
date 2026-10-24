@@ -109,7 +109,7 @@ UICombatLog.buildTurnInfo = function(div: HTMLElement) {
 		+ " Turn " + mapObj.turn + " of " + mapObj.maxTurns + "</span>";
 	if (game.campaign !== null)
 		html += "<span class='smallButtonMenu combatLogInfoButton' style='left: 15px' onclick=\"(function() { makeHidden('combatLog'); UIBuilder.showDossier(true, false); })();\">@</span><br>";
-	html += "<span class='smallButtonMenu combatLogInfoButton' style='right: 15px; font-size: 16px'onclick=\"(function(){ UICombatLog.toggleCombatLog(); UIBuilder.message(game.scenario.name, game.scenario.getDescription());})();\">g</span><hr/><span style='color: #f8e064;text-align: center;font-family: Arial;font-size: 14px;font-weight: normal;'>";
+	html += "<span class='smallButtonMenu combatLogInfoButton' style='right: 15px; font-size: 16px'>g</span><hr/><span style='color: #f8e064;text-align: center;font-family: Arial;font-size: 14px;font-weight: normal;'>";
 	html += "<i>" + game.scenario.name + "</i>, " + game.scenario.date.toDateString() + "<br/> ";
 	//The stray </b> is in the bundle, kept
 	html += logNumber(mapObj.sidesVictoryHexes[player.side].length) + "</b> objectives left to conquer, in ";
@@ -128,6 +128,20 @@ UICombatLog.buildTurnInfo = function(div: HTMLElement) {
 		+ "</span> " + groundConditionNames[game.scenario.ground] + " ground.";
 	html += "</span>";
 	header.innerHTML = html;
+	var infoButtons = header.querySelectorAll<HTMLElement>(".combatLogInfoButton");
+	infoButtons[infoButtons.length - 1].onclick = showScenarioInfo;
+}
+
+//The scenario description from the log's info button. The message box is drawn under the log, so
+//the log steps aside while it shows and comes back as it was when it is closed (the bundle closed
+//the log for good, #24)
+function showScenarioInfo() {
+	makeHidden("combatLog");
+	UIBuilder.message(game.scenario.name, game.scenario.getDescription(), function() {
+		makeHidden("ui-message");
+		game.uiMessageClicked = true;
+		makeVisible("combatLog");
+	});
 }
 
 //One line per unit of the spotting side that fought this turn, core units first.
