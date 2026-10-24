@@ -24,8 +24,9 @@ with the seed (the game stream) and the seed + 7919 (the AI's stream), every pla
 and played on the core's session (src/core/session.ts) to the turn limit or a victory. Two things
 differ from a game on the screen:
 
-- The first player plays its first turn. In a new game the old game's AI ended its first turn at
-  once (session.ts), which costs an attacker a turn the arena doesn't want to measure.
+- The first player plays its first turn, its turn start (purchases, deployment) included
+  (cli/game.ts startFirstTurn). In a new game the old game's AI ended its first turn at once
+  (session.ts), which costs an attacker a turn the arena doesn't want to measure.
 - No side plays on the screen, so the turn limit ends no one's game early: every player plays its
   last turn, then the side holding more objectives wins, as the end screen has it since #231. A
   tie is a draw.
@@ -64,44 +65,49 @@ It sees what its side sees, and asks the core (`check`) before every order, so n
 ever refused: the arena checks that. It has no plan beyond the order at hand: no sense of time, no
 withdrawal, no reserve.
 
-## Baseline, 23 October 2026
+## Baseline, 24 October 2026
 
 Panzer-Verbaende Ostpreussen (drpzop01.xml): Germany (axis) attacks, Poland (allies) defends. Of
 the 7 objectives Germany holds 2 at the start and has 5 to take; Poland has Germany's 2 to take.
-20 seeds a matchup, main at fa3d3ff (with #237's and #214's fixes).
+20 seeds a matchup, on main after #281 with the first player's turn start (#279's review).
 
 | side (player) | wins | first objective, turn (games) | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
 |---|---|---|---|---|---|---|---|---|
 | **AI vs AI** | | | | | | | | |
-| Germany (AI) | 6/20 | 9.4 (17/20) | 1.4 | 3.0 | 15.2 | 19.9 | 11.3 | 26.6 |
-| Poland (AI) | 14/20 | 14.5 (8/20) | 0.4 | 4.0 | 19.9 | 15.2 | 49.6 | 11.4 |
+| Germany (AI) | 12/20 | 9.3 (20/20) | 2.1 | 3.6 | 13.4 | 23.9 | 6.4 | 33.1 |
+| Poland (AI) | 8/20 | 15.1 (8/20) | 0.5 | 3.4 | 23.9 | 13.4 | 53.2 | 12.0 |
 | **general vs AI** | | | | | | | | |
-| Germany (general) | 7/20 | 4.8 (20/20) | 1.9 | 2.9 | 10.6 | 24.1 | 5.6 | 0 |
-| Poland (AI) | 13/20 | 10.1 (13/20) | 1.0 | 4.1 | 24.1 | 10.6 | 24.1 | 7.5 |
+| Germany (general) | 12/20 | 4.5 (19/20) | 2.0 | 3.5 | 7.2 | 34.6 | 3.5 | 0 |
+| Poland (AI) | 8/20 | 10.9 (8/20) | 0.6 | 3.5 | 34.6 | 7.2 | 57.8 | 8.5 |
 | **AI vs general** | | | | | | | | |
-| Germany (AI) | 14/20 | 8.6 (20/20) | 2.8 | 4.0 | 14.2 | 20.8 | 5.1 | 25.7 |
-| Poland (general) | 6/20 | 14.9 (11/20) | 0.8 | 3.0 | 20.8 | 14.2 | 26.0 | 0 |
+| Germany (AI) | 15/20 | 8.7 (20/20) | 3.0 | 4.2 | 18.8 | 22.1 | 6.1 | 34.5 |
+| Poland (general) | 5/20 | 14.7 (14/20) | 0.9 | 2.9 | 22.1 | 18.8 | 24.5 | 0 |
 | **general vs general** | | | | | | | | |
-| Germany (general) | 7/20 | 7.4 (19/20) | 2.1 | 3.2 | 10.8 | 23.1 | 5.0 | 0 |
-| Poland (general) | 13/20 | 12.8 (13/20) | 0.9 | 3.8 | 23.1 | 10.8 | 24.4 | 0 |
+| Germany (general) | 8/20 | 5.1 (17/20) | 1.9 | 3.2 | 8.5 | 27.6 | 4.6 | 0 |
+| Poland (general) | 12/20 | 12.5 (11/20) | 0.7 | 3.8 | 27.6 | 8.5 | 42.5 | 0 |
 
 Every game went to the turn limit; no side took every objective or wiped the other out. Germany
-wins at the turn limit by holding 4 of the 7 objectives: its own 2 and 2 of Poland's 5.
+wins at the turn limit by holding 4 of the 7 objectives: its own 2 and 2 of Poland's 5 (#256).
+
+Against the 23 October baseline (main at fa3d3ff, 20 seeds), Germany wins far more often: the AI's
+Germany 12 of 20 against the AI's Poland (6 before), the general's 12 (7 before), losing fewer units
+for each objective (6.4 against 11.3 for the AI). Two things changed together and these runs don't
+separate them: Germany's AI now spends its 3056 starting prestige on its first turn (above its reserve
+of 1000) instead of starting its second with it, and the fixes merged since (#87: the estimate no
+longer counts the return fire on support units as kills, which the AI's attack scores read; #21: its
+reinforcements are budgeted after its purchases).
 
 What it says:
 
-- **The AI is a slow attacker,** as the playtest found (weak-attacker.md): with Germany it takes its
-  first objective on turn 9 of 17 and 1.4 objectives a game, losing 11 units for each. Against the
-  AI's Poland it wins 6 of 20. The general, with the same army and the same purchases, takes its
-  first objective on turn 5, takes more (1.9), destroys more (24 against 20) and loses fewer (11
-  against 15), and wins 7 of 20: it gets there faster and cheaper, but it doesn't hold more at the
-  end, because it has no reserve and doesn't concentrate, so Poland retakes what it can't garrison.
-  A better AI attacker should bring the first objective forward and cut the losses per objective.
-- **The AI defends better than the general does.** As Poland the AI wins 14 of 20 against the AI's
-  Germany and 13 of 20 against the general's; the general's Poland wins only 6 of 20 against the
-  AI's Germany and loses 21 units. The general moves its units out to attack and doesn't fall back;
-  the AI keeps its units entrenched in place, which is what a defender needs.
-- **The AI wastes orders:** about 26 a game as Germany and 11 as Poland are refused: a turn planned
+- **The AI is still a slow attacker,** as the playtest found (weak-attacker.md): with Germany it
+  takes its first objective on turn 9 of 17. The general, with the same army and the same purchases,
+  takes its first on turn 4.5 and destroys 35 Polish units for 7 of its own, but it doesn't take or
+  hold more at the end (2.0 against 2.1 taken): it has no reserve and doesn't concentrate. A better AI
+  attacker should bring the first objective forward and cut the losses per objective.
+- **The AI defends better than the general does:** the general's Poland wins 5 of 20 against the AI's
+  Germany and loses 22 units; the AI's Poland holds out in 8 of 20 against either German player. The
+  general moves its units out to attack and doesn't fall back; the AI keeps its units entrenched.
+- **The AI wastes orders:** about 33 a game as Germany and 12 as Poland are refused: a turn planned
   at its start that the turn's own fighting has overtaken (#94).
 
 The general is a first version: a measuring stick for tempo and losses, not yet a strong player.

@@ -77,10 +77,18 @@ function movedTo(kw: World, u: UnitState, to: Position): { world: World } | { re
 	return moved.row === to.row && moved.col === to.col ? { world: r.world } : { refusal: `the move stops at ${cell(moved)}` };
 }
 
-//What a unit of side's can attack, from where it stands or from a hex it moves to first
+//The hexes u can move to, as the screen shows its range: computed on the game, where a zone of control
+//on a hex the side spots stops a move whoever casts it (reference/src/gamerules.js getMoveRange)
+const reachable = (w: World, u: UnitState) => moveRange(w, unitById(w, u.id)).filter((c) => c.canMove);
+const inReach = (w: World, u: UnitState, p: Position) =>
+	(u.row === p.row && u.col === p.col) || reachable(w, u).some((c) => c.row === p.row && c.col === p.col);
+
+//What a unit of side's can attack, from where it stands or from a hex in its move range it moves to
+//first (the estimate on the known world)
 export function targets(w: World, side: number, id: number, from?: Position): { estimates: Estimate[]; note: string } {
 	const kw = knownWorld(w, side), u = unitById(kw, id);
 	if (!u || sideOf(kw, u) !== side) return { estimates: [], note: `#${id} is not your unit` };
+	if (from && !inReach(w, u, from)) return { estimates: [], note: `can't get to ${cell(from)}: not in its move range` };
 	const at = movedTo(kw, u, from || u);
 	if ("refusal" in at) return { estimates: [], note: `can't get to ${cell(from)}: ${at.refusal}` };
 	const moved = unitById(at.world, id);
@@ -98,24 +106,24 @@ function estimateFrom(kw: World, u: UnitState, t: UnitState, c: MoveCell): Estim
 const worth = (e: Estimate) => e.kills - e.losses;
 const better = (a: Estimate | null, b: Estimate | null) => b === null || (a !== null && worth(a) > worth(b)) ? a : b;
 
-//The best hex u can move to and attack t from this turn
-function bestAfterMove(kw: World, u: UnitState, t: UnitState): Estimate | null {
+//The best hex of its move range u can move to and attack t from this turn
+function bestAfterMove(w: World, kw: World, u: UnitState, t: UnitState): Estimate | null {
 	if (u.hasMoved) return null;
 	const reach = unitAttackRange(kw, u);
-	return moveRange(kw, u).filter((c) => c.canMove && distance(c.row, c.col, t.row, t.col) <= reach)
+	return reachable(w, u).filter((c) => distance(c.row, c.col, t.row, t.col) <= reach)
 		.reduce((best: Estimate | null, c) => better(estimateFrom(kw, u, t, c), best), null);
 }
 
 const ready = (kw: World, side: number, u: UnitState) => sideOf(kw, u) === side && !u.hasFired && ammoOf(u) > 0;
-const attackOf = (kw: World, u: UnitState, t: UnitState) =>
-	check(kw, { type: "attack", unit: u.id, target: t.id }) === null ? estimate(kw, u, t) : bestAfterMove(kw, u, t);
+const attackOf = (w: World, kw: World, u: UnitState, t: UnitState) =>
+	check(kw, { type: "attack", unit: u.id, target: t.id }) === null ? estimate(kw, u, t) : bestAfterMove(w, kw, u, t);
 
 //Which of side's units can attack a target this turn: from where they stand, or after a move (the hex
 //with the best estimate), the best first
 export function attackers(w: World, side: number, targetId: number): { estimates: Estimate[]; note: string } {
 	const kw = knownWorld(w, side), t = unitById(kw, targetId);
 	if (!t || sideOf(kw, t) === side) return { estimates: [], note: `#${targetId} is not an enemy unit you see` };
-	const estimates = kw.state.units.filter((u) => ready(kw, side, u)).map((u) => attackOf(kw, u, t)).filter((e) => e !== null)
+	const estimates = kw.state.units.filter((u) => ready(kw, side, u)).map((u) => attackOf(w, kw, u, t)).filter((e) => e !== null)
 		.sort((a, b) => worth(b) - worth(a));
 	return { estimates, note: estimates.length ? "" : "none of your units can reach it this turn" };
 }

@@ -161,12 +161,25 @@ function unitAnswer(c: Call): Answer {
 	return answer([unitLine(kw, u, mine), statsLine(c.w.equipment[u.eqid]), ...(mine ? attackLines(c, kw, u.id) : [])]);
 }
 
+//An attack on an enemy the side doesn't see is refused as on a unit that doesn't exist: the screen can't
+//click a hidden unit, but the core's check doesn't ask (a program could name it by its id)
+function unseenTarget(w: World, side: number, cmd: Command): Refusal | null {
+	if (cmd.type !== "attack") return null;
+	const t = unitById(w, cmd.target);
+	return t === null || !seen(w, side, t) ? { reason: "no such target" } : null;
+}
+
+//Why a command is refused, as the side may know it: the target it sees, then the core's check (the
+//screen's own: a move's range is the one the screen shows)
+const refusalOf = (w: World, side: number, cmd: Command) => unseenTarget(w, side, cmd) ?? check(w, cmd);
+
 //What a command or a turn did: its events as text, or what changed when they aren't known
 const told = (before: World, after: World, side: number, events: GameEvent[] | null) =>
 	events === null ? changes(before, after, side) : describe(after, before, side, events);
 
 async function actAnswer(c: Call): Promise<Answer> {
-	const cmd = commandOf(c.w, c.side, c.x, c.flags);
+	const cmd = commandOf(c.w, c.side, c.x, c.flags), hidden = unseenTarget(c.w, c.side, cmd);
+	if (hidden) return answer([`refused: ${hidden.reason}`], { command: cmd, refusal: hidden });
 	const r = await c.front.act(cmd);
 	if (r.refusal) return answer([`refused: ${r.refusal.reason}`], { command: cmd, refusal: r.refusal });
 	const after = c.front.world(), u = "unit" in cmd ? unitById(after, cmd.unit) : null;
@@ -213,7 +226,7 @@ function reportAnswer(c: Call): Answer {
 }
 
 function checkAnswer(c: Call): Answer {
-	const cmd = commandOf(c.w, c.side, c.x.slice(1), c.flags), refusal = check(c.w, cmd);
+	const cmd = commandOf(c.w, c.side, c.x.slice(1), c.flags), refusal = refusalOf(c.w, c.side, cmd);
 	return answer([refusal === null ? "allowed" : `refused: ${refusal.reason}`], { command: cmd, refusal });
 }
 
