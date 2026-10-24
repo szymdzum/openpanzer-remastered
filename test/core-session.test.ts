@@ -67,16 +67,23 @@ test("A controller stuck where the old game froze ends the game for good (#80)",
 	expect([s.ended, advance(s)]).toEqual([{ kind: "stuck", reason: "no unit" }, { kind: "ended" }]);
 });
 
-test("A player handed over to the AI gets a new one at once, which ends that turn having planned nothing (#81)", () => {
-	let handed: Controller & { joined: number } = null;
+//The tutorial hands its allies over to the AI when their turn 6 starts: the AI plays that turn (#81: the old
+//game gave the player a new AI without its plan, and the allies skipped their first turn after the tutorial)
+test("A player handed over to the AI gets a new one at once, which starts and plays the turn it was given (#81)", () => {
+	let handed: Controller & { joined: number; started: number } = null;
+	const move: Order = { command: { type: "move", unit: 1, to: { row: 8, col: 8 } } };
 	const toAI = (w: World) => ({ ...w, state: { ...w.state, players: w.state.players.map((p) => p.id === 1 ? { ...p, type: playerType.aiLocal } : p) } });
 	const s = startSession(farApart([playerType.aiScripted, playerType.aiScripted]), (type, player) => {
-		if (type === playerType.aiLocal) return handed = scripted(player, []);
-		return scripted(player, [], player === 1 ? toAI : undefined);
+		if (type !== playerType.aiLocal) return scripted(player, [], player === 1 ? toAI : undefined);
+		const c = scripted(player, [move]);
+		return handed = { ...c, started: 0, startTurn(w) { this.started++; return c.startTurn(w); } };
 	});
 	expect(s.localSide).toBe(2);	//both scripted: hotseat, the screen shows the current player's side
-	expect(advance(s)).toMatchObject({ kind: "endTurn", player: 0, started: { player: 1 } });
-	expect([s.world.spotSide, s.world.state.players[1].type, handed.joined, s.controllers[1]]).toEqual([1, playerType.aiLocal, 1, handed]);
+	expect(advance(s)).toMatchObject({ kind: "endTurn", player: 0, started: { player: 1, type: playerType.aiLocal } });
+	expect([s.world.spotSide, s.world.state.players[1].type, handed.joined, handed.started, s.controllers[1]])
+		.toEqual([1, playerType.aiLocal, 1, 1, handed]);
+	expect(advance(s)).toMatchObject({ kind: "order", player: 1, order: move, refusal: null });
+	expect(s.world.state.units[1]).toMatchObject({ row: 8, col: 8 });
 	expect(advance(s)).toMatchObject({ kind: "endTurn", player: 1 });
 });
 
