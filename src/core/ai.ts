@@ -21,7 +21,7 @@
  */
 
 import type { Command } from "../commands";
-import { type AIConfig, aiDefaultConfig, movMethod, unitClass } from "../prototypes";
+import { type AIConfig, movMethod, unitClass } from "../prototypes";
 import { nextRandom, type RngStream } from "../rng";
 import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
@@ -38,12 +38,12 @@ import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from 
 import { groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
 
 export interface AIControllerOptions {
-	config?: AIConfig;	//aiDefaultConfig, the bundle's
+	config?: AIConfig;	//the settings of the rules the game plays by (w.rules.ai) when not given
 }
 
 //The computer player of player id
 export function aiController(player: number, options: AIControllerOptions = {}): Controller {
-	const config = options.config || aiDefaultConfig;
+	const configOf = (w: World): AIConfig => options.config || w.rules.ai.config;
 	let queue: Command[] = [];
 	//The prestige left for reinforcements: the player's when the AI was made, then after each turn's
 	//purchases (#21: the old AI took it before them, and spent the same prestige twice)
@@ -55,12 +55,12 @@ export function aiController(player: number, options: AIControllerOptions = {}):
 			return { world: w, commands: [], events: [], view: [] };
 		},
 		startTurn(w) {
-			const played = buyAndDeploy(w, player, config);
+			const played = buyAndDeploy(w, player, configOf(w));
 			prestigeLeft = played.world.state.players[player].prestige;
 			return played;
 		},
 		plan(w) {
-			const planned = planTurn(w, player, config, prestigeLeft);
+			const planned = planTurn(w, player, configOf(w), prestigeLeft);
 			queue = planned.queue;
 			prestigeLeft = planned.prestigeLeft;
 			return planned.world;

@@ -8,7 +8,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { groundCondition, leaderType, movTableDry, movTableFrozen, movTableMud } from "../prototypes";
+import { aiDefaultConfig, groundCondition, leaderType, movTableDry, movTableFrozen, movTableMud } from "../prototypes";
 import { classicCombat } from "./combat";
 import type { Ruleset } from "./types";
 
@@ -40,6 +40,7 @@ export const classicRules: Ruleset = {
 	leaders,
 	classLeaders: leaders.map((list) => list.length ? list[0] : -1),
 	combat: classicCombat,
+	ai: { config: aiDefaultConfig },
 };
 
 //The remaster's rules: the classic ones until a change lands here, each measured in the AI arena
