@@ -221,12 +221,20 @@ function startTurn(s: Session): StartedTurn | null {
 	if (!isProgram(s.world.state.players[player].type)) return null;
 	const c = controllerOf(s, player);
 	if (c === null) return null;
-	const type = s.world.state.players[player].type;
+	let type = s.world.state.players[player].type;
 	const played = c.startTurn(s.world);
 	s.world = c.plan(played.world);
-	//(the tutorial hands its players over to a person and to the AI, which starts with nothing to do)
-	if (played.handOver) join(s, player, s.world.state.players[player].type);
-	return { player, type, commands: played.commands, events: played.events, view: played.view };
+	if (!played.handOver) return { player, type, commands: played.commands, events: played.events, view: played.view };
+	//The tutorial hands its players over, to a person and to the AI: the AI starts and plans the turn it is
+	//given (#81: the old game's new AI had no plan, and the allies skipped their first turn after the tutorial)
+	type = s.world.state.players[player].type;
+	join(s, player, type);
+	const next = s.controllers[player];
+	if (next === null) return { player, type, commands: played.commands, events: played.events, view: played.view };
+	const its = next.startTurn(s.world);
+	s.world = next.plan(its.world);
+	return { player, type, commands: [...played.commands, ...its.commands], events: [...played.events, ...its.events],
+		view: [...played.view, ...its.view] };
 }
 
 //Plays the current player's turn to its end: what each advance did
