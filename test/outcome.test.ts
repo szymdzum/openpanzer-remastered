@@ -93,3 +93,46 @@ test("When an attack destroys the last unit of both sides the game ends once, as
 		expect(both, rules.name).toBeGreaterThan(0);
 	}
 });
+
+//The small game with the Soviet side's units off the map but one: the others wait in player 1's reserve,
+//to deploy, or as a reinforcement due on turn 3
+async function waiting(how: "reserve" | "reinforcement", rules: import("../src/core/types").Ruleset) {
+	const { smallGameData } = await import("./smallgame");
+	const { createWorld } = await import("../src/core/create");
+	const { Equipment } = await import("../src/equipment");
+	const saved = smallGameData([[142, 0, 4, 4], [504, 1, 4, 5], [511, 1, 8, 6]]);
+	const { id: _id, row: _row, col: _col, ...off } = saved.state.units.pop()!;
+	saved.state.map.hexes[8 * 12 + 6].unit = null;
+	if (how === "reserve") saved.state.players[1].core.push({ reserve: off });
+	else saved.state.reinforcements.push({ turn: 3, row: 8, col: 6, unit: off });
+	saved.state.units[1].strength = 1;
+	return (seed: number) => {
+		saved.state.rng = { game: seed, ai: 2 };
+		return createWorld(structuredClone(saved), Equipment.equipment, { rules });
+	};
+}
+
+//The German tank's attack, at the first seed of the game stream that destroys the last Soviet unit on the map
+async function lastUnitDestroyed(world: (seed: number) => import("../src/core/types").World) {
+	const { step } = await import("../src/core/step");
+	for (let seed = 1; seed <= 100; seed++) {
+		const r = step(world(seed), { type: "attack", unit: 0, target: 1 });
+		if (r.ok && !r.world.state.units.some((u) => u.owner === 1)) return r;
+	}
+	throw new Error("no seed destroys it");
+}
+
+//PG2 lets a side deploy its units waiting in the reserve or arriving later: the original counted only the
+//units on the map, so a side whose units all waited lost by elimination (#115). The classic rules keep it
+test("In the remaster rules a side with units waiting to deploy or arrive isn't eliminated (#115)", async () => {
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { outcome } = await import("../src/core/turn");
+	for (const how of ["reserve", "reinforcement"] as const)
+		for (const rules of [classicRules, remasterRules]) {
+			const r = await lastUnitDestroyed(await waiting(how, rules));
+			const eliminated = rules === classicRules, label = how + " " + rules.name;
+			expect(r.events.filter((e) => e.type === "victory"), label)
+				.toEqual(eliminated ? [{ type: "victory", side: 0, kind: "elimination" }] : []);
+			expect(outcome(r.world), label).toEqual(eliminated ? { kind: "elimination", winner: 0, loser: 1, rating: "briliant" } : null);
+		}
+});

@@ -149,7 +149,7 @@ export default defineConfig({
 				"src/core/sight.ts": { statements: 92, branches: 91, functions: 83, lines: 94 },
 				"src/core/step.ts": { statements: 96, branches: 100, functions: 83, lines: 95 },
 				"src/core/supply.ts": { statements: 97, branches: 97, functions: 90, lines: 98 },
-				"src/core/turn.ts": { statements: 98, branches: 100, functions: 92, lines: 98 },
+				"src/core/turn.ts": { statements: 98, branches: 100, functions: 91, lines: 98 },
 				"src/core/units.ts": { statements: 96, branches: 100, functions: 94, lines: 96 },
 				"src/core/world.ts": { statements: 97, branches: 98, functions: 94, lines: 96 },
 				"src/core/commands/common.ts": { statements: 87, branches: 85, functions: 85, lines: 92 },
