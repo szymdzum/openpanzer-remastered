@@ -73,6 +73,9 @@ export interface Ruleset {
 //the switches of the remaster's changes to its play, each off in the classic rules
 export interface AIRules {
 	config: AIConfig;
+	//The share of the bonus for staying entrenched that a side attacking keeps (#235): 1 in the classic
+	//rules, where a unit that has dug in stays whether its side attacks or defends
+	attackerEntrenchment: number;
 }
 
 //A hex of a move range (extendedCell): its distance from the unit, the cost to enter it (cin) and
