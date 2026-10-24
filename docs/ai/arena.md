@@ -118,3 +118,57 @@ What it says:
 The general is a first version: a measuring stick for tempo and losses, not yet a strong player.
 Making it hold back a reserve, concentrate on one sector and defend from depth would make it a
 harder bar for the AI changes of milestone "3. Promises kept" (#232-#236, #5, #6).
+
+## The remaster's AI: an attacker leaves its holes (#235), 24 October 2026
+
+The remaster's rules (#53) take the bonus for staying entrenched (50 a level) from a side that
+attacks, for each of its units with no enemy it sees within 3 hexes; in contact it keeps the bonus,
+to hold the line it reached. A side attacks while it has more objectives still to take than the
+enemy (`state.objectives`): it can't win at the turn limit by holding what it has. The roles follow
+the game: in Panzer-Verbaende Ostpreussen Germany attacks (5 to take against 2) until it has taken
+two; then Poland, behind, attacks to take them back, and Germany holds.
+
+Panzer-Verbaende Ostpreussen, the remaster's rules before (the same as the classic, the baseline
+above) and after, the same 20 seeds:
+
+| side (player) | wins | first objective, turn (games) | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+|---|---|---|---|---|---|---|---|---|
+| **AI vs AI, before** | | | | | | | | |
+| Germany (AI) | 12/20 | 9.3 (20/20) | 2.1 | 3.6 | 13.4 | 23.9 | 6.4 | 33.1 |
+| Poland (AI) | 8/20 | 15.1 (8/20) | 0.5 | 3.4 | 23.9 | 13.4 | 53.2 | 12.0 |
+| **AI vs AI, after** | | | | | | | | |
+| Germany (AI) | 13/20 | 8.9 (20/20) | 2.0 | 3.8 | 12.6 | 25.5 | 6.1 | 33.8 |
+| Poland (AI) | 7/20 | 15.3 (6/20) | 0.3 | 3.3 | 25.5 | 12.6 | 85.0 | 13.1 |
+| **general vs AI, before** | | | | | | | | |
+| Germany (general) | 12/20 | 4.5 (19/20) | 2.0 | 3.5 | 7.2 | 34.6 | 3.5 | 0 |
+| Poland (AI) | 8/20 | 10.9 (8/20) | 0.6 | 3.5 | 34.6 | 7.2 | 57.8 | 8.5 |
+| **general vs AI, after** | | | | | | | | |
+| Germany (general) | 8/20 | 4.5 (19/20) | 2.0 | 3.2 | 8.0 | 35.5 | 3.9 | 0 |
+| Poland (AI) | 12/20 | 11.7 (10/20) | 0.8 | 3.8 | 35.5 | 8.0 | 41.7 | 8.9 |
+| **AI vs general, before** | | | | | | | | |
+| Germany (AI) | 15/20 | 8.7 (20/20) | 3.0 | 4.2 | 18.8 | 22.1 | 6.1 | 34.5 |
+| Poland (general) | 5/20 | 14.7 (14/20) | 0.9 | 2.9 | 22.1 | 18.8 | 24.5 | 0 |
+| **AI vs general, after** | | | | | | | | |
+| Germany (AI) | 13/20 | 8.5 (20/20) | 2.9 | 3.9 | 18.9 | 22.3 | 6.6 | 30.7 |
+| Poland (general) | 7/20 | 14.6 (11/20) | 0.9 | 3.1 | 22.3 | 18.9 | 23.5 | 0 |
+
+Over 40 seeds (1-40), before and after:
+
+| | Germany (AI) vs AI: wins, first objective, lost per objective | Poland (AI) vs the general: wins | Germany (AI) vs the general: wins, first objective, lost per objective |
+|---|---|---|---|
+| before | 21/40, 9.0, 6.4 | 14/40 | 30/40, 8.5, 6.2 |
+| after | 24/40, 8.9, 6.9 | 20/40 | 29/40, 8.3, 6.6 |
+
+What it says:
+
+- **The defender gains most.** Poland's AI holds against the general in 12 of 20 games (8 before),
+  20 of 40 over the longer run (14): once Germany has taken two objectives, Poland's units away from
+  the front leave their holes and come back for them.
+- **The German attacker is barely faster.** Its first objective comes 0.1 to 0.4 turns earlier, in
+  the noise of 20 seeds; its losses per objective rise a little over 40 seeds (6.4 to 6.9 against
+  the AI). The holes weren't what held it back far from the front: the weak pull of a distant
+  objective and the crowding round the nearest one (weak-attacker.md, 1 and 2) still do. Against
+  the general it wins 13 of 20 (15 before), 29 of 40 over the longer run (30): no real change.
+- A first version took the bonus from every unit of an attacker, in contact too: over 40 seeds
+  Germany's AI won 19 of 40 against the AI (21 before) and lost 6.9 units per objective in both
+  matchups. Units in contact left their line one at a time and were destroyed.

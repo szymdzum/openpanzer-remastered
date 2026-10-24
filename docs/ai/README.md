@@ -50,7 +50,7 @@ the AI and a scripted general, before and after.
 | No artillery doctrine: guns don't follow the front or fire before the assault | #234 | design |
 | Every unit is pulled to the one nearest objective: a sector crowds one hex while others wait | #258 | design |
 | Its aircraft fly alone: no sense of enemy AA or fighters, no escort | #259 | design |
-| The bonus for staying entrenched glues an attacker to its hexes | #235 | design |
+| The bonus for staying entrenched glues an attacker to its hexes | #235 | remaster rules |
 | Doesn't finish weak, valuable units or withdraw its own damaged ones | #6 | design |
 | Doesn't defend its own objectives | #5 | design |
 | The difficulty changes resources, not the AI | #16 | design |
