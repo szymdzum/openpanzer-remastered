@@ -330,3 +330,15 @@ test("In the classic rules a fighter next to an enemy aircraft over a ground uni
 	expect(await call("check attack 22 15")).toBe("refused: not a target from here");
 	expect(await call("check attack 22 76")).toBe("allowed");
 }, 60_000);
+
+test("check says a unit that moves on its transport can't attack or unmount after the move (the Bzura playtest)", async () => {
+	const call = caller(tmpGame());
+	await call("new drpzop01.xml --seed 1");
+	//the Sturmpioniere #8 at 2,6 and its Opel Blitz
+	expect(await call("check mount 8")).toBe("allowed (once it moves on its transport it can't attack or unmount this turn)");
+	expect(await call("check move 8 3,5")).toBe("allowed");
+	await call("mount 8");
+	expect(await call("check move 8 3,5")).toBe("allowed (on its transport: it can't attack or unmount after this move)");
+	await call("move 8 3,5");
+	expect(await call("check unmount 8")).toBe("refused: can't unmount");
+}, 60_000);
