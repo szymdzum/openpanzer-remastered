@@ -4,7 +4,9 @@
 	// with main), so the code inherited from the original game doesn't block anyone; `npm run
 	// fallow:report` shows everything, inherited included.
 	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-	"entry": ["src/main.ts", "test/**/*.test.ts", "cli/play.ts", "cli/register.mjs", "cli/page.ts"],
+	"entry": ["src/main.ts", "test/**/*.test.ts", "cli/play.ts", "cli/register.mjs", "cli/page.ts",
+		// run by hand with node: docs/ui's tokens, card list, gallery and renders
+		"scripts/ui-design.mjs"],
 	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
 	// the contract scripts (read as text by test/contracts.ts and record.js)
 	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
