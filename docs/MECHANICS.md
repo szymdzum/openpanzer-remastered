@@ -155,6 +155,9 @@ still reinforce.
   move range, spotting, entrenchment and kill rolls, e.g. aggressive attack +4 av +2 dv, first
   strike makes initiative always favor the unit, overwhelming attack +2 kF and +1 kill,
   resilience -2 kF for the enemy, aggressive maneuver +1 move.
+- The original's roll never picks the last two leaders of a class's list (infiltration tactics and
+  liberator for the ground classes, fire discipline for the guns, first strike for the fighters): only
+  a scenario gives them. The remaster's rules (#78): any of the list can come up.
 
 ## Prestige and victory
 

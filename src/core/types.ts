@@ -80,6 +80,9 @@ export interface Ruleset {
 	//players' reserve) or to arrive (its reinforcements), as in PG2 (#115): false in the classic rules,
 	//where only the units on the map count
 	waitingUnitsFight: boolean;
+	//A unit's new leader can be any of its class's list but the class leader (#78): false in the classic
+	//rules, where the roll leaves out the list's last two
+	wholeLeaderList: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

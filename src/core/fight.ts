@@ -78,12 +78,14 @@ function leaderRoll(w: World, u: UnitState, eqid: number, expGained: number, rng
 	return roll > LEADER_CHANCE_THRESHOLD ? newLeader(w, uclass, rng) : -1;
 }
 
-//A leader of the class (Leaders.generateLeader): kept bug #78, the roll's range is the list less 3,
-//so the last two never come up and a class of 2 can roll its class leader
+//A leader of the class (Leaders.generateLeader), one draw: any of the list but the class leader in the
+//remaster's rules; in the classic rules (kept bug #78) the roll's range is the list less 3, so the last
+//two never come up and a class of 2 can roll its class leader
 export function newLeader(w: World, uclass: number, rng: RngStream): number {
 	const list = w.rules.leaders[uclass];
 	if (list.length < 2) return -1;
-	return list[Math.floor(nextRandom(rng) * (list.length - 1 - 2)) + 1];
+	const choices = w.rules.wholeLeaderList ? list.length - 1 : list.length - 1 - 2;
+	return list[Math.floor(nextRandom(rng) * choices) + 1];
 }
 
 const fighterState = (u: UnitState): FighterState =>

@@ -227,7 +227,7 @@ the caller: the core turns what they hold into the state, in the old loader's or
 - the players: a campaign gives its own player each turn at least a share of its starting prestige
   (not the AI's players, #15);
 - the reinforcements, then the hexes in the file's order. Each unit with a leader draws it from the
-  game stream as it comes (#78 kept); a ground or air unit counts in its side's cost and experience.
+  game stream as it comes (#78 kept in the classic rules); a ground or air unit counts in its side's cost and experience.
   A hex's units go to their slots (a later one over an earlier, #74), the hex becomes an objective of
   the side that has to take it, and its units enter the map on a draft: ids as they come, the ground
   unit first, and a unit marks the enemy units its side is the first to see (`tempSpotted`, as

@@ -44,6 +44,7 @@ export const classicRules: Ruleset = {
 	checkTargets: false,
 	deployOnOwnTowns: false,
 	waitingUnitsFight: false,
+	wholeLeaderList: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -60,6 +61,8 @@ export const remasterRules: Ruleset = {
 	deployOnOwnTowns: true,
 	//A side with units waiting to deploy or to arrive isn't eliminated (#115)
 	waitingUnitsFight: true,
+	//A new leader can be any of the class's list, its last two included (#78)
+	wholeLeaderList: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)
