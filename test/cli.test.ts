@@ -11,7 +11,10 @@ import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
 import { pageResultOf, parseArgs } from "../cli/commands";
 import { run } from "../cli/play";
-import { changes, describe } from "../cli/report";
+import { changes, describe, fightLines } from "../cli/report";
+import { fightRecorder } from "../cli/fightlog";
+import { CombatLog } from "../src/combatlog";
+import type { Unit } from "../src/unit";
 import { sideOf, unitById } from "../src/core/world";
 
 const AXIS = 0;
@@ -254,4 +257,26 @@ test("Attackers list every hex a unit can attack the target from after a move, n
 	await call("new drpzop01.xml --seed 1");
 	await call("move 1 0,15");
 	expect(await call("attackers 14")).toContain("#3 SS Infanterie @1,12 on #14 Bunker @2,15 from 2,14: kills 5, losses 0, surrenders; also from 3,14, 1,15");
+}, 60_000);
+
+test("On the page, an enemy attack that costs only the attacker, and the side's support fire, are reported as fights (#307)", async () => {
+	const g = open(await newSave("drpzop01.xml", [AXIS], 1)), w = world(g);
+	//the screen logs each fire as src/commands.ts does: the units before, then after
+	const log = { ...CombatLog }, fights = fightRecorder(log);
+	const unit = (id: number, strength: number) => {
+		const u = unitById(w, id);
+		return { id, eqid: u.eqid, player: { side: sideOf(w, u) }, strength, experience: 0, entrenchment: 0, ammo: 1, isMounted: false,
+			isSurprised: false, isCore: false, getPos: () => ({ row: u.row, col: u.col }) } as unknown as Unit;
+	};
+	const fire = (atk: number, def: number, after: [number, number], support: boolean) => {
+		const id = log.addCombatStart(unit(atk, 10), unit(def, 10), 1);
+		log.addCombatEnd(unit(atk, after[0]), unit(def, after[1]), id, support);
+	};
+	//the sFH 18 #21 fires in support of the Psw #1, which the Polish infantry #4 attacks and loses on
+	fire(21, 4, [10, 8], true);
+	fire(4, 1, [7, 10], false);
+	expect(fightLines(w, AXIS, fights.take())).toEqual([
+		"support fire: Axis 15 sFH18 #21 @4,8 10->10 on Allies 38 Piechota #4 @1,18 10->8",
+		"attack: Allies 38 Piechota #4 @1,18 10->7 on Axis Psw 231(8) #1 @1,10 10->10"]);
+	expect(fights.take()).toEqual([]);
 }, 60_000);

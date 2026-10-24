@@ -209,7 +209,9 @@ async function endAnswer(c: Call): Promise<Answer> {
 	if (over) return answer([`refused: ${over.reason}`, ...gameOver(c.front)], { events: null, refusal: over });
 	if (!c.front.humanTurn()) throw new UsageError("not your turn");
 	const events = await c.front.end(), after = c.front.world();
-	return answer([...told(c.w, after, c.side, events), ...status(after, c.side), ...gameOver(c.front)], { events });
+	//(the page doesn't know the turn's events: its report tells the fights it saw and what changed, #307)
+	const turn = events === null ? c.front.report() : told(c.w, after, c.side, events);
+	return answer([...turn, ...status(after, c.side), ...gameOver(c.front)], { events });
 }
 
 function unitsAnswer(c: Call): Answer {

@@ -12,7 +12,9 @@ import { game } from "../src/session";
 import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageResultOf, parseArgs, runOn, UsageError } from "./commands";
 import { status } from "./board";
 import { SIDES } from "./known";
-import { changes } from "./report";
+import { CombatLog } from "../src/combatlog";
+import { fightRecorder } from "./fightlog";
+import { changes, fightLines } from "./report";
 
 const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
@@ -26,6 +28,11 @@ const humanSide = () => game.scenario.map.getPlayers().find((p) => p.type === pl
 const humanTurn = () => game.scenario.map.currentPlayer.type === playerType.humanLocal && !game.gameEnded;
 const settled = () => !game.waitUIAnimation;
 let report: string[] = [];
+const fights = fightRecorder(CombatLog);
+
+//What the AI's turn did as the side saw it: its fights and the side's support fire, from the screen's
+//combat log, then what changed between the worlds before and after (#307)
+const turnReport = (before: World) => [...fightLines(world(), humanSide(), fights.take()), ...changes(before, world(), humanSide())];
 
 function show(id: number) {
 	const u = game.scenario.map.getUnitById(id);
@@ -77,8 +84,9 @@ const front: Front = {
 	},
 	end: async () => {
 		const before = world();
+		fights.take();
 		await endTurn();
-		report = changes(before, world(), humanSide());
+		report = turnReport(before);
 		return null;
 	},
 	report: () => report,
@@ -103,6 +111,14 @@ function hide(id: string) {
 
 const loaded = () => game.scenario.isLoaded && game.session !== null;
 
+//A new game whose first player is the AI: its turn played on the screen, then told (#307)
+async function firstAITurn(): Promise<string[]> {
+	const before = world();
+	fights.take();
+	await until(() => game.gameEnded || (humanTurn() && settled()), 30 * 60_000);
+	return turnReport(before);
+}
+
 async function newGame(args: Args): Promise<Answer> {
 	const file = args.words[1], side = flagInt(args, "side", 0), entry = scenariolist.find((e) => e[0] === file);
 	if (!entry) throw new UsageError(`no scenario ${file} in the scenario list`);
@@ -114,8 +130,8 @@ async function newGame(args: Args): Promise<Answer> {
 	await until(loaded, 30_000);
 	await sleep(500);
 	uncover();
-	report = [];
-	return answer([`new game of ${file} on the page, you play ${SIDES[side]}, ${game.rules} rules`, ...status(world(), side)]);
+	report = humanTurn() ? [] : await firstAITurn();
+	return answer([`new game of ${file} on the page, you play ${SIDES[side]}, ${game.rules} rules`, ...report, ...status(world(), side)]);
 }
 
 const playing = () => game?.scenario?.isLoaded === true && game.session !== null;

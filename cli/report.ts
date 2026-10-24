@@ -19,8 +19,23 @@ interface View {
 
 type Formatters = { [K in GameEvent["type"]]?: (e: Extract<GameEvent, { type: K }>, v: View) => string };
 
-const fighter = (v: View, f: Fighter) =>
-	`${SIDES[f.side]} ${v.after.equipment[f.eqid].name} #${f.unit} @${cell(f)} ${f.before.strength}->${Math.max(0, f.after.strength)}`;
+//A unit in a fight, as the core's event has it or the screen's combat log saw it (cli/fightlog.ts)
+type FighterView = Pick<Fighter, "unit" | "eqid" | "side" | "row" | "col"> & { before: { strength: number }; after: { strength: number } };
+
+//A fight: its attacker, its defender, whether it was support fire
+export interface FightView { support: boolean; attacker: FighterView; defender: FighterView }
+
+const fighter = (w: World, f: FighterView) =>
+	`${SIDES[f.side]} ${w.equipment[f.eqid].name} #${f.unit} @${cell(f)} ${f.before.strength}->${Math.max(0, f.after.strength)}`;
+
+//A fight the side was in, by its units or its own support fire, as text; how: rugged defense, overrun
+function fightText(w: World, side: number, f: FightView, how = ""): string {
+	if (f.attacker.side !== side && f.defender.side !== side) return "";
+	return `${f.support ? "support fire" : "attack"}: ${fighter(w, f.attacker)} on ${fighter(w, f.defender)}${how}`;
+}
+
+//The fights the screen played, as the side saw them (the page doesn't see the core's events, #307)
+export const fightLines = (w: World, side: number, fights: FightView[]) => fights.map((f) => fightText(w, side, f)).filter(Boolean);
 
 const ifMine = (v: View, id: number, text: string) => v.mine(id) ? text : "";
 
@@ -32,10 +47,7 @@ function moved(e: Extract<GameEvent, { type: "moved" }>, v: View): string {
 
 const how = (r: CombatResult) => (r.isRugged ? " (rugged defense)" : "") + (r.isOverrun ? " (overrun)" : "");
 
-function fight(e: Extract<GameEvent, { type: "fight" }>, v: View): string {
-	if (e.attacker.side !== v.side && e.defender.side !== v.side) return "";
-	return `${e.support ? "support fire" : "attack"}: ${fighter(v, e.attacker)} on ${fighter(v, e.defender)}${how(e.result)}`;
-}
+const fight = (e: Extract<GameEvent, { type: "fight" }>, v: View) => fightText(v.after, v.side, e, how(e.result));
 
 function captured(e: Extract<GameEvent, { type: "captured" }>, v: View): string {
 	const what = e.objective ? " (OBJECTIVE)" : e.flag ? " (flag)" : "";

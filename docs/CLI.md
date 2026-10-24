@@ -29,9 +29,11 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 cli/page.ts to the page and takes a call's words at `POST /__cli`, hands them to the page over the dev
 server's websocket and its answer back. The page plays them on the running game (its core world,
 src/mirror.ts) and answers with the same commands as headless; it waits for a move's or an attack's
-animation, and for the AI's turn, before it answers. It doesn't know a turn's events, so it tells what
-changed between the world before and after: the units the side saw moved, worn, gone or new, the
-victory hexes taken, the prestige. Without the variable the dev server and the page are as before.
+animation, and for the AI's turn, before it answers. It doesn't know a turn's events, so it tells the
+fights the screen's combat log saw (cli/fightlog.ts: the enemy's attacks on the side's units, the
+support fire either side gave, #307), then what changed between the world before and after: the units
+the side saw moved, worn, gone or new, the victory hexes taken, the prestige. The AI's first turn of a
+new game is told so too. Without the variable the dev server and the page are as before.
 The page's dice are its own: `--seed` is headless only.
 The page closes the scenario's opening message after `new`, never a later one: the end of the game's
 message stays up (its OK opens the main menu). Once the game is over, in both modes, `status` says who won,
