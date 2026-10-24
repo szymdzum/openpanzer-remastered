@@ -53,7 +53,9 @@ const LETTERS: { [uclass: number]: string } = {
 	[unitClass.artillery]: "g", [unitClass.fighter]: "j", [unitClass.tacticalBomber]: "s", [unitClass.levelBomber]: "l",
 	[unitClass.airTransport]: "q",
 };
-const TERRAIN = ".cafbhmsw~rxp-e=o";
+//A terrain's character on the map, by terrain type (terrainNames' order). Bocage isn't "b", the bunker's
+//letter, nor sand and a port "s" and "p", a tactical bomber's and an anti-tank's (#310)
+const TERRAIN = ".cafkhmdw~rxu-e=o";
 
 function terrainChar(d: HexData, h: HexState): string {
 	if (h.victorySide >= 0) return "$";
@@ -78,11 +80,15 @@ function hexChars(kw: World, side: number, i: number, zoc: boolean): string {
 
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, k) => from + k);
 
+//Every terrain the map draws, by its character (#310), then the marks that aren't a terrain
+const TERRAIN_LEGEND = [...terrainNames.map((n, t) => `${TERRAIN[t]} ${n.toLowerCase()}`), "+ road", "$ objective", "* an aircraft alone on the hex"];
+const legendRows = (items: string[], per: number) =>
+	Array.from({ length: Math.ceil(items.length / per) }, (_, k) => (k ? "         " : "terrain: ") + items.slice(k * per, k * per + per).join("  "));
+
 const MAP_LEGEND = [
-	"terrain: . clear  + road  c city  a airfield  f forest  h hill  m mountain  w swamp  r river  = impassable river",
-	"         - stream  x fortification  o rough  $ objective  * an aircraft alone on the hex",
+	...legendRows(TERRAIN_LEGEND, 7),
 	"units (yours CAPITAL, enemy small): i infantry t tank r recon p anti-tank a flak/AA b bunker v transport g artillery",
-	"         j fighter s tactical bomber l level bomber;  : a seen enemy's zone of control (--zoc)",
+	"         j fighter s tactical bomber l level bomber q air transport n other;  : a seen enemy's zone of control (--zoc)",
 	"odd columns sit half a hex lower: a hex's side neighbours are rows r-1 and r on even columns, r and r+1 on odd ones",
 ];
 
