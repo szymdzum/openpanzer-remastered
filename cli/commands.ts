@@ -9,7 +9,7 @@ import type { SessionEnd } from "../src/core/session";
 import { outcome, type Outcome } from "../src/core/turn";
 import type { Position, RulesetName, World } from "../src/core/types";
 import { isAir } from "../src/core/units";
-import { hexIndex, sideOf, unitById } from "../src/core/world";
+import { hexIndex, onMap, sideOf, unitById } from "../src/core/world";
 import { unitClassNames } from "../src/prototypes";
 import { hex, map, reserve, shop, status } from "./board";
 import { attackerLine, attackers, estimateLine, isTarget, targets } from "./combat";
@@ -77,9 +77,12 @@ export function parseArgs(argv: string[]): Args {
 //A call's words that don't make sense: said as they are, without a stack (exit code 2)
 export class UsageError extends Error {}
 
-export function cellOf(text: string | undefined): Position {
+//A cell of the map w plays on: one off it is refused as the words' mistake, not read (#309)
+export function cellOf(text: string | undefined, w: World): Position {
 	const m = /^(\d+),(\d+)$/.exec(text ?? "");
 	if (!m) throw new UsageError(`expected a cell row,col, got "${text ?? ""}"`);
+	const { rows, cols } = w.state.map;
+	if (!onMap(w, +m[1], +m[2])) throw new UsageError(`no hex ${text}: the map is ${rows} rows by ${cols} columns (0-${rows - 1}, 0-${cols - 1})`);
 	return { row: +m[1], col: +m[2] };
 }
 
@@ -101,7 +104,7 @@ function enemyOn(kw: World, p: Position, attacker: number | undefined): number {
 
 //An enemy named by id or by its hex
 const targetOf = (w: World, side: number, text: string, attacker?: number) =>
-	text.includes(",") ? enemyOn(knownWorld(w, side), cellOf(text), attacker) : intOf(text, "a unit id or a cell");
+	text.includes(",") ? enemyOn(knownWorld(w, side), cellOf(text, w), attacker) : intOf(text, "a unit id or a cell");
 
 type Words = string[];
 type Flags = Args["flags"];
@@ -111,11 +114,11 @@ const simple = (type: (typeof SIMPLE)[number]) => (x: Words): Command => ({ type
 
 //An action's words as the core's command
 const COMMANDS: { [verb: string]: (x: Words, w: World, side: number, flags: Flags) => Command } = {
-	move: (x) => ({ type: "move", unit: unitWord(x), to: cellOf(x[2]) }),
+	move: (x, w) => ({ type: "move", unit: unitWord(x), to: cellOf(x[2], w) }),
 	attack: (x, w, side) => ({ type: "attack", unit: unitWord(x), target: targetOf(w, side, x[2] ?? "", unitWord(x)) }),
 	reinforce: (x, _w, _s, flags) => ({ type: "reinforce", unit: unitWord(x), overstrength: flags.has("over") }),
 	buy: (x) => ({ type: "buy", eqid: intOf(x[1], "an equipment id"), transport: optionalInt(x[2], "a transport id") }),
-	deploy: (x) => ({ type: "deploy", index: intOf(x[1], "a reserve index"), to: cellOf(x[2]) }),
+	deploy: (x, w) => ({ type: "deploy", index: intOf(x[1], "a reserve index"), to: cellOf(x[2], w) }),
 	upgrade: (x) => ({ type: "upgrade", unit: unitWord(x), eqid: intOf(x[2], "an equipment id"), transport: optionalInt(x[3], "a transport id") }),
 	...Object.fromEntries(SIMPLE.map((t) => [t, simple(t)])),
 };
@@ -231,7 +234,7 @@ function movesAnswer(c: Call): Answer {
 }
 
 function targetsAnswer(c: Call): Answer {
-	const from = c.flags.has("from") ? cellOf(c.flags.get("from") as string) : undefined;
+	const from = c.flags.has("from") ? cellOf(c.flags.get("from") as string, c.w) : undefined;
 	const t = targets(c.w, c.side, intOf(c.x[1], "a unit id"), from);
 	return answer(t.estimates.length ? t.estimates.map((e) => estimateLine(knownWorld(c.w, c.side), e)) : [t.note], t);
 }
@@ -258,7 +261,7 @@ const ON_GAME: { [verb: string]: (c: Call) => Answer | Promise<Answer> } = {
 	enemies: enemiesAnswer,
 	unit: unitAnswer,
 	map: (c) => answer(map(c.w, c.side, rangeOf(c.x[1], c.w.state.map.rows - 1), rangeOf(c.x[2], c.w.state.map.cols - 1), c.flags.has("zoc"))),
-	hex: (c) => answer(hex(c.w, c.side, cellOf(c.x[1]))),
+	hex: (c) => answer(hex(c.w, c.side, cellOf(c.x[1], c.w))),
 	moves: movesAnswer,
 	targets: targetsAnswer,
 	attackers: attackersAnswer,
