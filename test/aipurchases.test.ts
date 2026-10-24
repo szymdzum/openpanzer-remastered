@@ -101,3 +101,17 @@ test("The AI budgets its reinforcements with the prestige left after its purchas
 	}
 });
 
+//A side with no deployment hex can't deploy what it buys (#60): the AI buys nothing then and keeps
+//its prestige, and buys as before once its side has a free deployment hex
+test("The AI buys no units while its side has no free deployment hex (#287)", () => {
+	const prestige = aiDefaultConfig.prestigeReserve + 3000;
+	const none = boughtWith(prestige, aiDefaultConfig, smallGameData());
+	expect(none.bought).toEqual([]);
+	const saved = smallGameData();
+	saved.state.players[1].prestige = prestige;
+	saved.state.turn.currentPlayer = 1;
+	const played = aiController(1, {}).startTurn(createWorld(saved, Equipment.equipment));
+	expect(played.world.state.players[1].prestige).toBe(prestige);
+	expect(played.world.state.players[1].core).toEqual([]);
+	expect(boughtWith(prestige).bought.length).toBeGreaterThan(0);
+});
