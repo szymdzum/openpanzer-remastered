@@ -109,21 +109,24 @@ export class Game {
 		this.processTurn = function() {
 			if (!game.gameStarted || game.gameEnded)
 				return;
-			if (scenData !== null && needScenarioLoad && game.uiMessageClicked) { //Load next scenario in campaign chain
-				//Asked once: the ticks while it loads would start it over through the loader's shared
-				//scenario, each load adding the players again (#64)
-				if (!nextScenarioLoading) {
-					nextScenarioLoading = true;
-					game.newScenario(scenData.scenario, scenData.intro);
-				}
-			} else {
-				const player = game.scenario.map.currentPlayer;
-				//No current player also goes on to process AI actions
-				if (!player || player.type == playerType.aiLocal || player.type == playerType.aiScripted) {
-					if (!game.waitUIAnimation && game.uiMessageClicked)
-						game.processAIActions();
-				}
-			}
+			if (scenData !== null && needScenarioLoad && game.uiMessageClicked) //Load next scenario in campaign chain
+				loadNextScenario();
+			else if (aiPlays(game.scenario.map.currentPlayer) && !game.waitUIAnimation && game.uiMessageClicked)
+				game.processAIActions();
+		}
+
+		//Asked once: the ticks while it loads would start it over through the loader's shared scenario,
+		//each load adding the players again (#64)
+		function loadNextScenario() {
+			if (nextScenarioLoading)
+				return;
+			nextScenarioLoading = true;
+			game.newScenario(scenData.scenario, scenData.intro);
+		}
+
+		//No current player also goes on to process AI actions
+		function aiPlays(player: Player | null) {
+			return !player || player.type == playerType.aiLocal || player.type == playerType.aiScripted;
 		}
 
 		this.startTurn = function() {}
