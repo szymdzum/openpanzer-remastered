@@ -1,5 +1,5 @@
 harness/out/
-node_modules/
+node_modules
 dist/
 public/hd/
 coverage/
