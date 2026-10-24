@@ -17,7 +17,7 @@
  * - a mount, right before a move only its transport makes (#82).
  * The reinforcement budget is the prestige left after the purchases (#21). Kept: the attack scores
  * count the hidden units' support fire (#17), and the objectives are scored in the order of the side's
- * list (D7, #141's order after an undo included).
+ * list (D7).
  */
 
 import type { Command } from "../commands";

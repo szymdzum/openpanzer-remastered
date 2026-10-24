@@ -35,20 +35,6 @@ async function holds<T>(property: fc.IAsyncProperty<T>, numRuns: number) {
 	await fc.assert(property, { seed: SEED, path: process.env.FC_PATH, numRuns: RUNS || numRuns });
 }
 
-//A known bug's property, for test.fails: it has to break the way the bug breaks it (known, a
-//pattern of the message). It fails on every run, so it isn't shrunk (slow). Broken another way,
-//the test passes and test.fails reports it, with the message
-async function breaks<T>(property: fc.IAsyncProperty<T>, numRuns: number, known: RegExp) {
-	try {
-		await fc.assert(property, { seed: SEED, path: process.env.FC_PATH, numRuns: RUNS || numRuns, endOnFailure: true });
-	} catch (e) {
-		const cause = (e as { cause?: unknown }).cause; //what the property threw
-		const message = cause instanceof Error ? cause.message : e instanceof Error ? e.message : JSON.stringify(e);
-		if (known.test(message)) throw e;
-		console.error("broken another way than the known bug:\n" + message);
-	}
-}
-
 const kinds = ["move", "capture", "attack", "resupply", "reinforce", "reinforce over", "mount", "unmount", "embark", "disembark",
 	"upgrade", "disband", "undo", "estimate", "end turn"] as const;
 type Kind = typeof kinds[number];
@@ -204,18 +190,16 @@ function select(p: Play, u: Unit) {
 
 //What a player sees on the map, in parts, each as plain text: the turn and the selection, the
 //objectives, the units' own fields and positions, the players, every hex's owner, flag, objective,
-//selection marks, units and counters. ignore leaves out what a known bug changes
-interface Ignore { unitFields?: string[]; objectiveOrder?: boolean }
+//selection marks, units and counters
 type State = Record<"turn" | "objectives" | "units" | "players" | "hexes", string>;
-function stateOf(w: World, ignore: Ignore = {}): State {
+function stateOf(w: World): State {
 	const { m } = w;
-	const own = (o: object, without: string[]) => Object.fromEntries(Object.entries(o)
+	const own = (o: object, without: string[] = []) => Object.fromEntries(Object.entries(o)
 		.filter(([k, v]) => typeof v !== "function" && !without.includes(k))
 		.map(([k, v]) => [k, k === "player" && v ? (v as { id: number }).id : v]));
-	const units = m.getUnits().map((u) => ({ ...own(u, ignore.unitFields || []), pos: u.getPos() ? cellName(u.getPos()) : null }));
+	const units = m.getUnits().map((u) => ({ ...own(u), pos: u.getPos() ? cellName(u.getPos()) : null }));
 	const players = m.getPlayers().map((pl) => ({ ...own(pl, ["handler"]), core: pl.getCoreUnitList().map((u) => u.id) }));
 	const objectives = m.sidesVictoryHexes.map((side) => side.map(cellName));
-	if (ignore.objectiveOrder) objectives.forEach((side) => side.sort());
 	const hexes: string[] = [];
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
@@ -316,7 +300,7 @@ function commandOf(p: Play, s: Pick): Played | null {
 //What the steps check: the undo right after a move (but what it ignores), the estimate, the
 //invariants after every step, and the commands' check against their run: drift, run never throws
 //once check has passed; refused, a refused command changes nothing
-interface Checks { undo?: Ignore; estimate?: boolean; invariants?: boolean; drift?: boolean; refused?: boolean }
+interface Checks { undo?: boolean; estimate?: boolean; invariants?: boolean; drift?: boolean; refused?: boolean }
 
 //What f returns and how many numbers it drew from Math.random (the game stream, unseeded)
 function counted<T>(f: () => T): { value: T; draws: number } {
@@ -367,7 +351,7 @@ function selectFor(p: Play, cmd: Command, checks: Checks) {
 	const u = cmd.type === "move" || cmd.type === "attack" ? p.w.m.getUnitById(cmd.unit) : null;
 	if (!u) return;
 	select(p, u);
-	if (cmd.type === "move") p.beforeMove = checks.undo ? { unit: u.id, state: stateOf(p.w, checks.undo) } : null;
+	if (cmd.type === "move") p.beforeMove = checks.undo ? { unit: u.id, state: stateOf(p.w) } : null;
 }
 
 //A command a pick chose, sent as the game sends it. The refusal's reason, if refused
@@ -433,7 +417,7 @@ function play(p: Play, s: Step, checks: Checks): StepResult | null {
 //Right after the unit's move, the undo restores everything as it was before it
 function undone(p: Play, unit: number, checks: Checks, previous: Play["beforeMove"]): string[] {
 	if (!checks.undo || !previous || previous.unit !== unit) return [];
-	return changes(previous.state, stateOf(p.w, checks.undo)).map((c) => "the undo didn't restore the " + c);
+	return changes(previous.state, stateOf(p.w)).map((c) => "the undo didn't restore the " + c);
 }
 
 //FC_STATS: how often each kind of step was played, "(none)" when no unit could, "(refused)" when
@@ -502,13 +486,8 @@ test("Property: the invariants hold after embarking, disembarking and upgrading 
 
 //The undo is checked right after a move: its kinds come up often
 const undoActions = { "move": 3, "capture": 2, "undo": 4, "attack": 1, "end turn": 1 };
-test("Property: an undo right after a move restores the state from before the move, tempSpotted included (#140), but for #141", async () => {
-	await holds(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: { objectiveOrder: true } })), 30);
-});
-
-test.fails("Property: an undo right after a move restores the objectives' order too (fails: #141)", async () => {
-	await breaks(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: {} })), 30,
-		/undo didn't restore the objectives/);
+test("Property: an undo right after a move restores the state from before the move, tempSpotted (#140) and the objectives' order (#141) included", async () => {
+	await holds(fc.asyncProperty(sequences(undoActions, 20), (seq) => run(seq, { undo: true })), 30);
 });
 
 test("Property: the attack estimate draws nothing from the random stream and changes nothing", async () => {

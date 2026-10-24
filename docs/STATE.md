@@ -151,7 +151,8 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
   unit class, the scenario names by outcome; empty until the first campaign scenario sets it up.
 - **`UndoState`**: the unit, the unit as it was before the move (`UnitState`, where it stood), and
   what the capture changed (old owner, flag and objective side, `null` when unchanged, the prestige
-  and score gained). `UndoSlot` with no unit is `null`: the rest of the slot is never read then.
+  and score gained; `objectiveIndex`, where an objective taken was in its side's list, only when the
+  move took one, #141: a save from before has none, and the undo puts the objective at the end). `UndoSlot` with no unit is `null`: the rest of the slot is never read then.
 - **`RngState`** is a number, the position of the game's and the AI's streams (`src/rng.ts`):
   fromData sets both back. `rng` is `null` while the game stream isn't seeded and reads
   `Math.random` (a test that seeds `Math.random`, as the contracts were recorded): its position

@@ -65,3 +65,29 @@ test("An undo leaves the enemy units the unit sees again as they were, not marke
 		expect(undone.world.state.units, rules.name).toEqual(w.state.units);
 	}
 });
+
+//A German infantry on a hand-built map takes the second of Germany's three objectives, all Polish, then
+//the move is taken back: the objective is back in its place in Germany's list, which an AI player of the
+//side follows in its order. The original's undo put it at the end (#141)
+test("An undo puts a captured objective back in its place in its side's list (#141)", async () => {
+	const { handWorld, germanyPoland } = await import("./coreworld");
+	const { createWorld } = await import("../src/core/create");
+	const { classicRules, remasterRules } = await import("../src/core/rules");
+	const { step } = await import("../src/core/step");
+	for (const rules of [classicRules, remasterRules]) {
+		const hand = handWorld({ rows: 8, cols: 8, units: [{ eqid: 115, owner: 0, row: 3, col: 4 }, { eqid: 264, owner: 1, row: 7, col: 7 }] },
+			undefined, { rules });
+		const saved = structuredClone({ data: hand.data, state: hand.state });
+		const objectives = [{ row: 1, col: 1 }, { row: 3, col: 2 }, { row: 6, col: 6 }];
+		for (const o of objectives) Object.assign(saved.state.map.hexes[o.row * 8 + o.col], { owner: 1, flag: 15, victorySide: 0 });
+		saved.state.objectives = [objectives, []];
+		const w = createWorld(saved, germanyPoland, { rules });
+		const moved = step(w, { type: "move", unit: 0, to: { row: 3, col: 2 } });
+		if (moved.ok === false) throw new Error(moved.refusal.reason);
+		expect(moved.world.state.objectives, rules.name).toEqual([[objectives[0], objectives[2]], [objectives[1]]]);
+		const undone = step(moved.world, { type: "undo", unit: 0 });
+		if (undone.ok === false) throw new Error(undone.refusal.reason);
+		expect(undone.world.state.objectives, rules.name).toEqual([objectives, []]);
+		expect(undone.world.state.map.hexes, rules.name).toEqual(w.state.map.hexes);
+	}
+});

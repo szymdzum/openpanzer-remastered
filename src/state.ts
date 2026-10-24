@@ -191,6 +191,7 @@ export interface UndoState {
 	oldVictorySide: number | null;
 	prestigeGain: number;
 	scoreGain: number;
+	objectiveIndex?: number;	//where the objective taken was in its side's list (#141); absent when none, or saved before
 }
 
 export interface ReinforcementState {
@@ -467,7 +468,8 @@ function undoState(m: GameMap): UndoState | null {
 	if (slot.unit === null)
 		return null;
 	return { unit: slot.unit.id, before: unitState(slot.savedUnit), oldOwner: slot.oldOwner, oldFlag: slot.oldFlag,
-		oldVictorySide: slot.oldVictorySide, prestigeGain: slot.prestigeGain, scoreGain: slot.scoreGain };
+		oldVictorySide: slot.oldVictorySide, prestigeGain: slot.prestigeGain, scoreGain: slot.scoreGain,
+		...(slot.objectiveIndex !== null ? { objectiveIndex: slot.objectiveIndex } : {}) };
 }
 
 //Scenario.reinforcements by turn key: integer keys enumerate in ascending order
@@ -695,6 +697,7 @@ export function restoreUndo(m: GameMap, s: UndoState) {
 	slot.oldVictorySide = s.oldVictorySide;
 	slot.prestigeGain = s.prestigeGain;
 	slot.scoreGain = s.scoreGain;
+	slot.objectiveIndex = s.objectiveIndex ?? null;
 }
 
 //The campaign's scenario and Game's progress: the campaign must be the one loaded, fromData doesn't
