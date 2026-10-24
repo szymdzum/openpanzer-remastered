@@ -13,9 +13,10 @@ import type { CommandHandler } from "../types";
 import { hexIndex, unitById } from "../world";
 import { unitCheck } from "./common";
 
-//Map.undoLastMove: the unit as it was before the move, back where it stood (it spots from there
-//again: #140, the enemy units it sees there are marked seen), the hex it took given back (#141: at
-//the end of its side's list), the prestige and score taken back
+//Map.undoLastMove: the unit as it was before the move, back where it stood, spotting from there again
+//without marking the enemy units it sees there as seen: they are as they were before the move (#140:
+//the original marked them, as if they had fired), the hex it took given back (#141: at the end of its
+//side's list), the prestige and score taken back
 //Only the current player's own unit (#171)
 export const undo: CommandHandler<CommandOf<"undo">> = {
 	check(w, cmd) {
@@ -31,7 +32,7 @@ export const undo: CommandHandler<CommandOf<"undo">> = {
 		relocate(d, cmd.unit, before, (u) => {
 			Object.assign(u, before, { row: u.row, col: u.col, tempSpotted: u.tempSpotted,
 				transport: before.transport !== null ? { ...before.transport } : u.transport });
-		});
+		}, false);
 		reselect(d, cmd.unit);
 		const player = playerAt(d, unitById(d, cmd.unit).owner);
 		const hex = hexIndex(d, from.row, from.col);
