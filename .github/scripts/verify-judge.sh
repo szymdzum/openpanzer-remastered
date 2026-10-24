@@ -47,7 +47,7 @@ if [ "$fingerprint" != "$accepted" ]; then
 		echo "<!-- verify-accepted: $fingerprint -->"
 		echo "verify: the label \`behavior-change\` accepted these differences ([run]($GITHUB_SERVER_URL/$REPO/actions/runs/$PLAY_RUN)). A new push keeps the label only if verify finds the same ones."
 		echo '```'
-		"$dir/verify-fingerprint.sh" "$log" --lines | head -60
+		"$dir/verify-fingerprint.sh" "$log" --lines | sed -n 1,60p
 		echo '```'
 	} > "$RUNNER_TEMP/accepted.md"
 	gh pr comment "$PR" --repo "$REPO" --body-file "$RUNNER_TEMP/accepted.md"
