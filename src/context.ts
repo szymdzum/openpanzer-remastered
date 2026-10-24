@@ -9,7 +9,7 @@ import type { Scenario } from "./scenario";
 import type { Campaign } from "./campaign";
 import type { Player } from "./map";
 import type { CampaignHost } from "./state";
-import type { World } from "./core/types";
+import type { RulesetName, World } from "./core/types";
 
 //The engine modules (map, unit, ai, scenarioloader) read these instead of the global game: the
 //scenario (Unit.copy takes the player from its map, #68), the campaign (difficulty, the
@@ -25,6 +25,7 @@ export interface EngineContext {
 	campaign(): Campaign | null;
 	campaignPlayer(): Player | null;
 	spotSide(): number;
+	rules(): RulesetName;	//the rules the game plays by (src/core/rules.ts)
 	host(): CampaignHost | null;
 	world(): World; //the core's world of the game's objects now (src/mirror.ts rulesWorld), which the rules read
 }
@@ -34,6 +35,7 @@ export var engineContext: EngineContext = {
 	campaign: function() { return null; },
 	campaignPlayer: function() { return null; },
 	spotSide: function() { return -1; },
+	rules: function() { return "classic"; },
 	host: function() { return null; },
 	world: function() { throw new Error("no game: no world"); }
 };

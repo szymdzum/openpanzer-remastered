@@ -1,7 +1,7 @@
 //The AI arena (#46, test/arena/): games played headless, the AI against the AI and against the scripted
 //general (#236), and what each side achieved. Off unless ARENA=1 (a few minutes): `npm run arena` prints
-//the tables docs/ai/arena.md keeps. ARENA_FILES (comma separated) and ARENA_SEEDS pick the games;
-//ARENA_OUT writes every game's result as JSON. One game always runs, to keep the general playing
+//the tables docs/ai/arena.md keeps. ARENA_FILES (comma separated) and ARENA_SEEDS pick the games,
+//ARENA_RULES the rules (remaster, or classic: #53); ARENA_OUT writes every game's result as JSON. One game always runs, to keep the general playing
 import fs from "node:fs";
 import { expect, test } from "vitest";
 import { type GameResult, type Match, type Player, playMatch, summary } from "./arena/arena";
@@ -17,14 +17,15 @@ const MATCHUPS: [Player, Player][] = [["ai", "ai"], ["general", "ai"], ["ai", "g
 test.runIf(!!process.env.ARENA)("The AI arena", () => {
 	const files = (process.env.ARENA_FILES || "drpzop01.xml").split(",");
 	const seeds = Array.from({ length: +(process.env.ARENA_SEEDS || 10) }, (_, i) => i + 1);
+	const rules = process.env.ARENA_RULES === "classic" ? "classic" : "remaster";
 	const all: GameResult[] = [];
 	const out: string[] = [];
 	for (const file of files) {
-		out.push(`\n### ${file}, ${seeds.length} seeds\n`,
+		out.push(`\n### ${file}, ${seeds.length} seeds, ${rules} rules\n`,
 			"| side (player) | wins | victory levels | first objective, turn (games) | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |",
 			"|---|---|---|---|---|---|---|---|---|---|");
 		for (const sides of MATCHUPS) {
-			const results = seeds.map((seed): GameResult => playMatch({ file, sides, seed } as Match));
+			const results = seeds.map((seed): GameResult => playMatch({ file, sides, seed, rules } as Match));
 			all.push(...results);
 			out.push(`| **${sides[0]} vs ${sides[1]}** | | | | | | | | | |`, ...summary(results).map((r) => "| " + r + " |"));
 			const ends = results.map((g) => g.end === "turnLimit" ? "limit" : `${g.end} t${g.turns}`);

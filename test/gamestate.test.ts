@@ -333,7 +333,7 @@ test("GameState import keeps the campaign's core list of a save of the format be
 test("GameState refuses what isn't a save", async () => {
 	const { readSave } = await import("../src/savegame");
 	const { GameState } = await import("../src/gamestate");
-	for (const text of ["not a save", "{}", "null", JSON.stringify({ version: 2, data: {}, state: {} }), JSON.stringify({ scenario: {} })]) {
+	for (const text of ["not a save", "{}", "null", JSON.stringify({ version: 3, data: {}, state: {} }), JSON.stringify({ scenario: {} })]) {
 		expect(readSave(text), text).toBeNull();
 		expect(new GameState(null).restoreFromString(text), text).toBe(false);
 	}

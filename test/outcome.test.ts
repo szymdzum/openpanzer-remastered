@@ -8,10 +8,10 @@ import { fixtures, readFixture, restoreState } from "./contracts";
 test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name) => {
 	const scenario = await restoreState(readFixture("engine", name).state);
 	const { game } = await import("../src/game");
-	const { mirrorOptions, worldOf } = await import("../src/mirror");
+	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	mirrorOptions.cache = false; //(the turn and the players written by hand below)
-	const world = () => worldOf(scenario, game, { spotSide: game.spotSide, noFOW: false });
+	const world = () => worldOf(scenario, game, gameInputs(game));
 	const m = scenario.map;
 	let defeats = 0;
 	//Without a move there is no capture, even for a side without objectives left (campaign-3-1).
@@ -51,7 +51,7 @@ function turnLimitOf(scenario: Awaited<ReturnType<typeof restoreState>>) {
 test("At the turn limit the side holding more objectives wins, a defender who held them included (#231)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
 	const { game } = await import("../src/game");
-	const { mirrorOptions, worldOf } = await import("../src/mirror");
+	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
 	const { outcome } = await import("../src/core/turn");
 	mirrorOptions.cache = false;
 	const m = scenario.map;
@@ -60,7 +60,7 @@ test("At the turn limit the side holding more objectives wins, a defender who he
 	objectives.forEach((h, i) => { h.owner = i === 0 ? 0 : 1; });
 	m.turn = m.maxTurns;
 	m.getPlayers().forEach((p) => { p.playedTurn = m.maxTurns; });
-	const world = worldOf(scenario, game, { spotSide: game.spotSide, noFOW: false });
+	const world = worldOf(scenario, game, gameInputs(game));
 	expect(objectives.length).toBeGreaterThan(2);
 	expect(outcome(world, { endedSide: 1 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });
 	expect(outcome(world, { endedSide: 0 })).toEqual({ kind: "turnLimit", winner: 1, loser: 0, rating: scenario.checkVictory() });

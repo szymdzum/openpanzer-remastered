@@ -5,9 +5,10 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * A save is { version, data, state } (docs/STATE.md D3, D11): toData's scenario data and state
- * (src/state.ts), plain JSON and self-contained, the scenario file isn't read again. readSave reads
- * one back, or imports a save of the format before it (GameStateExport, the JSON of the game's
+ * A save is { version, rules, data, state } (docs/STATE.md D3, D11): the rules the game plays by (#53),
+ * toData's scenario data and state (src/state.ts), plain JSON and self-contained, the scenario file
+ * isn't read again. readSave reads one back, a save of version 1 (before the rules were chosen: the
+ * classic ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
  * objects): what that save had is kept, what it never stored is listed as unknown, and the load
  * keeps the game's own there (the equipment lists as loaded, the random streams where they are,
  * the campaign's progress), as loading it always did. GameState (src/gamestate.ts) reads and
@@ -16,16 +17,18 @@
 
 import { Equipment } from "./equipment";
 import type { PlayerDossier } from "./map";
+import type { RulesetName } from "./core/types";
 import { Scenario } from "./scenario";
 import {
 	campaignFromData, type CampaignHost, type CampaignState, type CoreUnit, fromData, type GameState, type HexState, type OffMapUnit,
 	offMapUnit, type PlayerState, type Position, type ReinforcementState, type ScenarioData, type ScenarioState, toData, type UnitState
 } from "./state";
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export interface SaveFile {
 	version: typeof SAVE_VERSION;
+	rules: RulesetName;
 	data: ScenarioData;
 	state: GameState;
 }
@@ -44,10 +47,10 @@ export interface ReadSave {
 	unknown: UnknownPart[];
 }
 
-//The game as a save
-export function writeSave(scenario: Scenario, host: CampaignHost | null): SaveFile {
+//The game as a save, with the rules it plays by
+export function writeSave(scenario: Scenario, host: CampaignHost | null, rules: RulesetName): SaveFile {
 	const { data, state } = toData(scenario, host);
-	return { version: SAVE_VERSION, data, state };
+	return { version: SAVE_VERSION, rules, data, state };
 }
 
 //A save from its JSON, this format's or the one before it; null when it's neither (or a later
@@ -67,7 +70,10 @@ export function readSaveObject(o: unknown): ReadSave | null {
 		return null;
 	const s = o as Partial<SaveFile> & Partial<GameStateExport>;
 	if (s.version === SAVE_VERSION && s.data && s.state)
-		return { save: s as SaveFile, unknown: [] };
+		return { save: { ...s, rules: s.rules === "remaster" ? "remaster" : "classic" } as SaveFile, unknown: [] };
+	//(version 1 had no rules: its games played the classic ones)
+	if ((s.version as number) === 1 && s.data && s.state)
+		return { save: { version: SAVE_VERSION, rules: "classic", data: s.data, state: s.state }, unknown: [] };
 	if (s.version === undefined && s.scenario && s.scenario.file && s.players)
 		return importSave(s as GameStateExport);
 	return null;
@@ -204,7 +210,7 @@ export function importSave(old: GameStateExport): ReadSave {
 		campaign: c ? importCampaign(c) : null,
 		equipment: { indexes: {} },
 	};
-	return { save: { version: SAVE_VERSION, data, state }, unknown };
+	return { save: { version: SAVE_VERSION, rules: "classic", data, state }, unknown };
 }
 
 //The scenario's part: a save older than the field has the scenario's start there

@@ -4,6 +4,7 @@
 //fromData) with the engine context a game gives them (src/context.ts). Loads the two countries' equipment
 import fs from "node:fs";
 import path from "node:path";
+import { classicRules } from "../src/core/rules";
 import { Equipment, type EquipmentCountryFile } from "../src/equipment";
 import { playerType } from "../src/prototypes";
 import { Scenario } from "../src/scenario";
@@ -72,7 +73,7 @@ export function smallGameData(units = smallGameUnits): SavedGame {
 export function smallGame(units = smallGameUnits, saved = smallGameData(units)): { scenario: Scenario; map: GameMap; players: Player[] } {
 	mirrorOptions.cache = false;
 	const scenario = fromData(saved, null, new Scenario());
-	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, host: () => null,
-		world: () => worldOf(scenario, null, { spotSide: 0, noFOW: false }) });
+	setEngineContext({ scenario: () => scenario, campaign: () => null, campaignPlayer: () => null, spotSide: () => 0, rules: () => "classic",
+		host: () => null, world: () => worldOf(scenario, null, { spotSide: 0, noFOW: false, rules: classicRules }) });
 	return { scenario, map: scenario.map, players: scenario.map.getPlayers() };
 }

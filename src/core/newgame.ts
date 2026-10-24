@@ -24,7 +24,7 @@ import { beginDraft, finishDraft, place, writeHex } from "./draft";
 import { newLeader } from "./fight";
 import { classicRules } from "./rules";
 import type {
-	Draft, EquipmentTable, GameState, HexState, OffMapUnit, PlayerState, Position, ScenarioData, UnitState, World
+	Draft, EquipmentTable, GameState, HexState, OffMapUnit, PlayerState, Position, Ruleset, ScenarioData, UnitState, World
 } from "./types";
 import { isAir, isSea } from "./units";
 import { emptySight } from "./world";
@@ -103,6 +103,7 @@ export interface GameSetup {
 	rng: RngStreams | null;		//where the streams are; null: the game stream reads Math.random
 	campaign: CampaignState | null;
 	carried?: PlayerState | null;	//a campaign's player from its previous scenario (campaign.ts)
+	rules?: Ruleset;		//the rules it plays by, classicRules when not given (the leaders it loads)
 }
 
 const DEFAULT_EQUIPMENT = "eqp-adlerkorps";
@@ -165,13 +166,13 @@ export function newGame(g: GameSetup): { data: ScenarioData; state: GameState } 
 	state.reinforcements.sort((a, b) => a.turn - b.turn);
 	if (state.rng !== null) state.rng.game = rng.state;
 	//The hexes on a draft: it places the units with their sight, and the leaders draw from its stream
-	const d = beginDraft(createWorld({ data, state }, g.equipment));
+	const d = beginDraft(createWorld({ data, state }, g.equipment, { rules: g.rules }));
 	for (const h of f.hexes) loadHex(d, g, h);
 	const s = finishDraft(d).state;
 	initialScores(s);
 	if (g.campaign === null) return { data, state: singleScenario(g, s) };
 	//(a campaign's start on a draft too: it removes units and draws the prototype)
-	const c = beginDraft(createWorld({ data, state: s }, g.equipment));
+	const c = beginDraft(createWorld({ data, state: s }, g.equipment, { rules: g.rules }));
 	startCampaignScenario(c, g.campaign, g.carried || null);
 	return { data, state: finishDraft(c).state };
 }
@@ -221,7 +222,7 @@ function newPlayer(p: FilePlayer, campaign: CampaignState | null): PlayerState {
 const playerAt = (s: GameState, id: number) => id < s.players.length ? s.players[id] : s.players[0];
 
 //A world to ask the unit queries in, while loading
-const queries = (g: GameSetup, s: GameState): World => ({ data: null, state: s, equipment: g.equipment, rules: classicRules,
+const queries = (g: GameSetup, s: GameState): World => ({ data: null, state: s, equipment: g.equipment, rules: g.rules || classicRules,
 	noFOW: false, spotSide: -1, destroyed: new Set(), index: new Map(), sight: emptySight(0), scratch: null });
 
 //An equipment id the equipment knows, else the first it has (Unit's knownEqid: as the key, a string)

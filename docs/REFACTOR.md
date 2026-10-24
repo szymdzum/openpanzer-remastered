@@ -627,8 +627,11 @@ invariant tests:
 9. The campaign load (#64, #61). Done without a load token: the turn loop asks for the next
    scenario once, and its save stays until the next scenario's replaces it.
 10. A remaster ruleset next to the classic one (#53), so the mechanics gaps (#1-#4, #14, #18)
-    don't re-record the classic contracts. The Ruleset exists (C1, src/core/rules.ts); the flags
-    come with the first rule that differs. Open.
+    don't re-record the classic contracts. The switch is in: `remasterRules` (src/core/rules.ts,
+    the classic rules until a change lands there) is the default for new games, the settings'
+    "New games play the classic rules" picks the classic ones, the save names them (version 2),
+    the tutorial, the harness and the contracts play the classic ones. The rules that differ come
+    one by one, the AI's measured in the arena.
 11. Then the arena (#46) and the AI issues measured in it (docs/ai/). Open.
 
 ## Rules and traps

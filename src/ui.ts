@@ -1729,6 +1729,8 @@ function uiScaleMap(level: number) {
 				//Both sides are played by the tutorial script
 				uiSettings.isAI[0] = 2;
 				uiSettings.isAI[1] = 2;
+				//The tutorial's script was planned and checked on the classic rules (#188)
+				game.rules = "classic";
 				game.newScenario(DEFAULT_SCENARIO);
 				toggleButton($("options"), false);
 				break;

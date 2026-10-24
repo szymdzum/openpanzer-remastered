@@ -113,6 +113,7 @@ if (!window.__clock) {
 	uiSettings.quickAnimation = true;
 	uiSettings.muteUnitSounds = true;
 	uiSettings.hdGraphics = false; // the remaster's @2x images (the harness runs at 1x anyway)
+	uiSettings.classicRules = true; // new games play the original's rules, which they're compared with (#53)
 	window.__replayErrors = [];
 	window.addEventListener("error", (e) => window.__replayErrors.push(String(e.message)
 		+ (e.error && e.error.stack ? " @ " + e.error.stack.split("\n").slice(1, 4).map((l) => l.trim()).join(" < ") : "")));

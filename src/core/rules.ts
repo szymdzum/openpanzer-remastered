@@ -1,6 +1,8 @@
 /**
  * Ruleset - the rules a game plays by, as data: the movement tables, the class leaders and the
- * combat steps. classicRules is today's game (#116); a remaster ruleset (#53) sits next to it
+ * combat steps. classicRules is today's game (#116), the one the contracts and verify pin against the
+ * original; remasterRules (#53) the default for new games, where the remaster's changes to the
+ * mechanics and the AI go. A game plays by one of them from its start to its end (the save names it)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -39,6 +41,13 @@ export const classicRules: Ruleset = {
 	classLeaders: leaders.map((list) => list.length ? list[0] : -1),
 	combat: classicCombat,
 };
+
+//The remaster's rules: the classic ones until a change lands here, each measured in the AI arena
+//(docs/ai/arena.md)
+export const remasterRules: Ruleset = { ...classicRules, name: "remaster" };
+
+//The ruleset of a name; a name it doesn't know (a save from before #53) plays the classic rules
+export const rulesetNamed = (name: string | undefined): Ruleset => name === remasterRules.name ? remasterRules : classicRules;
 
 //The movement costs of a movement method on the scenario's ground (Scenario.setMoveTable: an
 //unknown ground condition moves as on dry ground)

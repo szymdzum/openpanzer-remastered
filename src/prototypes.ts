@@ -304,6 +304,7 @@ export interface UISettings {
 	showInfoToolTips: boolean;
 	showDetailInfoToolTips: boolean;
 	showHiddenVictoryHexes: boolean;
+	classicRules: boolean;
 }
 
 //Holds the settings for the game ui and renderer
@@ -337,8 +338,12 @@ export let uiSettings: UISettings = {
 	lastCloudSave: [],
 	showInfoToolTips: true,
 	showDetailInfoToolTips: false,
-	showHiddenVictoryHexes: true
+	showHiddenVictoryHexes: true,
+	classicRules: false		//new games play the classic rules of Panzer Marshal 3.2.14, not the remaster's (#53)
 };
+
+//The rules a new game plays by, as the settings choose them (#53)
+export const newGameRules = (): "classic" | "remaster" => uiSettings.classicRules ? "classic" : "remaster";
 
 //What triggered end of the campaign/scenario
 export let endGameType = {

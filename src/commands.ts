@@ -25,13 +25,13 @@
  * reach the next command's world.
  */
 
-import { Cell, type combatResults, movMethod, movementResults, type Supply, uiSettings, unitClass } from "./prototypes";
+import { Cell, type combatResults, movMethod, movementResults, type Supply, unitClass } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import { engineContext, touched } from "./context";
 import type { ReinforceResults } from "./map";
 import type { Scenario } from "./scenario";
 import type { Unit } from "./unit";
-import { applyData, checkedDifference, rulesWorld, stepWorld, unitObject } from "./mirror";
+import { applyData, checkedDifference, gameInputs, rulesWorld, stepWorld, unitObject } from "./mirror";
 import { attackResult } from "./core/combat";
 import type { Fighter, GameEvent } from "./core/events";
 import { begin, check, resume } from "./core/step";
@@ -174,7 +174,7 @@ export type Executed<T extends CommandType> = { ok: true; result: ResultOf<T> } 
 
 //The world of the game's objects now, for a step to start from
 function worldNow(scenario: Scenario): World {
-	return stepWorld(scenario, engineContext.host(), { spotSide: engineContext.spotSide(), noFOW: !!uiSettings.noFOW });
+	return stepWorld(scenario, engineContext.host(), gameInputs({ spotSide: engineContext.spotSide(), rules: engineContext.rules() }));
 }
 
 //The objects to the world: they must then mirror it (a difference is a bug in the mirror, which the
@@ -188,7 +188,7 @@ function mirror(scenario: Scenario, w: World) {
 
 //Whether cmd is allowed now, or why not (a query: on the world the screen's rules read)
 function checkNow(scenario: Scenario, cmd: Command): Refusal | null {
-	return check(rulesWorld(scenario, engineContext.host(), { spotSide: engineContext.spotSide(), noFOW: !!uiSettings.noFOW }), cmd);
+	return check(rulesWorld(scenario, engineContext.host(), gameInputs({ spotSide: engineContext.spotSide(), rules: engineContext.rules() })), cmd);
 }
 
 //Checks cmd, then plays it on the core and mirrors it, with the old commands' hooks

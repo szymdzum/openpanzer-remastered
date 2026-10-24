@@ -13,7 +13,7 @@
  */
 
 import {
-	actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, endGameLossText, endGameType, outcomeNames, playerType,
+	actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, endGameLossText, endGameType, newGameRules, outcomeNames, playerType,
 	uiSettings
 } from "./prototypes";
 import { GameState } from "./gamestate";
@@ -31,10 +31,11 @@ import { Commands } from "./commands";
 import { GameRules } from "./gamerules";
 import { coreDriver, endGameTurn, removeDestroyed, startGameSession } from "./coresession";
 import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./coreload";
-import { applyData, rulesWorld, worldOf } from "./mirror";
+import { applyData, gameInputs, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
 import { endCampaignScenario, scenarioEnded } from "./core/campaign";
 import type { Session } from "./core/session";
+import type { RulesetName } from "./core/types";
 import { setEngineContext, touched } from "./context";
 import { game, setGame } from "./session";
 import type { CampaignProgress } from "./state";
@@ -53,6 +54,7 @@ export class Game {
 	declare gameEnded: boolean;
 	declare waitUIAnimation: boolean;
 	declare spotSide: number;
+	declare rules: RulesetName;
 	declare uiMessageClicked: boolean;
 	declare loop: number;
 	declare session: Session | null; //the core's session the game plays on (src/coresession.ts), null before a scenario
@@ -86,6 +88,9 @@ export class Game {
 		this.gameEnded = false; //Game ended in victory or defeat
 		this.waitUIAnimation = false; //A move or an attack still playing: the next AI action and the end turn button wait
 		this.spotSide = -1; //currently visible side on map
+		//The rules the game plays by (#53): the settings' at a new game, the save's at a load, kept through a
+		//campaign; classic until then, as the tests and the contracts play
+		this.rules = "classic";
 		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window //TODO change to event
 
 		let localPlayingSide = -1; //Which player side plays locally on this computer
@@ -243,6 +248,7 @@ export class Game {
 		}
 
 		this.newCampaign = function(campIndex: number, difficulty: number) {
+			this.rules = newGameRules();
 			this.campaign = new Campaign(campIndex, difficulty, this.onCampaignLoadFinished.bind(this));
 		}
 
@@ -266,7 +272,7 @@ export class Game {
 		//The scenario's end (src/core/campaign.ts): the player carried into the next scenario, and the
 		//scenario as the old game left it until the next one loads (its player sent to HQ in place)
 		function endScenario(game: Game, outcomeType: ScenarioOutcome) {
-			const w = worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+			const w = worldOf(game.scenario, game, gameInputs(game));
 			const ended = endCampaignScenario(w, outcomeType, game.campaign.getCampaignData());
 			carryPlayer(ended.player);
 			OSGlue.reportScore(ended.player.score);
@@ -523,8 +529,9 @@ setEngineContext({
 	campaign: function() { return game.campaign; },
 	campaignPlayer: function() { return game.getCampaignPlayer(); },
 	spotSide: function() { return game.spotSide; },
+	rules: function() { return game.rules; },
 	host: function() { return game; },
-	world: function() { return rulesWorld(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW }); }
+	world: function() { return rulesWorld(game.scenario, game, gameInputs(game)); }
 });
 
 export function gameStart() {

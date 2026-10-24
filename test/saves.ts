@@ -14,7 +14,7 @@ export function withoutLosses(save: SaveFile): unknown {
 //A save without what an imported save never stored (src/savegame.ts UnknownPart): an imported save
 //has placeholders there, a loaded one the game's own
 export function withoutUnknown(save: SaveFile, unknown: UnknownPart[]): SaveFile {
-	const { version, data, state } = structuredClone(save);
+	const { version, rules, data, state } = structuredClone(save);
 	const drop: Record<UnknownPart, () => void> = {
 		description: () => { delete data.description; },
 		equipment: () => { delete state.equipment; },
@@ -29,7 +29,7 @@ export function withoutUnknown(save: SaveFile, unknown: UnknownPart[]): SaveFile
 		nextUnitId: () => { delete state.nextUnitId; },
 	};
 	for (const part of unknown) drop[part]();
-	return { version, data, state };
+	return { version, rules, data, state };
 }
 
 //The format before: GameState.exportGameState of the game as it wrote it, the JSON of the

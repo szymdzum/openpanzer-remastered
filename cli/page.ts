@@ -6,10 +6,10 @@ import type { Command } from "../src/commands";
 import { Commands } from "../src/commands";
 import { check } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { worldOf } from "../src/mirror";
-import { playerType, uiSettings } from "../src/prototypes";
+import { gameInputs, worldOf } from "../src/mirror";
+import { newGameRules, playerType, uiSettings } from "../src/prototypes";
 import { game } from "../src/session";
-import { answer, type Answer, type Args, flagInt, type Front, parseArgs, resultOf, runOn, UsageError } from "./commands";
+import { answer, type Answer, type Args, flagInt, flagRules, type Front, parseArgs, resultOf, runOn, UsageError } from "./commands";
 import { status } from "./board";
 import { SIDES } from "./known";
 import { changes } from "./report";
@@ -21,7 +21,7 @@ async function until(ready: () => boolean, limit: number) {
 	for (const end = Date.now() + limit; Date.now() < end && !ready(); ) await sleep(100);
 }
 
-const world = (): World => worldOf(game.scenario, game, { spotSide: game.spotSide, noFOW: !!uiSettings.noFOW });
+const world = (): World => worldOf(game.scenario, game, gameInputs(game));
 const humanSide = () => game.scenario.map.getPlayers().find((p) => p.type === playerType.humanLocal)?.side ?? 0;
 const humanTurn = () => game.scenario.map.currentPlayer.type === playerType.humanLocal && !game.gameEnded;
 const settled = () => !game.waitUIAnimation;
@@ -107,13 +107,14 @@ async function newGame(args: Args): Promise<Answer> {
 	if (!entry) throw new UsageError(`no scenario ${file} in the scenario list`);
 	uiSettings.isAI.forEach((_ai, p) => { uiSettings.isAI[p] = p === side ? 0 : 1; });
 	game.campaign = null;
+	game.rules = flagRules(args, newGameRules());
 	game.newScenario(file, (entry as unknown as string[])[2]);
 	["gameToolTip", "smScen", "startmenu"].forEach(hide);
 	await until(loaded, 30_000);
 	await sleep(500);
 	uncover();
 	report = [];
-	return answer([`new game of ${file} on the page, you play ${SIDES[side]}`, ...status(world(), side)]);
+	return answer([`new game of ${file} on the page, you play ${SIDES[side]}, ${game.rules} rules`, ...status(world(), side)]);
 }
 
 const playing = () => game?.scenario?.isLoaded === true && game.session !== null;
