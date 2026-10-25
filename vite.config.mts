@@ -83,25 +83,29 @@ function cliBridge(): Plugin {
 }
 
 export default defineConfig({
-	oxc: false, //types are blanked out by blankTypes
+	//.ts: the types are blanked out by blankTypes. .tsx (the new UI's components, src/view/): Vite's
+	//own transform, which compiles Preact's JSX too
+	oxc: { include: /\.tsx$/, jsx: { runtime: "automatic", importSource: "preact" } },
 	plugins: [blankTypes(), harnessSetters(), copyGameAssets(), cliBridge()],
-	optimizeDeps: { noDiscovery: true }, //no dependencies (and game/ has pages of its own)
+	optimizeDeps: { noDiscovery: true }, //the game has no dependencies, Preact (src/view/) is ESM as it is (and game/ has pages of its own)
 	test: {
 		//the game's modules need a DOM; the page is served from /game/ like index.html
 		environment: "jsdom",
 		environmentOptions: { jsdom: { url: "http://127.0.0.1/game/index.html" } },
 		setupFiles: ["test/setup.ts"],
-		include: ["test/**/*.test.ts"],
+		include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
 		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
-		//and the entry (main), and of the new core (src/core/ and its commands)
+		//and the entry (main), of the new core (src/core/ and its commands) and of the new UI's
+		//components (src/view/)
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/core/*.ts", "src/core/commands/*.ts"],
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/core/*.ts", "src/core/commands/*.ts",
+				"src/view/*.tsx"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -164,6 +168,7 @@ export default defineConfig({
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
+				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 			},
 		},
 	},

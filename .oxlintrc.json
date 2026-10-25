@@ -3,14 +3,17 @@
 // turned on: new files get every rule, and a file leaves a list once it is clean (the lists may
 // only shrink). The first override keeps the engine modules from importing UI modules or
 // game.ts (the engine reads the game through src/context.ts), the second and third the new
-// core (src/core/ and its commands) from importing the old engine.
+// core (src/core/ and its commands) from importing the old engine. The react and jsx-a11y
+// plugins check the JSX of the new UI's components (src/view/*.tsx, Preact).
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	"plugins": [
 		"typescript",
 		"unicorn",
 		"oxc",
-		"import"
+		"import",
+		"react",
+		"jsx-a11y"
 	],
 	"categories": {
 		"correctness": "error"
@@ -33,7 +36,9 @@
 		"no-eval": "error",
 		"import/no-cycle": "off",
 		"typescript/no-misused-spread": "error",
-		"typescript/no-useless-default-assignment": "off"
+		"typescript/no-useless-default-assignment": "off",
+		"react/rules-of-hooks": "error",
+		"react/button-has-type": "error"
 	},
 	"overrides": [
 		{
