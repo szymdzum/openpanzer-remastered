@@ -64,8 +64,4 @@ if (typeof window !== "undefined") {
 	//No media in jsdom: the sound sprites load and play nothing
 	HTMLMediaElement.prototype.load = function() {};
 	HTMLMediaElement.prototype.play = function() { return Promise.resolve(); };
-
-	//Map.attackUnit reads a global map, kept from the bundle: in the browser window.map is the
-	//renderer's canvas (the element with id "map"), so map.turn is undefined. No renderer here
-	(window as unknown as { map: HTMLCanvasElement }).map = document.createElement("canvas");
 }

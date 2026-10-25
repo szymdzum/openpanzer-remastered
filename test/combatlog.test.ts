@@ -1,9 +1,10 @@
 //The combat log's turn summary from the combats it was told about, on units made by hand: what the
 //attack and the summary window (src/uicombatlog.ts) read of each unit
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
 import { CombatLog } from "../src/combatlog";
 import { Cell } from "../src/prototypes";
 import type { Unit } from "../src/unit";
+import { freshGame, startState } from "./lifecycle";
 
 function unit(id: number, side: number, strength: number, entrenchment: number): Unit {
 	return { id, eqid: 100 + id, player: { side }, strength, experience: 0, entrenchment, ammo: 5, isMounted: false,
@@ -25,3 +26,19 @@ test("The resupply report lists the first unit of the scenario, id 0 (#114)", ()
 	CombatLog.addResupply(Object.assign(unit(0, 1, 10, 0), { fuel: 20 }));
 	expect(CombatLog.log.resupply[0]).toMatchObject({ eqid: 100, ammo: 5, fuel: 20, side: 1 });
 });
+
+test("A fight is logged with the turn it is fought on, not a global map's (#28)", async () => {
+	const game = await freshGame();
+	await startState(game, "campaign:0:1");
+	const { CombatLog: log } = await import("../src/combatlog");
+	const { Commands } = await import("../src/commands");
+	const { GameRules } = await import("../src/gamerules");
+	const map = game.scenario.map;
+	const own = map.getUnits().filter((u) => u.player.id === map.currentPlayer.id);
+	const [attacker, defender] = own.flatMap((a) => map.getUnits().filter((d) => GameRules.isEnemy(a, d)
+		&& GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)).map((d) => [a, d]))[0];
+	const started = vi.spyOn(log, "addCombatStart");
+	expect(Commands.execute(game.scenario, { type: "attack", unit: attacker.id, target: defender.id }, {}).ok).toBe(true);
+	expect(started.mock.calls.length).toBeGreaterThan(0);
+	expect(started.mock.calls.map((c) => c[2])).toEqual(started.mock.calls.map(() => map.turn));
+}, 60_000);

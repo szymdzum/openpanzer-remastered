@@ -409,12 +409,6 @@ function logged(scenario: Scenario, f: Fighter, done: boolean) {
 		getPos: () => new Cell(f.row, f.col) } as unknown as Unit;
 }
 
-//(Map.attackUnit logs the combat with the turn of a global map: the page's, whatever it holds)
-function globalTurn(): number {
-	const g = globalThis as unknown as { map?: { turn?: number } };
-	return g.map ? g.map.turn : undefined;
-}
-
 //The old Actions.resolveAttack after the shots: each fire in the combat log with the leaders it gave, the
 //attack hexes cleared by the attack itself, the support shots and the attack told to the hooks, the
 //result as the old one (the estimate's when there was no attack)
@@ -447,7 +441,8 @@ function leadersAfter(events: GameEvent[], i: number): number[] {
 function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, leaders: number[], result: AttackResult,
 	h: AttackCommandHooks) {
 	const m = scenario.map;
-	const id = CombatLog.addCombatStart(logged(scenario, e.attacker, false), logged(scenario, e.defender, false), globalTurn());
+	//The fight's own turn: the bundle read a global map's, in the page the canvas's, undefined (#28)
+	const id = CombatLog.addCombatStart(logged(scenario, e.attacker, false), logged(scenario, e.defender, false), m.turn);
 	if (!e.support) m.delAttackSel();
 	for (const l of leaders) CombatLog.addLeader(unitObject(m, l));
 	CombatLog.addCombatEnd(logged(scenario, e.attacker, true), logged(scenario, e.defender, true), id, e.support);
