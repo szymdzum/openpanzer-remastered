@@ -329,6 +329,30 @@ test("GameState import keeps the campaign's core list of a save of the format be
 		: i === list.length - 1 ? { reserve: expect.objectContaining({ eqid: u.eqid }) } : { onMap: u.id }));
 });
 
+//The selection is the old UI's, not the game's (#377): a save has none, whatever is selected. The saves of
+//the format before had it (the selected unit on the map, the move and attack marks on the hexes): such a
+//save loads as the same save without it, nothing selected
+test("A save has no selection, and a save of the format before loads without its selection (#377)", async () => {
+	const scenario = await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
+	const { game } = await import("../src/game");
+	const { GameRules } = await import("../src/gamerules");
+	const m = scenario.map;
+	const u = m.getUnits().find((x) => x.player.id === m.currentPlayer.id && x.getPos() !== null
+		&& GameRules.getMoveRange(m, x).some((c) => c.canMove) && GameRules.getUnitAttackCells(m.map, x, m.rows, m.cols).length > 0)!;
+	const save = await exportGame(), old = oldExport(game);
+	expect(m.selectUnit(u)).toBe(true);
+	expect(await exportGame(), "the save with a unit selected").toBe(save);
+	const selected = oldExport(game);
+	for (const field of ['"currentUnit":{"', '"isMoveSel":true', '"isAttackSel":true'])
+		expect(selected, "the save of the format before had " + field).toContain(field);
+	const { readSave } = await import("../src/savegame");
+	expect(readSave(selected)).toEqual(readSave(old));
+	const loadedSelected = await load(selected);
+	//(the load starts the game's modules again)
+	expect((await import("../src/game")).game.scenario.map.currentUnit, "nothing selected after the load").toBeNull();
+	expect(loadedSelected).toEqual(await load(old));
+});
+
 //Not a save: unreadable, another format or a later version
 test("GameState refuses what isn't a save", async () => {
 	const { readSave } = await import("../src/savegame");

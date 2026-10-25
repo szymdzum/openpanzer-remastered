@@ -27,8 +27,8 @@
 //
 // Here the game plays on its core (#137). The player's actions (the AI's and the random ones: move,
 // attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband) go through
-// the game's command entry, src/commands.ts (env.Commands), as the game sends them: a move and an
-// attack played whole (#375) with the UI's selection refresh after the cleanup, then shown as the UI
+// the game's command entry, src/commands.ts (env.Commands), as the old UI sends them: a move and an
+// attack played whole (#375), then the UI's selection after them (src/selection.ts), then shown as the UI
 // shows them (the victories); the two units of an attack as they were at its shots, which the game
 // stopped at until then, played again on the core from the world before (env.Actions.shotUnits,
 // test/coreengine.ts). The end of turn is
@@ -271,12 +271,23 @@ function runEngineContract(env) {
 			retreat, victory, outcome: outcome() };
 	}
 
+	// A command as the old UI plays it (src/ui.ts played): then the selection shows what the old engine's
+	// command left selected, a disband the command allows deselects first (src/selection.ts: the commands
+	// don't touch it, #377)
+	function execute(cmd) {
+		const selection = m.getSelection();
+		if (cmd.type === "disband" && C.check(sc, cmd) === null) selection.clear();
+		const r = C.execute(sc, cmd);
+		selection.after(cmd, r);
+		return r;
+	}
+
 	// The attack command: its check is the range, which the callers already checked (no position is
 	// out of range)
 	function attack(a, d) {
 		if (C) {
 			const cmd = { type: "attack", unit: a.id, target: d.id }, before = X.worldNow();
-			const r = C.execute(sc, cmd, { reselect: true });
+			const r = execute(cmd);
 			return r.ok ? finishAttack(resolved(a, d, r.result, X.shotUnits(before, cmd, [a.id, d.id])), r.result) : "no position";
 		}
 		const r = resolveAttack(a, d);
@@ -319,7 +330,7 @@ function runEngineContract(env) {
 		let mr = null, after = null;
 		if (C) {
 			const cmd = { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, before = X.worldNow();
-			const r = C.execute(sc, cmd, { reselect: true });
+			const r = execute(cmd);
 			if (!r.ok) return { refused: r.refusal.reason, unit: contractUnitState(u), outcome: outcome() };
 			mr = r.result.move;
 			after = moveFinished(u, mr, r.result, (ids) => X.shotUnits(before, cmd, ids));
@@ -336,7 +347,7 @@ function runEngineContract(env) {
 	// old: the engine function, on the reference
 	function command(cmd, old, refused) {
 		if (!C) return old();
-		const r = C.execute(sc, cmd);
+		const r = execute(cmd);
 		if (r.ok) return r.result === null ? undefined : r.result;
 		return arguments.length > 2 ? refused : { refused: r.refusal.reason };
 	}

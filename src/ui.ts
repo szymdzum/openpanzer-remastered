@@ -36,7 +36,7 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { type AttackResult, type CommandType, Commands, type Executed, type MoveResult, type ResultOf } from "./commands";
+import { type AttackResult, type Command, type CommandType, Commands, type Executed, type MoveResult, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
 //bundle: src/oldscreen.ts types `new UI(game)` through its UIConstructor
@@ -203,10 +203,10 @@ export function UI(this: UI, game: Game) {
 				selected = handleUnitSelect(row, col);
 			else
 				//attack an allowed hex unit
-				if (hex.isAttackSel && !map.currentUnit.hasFired)
+				if (map.getSelection().isAttack(row, col) && !map.currentUnit.hasFired)
 					handleUnitAttack(map.currentUnit, row, col);
 				else
-					if (hex.isMoveSel) //Move unit over/under clickedUnit
+					if (map.getSelection().isMove(row, col)) //Move unit over/under clickedUnit
 						uiUnitMove(map.currentUnit, row, col, map.getCurrentMoveRange());
 					else
 						if (map.currentUnit === clickedUnit) { //Click on the selected unit deselects it
@@ -220,7 +220,7 @@ export function UI(this: UI, game: Game) {
 				handleUnitDeployment(row, col); //Allow deployment on deployment hexes if on same side
 			else
 				//move to an empty allowed hex, currentUnit is checked for null after it's used
-				if (hex.isMoveSel && !map.currentUnit.hasMoved && map.currentUnit !== null)
+				if (map.getSelection().isMove(row, col) && !map.currentUnit.hasMoved && map.currentUnit !== null)
 					uiUnitMove(map.currentUnit, row, col, map.getCurrentMoveRange());
 				else { //remove current selection
 					handleUnitDeselect();
@@ -339,11 +339,22 @@ function handleKeyboard(e: KeyboardEvent) {
 //handle unit deployment
 function handleUnitDeployment(row: number, col: number) {
 	var deployUnit = $<EqUserSelElement>("eqUserSel").deployunit;
-	if (resultOf(Commands.execute(game.scenario, { type: "deploy", index: deployUnit, to: { row: row, col: col } }), false)) {
+	if (resultOf(played({ type: "deploy", index: deployUnit, to: { row: row, col: col } }), false)) {
 		R.cacheImages(function() { R.render(row, col, 1); });
 		handleUnitDeselect();
 		updateEquipmentWindow($<EqUserSelElement>("eqUserSel").eqclass);
 	}
+}
+
+//A command the old UI plays, the person's or a program's: then the selection shows what the old engine's
+//command left selected (a disband the old command allowed deselects first, src/selection.ts)
+function played<C extends Command>(cmd: C): Executed<C["type"]> {
+	const selection = map.getSelection();
+	if (cmd.type === "disband" && Commands.check(game.scenario, cmd) === null)
+		selection.clear();
+	const done = Commands.execute(game.scenario, cmd);
+	selection.after(cmd, done);
+	return done;
 }
 
 //A command's result, or refused when the command was refused: what the engine call it replaced
@@ -434,8 +445,7 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	var oldpos = unit.getPos();
 	var selected = map.currentUnit;
 
-	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells },
-		{ reselect: true });
+	var moved = played({ type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells });
 
 	//No path there: the unit stays
 	if (!moved.ok) {
@@ -518,7 +528,7 @@ function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
 	const selected = map.currentUnit;
 	if (Commands.check(game.scenario, cmd) === null)
 		UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar, the units as they were
-	const result = resultOf(Commands.execute(game.scenario, cmd, { reselect: true }), null);
+	const result = resultOf(played(cmd), null);
 	if (result === null)
 		animating(false);
 	else
@@ -982,22 +992,22 @@ function unitContextButton(action: string, unit: Unit) {
 
 	switch (action) {
 		case "mount": { //Can get a bigger range on mount
-			Commands.execute(game.scenario, { type: unit.isMounted ? "unmount" : "mount", unit: unit.id });
+			played({ type: unit.isMounted ? "unmount" : "mount", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
 		case "embark": {
 			if (unit.carrier > 0) {
-				Commands.execute(game.scenario, { type: "disembark", unit: unit.id });
+				played({ type: "disembark", unit: unit.id });
 				refreshRender = true;
 			} else {
-				if (resultOf(Commands.execute(game.scenario, { type: "embark", unit: unit.id }), false))
+				if (resultOf(played({ type: "embark", unit: unit.id }), false))
 					refreshRender = true;
 			}
 			break;
 		}
 		case "resupply": { //same location same range
-			ret = resultOf(Commands.execute(game.scenario, { type: "resupply", unit: unit.id }), new Supply(0, 0));
+			ret = resultOf(played({ type: "resupply", unit: unit.id }), new Supply(0, 0));
 			pos = unit.getPos();
 			text = "";
 			if (ret.ammo > 0) text += "+" + ret.ammo + " ammo ";
@@ -1012,7 +1022,7 @@ function unitContextButton(action: string, unit: Unit) {
 		case "reinforce": { //same location same range
 			overstrength = (action == "overstrength");
 			//the result takes the render range variable, the old range is lost
-			r = resultOf(Commands.execute(game.scenario, { type: "reinforce", unit: unit.id, overstrength: overstrength }),
+			r = resultOf(played({ type: "reinforce", unit: unit.id, overstrength: overstrength }),
 				{ strength: 0, ammo: 0, fuel: 0 });
 			pos = unit.getPos();
 			text = "";
@@ -1026,7 +1036,7 @@ function unitContextButton(action: string, unit: Unit) {
 			break;
 		}
 		case "undo": { //new location different range
-			Commands.execute(game.scenario, { type: "undo", unit: unit.id });
+			played({ type: "undo", unit: unit.id });
 			refreshRender = true;
 			break;
 		}
@@ -1903,7 +1913,7 @@ function uiScaleMap(level: number) {
 				if (typeof eqTransport === "undefined" || (eqTransport as number | string) == "")
 					eqTransport = -1;
 
-				Commands.execute(game.scenario, { type: "buy", eqid: eqUnit, transport: eqTransport });
+				played({ type: "buy", eqid: eqUnit, transport: eqTransport });
 				updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 				break;
 			}
@@ -1920,11 +1930,11 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Upgrade an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (resultOf(Commands.execute(game.scenario, { type: "upgradeUndeployed", index: deployId, eqid: eqUnit,
+					if (resultOf(played({ type: "upgradeUndeployed", index: deployId, eqid: eqUnit,
 						transport: eqTransport }), false))
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
 				} else { //Upgrade a unit already on map
-					if (resultOf(Commands.execute(game.scenario, { type: "upgrade", unit: unitId, eqid: eqUnit, transport: eqTransport }), false)) {
+					if (resultOf(played({ type: "upgrade", unit: unitId, eqid: eqUnit, transport: eqTransport }), false)) {
 						R.cacheImages(function() { R.render(); }); //Need to cache new image
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);
 					}
@@ -1940,13 +1950,13 @@ function uiScaleMap(level: number) {
 
 				if (typeof unitId === "undefined" || unitId == -1) { //Sell an undeployed unit
 					u = p.getCoreUnitList()[deployId];
-					if (resultOf(Commands.execute(game.scenario, { type: "sell", index: deployId }), false)) {
+					if (resultOf(played({ type: "sell", index: deployId }), false)) {
 						//The units after it in the core list moved up: the index named the sold one, now another or none (#208)
 						$<EqUserSelElement>("eqUserSel").deployunit = -1;
 						updateEquipmentWindow(Equipment.equipment[u.eqid].uclass);
 					}
 				} else { //Disband a unit on map
-					if (resultOf(Commands.execute(game.scenario, { type: "disband", unit: unitId }), false)) {
+					if (resultOf(played({ type: "disband", unit: unitId }), false)) {
 						R.cacheImages(function() { R.render(); });
 						$<EqUserSelElement>("eqUserSel").userunit = -1;
 						if (eqUnit > 0) updateEquipmentWindow(Equipment.equipment[eqUnit].uclass);

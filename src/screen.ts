@@ -19,6 +19,7 @@ import type { Unit } from "./unit";
 import type { ScenarioOutcome } from "./scenario";
 import type { ViewEvent } from "./core/controller";
 import type { Position } from "./state";
+import type { Command, CommandType, Executed } from "./commands";
 
 export interface Screen {
 	//---- The game's course (the host)
@@ -56,6 +57,10 @@ export interface Screen {
 	//show). shown is called once the player has seen it: a program's next action waits for its unit picked
 	//and its look at a hex (the old UI shows them a moment, #8) and for its message
 	view(event: ViewEvent, shown?: () => void): void;
+	//A program's command other than a move or an attack, played (done: its result or its refusal): what the
+	//screen shows beside the state after it (the old UI's selection, src/selection.ts). A screen that reads
+	//the game's world has none
+	played?(cmd: Command, done: Executed<CommandType>): void;
 	//A step the screen is still showing, the program's or the person's: a move or an attack it animates (the
 	//old UI). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
 	//screen that shows each step at once has none

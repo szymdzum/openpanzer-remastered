@@ -17,7 +17,7 @@ import { isDeepStrictEqual } from "node:util";
 import fc from "fast-check";
 import { afterAll, test } from "vitest";
 import { fixtures, restoreState } from "./contracts";
-import { cellName, load, violations, type Restored as World } from "./invariants";
+import { cellName, load, uiCommand, violations, type Restored as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";
@@ -146,7 +146,7 @@ function attacked(p: Play, res: AttackResult) {
 
 //The attack command as ui.ts uiUnitAttack sends it, played whole with the selection refreshed
 function attack(p: Play, cmd: Command & { type: "attack" }) {
-	const r = p.w.Commands.execute(p.w.scenario, cmd, { reselect: true });
+	const r = uiCommand(p.w, cmd);
 	if (r.ok) attacked(p, r.result);
 	return r;
 }
@@ -154,7 +154,7 @@ function attack(p: Play, cmd: Command & { type: "attack" }) {
 //The move command as ui.ts uiUnitMove sends it, shown as uiMoveShown shows it: the capture victory, then
 //the surprise attack
 function move(p: Play, cmd: Command & { type: "move" }) {
-	const r = p.w.Commands.execute(p.w.scenario, cmd, { reselect: true });
+	const r = uiCommand(p.w, cmd);
 	if (r.ok) {
 		settle(p, { move: r.result });
 		if (r.result.surprise !== null && r.result.surprise.attack !== null) attacked(p, r.result.surprise.attack);
@@ -187,7 +187,7 @@ function stateOf(w: World): State {
 			const counts = m.getVisibility().counters[r][c]; //(what isZOC and isSpotted read)
 			const zoc = (s: number) => counts.zoc[s];
 			const spot = (s: number) => counts.spot[s];
-			hexes.push([r, c, h.owner, h.flag, h.victorySide, h.isMoveSel, h.isAttackSel, h.unit ? h.unit.id : "",
+			hexes.push([r, c, h.owner, h.flag, h.victorySide, m.getSelection().isMove(r, c), m.getSelection().isAttack(r, c), h.unit ? h.unit.id : "",
 				h.airunit ? h.airunit.id : "", zoc(0), zoc(1), spot(0), spot(1)].join(","));
 		}
 	return {
@@ -321,7 +321,7 @@ const refusalOf = (r: { ok: true } | { ok: false; refusal: Refusal }) => "refusa
 //game.ts plays it. The refusal's reason, if refused
 function sendAtOnce(p: Play, cmd: Command): string | null {
 	if (cmd.type === "endTurn") return refusalOf(endTurn(p));
-	const r = p.w.Commands.execute(p.w.scenario, cmd);
+	const r = uiCommand(p.w, cmd);
 	settle(p);
 	return refusalOf(r);
 }

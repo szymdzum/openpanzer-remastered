@@ -6,6 +6,13 @@
 function check(cond, what) { if (!cond) throw new Error("check failed: " + what); }
 const M = () => game.scenario.map;
 const U = (id) => M().getUnitById(id);
+// Whether the hex shows that the selected unit can move there, attack there: the old UI's selection holds
+// the marks since #377, the hexes on the original and a baseline before
+function marked(attack, row, col) {
+	const s = M().getSelection ? M().getSelection() : null;
+	if (s && s.isMove) return attack ? s.isAttack(row, col) : s.isMove(row, col);
+	return M().map[row][col][attack ? "isAttackSel" : "isMoveSel"];
+}
 function teleport(u, row, col) {
 	const m = M(), p = u.getPos();
 	GameRules.setZOCRange(m.map, u, false, m.rows, m.cols);
@@ -74,7 +81,7 @@ function attackClick(atk, def) {
 	if (M().currentUnit) window.dispatchEvent(new KeyboardEvent("keyup", { code: "Escape", key: "Escape", bubbles: true }));
 	clickHex(a.row, a.col);
 	check(M().currentUnit === atk, "attacker selected");
-	check(M().map[d.row][d.col].isAttackSel, "target attackable");
+	check(marked(true, d.row, d.col), "target attackable");
 	clickHex(d.row, d.col);
 }
 const steps = [
@@ -181,7 +188,7 @@ const steps = [
 		const tank = U(53), enemy = U(64);
 		const h = hideInRange(tank, enemy), p = tank.getPos(), f = h.getPos();
 		clickHex(p.row, p.col);
-		check(M().currentUnit === tank && h.isMoveSel, "hidden hex looks free");
+		check(M().currentUnit === tank && marked(false, h.getPos().row, h.getPos().col), "hidden hex looks free");
 		clickHex(f.row, f.col);
 		await finish();
 		{ const al = alerts(); check(al.indexOf("Surprised") >= 0, "Surprised alert in " + al); }
@@ -198,7 +205,7 @@ const steps = [
 		u.ammo = 0;
 		if (M().currentUnit) window.dispatchEvent(new KeyboardEvent("keyup", { code: "Escape", key: "Escape", bubbles: true }));
 		clickHex(p.row, p.col);
-		check(M().currentUnit === u && h.isMoveSel, "hidden hex looks free");
+		check(M().currentUnit === u && marked(false, h.getPos().row, h.getPos().col), "hidden hex looks free");
 		const str = enemy.strength;
 		clickHex(f.row, f.col);
 		await finish();

@@ -34,19 +34,37 @@ export function withoutUnknown(save: SaveFile, unknown: UnknownPart[]): SaveFile
 
 //The format before: GameState.exportGameState of the game as it wrote it, the JSON of the
 //scenario, its players and the campaign's progress, the units without their player and a hex
-//with nothing but the defaults as {}
+//with nothing but the defaults as {}. The selection was on the map and the hexes then (the
+//selected unit, the move and attack marks, #377): written where the old game had them
 export function oldExport(game: Game): string {
 	const emptyHex: Record<string, unknown> = { unit: null, airunit: null, terrain: 0, road: 0, owner: -1, flag: -1,
 		isDeployment: -1, victorySide: -1, name: "", isMoveSel: false, isAttackSel: false };
+	const selection = game.scenario.map.getSelection();
 	const state = { scenario: game.scenario, players: game.scenario.map.getPlayers(), campaign: oldCampaignSave(game) };
 	return JSON.stringify(state, function(this: Record<string, unknown>, key, value: Record<string, unknown>) {
-		if (key === "player" && Object.prototype.hasOwnProperty.call(this, "eqid"))
+		if (key === "player" && hasOwn(this, "eqid"))
 			return undefined;
-		if (value && Object.prototype.hasOwnProperty.call(value, "terrain")
-			&& Object.keys(emptyHex).every((p) => Object.prototype.hasOwnProperty.call(value, p) && value[p] === emptyHex[p]))
-			return {};
+		if (value && hasOwn(value, "isLastRowPartial"))
+			return withAfter(value, "turn", { currentUnit: selection.unit });
+		if (value && hasOwn(value, "terrain") && typeof value.getPos === "function") {
+			const at = (value.getPos as () => { row: number; col: number })();
+			const hex = withAfter(value, "name", { isMoveSel: selection.isMove(at.row, at.col), isAttackSel: selection.isAttack(at.row, at.col) });
+			return Object.keys(emptyHex).every((p) => hex[p] === emptyHex[p]) ? {} : hex;
+		}
 		return value;
 	});
+}
+
+const hasOwn = (o: object, key: string) => Object.prototype.hasOwnProperty.call(o, key);
+
+//o's own fields with more after the one named
+function withAfter(o: Record<string, unknown>, after: string, more: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const k of Object.keys(o)) {
+		out[k] = o[k];
+		if (k === after) Object.assign(out, more);
+	}
+	return out;
 }
 
 //And a local save of the format before: three items, the JSON of the scenario, of its players and

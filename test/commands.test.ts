@@ -3,7 +3,7 @@
 //what it does on the core through the game's objects, and when the move and the attack finish
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { Commands, type Command } from "../src/commands";
-import { engineContext, setEngineContext } from "../src/context";
+import { engineContext, setEngineContext, touched } from "../src/context";
 import { Equipment } from "../src/equipment";
 import { GameRules } from "../src/gamerules";
 import type { GameMap, Player } from "../src/map";
@@ -113,6 +113,24 @@ test("A move is played whole before it is shown: the move, its surprise attack a
 	expect(s.ok && s.result.events.map((e) => e.type)).toContain("fight");
 });
 
+//The selection is the old UI's, not the game's (#377): a command leaves it as it was, and the old UI then
+//shows what the old engine's command left selected (src/selection.ts): a move, the moved unit's hexes
+test("A command leaves the selection alone, which then shows what the old command left selected (#377)", () => {
+	const inf = unitAt(3, 3), tank = unitAt(4, 4), selection = map.getSelection();
+	const cells = (list: Cell[]) => list.map((c) => c.row + "," + c.col);
+	const shown = () => [map.currentUnit, cells(selection.moveSelected), cells(selection.attackSelected)];
+	expect(map.selectUnit(inf)).toBe(true);
+	const before = shown();
+	const cmd: Command = { type: "move", unit: tank.id, to: reachable(tank) };
+	const r = execute(scenario, cmd);
+	expect(r.ok).toBe(true);
+	expect(shown()).toEqual(before);
+	selection.after(cmd, r);
+	expect(shown()).toEqual([inf, cells(GameRules.getMoveRange(map, tank)),
+		cells(GameRules.getUnitAttackCells(map.map, tank, map.rows, map.cols))]);
+	expect(selection.isMove(cmd.to.row, cmd.to.col)).toBe(false);
+});
+
 test("An attack needs both units and the target in range", () => {
 	setup(duel);
 	const inf = unitAt(6, 7), enemy = unitAt(7, 7);
@@ -144,6 +162,25 @@ test("An attack is played whole: its shots, the destroyed units off the map, wha
 	Rng.game.state = 3;
 	const again = execute(scenario, { type: "attack", unit: unitAt(6, 7).id, target: unitAt(7, 7).id });
 	expect(again.ok && [again.result.attacking.newstr, again.result.defending.newstr]).toEqual([a.newstr, d.newstr]);
+});
+
+//The old UI reads a destroyed unit's object after the attack: it is as it was when it was destroyed, though
+//the objects are updated only to the step's end (#377)
+test("A unit an attack destroys keeps on its object what it was at the shots", () => {
+	//(the first dice that destroy a weakened defender)
+	let destroyed: Unit | null = null, newstr = -1;
+	for (let seed = 1; seed <= 50 && destroyed === null; seed++) {
+		setup(duel);
+		const inf = unitAt(6, 7), enemy = unitAt(7, 7);
+		enemy.strength = 1;
+		touched();
+		Rng.game.state = seed;
+		const r = execute(scenario, { type: "attack", unit: inf.id, target: enemy.id });
+		if (r.ok && r.result.destroyed.includes(enemy)) [destroyed, newstr] = [enemy, r.result.defending.newstr];
+	}
+	expect(destroyed).not.toBeNull();
+	expect([destroyed!.destroyed, destroyed!.getPos(), destroyed!.strength]).toEqual([true, null, newstr]);
+	expect(newstr).toBeLessThanOrEqual(0);
 });
 
 test("Resupply and reinforce a unit", () => {

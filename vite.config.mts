@@ -120,7 +120,9 @@ export default defineConfig({
 				"src/board.ts": { statements: 94, branches: 100, functions: 75, lines: 94 },
 				"src/campaign.ts": { statements: 61, branches: 40, functions: 73, lines: 61 },
 				"src/combatlog.ts": { statements: 96, branches: 81, functions: 90, lines: 96 },
-				"src/commands.ts": { statements: 95, branches: 88, functions: 98, lines: 97 },
+				//(the selection's part, covered, went to src/selection.ts in #377: the functions left are fewer, the
+				//harness's setter one of them, not less covered)
+				"src/commands.ts": { statements: 95, branches: 88, functions: 97, lines: 97 },
 				"src/context.ts": { statements: 91, branches: 100, functions: 90, lines: 91 },
 				"src/equipment.ts": { statements: 95, branches: 62, functions: 73, lines: 94 },
 				//(its turn loop, covered, went to the host in #374: the functions left are fewer, not less covered)

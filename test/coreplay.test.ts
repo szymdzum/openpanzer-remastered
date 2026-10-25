@@ -16,7 +16,7 @@ import { createHash } from "node:crypto";
 import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { commandOf, type Sequence, sequences } from "./commandgen";
-import { load } from "./invariants";
+import { load, uiCommand } from "./invariants";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
 import type { AttackResult, Command, MoveResult } from "../src/commands";
@@ -70,8 +70,7 @@ class Play {
 	//The command as the UI plays it (ui.ts uiUnitMove, uiUnitAttack), what it is told
 	run(cmd: Command) {
 		if (cmd.type === "endTurn") return this.endTurn();
-		const reselect = cmd.type === "move" || cmd.type === "attack";
-		const r = this.w.Commands.execute(this.w.scenario, cmd, { reselect });
+		const r = uiCommand(this.w, cmd);
 		if (!r.ok) {
 			this.tell("refused " + JSON.stringify(r));
 			return;

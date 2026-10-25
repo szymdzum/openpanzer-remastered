@@ -610,6 +610,20 @@ them, and the game runs on the session.
   another way (a hotseat turn) is the world kept with that side's sight. test/ui.test.ts records every
   write the old UI makes into the objects while it plays; test/oneway.test.ts writes into them and steps.
   Verify: identical.
+- The selection out of the game (#377, stage D0.5): the selected unit and the move and attack marks are
+  the old UI's view (STATE.md D6), held by `MapSelection` (src/selection.ts) and no longer on the hexes
+  (`isMoveSel`, `isAttackSel`) and the map (`currentUnit` is an accessor of GameMap's selection, which
+  GameMap carries for the old UI and the harness's scripts until D8). toData and the save never had them;
+  the contracts and the harness snapshot no longer hash them (re-recorded once, on main's engine: only
+  the hashes changed). `Commands.execute` doesn't touch the selection: it plays a move or an attack on
+  the worlds of its checkpoints and updates the objects once, at the end (what the result tells of the
+  shots, the combat log's leaders and captures are read off those worlds). The old UI asks the selection
+  to show what the old command left selected after each command (`MapSelection.after`, `before` for a
+  disband; a program's other commands through the screen's `played`). The move and attack hexes are
+  the rules' queries (`GameRules.getMoveRange`, `getUnitAttackCells`); a program's move takes its path
+  in the move range the host asks for. A unit an attack's selection puts back aboard has its hexes'
+  counters counted again, as the attack's end did when it came after. The contracts pass unchanged on
+  the re-recorded fixtures: the states are the same, the selection aside.
 
 ### Not worth it now
 
