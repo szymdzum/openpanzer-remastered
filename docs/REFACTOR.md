@@ -295,7 +295,7 @@ loses data, and verification tied to all of it.
 | C3 | The turn and the scenario and campaign lifecycle | #135 | C2 | done |
 | C4 | The AI and the scripted opponent as controllers (#121) | #136 | C3 | done |
 | C5 | The switch; the old engine removed | #137 | C4 | done |
-| D | The new UI (the war room mockups) on the core's events; the old UI removed | #130 | C5 | next |
+| D | The new UI (docs/ui/) on the core's events; the old UI removed (D0 first, docs/ui/PLAN.md) | #130 | C5 | next |
 
 - **A, refactors on the current engine** (contracts and verify unchanged). Only what stage C
   needs: the commands are the API through which the tests drive the old engine as the oracle,
@@ -321,12 +321,15 @@ loses data, and verification tied to all of it.
   The game switches only when the core has everything. #53's remaster ruleset sits next to the
   classic one; the classic contracts stay the gameplay reference.
 - **D, the new UI, not a port of the old one.** The new interface is designed already
-  (docs/design/), and porting about 4300 lines of UI and then replacing them would be work done
-  twice.
-  - Until the switch, the old UI reads the new state through a thin adapter.
-  - The new UI draws a read-only view, plays its animations from the events after the step, and
-    sends commands.
-  - `waitUIAnimation`, the 1 s tick and the surprise race (#58) go with the old UI.
+  (docs/ui/), and porting about 4300 lines of UI and then replacing them would be work done
+  twice. docs/ui/PLAN.md has the phases (reordered on 2026-10-25):
+  - D0 first: the game's flow out of the old UI into a game host behind one screen interface,
+    which the old UI implements with a thin adapter (#373-#378). `waitUIAnimation`, the 1 s tick
+    and the animation callbacks that finish moves and attacks go there (#375).
+  - The old UI is frozen: no fixes, no features.
+  - The design system (tokens, the component library) before the screens; the new UI draws a
+    read-only view, plays its animations from the events after the step, and sends commands.
+  - The switch as soon as a whole game plays on the new UI; tablets after it.
 
 **The gameplay is frozen during stage C.** No rule fixes and no new mechanics go into the old
 engine: each would be done twice, and the oracle would keep moving. The exceptions:
@@ -620,7 +623,8 @@ invariant tests:
 3. `tempSpotted` by the unit's own side (#75): done. The AI's fog leaks (#17): open.
 4. The counter drift (#72, #73). Done: sight is derived from the units (C5).
 5. A guard on the move's destination, the AI stacking (#74). Done.
-6. Close the surprise and input race (#58). Open; goes with the new UI (#130).
+6. Close the surprise and input race (#58). Done in #289: End turn waits for a move or an attack
+   to finish. The waiting itself goes when moves and attacks step whole (#375).
 7. Separate seeded RNG streams for rules, AI and cosmetics: step 4, stage B (#126). Done.
 8. A lossless save (#71, #55, #83, #54, #85, #84): step 4, stage B (#128). Done, with #142, #149
    and #150.
