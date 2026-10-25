@@ -426,6 +426,15 @@ did after an attack's cleanup (the attacker selected again) is the command's `re
 old UI asks for and the null screen doesn't. `game.waitUIAnimation` is kept, written by the old UI while it
 shows a step, for the harness and the command-line player, which wait on it (#378).
 
+The new UI (`src/view/`, #380) is a second implementation, under `?ui=new`: `src/view/screen.tsx` reads the
+game only through the host (`world()`, the world the screen's rules read) and sends the person's commands
+to it (`command`: refused with a `Refusal` while a program plays or a message is open, the end of turn
+ending the person's turn as the old UI's button does). Its view model (`src/view/model.ts`) computes what
+the screens show from the world, the signals (`src/view/store.ts`) carry it to the Preact components. It
+animates nothing yet: a program's move or attack is played whole (`play`), shown at once and its
+victories told then (`won`, which the null screen uses too); a message holds the game until its OK
+(`holdForMessage`, `messageClosed`), the tutorial's orders included.
+
 ## The proof
 
 Until the switch (#137) the core was proven against the old engine, which the tests ran beside it.

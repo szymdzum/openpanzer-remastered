@@ -51,6 +51,8 @@ import * as host from "./host";
 import * as screen from "./screen";
 import * as oldscreen from "./oldscreen";
 import * as nullscreen from "./nullscreen";
+//(the new UI's entry, not one of the modules above: the harness reaches into the old UI's)
+import { startNewUI } from "./view/screen";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
@@ -70,6 +72,11 @@ Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuild
 //The random streams seeded once, here and not while rng.ts loads: until then the game stream reads
 //Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
 rng.Rng.seed(rng.randomSeed());
+
+//?ui=new: the new UI shows the game (src/view/, #380), the old one isn't built; without it nothing changes.
+//Its screen goes to the host before the game starts
+if (new URLSearchParams(location.search).get("ui") === "new")
+	startNewUI(game.game.host);
 
 //The start on window load. game.ts did it while loading; here, so that importing it starts nothing. No turn
 //loop ticks: a program's turn goes on when the screen has shown its last action (src/host.ts, #375)

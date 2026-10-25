@@ -5,7 +5,8 @@
 // interface (src/screen.ts) and the screen that shows nothing (src/nullscreen.ts) from importing UI
 // modules or game.ts (the engine reads the game through src/context.ts, and shows it through the
 // screen interface, which the old UI implements in src/oldscreen.ts), the second
-// and third the new core (src/core/ and its commands) from importing the old engine. The react and jsx-a11y
+// and third the new core (src/core/ and its commands) from importing the old engine, the fourth the new UI
+// (src/view/) from importing anything but the core, the host and the screen interface. The react and jsx-a11y
 // plugins check the JSX of the new UI's components (src/view/*.tsx, Preact).
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
@@ -142,6 +143,32 @@
 								],
 								"allowTypeImports": true,
 								"message": "The new core imports only the tables of src/prototypes.ts, src/rng.ts and types: not the old engine (docs/CORE.md)"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"src/view/*.ts",
+				"src/view/*.tsx"
+			],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"../*",
+									"!../core",
+									"!../host",
+									"!../screen",
+									"!../prototypes"
+								],
+								"allowTypeImports": true,
+								"message": "The new UI (src/view/) imports only the core, the game host, the screen interface, the tables of src/prototypes.ts, its own components and Preact: never the old UI or game.ts (docs/ui/PLAN.md)"
 							}
 						]
 					}

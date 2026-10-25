@@ -75,6 +75,20 @@ test("The screen interface and the screen that shows nothing reach no UI module;
 	expect(direct).toContain("oldscreen");
 });
 
+//The new UI (src/view/, #380) reads the game through the core, the game host and the screen interface: what
+//its modules import from outside src/view/ is only those and the tables of src/prototypes.ts, and none of
+//it reaches an old UI module or game.ts
+test("The new UI's imports reach no old UI module and no game.ts (#380)", () => {
+	const view = path.join(root, "src/view"), outside = new Set<string>();
+	for (const file of fs.readdirSync(view).filter((f) => /\.tsx?$/.test(f)))
+		for (const i of fs.readFileSync(path.join(view, file), "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\.\/([\w/]+)";/gm))
+			if (!i[1]) outside.add(i[2]);
+	const engine = [...outside].filter((m) => !m.startsWith("core/"));
+	expect(engine.filter((m) => !["host", "screen", "prototypes"].includes(m))).toEqual([]);
+	expect([...reachedFrom(engine)].filter((m) => uiModules.includes(m))).toEqual([]);
+	expect(outside).toContain("core/step");
+});
+
 //No turn loop ticks: a program's turn goes on when the screen has shown its last action (#375)
 test("game.ts starts no timer and no listener while it loads, main.ts starts the game and no turn loop", () => {
 	const top = (file: string) => fs.readFileSync(path.join(root, "src", file), "utf8").split("\n")

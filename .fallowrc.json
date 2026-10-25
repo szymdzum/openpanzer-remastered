@@ -9,11 +9,9 @@
 		"scripts/ui-design.mjs",
 		// stylelint's two rules of our own, which .stylelintrc.json loads
 		"scripts/stylelint-rules.mjs",
-		// the new UI's components' CSS and its faces, which docs/ui's pages load (the game doesn't yet, D1c)
+		// the new UI's components' CSS and its faces, which docs/ui's pages load (the game loads them
+		// through src/view/game.css under ?ui=new)
 		"src/view/library.css", "src/view/fonts.css"],
-	// src/view/ (the new UI) is reached from its tests until the game loads it (D1c); so are the
-	// view model's signals, a runtime dependency which only the tests use until then
-	"ignoreDependencies": ["@preact/signals"],
 	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
 	// the contract scripts (read as text by test/contracts.ts and record.js)
 	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
