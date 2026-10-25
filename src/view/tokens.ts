@@ -70,6 +70,7 @@ export const TOKENS = {
 		"map-brass": "#6b4f12",
 		"map-axis": "#4f6b80",
 		"map-allied": "#9c3b22",
+		"map-paper-sunken": "#d9ceb2",
 		"map-sandbag": "#c8b27a",
 	},
 	px: {
@@ -88,6 +89,8 @@ export const TOKENS = {
 		"hex-target-width": 2.4,
 		"hex-move-width": 2,
 		"hex-shadow-width": 5.5,
+		"hex-zone-width": 3,
+		"hex-support-width": 1.8,
 	},
 	fontPx: {
 		wordmark: 88,

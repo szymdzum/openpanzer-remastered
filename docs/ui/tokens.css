@@ -39,6 +39,7 @@
 	--map-brass: #6b4f12;
 	--map-axis: #4f6b80;
 	--map-allied: #9c3b22;
+	--map-paper-sunken: #d9ceb2;
 	--map-sandbag: #c8b27a;
 	--scrim: rgba(20, 17, 10, 0.45);
 	--photo-tint: rgba(232, 223, 200, 0.18);
@@ -83,6 +84,7 @@
 	--map-brass: #6b4f12;
 	--map-axis: #4f6b80;
 	--map-allied: #9c3b22;
+	--map-paper-sunken: #d9ceb2;
 	--map-sandbag: #c8b27a;
 	--scrim: rgba(8, 9, 6, 0.6);
 	--photo-tint: rgba(20, 22, 15, 0.55);
@@ -108,6 +110,8 @@
 	--hex-target-width: 2.4px;
 	--hex-move-width: 2px;
 	--hex-shadow-width: 5.5px;
+	--hex-zone-width: 3px;
+	--hex-support-width: 1.8px;
 	--z-map-overlay: 5;
 	--z-hud: 100;
 	--z-context: 150;
