@@ -60,7 +60,8 @@ test("The selected unit as the side shown sees it, its actions with the core's r
 	expect(tank.name).toBe(w.equipment[142].name);
 	expect([tank.moves, tank.movpoints]).toEqual([w.equipment[142].movpoints, w.equipment[142].movpoints]);
 	expect(tank.actions.map((a) => [a.label, a.refusal])).toEqual([
-		["Resupply", "Can't resupply"], ["Reinforce", "Can't reinforce"], ["Mount", "Can't mount"], ["Dismount", "Can't unmount"],
+		["Resupply", "Can't resupply"], ["Reinforce", "Can't reinforce"], ["Overstrength", "Can't reinforce"], ["Mount", "Can't mount"],
+		["Dismount", "Can't unmount"],
 		["Embark", "Can't embark"], ["Disembark", "Can't disembark"], ["Undo move", "Can't undo"]]);
 	expect(tank.actions[0].command).toEqual({ type: "resupply", unit: 1 });
 });

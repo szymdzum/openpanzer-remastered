@@ -7,6 +7,7 @@ import { IconSprite } from "./icon";
 import { List } from "./list";
 import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
+import { EndTurn, EndTurnQuestion, Rail } from "./rail";
 import { StatusBar } from "./statusbar";
 import type { Store } from "./store";
 
@@ -40,15 +41,6 @@ function Reserve({ store }: { store: Store }) {
 	);
 }
 
-function EndTurn({ store }: { store: Store }) {
-	return (
-		<div id="endturn" class="pm-endturn">
-			<Button variant="primary" large icon="end-turn" disabled={off(store.endTurn.value)}
-				onClick={() => store.dispatch({ type: "endTurn" })}>End turn</Button>
-		</div>
-	);
-}
-
 //The open message, over the rest: the scenario's briefing, the game's outcome, the tutorial's orders
 function Message({ store }: { store: Store }) {
 	const note = store.note.value;
@@ -70,9 +62,11 @@ export function App({ store }: { store: Store }) {
 			<IconSprite />
 			<MapView store={store} />
 			<StatusBar store={store} />
-			<UnitActions store={store} />
+			<Rail store={store} />
+			{store.infoShown.value && <UnitActions store={store} />}
 			<Reserve store={store} />
 			<EndTurn store={store} />
+			<EndTurnQuestion store={store} />
 			<Message store={store} />
 		</div>
 	);

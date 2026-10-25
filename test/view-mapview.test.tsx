@@ -9,9 +9,9 @@ import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
 import type { Command } from "../src/commands";
-import { MapView, setHexGrid } from "../src/view/map";
+import { MapView } from "../src/view/map";
 import { hexCentre } from "../src/view/hexgrid";
-import { createStore, type StoreHost } from "../src/view/store";
+import { createStore, type Store, type StoreHost } from "../src/view/store";
 
 //A context that counts what is drawn
 let drawn = 0;
@@ -24,7 +24,6 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
-	setHexGrid(false);
 });
 
 const frame = () => act(() => new Promise((r) => requestAnimationFrame(() => r(null))));
@@ -109,8 +108,9 @@ test("A click on a target attacks it through the host; a refused command says wh
 });
 
 test("The map looks at the side's first unit when the scenario starts, and at a hex a program looks at", async () => {
-	setHexGrid(true);
 	const { store } = await mapOf(handWorld({ rows: 30, cols: 30, units: [{ eqid: 140, owner: 0, row: 20, col: 20 }] }, undefined, { spotSide: 0 }));
+	await act(() => { store.hexGrid.value = true; });
+	await frame();
 	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
 	//(jsdom lays nothing out: the scroll is what the map asked for, the screen 0 wide)
 	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(20, 20).x, hexCentre(20, 20).y]);
@@ -134,36 +134,29 @@ test("No game playing: a click on the map does nothing, the map is empty", async
 	expect(document.querySelector<HTMLElement>(".pm-mapview-area")!.style.inlineSize).toBe("0px");
 });
 
-const press = (key: string, more: KeyboardEventInit = {}, on: EventTarget = window) =>
-	act(() => { on.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...more })); });
+//A key of the map's (the rail takes them from the keyboard: test/view-rail.test.tsx)
+const press = (store: Store, menu: "air" | "zoom") => act(() => store.shortcut({ menu }));
 
-//AirLayer: the A key switches the layer, selecting an aircraft switches it on, a ground unit off; leaving it deselects
+//AirLayer: A switches the layer, selecting an aircraft switches it on, a ground unit off; leaving it deselects
 //an aircraft, which would be underneath
 test("The air layer: A switches it, a selected aircraft switches it on and a tank off, leaving it deselects the aircraft", async () => {
 	const { store } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 },
 		{ eqid: 159, owner: 0, row: 6, col: 3 }] }, undefined, { spotSide: 0 }));
-	await press("a");
+	await press(store, "air");
 	expect(store.airMode.value).toBe(true);
-	await press("A");
+	await press(store, "air");
 	expect(store.airMode.value).toBe(false);
-	//(not with a modifier, nor while a field takes the typing)
-	await press("a", { ctrlKey: true });
-	const field = document.body.appendChild(document.createElement("input"));
-	await press("a", {}, field);
-	await press("x");
-	expect(store.airMode.value).toBe(false);
-	field.remove();
 	await act(() => pointer("click", 6, 3));
 	expect([store.selected.value, store.airMode.value]).toEqual([1, true]);
 	expect(store.units.value.find((u) => u.id === 1)).toMatchObject({ lifted: true, dim: false });
 	//leaving the layer deselects the aircraft (a click on the tank would move the aircraft over it)
-	await press("a");
+	await press(store, "air");
 	expect([store.selected.value, store.airMode.value]).toEqual([null, false]);
-	await press("a");
+	await press(store, "air");
 	await act(() => pointer("click", 4, 3));
 	expect([store.selected.value, store.airMode.value]).toEqual([0, false]);
 	//a tank selected stays selected in the air layer
-	await press("a");
+	await press(store, "air");
 	expect([store.selected.value, store.airMode.value]).toEqual([0, true]);
 });
 
@@ -174,7 +167,7 @@ test("The strategic map: Z opens it, the pointer shows no path there, a click zo
 	Object.defineProperty(s, "clientWidth", { value: 1000 });
 	Object.defineProperty(s, "clientHeight", { value: 600 });
 	await act(() => { store.selected.value = 0; });
-	await press("z");
+	await press(store, "zoom");
 	expect(store.strategic.value).toBe(true);
 	expect(document.querySelector(".pm-mapview")!.classList.contains("strategic")).toBe(true);
 	await frame();
@@ -188,8 +181,8 @@ test("The strategic map: Z opens it, the pointer shows no path there, a click zo
 	expect([store.strategic.value, store.lookAt.value, store.selected.value]).toEqual([false, { row: 15, col: 12 }, 0]);
 	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(15, 12).x - 500, hexCentre(15, 12).y - 300]);
 	//Z again opens and closes it, the scroll kept
-	await press("z");
-	await press("z");
+	await press(store, "zoom");
+	await press(store, "zoom");
 	expect([store.strategic.value, s.scrollLeft]).toEqual([false, hexCentre(15, 12).x - 500]);
 });
 

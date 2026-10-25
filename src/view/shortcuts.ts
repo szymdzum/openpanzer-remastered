@@ -1,0 +1,25 @@
+//The keyboard shortcuts of the new UI (GameMenu, #346): every key the old UI reads (handleKeyboard, src/ui.ts), by the
+//same physical keys (KeyboardEvent.code, so a French or German layout plays the same keys) and Escape by its name.
+//Plain TypeScript: the store (src/view/store.ts) does what each one says.
+import type { ActionKey } from "./model";
+
+//The rail's buttons and the map's keys: I, B, H, A, Z, L, the next and previous unit, Escape
+export type MenuKey = "inspect" | "buy" | "hex" | "air" | "zoom" | "labels" | "next" | "previous" | "escape";
+
+export type Shortcut = { menu: MenuKey } | { unit: ActionKey };
+
+const KEYS: Record<string, Shortcut> = {
+	KeyI: { menu: "inspect" }, KeyB: { menu: "buy" }, KeyH: { menu: "hex" }, KeyA: { menu: "air" }, KeyZ: { menu: "zoom" },
+	KeyL: { menu: "labels" }, KeyN: { menu: "next" }, KeyP: { menu: "previous" },
+	KeyM: { unit: "mount" }, KeyE: { unit: "embark" }, KeyS: { unit: "resupply" }, KeyR: { unit: "reinforce" },
+	KeyO: { unit: "overstrength" }, KeyU: { unit: "undo" },
+};
+
+//What a key does, null for nothing: not while a field takes the typing, nor with a modifier (the browser's own
+//shortcuts), nor a key held down. Escape that a window took (it closes the top window) is the window's
+export function shortcutOf(e: KeyboardEvent): Shortcut | null {
+	const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]") !== null;
+	if (typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return null;
+	if (e.key === "Escape" || e.key === "Esc") return e.defaultPrevented ? null : { menu: "escape" };
+	return KEYS[e.code] || null;
+}
