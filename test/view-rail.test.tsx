@@ -49,8 +49,9 @@ test("The rail has the game's buttons in the card's groups, each named with its 
 	const groups = [...document.querySelectorAll("#menu .group")].map((g) => [...g.querySelectorAll("button")].map((b) => b.id));
 	expect(groups).toEqual([["inspectunit"], ["buy", "hex", "air", "zoom", "options"], ["mainmenu"]]);
 	expect(screen.getByRole("navigation", { name: "Game menu" }).id).toBe("menu");
-	expect(["inspectunit", "hex", "air", "zoom"].map((id) => [button(id).getAttribute("aria-label"), button(id).title]))
-		.toEqual([["Inspect unit", "Inspect unit (I)"], ["Hex grid", "Hex grid (H)"], ["Air layer", "Air layer (A)"], ["Strategic map", "Strategic map (Z)"]]);
+	//(the key in the rail's tooltip, test/view-tooltips.test.tsx, and for screen readers)
+	expect(["inspectunit", "hex", "air", "zoom"].map((id) => [button(id).getAttribute("aria-label"), button(id).getAttribute("aria-keyshortcuts")]))
+		.toEqual([["Inspect unit", "I"], ["Hex grid", "H"], ["Air layer", "A"], ["Strategic map", "Z"]]);
 	expect([button("buy").disabled, button("buy").title, button("options").title, button("options").getAttribute("aria-keyshortcuts")])
 		.toEqual([true, "Buy and upgrade: Not in the new UI yet", "Options: Not in the new UI yet", "Escape"]);
 	//the toggles say whether they are on; Inspect unit and the fold don't
