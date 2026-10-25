@@ -30,6 +30,7 @@ import { Campaign } from "./campaign";
 import { game } from "./session";
 import { OSGlue } from "./osglue";
 import { Rng } from "./rng";
+import { newDossier } from "./core/draft";
 
 //Undeclared in the bundle (implicit globals): module variables here, same lifetime (fillCloudSavesList, buildEquipmentSortOptions)
 var div: any;
@@ -1175,10 +1176,9 @@ UIBuilder.showDossier = function(isInGame: boolean, onClose?: () => void) {
 	}
 	dossierDiv.style.display = "block";
 
+	//(one not set up yet shown empty: the window leaves the player as the game has it, #403)
 	var player = game.getCampaignPlayer();
-	var dossier = player.dossier;
-	if (!dossier.hasOwnProperty("units"))
-		player.initDossier();
+	var dossier: PlayerDossier = player.dossier.hasOwnProperty("units") ? player.dossier : newDossier();
 
 	$('dossierTitle').textContent = game.campaign.name + " " + player.getCountryName() + " Campaign";
 	$('dossierTitle').className = "combatLogHeader";
