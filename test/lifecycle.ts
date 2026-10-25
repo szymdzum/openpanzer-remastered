@@ -97,3 +97,37 @@ export async function startState(game: Game, item: string, isAI = [0, 0, 0, 0]) 
 export function freshFixtures(module: string): string[] {
 	return fs.readdirSync(path.join(__dirname, "contracts", module)).filter((f) => f.endsWith("-t0.json.gz")).sort();
 }
+
+//Makes the requests for a file of game/ fail as a browser's can (#367): "error" a network error, "empty"
+//the empty body with status 0 of a missing local file. Returns the function that takes it away
+export function failRequests(file: string, how: "error" | "empty"): () => void {
+	type Request = XMLHttpRequest & { failing?: boolean };
+	type Method = (this: Request, ...args: unknown[]) => void;
+	const proto = XMLHttpRequest.prototype;
+	const real = { open: Object.getOwnPropertyDescriptor(proto, "open"), send: Object.getOwnPropertyDescriptor(proto, "send") };
+	const passed = (k: "open" | "send", request: Request, args: unknown[]) => (real[k].value as Method).apply(request, args);
+	proto.open = function(this: Request, ...args: unknown[]) {
+		this.failing = (args[1] as string).split("?")[0].endsWith("/" + file);
+		passed("open", this, args);
+	};
+	proto.send = function(this: Request, ...args: unknown[]) {
+		if (!this.failing) return passed("send", this, args);
+		queueMicrotask(() => {
+			Object.assign(this, { readyState: 4, status: 0, responseText: "" });
+			if (how === "error") this.onerror?.(new ProgressEvent("error"));
+			else this.onload?.(new ProgressEvent("load"));
+		});
+	};
+	return () => {
+		Object.defineProperty(proto, "open", real.open);
+		Object.defineProperty(proto, "send", real.send);
+	};
+}
+
+//The texts of the messages the game shows (UIBuilder.messageDynamic), from now on: a load that fails says so
+export async function messagesShown(): Promise<string[]> {
+	const { UIBuilder } = await import("../src/uibuilder");
+	const shown: string[] = [];
+	UIBuilder.messageDynamic = (_title: string, message: string) => { shown.push(message); };
+	return shown;
+}

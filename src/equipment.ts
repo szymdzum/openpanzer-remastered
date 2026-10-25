@@ -44,9 +44,9 @@ export interface EquipmentModule {
 	getCountryName(country: number): string;
 	getCountryNameByEqp(country: number, eqpName: string): string;
 	resetEquipment(): void;
-	addPlayersEquipment(players: EquipmentPlayerCountries[], callback: () => void): void;
-	addCountryEquipment(country: number, callback: () => void): void;
-	addUnitsEquipment(eqids: number[], callback: () => void): void;
+	addPlayersEquipment(players: EquipmentPlayerCountries[], callback: () => void, onFail: () => void): void;
+	addCountryEquipment(country: number, callback: () => void, onFail: () => void): void;
+	addUnitsEquipment(eqids: number[], callback: () => void, onFail: () => void): void;
 	parseCountryEquipment(country: number, e: EquipmentCountryFile, lists?: boolean): boolean;
 	getCountryEquipmentByClass(uclass: number, country: number, sortkey?: keyof EquipmentEntry, reverse?: boolean): number[];
 	isPurchasable(eqid: number): boolean;
@@ -94,8 +94,9 @@ Equipment.resetEquipment = function() {
 }
 
 //Loads the equipment of the players countries and of their supporting countries
-//callback is called after each country file finished loading (see Equipment.equipmentToLoad)
-Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], callback: () => void) {
+//callback is called after each country file finished loading (see Equipment.equipmentToLoad); onFail
+//once, instead of callback, when a file doesn't load (#367: the load waited for good)
+Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], callback: () => void, onFail: () => void) {
 	Equipment.resetEquipment();
 	Equipment.equipmentToLoadSet[-1] = true; //country file 0, the generic equipment
 	for (let i = 0; i < players.length; i++) {
@@ -108,20 +109,23 @@ Equipment.addPlayersEquipment = function(players: EquipmentPlayerCountries[], ca
 		}
 	}
 	Equipment.equipmentToLoad = Object.keys(Equipment.equipmentToLoadSet).length;
+	const fail = once(onFail);
 	for (const country in Equipment.equipmentToLoadSet)
-		Equipment.addCountryEquipment(+country, callback);
+		Equipment.addCountryEquipment(+country, callback, fail);
 }
 
-Equipment.addCountryEquipment = function(country: number, callback: () => void) {
-	loadEquipment(country + 1, callback); //TODO fix indexes
+Equipment.addCountryEquipment = function(country: number, callback: () => void, onFail: () => void) {
+	loadEquipment(country + 1, callback, onFail); //TODO fix indexes
 }
 
 //Loads the country files of the set that have the equipment ids given not loaded yet, for the units alone
 //(#286): a scenario's units aren't all of its players' countries', and a unit whose equipment wasn't
 //loaded became the first one loaded (a Light Cruiser in eqp-pacific). Their lists by unit class aren't
 //the game's: what can be bought stays the players' countries'. The other files load and are dropped.
-//callback is called once, after the last file; at once when every id is loaded
-Equipment.addUnitsEquipment = function(eqids: number[], callback: () => void) {
+//callback is called once, after the last file; at once when every id is loaded. onFail instead, once, when
+//a file doesn't load (#367). Which file has an id is known only once it is loaded: a unit's flag doesn't
+//name it (none of the 150 such units of the scenario files flies the country of its equipment's file)
+Equipment.addUnitsEquipment = function(eqids: number[], callback: () => void, onFail: () => void) {
 	const missing = eqids.filter((id) => typeof Equipment.equipment[id] === "undefined");
 	const files: number[] = [];
 	for (let file = 0; file <= Equipment.countryNames[Equipment.name].length; file++)
@@ -129,13 +133,25 @@ Equipment.addUnitsEquipment = function(eqids: number[], callback: () => void) {
 	if (!missing.length || !files.length)
 		return callback();
 	let toLoad = files.length;
+	const fail = once(onFail);
 	for (const file of files)
-		requestEquipment(file, function(e: EquipmentCountryFile | null) {
-			if (e !== null && missing.some((id) => e.units.hasOwnProperty(id)))
+		requestEquipment(file, function(e: EquipmentCountryFile) {
+			if (missing.some((id) => e.units.hasOwnProperty(id)))
 				Equipment.parseCountryEquipment(file, e, false);
 			if (--toLoad === 0)
 				callback();
-		});
+		}, fail);
+}
+
+//f, called the first time only: a load fails once, however many of its files don't load
+function once(f: () => void): () => void {
+	let called = false;
+	return () => {
+		if (!called) {
+			called = true;
+			f();
+		}
+	};
 }
 
 //lists: false for a file loaded for its units alone (addUnitsEquipment)
@@ -195,27 +211,46 @@ Equipment.isPurchasable = function(eqid: number) {
 }
 
 
-//Loads a country equipment file from the current equipment set, callback is called after
-//the request finished, also when it failed
-function loadEquipment(country: number, callback: () => void): void {
-	requestEquipment(country, function(e: EquipmentCountryFile | null) {
-		if (e !== null)
-			Equipment.parseCountryEquipment(country, e);
+//Loads a country equipment file from the current equipment set, callback is called after it loaded,
+//onFail when it didn't
+function loadEquipment(country: number, callback: () => void, onFail: () => void): void {
+	requestEquipment(country, function(e: EquipmentCountryFile) {
+		Equipment.parseCountryEquipment(country, e);
 		callback();
-	});
+	}, onFail);
 }
 
-//Requests a country equipment file of the current equipment set: onDone gets it, null when it failed
-function requestEquipment(country: number, onDone: (e: EquipmentCountryFile | null) => void): void {
+//Requests a country equipment file of the current equipment set: onDone gets it; onFail is called
+//when it doesn't come (a network error, an aborted request, an error status, a body that isn't the file:
+//an empty one with status 0 from a missing local file), where the original waited for good or went on
+//without the file (#367)
+function requestEquipment(country: number, onDone: (e: EquipmentCountryFile) => void, onFail: () => void): void {
 	const jsonFile = Equipment.equipmentPath + Equipment.name + "/" + (Equipment.filePrefix + country + ".json");
 	const req = new XMLHttpRequest();
 
 	req.onload = function() {
-		if (req.readyState === 4)
-			onDone(req.status === 200 || req.status === 0 ? JSON.parse(req.responseText) as EquipmentCountryFile : null);
+		if (req.readyState !== 4)
+			return;
+		const e = req.status === 200 || req.status === 0 ? parseFile(req.responseText) : null;
+		if (e === null)
+			onFail();
+		else
+			onDone(e);
 	}
+	req.onerror = onFail;
+	req.onabort = onFail;
 	req.open("GET", jsonFile, true);
 	req.send(null);
+}
+
+//A country file's text as the file, null when it isn't one
+function parseFile(text: string): EquipmentCountryFile | null {
+	try {
+		const e = JSON.parse(text) as EquipmentCountryFile | null;
+		return e !== null && typeof e === "object" && typeof e.units === "object" && e.units !== null ? e : null;
+	} catch {
+		return null;
+	}
 }
 
 function keySort(key: keyof EquipmentEntry, reverse: boolean) {

@@ -7,7 +7,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import { readFixture } from "./contracts";
 import { setupOf } from "./corefiles";
-import { freshFixtures, freshGame, mapSizes, startState } from "./lifecycle";
+import { failRequests, freshFixtures, freshGame, mapSizes, messagesShown, startState, until } from "./lifecycle";
 import { oldExport } from "./saves";
 
 //The reference's export with the deliberate fixes to the loading since: in a campaign, a player of
@@ -78,3 +78,22 @@ test("Map image sizes match the images", () => {
 		? fs.readdirSync(path.join(dir, "resources/maps/images")).filter((f) => f.endsWith(".png")).length : 0;
 	expect(Object.keys(mapSizes).length, "every map image listed").toBe(images || Object.keys(mapSizes).length);
 });
+
+//#367: an equipment file that doesn't come fails the load as a scenario file that doesn't come does: the game
+//says it couldn't load the scenario and ends, where it waited for good. pc1indi.xml loads its players'
+//countries' files (0 the generic one) and, for units of none of those countries, file 31 (#286)
+test.each([["equipment-country-0.json", "error"], ["equipment-country-31.json", "error"], ["equipment-country-31.json", "empty"]] as const)(
+	"A scenario whose equipment file %s doesn't load (%s) fails to load, it doesn't wait for good (#367)", async (file, how) => {
+		const game = await freshGame();
+		const shown = await messagesShown();
+		const restore = failRequests(file, how);
+		try {
+			game.newScenario("pc1indi.xml");
+			await until(() => shown.length > 0, "the load to fail", 5000);
+			await new Promise((r) => setTimeout(r, 50)); //the other files come in
+			expect(shown).toEqual(["Error Loading scenario pc1indi.xml"]);
+			expect([game.scenario.isLoaded, game.gameEnded]).toEqual([false, true]);
+		} finally {
+			restore();
+		}
+	});
