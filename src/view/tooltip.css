@@ -1,6 +1,6 @@
 /* Tooltip (tooltip.tsx; the Tooltips card) */
-.pm-tip { position: absolute; z-index: var(--z-context); max-width: 300px; padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: var(--shadow-panel); font-size: 13px; line-height: 18px; }
+.pm-tip { position: absolute; z-index: var(--z-context); max-width: 300px; padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: var(--shadow-panel); font-size: var(--type-small-size); line-height: 18px; }
 .pm-tip::before { content: ""; position: absolute; top: 18px; left: -8px; width: 14px; height: 14px; background: var(--panel); border-left: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); transform: rotate(45deg); }
 .pm-tip.right::before { left: auto; right: -8px; transform: rotate(-135deg); }
 .pm-tip.above::before { top: auto; bottom: -8px; left: 22px; transform: rotate(-45deg); }
-.pm-tip .hd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 700; font-size: 14px; }
+.pm-tip .hd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 700; font-size: var(--type-body-size); }

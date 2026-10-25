@@ -2,11 +2,11 @@
    stat sheet (UnitInfo) and the table of numbers by class (Dossier). Facts and stats are description lists */
 .pm-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
 .pm-facts > div { background: var(--panel-raised); padding: 8px 12px 10px; }
-.pm-facts .n { display: flex; align-items: center; gap: 6px; font: 700 18px/22px var(--font-mono); margin-top: 2px; }
+.pm-facts .n { display: flex; align-items: center; gap: 6px; font: 700 var(--type-data-lg-size)/22px var(--font-mono); margin-top: 2px; }
 .pm-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
 .pm-stats > div { background: var(--panel-raised); padding: 4px 6px 3px; }
-.pm-stats .k { display: block; font-size: 9.5px; line-height: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-muted); white-space: nowrap; }
-.pm-stats .n { font-family: var(--font-mono); font-weight: 700; font-size: 15px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.pm-stats .k { display: block; font-size: var(--type-stat-key-size); line-height: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-muted); white-space: nowrap; }
+.pm-stats .n { font-family: var(--font-mono); font-weight: 700; font-size: var(--type-typed-size); line-height: 18px; font-variant-numeric: tabular-nums; }
 .pm-stats.cols6 { grid-template-columns: repeat(6, 1fr); }
 .pm-facts, .pm-stats { margin: 0; }
 .pm-facts dd, .pm-stats dd { margin: 0; }
@@ -16,6 +16,6 @@
 .pm-table th:first-child { width: 124px; }
 .pm-table thead th { letter-spacing: .04em; text-align: center; }
 .pm-table thead th .i { margin: 0 auto 3px; }
-.pm-table td { font-size: 15px; }
+.pm-table td { font-size: var(--type-typed-size); }
 .pm-table td.muted { color: var(--ink-muted); }
 .pm-table td.critical { color: var(--critical); }

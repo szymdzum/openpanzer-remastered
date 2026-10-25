@@ -3,4 +3,4 @@
 .pm-sheet .grip { display: grid; place-items: center; padding: var(--space-2) 0 0; cursor: grab; touch-action: none; }
 .pm-sheet .grip span { width: 48px; height: 5px; background: var(--line); }
 .pm-sheet > .hd { padding-top: var(--space-2); }
-.pm-sheet > .hd .pm-title { font-size: 24px; line-height: 28px; }
+.pm-sheet > .hd .pm-title { font-size: var(--type-name-lg-size); line-height: 28px; }
