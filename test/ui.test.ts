@@ -301,6 +301,53 @@ test("The AI's next action waits for the retreat its attack caused to end (#248)
 	expect(shown).toEqual([false]);
 }, 60_000);
 
+//An AI move the side shown can't see isn't animated, but the surprise attack it runs into is: the old screen
+//called the AI's shown at once for a move the UI didn't animate, so its next action came while the surprise
+//attack still played (#396, the visible moves' race #248 closed). Every other unit off the map, an AI unit's
+//path through the hex of a person's unit that sees only its own hex: the AI doesn't see it coming, and the
+//person's side sees none of the move
+test("The AI's next action waits for the surprise attack of a move the player didn't see (#396)", async () => {
+	const { game } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+	const { GameRules } = await import("../src/gamerules");
+	const { Equipment } = await import("../src/equipment");
+	const { touched } = await import("../src/context");
+	const { terrainType, uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const ground = (u: Unit) => !GameRules.isAir(u) && !GameRules.isSea(u) && u.getPos() !== null;
+	const mover = map.getUnits().filter((u) => u.player.side === 1 && ground(u))
+		.sort((a, b) => b.unitData().movpoints - a.unitData().movpoints)[0];
+	const hidden = map.getUnits().find((u) => u.player.side === 0 && ground(u))!;
+	for (const u of map.getUnits()) if (u !== mover && u !== hidden) u.destroyed = true;
+	touched();
+	map.updateUnitList();
+	Equipment.equipment[hidden.eqid].spotrange = 0;
+	touched();
+	//A hex the mover can reach, out of its sight and on clear ground, for the hidden unit: the mover is
+	//sent there and runs into it
+	const from = mover.getPos(), seen = GameRules.getUnitSpotRange(mover);
+	const at = GameRules.getMoveRange(map, mover).find((c) => c.canMove && GameRules.distance(from.row, from.col, c.row, c.col) > seen + 1
+		&& map.map[c.row][c.col].terrain === terrainType.Clear && !map.map[c.row][c.col].unit)!;
+	const p = hidden.getPos();
+	map.map[p.row][p.col].delUnit(hidden);
+	map.map[at.row][at.col].setUnit(hidden);
+	hidden.tempSpotted = false;
+	touched();
+	expect(map.map[at.row][at.col].isSpotted(1), "the AI doesn't see the hidden unit").toBe(false);
+	//The AI's move as the host asks the screen for it (src/host.ts processAction)
+	map.currentPlayer = mover.player;
+	touched();
+	map.setMoveRange(mover);
+	const shown: boolean[] = [];
+	game.host.screen.move(mover, at, map.getCurrentMoveRange(), () => { shown.push(game.waitUIAnimation); });
+	const stopped = mover.getPos();
+	expect([GameRules.distance(stopped.row, stopped.col, at.row, at.col), hidden.hits > 0 || hidden.strength < 10],
+		"stopped next to the hidden unit, which it attacked").toEqual([1, true]);
+	expect(map.map[stopped.row][stopped.col].isSpotted(0), "the person's side didn't see it").toBe(false);
+	await until(() => !game.waitUIAnimation, "the surprise attack");
+	expect(shown, "shown once the surprise attack has been shown").toEqual([false]);
+}, 60_000);
+
 //A unit the player's attack destroys leaves the map when the attack's animation ends. The end turn
 //button clicked twice before then ended the turn and saved the unit, strength 0 or less, on its hex: a
 //reload put it back there, where it blocks moves and captures for the rest of the game (#58)
