@@ -274,7 +274,7 @@
 		"group": "Screens · In game",
 		"width": 900,
 		"height": 150,
-		"subtitle": "Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message",
+		"subtitle": "Status bar (#statusbar): side, turn, date, weather, ground, rules, prestige, turn report and status message",
 		"status": "Ready",
 		"readme": true
 	},
