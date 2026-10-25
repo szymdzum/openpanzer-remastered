@@ -21,7 +21,7 @@ describe("List", () => {
 		const picked = screen.getByRole("radio", { name: "Fall Weiss 8 Armee 1939 · 4 scenarios 2,000" }) as HTMLInputElement;
 		expect(picked.checked).toBe(true);
 		const row = picked.closest(".pm-row");
-		expect(row.className).toBe("pm-row is-on");
+		expect(row.className).toBe("pm-row");
 		expect(row.querySelector("svg.mark use")?.getAttribute("href")).toBe("#pm-flag-de");
 		expect(row.querySelector(".t")?.textContent).toBe("Fall Weiss 8 Armee");
 		expect(row.querySelector(".m")?.textContent).toBe("1939 · 4 scenarios");

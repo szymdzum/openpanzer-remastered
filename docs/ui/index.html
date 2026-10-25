@@ -48,9 +48,9 @@
 		const url = new URL("../../src/view/library.css", location.href);
 		const css = (u) => fetch(u, { headers: { Accept: "text/css" } }).then((r) => r.text());
 		const text = await css(url);
-		const parts = await Promise.all([...text.matchAll(/@import "([^"]+)";/g)].map((m) => css(new URL(m[1], url))));
+		const parts = await Promise.all([...text.matchAll(/@import url\("([^"]+)"\);/g)].map((m) => css(new URL(m[1], url))));
 		let i = 0;
-		return text.replace(/@import "([^"]+)";/g, () => parts[i++]);
+		return text.replace(/@import url\("([^"]+)"\);/g, () => parts[i++]);
 	}
 	const [list, tokens, components, css, js] = await Promise.all([
 		fetch("components.json").then((r) => r.json()),

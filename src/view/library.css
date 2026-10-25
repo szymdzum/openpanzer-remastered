@@ -1,14 +1,15 @@
 /* The new UI's components' CSS, in order: what loads before docs/ui/components/bundle.css (the
    screens' rules) and after tokens.css. Each file belongs to one component or family (src/view/*.tsx);
-   the cards (scripts/ui-design.mjs, docs/ui/index.html) load the same files. */
-@import "./base.css";
-@import "./panel.css";
-@import "./button.css";
-@import "./tabs.css";
-@import "./controls.css";
-@import "./list.css";
-@import "./meter.css";
-@import "./facts.css";
-@import "./tooltip.css";
-@import "./strength.css";
-@import "./sheet.css";
+   the cards (scripts/ui-design.mjs, docs/ui/index.html) load the same files. Every rule is in one
+   of the cascade layers whose order tokens.css declares, once (docs/ui/handoff.md, CSS). */
+@import url("./base.css");
+@import url("./panel.css");
+@import url("./button.css");
+@import url("./tabs.css");
+@import url("./controls.css");
+@import url("./list.css");
+@import url("./meter.css");
+@import url("./facts.css");
+@import url("./tooltip.css");
+@import url("./strength.css");
+@import url("./sheet.css");

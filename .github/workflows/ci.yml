@@ -29,6 +29,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run lint
+      - run: npm run stylelint
       - name: "fallow dead-code: the whole tree has no unused code and no import cycles"
         run: npx fallow dead-code
       - name: "fallow audit: what this change adds (unused code, import cycles, duplicates, complexity)"

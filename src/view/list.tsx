@@ -29,7 +29,7 @@ type ListProps = {
 
 function ListRow({ name, row, on, onSelect }: { name: string, row: Row, on: boolean, onSelect: () => void }) {
 	return (
-		<label class={on ? "pm-row is-on" : "pm-row"}>
+		<label class="pm-row">
 			<input class="pm-sr" type="radio" name={name} value={row.id} checked={on} onChange={onSelect} />
 			{row.nation && <Mark nation={row.nation} />}
 			{/* the spaces keep the title, the meta line and the value apart in the row's name */}

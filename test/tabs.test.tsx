@@ -19,7 +19,7 @@ describe("Tabs", () => {
 		expect(list.id).toBe("eqSelClass");
 		expect(list.className).toBe("pm-tabs");
 		const tank = screen.getByRole("tab", { name: "Tank 8" });
-		expect(tank.className).toBe("pm-tab is-on");
+		expect(tank.className).toBe("pm-tab");
 		expect(tank.getAttribute("aria-selected")).toBe("true");
 		expect(tank.tabIndex).toBe(0);
 		expect(tank.querySelector("svg")?.getAttribute("class")).toBe("i");
@@ -81,7 +81,7 @@ describe("SegmentedControl", () => {
 		const group = screen.getByRole("group", { name: "Theme" });
 		expect(group.className).toBe("pm-seg");
 		const paper = screen.getByRole("button", { name: "Paper" });
-		expect(paper.className).toBe("is-on");
+		expect(paper.className).toBe("");
 		expect(paper.getAttribute("aria-pressed")).toBe("true");
 		expect(paper.querySelector("svg")?.getAttribute("class")).toBe("i sm");
 		expect(screen.getByRole("button", { name: "Blackout" }).getAttribute("aria-pressed")).toBe("false");

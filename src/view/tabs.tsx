@@ -54,7 +54,7 @@ export function Tabs<T extends string>({ tabs, selected, onSelect, text, label, 
 			{tabs.map((t, i) => {
 				const on = t.id === selected;
 				return (
-					<button key={t.id} type="button" class={on ? "pm-tab is-on" : "pm-tab"} role="tab" aria-selected={on}
+					<button key={t.id} type="button" class="pm-tab" role="tab" aria-selected={on}
 						tabIndex={on ? 0 : -1} disabled={t.disabled} onClick={() => onSelect(t.id)} onKeyDown={(e) => onKeyDown(e, i)}>
 						{t.icon && <Icon name={t.icon} size={text ? "sm" : undefined} />}
 						{t.label}
@@ -82,7 +82,7 @@ export function SegmentedControl<T extends string>({ label, options, value, onCh
 			{options.map((o) => {
 				const on = o.value === value;
 				return (
-					<button key={o.value} type="button" class={on ? "is-on" : undefined} aria-pressed={on} disabled={o.disabled} onClick={() => onChange(o.value)}>
+					<button key={o.value} type="button" aria-pressed={on} disabled={o.disabled} onClick={() => onChange(o.value)}>
 						{o.icon && <Icon name={o.icon} size="sm" />}
 						{o.label}
 					</button>
