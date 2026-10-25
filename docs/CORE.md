@@ -151,8 +151,8 @@ the animation's end, showing the state in between. `begin(world, command)` plays
 first checkpoint, `resume(world, checkpoint)` from one to the next: a move stops once moved
 (`surprise` next: the surprise attack and the capture's victory), an attack once its shots are fired
 (`cleanUp` next: the destroyed units leave the map) and once they are gone (`end` next: the retreat or
-the surrender, the elimination victory). The world resumed from can be one made again from the
-screen's objects. The surprise attack hits the hidden unit of the mover's kind first, the one that
+the surrender, the elimination victory). The world resumed from is the game's kept one (src/mirror.ts):
+since #376 nothing the screen writes into its objects is in it. The surprise attack hits the hidden unit of the mover's kind first, the one that
 stopped it (#77: the old game picked by the person's air mode toggle, for the AI's moves too). `step`
 passes every checkpoint at once on one draft; test/core-steps.test.ts played each of its commands both
 ways until #137. Since #375 the game's `Commands.execute` passes them all in one call too, the objects

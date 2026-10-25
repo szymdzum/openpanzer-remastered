@@ -405,7 +405,6 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare setMoveRange: (unit: Unit) => void;
 	declare getCurrentMoveRange: () => Cell[];
 	declare setAttackRange: (unit: Unit) => void;
-	declare disembarkUnit: (unit: Unit) => boolean;
 	declare selectUnit: (unit: Unit) => boolean;
 	declare canUndoMove: (unit: Unit) => boolean;
 	declare updateUnitList: () => void;
@@ -568,21 +567,6 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	this.setMoveRange = function(unit) { selection.setMoveRange(unit); }
 	this.getCurrentMoveRange = function() { return selection.moveSelected; }
 	this.setAttackRange = function(unit) { selection.setAttackRange(unit); }
-
-	this.disembarkUnit = function(unit) {
-		const c = GameRules.getDisembarkPositions(this.map, unit);
-		if (c.length <= 0)
-			return false;
-
-		this.delMoveSel();
-		this.delAttackSel();
-		for (let i = 0; i < c.length; i++)
-			selection.addMoveCell(c[i], true);
-
-		unit.toggleEmbark();
-
-		return true;
-	}
 
 	// selects a new unit as the current unit
 	this.selectUnit = function(unit) { return selection.select(unit); }

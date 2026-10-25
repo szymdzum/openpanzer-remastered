@@ -591,6 +591,23 @@ them, and the game runs on the session.
   are back to the default timeout. Two test files were run once where they ran twice or on one worker:
   the engine contract's run gives its outcome test too (test/engine.test.ts), and the state's slowest
   test has a file of its own (test/state-ai.test.ts).
+- The mirror one way (#376, stage D0.4): the world kept is the game, and the objects only a copy of it
+  for the old UI and the harness. A step and the screen's rules start from it, never from the objects,
+  so what the screen writes into them doesn't reach the game; the checks compare the two before every
+  step (a write that didn't say so throws in the tests and on the dev server). What the old UI wrote
+  that was the game's goes through the core: the selection's carrier flips (a unit left while
+  disembarking, or selected with nowhere left to land, goes back aboard) are the embark's step, which
+  leaves the hexes' counters as the old flip did until the next command; the retreat's move and attack
+  hexes are asked of a world made for them instead of the unit's points written and put back; the unit
+  info shows a copy of the unit mounted or not. The dossier window set up the player's dossier when it had
+  none (a campaign save from before it): a bug, #403, fixed before, its own verify difference. What stays on the objects is the screen's and no world holds it: the selected unit and
+  its hexes (#377 takes them out of the state the harness hashes), the unit a move animates
+  (`hasAnimation`, which the harness's scripts wait on). The world is made from the objects only where
+  they were set up by hand and said so (`touched()`: a load, the players' setup, a test), and under
+  ?harness, whose scripts set up their games by writing into the objects (until #378); a side shown
+  another way (a hotseat turn) is the world kept with that side's sight. test/ui.test.ts records every
+  write the old UI makes into the objects while it plays; test/oneway.test.ts writes into them and steps.
+  Verify: identical.
 
 ### Not worth it now
 

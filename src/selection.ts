@@ -8,9 +8,12 @@
  * GameMap.currentUnit and the highlighted hexes in Hex.isMoveSel and isAttackSel: both are saved
  * with the game and read by the harness. The move cells are also what a move finds its path in
  * when the caller passes them (GameMap.moveUnit's cells).
+ *
+ * The selection only shows the game: a unit left while it was disembarking goes back aboard by the
+ * game's embark (backAboard), as the old selection put it back on its carrier (#376).
  */
 
-import { GameRules } from "./gamerules";
+import { GameRules, type GameRulesModule } from "./gamerules";
 import type { Cell } from "./prototypes";
 import type { GameMap } from "./map";
 import type { Unit } from "./unit";
@@ -21,6 +24,9 @@ export class MapSelection {
 	//Cells for disembark and retreat (no cost, the NaN moveUnit catches)
 	declare moveSelected: Cell[];
 	declare attackSelected: Cell[]; //selected hexes for current unit attack destinations
+	//The game's embark of a unit leaving its carrier, back aboard (src/host.ts runGame sets it: the
+	//selection doesn't reach the commands)
+	declare static backAboard: (unit: Unit) => void;
 
 	constructor(map: GameMap) {
 		this.map = map;
@@ -41,10 +47,16 @@ export class MapSelection {
 		this.clear();
 		this.map.currentUnit = unit;
 
-		//Negative carrier: the unit is disembarking, show the disembark positions
+		//Negative carrier: the unit is disembarking, show the hexes it can land on; with none left it
+		//goes back aboard
 		if (unit.carrier < 0) {
-			unit.toggleEmbark();
-			this.map.disembarkUnit(unit);
+			const cells = GameRules.getLandingPositions(unit);
+			if (cells.length > 0) {
+				for (const c of cells)
+					this.addMoveCell(c, true);
+			} else {
+				MapSelection.backAboard(unit);
+			}
 		}
 
 		if (!unit.hasMoved && unit.carrier >= 0)
@@ -59,7 +71,7 @@ export class MapSelection {
 	clear() {
 		//A unit left in the middle of a disembark goes back to its carrier
 		if (this.map.currentUnit !== null && this.map.currentUnit.carrier < 0)
-			this.map.currentUnit.toggleEmbark();
+			MapSelection.backAboard(this.map.currentUnit);
 		this.map.currentUnit = null;
 		this.clearMove();
 		this.clearAttack();
@@ -88,18 +100,19 @@ export class MapSelection {
 			this.map.map[cell.row][cell.col].isMoveSel = true;
 	}
 
-	setMoveRange(unit: Unit) {
+	//rules: what answers them, the game's by default
+	setMoveRange(unit: Unit, rules: GameRulesModule = GameRules) {
 		this.clearMove();
-		var c = GameRules.getMoveRange(this.map, unit);
+		var c = rules.getMoveRange(this.map, unit);
 
 		//Both canPass and canMove cells for the shortest path, only canMove ones shown on the map
 		for (var i = 0; i < c.length; i++)
 			this.addMoveCell(c[i], c[i].canMove);
 	}
 
-	setAttackRange(unit: Unit) {
+	setAttackRange(unit: Unit, rules: GameRulesModule = GameRules) {
 		this.clearAttack();
-		var c = GameRules.getUnitAttackCells(this.map.map, unit, this.map.rows, this.map.cols);
+		var c = rules.getUnitAttackCells(this.map.map, unit, this.map.rows, this.map.cols);
 
 		for (var i = 0; i < c.length; i++) {
 			this.attackSelected.push(c[i]);

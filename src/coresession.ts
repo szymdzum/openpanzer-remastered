@@ -11,8 +11,8 @@
  * for the current player's next order and hands it out as the old action (harness/replay.js wraps it
  * to hash the state there), and the host's processAction plays it as before, its commands on the core
  * (src/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
- * the session with its controller. The session's world is the objects' before each call (src/mirror.ts
- * stepWorld), so what the screen and the harness wrote into them is in it.
+ * the session with its controller. The session's world is the game's before each call (src/mirror.ts
+ * stepWorld: what the screen writes into the objects isn't in it, what the harness writes is).
  */
 
 import { actionType, type Cell, CURRENCY_ICON, playerType } from "./prototypes";

@@ -917,11 +917,9 @@ function updateUnitInfoWindow(u: UIUnitOrEntry) {
 			simulateMount = true;
 		}
 
+		//(a copy of the unit shown mounted or not: the unit stays as the game has it, #376)
 		$("uTransport").onclick = function() {
-			var s = u.isMounted;
-			u.isMounted = simulateMount;
-			updateUnitInfoWindow(u);
-			u.isMounted = s;
+			updateUnitInfoWindow(Object.assign(Object.create(Object.getPrototypeOf(u)) as UIUnitOrEntry, u, { isMounted: simulateMount }));
 		};
 	}
 
