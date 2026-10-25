@@ -8,23 +8,24 @@ afterEach(cleanup);
 
 describe("Button", () => {
 	test("renders its caption, icon and cost with the card's classes", () => {
-		render(<Button variant="primary" icon="pm-depot" cost={276}>Buy new</Button>);
+		render(<Button variant="primary" icon="depot" cost={276}>Buy new</Button>);
 		const button = screen.getByRole("button", { name: "Buy new 276" });
 		expect(button.className).toBe("pm-btn primary");
 		expect(button.querySelector("svg.i.sm use")?.getAttribute("href")).toBe("#pm-depot");
 		expect(button.querySelector(".cost")?.textContent).toBe("276");
 		expect(button.hasAttribute("disabled")).toBe(false);
+		expect(button.hasAttribute("title")).toBe(false);
 	});
 
 	test("an icon-only button is square and named by its label", () => {
-		render(<Button icon="pm-close" label="Close" />);
+		render(<Button icon="close" label="Close" />);
 		const button = screen.getByRole("button", { name: "Close" });
 		expect(button.className).toBe("pm-btn icon");
 		expect(button.querySelector("svg")?.getAttribute("class")).toBe("i");
 	});
 
 	test("a large button has the lg class and a full-size icon", () => {
-		render(<Button variant="primary" large icon="pm-end-turn">End turn</Button>);
+		render(<Button variant="primary" large icon="end-turn">End turn</Button>);
 		const button = screen.getByRole("button", { name: "End turn" });
 		expect(button.className).toBe("pm-btn primary lg");
 		expect(button.querySelector("svg")?.getAttribute("class")).toBe("i");
@@ -47,7 +48,29 @@ describe("Button", () => {
 		expect(onClick).not.toHaveBeenCalled();
 	});
 
-	test("a signal read in the parent renders the button again when it changes", async () => {
+	test("a context button says what it will do in a second line, the cost at its end", () => {
+		render(<Button icon="reinforce" line="+2" cost={56}>Reinforce</Button>);
+		const button = screen.getByRole("button", { name: "Reinforce +2 · 56" });
+		expect(button.querySelector("svg")?.getAttribute("class")).toBe("i");
+		expect(button.querySelector(".n")?.className).toBe("n");
+		expect(button.querySelector(".n .cost")?.textContent).toBe("56");
+	});
+
+	test("a second line the prestige covers only in part is marked part", () => {
+		render(<Button icon="reinforce" line="+1 of 2" cost={28} partial>Reinforce</Button>);
+		expect(screen.getByRole("button", { name: "Reinforce +1 of 2 · 28" }).querySelector(".n")?.className).toBe("n part");
+	});
+
+	test("a refused context button stays, with the reason as its second line and no title", () => {
+		render(<Button icon="reinforce" line="+2" cost={56} disabled="needs 28">Reinforce</Button>);
+		const button = screen.getByRole("button", { name: "Reinforce needs 28" });
+		expect(button.hasAttribute("disabled")).toBe(true);
+		expect(button.querySelector(".n")?.textContent).toBe("needs 28");
+		expect(button.querySelector(".cost")).toBeNull();
+		expect(button.hasAttribute("title")).toBe(false);
+	});
+
+	test("a signal read in the parent renders the button again when it changes, and a lifted refusal leaves no title", async () => {
 		//how the view model will reach the components (docs/ui/PLAN.md): a Refusal lifted, the button comes on
 		const refusal = signal<string | undefined>("Not your turn");
 		function EndTurn() {
@@ -56,8 +79,9 @@ describe("Button", () => {
 		render(<EndTurn />);
 		const button = screen.getByRole("button", { name: "End turn" });
 		expect(button.hasAttribute("disabled")).toBe(true);
+		expect(button.title).toBe("Not your turn");
 		await act(() => { refusal.value = undefined; });
 		expect(button.hasAttribute("disabled")).toBe(false);
-		expect(button.title).toBe("");
+		expect(button.hasAttribute("title")).toBe(false);
 	});
 });
