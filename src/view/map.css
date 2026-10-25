@@ -32,6 +32,17 @@
 		cursor: zoom-in;
 	}
 
+	/* the placing tag beside the hovered hex (Deployment, the card's .pm-placetag): what a click does over how the
+	   unit lands */
+	.pm-placetag {
+		pointer-events: none;
+
+		& output {
+			display: flex;
+			flex-direction: column;
+		}
+	}
+
 	/* the move path's tag: the first line what happens, the next ones what it costs */
 	.pm-pathtag {
 		z-index: var(--z-map-overlay);

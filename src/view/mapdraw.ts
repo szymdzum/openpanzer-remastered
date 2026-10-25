@@ -11,7 +11,8 @@ import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine
 import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
-import { drawFog, drawHatch, drawPlaques, drawSupport, drawSupportTags, drawZones } from "./overlays";
+import type { Deployment, Ghost } from "./deploy";
+import { drawDeployZone, drawFog, drawHatch, drawPlaceOutline, drawPlaques, drawSupport, drawSupportTags, drawZones } from "./overlays";
 import type { Strategic } from "./strategic";
 import { drawStrategic } from "./strategicdraw";
 import { TOKENS } from "./tokens";
@@ -32,6 +33,8 @@ export interface Scene {
 	support: Support | null; //the guns that fire if the hovered target is attacked
 	plaques: Plaque[];
 	strategic: Strategic | null; //the strategic map instead of the rest, the map fit to the window (src/view/strategic.ts)
+	deploy: Deployment | null; //the deployment zone while a reserve unit is picked (src/view/deploy.ts)
+	ghost: Ghost | null; //the picked reserve unit on the hovered hex where a click places it
 }
 
 //A sprite strip or the bridge by its file, null until it has loaded
@@ -198,6 +201,15 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 	c.restore();
 }
 
+//The picked reserve unit on the hex where a click places it, at 55% (Deployment)
+function drawGhost(c: CanvasRenderingContext2D, vp: Viewport, g: Ghost, images: Images) {
+	c.save();
+	c.globalAlpha = 0.55;
+	drawSprite(c, vp, { id: -1, row: g.row, col: g.col, icon: g.icon, facing: g.facing, side: -1, bridge: false, marker: null, dim: false,
+		lifted: false }, images);
+	c.restore();
+}
+
 //An arrow: the unit can still move
 function drawMoveMark(c: CanvasRenderingContext2D, x: number, y: number) {
 	c.lineWidth = 1.3;
@@ -339,10 +351,13 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
 	drawAirRings(c, vp, scene.units);
+	if (scene.deploy !== null) drawDeployZone(c, vp, scene.deploy);
+	if (scene.ghost !== null) drawPlaceOutline(c, vp, scene.ghost);
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
 	atMap(c, vp);
 	for (const u of scene.units) drawSprite(c, vp, u, images);
+	if (scene.ghost !== null) drawGhost(c, vp, scene.ghost, images);
 	atScreen(c, vp);
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));

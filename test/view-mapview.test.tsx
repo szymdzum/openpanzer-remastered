@@ -2,8 +2,9 @@
 //the person's commands on the core: the pointer's hex, the path's tag, a click that selects, moves and attacks,
 //a refusal in the status line, and the canvas drawn again when what it shows changes
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/preact";
-import { handWorld } from "./coreworld";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { deployWorld, handWorld } from "./coreworld";
+import { App } from "../src/view/app";
 import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
@@ -190,6 +191,62 @@ test("The strategic map: Z opens it, the pointer shows no path there, a click zo
 	await press("z");
 	await press("z");
 	expect([store.strategic.value, s.scrollLeft]).toEqual([false, hexCentre(15, 12).x - 500]);
+});
+
+//Deployment: the first reserve unit picked at the start, the map on the zone; the tag over a free hex; a click places it
+//through the host and picks the next; the reserve picker until the tray (D5): another unit, Done, Deploy again
+test("Deploying: the first reserve unit picked, its tag on a free hex, a click places it and picks the next", async () => {
+	const h = hostOf(deployWorld()), store = createStore(h.host);
+	store.refresh();
+	render(<App store={store} />);
+	await act(() => store.startDeployment());
+	expect([store.deploying.value, store.lookAt.value]).toEqual([1, { row: 1, col: 1 }]);
+	const msg = () => document.querySelector(".pm-status .msg")!.textContent;
+	expect(msg()).toBe("DeployInfanterie · click a brass hex to place it · 2 in reserve");
+	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
+	s.scrollLeft = s.scrollTop = 0;
+	//(the fighter picked in the reserve, then the infantry again)
+	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Me-109E-3/ })); });
+	expect(store.deploying.value).toBe(2);
+	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Infanterie/ })); });
+	await act(() => pointer("mousemove", 2, 1));
+	expect(document.querySelector(".pm-placetag")!.textContent).toBe("Place Infanterie" + "can't go back to the reserve");
+	//the taken hex: no tag, and a click there selects nothing while deploying (no move area drawn)
+	await act(() => pointer("mousemove", 1, 2));
+	expect(document.querySelector(".pm-placetag")).toBeNull();
+	await act(() => pointer("click", 2, 1));
+	expect(h.sent).toEqual([{ type: "deploy", index: 1, to: { row: 2, col: 1 } }]);
+	expect(store.deploying.value).toBe(2);
+	//the picker: the fighter picked, then the infantry's gone; Done ends deploying, Deploy starts it again
+	const rows = () => [...document.querySelectorAll(".pm-reserve .pm-row")].map((r) => r.textContent);
+	expect(rows()).toEqual(["Me-109E-3 10"]);
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Done" })); });
+	expect([store.deploying.value, store.deployment.value]).toEqual([null, null]);
+	await act(() => pointer("click", 1, 2));
+	expect(store.selected.value).toBe(0);
+	expect(store.selection.value!.area.length).toBeGreaterThan(0);
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: /Deploy · 1 in reserve/ })); });
+	expect([store.deploying.value, store.selected.value, store.selection.value]).toEqual([2, null, null]);
+	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Me-109E-3/ })); });
+	await act(() => pointer("click", 1, 2));
+	expect(h.sent[1]).toEqual({ type: "deploy", index: 2, to: { row: 1, col: 2 } });
+	//the reserve empty: deploying ends, the picker goes
+	expect([store.deploying.value, document.querySelector(".pm-reserve")]).toEqual([null, null]);
+	await act(() => store.startDeployment());
+	expect(store.deploying.value).toBeNull();
+	//the host refuses the placement (a message to read first): the unit stays picked, the reason in the status line
+	const refusing = createStore({ ...hostOf(deployWorld()).host, command: () => ({ ok: false, refusal: { reason: "read the message first" } }) });
+	refusing.refresh();
+	refusing.startDeployment();
+	refusing.clickHex({ row: 2, col: 1 });
+	expect([refusing.deploying.value, refusing.refused.value]).toEqual([1, "Read the message first"]);
+	//a side with no deployment hex: the unit picked, nowhere to look at
+	const nowhere = deployWorld();
+	for (const hex of nowhere.data.hexes) hex.deployment = -1;
+	const lost = createStore(hostOf(nowhere).host);
+	lost.refresh();
+	lost.startDeployment();
+	expect([lost.deploying.value, lost.deployment.value!.zone, lost.lookAt.value]).toEqual([1, [], null]);
 });
 
 //A map smaller than the screen is centred in it, as the old UI centres it: the pointer finds the hexes there

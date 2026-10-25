@@ -4,6 +4,7 @@
 //store's signals and send its commands: what they show and why a control is off is the view model's.
 import { Button } from "./button";
 import { Icon, IconSprite } from "./icon";
+import { List } from "./list";
 import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
 import type { Store } from "./store";
@@ -27,12 +28,14 @@ function StatusBar({ store }: { store: Store }) {
 	);
 }
 
-//The status line: on the strategic map how to leave it (StrategicMap); else the layer shown first (AirLayer), then a
-//refusal or the selected unit
+//The status line: on the strategic map how to leave it (StrategicMap); while deploying what a click does (Deployment);
+//else the layer shown first (AirLayer), then a refusal or the selected unit
 function MapLine({ store }: { store: Store }) {
-	const unit = store.unit.value, air = store.airMode.value;
+	const unit = store.unit.value, air = store.airMode.value, deploy = store.deployment.value;
 	if (store.strategic.value)
 		return <output class="msg"><b>Strategic map</b><span>{air ? "air layer" : "ground layer"} · click a place to zoom in there</span></output>;
+	if (deploy !== null && store.refused.value === null)
+		return <output class="msg"><b>Deploy</b><span>{deploy.unit.name} · click a brass hex to place it · {deploy.waiting} in reserve</span></output>;
 	return (
 		<output class="msg">
 			{air && <b>Air layer</b>}
@@ -49,6 +52,22 @@ function UnitActions({ store }: { store: Store }) {
 	return (
 		<Panel class="pm-actions" label={unit.name}>
 			{unit.actions.map((a) => <Button key={a.label} disabled={off(a.refusal)} onClick={() => store.dispatch(a.command)}>{a.label}</Button>)}
+		</Panel>
+	);
+}
+
+//The units waiting in the reserve, until the reserve tray (Deployment, D5): one picked to place on the map, or
+//none to play on, the reserve kept for later
+function Reserve({ store }: { store: Store }) {
+	const reserve = store.reserve.value, picked = store.deployment.value;
+	if (reserve.length === 0) return null;
+	if (picked === null)
+		return <Panel class="pm-reserve"><Button icon="deploy" onClick={() => store.pick(reserve[0].index)}>Deploy · {reserve.length} in reserve</Button></Panel>;
+	return (
+		<Panel class="pm-reserve">
+			<List label="Reserve" groups={[{ rows: reserve.map((r) => ({ id: String(r.index), title: r.name, value: r.strength })) }]}
+				selected={String(picked.unit.index)} onSelect={(id) => store.pick(Number(id))} />
+			<Button onClick={() => store.pick(null)}>Done</Button>
 		</Panel>
 	);
 }
@@ -84,6 +103,7 @@ export function App({ store }: { store: Store }) {
 			<MapView store={store} />
 			<StatusBar store={store} />
 			<UnitActions store={store} />
+			<Reserve store={store} />
 			<EndTurn store={store} />
 			<Message store={store} />
 		</div>
