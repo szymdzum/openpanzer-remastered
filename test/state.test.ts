@@ -154,7 +154,7 @@ test("A campaign's next scenario starts with no zone of control or spotting of t
 	const { Equipment } = await import("../src/equipment");
 	const m = game.scenario.map, w = createWorld(toData(game.scenario, game), Equipment.equipment);
 	expect(game.scenario.file, "the campaign's next scenario").not.toBe(before.file);
-	const counters = viewOf(m, game.spotSide).hexes.map((h) => h.split(",").slice(2).join(","));
+	const counters = viewOf(m, game.spotSide).hexes;
 	const sight = counters.map((_h, i) => [w.sight.zoc[0][i], w.sight.zoc[1][i], w.sight.spot[0][i], w.sight.spot[1][i]].map((n) => +(n > 0)).join(","));
 	expect(counters).toEqual(sight);
 	expect(m.getUnits().length, "the scenario's own units on the player's deployment hexes taken off").toBeGreaterThan(0);

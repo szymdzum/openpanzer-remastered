@@ -58,8 +58,8 @@ async function play(item: string): Promise<string[]> {
 	await startState(game, item.startsWith("campaign:") ? item + ":0" : item, [1, 1, 1, 1]);
 	const trace: string[] = [];
 	const map = () => game.scenario.map;
-	const state = () => JSON.stringify(toData(game.scenario, game).state) + JSON.stringify([map().currentUnit ? map().currentUnit.id : null,
-		map().getCurrentMoveRange().length, CombatLog.log, map().getUnitImagesList(), game.spotSide, screen.splice(0)]);
+	const state = () => JSON.stringify(toData(game.scenario, game).state) + JSON.stringify([CombatLog.log, map().getUnitImagesList(),
+		game.spotSide, screen.splice(0)]);
 	//harness/replay.js makeAllAI: every player the AI, its actions hashed where they are handed out
 	const traced = new Set<unknown>();
 	const makeAllAI = () => {

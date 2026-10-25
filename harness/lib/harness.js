@@ -205,10 +205,11 @@ function snapshot() {
 	return window.__stateSnapshot === "toData" || window.__stateSnapshot === "toData-norng" ? stateSnapshot() : walkSnapshot();
 }
 
-// toData's { data, state }, and what the screen shows beside the state, which the state leaves
-// out (docs/STATE.md D6, D10): the selected unit, and per hex the move and attack marks, the
-// spotting and the zone of control of each side as the hex tells them. A scenario still loading
-// has no state yet (its date is the clock's)
+// toData's { data, state }, and per hex what the state leaves out and the game derives from it
+// (docs/STATE.md D10): the spotting and the zone of control of each side as the hex tells them. Not
+// the selection (the selected unit, the move and attack marks): it is the old UI's, not the game's
+// (D6, #377), and the canvas shows it. A scenario still loading has no state yet (its date is the
+// clock's)
 function stateSnapshot() {
 	const s = game.scenario;
 	if (!s.isLoaded) return JSON.stringify({ loading: s.file });
@@ -216,11 +217,11 @@ function stateSnapshot() {
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
 			const h = m.map[r][c];
-			hexes.push("" + +h.isMoveSel + +h.isAttackSel + +h.isSpotted(0) + +h.isSpotted(1) + +h.isZOC(0) + +h.isZOC(1));
+			hexes.push("" + +h.isSpotted(0) + +h.isSpotted(1) + +h.isZOC(0) + +h.isZOC(1));
 		}
 	const saved = toData(s, game);
 	if (window.__stateSnapshot === "toData-norng") saved.state.rng = null;
-	return JSON.stringify({ ...saved, selected: m.currentUnit ? m.currentUnit.id : null, hexes: hexes.join(",") });
+	return JSON.stringify({ ...saved, hexes: hexes.join(",") });
 }
 
 // The walk: built from plain properties so it doesn't depend on the modules under test more than
@@ -228,7 +229,8 @@ function stateSnapshot() {
 const ENTITIES = ["Unit", "Player", "Hex", "Map", "GameMap", "Scenario", "AI", "AIScripted", "Game", "Campaign", "Transport"];
 // Classes the remaster renamed, under their original names so traces compare with the reference
 const RENAMED = { GameMap: "Map", SpriteAnimation: "Animation" };
-const SKIP_KEYS = { handler: 1, map: 1 };
+// (the selection is the UI's, #377: the original and a baseline before it keep it on the map and the hexes)
+const SKIP_KEYS = { handler: 1, map: 1, currentUnit: 1, isMoveSel: 1, isAttackSel: 1 };
 
 function entityRef(v) {
 	const name = v.constructor && (RENAMED[v.constructor.name] || v.constructor.name);

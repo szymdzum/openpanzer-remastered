@@ -13,12 +13,12 @@ type Json = Record<string, unknown>;
 
 const { contractSerialize, contractHash } = contractCommon();
 
-//What the contract compared that isn't game state: the selection (D6), the spotting and zone of
-//control counters (D10, read as set or not, the way a hex tells them) and the side shown
+//What the contract compared that isn't game state: the spotting and zone of control counters (D10,
+//read as set or not, the way a hex tells them) and the side shown. Not the selection (D6), the old
+//UI's (#377)
 export interface View {
-	currentUnit: number | null;
 	spotSide: number;
-	hexes: string[]; //per hex: move and attack marks, zone of control of side 0 and 1, spotted by 0 and 1
+	hexes: string[]; //per hex: zone of control of side 0 and 1, spotted by 0 and 1
 }
 
 export function viewOf(m: GameMap, spotSide: number): View {
@@ -26,9 +26,9 @@ export function viewOf(m: GameMap, spotSide: number): View {
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
 			const h = m.map[r][c];
-			hexes.push([h.isMoveSel ? 1 : 0, h.isAttackSel ? 1 : 0, +h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(","));
+			hexes.push([+h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(","));
 		}
-	return { currentUnit: m.currentUnit ? m.currentUnit.id : null, spotSide, hexes };
+	return { spotSide, hexes };
 }
 
 //A unit as plain data, the way common.js's contractUnitState writes it: own fields sorted, the
@@ -64,7 +64,7 @@ const writtenOnly = ["hasRessuplied", "nodossier"];
 export function contractStateString(sc: Scenario, equipment: EquipmentModule, spotSide: number): string {
 	const m = sc.map;
 	const reinforcements = Object.keys(sc.reinforcements).reduce((n, t) => n + (sc.reinforcements[t] ? sc.reinforcements[t].length : 0), 0);
-	return [m.turn, m.currentPlayer ? m.currentPlayer.id : null, m.currentUnit ? m.currentUnit.id : null,
+	return [m.turn, m.currentPlayer ? m.currentPlayer.id : null,
 		JSON.stringify(m.sidesVictoryHexes), sc.date.getTime(), sc.dayTurn, reinforcements,
 		contractHash(contractSerialize(equipment.equipmentIndexes)), spotSide].join("|")
 		+ "\n" + unitStrings(m).join("\n") + "\n" + playerStrings(m).join("\n") + "\n" + hexStrings(m);
@@ -94,8 +94,7 @@ function hexStrings(m: GameMap): string {
 	for (let r = 0; r < m.rows; r++)
 		for (let c = 0; c < m.cols; c++) {
 			const h = m.map[r][c];
-			hexes += [h.owner, h.flag, h.victorySide, h.isMoveSel ? 1 : 0, h.isAttackSel ? 1 : 0,
-				h.unit ? h.unit.id : "", h.airunit ? h.airunit.id : "",
+			hexes += [h.owner, h.flag, h.victorySide, h.unit ? h.unit.id : "", h.airunit ? h.airunit.id : "",
 				+h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(",") + ";";
 		}
 	return hexes;
@@ -119,10 +118,9 @@ export function stateStringFromData(saved: SavedGame, view: View, equipment: Equ
 	});
 	let hexes = "";
 	state.map.hexes.forEach((h, i) => {
-		const [moveSel, attackSel, ...counters] = view.hexes[i].split(",");
-		hexes += [h.owner, h.flag, h.victorySide, moveSel, attackSel, h.unit ?? "", h.air ?? "", ...counters].join(",") + ";";
+		hexes += [h.owner, h.flag, h.victorySide, h.unit ?? "", h.air ?? "", ...view.hexes[i].split(",")].join(",") + ";";
 	});
-	return [state.turn.turn, state.turn.currentPlayer >= 0 ? state.turn.currentPlayer : null, view.currentUnit,
+	return [state.turn.turn, state.turn.currentPlayer >= 0 ? state.turn.currentPlayer : null,
 		JSON.stringify(state.objectives), new Date(state.scenario.date).getTime(), state.scenario.dayTurn, state.reinforcements.length,
 		contractHash(contractSerialize(state.equipment.indexes)), view.spotSide].join("|")
 		+ "\n" + units.join("\n") + "\n" + ps.join("\n") + "\n" + hexes;
