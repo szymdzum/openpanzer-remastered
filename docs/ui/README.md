@@ -28,7 +28,7 @@ is built from, and its source of truth.
 | `components/<Name>/README.md` | what the card does, its rules, states and the ids to keep |
 | `renders/<Name>.webp` | the card rendered in Paper, for reading here on GitHub |
 | `assets/` | map, sprites and photograph used only to stage the cards (see its README) |
-| `index.html` | a viewer for the cards, live, with the theme switch |
+| `index.html` | a viewer for the cards, live, with the theme switch, and under a card the real components (`live.html`, from `src/view/gallery.tsx`) in both themes |
 
 ## Viewing and changing
 
