@@ -8,6 +8,29 @@ Nicu Pavel rebuilt it for the browser as [OpenPanzer](https://github.com/nicupav
 and then [Panzer Marshal](https://github.com/nicupavel/panzermarshal). This project takes
 Panzer Marshal 3.2.14, its last version, and carries it forward.
 
+## Why
+
+**So it doesn't disappear.** Games age faster than books: formats, systems and browsers go, and
+the works go with them. PG2 lives on because Nicu took it to the browser. This is the next step:
+not only that it runs, but that it can keep growing. Closer to restoring an old building than to
+writing a new game, and the proof that it still plays like the original is the restorer's record
+of what is original and what is new.
+
+**Out of respect for the work.** Something "in the style of PG2" from scratch would be easier.
+We keep SSI's game and Nicu's port as they play, down to the dice, and only then make them
+better.
+
+**For the craft.** Tests, a deterministic engine, layers that stand apart: made properly, so that
+in five years someone can open the code and see why it works.
+
+**To learn.** A 1997 wargame holds a whole education: state, randomness, AI opponents,
+interfaces, history.
+
+**For history.** The Bzura, Mława, September 1939: a game can show why a battle went the way it
+did through your own decisions, not a textbook's.
+
+**And because it's fun.** We loved this game and want to play it, better.
+
 ## What we're doing
 
 **Keep the spirit.** Core units you care about, scenarios that play like puzzles against the turn
