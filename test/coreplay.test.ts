@@ -184,7 +184,6 @@ async function loaded(seq: Sequence) {
 	w.Rng.game.state = seq.seed >>> 0;
 	w.Rng.ai.state = 7;
 	w.CombatLog.reset();
-	(globalThis as { map?: unknown }).map = w.m; //Map.attackUnit logs the turn of a global map (#28)
 	const world = () => worldOf(w.scenario, w.game, gameInputs(w.game));
 	return Object.assign(w, { worldOf: world, applyData: (x: ReturnType<typeof world>) => applyData(w.scenario, x, w.game),
 		arriveReinforcements, step, ended: () => outcome(world()) !== null });
