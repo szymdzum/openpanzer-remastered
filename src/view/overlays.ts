@@ -163,10 +163,9 @@ function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
 	c.stroke();
 }
 
-//What a plaque says: its name set in capitals as the cards' labels are (the letters as the data has them), and
-//the prestige taking it gives
+//What a plaque says: its name as the data writes it, never re-cased (principles.md), and the prestige taking it gives
 function plaqueText(p: Plaque): string {
-	return (p.name !== "" ? p.name : p.objective ? "Objective" : "Town").toUpperCase() + "  +" + p.prestige;
+	return (p.name !== "" ? p.name : p.objective ? "Objective" : "Town") + "  +" + p.prestige;
 }
 
 //An objective on paper, room for its star; a town smaller and greyer
