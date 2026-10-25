@@ -68,6 +68,9 @@ export const TOKENS = {
 		"map-ok": "#1f5a4f",
 		"map-low": "#7a4c00",
 		"map-brass": "#6b4f12",
+		"map-axis": "#4f6b80",
+		"map-allied": "#9c3b22",
+		"map-sandbag": "#c8b27a",
 	},
 	px: {
 		"space-1": 4,
