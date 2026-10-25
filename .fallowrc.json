@@ -7,8 +7,8 @@
 	"entry": ["src/main.ts", "test/**/*.test.ts", "test/**/*.test.tsx", "cli/play.ts", "cli/register.mjs", "cli/page.ts",
 		// run by hand with node: docs/ui's tokens, card list, gallery and renders
 		"scripts/ui-design.mjs",
-		// the new UI's components' CSS, which docs/ui's pages load (the game doesn't yet, D1c)
-		"src/view/library.css"],
+		// the new UI's components' CSS and its faces, which docs/ui's pages load (the game doesn't yet, D1c)
+		"src/view/library.css", "src/view/fonts.css"],
 	// src/view/ (the new UI) is reached from its tests until the game loads it (D1c); so are the
 	// view model's signals, a runtime dependency which only the tests use until then
 	"ignoreDependencies": ["@preact/signals"],
