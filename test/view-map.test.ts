@@ -16,8 +16,9 @@ import type { World } from "../src/core/types";
 import { leaderType, roadType, terrainType } from "../src/prototypes";
 import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
 import { clickOn, mapUnits, outlineOf, pathOf, selectionOf } from "../src/view/mapview";
+import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
 
-const PZ_IIA = 140, BRUCKE = 111, TP7 = 273, INFANTERIE = 115, PSW_222 = 117, OPEL_BLITZ = 157, ME_109 = 159;
+const PZ_IIA = 140, BRUCKE = 111, WZ13 = 262, TP7 = 273, INFANTERIE = 115, PSW_222 = 117, OPEL_BLITZ = 157, ME_109 = 159;
 
 //A hand-built map seen by side 0, player 0's turn
 const hand = (units: HandUnit[], more: { rows?: number; cols?: number; terrain?: (r: number, c: number) => number;
@@ -99,7 +100,7 @@ test("The move area is the core's move range: tinted where the unit can stop, fr
 		expect(inside.has(hexIndex(w, n.row, n.col)) && n.row >= 0 && n.col >= 0).toBe(false);
 	}
 	//the enemy selected: its hex, no area; not the person's turn: no area either
-	expect(selectionOf(w, 2)).toEqual({ unit: 2, at: { row: 3, col: 1 }, range: [], area: [], outline: [], targets: [] });
+	expect(selectionOf(w, 2)).toEqual({ unit: 2, at: { row: 3, col: 1 }, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] });
 	const theirs = { ...w, state: { ...w.state, turn: { ...w.state.turn, currentPlayer: 1 } } };
 	expect(selectionOf(theirs, 0)!.area).toEqual([]);
 	expect([selectionOf(w, null), selectionOf(w, 99)]).toEqual([null, null]);
@@ -211,4 +212,85 @@ test("The small game's map: the person's units with their move areas, the enemy'
 	expect(sel.area.length).toBeGreaterThan(0);
 	const to = sel.area[0];
 	expect(clickOn(w, sel, to, false)).toEqual({ command: { type: "move", unit: 1, to } });
+});
+
+//An enemy zone (MapOverlays): a bar on each edge of the area where the zone ends the move, facing the enemy the
+//side sees. A hidden enemy's zone ends the move too (#282, the original's rule) but has no bar: no enemy to face
+test("Enemy zone bars sit on the area's edges facing a seen enemy whose zone ends the move there", () => {
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 4, col: 3 }]);
+	const sel = selectionOf(w, 0)!;
+	expect(sel.zones.length).toBeGreaterThan(0);
+	for (const e of sel.zones) {
+		expect(adjacent(e.row, e.col)[e.side]).toEqual({ row: 4, col: 3 });
+		expect(pathOf(w, sel, e)!.stop).toBe(true);
+	}
+	//every hex of the area next to the enemy that the side sees has its bar (on a hex it doesn't see, the zone
+	//doesn't end the move)
+	const next = sel.area.filter((c) => isSeen(w, c.row, c.col) && adjacent(c.row, c.col).some((n) => n.row === 4 && n.col === 3));
+	expect(sel.zones.map((e) => ({ row: e.row, col: e.col }))).toEqual(next);
+	//an aircraft is in no zone
+	const plane = hand([{ eqid: ME_109, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 4, col: 3 }]);
+	expect(selectionOf(plane, 0)!.zones).toEqual([]);
+	//a hidden enemy: the 7TP three hexes from the infantry is in the fog. Its zone still ends the move on the seen
+	//hex next to it, with no bar
+	const hidden = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 4, col: 4 }]);
+	const hsel = selectionOf(hidden, 0)!;
+	expect(mapUnits(hidden, false, null).map((u) => u.id)).toEqual([0]);
+	expect(isSeen(hidden, 4, 3)).toBe(true);
+	expect(pathOf(hidden, hsel, { row: 4, col: 3 })!.stop).toBe(true);
+	expect(hsel.zones).toEqual([]);
+});
+
+test("The area's hexes the side doesn't see are hatched, not tinted: the move may run into an ambush", () => {
+	const w = hand([{ eqid: PSW_222, owner: 0, row: 1, col: 1 }], { rows: 14, cols: 14 });
+	const sel = selectionOf(w, 0)!;
+	expect(sel.unseen.length).toBeGreaterThan(0);
+	expect(sel.unseen.length).toBeLessThan(sel.area.length);
+	for (const c of sel.area) expect(sel.unseen.some((u) => u.row === c.row && u.col === c.col)).toBe(!w.sight.spot[0][hexIndex(w, c.row, c.col)]);
+});
+
+test("The fog of war covers the hexes the side shown doesn't see; a unit that fired from there shows, its plate dotted", () => {
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 9, col: 9, tempSpotted: true }]);
+	const fog = fogOf(w)!;
+	expect([fog[hexIndex(w, 4, 1)], fog[hexIndex(w, 4, 2)], fog[hexIndex(w, 9, 9)]]).toEqual([0, 0, 1]);
+	expect(Array.from(fog).filter((f) => f === 0).length).toBe(Array.from(w.sight.spot[0]).filter((n) => n > 0).length);
+	const units = mapUnits(w, false, null);
+	expect(units.map((u) => [u.id, u.marker!.revealed])).toEqual([[0, false], [1, true]]);
+	expect(fogOf({ ...w, noFOW: true })).toBeNull();
+	expect(fogOf({ ...w, spotSide: -1 })).toBeNull();
+});
+
+test("Hovering a target draws the guns the side sees that will fire in support, as the estimate counts them", () => {
+	//the tank attacks the 7TP next to it; one Polish gun in range is seen, the other is in the fog
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }, { eqid: TP7, owner: 1, row: 4, col: 4 },
+		{ eqid: WZ13, owner: 1, row: 5, col: 5 }, { eqid: WZ13, owner: 1, row: 7, col: 5 }], { rows: 12, cols: 12 });
+	const sel = selectionOf(w, 0)!;
+	expect(isSeen(w, 5, 5) && !isSeen(w, 7, 5)).toBe(true);
+	expect(supportOf(w, sel, { row: 4, col: 4 }, false)).toEqual({ attacker: { row: 4, col: 3 }, target: { row: 4, col: 4 }, guns: [{ row: 5, col: 5 }] });
+	//not a target, nothing hovered, nothing selected
+	expect([supportOf(w, sel, { row: 5, col: 4 }, false), supportOf(w, sel, null, false), supportOf(w, null, { row: 4, col: 4 }, false)])
+		.toEqual([null, null, null]);
+	//a surprised attacker draws no support fire, as the estimate counts none
+	const surprised = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3, isSurprised: true }, { eqid: TP7, owner: 1, row: 4, col: 4 },
+		{ eqid: WZ13, owner: 1, row: 5, col: 5 }], { rows: 12, cols: 12 });
+	expect(supportOf(surprised, selectionOf(surprised, 0), { row: 4, col: 4 }, false)).toBeNull();
+	//no gun in reach: none
+	const alone = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }, { eqid: TP7, owner: 1, row: 4, col: 4 }]);
+	expect(supportOf(alone, selectionOf(alone, 0), { row: 4, col: 4 }, false)).toBeNull();
+});
+
+const isSeen = (w: World, row: number, col: number) => w.sight.spot[0][hexIndex(w, row, col)] > 0;
+
+test("Every flag and objective has its plaque (#62): an objective +150 with its owner's side, a town +50", () => {
+	const w = hand([]);
+	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 5)], { owner: 0, flag: 7 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 7, 1)], { victorySide: 1 });
+	w.data.hexes[hexIndex(w, 2, 2)].name = "Mława";
+	w.data.hexes[hexIndex(w, 5, 5)].name = "Grudusk";
+	expect(plaquesOf(w)).toEqual([
+		{ row: 2, col: 2, name: "Mława", objective: true, prestige: 150, side: 1 },
+		{ row: 5, col: 5, name: "Grudusk", objective: false, prestige: 50, side: 0 },
+		{ row: 7, col: 1, name: "", objective: true, prestige: 150, side: -1 },
+	]);
 });
