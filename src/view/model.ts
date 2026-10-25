@@ -78,6 +78,11 @@ export function reasonOf(r: Refusal): string {
 	return r.reason.charAt(0).toUpperCase() + r.reason.slice(1);
 }
 
+//Whether the person can order a unit now: it is theirs, on their turn (the map shows its move area and targets)
+export function canOrder(w: World, u: UnitState): boolean {
+	return turnRefusal(w, u) === null;
+}
+
 //Why the person can't send a command now (the screen's reason, before the core's), null when they can
 function turnRefusal(w: World, u: UnitState | null): string | null {
 	if (!isYourTurn(w)) return "Not your turn";
