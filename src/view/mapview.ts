@@ -10,7 +10,7 @@ import { captureAt } from "../core/moves";
 import { isBridgeForSide, moveRange, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
 import { isGround, unitUsesAmmo, unitUsesFuel } from "../core/units";
-import { ammoOf, fuelOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
+import { airUnitAt, ammoOf, fuelOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
 import { unitClass } from "../prototypes";
 import { canOrder } from "./model";
 
@@ -39,6 +39,8 @@ export interface MapUnit {
 	side: number;
 	bridge: boolean; //a ground unit on a bridge of its side is drawn as the bridge, unless selected
 	marker: Marker | null; //the unit shown on top of its hex has one, the one underneath none
+	dim: boolean; //in the other layer's slot (MapLayers): drawn underneath at 45%, without its marker
+	lifted: boolean; //an aircraft on top in the air layer (AirLayer): lifted with a shadow inside a dashed air ring
 }
 
 //A hex's edge: adjacent()'s side k of the hex
@@ -107,24 +109,30 @@ function markerOf(w: World, u: UnitState): Marker {
 		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) };
 }
 
-function mapUnit(w: World, u: UnitState, top: boolean, selected: UnitId | null): MapUnit {
+//A unit as the map draws it: on top of its hex with its marker (lifted in the air layer), or in the other
+//layer's slot, dimmed underneath
+function mapUnit(w: World, u: UnitState, top: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
 	const side = sideOf(w, u);
 	const bridge = u.id !== selected && isGround(w, u) && isBridgeForSide(w, hexIndex(w, u.row, u.col), side);
 	return { id: u.id, row: u.row, col: u.col, icon: unitData(w, u).icon as unknown as string, facing: u.facing, side, bridge,
-		marker: top && u.strength > 0 ? markerOf(w, u) : null };
+		marker: top && u.strength > 0 ? markerOf(w, u) : null, dim: !top, lifted: top && airMode };
 }
 
-//The units the side shown sees, hex by hex, row by row: on a hex with two, the one the layer doesn't show
-//first and without a marker, then the one it shows (airMode: the aircraft) with its marker
+//The units the side shown sees, hex by hex, row by row (MapLayers): every hex has a ground slot and an air slot.
+//The slot of the layer shown (airMode: the air slot) is on top with its marker; the other one's unit is drawn
+//first, dimmed and without a marker, also when it is alone on its hex: an aircraft alone is still under the
+//ground layer, which tells which units a click deals with. (A click on it still selects it, as the old UI's
+//Hex.getUnit did, and selecting an aircraft switches the air layer on: src/view/store.ts)
 export function mapUnits(w: World, airMode: boolean, selected: UnitId | null): MapUnit[] {
 	const units: MapUnit[] = [];
 	const { rows, cols } = w.state.map;
 	for (let row = 0; row < rows; row++)
 		for (let col = 0; col < cols; col++) {
 			const hex = hexIndex(w, row, col);
-			const top = unitAt(w, hex, airMode), below = unitAt(w, hex, !airMode);
-			if (below !== null && below !== top && shown(w, below)) units.push(mapUnit(w, below, false, selected));
-			if (top !== null && shown(w, top)) units.push(mapUnit(w, top, true, selected));
+			const air = airUnitAt(w, hex), ground = groundUnitAt(w, hex);
+			const top = airMode ? air : ground, below = airMode ? ground : air;
+			if (below !== null && shown(w, below)) units.push(mapUnit(w, below, false, airMode, selected));
+			if (top !== null && shown(w, top)) units.push(mapUnit(w, top, true, airMode, selected));
 		}
 	return units;
 }

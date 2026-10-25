@@ -24,8 +24,10 @@ function StatusBar({ store }: { store: Store }) {
 				{prestige !== null && <span class="cell pm-prestige" title="Prestige"><Icon name="prestige" size="sm" />{prestige}</span>}
 			</div>
 			<output class="msg">
-				{store.refused.value !== null ? store.refused.value
-					: unit !== null && <><b>{unit.name}</b> {unit.className} · strength {unit.strength} · {unit.moves} moves left</>}
+				{/* (the layer shown first, AirLayer) */}
+				{store.airMode.value && <b>Air layer</b>}
+				{store.refused.value !== null ? <span>{store.refused.value}</span>
+					: unit !== null && <span><b>{unit.name}</b> {unit.className} · strength {unit.strength} · {unit.moves} moves left</span>}
 			</output>
 		</Panel>
 	);

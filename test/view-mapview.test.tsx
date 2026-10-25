@@ -133,6 +133,39 @@ test("No game playing: a click on the map does nothing, the map is empty", async
 	expect(document.querySelector<HTMLElement>(".pm-mapview-area")!.style.inlineSize).toBe("0px");
 });
 
+const press = (key: string, more: KeyboardEventInit = {}, on: EventTarget = window) =>
+	act(() => { on.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...more })); });
+
+//AirLayer: the A key switches the layer, selecting an aircraft switches it on, a ground unit off; leaving it deselects
+//an aircraft, which would be underneath
+test("The air layer: A switches it, a selected aircraft switches it on and a tank off, leaving it deselects the aircraft", async () => {
+	const { store } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 },
+		{ eqid: 159, owner: 0, row: 6, col: 3 }] }, undefined, { spotSide: 0 }));
+	await press("a");
+	expect(store.airMode.value).toBe(true);
+	await press("A");
+	expect(store.airMode.value).toBe(false);
+	//(not with a modifier, nor while a field takes the typing)
+	await press("a", { ctrlKey: true });
+	const field = document.body.appendChild(document.createElement("input"));
+	await press("a", {}, field);
+	await press("x");
+	expect(store.airMode.value).toBe(false);
+	field.remove();
+	await act(() => pointer("click", 6, 3));
+	expect([store.selected.value, store.airMode.value]).toEqual([1, true]);
+	expect(store.units.value.find((u) => u.id === 1)).toMatchObject({ lifted: true, dim: false });
+	//leaving the layer deselects the aircraft (a click on the tank would move the aircraft over it)
+	await press("a");
+	expect([store.selected.value, store.airMode.value]).toEqual([null, false]);
+	await press("a");
+	await act(() => pointer("click", 4, 3));
+	expect([store.selected.value, store.airMode.value]).toEqual([0, false]);
+	//a tank selected stays selected in the air layer
+	await press("a");
+	expect([store.selected.value, store.airMode.value]).toEqual([0, true]);
+});
+
 //A map smaller than the screen is centred in it, as the old UI centres it: the pointer finds the hexes there
 test("A map smaller than the screen sits in its middle, and a click finds the hex under it", async () => {
 	const { store } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }] }, undefined, { spotSide: 0 }));
