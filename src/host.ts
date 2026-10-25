@@ -598,11 +598,9 @@ function programPlays(player: Player | null) {
 //picked and a look at a hex too: the screen shows them a moment before the next action (#8)
 type ShownAction = (host: GameHost, p: AIAction["param"], shown: () => void) => void;
 const shownActions: { [type: number]: ShownAction } = {
+	//(the move takes its path in the unit's move range, which the old UI shows)
 	[actionType.move]: (host, p, shown) => {
-		//The selection (hashed, saved); the move takes its path from that same range
-		const g = host.game;
-		g.scenario.map.setMoveRange(p[0] as Unit);
-		host.screen.move(p[0] as Unit, p[1] as Cell, g.scenario.map.getCurrentMoveRange(), shown);
+		host.screen.move(p[0] as Unit, p[1] as Cell, GameRules.getMoveRange(host.game.scenario.map, p[0] as Unit), shown);
 	},
 	//(the range asked after the wait: a missing unit throws there and the turn waits for good, #80)
 	[actionType.attack]: (host, p, shown) => {
@@ -627,7 +625,9 @@ const passing = [actionType.upgrade, actionType.buy, actionType.deploy];
 function playCommand(g: Game, type: number, unit: Unit | null): boolean {
 	const command = commandOf[type];
 	if (command !== undefined) {
-		Commands.execute(g.scenario, { type: command, unit: unit ? unit.id : -1 });
+		const cmd = { type: command, unit: unit ? unit.id : -1 };
+		const done = Commands.execute(g.scenario, cmd);
+		if (g.host.screen.played) g.host.screen.played(cmd, done);
 		return true;
 	}
 	return passing.includes(type);
@@ -668,7 +668,7 @@ export function runGame(g: Game) {
 	ScenarioLoader.build = buildOnCore;
 	ScenarioLoader.coreCountries = carriedCountries;
 	GameMap.removeDestroyed = removeDestroyed;
-	MapSelection.backAboard = (u) => backAboard(game.scenario, u.id);
+	MapSelection.backAboard = (u, counters) => backAboard(game.scenario, u.id, counters);
 	setEngineContext({
 		scenario: function() { return game.scenario; },
 		campaign: function() { return game.campaign; },

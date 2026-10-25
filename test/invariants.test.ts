@@ -7,7 +7,7 @@
 //drills (#73) come out clean.
 import { expect, test } from "vitest";
 import { fixtures } from "./contracts";
-import { cellName, hexName, load, unitName, violations, type Restored as World } from "./invariants";
+import { cellName, hexName, load, uiCommand, unitName, violations, type Restored as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
@@ -17,13 +17,13 @@ import type { Command } from "../src/commands";
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
 //the commands, played whole, with the UI's selection refresh after an attack (#29 guarded)
 function attack(w: World, a: Unit, d: Unit) {
-	w.Commands.execute(w.scenario, { type: "attack", unit: a.id, target: d.id }, { reselect: true });
+	uiCommand(w, { type: "attack", unit: a.id, target: d.id });
 }
 
 //src/host.ts processAction (move): the move range, then the move command
 function move(w: World, u: Unit, cell: Cell) {
 	w.m.setMoveRange(u);
-	w.Commands.execute(w.scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, { reselect: true });
+	uiCommand(w, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } });
 }
 
 //A part of an AI action, for the step's name
@@ -53,7 +53,7 @@ function attacked(w: World, a: Unit, d: Unit): Unit[] {
 
 //A resupply or a reinforcement
 function supplied(w: World, type: "resupply" | "reinforce", u: Unit): Unit[] {
-	w.Commands.execute(w.scenario, { type, unit: u.id });
+	uiCommand(w, { type, unit: u.id });
 	return [];
 }
 
@@ -174,7 +174,7 @@ function movers(w: World): Unit[] {
 
 //A command played as the game sends it; false when refused
 function play(w: World, cmd: Command): boolean {
-	return w.Commands.execute(w.scenario, cmd).ok;
+	return uiCommand(w, cmd).ok;
 }
 
 drill("#68 undo keeps the unit attached to its player", "ruscam09-t2.json.gz", (w, setup) => {

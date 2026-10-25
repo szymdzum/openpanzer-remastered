@@ -391,6 +391,13 @@ function applyUnit(m: GameMap, u: Unit, s: UnitState, destroyed: boolean) {
 	u.setHex(s.row >= 0 ? m.map[s.row][s.col] : null);
 }
 
+//A unit a step took off the map, its object as it was in the last world of the step it was in (the update
+//to the step's end then takes it off: src/commands.ts)
+export function applyGone(m: GameMap, s: UnitState) {
+	const u = unitObject(m, s.id);
+	if (u !== null) applyOffMap(m, u, s);
+}
+
 //A unit's fields but its id and position, and its player
 function applyOffMap(m: GameMap, u: Unit, s: OffMapUnit) {
 	u.eqid = s.eqid;

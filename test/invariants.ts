@@ -8,6 +8,7 @@ import { createWorld } from "../src/core/create";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
+import type { Command, Executed } from "../src/commands";
 
 //The modules of the restored state (restoreState resets them for every fixture), with the game's
 //session the engine contract plays on (test/coreengine.ts): its players and end of turn
@@ -31,6 +32,16 @@ export async function load(name: string) {
 	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),
 		...prototypes };
 }
+//A command as the old UI plays it (src/ui.ts played): then the selection shows what the old engine's
+//command left selected (a disband the command allows deselects first)
+export function uiCommand<C extends Command>(w: Pick<Restored, "m" | "scenario" | "Commands">, cmd: C): Executed<C["type"]> {
+	const selection = w.m.getSelection();
+	if (cmd.type === "disband" && w.Commands.check(w.scenario, cmd) === null) selection.clear();
+	const done = w.Commands.execute(w.scenario, cmd);
+	selection.after(cmd, done);
+	return done;
+}
+
 //The game's modules of a restored fixture (the core's World is src/core/types.ts's)
 export type Restored = Awaited<ReturnType<typeof load>>;
 

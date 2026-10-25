@@ -11,7 +11,7 @@
  * its last animation ends.
  */
 
-import type { Cell } from "./prototypes";
+import type { Cell, extendedCell } from "./prototypes";
 import { UI } from "./ui";
 import { UIBuilder } from "./uibuilder";
 import { OSGlue } from "./osglue";
@@ -22,6 +22,7 @@ import type { ViewEvent } from "./core/controller";
 import type { Position } from "./state";
 import type { Game } from "./game";
 import type { Screen } from "./screen";
+import type { Command, CommandType, Executed } from "./commands";
 
 //How long a program's unit picked or look at a hex stays before its next action, and its turn's end before
 //the next player's: the turn loop's tick until #375 (#8: it was a second, an AI turn took a minute)
@@ -57,7 +58,9 @@ export function oldScreen(g: Game): Screen {
 		reportScore(score: number) { OSGlue.reportScore(score); },
 		reportAchievement(campaignFile: string) { OSGlue.reportAchievement(campaignFile); },
 
+		//(the unit's move range shown, where the move goes: the hexes stay shown when the move is refused)
 		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
+			g.scenario.map.getSelection().showMoveCells(cells as extendedCell[]);
 			played(shown, () => g.ui.uiUnitMove(unit, to.row, to.col, cells), unit);
 		},
 		attack(attacker: Unit, target: Unit, shown: () => void) {
@@ -72,6 +75,7 @@ export function oldScreen(g: Game): Screen {
 			showView(g, event);
 			if (shown) setTimeout(shown, PICKED_MS);
 		},
+		played(cmd: Command, done: Executed<CommandType>) { g.scenario.map.getSelection().after(cmd, done); },
 		//(none before the UI is built, at the first scenario's start)
 		showingStep() { return g.ui !== null && g.ui.showingStep(); },
 		aiTurnEnded() { UIBuilder.showAIStatus(false); },

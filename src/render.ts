@@ -359,18 +359,18 @@ export class Render {
 					//Only show deployment hexes not move/attack hexes on deploy mode
 					//Don't show move/attack hexes for non local players
 					if (!uiSettings.deployMode && map.currentPlayer.side == game.spotSide) {
-						if (hex.isMoveSel) {
+						if (map.getSelection().isMove(row, col)) {
 							if (hex.isSpotted(map.currentPlayer.side))
 								drawHex(c, x0, y0, hexstyle.movespotted);
 							else
 								drawHex(c, x0, y0, hexstyle.move);
 						}
 
-						if (hex.isAttackSel)
+						if (map.getSelection().isAttack(row, col))
 							drawHex(c, x0, y0, hexstyle.attack);
 					}
 
-					if (uiSettings.hasTouch && hex.isAttackSel && map.currentUnit) { //For touchScreens where we can't have mousecursors
+					if (uiSettings.hasTouch && map.getSelection().isAttack(row, col) && map.currentUnit) { //For touchScreens where we can't have mousecursors
 						var localx = x0 - s/2;
 						var atkunit = map.currentUnit;
 						var defunit = hex.getAttackableUnit(atkunit, uiSettings.airMode);
@@ -394,7 +394,7 @@ export class Render {
 				redraw = true; //Redraw because a new unit has been selected
 
 			//Check if we should generate an ATTACK cursor
-			if (hex.isAttackSel && map.currentUnit !== null && !map.currentUnit.hasFired) {
+			if (map.getSelection().isAttack(row, col) && map.currentUnit !== null && !map.currentUnit.hasFired) {
 				//check cell if a cursor should be generated again
 				if ((redraw == true) || (lastCursorCell === null) || (lastCursorImage === null) ||
 					(lastCursorCell.row != row) || (lastCursorCell.col != col)) {

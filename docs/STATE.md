@@ -267,8 +267,9 @@ small enough to keep one per move.
 On the old engine (#127) `undoable` is filled from `UndoSlot`.
 
 **D6. Not state: the selection, the controllers, the UI settings, the combat log.**
-- `currentUnit`, `isMoveSel`/`isAttackSel` and the move and attack cells are the UI's (they're
-  saved today and never read back).
+- `currentUnit`, `isMoveSel`/`isAttackSel` and the move and attack cells are the UI's (they were
+  saved in the format before and never read back). Since #377 the old UI's `MapSelection` holds them
+  (src/selection.ts), not the map and the hexes, and neither the contracts nor the harness hash them.
 - A player's `handler` is a controller chosen from `type`; the AI's plan and queue are its
   memory during its turn (saves happen at turn start).
 - `noFOW` and `airMode` are inputs to a query or a command, not state; `isAI` picks the

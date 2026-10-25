@@ -7,38 +7,32 @@
  * A command names its units by id and its hexes by cell, so it can be logged, saved, sent and written
  * by a program (docs/REFACTOR.md, step 4). The core plays it (src/core/step.ts: check, then the
  * command's handler); Commands.execute plays it whole in the running game, on the game's world (src/mirror.ts),
- * the objects updated to the world after it, and what the old engine did beside the state where it did
- * it: the selection's hexes, the combat log, the image cache.
+ * the objects updated to the world after it, and what the old engine did beside the state: the combat log,
+ * the image cache.
  *
  * A move and an attack are played to their end before anything is shown (#375): a move with its surprise
  * attack and its capture, an attack with its support fire, the destroyed units, the retreat or the
  * surrender and the victory. The screen then animates them from the result (the step's events, with what
- * the old animation read in between: the strengths and the facings at the shots). Within the step the
- * objects pass through the worlds of its checkpoints, where the old engine set the selection's hexes;
- * each piece starts from the game's world then, so a unit the selection put back aboard is in it.
+ * the old animation read in between: the strengths and the facings at the shots, read off the worlds of
+ * the step's checkpoints). The objects are updated once, to the world at the step's end (a unit the step took
+ * off the map to its last state in the step).
  *
- * What the state doesn't hold, done on the objects as the old engine's commands did it: a move shows
- * the unit's new move and attack hexes, an attack clears the attack hexes, a resupply, a reinforcement,
- * a mount, an embark or a disembark clear the selection's hexes, a mount, an unmount, an embark and an
- * undo select the unit again, a disembark shows the hexes it can land on, a disband deselects. The
- * selection changes no unit itself: a unit it leaves while disembarking goes back aboard by the embark's
- * step (backAboard, #376).
+ * The selection is the old UI's, not the game's (#377): a command doesn't touch it. The old UI shows what
+ * the old engine's command left selected after it (src/selection.ts).
  */
 
-import { Cell, type combatResults, movMethod, movementResults, type Supply, unitClass } from "./prototypes";
+import { Cell, type combatResults, movementResults, type Supply } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import { engineContext } from "./context";
-import type { ReinforceResults } from "./map";
+import type { GameMap, ReinforceResults } from "./map";
 import type { Scenario } from "./scenario";
 import type { Unit } from "./unit";
-import { applyData, checkedDifference, gameInputs, rulesWorld, stepWorld, unitObject } from "./mirror";
-import { rulesOver } from "./gamerules";
-import { createWorld } from "./core/create";
+import { applyData, applyGone, checkedDifference, gameInputs, rulesWorld, stepWorld, unitObject } from "./mirror";
 import { attackResult } from "./core/combat";
 import type { Fighter, GameEvent } from "./core/events";
 import { begin, check, resume } from "./core/step";
-import type { Checkpoint, World } from "./core/types";
-import { unitById } from "./core/world";
+import type { Checkpoint, UnitState, World } from "./core/types";
+import { sideOf, unitById, unitData } from "./core/world";
 
 //The player's actions. unit: a unit on the map by its id; index: a core unit not on the map, by
 //its place in the current player's core unit list (the deployment list); eqid and transport:
@@ -96,6 +90,9 @@ export interface AttackResult {
 	surrender: boolean; //the defender had nowhere to retreat to
 	victorySides: number[]; //the sides that won because the other one has no units left
 	events: GameEvent[]; //what the attack did, in order
+	//The world once the destroyed units left the map, before the retreat or the surrender: the old UI's
+	//selection after the attack is made on it (src/selection.ts)
+	cleanedUp: World;
 }
 
 //A move played whole: the move, the surprise (the hidden unit hit, the attack on it played whole), the
@@ -108,14 +105,9 @@ export interface MoveResult {
 	capture: boolean;
 	victorySide: number;
 	events: GameEvent[]; //what the move did, its surprise attack's too, in order
+	moved: World; //the world once the unit moved, before its surprise attack: the old UI shows its hexes on it
 }
 
-//What a command takes beside itself. reselect: after an attack's cleanup the selected unit is selected
-//again (cleared when the attack destroyed it), with its move hexes made again when it destroyed the
-//defender, as the old UI did there (D0.5 takes the selection out of the game's objects)
-export interface ExecuteOptions {
-	reselect?: boolean;
-}
 
 //What execute returns: the old engine's results (a move's and an attack's, the step played whole). null where
 //it returned nothing
@@ -155,24 +147,37 @@ function mirror(scenario: Scenario, w: World) {
 	if (difference !== "") throw new Error("Commands: " + difference);
 }
 
+//The objects to the last of a step's worlds, once. A unit the step took off the map keeps what it was in the
+//last world it was in, as the objects going through the step's worlds left it: the old UI reads a destroyed
+//unit's object after the step (its strength, whether it fired)
+function mirrorEnd(scenario: Scenario, worlds: World[]) {
+	const end = worlds[worlds.length - 1], gone = new Set<number>();
+	for (let i = worlds.length - 2; i >= 0; i--)
+		for (const u of worlds[i].state.units)
+			if (!gone.has(u.id) && unitById(end, u.id) === null) {
+				gone.add(u.id);
+				applyGone(scenario.map, u);
+			}
+	mirror(scenario, end);
+}
+
 //Whether cmd is allowed now, or why not (a query: on the world the screen's rules read)
 function checkNow(scenario: Scenario, cmd: Command): Refusal | null {
 	return check(rulesWorld(scenario, engineContext.host(), gameInputs({ spotSide: engineContext.spotSide(), rules: engineContext.rules() })), cmd);
 }
 
 //Checks cmd, then plays it whole on the core and mirrors it
-function execute<C extends Command>(scenario: Scenario, cmd: C, options?: ExecuteOptions): Executed<C["type"]> {
+function execute<C extends Command>(scenario: Scenario, cmd: C): Executed<C["type"]> {
 	const w = worldNow(scenario);
 	const refusal = check(w, cmd);
 	if (refusal !== null) return { ok: false, refusal };
-	return { ok: true, result: run(scenario, w, cmd, options || {}) as ResultOf<C["type"]> };
+	return { ok: true, result: run(scenario, w, cmd) as ResultOf<C["type"]> };
 }
 
-function run(scenario: Scenario, w: World, cmd: Command, options: ExecuteOptions): unknown {
-	if (cmd.type === "move") return move(scenario, w, cmd, options);
-	if (cmd.type === "attack") return attack(scenario, w, cmd, options);
-	if (cmd.type === "disband") scenario.map.delCurrentUnit();
-	const b = begin(cmd.type === "disband" ? worldNow(scenario) : w, cmd);
+function run(scenario: Scenario, w: World, cmd: Command): unknown {
+	if (cmd.type === "move") return move(scenario, w, cmd);
+	if (cmd.type === "attack") return attack(scenario, w, cmd);
+	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
 	mirror(scenario, b.world);
 	return afterCommand(scenario, cmd, b.events);
@@ -186,21 +191,10 @@ const has = (events: GameEvent[], type: GameEvent["type"]) => events.some((e) =>
 const emitted = (type: GameEvent["type"]): After => (_s, _u, events) => has(events, type);
 
 const after: { [T in CommandType]?: After } = {
-	resupply: (scenario, _u, events) => {
-		scenario.map.delAttackSel();
-		scenario.map.delMoveSel();
-		const e = events.find((x) => x.type === "resupplied");
-		return e !== undefined && e.type === "resupplied" ? e.supply as Supply : null;
-	},
-	reinforce: (scenario, _u, events) => reinforced(scenario, events),
-	mount: (scenario, unit) => reselect(scenario, unit),
-	unmount: (scenario, unit) => reselect(scenario, unit),
-	embark: (scenario, unit, events) => has(events, "embarked") && reselect(scenario, unit) === null,
-	disembark: (scenario, _u, events) => disembarked(scenario, events),
-	undo: (scenario, unit) => {
-		scenario.map.selectUnit(unit);
-		return null;
-	},
+	resupply: (_s, _u, events) => (events.find((x) => x.type === "resupplied") as Extract<GameEvent, { type: "resupplied" }>).supply as Supply,
+	reinforce: (_s, _u, events) => reinforced(events),
+	embark: emitted("embarked"),
+	disembark: emitted("disembarked"),
 	deploy: emitted("deployed"),
 	buy: emitted("bought"),
 	upgrade: (scenario, unit, events) => has(events, "upgraded") && upgradeImages(scenario.map.getUnitImagesList(), unit),
@@ -223,32 +217,20 @@ function upgradeImages(images: { [eqid: number]: string }, u: Unit): true {
 }
 
 //Map.reinforceUnit: the strength, ammo and fuel given, none when the player couldn't pay for any
-function reinforced(scenario: Scenario, events: GameEvent[]): ReinforceResults {
+function reinforced(events: GameEvent[]): ReinforceResults {
 	const e = events.find((x) => x.type === "reinforced");
 	if (e === undefined || e.type !== "reinforced") return { strength: 0, ammo: 0, fuel: 0 };
-	scenario.map.delAttackSel();
-	scenario.map.delMoveSel();
 	return { strength: e.strength, ammo: e.supply.ammo, fuel: e.supply.fuel };
 }
 
-//The unit selected again for its new move and attack hexes (a mount, an unmount, an embark)
-function reselect(scenario: Scenario, unit: Unit): null {
-	scenario.map.delMoveSel();
-	scenario.map.delAttackSel();
-	scenario.map.selectUnit(unit);
-	return null;
+//A unit in a world of the step: it is there (a destroyed one until the attack's clean up)
+function unitIn(w: World, id: number): UnitState {
+	const u = unitById(w, id);
+	if (u === null) throw new Error("Commands: no unit " + id);
+	return u;
 }
 
-//Map.disembarkUnit: the hexes the unit can land on are its move hexes
-function disembarked(scenario: Scenario, events: GameEvent[]): boolean {
-	const e = events.find((x) => x.type === "disembarked");
-	if (e === undefined || e.type !== "disembarked") return false;
-	const m = scenario.map;
-	m.delMoveSel();
-	m.delAttackSel();
-	for (const c of e.cells) m.getSelection().addMoveCell(new Cell(c.row, c.col), true);
-	return true;
-}
+const cellOf = (u: UnitState) => new Cell(u.row, u.col);
 
 //---- The move
 
@@ -273,37 +255,37 @@ function pathCell(c: { row: number; col: number; visible: boolean }): Cell {
 	return cell;
 }
 
-//The objectives taken, in the combat log (Map.captureHex)
-function logCaptures(scenario: Scenario, events: GameEvent[]) {
+//The objectives taken, in the combat log (Map.captureHex): w, the world after them
+function logCaptures(w: World, events: GameEvent[]) {
 	for (const e of events)
 		if (e.type === "captured" && e.objective)
-			CombatLog.addObjectiveCapture(new Cell(e.at.row, e.at.col), scenario.map.getUnitById(e.unit).player.side);
+			CombatLog.addObjectiveCapture(new Cell(e.at.row, e.at.col), sideOf(w, unitIn(w, e.unit)));
 }
 
 //The move played whole: the move, then its surprise attack (on the hidden unit that stopped it) to its
-//end, or the capture's victory. The objects pass through the worlds of the step's checkpoints, here only,
-//for what the old engine did beside the state there: the moved unit's move and attack hexes on the world
-//of its move (the surprise attack's shots then clear the attack hexes), the combat log, the selection after
-//the attack's cleanup. Nothing outside sees them: the screen shows the step after it (#375)
-function move(scenario: Scenario, w: World, cmd: CommandOf<"move">, options: ExecuteOptions): MoveResult {
+//end, or the capture's victory. What the result tells of the move (where the unit stopped, its facing)
+//is read off the world of the move, before the surprise attack turned it; the objects are updated once,
+//at the end. Nothing outside sees the worlds in between: the screen shows the step after it (#375)
+function move(scenario: Scenario, w: World, cmd: CommandOf<"move">): MoveResult {
 	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
-	mirror(scenario, b.world);
-	const m = scenario.map, unit = m.getUnitById(cmd.unit);
-	logCaptures(scenario, b.events);
-	m.setMoveRange(unit);
-	m.setAttackRange(unit);
+	const moved = b.world, unit = unitIn(moved, cmd.unit);
+	logCaptures(moved, b.events);
 	const cp = b.checkpoint as MoveCheckpoint;
 	const mr = movementOf(b.events, cmd.unit, cp);
-	if (cp.win) mr.isVictorySide = unit.player.side;
-	const result: MoveResult = { move: mr, at: unit.getPos(), facing: unit.facing, surprise: null, capture: mr.isCapture,
-		victorySide: mr.isVictorySide, events: b.events };
+	if (cp.win) mr.isVictorySide = sideOf(moved, unit);
+	const result: MoveResult = { move: mr, at: cellOf(unit), facing: unit.facing, surprise: null, capture: mr.isCapture,
+		victorySide: mr.isVictorySide, events: b.events, moved };
+	let rest: World[];
 	if (cp.surprise !== null) {
-		result.surprise = surprise(scenario, unit, cp, options);
-		if (result.surprise.attack !== null) result.events = [...b.events, ...result.surprise.attack.events];
+		const s = surprise(scenario, moved, cp);
+		result.surprise = s.surprise;
+		if (s.surprise.attack !== null) result.events = [...b.events, ...s.surprise.attack.events];
+		rest = s.worlds;
 	} else {
-		mirror(scenario, resume(worldNow(scenario), cp).world);
+		rest = [resume(moved, cp).world];
 	}
+	mirrorEnd(scenario, [moved, ...rest]);
 	return result;
 }
 
@@ -312,68 +294,77 @@ type MoveCheckpoint = Extract<Checkpoint, { next: "surprise" }>;
 
 //The old Actions.finishMove's surprise attack: its target the unit of the mover's kind first (the one that
 //stopped it, #77) that the mover can attack, its shots and its finish as an attack's; the mover no longer
-//surprised
-function surprise(scenario: Scenario, unit: Unit, cp: MoveCheckpoint, options: ExecuteOptions): NonNullable<MoveResult["surprise"]> {
+//surprised. Without a target, nothing but the capture's victory. The worlds it went through
+function surprise(scenario: Scenario, moved: World, cp: MoveCheckpoint): { surprise: NonNullable<MoveResult["surprise"]>; worlds: World[] } {
 	const cell = new Cell(cp.surprise.row, cp.surprise.col);
-	const target = scenario.map.map[cell.row][cell.col].getAttackableUnit(unit, unit.unitData().movmethod === movMethod.air);
-	if (target === null) {
-		mirror(scenario, resume(worldNow(scenario), cp).world);
-		return { cell, target, attack: null };
-	}
-	const w = worldNow(scenario), sides = sidesOf(unit, target), estimate = estimateOf(w, unit, target);
-	const r = resume(w, cp);
-	mirror(scenario, r.world);
-	if (!r.events.some((e) => e.type === "fight" && !e.support && e.defender.unit === target.id))
-		throw new Error("Commands: the surprise attack's target isn't the screen's");
-	return { cell, target, attack: finishAttack(scenario, shots(scenario, r.events, sides, estimate), r.checkpoint, options) };
+	const r = resume(moved, cp);
+	if (r.checkpoint === null || r.checkpoint.next !== "cleanUp")
+		return { surprise: { cell, target: null, attack: null }, worlds: [r.world] };
+	const start = r.checkpoint.attack, m = scenario.map;
+	const sides = sidesOf(m, moved, start.attacker, start.defender), estimate = estimateOf(moved, start.attacker, start.defender);
+	const done = finishAttack(m, shots(m, r.events, sides, estimate, r.world), r.checkpoint, r.world);
+	return { surprise: { cell, target: sides[1].unit, attack: done.result }, worlds: [r.world, ...done.worlds] };
 }
 
 //The attack's estimate (Actions.resolveAttack's first combat result, before any shot)
-function estimateOf(w: World, attacker: Unit, defender: Unit): combatResults {
-	return attackResult(w, unitById(w, attacker.id), unitById(w, defender.id), null) as unknown as combatResults;
+function estimateOf(w: World, attacker: number, defender: number): combatResults {
+	return attackResult(w, unitIn(w, attacker), unitIn(w, defender), null) as unknown as combatResults;
 }
 
 //---- The attack
 
-//The two sides before the attack: their units, cells and strengths
-function sidesOf(attacker: Unit, defender: Unit): [AttackSide, AttackSide] {
-	const side = (u: Unit): AttackSide => ({ unit: u, cell: u.getPos(), oldstr: u.strength, newstr: 0, leaderGain: false,
-		uclass: u.unitData().uclass, facing: u.facing });
+//The two sides before the attack, in w: their units, cells, strengths, classes and facings
+function sidesOf(m: GameMap, w: World, attacker: number, defender: number): [AttackSide, AttackSide] {
+	const side = (id: number): AttackSide => {
+		const u = unitIn(w, id);
+		return { unit: unitObject(m, id), cell: cellOf(u), oldstr: u.strength, newstr: 0, leaderGain: false,
+			uclass: unitData(w, u).uclass, facing: u.facing };
+	};
 	return [side(attacker), side(defender)];
 }
 
-//The attack played whole: its shots, then its finish (the objects through its checkpoints as a move's)
-function attack(scenario: Scenario, w: World, cmd: CommandOf<"attack">, options: ExecuteOptions): AttackResult {
+//The attack played whole: its shots, then its finish
+function attack(scenario: Scenario, w: World, cmd: CommandOf<"attack">): AttackResult {
 	const m = scenario.map;
-	const sides = sidesOf(m.getUnitById(cmd.unit), m.getUnitById(cmd.target));
-	const estimate = estimateOf(w, sides[0].unit, sides[1].unit);
+	const sides = sidesOf(m, w, cmd.unit, cmd.target);
+	const estimate = estimateOf(w, cmd.unit, cmd.target);
 	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
-	mirror(scenario, b.world);
-	return finishAttack(scenario, shots(scenario, b.events, sides, estimate), b.checkpoint, options);
+	const done = finishAttack(m, shots(m, b.events, sides, estimate, b.world), b.checkpoint as Checkpoint, b.world);
+	mirrorEnd(scenario, [b.world, ...done.worlds]);
+	return done.result;
 }
 
 //A unit of a fight as the combat log reads it, before or after
-function logged(scenario: Scenario, f: Fighter, done: boolean) {
-	const s = done ? f.after : f.before, u = unitObject(scenario.map, f.unit);
+function logged(m: GameMap, f: Fighter, done: boolean) {
+	const s = done ? f.after : f.before, u = unitObject(m, f.unit);
 	return { id: f.unit, eqid: f.eqid, player: { side: f.side }, strength: s.strength, experience: s.experience,
 		entrenchment: s.entrenchment, ammo: s.ammo, isMounted: f.isMounted, isSurprised: f.isSurprised, isCore: u.isCore,
 		getPos: () => new Cell(f.row, f.col) } as unknown as Unit;
 }
 
+//A unit that gained a leader as the combat log reads it, in the world of the shots (a defender that
+//retreats is still where it was hit)
+function leaderUnit(m: GameMap, w: World, id: number) {
+	const u = unitIn(w, id);
+	return { id, eqid: u.eqid, isCore: unitObject(m, id).isCore, leader: u.leader, player: { side: sideOf(w, u) },
+		getPos: () => cellOf(u), unitData: () => unitData(w, u) } as unknown as Unit;
+}
+
 //The old Actions.resolveAttack after the shots: each fire in the combat log with the leaders it gave, the
-//attack hexes cleared by the attack itself, the result as the old one (the estimate's when there was no
-//attack), the strengths and the facings after the shots
-function shots(scenario: Scenario, events: GameEvent[], sides: [AttackSide, AttackSide], estimate: combatResults): AttackResult {
+//result as the old one (the estimate's when there was no attack), the strengths and the facings after
+//the shots (w, the world then)
+function shots(m: GameMap, events: GameEvent[], sides: [AttackSide, AttackSide], estimate: combatResults, w: World): AttackResult {
 	const result: AttackResult = { attacking: sides[0], defending: sides[1], cr: estimate, support: [], attackStopped: false,
-		destroyed: [], retreat: null, retreatMove: null, surrender: false, victorySides: [], events: [...events] };
+		destroyed: [], retreat: null, retreatMove: null, surrender: false, victorySides: [], events: [...events], cleanedUp: w }; //(the cleanup's world: finishAttack)
 	events.forEach((e, i) => {
 		if (e.type === "attackStopped") result.attackStopped = true;
-		if (e.type === "fight") fired(scenario, e, leadersAfter(events, i), result);
+		if (e.type === "fight") fired(m, w, e, leadersAfter(events, i), result);
 	});
 	for (const side of sides) {
-		side.newstr = side.unit.strength;
-		side.facing = side.unit.facing;
+		const u = unitIn(w, side.unit.id);
+		side.newstr = u.strength;
+		side.facing = u.facing;
 	}
 	return result;
 }
@@ -381,22 +372,18 @@ function shots(scenario: Scenario, events: GameEvent[], sides: [AttackSide, Atta
 //The leaders a fire gave: the events right after it
 function leadersAfter(events: GameEvent[], i: number): number[] {
 	const ids: number[] = [];
-	for (let k = i + 1; k < events.length && events[k].type === "leader"; k++) {
-		const l = events[k];
-		if (l.type === "leader") ids.push(l.unit);
-	}
+	for (let k = i + 1; k < events.length && events[k].type === "leader"; k++)
+		ids.push((events[k] as Extract<GameEvent, { type: "leader" }>).unit);
 	return ids;
 }
 
 //One unit firing on another (Map.attackUnit and what resolveAttack did after it): the combat log with
-//the leaders, the attack hexes cleared by the attack itself
-function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, leaders: number[], result: AttackResult) {
-	const m = scenario.map;
+//the leaders
+function fired(m: GameMap, w: World, e: Extract<GameEvent, { type: "fight" }>, leaders: number[], result: AttackResult) {
 	//The fight's own turn: the bundle read a global map's, in the page the canvas's, undefined (#28)
-	const id = CombatLog.addCombatStart(logged(scenario, e.attacker, false), logged(scenario, e.defender, false), m.turn);
-	if (!e.support) m.delAttackSel();
-	for (const l of leaders) CombatLog.addLeader(unitObject(m, l));
-	CombatLog.addCombatEnd(logged(scenario, e.attacker, true), logged(scenario, e.defender, true), id, e.support);
+	const id = CombatLog.addCombatStart(logged(m, e.attacker, false), logged(m, e.defender, false), m.turn);
+	for (const l of leaders) CombatLog.addLeader(leaderUnit(m, w, l));
+	CombatLog.addCombatEnd(logged(m, e.attacker, true), logged(m, e.defender, true), id, e.support);
 	if (e.support) {
 		result.support.push(unitObject(m, e.attacker.unit));
 		return;
@@ -407,85 +394,51 @@ function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, lea
 }
 
 //The old Actions.finishAttack: the units destroyed (by the strengths in the result) off the map, the
-//selection again (options.reselect), the retreat or the surrender, the victory
-function finishAttack(scenario: Scenario, result: AttackResult, cp: Checkpoint | null, options: ExecuteOptions): AttackResult {
+//retreat or the surrender, the victory. The worlds it went through (w: at the shots)
+function finishAttack(m: GameMap, result: AttackResult, cp: Checkpoint, w: World): { result: AttackResult; worlds: World[] } {
 	for (const side of [result.attacking, result.defending])
 		if (side.oldstr - side.newstr >= side.oldstr) result.destroyed.push(side.unit);
-	if (cp === null) return result;
-	const cleaned = resume(worldNow(scenario), cp);
-	mirror(scenario, cleaned.world);
-	if (options.reselect) reselectAfterAttack(scenario.map, result.attacking.unit, result.defending.unit);
-	const ended = resume(worldNow(scenario), cleaned.checkpoint);
-	mirror(scenario, ended.world);
+	const cleaned = resume(w, cp);
+	result.cleanedUp = cleaned.world;
+	const ended = resume(cleaned.world, cleaned.checkpoint as Checkpoint);
 	result.events.push(...cleaned.events, ...ended.events);
-	for (const e of ended.events) ending(scenario, result, e, ended.events);
-	return result;
-}
-
-//The old UI's selection after the attack's cleanup (its uiReselectAfterAttack): cleared when its unit was
-//destroyed, else selected again, with its move hexes made again when it destroyed the defender (the old
-//game read the cleared selection when both units were destroyed: it threw, #326, #29)
-function reselectAfterAttack(m: Scenario["map"], attacker: Unit, defender: Unit) {
-	const u = m.currentUnit;
-	if (!u) return;
-	if (attacker.destroyed && u.id === attacker.id) {
-		m.delCurrentUnit();
-		return;
-	}
-	m.selectUnit(u);
-	if (defender.destroyed && !u.hasMoved) m.setMoveRange(u);
+	for (const e of ended.events) ending(m, result, e, ended);
+	return { result, worlds: [cleaned.world, ended.world] };
 }
 
 //What the attack's end did: the retreat, the surrender, the victory
-function ending(scenario: Scenario, result: AttackResult, e: GameEvent, events: GameEvent[]) {
-	if (e.type === "retreated") retreated(scenario, result, events);
+function ending(m: GameMap, result: AttackResult, e: GameEvent, ended: { world: World; events: GameEvent[] }) {
+	if (e.type === "retreated") retreated(m, result, ended.world, ended.events);
 	if (e.type === "surrendered") result.surrender = true;
 	if (e.type === "victory") result.victorySides.push(e.side);
 }
 
-//Map.retreatUnit: the retreat's move shows the unit's move and attack hexes as a move does, then the
-//unit selected before is selected again
-function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[]) {
-	const m = scenario.map, u = result.defending.unit, before = m.currentUnit;
-	logCaptures(scenario, events);
-	showRetreatRanges(scenario, u);
-	if (before !== null) m.selectUnit(before);
+//Map.retreatUnit: the retreat's move, its capture and the victory it won (w: the world after it)
+function retreated(_m: GameMap, result: AttackResult, w: World, events: GameEvent[]) {
+	const u = unitIn(w, result.defending.unit.id);
+	logCaptures(w, events);
 	const mr = movementOf(events, u.id, null);
 	const captured = events.find((e) => e.type === "captured" && e.unit === u.id);
-	if (captured !== undefined && captured.type === "captured" && captured.win) mr.isVictorySide = u.player.side;
-	result.retreat = u.getPos();
+	if (captured !== undefined && captured.type === "captured" && captured.win) mr.isVictorySide = sideOf(w, u);
+	result.retreat = cellOf(u);
 	result.retreatMove = mr;
 }
 
-//The retreated unit's move and attack hexes as the old retreat's move showed them: with the move's
-//points spent (Unit.move: a mounted unit's all of them; done unless a recon unit with points left),
-//which the retreat gave back after. Asked of the game's world with the unit so, made for them alone (the
-//old engine wrote the points into the unit and back)
-function showRetreatRanges(scenario: Scenario, u: Unit) {
-	const w = worldNow(scenario), s = unitById(w, u.id), spent = { ...s };
-	if (spent.isMounted && spent.transport !== null) spent.moveLeft = 0;
-	if (u.unitData().uclass !== unitClass.recon || spent.moveLeft <= 0) spent.hasMoved = spent.hasOverstrength = true;
-	const state = { ...w.state, units: w.state.units.map((x) => x === s ? spent : x) };
-	const moved = createWorld({ data: w.data, state }, w.equipment, { spotSide: w.spotSide, noFOW: w.noFOW, rules: w.rules,
-		destroyed: w.destroyed });
-	const rules = rulesOver(moved);
-	scenario.map.getSelection().setMoveRange(u, rules);
-	scenario.map.getSelection().setAttackRange(u, rules);
-}
-
 //A unit leaving its carrier put back on it: the selection left it, or it can't land any more (the old
-//selection's flip of its carrier, src/selection.ts). The embark's step alone: what the command shows
+//selection's flip of its carrier, src/selection.ts). The embark's step alone: what the old UI shows
 //beside it (the unit selected again) is the selection's own business there. The hexes' counters stay as
-//they were until the next command, as the old flip left them (the world's sight has the unit aboard)
-export function backAboard(scenario: Scenario, unit: number) {
+//they were until the next command, as the old flip left them (the world's sight has the unit aboard),
+//unless counters: then they are the world's (an attack's selection put it back aboard before the attack's
+//end, whose update counted them again)
+export function backAboard(scenario: Scenario, unit: number, counters = false) {
 	const b = begin(worldNow(scenario), { type: "embark", unit });
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
-	applyData(scenario, b.world, engineContext.host(), false);
+	applyData(scenario, b.world, engineContext.host(), counters);
 }
 
 export interface CommandsAPI {
 	check(scenario: Scenario, cmd: Command): Refusal | null;
-	execute<C extends Command>(scenario: Scenario, cmd: C, options?: ExecuteOptions): Executed<C["type"]>;
+	execute<C extends Command>(scenario: Scenario, cmd: C): Executed<C["type"]>;
 }
 
 //(a module object: the harness's and the contracts' Commands)

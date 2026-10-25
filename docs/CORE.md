@@ -155,9 +155,10 @@ the surrender, the elimination victory). The world resumed from is the game's ke
 since #376 nothing the screen writes into its objects is in it. The surprise attack hits the hidden unit of the mover's kind first, the one that
 stopped it (#77: the old game picked by the person's air mode toggle, for the AI's moves too). `step`
 passes every checkpoint at once on one draft; test/core-steps.test.ts played each of its commands both
-ways until #137. Since #375 the game's `Commands.execute` passes them all in one call too, the objects
-going through each checkpoint's world only for what the old engine did beside the state there (the
-selection's hexes); the screen shows the step after it, from its result (below, "The screen").
+ways until #137. Since #375 the game's `Commands.execute` passes them all in one call too; since #377 the
+objects are updated once, to the world at the end (the selection, which the old engine set at the
+checkpoints, is the old UI's and no command touches it); the screen shows the step after it, from its
+result (below, "The screen").
 
 **Undo (D5).** The state keeps `turn.undoable` as the old engine's slot decides it: a human
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
@@ -422,9 +423,10 @@ strengths, the units' classes and facings at the shots, where the move stopped a
 there), and the old UI animates it after: the move, the surprise, the hits, the losses, the explosions, the
 retreat's move or the surrender, then tells the host the victories where its animations end, and calls
 shown at the end of the last one (`animating(false)` in src/ui.ts). The screen that shows nothing
-(src/nullscreen.ts) calls it at once and tells the host the victories then. What the old UI's selection
-did after an attack's cleanup (the attacker selected again) is the command's `reselect` option, which the
-old UI asks for and the null screen doesn't. A screen that animates says while it shows a step, a
+(src/nullscreen.ts) calls it at once and tells the host the victories then. The old UI's selection
+(src/selection.ts) then shows what the old engine's command left selected (`MapSelection.after`: the
+attacker selected again after an attack, a moved unit's hexes...), for the program's other commands too
+(the screen's optional `played`); the null screen has none. A screen that animates says while it shows a step, a
 program's or the person's (`showingStep`, optional: the old UI's animation; a screen that shows each step at
 once has none), and the host passes it on (`GameHost.showingStep`): the harness and the command-line player
 wait on it, where they waited on `game.waitUIAnimation` until #378 (the original game's flag, which the

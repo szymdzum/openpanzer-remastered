@@ -38,7 +38,7 @@ test("A fight is logged with the turn it is fought on, not a global map's (#28)"
 	const [attacker, defender] = own.flatMap((a) => map.getUnits().filter((d) => GameRules.isEnemy(a, d)
 		&& GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)).map((d) => [a, d]))[0];
 	const started = vi.spyOn(log, "addCombatStart");
-	expect(Commands.execute(game.scenario, { type: "attack", unit: attacker.id, target: defender.id }, {}).ok).toBe(true);
+	expect(Commands.execute(game.scenario, { type: "attack", unit: attacker.id, target: defender.id }).ok).toBe(true);
 	expect(started.mock.calls.length).toBeGreaterThan(0);
 	expect(started.mock.calls.map((c) => c[2])).toEqual(started.mock.calls.map(() => map.turn));
 }, 60_000);

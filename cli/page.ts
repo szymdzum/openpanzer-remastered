@@ -12,6 +12,7 @@ import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageRes
 import { status } from "./board";
 import { SIDES } from "./known";
 import { CombatLog } from "../src/combatlog";
+import { GameRules } from "../src/gamerules";
 import { fightRecorder } from "./fightlog";
 import { changes, fightLines } from "./report";
 
@@ -56,8 +57,7 @@ async function animate(cmd: Animated) {
 	let shown = false;
 	const done = () => { shown = true; };
 	if (cmd.type === "move") {
-		map.setMoveRange(unit);
-		screen.move(unit, cmd.to, map.getCurrentMoveRange(), done);
+		screen.move(unit, cmd.to, GameRules.getMoveRange(map, unit), done);
 	} else {
 		screen.attack(unit, map.getUnitById(cmd.target), done);
 	}

@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import type { Game } from "../src/game";
 import type { EqUserSelElement, UI } from "../src/ui";
-import type { AttackResult, Executed, ExecuteOptions } from "../src/commands";
+import type { AttackResult, Executed } from "../src/commands";
 import type { Unit } from "../src/unit";
 
 //Any property of it, called or not, is itself; as a number it is 0
@@ -265,8 +265,8 @@ test("A unit out of ammo and fuel shows both map tooltips with their own ids, an
 async function attacksWith(more: (result: AttackResult) => void) {
 	const { Commands } = await import("../src/commands");
 	const execute = Commands.execute.bind(Commands);
-	vi.spyOn(Commands, "execute").mockImplementation(((scenario: never, cmd: { type: string }, options?: ExecuteOptions) => {
-		const r = execute(scenario, cmd as never, options) as Executed<"attack">;
+	vi.spyOn(Commands, "execute").mockImplementation(((scenario: never, cmd: { type: string }) => {
+		const r = execute(scenario, cmd as never) as Executed<"attack">;
 		if (cmd.type === "attack" && r.ok) more(r.result);
 		return r;
 	}) as unknown as typeof Commands.execute);
@@ -660,9 +660,9 @@ async function writesDuring(game: Game, play: () => Promise<void>): Promise<stri
 	return [...written].sort();
 }
 
-//The inventory of #376: what the old UI writes into the game's objects is the screen's own (the selected
-//unit and its hexes, the unit it animates), which the game's world doesn't hold; the rest it changes
-//through commands, which the mirror's updates write
+//The inventory of #376: what the old UI writes into the game's objects is the screen's own (the unit it
+//animates), which the game's world doesn't hold; the rest it changes through commands, which the mirror's
+//updates write. The selection is no longer on the map and the hexes (#377): the old UI's own
 test("The old UI writes into the game's objects only what the screen owns, none of it the game's (#376)", async () => {
 	const { game, ui } = await uiGame("campaign:0:1");
 	const { GameRules } = await import("../src/gamerules");
@@ -698,7 +698,7 @@ test("The old UI writes into the game's objects only what the screen owns, none 
 		await until(() => !unit.hasAnimation && !game.host.showingStep(), "the move");
 		ui.uiUnitSelect(null);
 	});
-	expect(written).toEqual(["GameMap.currentUnit", "Hex.isAttackSel", "Hex.isMoveSel", "Unit.hasAnimation"]);
+	expect(written).toEqual(["Unit.hasAnimation"]);
 	//(the objects are still a copy of the game's world)
 	expect(JSON.stringify(toData(game.scenario, game).state)).toBe(JSON.stringify(worldOf(game.scenario, game, gameInputs(game)).state));
 }, 60_000);
