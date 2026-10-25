@@ -9,8 +9,9 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dir = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "docs", "ui");
+const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "docs", "ui");
 const chrome = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const read = (file) => fs.readFileSync(path.join(dir, file), "utf8");
@@ -98,7 +99,7 @@ function gallery(list) {
 		}
 	}
 	md += "\n<!-- gallery:end -->";
-	fs.writeFileSync(file, readme.replace(/<!-- gallery:start[\s\S]*<!-- gallery:end -->/, md));
+	fs.writeFileSync(file, readme.replace(/<!-- gallery:start[\s\S]*<!-- gallery:end -->/, () => md));
 }
 
 fs.writeFileSync(path.join(dir, "tokens.css"), tokensCss());
