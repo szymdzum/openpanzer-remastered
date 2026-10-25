@@ -7,6 +7,7 @@ import { computed, signal } from "@preact/signals";
 import type { Command } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
 import type { GameHost } from "../host";
+import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
 import { endTurnRefusal, reasonOf, statusOf, unitView } from "./model";
 
@@ -47,6 +48,10 @@ export function createStore(host: StoreHost) {
 	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value));
 	const selection = computed(() => world.value === null ? null : selectionOf(world.value, selected.value));
 	const path = computed(() => world.value === null || hover.value === null ? null : pathOf(world.value, selection.value, hover.value));
+	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
+	const fog = computed(() => world.value === null ? null : fogOf(world.value));
+	const support = computed(() => world.value === null ? null : supportOf(world.value, selection.value, hover.value, airMode.value));
+	const plaques = computed(() => world.value === null ? [] : plaquesOf(world.value));
 
 	//The world as the host plays it now
 	const refresh = () => { world.value = host.world(); };
@@ -64,7 +69,7 @@ export function createStore(host: StoreHost) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, side, sideName, turn, prestige, endTurn, unit, note, units,
-		selection, path, refresh,
+		selection, path, fog, support, plaques, refresh,
 
 		//A click on a hex of the map: the selected unit's attack or move there, sent as the person's command,
 		//else the unit there selected (none on an empty hex)

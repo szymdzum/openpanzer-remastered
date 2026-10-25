@@ -19,6 +19,10 @@
 		inset: 0;
 		overflow: auto;
 		cursor: default;
+
+		/* thin scrollbars in the theme's colours over the map, not the system's grey ones */
+		scrollbar-width: thin;
+		scrollbar-color: var(--line-strong) var(--panel-sunken);
 	}
 
 	/* the move path's tag: the first line what happens, the next ones what it costs */
