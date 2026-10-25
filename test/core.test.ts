@@ -23,6 +23,10 @@ import type { Contribution, UnitState, World } from "../src/core/types";
 import type { Command } from "../src/commands";
 import { createWorld } from "../src/core/create";
 import { type HandUnit, handWorld } from "./coreworld";
+import { deployedAs } from "../src/core/commands/units";
+import type { OffMapUnit } from "../src/state";
+import { Equipment } from "../src/equipment";
+import { smallGameData } from "./smallgame";
 
 const PZ_IIA = 140, TP7 = 273, INFANTERIE = 115, WZ97 = 264, ME_109 = 159, P11 = 280, PSW_222 = 117;
 
@@ -756,4 +760,29 @@ test("In the remaster rules a unit can win any leader of its class's list, the l
 			expect([...rolled].sort((a, b) => a - b), rules.name + " class " + uclass).toEqual([...expected].sort((a, b) => a - b));
 		});
 	}
+});
+
+//The unit deploy places (src/core/commands/units.ts deployedAs), which the new UI's placing tag reads before the click:
+//a German infantry on an ocean deployment hex embarks on Germany's naval transport, on land it stays as it is, and an
+//aircraft over the ocean is an aircraft
+test("A reserve unit deploys as deployedAs says: a ground unit on the ocean embarked, on land or in the air as it is", () => {
+	const saved = smallGameData();
+	saved.data.hexes[1 * 12 + 1].deployment = 0;
+	saved.data.hexes[1 * 12 + 2] = { ...saved.data.hexes[1 * 12 + 2], terrain: terrainType.Ocean, deployment: 0 };
+	saved.state.players[0].prestige = 5000;
+	let w = createWorld(saved, Equipment.equipment, { rules: classicRules });
+	for (const eqid of [115, 159]) {
+		const r = step(w, { type: "buy", eqid, transport: -1 });
+		if (r.ok === false) throw new Error(r.refusal.reason);
+		w = r.world;
+	}
+	const reserve = (i: number) => (w.state.players[0].core[i] as { reserve: OffMapUnit }).reserve;
+	const sea = deployedAs(w, reserve(0), hexIndex(w, 1, 2));
+	expect(sea).toEqual({ ...reserve(0), carrier: sea.carrier });
+	expect(sea.carrier).toBeGreaterThan(0);
+	expect(deployedAs(w, reserve(0), hexIndex(w, 1, 1))).toBe(reserve(0));
+	expect(deployedAs(w, reserve(1), hexIndex(w, 1, 2))).toBe(reserve(1));
+	const r = step(w, { type: "deploy", index: 0, to: { row: 1, col: 2 } });
+	if (r.ok === false) throw new Error(r.refusal.reason);
+	expect(unitById(r.world, r.world.state.map.hexes[hexIndex(w, 1, 2)].unit!)!.carrier).toBe(sea.carrier);
 });
