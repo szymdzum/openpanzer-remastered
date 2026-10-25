@@ -31,7 +31,7 @@ function attack(w: World, a: Unit, d: Unit) {
 		{ finish: { afterCleanup: (r) => refreshSelection(w, r) } });
 }
 
-//game.ts processAction (move): the move range, then the move command
+//src/host.ts processAction (move): the move range, then the move command
 function move(w: World, u: Unit, cell: Cell) {
 	w.m.setMoveRange(u);
 	w.Commands.execute(w.scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } },
@@ -42,7 +42,7 @@ function move(w: World, u: Unit, cell: Cell) {
 const named = (x: unknown) => x === null || x === undefined ? "no unit" : typeof x === "string" ? "a message"
 	: typeof (x as Unit).unitData === "function" ? unitName(x as Unit) : cellName(x as Cell);
 
-//An AI action as game.ts processAction plays it: the units a move put another unit on, "end" when it
+//An AI action as src/host.ts processAction plays it: the units a move put another unit on, "end" when it
 //ends the turn. The tutorial's messages name a hex; a unit its script meant that isn't there (#188)
 //the game's command refuses, and its stuck attack with no unit (#80) is where the game stops
 function playAction(w: World, type: number, p: [Unit, Unit & Cell]): Unit[] | "end" {

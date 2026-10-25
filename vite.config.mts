@@ -104,9 +104,10 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/core/*.ts", "src/core/commands/*.ts",
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/oldscreen.ts", "src/nullscreen.ts",
+				"src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx"],
-			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
+			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -118,7 +119,8 @@ export default defineConfig({
 				"src/commands.ts": { statements: 95, branches: 88, functions: 98, lines: 97 },
 				"src/context.ts": { statements: 91, branches: 100, functions: 90, lines: 91 },
 				"src/equipment.ts": { statements: 95, branches: 62, functions: 73, lines: 94 },
-				"src/game.ts": { statements: 86, branches: 80, functions: 83, lines: 87 },
+				//(its turn loop, covered, went to the host in #374: the functions left are fewer, not less covered)
+				"src/game.ts": { statements: 86, branches: 80, functions: 78, lines: 87 },
 				"src/gamerules.ts": { statements: 96, branches: 97, functions: 96, lines: 97 },
 				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
 				"src/leaders.ts": { statements: 87, branches: 50, functions: 50, lines: 88 },
@@ -166,7 +168,9 @@ export default defineConfig({
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
-				"src/host.ts": { statements: 94, branches: 86, functions: 92, lines: 95 },
+				"src/host.ts": { statements: 95, branches: 90, functions: 94, lines: 95 },
+				"src/oldscreen.ts": { statements: 87, branches: 63, functions: 92, lines: 89 },
+				"src/nullscreen.ts": { statements: 78, branches: 75, functions: 75, lines: 80 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },

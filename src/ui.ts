@@ -40,14 +40,15 @@ import { type AttackCommandHooks, type AttackResult, type AttackSide, type Comma
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
-//bundle: game.ts types `new UI(game)` through its UIConstructor
+//bundle: src/oldscreen.ts types `new UI(game)` through its UIConstructor
 export interface UI {
 	handleReinforcementDeployment(): void;
 	uiUnitSelect(unit: Unit | null): boolean;
 	uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]): boolean;
 	uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit): boolean;
 	showAlert(row: number, col: number, text: string | number, positive?: boolean): void;
-	showGameToolTip(text: string, row: number, col: number): void;
+	showGameToolTip(text: string, row: number, col: number, onOk: () => void): void;
+	whenShown(shown: (() => void) | null): void;
 	showSmallToolTip(text: string, row: number, col: number, color: number, id?: string, style?: number): void;
 	addSmallToolTips(unitsOnly?: boolean): void;
 	removeUnitToolTip(unitId: number): void;
@@ -400,6 +401,21 @@ function uiUnitSelect(unit: Unit | null) {
 	return true;
 }
 
+//The game's shown for the move or the attack it asked the screen for (src/oldscreen.ts), called when the
+//wait on it ends
+let pendingShown: (() => void) | null = null;
+
+//A move or an attack playing (true) or no longer: the AI's next action and the player's end of turn wait
+//for it (game.waitUIAnimation, #58); when it ends, the game's shown is called
+function animating(playing: boolean) {
+	game.waitUIAnimation = playing;
+	if (playing || pendingShown === null)
+		return;
+	const shown = pendingShown;
+	pendingShown = null;
+	shown();
+}
+
 //handle the move of a unit to row,col destination: the move command, animated, finished when the
 //animation ends. True when the player sees it move
 //cells: the shown move range the player clicked in (it can be the disembark hexes or older than the state),
@@ -407,7 +423,7 @@ function uiUnitSelect(unit: Unit | null) {
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	//Waited for until the move's finish (uiMoveAnimationFinished): the AI's next action, the player's end of
 	//turn (#58)
-	game.waitUIAnimation = true;
+	animating(true);
 	var mm = unit.unitData().movmethod;
 	if (GameRules.isTrain(unit))
 		mm = movMethod.tracked; //Trains use the tracked move sound
@@ -473,7 +489,7 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 		onVictory: uiMoveVictory
 	});
 
-	game.waitUIAnimation = surprise;
+	animating(surprise);
 }
 
 //A side has won by capturing all its victory hexes, the move's animation ended: the game host tells it and
@@ -500,10 +516,10 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number) {
 //the command's. Null when it can't attack it (a unit isn't on the map)
 //The attack is waited for until its finish (uiAttackAnimationFinished), as a move is
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
-	game.waitUIAnimation = true;
+	animating(true);
 	const result = resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
 		uiAttackHooks(attackingUnit, enemyUnit)), null);
-	if (result === null) game.waitUIAnimation = false;
+	if (result === null) animating(false);
 	return result;
 }
 
@@ -639,7 +655,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 	if (result.destroyed.length > 0 || result.retreat !== null || result.surrender)
 		R.render(a.cell.row, a.cell.col, renderRange);
 
-	game.waitUIAnimation = retreating;
+	animating(retreating);
 	uiTurnInfo();
 }
 
@@ -1585,10 +1601,13 @@ function uiScaleMap(level: number) {
 	this.uiUnitAttack = function(attackingUnit: Unit, enemyUnit: Unit) { return uiUnitAttack(attackingUnit, enemyUnit) !== null; };
 	this.showAlert = function(row: number, col: number, text: string | number, positive?: boolean) { return uiShowAlert(row, col, text, positive); };
 
-	this.showGameToolTip = function(text: string, row: number, col: number) {
+	this.showGameToolTip = function(text: string, row: number, col: number, onOk: () => void) {
 		var pos = R.cellToScreen(row, col, true);
-		UIBuilder.gameToolTip(text, pos.x, pos.y);
+		UIBuilder.gameToolTip(text, pos.x, pos.y, onOk);
 	};
+
+	//What the game waits on while the move or the attack it asked for is shown (src/oldscreen.ts)
+	this.whenShown = function(shown: (() => void) | null) { pendingShown = shown; };
 
 	this.showSmallToolTip = function(text: string, row: number, col: number, color: number, id?: string, style?: number) {
 		var pos = R.cellToScreen(row, col, true);

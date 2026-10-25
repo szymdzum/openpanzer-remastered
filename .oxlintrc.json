@@ -1,8 +1,10 @@
 // npm run lint: oxlint with the type-aware rules (tsgolint, the same native TypeScript as tsc).
 // Every rule is an error. "overrides" lists, per rule, the files that broke it when it was
 // turned on: new files get every rule, and a file leaves a list once it is clean (the lists may
-// only shrink). The first override keeps the engine modules and the game host (src/host.ts) from
-// importing UI modules or game.ts (the engine reads the game through src/context.ts), the second
+// only shrink). The first override keeps the engine modules, the game host (src/host.ts), the screen
+// interface (src/screen.ts) and the screen that shows nothing (src/nullscreen.ts) from importing UI
+// modules or game.ts (the engine reads the game through src/context.ts, and shows it through the
+// screen interface, which the old UI implements in src/oldscreen.ts), the second
 // and third the new core (src/core/ and its commands) from importing the old engine. The react and jsx-a11y
 // plugins check the JSX of the new UI's components (src/view/*.tsx, Preact).
 {
@@ -57,11 +59,13 @@
 				"src/leaders.ts",
 				"src/map.ts",
 				"src/mirror.ts",
+				"src/nullscreen.ts",
 				"src/prototypes.ts",
 				"src/rng.ts",
 				"src/savegame.ts",
 				"src/scenario.ts",
 				"src/scenarioloader.ts",
+				"src/screen.ts",
 				"src/selection.ts",
 				"src/state.ts",
 				"src/undo.ts",

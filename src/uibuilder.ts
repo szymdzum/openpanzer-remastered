@@ -71,7 +71,7 @@ export interface UIBuilderModule {
 	message(title: string, message: string, onOk?: () => void): void;
 	messageDynamic(title: string, message: string): void;
 	showPrototypeAwardMessage(eqid: number): void;
-	gameToolTip(text: string, x: number, y: number): void;
+	gameToolTip(text: string, x: number, y: number, onOk: () => void): void;
 	gameSmallToolTip(text: string, x: number, y: number, color?: number, id?: string, style?: number): void;
 	uiToolTip(text: string, x: number, y: number, isRightOriented: boolean | number): void;
 	uiToolTipAtElement(element: HTMLElement, text: string, isRightOriented: boolean | number): void;
@@ -1015,8 +1015,8 @@ UIBuilder.showPrototypeAwardMessage = function(eqid: number) {
 	UIBuilder.messageDynamic("You have been awarded a prototype unit", msg);
 };
 
-//Tooltip with an ok button shown next to a map position, used by the tutorial
-UIBuilder.gameToolTip = function(text: string, x: number, y: number) {
+//Tooltip with an ok button shown next to a map position, used by the tutorial; onOk: the game goes on
+UIBuilder.gameToolTip = function(text: string, x: number, y: number, onOk: () => void) {
 	var tt = $('gameToolTip');
 	tt.setAttribute("type", "game");
 	tt.style.top = y - 55 + "px";
@@ -1026,7 +1026,7 @@ UIBuilder.gameToolTip = function(text: string, x: number, y: number) {
 	makeVisible('gameToolTip');
 	$('gameToolTipOk').onclick = function() {
 		makeHidden('gameToolTip');
-		game.waitUIAnimation = false;
+		onOk();
 	};
 };
 
