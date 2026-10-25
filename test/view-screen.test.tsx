@@ -121,11 +121,12 @@ test("The screen shows the host's messages, the campaign's end and the view even
 	await act(() => { s = newScreen(host as unknown as GameHost, root); });
 	const then = vi.fn(), shown = vi.fn();
 	await act(() => {
+		//(a prototype comes first, at a scenario's start)
+		s.showPrototype(142);
 		s.loadFailed("x.xml");
 		s.message("VICTORY", "<b>won</b>");
 		s.message("DEFEAT", "lost", then);
 		s.campaignEnd("briliant", "the end", then);
-		s.showPrototype(142);
 		s.view({ type: "message", text: "Look here", at: { row: 1, col: 2 } }, shown);
 	});
 	const titles: string[] = [];
@@ -133,7 +134,7 @@ test("The screen shows the host's messages, the campaign's end and the view even
 		titles.push(screen.getByRole("dialog").querySelector("h1")!.textContent);
 		await act(() => { fireEvent.click(ok()); });
 	}
-	expect(titles).toEqual(["Error", "VICTORY", "DEFEAT", "Brilliant Victory", "Prototype", "Orders"]);
+	expect(titles).toEqual(["Prototype", "Error", "VICTORY", "DEFEAT", "Brilliant Victory", "Orders"]);
 	expect([host.holdForMessage.mock.calls.length, host.messageClosed.mock.calls.length, then.mock.calls.length, shown.mock.calls.length])
 		.toEqual([2, 1, 2, 1]);
 	//A program's move and attack played by the host and shown at once; the other events shown at once
@@ -215,4 +216,38 @@ test("The map is drawn at the scale the settings saved (#345)", async () => {
 	await act(() => { newScreen(g.host, root).showScenario(); });
 	expect(width()).toBe(at1 * 2);
 	uiSettings.zoomLevel = zoom;
+});
+
+test("A scenario's start drops the briefing of the scenario before: the game stays held under the new one (#405)", async () => {
+	const g = await playing("tutorial.xml", [0, 1, 0, 0]);
+	const first = g.host.world()!.data.name;
+	//The next scenario starts while the first one's briefing is still open (the CLI's "new", a load)
+	await act(async () => {
+		g.host.newScenario("drpzop01.xml");
+		await until(() => g.gameStarted && g.host.world() !== null && g.host.world()!.data.name !== first, "the second scenario");
+	});
+	const dialogs = screen.getAllByRole("dialog");
+	expect(dialogs.map((d) => d.querySelector("h1")!.textContent)).toEqual([g.host.world()!.data.name]);
+	expect(g.uiMessageClicked).toBe(false);
+	await act(() => { fireEvent.click(ok()); });
+	expect([screen.queryByRole("dialog"), g.uiMessageClicked]).toEqual([null, true]);
+}, 60_000);
+
+test("A campaign's prototype shown at the scenario's start stays, before the briefing (#405)", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	const host = { world: (): World | null => null, command: vi.fn(), won: vi.fn(), play: vi.fn(), holdForMessage: vi.fn(), messageClosed: vi.fn() };
+	let s: ReturnType<typeof newScreen>;
+	await act(() => { s = newScreen(host as unknown as GameHost, root); });
+	await act(() => {
+		s.message("VICTORY", "the scenario before");
+		s.showPrototype(142);
+		s.showScenario();
+	});
+	const titles: string[] = [];
+	while (screen.queryByRole("dialog") !== null) {
+		titles.push(screen.getByRole("dialog").querySelector("h1")!.textContent);
+		await act(() => { fireEvent.click(ok()); });
+	}
+	expect(titles).toEqual(["Prototype", ""]);
 });
