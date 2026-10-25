@@ -36,8 +36,9 @@ export function supportOf(w: World, sel: Selection | null, hover: Position | nul
 	return guns.length === 0 ? null : { attacker: sel.at, target: { row: hover.row, col: hover.col }, guns };
 }
 
-//A plaque over a flag or an objective (#62): its name, what taking it gives, its owner's side (-1: none).
-//Every objective has one, also without a flag (the old map marked those only with showHiddenVictoryHexes)
+//A plaque over a flag or an objective (#62): its name, what taking it gives, its owner's side (-1: none) and the
+//flag on it (a country in the flag strip, -1: none; the strategic map shows it). Every objective has one, also
+//without a flag (the old map marked those only with showHiddenVictoryHexes)
 export interface Plaque {
 	row: number;
 	col: number;
@@ -45,6 +46,7 @@ export interface Plaque {
 	objective: boolean;
 	prestige: number;
 	side: number;
+	flag: number;
 }
 
 export function plaquesOf(w: World): Plaque[] {
@@ -57,7 +59,7 @@ export function plaquesOf(w: World): Plaque[] {
 			const objective = h.victorySide !== -1;
 			plaques.push({ row, col, name: w.data.hexes[hex].name, objective,
 				prestige: objective ? prestigeGains.objectiveCapture : prestigeGains.flagCapture,
-				side: h.owner === -1 ? -1 : w.state.players[h.owner].side });
+				side: h.owner === -1 ? -1 : w.state.players[h.owner].side, flag: h.flag });
 		}
 	return plaques;
 }

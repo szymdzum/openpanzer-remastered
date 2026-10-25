@@ -24,6 +24,16 @@ export function toScreen(p: Point, vp: Viewport): Point {
 	return { x: p.x * vp.scale - vp.x, y: p.y * vp.scale - vp.y };
 }
 
+//The whole map (its size in its own pixels) fit to a screen under a top inset and centred in the room left: the
+//strategic map's viewport (StrategicMap). A screen not laid out yet still gets a scale above 0
+export function fitViewport(map: { width: number; height: number }, screen: { width: number; height: number }, top: number,
+	dpr: number): Viewport {
+	const room = Math.max(1, screen.height - top);
+	const scale = Math.min(Math.max(1, screen.width) / Math.max(1, map.width), room / Math.max(1, map.height));
+	return { x: -(screen.width - map.width * scale) / 2, y: -(top + (room - map.height * scale) / 2), width: screen.width,
+		height: screen.height, scale, dpr };
+}
+
 //Paths laid out in the map's pixels; strokes and markers in the screen's
 export const atMap = (c: CanvasRenderingContext2D, vp: Viewport) =>
 	c.setTransform(vp.dpr * vp.scale, 0, 0, vp.dpr * vp.scale, -vp.x * vp.dpr, -vp.y * vp.dpr);

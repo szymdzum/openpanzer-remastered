@@ -149,7 +149,7 @@ export function drawSupportTags(c: CanvasRenderingContext2D, vp: Viewport, s: Su
 }
 
 //A five-pointed star
-function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
+export function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
 	c.beginPath();
 	for (let i = 0; i < 10; i++) {
 		const a = -Math.PI / 2 + i * Math.PI / 5, rr = i & 1 ? r * 0.42 : r;

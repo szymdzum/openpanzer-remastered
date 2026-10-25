@@ -17,6 +17,7 @@ import { leaderType, roadType, terrainType } from "../src/prototypes";
 import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
 import { clickOn, mapUnits, outlineOf, pathOf, selectionOf } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
+import { strategicOf } from "../src/view/strategic";
 
 const PZ_IIA = 140, BRUCKE = 111, WZ13 = 262, TP7 = 273, INFANTERIE = 115, PSW_222 = 117, OPEL_BLITZ = 157, ME_109 = 159;
 const KAWALERIA = 267, PZL_23 = 281;
@@ -305,6 +306,27 @@ test("Hovering a target draws the guns the side sees that will fire in support, 
 
 const isSeen = (w: World, row: number, col: number) => w.sight.spot[0][hexIndex(w, row, col)] > 0;
 
+//StrategicMap: the layer's units as chips, the side shown's and the enemy's it sees, the objectives only, the flags
+test("The strategic map: a chip per unit of the layer the side sees, dimmed when it moved, and the objectives' plaques", () => {
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, hasMoved: true }, { eqid: ME_109, owner: 0, row: 4, col: 1 },
+		{ eqid: TP7, owner: 1, row: 4, col: 2 }, { eqid: PZL_23, owner: 1, row: 5, col: 1 }, { eqid: TP7, owner: 1, row: 9, col: 9 }]);
+	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 5)], { owner: 0, flag: 7 });
+	w.data.hexes[hexIndex(w, 2, 2)].name = "Mława";
+	const ground = strategicOf(w, false);
+	//the tank and the 7TP next to it; the 7TP in the fog isn't drawn, nor the aircraft
+	expect(ground.chips).toEqual([
+		{ row: 4, col: 1, side: 0, own: true, flag: 7, moved: true },
+		{ row: 4, col: 2, side: 1, own: false, flag: 15, moved: false },
+	]);
+	expect(strategicOf(w, true).chips.map((c) => [c.row, c.col, c.own])).toEqual([[4, 1, true], [5, 1, false]]);
+	//the town is left out; the objective keeps its name as written and its flag
+	expect(ground.plaques).toEqual([{ row: 2, col: 2, name: "Mława", objective: true, prestige: 150, side: 1, flag: 15 }]);
+	expect(ground.flags).toBe("resources/ui/flags/eqp-adlerkorps/flags_med.png");
+	expect(strategicOf({ ...w, data: { ...w.data, equipment: "eqp-pacific" } }, false).flags).toBe("resources/ui/flags/eqp-pacific/flags_med.png");
+	expect(strategicOf({ ...w, data: { ...w.data, equipment: "" } }, false).flags).toBe(ground.flags);
+});
+
 test("Every flag and objective has its plaque (#62): an objective +150 with its owner's side, a town +50", () => {
 	const w = hand([]);
 	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
@@ -313,8 +335,8 @@ test("Every flag and objective has its plaque (#62): an objective +150 with its 
 	w.data.hexes[hexIndex(w, 2, 2)].name = "Mława";
 	w.data.hexes[hexIndex(w, 5, 5)].name = "Grudusk";
 	expect(plaquesOf(w)).toEqual([
-		{ row: 2, col: 2, name: "Mława", objective: true, prestige: 150, side: 1 },
-		{ row: 5, col: 5, name: "Grudusk", objective: false, prestige: 50, side: 0 },
-		{ row: 7, col: 1, name: "", objective: true, prestige: 150, side: -1 },
+		{ row: 2, col: 2, name: "Mława", objective: true, prestige: 150, side: 1, flag: 15 },
+		{ row: 5, col: 5, name: "Grudusk", objective: false, prestige: 50, side: 0, flag: 7 },
+		{ row: 7, col: 1, name: "", objective: true, prestige: 150, side: -1, flag: -1 },
 	]);
 });

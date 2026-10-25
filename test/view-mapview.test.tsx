@@ -166,6 +166,32 @@ test("The air layer: A switches it, a selected aircraft switches it on and a tan
 	expect([store.selected.value, store.airMode.value]).toEqual([0, true]);
 });
 
+//StrategicMap: Z fits the whole map to the window under the status bar; a click there zooms back in, centred on its hex
+test("The strategic map: Z opens it, the pointer shows no path there, a click zooms back in centred on the hex clicked", async () => {
+	const { store } = await mapOf(handWorld({ rows: 20, cols: 20, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }] }, undefined, { spotSide: 0 }));
+	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
+	Object.defineProperty(s, "clientWidth", { value: 1000 });
+	Object.defineProperty(s, "clientHeight", { value: 600 });
+	await act(() => { store.selected.value = 0; });
+	await press("z");
+	expect(store.strategic.value).toBe(true);
+	expect(document.querySelector(".pm-mapview")!.classList.contains("strategic")).toBe(true);
+	await frame();
+	//the map (19 * 45 + 15 by 20 * 50) fit to 1000 by 600: its height fills the screen, centred across
+	const scale = 600 / 1000, left = (1000 - 870 * scale) / 2;
+	const at = (row: number, col: number) => ({ clientX: hexCentre(row, col).x * scale + left, clientY: hexCentre(row, col).y * scale });
+	await act(() => { s.dispatchEvent(new MouseEvent("mousemove", { ...at(4, 4), bubbles: true })); });
+	expect([store.hover.value, store.path.value, document.querySelector(".pm-pathtag")]).toEqual([{ row: 4, col: 4 }, null, null]);
+	expect(store.overview.value!.chips).toHaveLength(1);
+	await act(() => { s.dispatchEvent(new MouseEvent("click", { ...at(15, 12), bubbles: true })); });
+	expect([store.strategic.value, store.lookAt.value, store.selected.value]).toEqual([false, { row: 15, col: 12 }, 0]);
+	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(15, 12).x - 500, hexCentre(15, 12).y - 300]);
+	//Z again opens and closes it, the scroll kept
+	await press("z");
+	await press("z");
+	expect([store.strategic.value, s.scrollLeft]).toEqual([false, hexCentre(15, 12).x - 500]);
+});
+
 //A map smaller than the screen is centred in it, as the old UI centres it: the pointer finds the hexes there
 test("A map smaller than the screen sits in its middle, and a click finds the hex under it", async () => {
 	const { store } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }] }, undefined, { spotSide: 0 }));
