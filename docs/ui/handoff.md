@@ -1,6 +1,6 @@
 # Implementing in HTML and CSS
 
-How to bring this system into `openpanzer-remastered` without a framework. It was first written as a restyle of the old UI. Under stage D the new UI is built on the core instead (PLAN.md), so read "keep the id" as "the new module renders this id": the ids keep the harness, the shortcuts and the tests pointing at the same things, and the classes and markup below are what the new modules produce. The migration order at the end is superseded by PLAN.md's phases.
+How to bring this system into `openpanzer-remastered`. It was first written as a restyle of the old UI, without a framework; the new UI is built with Preact components (PLAN.md), which produce the classes and markup below. Under stage D the new UI is built on the core instead (PLAN.md), so read "keep the id" as "the new module renders this id": the ids keep the harness, the shortcuts and the tests pointing at the same things, and the classes and markup below are what the new modules produce. The migration order at the end is superseded by PLAN.md's phases.
 
 ## Files
 
