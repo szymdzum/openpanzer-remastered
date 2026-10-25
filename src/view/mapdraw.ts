@@ -1,39 +1,34 @@
-//The map's canvas (#345): the terrain, the hex grid, the move area, the targets, the selection, the move
-//path, the units and their markers, in the MapOverlays card's order. It draws what the map's view model
-//(src/view/mapview.ts) computed and decides nothing. Colours and line widths are the tokens'
+//The map's canvas (#345): the terrain, the hex grid, the fog, the move area, the zones, the targets, the
+//support fire, the selection, the move path, the units and their markers, the plaques, in the MapOverlays
+//card's order. It draws what the map's view model (src/view/mapview.ts, mapinfo.ts) computed and decides nothing. Colours and line widths are the tokens'
 //(src/view/tokens.ts), the same in both themes.
 //
 //The canvas is the size of the screen, at the device's pixels (sharp on HiDPI, #31), and draws the part of
 //the map in view. The terrain and the sprites scale with the map (ZoomLevels); everything drawn on top
 //keeps its screen size: a line's path is laid out at the map's scale, then stroked at the screen's, so its
 //width is the token's in screen pixels, and the markers and the path's ring are drawn at screen points.
-import type { Position } from "../core/types";
-import { CORNERS, EDGES, hexCentre, type Point } from "./hexgrid";
-import type { Edge, Marker, MapUnit, Path, Selection } from "./mapview";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport } from "./canvas";
+import { hexCentre, type Point } from "./hexgrid";
+import type { Plaque, Support } from "./mapinfo";
+import type { Marker, MapUnit, Path, Selection } from "./mapview";
+import { drawFog, drawHatch, drawPlaques, drawSupport, drawSupportTags, drawZones } from "./overlays";
 import { TOKENS } from "./tokens";
 
 const MAP = TOKENS.map, PX = TOKENS.px;
 
-//The part of the map on the screen: its top left corner in screen pixels from the map's (the scroll), the
-//screen's size in CSS pixels, the map's scale and the device's pixels per CSS pixel
-export interface Viewport {
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-	scale: number;
-	dpr: number;
-}
-
 //What the canvas draws
 export interface Scene {
 	terrain: CanvasImageSource | null;
+	size: { width: number; height: number }; //the map's, in its own pixels: nothing is drawn past it
 	rows: number;
 	cols: number;
 	grid: boolean; //the hex grid setting
 	units: MapUnit[];
 	selection: Selection | null;
 	path: Path | null;
+	fog: Uint8Array | null; //1 on each hex the side shown doesn't see (src/view/mapinfo.ts)
+	support: Support | null; //the guns that fire if the hovered target is attacked
+	plaques: Plaque[];
 }
 
 //A sprite strip or the bridge by its file, null until it has loaded
@@ -42,72 +37,8 @@ export type Images = (file: string) => (CanvasImageSource & { width: number; hei
 //The bridge drawn instead of a ground unit on a bridge of its side
 export const BRIDGE = "resources/units/images/bridg.png";
 
-//Where a point of the map is on the screen
-export function toScreen(p: Point, vp: Viewport): Point {
-	return { x: p.x * vp.scale - vp.x, y: p.y * vp.scale - vp.y };
-}
-
-//Paths laid out in the map's pixels; strokes and markers in the screen's
-const atMap = (c: CanvasRenderingContext2D, vp: Viewport) =>
-	c.setTransform(vp.dpr * vp.scale, 0, 0, vp.dpr * vp.scale, -vp.x * vp.dpr, -vp.y * vp.dpr);
-const atScreen = (c: CanvasRenderingContext2D, vp: Viewport) => c.setTransform(vp.dpr, 0, 0, vp.dpr, 0, 0);
-
-//The rows and columns in view, a hex more on each side
-function inView(vp: Viewport, rows: number, cols: number): { r0: number; r1: number; c0: number; c1: number } {
-	const x0 = vp.x / vp.scale, y0 = vp.y / vp.scale;
-	const x1 = (vp.x + vp.width) / vp.scale, y1 = (vp.y + vp.height) / vp.scale;
-	const step = PX["hex-w"] * 0.75, h = PX["hex-h"];
-	return { c0: Math.max(0, Math.floor(x0 / step) - 1), c1: Math.min(cols - 1, Math.ceil(x1 / step) + 1),
-		r0: Math.max(0, Math.floor(y0 / h) - 1), r1: Math.min(rows - 1, Math.ceil(y1 / h) + 1) };
-}
-
-function addHex(c: CanvasRenderingContext2D, at: Position) {
-	const o = hexCentre(at.row, at.col);
-	c.moveTo(o.x + CORNERS[0].x, o.y + CORNERS[0].y);
-	for (let k = 1; k < 6; k++) c.lineTo(o.x + CORNERS[k].x, o.y + CORNERS[k].y);
-	c.closePath();
-}
-
-function addEdge(c: CanvasRenderingContext2D, e: Edge) {
-	const o = hexCentre(e.row, e.col), [a, b] = EDGES[e.side];
-	c.moveTo(o.x + CORNERS[a].x, o.y + CORNERS[a].y);
-	c.lineTo(o.x + CORNERS[b].x, o.y + CORNERS[b].y);
-}
-
-//The path laid out, stroked at screen size over the dark under-stroke every map line has
-function strokeLine(c: CanvasRenderingContext2D, vp: Viewport, colour: string, width: number, under: number, dash: number[] = []) {
-	atScreen(c, vp);
-	c.lineJoin = "round";
-	c.setLineDash([]);
-	c.globalAlpha = 0.55;
-	c.strokeStyle = MAP["hex-shadow"];
-	c.lineWidth = under;
-	c.stroke();
-	c.globalAlpha = 1;
-	c.setLineDash(dash);
-	c.strokeStyle = colour;
-	c.lineWidth = width;
-	c.stroke();
-	c.setLineDash([]);
-}
-
-function fillHexes(c: CanvasRenderingContext2D, vp: Viewport, hexes: Position[], colour: string, alpha: number) {
-	if (hexes.length === 0) return;
-	atMap(c, vp);
-	c.beginPath();
-	for (const h of hexes) addHex(c, h);
-	c.globalAlpha = alpha;
-	c.fillStyle = colour;
-	c.fill();
-	c.globalAlpha = 1;
-}
-
 function drawGrid(c: CanvasRenderingContext2D, vp: Viewport, rows: number, cols: number) {
-	const v = inView(vp, rows, cols);
-	atMap(c, vp);
-	c.beginPath();
-	for (let row = v.r0; row <= v.r1; row++)
-		for (let col = v.c0; col <= v.c1; col++) addHex(c, { row, col });
+	addHexesInView(c, vp, rows, cols, () => true);
 	atScreen(c, vp);
 	c.globalAlpha = 0.35;
 	c.strokeStyle = MAP["hex-shadow"];
@@ -117,8 +48,10 @@ function drawGrid(c: CanvasRenderingContext2D, vp: Viewport, rows: number, cols:
 }
 
 //The move area's tint, the one outline round it, the targets and the selected hex
-function drawSelection(c: CanvasRenderingContext2D, vp: Viewport, sel: Selection) {
-	fillHexes(c, vp, sel.area, MAP["hex-move"], 0.16);
+function drawSelection(c: CanvasRenderingContext2D, vp: Viewport, sel: Selection, support: Support | null) {
+	const unseen = new Set(sel.unseen.map((h) => h.row * 65536 + h.col));
+	fillHexes(c, vp, sel.area.filter((h) => !unseen.has(h.row * 65536 + h.col)), MAP["hex-move"], 0.16);
+	drawHatch(c, vp, sel.unseen);
 	if (sel.outline.length > 0) {
 		atMap(c, vp);
 		c.beginPath();
@@ -126,6 +59,7 @@ function drawSelection(c: CanvasRenderingContext2D, vp: Viewport, sel: Selection
 		c.lineCap = "round";
 		strokeLine(c, vp, MAP["hex-move"], PX["hex-move-width"], PX["hex-move-width"] + 2);
 	}
+	drawZones(c, vp, sel.zones);
 	fillHexes(c, vp, sel.targets, MAP["hex-target"], 0.12);
 	if (sel.targets.length > 0) {
 		atMap(c, vp);
@@ -134,6 +68,7 @@ function drawSelection(c: CanvasRenderingContext2D, vp: Viewport, sel: Selection
 		c.lineCap = "butt";
 		strokeLine(c, vp, MAP["hex-target"], PX["hex-target-width"], PX["hex-target-width"] + 2.6, [5, 3]);
 	}
+	if (support !== null) drawSupport(c, vp, support);
 	atMap(c, vp);
 	c.beginPath();
 	addHex(c, sel.at);
@@ -284,6 +219,13 @@ function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: numb
 	c.lineWidth = 1;
 	c.stroke();
 	c.globalAlpha /= 0.75;
+	//(revealed by its fire from a hex the side doesn't see: a dotted outline, known to be there and no more)
+	if (m.revealed) {
+		c.setLineDash([1.5, 1.5]);
+		c.strokeStyle = MAP.glint;
+		c.stroke();
+		c.setLineDash([]);
+	}
 	c.font = "bold 9px " + TOKENS.fonts.ui;
 	c.textAlign = "center";
 	c.textBaseline = "middle";
@@ -349,14 +291,23 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	c.setTransform(1, 0, 0, 1, 0, 0);
 	c.clearRect(0, 0, vp.width * vp.dpr, vp.height * vp.dpr);
 	c.imageSmoothingEnabled = false;
+	c.save();
 	atMap(c, vp);
+	//(the grid's half hexes at the edges reach past the map image: fog and overlays stop at its edge)
+	c.beginPath();
+	c.rect(0, 0, scene.size.width, scene.size.height);
+	c.clip();
 	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
-	if (scene.selection !== null) drawSelection(c, vp, scene.selection);
+	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
+	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
 	atMap(c, vp);
 	for (const u of scene.units) drawSprite(c, u, images);
 	atScreen(c, vp);
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
+	drawPlaques(c, vp, scene.plaques);
+	if (scene.support !== null) drawSupportTags(c, vp, scene.support);
+	c.restore();
 }

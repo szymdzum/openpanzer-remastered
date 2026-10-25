@@ -132,3 +132,21 @@ test("No game playing: a click on the map does nothing, the map is empty", async
 	expect([store.selected.value, store.units.value, store.selection.value, store.path.value]).toEqual([null, [], null, null]);
 	expect(document.querySelector<HTMLElement>(".pm-mapview-area")!.style.inlineSize).toBe("0px");
 });
+
+//A map smaller than the screen is centred in it, as the old UI centres it: the pointer finds the hexes there
+test("A map smaller than the screen sits in its middle, and a click finds the hex under it", async () => {
+	const { store } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }] }, undefined, { spotSide: 0 }));
+	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
+	Object.defineProperty(s, "clientWidth", { value: 2000 });
+	Object.defineProperty(s, "clientHeight", { value: 1000 });
+	s.scrollLeft = s.scrollTop = 0;
+	await act(() => { s.dispatchEvent(new Event("scroll")); });
+	await frame();
+	const width = 9 * 45 + 15, height = 500, left = (2000 - width) / 2, top = (1000 - height) / 2;
+	const c = hexCentre(4, 3);
+	await act(() => { s.dispatchEvent(new MouseEvent("click", { clientX: c.x + left, clientY: c.y + top, bubbles: true })); });
+	expect(store.selected.value).toBe(0);
+	//the tag is placed on the screen where the path ends
+	await act(() => { s.dispatchEvent(new MouseEvent("mousemove", { clientX: hexCentre(4, 4).x + left, clientY: hexCentre(4, 4).y + top, bubbles: true })); });
+	expect(document.querySelector(".pm-pathtag")).not.toBeNull();
+});

@@ -9,10 +9,14 @@ import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
-import { drawMap, type Images, toScreen, type Viewport } from "./mapdraw";
+import { toScreen, type Viewport } from "./canvas";
+import { drawMap, type Images, type Scene } from "./mapdraw";
 import type { Store } from "./store";
 
 type Picture = HTMLImageElement;
+
+//Where the map is on the screen (the screen's top left corner in the map's screen pixels) and its size there
+type View = Point & { width: number; height: number };
 
 //The map's images by file: the terrain and the sprite strips, loaded once, then drawn
 class ImageCache {
@@ -50,20 +54,19 @@ class Painter {
 	declare canvas: HTMLCanvasElement | null;
 	declare scroller: HTMLElement | null;
 	declare pending: boolean;
-	declare onImage: () => void;
+	declare onView: (view: View) => void;
+	declare view: View;
 	declare looked: { data: World["data"] | null; look: Position | null };
 
-	constructor(store: Store, onImage: () => void) {
+	constructor(store: Store, onView: (view: View) => void) {
 		this.store = store;
 		this.canvas = null;
 		this.scroller = null;
 		this.pending = false;
-		this.onImage = onImage;
+		this.onView = onView;
+		this.view = { x: 0, y: 0, width: 0, height: 0 };
 		this.looked = { data: null, look: null };
-		this.cache = new ImageCache(() => {
-			this.request();
-			this.onImage();
-		});
+		this.cache = new ImageCache(() => this.request());
 	}
 
 	//On the page: drawn when what it shows changes, the pointer taken. Returns the detach
@@ -73,7 +76,7 @@ class Painter {
 		const s = this.store;
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
-			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value];
+			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -102,8 +105,8 @@ class Painter {
 	cellOf(e: MouseEvent): Position | null {
 		const w = this.store.world.peek(), s = this.scroller;
 		if (w === null || s === null) return null;
-		const box = s.getBoundingClientRect(), scale = this.store.scale.peek();
-		const p = { x: (e.clientX - box.left + s.scrollLeft) / scale, y: (e.clientY - box.top + s.scrollTop) / scale };
+		const box = s.getBoundingClientRect(), scale = this.store.scale.peek(), o = this.origin(s);
+		const p = { x: (e.clientX - box.left + o.x) / scale, y: (e.clientY - box.top + o.y) / scale };
 		return cellAt(p, w.state.map.rows, w.state.map.cols);
 	}
 
@@ -116,25 +119,56 @@ class Painter {
 		});
 	}
 
+	//The map's size on the screen at its scale
+	size(): { width: number; height: number } {
+		const w = this.store.world.peek();
+		return mapSize(w, w === null ? null : this.cache.get(w.data.image), this.store.scale.peek());
+	}
+
+	//The screen's top left corner in the map's screen pixels: the scroll, less half the room left round a map
+	//smaller than the screen, which is centred in it, as the old UI centres it
+	origin(s: HTMLElement): Point {
+		const size = this.size();
+		return { x: s.scrollLeft - Math.max(0, (s.clientWidth - size.width) / 2), y: s.scrollTop - Math.max(0, (s.clientHeight - size.height) / 2) };
+	}
+
 	viewport(s: HTMLElement): Viewport {
-		return { x: s.scrollLeft, y: s.scrollTop, width: s.clientWidth, height: s.clientHeight, scale: this.store.scale.peek(),
-			dpr: devicePixelRatio || 1 };
+		const o = this.origin(s);
+		return { x: o.x, y: o.y, width: s.clientWidth, height: s.clientHeight, scale: this.store.scale.peek(), dpr: devicePixelRatio || 1 };
+	}
+
+	//Tells the component where the map is on the screen when that changed: the path's tag follows it
+	report(vp: Viewport, size: { width: number; height: number }) {
+		const v = this.view;
+		if (vp.x === v.x && vp.y === v.y && size.width === v.width && size.height === v.height) return;
+		this.view = { x: vp.x, y: vp.y, ...size };
+		this.onView(this.view);
 	}
 
 	draw() {
 		const w = this.store.world.peek(), canvas = this.canvas, s = this.scroller;
 		if (canvas === null || s === null) return;
-		const vp = this.viewport(s);
+		const vp = this.viewport(s), size = this.size();
+		this.report(vp, size);
 		const width = Math.round(vp.width * vp.dpr), height = Math.round(vp.height * vp.dpr);
 		if (canvas.width !== width || canvas.height !== height) {
 			canvas.width = width;
 			canvas.height = height;
 		}
 		const c = canvas.getContext("2d");
-		if (c === null || w === null) return;
-		const images: Images = (file) => this.cache.get(file);
-		drawMap(c, { terrain: images(w.data.image), rows: w.state.map.rows, cols: w.state.map.cols, grid: hexGrid,
-			units: this.store.units.peek(), selection: this.store.selection.peek(), path: this.store.path.peek() }, vp, images);
+		if (c !== null && w !== null) drawMap(c, this.scene(w, { width: size.width / vp.scale, height: size.height / vp.scale }), vp, (f) => this.image(f));
+	}
+
+	//A sprite or the terrain, once it has loaded
+	image(file: string): ReturnType<Images> {
+		return this.cache.get(file);
+	}
+
+	//What the canvas draws now, from the store
+	scene(w: World, size: { width: number; height: number }): Scene {
+		const s = this.store;
+		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: hexGrid, units: s.units.peek(),
+			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek() };
 	}
 
 	//Where the map looks, when the scenario or the look asked changes (not when the side's first unit moves): the
@@ -162,13 +196,12 @@ function firstOwnUnit(w: World): Position | null {
 	return u === undefined ? null : { row: u.row, col: u.col };
 }
 
-//The map's size on the screen: the terrain image's, or the grid's until it has loaded, at the map's scale
+//The map's size on the screen: the terrain image's (the grid's half hexes at its edges reach past it), or the
+//grid's until it has loaded, at the map's scale
 function mapSize(w: World | null, terrain: Picture | null, scale: number): { width: number; height: number } {
 	if (w === null) return { width: 0, height: 0 };
-	const grid = gridSize(w.state.map.rows, w.state.map.cols);
-	const width = Math.max(grid.width, terrain === null ? 0 : terrain.width);
-	const height = Math.max(grid.height, terrain === null ? 0 : terrain.height);
-	return { width: width * scale, height: height * scale };
+	const size = terrain !== null ? terrain : gridSize(w.state.map.rows, w.state.map.cols);
+	return { width: size.width * scale, height: size.height * scale };
 }
 
 //The move path's tag under its end (MovePath): what happens, then what it costs
@@ -185,10 +218,9 @@ function PathTag({ store, at }: { store: Store; at: Point }) {
 export function MapView({ store }: { store: Store }) {
 	const canvas = useRef<HTMLCanvasElement>(null);
 	const scroller = useRef<HTMLDivElement>(null);
-	const [scroll, setScroll] = useState({ x: 0, y: 0 });
-	//(an image that loaded may change the map's size: rendered again)
-	const [, setImages] = useState(0);
-	const [painter] = useState(() => new Painter(store, () => setImages((n) => n + 1)));
+	//(where the map is on the screen, after each draw that moved it: the tag follows, a terrain that loaded sizes the map)
+	const [view, setView] = useState<View>({ x: 0, y: 0, width: 0, height: 0 });
+	const [painter] = useState(() => new Painter(store, setView));
 	const w = store.world.value, scale = store.scale.value, look = store.lookAt.value;
 
 	useEffect(() => painter.attach(canvas.current!, scroller.current!), [painter]);
@@ -202,15 +234,11 @@ export function MapView({ store }: { store: Store }) {
 	const size = mapSize(w, terrain, scale);
 	const path = store.path.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
-	const vp = { x: scroll.x, y: scroll.y, width: 0, height: 0, scale, dpr: 1 };
+	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	return (
 		<div class="pm-mapview">
 			<canvas ref={canvas} class="pm-mapview-canvas" aria-hidden="true" />
-			<div ref={scroller} class="pm-mapview-scroll" role="application" aria-label="Map" onScroll={(e) => {
-				const s = e.currentTarget;
-				setScroll({ x: s.scrollLeft, y: s.scrollTop });
-				painter.request();
-			}}>
+			<div ref={scroller} class="pm-mapview-scroll" role="application" aria-label="Map" onScroll={() => painter.request()}>
 				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + "px" }} />
 			</div>
 			{end !== null && <PathTag store={store} at={toScreen(hexCentre(end.row, end.col), vp)} />}
