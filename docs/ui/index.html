@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Panzer Marshal UI</title>
 <!-- The design system's previews, live: npm run dev, then /docs/ui/. Each preview is a fragment;
-     it runs in an iframe with tokens.css, components/bundle.css and components/bundle.js. -->
+     it runs in an iframe with tokens.css, the components' CSS (src/view/library.css), components/bundle.css
+     and components/bundle.js. -->
 <style>
 	:root { color-scheme: light dark; --bg: #f3efe4; --ink: #211c13; --muted: #5d5340; --line: #cbbf9f; --on: #e6dbbd; }
 	@media (prefers-color-scheme: dark) { :root { --bg: #17190f; --ink: #ece6d2; --muted: #aaa892; --line: #3f443a; --on: #2f3424; } }
@@ -35,9 +36,19 @@
 	<div class="stage" id="stage"><iframe id="frame" title="Preview"></iframe></div>
 </main>
 <script type="module">
-	const [list, tokens, css, js] = await Promise.all([
+	//The components' CSS, its @imports written in (the dev server may already have done it)
+	async function library() {
+		const url = new URL("../../src/view/library.css", location.href);
+		const css = (u) => fetch(u, { headers: { Accept: "text/css" } }).then((r) => r.text());
+		const text = await css(url);
+		const parts = await Promise.all([...text.matchAll(/@import "([^"]+)";/g)].map((m) => css(new URL(m[1], url))));
+		let i = 0;
+		return text.replace(/@import "([^"]+)";/g, () => parts[i++]);
+	}
+	const [list, tokens, components, css, js] = await Promise.all([
 		fetch("components.json").then((r) => r.json()),
 		fetch("tokens.css").then((r) => r.text()),
+		library(),
 		fetch("components/bundle.css").then((r) => r.text()),
 		fetch("components/bundle.js").then((r) => r.text()),
 	]);
@@ -48,7 +59,7 @@
 	async function show(c) {
 		current = c;
 		const body = await fetch(`components/${c.name}/preview.html`).then((r) => r.text());
-		$("frame").srcdoc = `<!doctype html><html data-theme="${$("theme").value}"><head><meta charset="utf-8"><base href="${base}"><style>body{margin:0}${tokens}${css}</style><script>${js}<\/script></head><body>${body}</body></html>`;
+		$("frame").srcdoc = `<!doctype html><html data-theme="${$("theme").value}"><head><meta charset="utf-8"><base href="${base}"><style>body{margin:0}${tokens}${components}${css}</style><script>${js}<\/script></head><body>${body}</body></html>`;
 		$("frame").width = c.width;
 		$("frame").height = c.height;
 		fit();

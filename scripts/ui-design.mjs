@@ -1,7 +1,8 @@
 // Builds what docs/ui needs from its sources: tokens.css from tokens.json, components.json (the
 // list the viewer and the README read, from each preview's @dsCard line) and, with --render, a
 // WebP render of every preview in renders/ (headless Chrome, then cwebp). The previews are HTML
-// fragments: tokens.css, components/bundle.css and components/bundle.js turn them into pages.
+// fragments: tokens.css, the components' CSS (src/view/library.css), components/bundle.css and
+// components/bundle.js turn them into pages.
 //
 //   node scripts/ui-design.mjs            tokens.css and components.json
 //   node scripts/ui-design.mjs --render   the same, then renders/<Name>.webp (one Chrome at a time)
@@ -15,6 +16,13 @@ const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "docs"
 const chrome = process.env.CHROME || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const read = (file) => fs.readFileSync(path.join(dir, file), "utf8");
+const view = path.join(dir, "..", "..", "src", "view");
+
+//The components' CSS: src/view/library.css with its @imports written in, in their order
+function libraryCss() {
+	return fs.readFileSync(path.join(view, "library.css"), "utf8")
+		.replace(/@import "\.\/([\w-]+\.css)";/g, (_, file) => fs.readFileSync(path.join(view, file), "utf8"));
+}
 
 //A token's value in a theme; a token with one value has it in every theme
 function tokenValue(k, id, fallback) {
@@ -58,7 +66,7 @@ function manifest() {
 
 //A preview as a page of its own, written next to index.html so the assets/ paths resolve
 function page(name, theme) {
-	const css = read("tokens.css") + read("components/bundle.css");
+	const css = read("tokens.css") + libraryCss() + read("components/bundle.css");
 	return `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8"><style>body{margin:0}${css}</style><script>${read("components/bundle.js")}</script></head><body>${read(`components/${name}/preview.html`)}</body></html>`;
 }
 

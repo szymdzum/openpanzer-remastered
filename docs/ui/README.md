@@ -21,8 +21,9 @@ is built from, and its source of truth.
 |---|---|
 | `tokens.json` | colors per theme, spacing, radius, sizes, z-index and the font families |
 | `tokens.css` | the same as custom properties, generated |
-| `components/bundle.css` | every component's CSS, colors only through `var(--…)` |
-| `components/bundle.js` | the icon sprite (66 icons and the nation marks) and `PM.mount()` |
+| `src/view/*.css` (the repo's) | the components' CSS, one file per component or family, loaded in the order of `library.css`; colors only through `var(--…)` |
+| `components/bundle.css` | the screens' CSS and the mockup frames, loaded after the components', colors only through `var(--…)` |
+| `components/bundle.js` | the icon sprite (66 icons and the nation marks) and `PM.mount()`; `src/view/sprite.ts` is its port, kept the same by a test |
 | `components/<Name>/preview.html` | the card: an HTML fragment drawn with the files above |
 | `components/<Name>/README.md` | what the card does, its rules, states and the ids to keep |
 | `renders/<Name>.webp` | the card rendered in Paper, for reading here on GitHub |

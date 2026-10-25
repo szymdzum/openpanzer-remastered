@@ -1,0 +1,17 @@
+/* Meter, Stars, Badge and Tag (meter.tsx; the Meter card) */
+.pm-badge { display: inline-block; min-width: 22px; height: 16px; padding: 0 4px; font: 700 11px/14px var(--font-mono); text-align: center; color: var(--on-side); background: var(--axis); border: 1px solid rgba(0, 0, 0, .7); }
+.pm-badge.allied { background: var(--allied); }
+.pm-badge.neutral { background: var(--neutral-side); }
+.pm-badge.abs { position: absolute; }
+.pm-tag { display: inline-flex; align-items: center; gap: 4px; font: 700 10px/12px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; padding: 2px 5px; border: 1px solid currentColor; }
+.pm-meter { display: grid; grid-template-columns: 18px 1fr auto; gap: 0 6px; align-items: center; font-size: 13px; line-height: 16px; }
+.pm-meter + .pm-meter { margin-top: 7px; }
+.pm-meter .v { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pm-meter .st { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-left: 4px; }
+.pm-meter .track { grid-column: 2 / -1; height: 5px; margin-top: 3px; background: var(--panel-sunken); border: 1px solid var(--line); }
+.pm-meter .track b { display: block; height: 100%; background: var(--ink-muted); }
+.pm-meter.ok .track b { background: var(--ok); } .pm-meter.ok .i { color: var(--ok); }
+.pm-meter.low .track b { background: var(--low); } .pm-meter.low .i, .pm-meter.low .v, .pm-meter.low .st { color: var(--low); }
+.pm-meter.critical .track b { background: var(--critical); } .pm-meter.critical .i, .pm-meter.critical .v, .pm-meter.critical .st { color: var(--critical); }
+.pm-stars { display: inline-flex; gap: 2px; color: var(--accent-ink); }
+.pm-stars .off { color: var(--line); }

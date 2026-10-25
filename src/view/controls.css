@@ -1,0 +1,20 @@
+/* Toggle, Slider and Input (controls.tsx; the Toggle and Slider cards, SaveLoad's field) */
+.pm-toggle { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: var(--hit-target); padding: 0; border: 0; background: none; cursor: pointer; }
+.pm-toggle .track { position: relative; width: 56px; height: 28px; border: 1px solid var(--line-strong); border-radius: var(--radius-paper); background: var(--panel-sunken); }
+.pm-toggle .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: var(--radius-paper); background: var(--panel-raised); border: 1px solid var(--line-strong); }
+.pm-toggle .track::before { content: "OFF"; position: absolute; right: 6px; top: 7px; font: 700 10px/12px var(--font-mono); color: var(--ink-muted); }
+.pm-toggle[aria-checked="true"] .track { background: var(--accent); }
+.pm-toggle[aria-checked="true"] .track::after { left: 31px; }
+.pm-toggle[aria-checked="true"] .track::before { content: "ON"; left: 7px; right: auto; color: var(--on-accent); }
+.pm-toggle:disabled { opacity: .5; cursor: default; }
+.pm-range { -webkit-appearance: none; appearance: none; width: 220px; height: var(--hit-target); margin: 0; background: transparent; cursor: pointer; --val: 50%; }
+.pm-range::-webkit-slider-runnable-track { height: 6px; border: 1px solid var(--line-strong); background: linear-gradient(90deg, var(--accent) 0 var(--val), var(--panel-sunken) var(--val)); }
+.pm-range::-moz-range-track { height: 6px; border: 1px solid var(--line-strong); background: var(--panel-sunken); }
+.pm-range::-moz-range-progress { height: 6px; background: var(--accent); }
+.pm-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 26px; margin-top: -11px; background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: inset 0 -3px 0 var(--line), 0 1px 2px rgba(0, 0, 0, .3); }
+.pm-range::-moz-range-thumb { width: 14px; height: 26px; background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); }
+.pm-range:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pm-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pm-input { display: flex; align-items: center; height: var(--hit-target); padding: 0 var(--space-3); background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); font: 400 14px/1 var(--font-mono); color: var(--ink); min-width: 0; }
+.pm-input::placeholder, .pm-input.ph { color: var(--ink-muted); }
+.pm-input.err { border-color: var(--critical); box-shadow: inset 0 0 0 1px var(--critical); }
