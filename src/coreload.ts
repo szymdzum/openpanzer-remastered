@@ -17,7 +17,6 @@ import type { Scenario } from "./scenario";
 import { campaignState, fromData, type PlayerState, type RngStreams } from "./state";
 import { awardedPrototype, coreCountries } from "./core/campaign";
 import { type FileUnit, newGame, type ScenarioFile } from "./core/newgame";
-import { readScenarioFile } from "./core/scenariofile";
 import { game } from "./session";
 
 //What the game carries into a scenario it starts: a campaign's player from the scenario before
@@ -42,9 +41,8 @@ function streams(): RngStreams | null {
 }
 
 //ScenarioLoader.build: the game the scenario file starts, into the scenario loading, then its load ends
-export function buildOnCore(scen: Scenario, xmlData: Document, imageSize: [number, number]) {
+export function buildOnCore(scen: Scenario, file: ScenarioFile, imageSize: [number, number]) {
 	const campaign = game.campaign !== null ? campaignState(game.campaign, game.getCampaignProgress()) : null;
-	const file = readScenarioFile(xmlData);
 	const saved = newGame({ file: scen.file, name: scen.name, description: scen.getDescription(), scenario: file,
 		imageSize, equipment: Equipment.equipment, indexes: Equipment.equipmentIndexes, isAI: uiSettings.isAI, rng: streams(), campaign,
 		carried: campaign !== null ? carried : null });

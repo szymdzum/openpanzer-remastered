@@ -107,7 +107,9 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 		data.description = new Scenario(state.scenario.file).getDescription();
 	if (unknown("equipment"))
 		state.equipment = { indexes: Equipment.equipmentIndexes };
-	//(a unit the save holds with no strength left comes off the map, #290)
+	//(a unit the save holds with no strength left comes off the map, #290; the world only for that)
+	if (!state.units.some((u) => u.strength <= 0))
+		return fromData({ data, state });
 	const w = withoutDestroyed(createWorld({ data, state }, Equipment.equipment, { rules: rulesetNamed(read.save.rules) }));
 	return fromData({ data, state: w.state });
 }

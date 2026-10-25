@@ -176,8 +176,7 @@ export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitSta
 	u.col = to.col;
 	enterHex(d, to.row * d.state.map.cols + to.col, u);
 	if (mark) return sightOn(d, u);
-	countCells(d, d.sight.zoc, u, zocCells(d, u), 1);
-	countCells(d, d.sight.spot, u, spotCells(d, u), 1);
+	quietSightOn(d, u);
 	return [];
 }
 
@@ -187,6 +186,11 @@ export function changeUnit(d: Draft, id: UnitId, change: (u: UnitState) => void)
 	const u = writeUnit(d, id);
 	sightOff(d, u);
 	change(u);
+	quietSightOn(d, u);
+}
+
+//A unit's sight on, the counters alone: no unit marked seen
+function quietSightOn(d: Draft, u: UnitState) {
 	countCells(d, d.sight.zoc, u, zocCells(d, u), 1);
 	countCells(d, d.sight.spot, u, spotCells(d, u), 1);
 }
