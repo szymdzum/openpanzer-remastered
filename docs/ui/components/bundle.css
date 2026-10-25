@@ -252,7 +252,7 @@
 .pm-unitlist.pm-deploy { position: absolute; left: 50%; transform: translateX(-50%); bottom: var(--space-3); width: 900px; }
 .pm-unitlist.pm-deploy .hd > .i { color: var(--accent-ink); }
 .pm-placetag { position: absolute; z-index: var(--z-map-overlay); padding: 4px 7px 5px; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: 0 1px 3px rgba(0, 0, 0, .35); white-space: nowrap; }
-.pm-placetag .t { display: flex; align-items: center; gap: 4px; font: 700 var(--type-map-label-size)/12px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
+.pm-placetag .t { display: flex; align-items: center; gap: 4px; font: 700 var(--type-map-label-size)/12px var(--font-ui); letter-spacing: .06em; color: var(--ink); }
 .pm-placetag .t .i { width: 11px; height: 11px; color: var(--accent-ink); }
 .pm-placetag .s { font: 400 var(--type-map-small-size)/11px var(--font-mono); color: var(--ink-muted); }
 

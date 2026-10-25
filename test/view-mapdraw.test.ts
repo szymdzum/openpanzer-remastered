@@ -157,13 +157,13 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	const zone = at((o) => o.op === "stroke" && o.lineWidth === TOKENS.px["hex-zone-width"] && o.strokeStyle === MAP["hex-target"]);
 	const arc = at((o) => o.op === "stroke" && o.lineWidth === TOKENS.px["hex-support-width"]);
 	const select = at((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"]);
-	const plaque = at((o) => o.op === "fillText" && o.args[0] === "MŁAWA  +150");
+	const plaque = at((o) => o.op === "fillText" && o.args[0] === "Mława  +150");
 	const tag = at((o) => o.op === "fillText" && o.args[0] === "support fire");
 	const order = [fog, hatch, zone, arc, select, plaque, tag];
 	expect(order.every((i) => i >= 0)).toBe(true);
 	expect([...order].sort((a, b) => a - b)).toEqual(order);
 	expect([ops[zone].zoom, ops[arc].zoom, ops[arc].dash]).toEqual([2, 2, [5, 3]]);
-	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "TOWN  +50")).toBe(true);
+	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Town  +50")).toBe(true);
 	//the town's owner bar in the axis colour, the objective's in the allied; the revealed enemy's plate dotted
 	expect(ops.filter((o) => o.op === "fillRect" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"])).map((o) => o.fillStyle))
 		.toEqual([MAP["map-allied"], MAP["map-axis"]]);

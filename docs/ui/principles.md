@@ -13,7 +13,7 @@ Set `data-theme="paper"` or `data-theme="blackout"` on the game root. The System
 
 - Write like a staff officer: short, factual, no exclamation marks. "3 of 5 moves left", "Estimated losses: you 4, enemy 1", "Tanks move on their own tracks."
 - Buttons and labels are written in sentence case ("End turn", "Buy new"). CSS sets buttons, labels and tab captions in uppercase. Titles, list items and body text stay as written.
-- Unit and place names stay exactly as the game data has them: "Pz 38(t)A", "SdKfz 251", "Ciechanow", "Mława". Never re-case a name.
+- Unit and place names stay exactly as the game data has them: "Pz 38(t)A", "SdKfz 251", "Ciechanow", "Mława". Never re-case a name, on the map too: the plaques and the placing tag write it as the data does.
 - Numbers use tabular figures. Prestige uses a thousands separator (3,056). Supply uses a slash (18/50). A strength change uses an arrow (10 → 6). A delta is signed (+4, −1).
 - Dates are written "06 Sep 1939". The turn is written "3/17", or "Turn 3 of 17" where there is room.
 - Stamps (Requisition, Secret, Brilliant victory) add flavor. Use at most one per window, and never put information in a stamp alone.
