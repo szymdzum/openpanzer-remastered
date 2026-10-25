@@ -10,7 +10,7 @@ import { captureAt } from "../core/moves";
 import { isBridgeForSide, moveRange, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
 import { isGround, unitUsesAmmo, unitUsesFuel } from "../core/units";
-import { ammoOf, fuelOf, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
+import { ammoOf, fuelOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
 import { unitClass } from "../prototypes";
 import { canOrder } from "./model";
 
@@ -26,6 +26,7 @@ export interface Marker {
 	bars: number; //experience, a bar per 100 points, five at most
 	entrenchment: number;
 	hits: number;
+	revealed: boolean; //an enemy that fired from a hex the side doesn't see: known to be there, not what's around it
 }
 
 //A unit as the map draws it
@@ -48,14 +49,18 @@ export interface Edge {
 }
 
 //The selected unit on the map: its hex, and when the person can order it, where it can go and what it can
-//hit. The area is the core's move range: the hexes it can stop on (tinted), the hexes it only passes
-//(friends: not tinted), the outline round all of them with the unit's own hex
+//hit. The area is the core's move range: the hexes it can stop on (tinted, or hatched where its side doesn't
+//see: a hidden enemy there is an ambush), the hexes it only passes (friends: not tinted), the outline round
+//all of them with the unit's own hex, and a bar on each edge of the area that faces an enemy its side sees
+//and whose zone of control ends the move there
 export interface Selection {
 	unit: UnitId;
 	at: Position;
 	range: MoveCell[]; //the core's move range, the cells a path goes through
 	area: Position[]; //the hexes the unit can stop on
+	unseen: Position[]; //those of them its side doesn't see
 	outline: Edge[];
+	zones: Edge[];
 	targets: Position[]; //the hexes with a unit it can attack, each once
 }
 
@@ -99,7 +104,7 @@ function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove"
 function markerOf(w: World, u: UnitState): Marker {
 	const own = sideOf(w, u) === w.spotSide;
 	return { strength: u.strength, own, ...readiness(w, u, own), bars: Math.min(Math.floor(u.experience / 100), 5),
-		entrenchment: u.entrenchment, hits: u.hits };
+		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) };
 }
 
 function mapUnit(w: World, u: UnitState, top: boolean, selected: UnitId | null): MapUnit {
@@ -140,14 +145,33 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	const u = id === null ? null : unitById(w, id);
 	if (u === null || u.row < 0 || !shown(w, u)) return null;
 	const at = { row: u.row, col: u.col };
-	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], outline: [], targets: [] };
-	const range = moveRange(w, u);
+	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] };
+	const range = moveRange(w, u), side = sideOf(w, u);
 	const area = range.filter((c) => c.canMove && !same(c, at)).map((c) => ({ row: c.row, col: c.col }));
 	const outline = range.length === 0 ? [] : outlineOf(w, [at, ...range.map((c) => ({ row: c.row, col: c.col }))]);
 	const targets: Position[] = [];
 	for (const c of attackCells(w, u))
 		if (!targets.some((t) => same(t, c))) targets.push({ row: c.row, col: c.col });
-	return { unit: u.id, at, range, area, outline, targets };
+	return { unit: u.id, at, range, area, unseen: area.filter((c) => !isSpotted(w, hexIndex(w, c.row, c.col), side)), outline,
+		zones: zoneEdges(w, u, range), targets };
+}
+
+//The edges of the move range where an enemy zone of control ends the move (a hex that stops it, though its
+//terrain doesn't) facing an enemy the unit's side sees: ground and naval units cast a zone, aircraft none.
+//A hidden enemy's zone ends the move too, as in the original (#282), but has no enemy to face: no bar there,
+//the path's tag still says the move stops
+function zoneEdges(w: World, u: UnitState, range: MoveCell[]): Edge[] {
+	const side = sideOf(w, u), edges: Edge[] = [];
+	for (const c of range) {
+		if (c.cost < STOP || terrainCost(w, u, c) >= STOP) continue;
+		adjacent(c.row, c.col).forEach((n, k) => {
+			if (!onMap(w, n.row, n.col)) return;
+			const hex = hexIndex(w, n.row, n.col), other = groundUnitAt(w, hex);
+			if (other !== null && sideOf(w, other) !== side && (isSpotted(w, hex, side) || other.tempSpotted))
+				edges.push({ row: c.row, col: c.col, side: k });
+		});
+	}
+	return edges;
 }
 
 const plural = (n: number, one: string, many: string) => n + " " + (n === 1 ? one : many);
