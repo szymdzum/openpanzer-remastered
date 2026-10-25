@@ -18,7 +18,7 @@ The actions for the selected unit (`#unit-context`), in one row above its hex. T
 | full | nothing missing |
 | needs 28 | prestige below one point (today the button is hidden) |
 | no airfield | aircraft without an airfield next to it |
-| in port | ship in a port (#19) |
+| not in port | ship out of a port (#19) |
 | revealed units / ambushed / after an attack | the undo slot was cleared (`lastMove`) |
 
 Today resupply also adds 1 ammo and 1 fuel when nothing is missing (#95). The menu shows only what is missing, so it doesn't promise that extra point.

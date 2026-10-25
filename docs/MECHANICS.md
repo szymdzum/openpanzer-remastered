@@ -139,8 +139,10 @@ still reinforce.
 - Full amount in a city with no adjacent enemy. Outside a city /1.3, with 1-2 adjacent enemies
   /1.5, with 3 or more /3. Resupply: air and naval units always get the full amount.
   Reinforcement: only air units do, naval units are divided like ground units. Air units
-  reinforce next to an airfield, naval units outside ports.
-- At turn start, units in a city with no adjacent enemy are resupplied automatically.
+  resupply and reinforce next to an airfield, naval units in a port (#19: the original had it
+  backwards, its ships took supplies anywhere at sea and never in port).
+- At turn start, units in a city with no adjacent enemy are resupplied automatically, and so are
+  ships in a port and aircraft at an airfield that didn't act.
 - Reinforcing costs prestige, by the unit's cost per strength point.
 - **Overstrength**: a unit at strength 10 with 100+ experience can reinforce over 10, one point
   per 100 experience.
