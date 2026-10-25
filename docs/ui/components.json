@@ -4,7 +4,7 @@
 		"group": "Screens · In game",
 		"width": 1920,
 		"height": 1080,
-		"subtitle": "Air layer at 1920×1080: aircraft on top with their markers, ground units dimmed underneath, the air target picked",
+		"subtitle": "Air layer at 1920×1080: aircraft on top with their markers, ground units alone on a hex whole, those under an aircraft at 75% with a chip, the air target picked",
 		"status": "Ready",
 		"readme": true
 	},
@@ -157,7 +157,7 @@
 		"group": "Screens · In game",
 		"width": 1192,
 		"height": 520,
-		"subtitle": "The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker, which is the target",
+		"subtitle": "The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker on a shared hex, which is the target",
 		"status": "Ready",
 		"readme": true
 	},

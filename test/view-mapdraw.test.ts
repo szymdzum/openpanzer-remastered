@@ -132,7 +132,7 @@ test("A ring with the moves left; a light ring when the unit can move again; das
 test("A unit on a bridge of its side is drawn as the bridge; an image not loaded isn't drawn", () => {
 	const drawn: string[] = [];
 	const { ctx } = recorder();
-	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, lifted: false };
+	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, chip: null, lifted: false };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 3, cols: 3, grid: false, units: [unit, { ...unit, bridge: false, icon: "" }], selection: null, path: null,
 		fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null },
 		vp(1), (file) => {
@@ -170,6 +170,7 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(order.every((i) => i >= 0)).toBe(true);
 	expect([...order].sort((a, b) => a - b)).toEqual(order);
 	expect([ops[zone].zoom, ops[arc].zoom, ops[arc].dash]).toEqual([2, 2, [5, 3]]);
+	expect(ops[ops.findIndex((o, i) => i > hatch && o.op === "stroke")]).toMatchObject({ strokeStyle: MAP["hex-hatch"], lineWidth: TOKENS.px["hex-hatch-width"] });
 	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Town  +50")).toBe(true);
 	//the town's owner bar in the axis colour, the objective's in the allied; the revealed enemy's plate dotted
 	expect(ops.filter((o) => o.op === "fillRect" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"])).map((o) => o.fillStyle))
@@ -177,9 +178,9 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(ops.some((o) => o.op === "stroke" && o.dash.join() === "1.5,1.5" && o.strokeStyle === MAP.glint)).toBe(true);
 });
 
-//MapLayers and AirLayer: the other layer's unit dimmed to 45% without its marker; in the air layer the aircraft on top
+//MapLayers and AirLayer: the other layer's unit on a shared hex dimmed to 75% with a strength chip instead of its marker; in the air layer the aircraft on top
 //lifted, its shadow on the ground at the map's scale, inside a dashed air ring drawn at screen size under the selection
-test("The air layer: a ring round the aircraft on top, lifted with its shadow; the ground unit under it dimmed, no marker", () => {
+test("The air layer: a ring round the aircraft on top, lifted with its shadow; the ground unit under it dimmed, a chip", () => {
 	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 1 }, { eqid: 159, owner: 0, row: 4, col: 1 }] },
 		undefined, { spotSide: 0 });
 	for (const scale of [1, 2]) {
@@ -191,16 +192,25 @@ test("The air layer: a ring round the aircraft on top, lifted with its shadow; t
 		expect(ring).toBeLessThan(ops.findIndex((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"]));
 		const sprites = ops.filter((o) => o.op === "drawImage" && o.args.length === 9);
 		//the tank first, dimmed; the aircraft 4px higher with its shadow 9px under it, both in the map's pixels
-		expect(sprites.map((o) => [o.globalAlpha, o.shadowOffsetY])).toEqual([[0.45, 0], [1, 9 * scale * 2]]);
+		expect(sprites.map((o) => [o.globalAlpha, o.shadowOffsetY])).toEqual([[TOKENS.px["unit-under-alpha"], 0], [1, 9 * scale * 2]]);
 		expect((sprites[0].args[6] as number) - (sprites[1].args[6] as number)).toBe(4);
-		//one marker: the aircraft's
-		expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["10"]);
+		//one marker, the aircraft's, and the tank's chip after it
+		expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["10", String(w.state.units[0].strength)]);
 	}
 	//the ground layer: no ring, the aircraft dimmed under the tank
 	const { ctx, ops } = recorder();
 	drawMap(ctx, { ...scene(w), units: mapUnits(w, false, null) }, vp(1), images);
 	expect(ops.some((o) => o.strokeStyle === MAP["hex-air"])).toBe(false);
-	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.globalAlpha)).toEqual([0.45, 1]);
+	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.globalAlpha)).toEqual([TOKENS.px["unit-under-alpha"], 1]);
+});
+
+//The hatching is for ground units: an aircraft's area is all tinted over the fog, not one clip but the map's edge
+test("An aircraft's move area is drawn without hatching", () => {
+	const w = handWorld({ rows: 12, cols: 12, units: [{ eqid: 159, owner: 0, row: 4, col: 3 }] }, undefined, { spotSide: 0 });
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { ...scene(w), selection: selectionOf(w, 0), fog: fogOf(w), units: mapUnits(w, true, 0) }, vp(1), images);
+	expect(ops.filter((o) => o.op === "clip").length).toBe(1);
+	expect(ops.some((o) => o.strokeStyle === MAP["hex-hatch"])).toBe(false);
 });
 
 //Deployment: the zone after the fog and before the sprites, its free hexes tinted with their light line, the taken one's

@@ -26,7 +26,8 @@
 	--hex-target: #ff6a4d;
 	--hex-move: #f4eedd;
 	--hex-shadow: #1d170b;
-	--hex-fog: rgba(20, 22, 15, 0.42);
+	--hex-fog: rgba(20, 22, 15, 0.22);
+	--hex-hatch: rgba(244, 238, 221, 0.35);
 	--shade: #000000;
 	--glint: #ffffff;
 	--map-paper: #e8dfc8;
@@ -75,7 +76,8 @@
 	--hex-target: #ff6a4d;
 	--hex-move: #f4eedd;
 	--hex-shadow: #1d170b;
-	--hex-fog: rgba(20, 22, 15, 0.42);
+	--hex-fog: rgba(20, 22, 15, 0.22);
+	--hex-hatch: rgba(244, 238, 221, 0.35);
 	--shade: #000000;
 	--glint: #ffffff;
 	--map-paper: #e8dfc8;
@@ -114,12 +116,14 @@
 	--rail-w: 3rem;
 	--hex-w: 60px;
 	--hex-h: 50px;
+	--unit-under-alpha: 0.75;
 	--hex-select-width: 3px;
 	--hex-target-width: 2.4px;
 	--hex-move-width: 2px;
 	--hex-shadow-width: 5.5px;
 	--hex-zone-width: 3px;
 	--hex-support-width: 1.8px;
+	--hex-hatch-width: 0.8px;
 	--hex-air-width: 1.2px;
 	--hex-deploy-width: 2.6px;
 	--z-map-overlay: 5;
