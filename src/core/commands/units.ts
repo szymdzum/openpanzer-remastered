@@ -86,6 +86,14 @@ function freeFor(w: World, hex: number, air: boolean): boolean {
 	return air ? h.air === null : h.unit === null;
 }
 
+//A reserve unit as deploy places it on a hex: a ground unit on the ocean embarked on its country's naval transport,
+//when the country has one (the new UI's placing tag says so before the click)
+export function deployedAs(w: World, unit: OffMapUnit, hex: number): OffMapUnit {
+	if (isAir(w, asUnit(unit)) || w.data.hexes[hex].terrain !== terrainType.Ocean) return unit;
+	const carrier = firstOfClass(w, unitClass.navalTransport, playerAt(w, unit.owner).country + 1);
+	return carrier ? { ...unit, carrier } : unit;
+}
+
 //On a free deployment hex of the player's side (the UI's click, Map.deployPlayerUnit; in the remaster's
 //rules a side with none deploys on its own towns, #302): a ground unit on the ocean embarks on its
 //country's naval transport
@@ -101,12 +109,7 @@ export const deploy: CommandHandler<CommandOf<"deploy">> = {
 	},
 	run(d, cmd) {
 		const p = currentPlayer(d);
-		let unit = (p.core[cmd.index] as { reserve: OffMapUnit }).reserve;
-		const hex = hexIndex(d, cmd.to.row, cmd.to.col);
-		if (!isAir(d, asUnit(unit)) && d.data.hexes[hex].terrain === terrainType.Ocean) {
-			const carrier = firstOfClass(d, unitClass.navalTransport, playerAt(d, unit.owner).country + 1);
-			if (carrier) unit = { ...unit, carrier };
-		}
+		const unit = deployedAs(d, (p.core[cmd.index] as { reserve: OffMapUnit }).reserve, hexIndex(d, cmd.to.row, cmd.to.col));
 		const u = place(d, unit, cmd.to);
 		writePlayer(d, p.id).core[cmd.index] = { onMap: u.id };
 		emit(d, { type: "deployed", unit: u.id, index: cmd.index, at: { row: cmd.to.row, col: cmd.to.col } });
