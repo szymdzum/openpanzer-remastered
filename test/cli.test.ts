@@ -342,3 +342,13 @@ test("check says a unit that moves on its transport can't attack or unmount afte
 	await call("move 8 3,5");
 	expect(await call("check unmount 8")).toBe("refused: can't unmount");
 }, 60_000);
+
+test("A game saved before the objectives at the start were kept plays on: status and the end of turn answer (#364)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1");
+	const save = JSON.parse(fs.readFileSync(file, "utf8")) as { data: { startObjectives?: unknown } };
+	delete save.data.startObjectives;
+	fs.writeFileSync(file, JSON.stringify(save));
+	expect((await call("status")).split("\n")[0]).toContain("turn 1/17");
+	expect(await call("end")).toContain("turn 2/17, Axis to play");
+}, 60_000);
