@@ -1,0 +1,76 @@
+/* The map (map.tsx; the MapOverlays and MovePath cards): the canvas fills the screen under a layer that
+   scrolls the map and takes the pointer; the move path's tag sits over both, placed by the map code */
+@layer components {
+	.pm-mapview {
+		position: absolute;
+		inset: 0;
+		background: var(--shade);
+	}
+
+	.pm-mapview-canvas {
+		position: absolute;
+		inset: 0;
+		inline-size: 100%;
+		block-size: 100%;
+	}
+
+	.pm-mapview-scroll {
+		position: absolute;
+		inset: 0;
+		overflow: auto;
+		cursor: default;
+	}
+
+	/* the move path's tag: the first line what happens, the next ones what it costs */
+	.pm-pathtag {
+		z-index: var(--z-map-overlay);
+		pointer-events: none;
+		padding-block: 0.1875rem 0.25rem;
+		padding-inline: 0.375rem;
+		box-shadow: var(--shadow-panel);
+		white-space: nowrap;
+
+		& output {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 0.0625rem;
+		}
+
+		& b {
+			font: 700 var(--type-label-size) / var(--type-label-line) var(--font-mono);
+			color: var(--ink);
+		}
+
+		& span {
+			font: 400 var(--type-micro-size) / var(--type-micro-line) var(--font-mono);
+			color: var(--ink-muted);
+		}
+
+		& :is(.gain, .warn, .low) {
+			font-weight: 700;
+		}
+
+		& .gain {
+			color: var(--accent-ink);
+		}
+
+		& .warn {
+			color: var(--critical);
+		}
+
+		& .low {
+			color: var(--low);
+		}
+
+		&.stop {
+			background: var(--critical);
+			border-color: var(--line-strong);
+			box-shadow: var(--shadow-panel);
+
+			& :is(b, span) {
+				color: var(--on-side);
+			}
+		}
+	}
+}

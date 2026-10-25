@@ -187,3 +187,18 @@ test("?ui=new: the page's old stylesheet and markup set aside, the new UI's root
 	vi.unstubAllGlobals();
 	expect(typeof host.screen.showScenario).toBe("function");
 });
+
+//The map's scale as the settings saved it (the Game map scale, 1x to 3x), until the Settings window has it (D6)
+test("The map is drawn at the scale the settings saved (#345)", async () => {
+	const zoom = uiSettings.zoomLevel;
+	const g = await playing("tutorial.xml", [0, 1, 0, 0]);
+	const width = () => parseFloat(document.querySelector<HTMLElement>(".pm-mapview-area")!.style.inlineSize);
+	const at1 = width();
+	document.body.innerHTML = "";
+	uiSettings.zoomLevel = 2;
+	const root = document.createElement("div");
+	document.body.append(root);
+	await act(() => { newScreen(g.host, root).showScenario(); });
+	expect(width()).toBe(at1 * 2);
+	uiSettings.zoomLevel = zoom;
+});

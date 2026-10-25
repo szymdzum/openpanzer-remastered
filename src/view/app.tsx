@@ -1,9 +1,10 @@
-//The new UI's root under ?ui=new (#380): for now the status bar's side, turn and prestige, the selected
-//unit with its actions, End turn and the message window, composed of the component library. The map
-//(D2), the HUD (D3) and the windows (D5) replace them piece by piece. The components only read the
+//The new UI's root under ?ui=new (#380): for now the map (#345), the status bar's side, turn and prestige,
+//the selected unit with its actions, End turn and the message window, composed of the component library. The
+//HUD (D3) and the windows (D5) replace them piece by piece. The components only read the
 //store's signals and send its commands: what they show and why a control is off is the view model's.
 import { Button } from "./button";
 import { Icon, IconSprite } from "./icon";
+import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
 import type { Store } from "./store";
 
@@ -69,6 +70,7 @@ export function App({ store }: { store: Store }) {
 	return (
 		<div class="pm pm-screen">
 			<IconSprite />
+			<MapView store={store} />
 			<StatusBar store={store} />
 			<UnitActions store={store} />
 			<EndTurn store={store} />

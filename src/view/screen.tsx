@@ -8,11 +8,12 @@ import { render } from "preact";
 import type { ViewEvent } from "../core/controller";
 import type { Position } from "../core/types";
 import type { GameHost } from "../host";
-import { type Cell, outcomeNames } from "../prototypes";
+import { type Cell, outcomeNames, uiSettings } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
 import type { Screen } from "../screen";
 import type { Unit } from "../unit";
 import { App } from "./app";
+import { setHexGrid } from "./map";
 import { createStore } from "./store";
 import { applyTheme, type Theme } from "./theme";
 
@@ -24,6 +25,9 @@ type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdFor
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	const store = createStore(host);
 	const { refresh } = store;
+	//(the map's scale as the settings saved it, as the old UI applies it at its start, until the Settings window
+	//has it, D6)
+	store.scale.value = uiSettings.zoomLevel;
 	render(<App store={store} />, root);
 	const show = (title: string, html: string, ok: () => void, at: Position | null = null) => store.show({ title, html, at, ok });
 	//A message the player clicks away: the game waits for it (a program's turn, a campaign's next scenario)
@@ -104,5 +108,7 @@ export function startNewUI(host: GameHost, page: Document = document) {
 	const root = page.createElement("div");
 	page.body.append(root);
 	applyTheme(themeOf(page.location.search), page.documentElement);
+	//(the hex grid as the settings saved it, until the Settings window has it, D6)
+	setHexGrid(uiSettings.hexGrid);
 	host.screen = newScreen(host, root);
 }
