@@ -464,6 +464,26 @@ test("The scenario info button of the combat log shows the description, and clos
 	expect(document.getElementById("combatLogButton")!.getAttribute("selected")).toBe("on");
 }, 60_000);
 
+//In a campaign the log's header has two buttons of the class, the dossier's (@) and the scenario info's
+//(g): the info's handler is its own, whatever their order. It closes a dossier left open, as the toggle
+//of the log it no longer runs closed it (#368)
+test("The combat log's scenario info button shows the description and closes an open dossier (#368)", async () => {
+	const { game } = await uiGame("campaign:0:1");
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { UICombatLog } = await import("../src/uicombatlog");
+	const shown = (id: string) => !["", "none"].includes(document.getElementById(id)!.style.display);
+	const button = (text: string) => Array.from(document.querySelectorAll<HTMLElement>("#combatLog .combatLogInfoButton")).find((e) => e.textContent === text)!;
+	UICombatLog.toggleCombatLog(true, false);
+	UIBuilder.showDossier(true);
+	expect([shown("combatLog"), shown("dossier")]).toEqual([true, true]);
+	button("g").click();
+	expect([shown("ui-message"), shown("combatLog"), shown("dossier")]).toEqual([true, false, false]);
+	expect(document.getElementById("message")!.innerHTML).toBe(game.scenario.getDescription());
+	document.getElementById("uiokbut")!.click();
+	expect([shown("ui-message"), shown("combatLog")]).toEqual([false, true]);
+	expect(button("@").onclick, "the dossier's button keeps its own (inline) handler").not.toBe(button("g").onclick);
+}, 60_000);
+
 //The person's attack with its attacker selected (click the unit, then the enemy), both units at one
 //strength point with a leader that kills one more: the exchange destroys both. The selection refresh
 //cleared the destroyed attacker, then read the cleared selection's hasMoved: the TypeError skipped the
