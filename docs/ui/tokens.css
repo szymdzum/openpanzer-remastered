@@ -20,8 +20,11 @@
 	--low: #7a4c00;
 	--critical: #a1221a;
 	--focus: #1d3fb0;
-	--hex-select: #f2c94c;
-	--hex-target: #e2492f;
+	--hex-select: #f0b44a;
+	--hex-target: #ff6a4d;
+	--hex-move: #f4eedd;
+	--hex-shadow: #1d170b;
+	--hex-fog: rgba(20, 22, 15, 0.42);
 	--scrim: rgba(20, 17, 10, 0.45);
 	--photo-tint: rgba(232, 223, 200, 0.18);
 	--shadow-panel: 0 2px 0 rgba(43, 37, 25, 0.35), 0 6px 14px rgba(20, 17, 10, 0.35);
@@ -49,7 +52,10 @@
 	--critical: #ff7a66;
 	--focus: #f7e08a;
 	--hex-select: #f0b44a;
-	--hex-target: #ff7a66;
+	--hex-target: #ff6a4d;
+	--hex-move: #f4eedd;
+	--hex-shadow: #1d170b;
+	--hex-fog: rgba(20, 22, 15, 0.42);
 	--scrim: rgba(8, 9, 6, 0.6);
 	--photo-tint: rgba(20, 22, 15, 0.55);
 	--shadow-panel: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.45);

@@ -5,6 +5,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Air layer at 1920×1080: aircraft on top with their markers, ground units dimmed underneath, the air target picked",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -13,6 +14,7 @@
 		"width": 1110,
 		"height": 1130,
 		"subtitle": "The attack preview in four stages, from the target marks to the full breakdown, and the stage 1 cursor in each situation",
+		"status": "Stages 0–2 ready; stage 3 needs the hit chance from the core first",
 		"readme": true
 	},
 	{
@@ -21,6 +23,7 @@
 		"width": 900,
 		"height": 300,
 		"subtitle": "Primary, secondary, icon, ghost and danger, with hot, pressed, disabled and focus states",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -29,6 +32,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "End of campaign at 1920×1080: victory and defeat side by side",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -37,6 +41,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Campaign selection at 1920×1080: list grouped by side, description, country, difficulty, scenarios, starting prestige",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -45,6 +50,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Combat log and turn summary (#combatLog) at 1920×1080",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -53,6 +59,7 @@
 		"width": 700,
 		"height": 800,
 		"subtitle": "Combat odds v2: overrun, rugged defense, a costly close combat and a safe bombardment, with the reasons and what happens next",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -61,6 +68,7 @@
 		"width": 700,
 		"height": 650,
 		"subtitle": "After the combat: losses over each hex, one stamp for what happened, and the same line in the status bar",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -69,6 +77,7 @@
 		"width": 1000,
 		"height": 288,
 		"subtitle": "",
+		"status": "Not built: the README's banner",
 		"readme": false
 	},
 	{
@@ -77,6 +86,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Deployment at 1920×1080: the zone, units placed, the next one shown on the hovered hex, and the reserve tray",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -84,7 +94,8 @@
 		"group": "Screens · Menus",
 		"width": 1920,
 		"height": 1080,
-		"subtitle": "End-of-scenario dossier (#dossier) at 1920×1080 with medal, outcome stamp, casualties and campaign medal record",
+		"subtitle": "End-of-scenario dossier (#dossier) at 1920×1080: outcome stamp and medal, the campaign's outcome text, the units destroyed and lost by class, and the medal record",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -93,14 +104,16 @@
 		"width": 1366,
 		"height": 768,
 		"subtitle": "Equipment window (#equipment) at 1366×768: class tabs, sorted grid, comparison, transport, prestige",
+		"status": "Ready",
 		"readme": true
 	},
 	{
 		"name": "GameMenu",
 		"group": "Screens · In game",
 		"width": 760,
-		"height": 680,
-		"subtitle": "Game menu (#menu): the game's own buttons, open and folded, and the labelled rail for touch",
+		"height": 880,
+		"subtitle": "Game menu (#menu): the game's own buttons, open and folded, the labelled rail for touch, and every keyboard shortcut",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -109,6 +122,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -117,6 +131,7 @@
 		"width": 1366,
 		"height": 768,
 		"subtitle": "The full HUD at 1366×768: the same elements, proving the map stays visible on a small laptop",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -125,6 +140,7 @@
 		"width": 960,
 		"height": 510,
 		"subtitle": "The full stroked icon set and the filled nation marks",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -133,6 +149,7 @@
 		"width": 900,
 		"height": 330,
 		"subtitle": "Selectable rows with a group header, as in the campaign and scenario lists",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -141,6 +158,7 @@
 		"width": 1192,
 		"height": 520,
 		"subtitle": "The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker, which is the target",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -149,6 +167,7 @@
 		"width": 640,
 		"height": 780,
 		"subtitle": "The map layer: selection, move area, enemy zones, move path, attack target, support fire, fog, entrenchment, objectives and towns",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -157,6 +176,7 @@
 		"width": 1366,
 		"height": 768,
 		"subtitle": "Message dialog (#ui-message) as a scenario briefing over the map at 1366×768",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -165,6 +185,7 @@
 		"width": 900,
 		"height": 260,
 		"subtitle": "Supply meters in ok, low and critical, experience stars and strength badges",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -173,6 +194,7 @@
 		"width": 1440,
 		"height": 1120,
 		"subtitle": "Move path preview (#32): the route to the hovered hex, moves and fuel left, and where a move stops, captures, turns blind or ends firing",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -181,6 +203,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Start menu on a first run: no Continue, the three new-game choices with what each one is, Campaign as the primary action",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -189,6 +212,7 @@
 		"width": 900,
 		"height": 300,
 		"subtitle": "The HUD panel and the modal window with header and footer",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -197,6 +221,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Save and load (#smState) at 1920×1080: file and cloud, the last saves, and the error and empty states",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -205,6 +230,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Scenario selection at 1920×1080: list, sides and countries, description and turns",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -213,6 +239,7 @@
 		"width": 900,
 		"height": 160,
 		"subtitle": "Sort, filter and transport choice",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -220,7 +247,8 @@
 		"group": "Screens · Menus",
 		"width": 1920,
 		"height": 1080,
-		"subtitle": "Settings at 1920×1080: theme switch, interface sliders and gameplay toggles",
+		"subtitle": "Settings at 1920×1080: theme switch, interface sliders, the rules new games play, and gameplay toggles",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -229,6 +257,7 @@
 		"width": 900,
 		"height": 170,
 		"subtitle": "Interface width, interface scale and map scale",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -237,6 +266,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Start menu at 1920×1080: wordmark, new game, continue, load, settings, credits, over a slowly panning photograph",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -245,6 +275,7 @@
 		"width": 900,
 		"height": 150,
 		"subtitle": "Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -253,6 +284,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Strategic map at 1920×1080: the whole Ciechanow map, units as side chips, objectives as large plaques",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -261,6 +293,7 @@
 		"width": 1000,
 		"height": 580,
 		"subtitle": "Where to resupply and reinforce: the divisors the engine applies, with real numbers for one tank",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -269,6 +302,7 @@
 		"width": 1180,
 		"height": 820,
 		"subtitle": "iPad landscape: equipment full screen, 3-column grid and the comparison column",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -277,6 +311,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "iPad portrait: equipment full screen, grid on top and the comparison below",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -285,6 +320,7 @@
 		"width": 1180,
 		"height": 820,
 		"subtitle": "iPad landscape (1180×820): touch HUD with labelled rail, compact unit info and odds on first tap",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -293,6 +329,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "iPad portrait (820×1180): bottom command bar, two-row status bar, unit card above the bar",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -301,6 +338,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -309,6 +347,7 @@
 		"width": 900,
 		"height": 220,
 		"subtitle": "Icon tabs with counts, as in the equipment class filter, and text tabs",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -317,6 +356,7 @@
 		"width": 900,
 		"height": 150,
 		"subtitle": "On, off and disabled, as used in the settings window",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -324,7 +364,8 @@
 		"group": "Screens · In game",
 		"width": 1366,
 		"height": 768,
-		"subtitle": "Hex tooltip, unit pins (low fuel, low ammo, out of supply), button tooltip and the AI status indicator",
+		"subtitle": "Hex tooltip with what the terrain does, unit pins (low fuel, no ammo), button tooltip and the AI status indicator",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -333,6 +374,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "The short turn report (#combatLog) through a scenario: early, late, last turn, Blackout",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -341,6 +383,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "Start of a turn at 1920×1080: the short turn report under the status bar, the first unit selected",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -349,6 +392,7 @@
 		"width": 1000,
 		"height": 920,
 		"subtitle": "The full unit sheet: identity, experience, condition in words, every stat with what it is for, leader abilities and the next upgrade",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -357,14 +401,16 @@
 		"width": 1440,
 		"height": 1000,
 		"subtitle": "Unit context menu (#unit-context) with the real amounts: what Supply and Reinforce will give, the cost, why an action is missing",
+		"status": "Ready",
 		"readme": true
 	},
 	{
 		"name": "UnitInfo",
 		"group": "Screens · In game",
 		"width": 900,
-		"height": 230,
+		"height": 300,
 		"subtitle": "Unit info panel (#unit-info): identity, supply meters and the full stat sheet",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -373,6 +419,7 @@
 		"width": 1366,
 		"height": 300,
 		"subtitle": "Unit list (#container-unitlist) as a strip under the status bar",
+		"status": "Ready",
 		"readme": true
 	},
 	{
@@ -381,6 +428,7 @@
 		"width": 1360,
 		"height": 820,
 		"subtitle": "Detail by zoom: what the map shows at the strategic fit, at 1×, and at the 2–3× map scale, and why markers keep their size",
+		"status": "Ready",
 		"readme": true
 	}
 ]

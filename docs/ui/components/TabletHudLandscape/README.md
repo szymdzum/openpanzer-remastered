@@ -4,3 +4,4 @@ The HUD on an iPad in landscape. It is fully playable by touch, with no hover an
 - Unit info moves to the bottom left and is compact: identity, then strength, fuel and ammo. The Stats button opens the full sheet as a bottom sheet (see `TabletUnitInfo`).
 - **Odds.** Tapping an enemy once shows the odds preview, and tapping it again attacks. Tapping anywhere else dismisses the preview.
 - Long-pressing a hex opens the hex tooltip.
+- The map, the markers and the odds card are those of `HudDesktop`: `MapOverlays` and `CombatOdds` (v2), whose last line says the touch inputs: tap again to attack, tap elsewhere to cancel.

@@ -25,7 +25,7 @@ Set `data-theme="paper"` or `data-theme="blackout"` on the game root. The System
 - Brass (`accent`) marks exactly one primary action per view: End turn, Buy new, Play, OK. It also marks the active tab and the active rail button. Text on it is `on-accent`. In Paper, brass on paper is only 2.4:1, so a brass fill always keeps its `line-strong` border. Brass as text is `accent-ink`, used for prestige.
 - **Sides.** The Axis is `axis`, a field-grey blue. The Allies are `allied`, one rust for every Allied nation: Polish, Soviet, British, US and French. Neutral is `neutral-side`. Use side colors as fills (badges, chips, strength bars, side cards) with `on-side` text, and `axis-ink` or `allied-ink` for text. The nation is always named by its flag and name, never by a color per country. Blue against rust stays apart under every common color-vision deficiency.
 - **States.** `ok`, `low` and `critical` cover fuel, ammo, supply and combat verdicts. Each always comes with its icon (`ok`, `low` or `critical`) or its word, so color is never the only signal.
-- **Map overlays.** Use `hex-select` for the selected unit's hex (3px solid) and `hex-target` for the enemy hex under the odds preview (3px dashed).
+- **Map overlays.** The `hex-*` tokens, one value in both themes because they sit on the map, not on a panel: `hex-select` for the selected unit's hex (3px solid), `hex-target` for the enemies it can attack (dashed), `hex-move` for the move area and path, `hex-fog` for the hexes the side doesn't see, each line over a `hex-shadow` under-stroke. The canvas draws with the same values (`MapOverlays`).
 - **Focus.** The keyboard focus ring is 2px of solid `focus` with a 2px offset: deep blue on Paper, pale yellow on Blackout. It never looks like selection.
 
 ## Type

@@ -1,5 +1,6 @@
 Everything about the selected unit, in three columns. The first holds the identity: nation mark, name, formation, class, core or auxiliary, experience stars and leader. The second holds the supply meters: strength, fuel, ammo and entrenchment. The third holds the full stat sheet: soft, hard, air and naval attack, ground, air and close defence, initiative, range, spotting, movement and experience points.
 
 - Low and critical supply show the word as well as the color.
-- A unit with a leader shows the ability name in `accent-ink` and its effect on hover or tap, as in the small panel above.
+- **Experience:** one star per 100 XP, five in all, as the game counts its bars (`experience / 100`): this Pz IIA has 120 XP, one star, as in `UnitCard`.
+- **Leader:** a unit with a leader shows its name in `accent-ink` (`.leader.has`); one without says "No leader yet". A unit wins a leader of its class's list, never the class leader itself, and with it the class leader too (`hasLeader`, `src/core/units.ts`; `Leaders.getUnitLeaderDescriptions`). Hover or tap shows both, as `Leaders.description` words them, in a tooltip above the panel (`.pm-tip.above`) that never covers the unit's name. A leader's bonus is in the stat it changes: the class leader Aggressive Tank Maneuver makes Move 6. The same unit, leaders and stats as `UnitCard`.
 - Keep `#unit-info`, `#statsRowTop`, `#uSmallFlag`, `#uName`, `#statsRowContainer` and `#statsRow`. Text glyphs and the `m04` pixel fonts are replaced by the icon set and Courier Prime.
