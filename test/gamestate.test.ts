@@ -565,6 +565,7 @@ test("On the screen the remaster's turn limit ends the game once both sides have
 		await loadedAfter(old);
 		const outcomes: string[] = [];
 		game.continueCampaign = (o) => { outcomes.push(o); };
+		Object.assign(game.ui, { uiTurnLimitMessage() {} });
 		const attacker = save.data.startObjectives[0] > save.data.startObjectives[1] ? 0 : 1;
 		game.endTurn();
 		expect([game.gameEnded, game.session.ended], name + ", the first side's last turn").toEqual([false, null]);
@@ -573,5 +574,40 @@ test("On the screen the remaster's turn limit ends the game once both sides have
 		expect(game.session.ended, name).toEqual({ kind: "turnLimit", side: players[players.length - 1].side });
 		if (save.state.campaign === null) expect([game.gameEnded, outcomes], name).toEqual([true, []]);
 		else expect(outcomes, name).toEqual([game.getCampaignPlayer().side === attacker ? "lose" : "tactical"]);
+	}
+}, 60_000);
+
+//The turn limit's end told once, from Game.endTurn, whichever side's last turn ended it, and the next
+//turn's info (the combat log) not shown over the message: a campaign's next scenario waits for its OK
+//with the game not ended, so the AI's turn showed the log over it 2.5 s later (#365)
+test("The turn limit's end is told once and the combat log stays closed over it, after the AI's last turn too (#365)", async () => {
+	for (const name of ["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"]) {
+		const game = await playing(name);
+		const { Game } = await import("../src/game");
+		const { UIBuilder } = await import("../src/uibuilder"); //(this load's modules)
+		Object.assign(UIBuilder, { showAIStatus() {} });
+		game.setupGameState = new Game().setupGameState;
+		const save = JSON.parse(await exportGame()) as SaveFile;
+		const turn = save.state.turn.turn, old = game.scenario;
+		save.rules = "remaster";
+		save.data.startObjectives = [save.state.objectives[0].length, save.state.objectives[1].length];
+		save.state.scenario = { ...save.state.scenario, maxTurns: turn, victoryTurns: [0, 0, turn] };
+		save.state.players.forEach((p) => { p.playedTurn = turn - 1; });
+		game.state.restoreFromString(JSON.stringify(save));
+		await loadedAfter(old);
+		const screen: string[] = [];
+		game.continueCampaign = () => { screen.push("outcome"); }; //(the next scenario waits: not ended)
+		Object.assign(game.ui, { uiEndTurnInfo() { screen.push("turn info"); }, uiTurnLimitMessage() { screen.push("turn limit"); } });
+		game.endTurn();
+		const last = game.scenario.map.currentPlayer;
+		last.handler = { getAction: (): null => null } as unknown as typeof last.handler; //(the AI's last turn: it ends it at once)
+		vi.useFakeTimers();
+		try {
+			game.processAIActions();
+			vi.advanceTimersByTime(3000);
+		} finally {
+			vi.useRealTimers();
+		}
+		expect(screen, name).toEqual([save.state.campaign === null ? "turn limit" : "outcome"]);
 	}
 }, 60_000);
