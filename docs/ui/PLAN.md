@@ -14,9 +14,17 @@ done. The designs it builds are in this folder (README.md). The order was decide
   the CLI.
 - **The old UI is frozen.** No fixes, no features: only the adapter D0 gives it. Its own bugs
   close when it goes (#112, #113).
-- **The design system before the screens (D1).** Tokens, then a component library in TypeScript
-  without a framework, seen in a live gallery (`docs/ui/index.html`); the screens are composed of
-  its primitives and patterns, with no CSS of their own beyond layout.
+- **The design system before the screens (D1).** Tokens, then a component library, seen in a live
+  gallery (`docs/ui/index.html`); the screens are composed of its primitives and patterns, with no
+  CSS of their own beyond layout.
+- **Preact with signals (decided 2026-10-25).** Components are functions in `.tsx`, typed by the
+  compiler, with no logic of their own: the view model (plain TypeScript, tested without the DOM)
+  computes what they show, and signals carry it to them after each step, so only the parts that
+  changed render again. The map stays a canvas the components only mount. Compared on the same
+  day with Lit (the runner-up: plain `.ts`, used by OpenFront.io), Svelte 5 and Vue 3.6 (their
+  type checkers don't run on TypeScript 7 yet) and Solid 2.0 (still a release candidate). D1a
+  starts with a spike: one component through the types, oxlint, fallow, Stryker, the coverage
+  and the build; if `.tsx` breaks one of them, Preact with `htm` templates in `.ts`, else Lit.
 - **A new UI as a second screen.** It lives in its own modules (`src/view/`), on the core: it
   draws a read-only view of the `World`, sends commands through the game host, shows a `Refusal`
   as the reason a control is disabled, and plays animations and sounds from the step's
@@ -45,8 +53,8 @@ done. The designs it builds are in this folder (README.md). The order was decide
 | D0.6 Harness and CLI | #378 | verify's replays and the CLI's live mode on the game host, not the old UI | D0.3 |
 | Cards | #379 | the cards fixed where they show what the game doesn't do, or disagree | |
 | D1a Tokens | #344 | the type scale in `tokens.css`, tokens for the canvas, fonts, `data-theme`, a check against written-in values | |
-| D1b Library | #344 | primitives and patterns as TypeScript components, the live gallery (cards: Icons, Button, Panel, Tabs, SegmentedControl, Toggle, Slider, ListRow, Meter) | D1a |
-| D1c View model | #380 | `src/view/`: the view model, command dispatch, the new UI as a screen, `?ui=new` | D1b, D0.2 |
+| D1b Library | #344 | primitives and patterns as Preact components, the live gallery (cards: Icons, Button, Panel, Tabs, SegmentedControl, Toggle, Slider, ListRow, Meter) | D1a |
+| D1c View model | #380 | `src/view/`: the view model and its signals, command dispatch, the new UI as a screen, `?ui=new` | D1b, D0.2 |
 | D2 Map | #345 | the canvas: terrain, markers, overlays at screen size, move area, zones, move path (#32), targets, fog, air layer, strategic map, deployment zone (cards: MapOverlays, MovePath, MapLayers, AirLayer, StrategicMap, ZoomLevels) | D1c |
 | D3 HUD | #346 | status bar, game menu and every shortcut, End turn, unit info, context menu with real amounts, tooltips, AI indicator, turn banner (cards: HudDesktop, HudLaptop, StatusBar, GameMenu, UnitInfo, UnitContext, SupplyRules, Tooltips, TurnStart, TurnBanner) | D1c |
 | D4 Combat | #347 | attack preview stages 0-2, odds card, combat results, the animations and sounds from the events (cards: AttackPreview, CombatOdds, CombatResults) | D2, D3 |
