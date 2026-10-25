@@ -70,7 +70,20 @@ export let weatherCondition = { fair:0, overcast: 1, rain: 2, snow: 3 };
 export let weatherConditionNames = ["Fair", "Overcast", "Raining", "Snowing"];
 export let weatherFontEncoding = ["4", "5", "1", "2"]; //openpanzer icon font mapping
 
-//The countryNames list of 2.9 is no longer defined here
+//The country names by equipment set, a country's index in its set (Equipment.getCountryName reads them)
+export let countryNames: { [eqpName: string]: string[] } = {
+	"eqp-adlerkorps": ["Slovakia", "Belgium", "Bulgaria", "Czechoslovakia", "Denmark", "Finland",
+		"France", "Germany", "Greece", "USA", "Hungary", "Turkey", "Italy", "Netherlands", "Norway",
+		"Poland", "Portugal", "Romania", "Croatia", "Russia", "Sweden", "Allied Yugoslavia",
+		"United Kingdom", "Yugoslavia", "Nationalist Spain", "Republican Spain", "Australia", "Canada",
+		"Ethiopia", "New Zealand", "South Africa"],
+	"eqp-pacific": ["New Zealand", "Panzerzug", "India", "Australia", "Hungary", "Japan", "France",
+		"Germany", "Bulgaria", "U.S. Army", "Canada", "Turkey", "Italy", "Romania", "Thailand",
+		"Nationalist Chinese", "Philippines", "Netherlands", "Afrika Korps", "Russia", "Poland",
+		"Communist Chinese", "United Kingdom", "Mongolia", "Manchukuo", "U.S. Marines", "Republican",
+		"Allied Forces", "Captured Equipment", "Axis Forces", "Arab Countries"]
+};
+
 export let playerSide = { axis: 0, allies: 1 };
 
 export let sideNames =

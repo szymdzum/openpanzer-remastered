@@ -12,6 +12,7 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
+import { countryNames } from "./prototypes";
 
 //The index lists of a country file: equipment ids by unit class
 export interface EquipmentIndexes {
@@ -62,18 +63,7 @@ Equipment.defaultName = "eqp-adlerkorps"; //equipment set, a folder under equipm
 Equipment.name = Equipment.defaultName;
 Equipment.equipmentToLoadSet = {}; //country file indexes still to load, as keys
 Equipment.equipmentToLoad = 0; //number of country files not yet loaded
-Equipment.countryNames = {
-	"eqp-adlerkorps": ["Slovakia", "Belgium", "Bulgaria", "Czechoslovakia", "Denmark", "Finland",
-		"France", "Germany", "Greece", "USA", "Hungary", "Turkey", "Italy", "Netherlands", "Norway",
-		"Poland", "Portugal", "Romania", "Croatia", "Russia", "Sweden", "Allied Yugoslavia",
-		"United Kingdom", "Yugoslavia", "Nationalist Spain", "Republican Spain", "Australia", "Canada",
-		"Ethiopia", "New Zealand", "South Africa"],
-	"eqp-pacific": ["New Zealand", "Panzerzug", "India", "Australia", "Hungary", "Japan", "France",
-		"Germany", "Bulgaria", "U.S. Army", "Canada", "Turkey", "Italy", "Romania", "Thailand",
-		"Nationalist Chinese", "Philippines", "Netherlands", "Afrika Korps", "Russia", "Poland",
-		"Communist Chinese", "United Kingdom", "Mongolia", "Manchukuo", "U.S. Marines", "Republican",
-		"Allied Forces", "Captured Equipment", "Axis Forces", "Arab Countries"]
-};
+Equipment.countryNames = countryNames;
 
 //The bit masks of the attr field, only the ones used here (see the 2.9 source for the full list)
 const PURCHASABLE_MASK		= 1 << 18;
