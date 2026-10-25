@@ -20,7 +20,9 @@ import { CombatLog } from "./combatlog";
 import type { AIAction, AIDriver } from "./ai";
 import type { GameMap, Player } from "./map";
 import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "./mirror";
-import { beginDraft, finishDraft, removeUnit } from "./core/draft";
+import { beginDraft, finishDraft } from "./core/draft";
+import { destroyUnits } from "./core/fight";
+import { unitById } from "./core/world";
 import { aiController } from "./core/ai";
 import { tutorialController } from "./core/tutorial";
 import type { Command } from "./commands";
@@ -183,6 +185,6 @@ function arrived(game: Game, events: GameEvent[]) {
 export function removeDestroyed(m: GameMap) {
 	const w = worldOf(running.scenario, running, gameInputs(running));
 	const d = beginDraft(w);
-	for (const u of m.getUnits().filter((x) => x.destroyed)) removeUnit(d, u.id, true);
+	destroyUnits(d, m.getUnits().filter((x) => x.destroyed).map((u) => unitById(d, u.id)));
 	applyData(running.scenario, finishDraft(d), running);
 }

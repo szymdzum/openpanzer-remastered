@@ -13,7 +13,7 @@
  */
 
 import { Equipment } from "./equipment";
-import { fileEquipment } from "./core/newgame";
+import { fileEquipment, type ScenarioFile } from "./core/newgame";
 import { readScenarioFile } from "./core/scenariofile";
 import type { Scenario } from "./scenario";
 
@@ -27,7 +27,7 @@ export const scenarioPath = "resources/scenarios/data/";
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
 	//Who makes the game once its files are in (src/coreload.ts, set by game.ts)
-	declare static build: (scen: Scenario, xmlData: Document, imageSize: [number, number]) => void;
+	declare static build: (scen: Scenario, file: ScenarioFile, imageSize: [number, number]) => void;
 	//The countries of the core units a campaign carries in, loaded beside the players' (src/coreload.ts)
 	declare static coreCountries: () => number[];
 	declare noCache: boolean;
@@ -97,9 +97,10 @@ export class ScenarioLoader {
 				Equipment.addPlayersEquipment(players, function() {
 					if (--Equipment.equipmentToLoad) //called after each file, the last one makes the game
 						return;
-					//(then the files of the units' equipment its countries don't have, #286)
-					Equipment.addUnitsEquipment(fileEquipment(readScenarioFile(xmlData)),
-						() => ScenarioLoader.build(scen, xmlData, imageSize), loadFailed);
+					//(then the files of the units' equipment its countries don't have, #286; the file read once,
+					//for them and the game)
+					const file = readScenarioFile(xmlData);
+					Equipment.addUnitsEquipment(fileEquipment(file), () => ScenarioLoader.build(scen, file, imageSize), loadFailed);
 				}, loadFailed);
 			}
 			img.onerror = loadFailed;

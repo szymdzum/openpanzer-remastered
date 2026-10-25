@@ -200,20 +200,23 @@ export function resolveAttack(d: Draft, attacker: UnitId, defender: UnitId): Att
 //for the retreat's rule (it reads what the attacker is, even destroyed)
 export function cleanUpAttack(d: Draft, start: AttackStart): UnitState {
 	const atk = unitById(d, start.attacker), def = unitById(d, start.defender);
-	for (const u of [atk, def, ...d.state.units.filter((x) => x !== atk && x !== def)])
-		if (u !== null && u.strength <= 0) destroy(d, u);
+	destroyUnits(d, [atk, def, ...d.state.units.filter((x) => x !== atk && x !== def)].filter((u) => u !== null && u.strength <= 0));
 	return atk;
 }
 
 //A loaded game without the units on the map that have no strength left (#290): a save written while an
 //attack's animation ran (the original's race, ours until #58) holds them, and nothing else takes them off,
 //so one stood on its hex for good. Taken off as the attack's cleanup would have, a loss in a campaign's
-//dossier; the world as it is when there is none
+//dossier (the load builds the world only for a save that holds one)
 export function withoutDestroyed(w: World): World {
-	if (!w.state.units.some((u) => u.strength <= 0)) return w;
 	const d = beginDraft(w);
-	for (const u of d.state.units.filter((x) => x.strength <= 0)) destroy(d, u);
+	destroyUnits(d, d.state.units.filter((x) => x.strength <= 0));
 	return finishDraft(d);
+}
+
+//Takes the units off the map as destroyed, in the order given: each a loss in a campaign's dossier
+export function destroyUnits(d: Draft, units: readonly UnitState[]) {
+	for (const u of units) destroy(d, u);
 }
 
 //After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with
