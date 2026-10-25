@@ -209,6 +209,8 @@ export default defineConfig({
 				"src/view/strength.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/tabs.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/tooltip.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				//the HUD (#346)
+				"src/view/statusbar.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 			},
 		},
 	},

@@ -24,6 +24,8 @@ type ButtonProps = {
 	//second line where it has one (the action stays in place with its reason), else as its title
 	disabled?: string,
 	onClick?: () => void,
+	//the id the harness, the tests and the shortcuts find it by (handoff.md, Element map)
+	id?: string,
 };
 
 //The second line under the caption: the effect and its cost, or the reason it can't be done
@@ -50,15 +52,20 @@ function useTitle(title: string | undefined) {
 	return ref;
 }
 
-export function Button({ children, variant, large, icon, label, cost, line, partial, disabled, onClick }: ButtonProps) {
+//The card's classes: its variant, large, icon-only
+function classesOf(variant: ButtonProps["variant"], large: boolean | undefined, iconOnly: boolean) {
+	return ["pm-btn", variant, large && "lg", iconOnly && "icon"].filter(Boolean).join(" ");
+}
+
+export function Button({ children, variant, large, icon, label, cost, line, partial, disabled, onClick, id }: ButtonProps) {
 	const iconOnly = children === undefined && cost === undefined;
-	const classes = ["pm-btn", variant, large && "lg", iconOnly && "icon"].filter(Boolean).join(" ");
+	const classes = classesOf(variant, large, iconOnly);
 	const off = disabled !== undefined;
 	const ref = useTitle(line === undefined ? disabled : undefined);
 	const small = !large && !iconOnly && line === undefined;
 	//no handler when disabled: jsdom (and a synthetic click in some browsers) still fires one on a disabled button
 	return (
-		<button ref={ref} type="button" class={classes} aria-label={label} disabled={off} onClick={off ? undefined : onClick}>
+		<button ref={ref} id={id} type="button" class={classes} aria-label={label} disabled={off} onClick={off ? undefined : onClick}>
 			{icon && <Icon name={icon} size={small ? "sm" : undefined} />}
 			{children}
 			<After line={line} cost={cost} partial={partial} refusal={disabled} />

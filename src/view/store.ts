@@ -13,7 +13,7 @@ import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
-import { endTurnRefusal, reasonOf, statusOf, unitView } from "./model";
+import { endTurnRefusal, prestigeText, reasonOf, statusOf, unitView } from "./model";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -48,6 +48,14 @@ export function createStore(host: StoreHost) {
 	const sideName = computed(() => status.value === null ? "" : status.value.sideName);
 	const turn = computed(() => status.value === null ? "" : status.value.turn + "/" + status.value.maxTurns);
 	const prestige = computed(() => status.value === null ? null : status.value.prestige);
+	//(written as the HUD writes it: 3,056)
+	const prestigeShown = computed(() => prestige.value === null ? null : prestigeText(prestige.value));
+	const country = computed(() => status.value === null ? "" : status.value.country);
+	const nation = computed(() => status.value === null ? null : status.value.nation);
+	const date = computed(() => status.value === null ? "" : status.value.date);
+	const weather = computed(() => status.value === null ? null : status.value.weather);
+	const ground = computed(() => status.value === null ? null : status.value.ground);
+	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
@@ -91,7 +99,8 @@ export function createStore(host: StoreHost) {
 
 	return {
 		dispatch,
-		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, endTurn, unit, note,
+		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
+		date, weather, ground, rules, endTurn, unit, note,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
