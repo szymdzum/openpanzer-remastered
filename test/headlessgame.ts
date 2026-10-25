@@ -1,0 +1,22 @@
+//The game the host plays, without the DOM's old UI: Game's fields (test/host.test.ts, the new UI's screen in
+//test/view-screen.test.tsx)
+import { GameHost, runGame } from "../src/host";
+import type { Game } from "../src/game";
+import type { Screen } from "../src/screen";
+
+//The game the host plays: Game's fields, and the members the engine and the core's glue call on it
+//(src/coresession.ts, src/coreload.ts, src/mirror.ts), handed on to the host as Game hands them
+export function headlessGame(screen: (g: Game) => Screen): Game {
+	let saves = 0;
+	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves }, campaign: null, scenario: null,
+		gameStarted: false, gameEnded: false, waitUIAnimation: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
+		session: null } as unknown as Game;
+	const host = new GameHost(g, screen(g));
+	Object.assign(g, { host,
+		getCampaignPlayer: () => host.getCampaignPlayer(),
+		getCampaignProgress: () => host.getCampaignProgress(),
+		setCampaignProgress: (...args: Parameters<GameHost["setCampaignProgress"]>) => host.setCampaignProgress(...args),
+		setCurrentSide: () => host.setCurrentSide() });
+	runGame(g);
+	return g;
+}
