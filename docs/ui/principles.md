@@ -67,7 +67,7 @@ The rules below decide a player's move, and the engine already knows each of the
 | Rule | Show | Where |
 | --- | --- | --- |
 | The move area comes from terrain, road and ground condition, capped by fuel (`getMoveRange`, `getUnitMoveRange` gr:208) | the area the engine returns, nothing drawn from distance | map |
-| A spotted hex next to an enemy ground unit, ship or fort ends the move (cost 254, gr:173); a hidden enemy's zone doesn't | a red bar on the edge facing the enemy; the path ends in a stop with "stops: enemy zone" | map |
+| A spotted hex next to an enemy ground unit, ship or fort ends the move (cost 254, gr:173), a hidden enemy's zone too, as in the original (#282) | a red bar on the edge facing an enemy the side sees (none for a hidden one: no enemy to face); the path ends in a stop with "stops: enemy zone" | map |
 | Moving into a hidden enemy is an ambush that ends the move and forces a bad fight (map.ts:1180) | hatched area hexes the side doesn't see | map |
 | Friends can be passed through, not ended on (`canPassInto`, `canMoveInto`) | the path crosses them; no area tint on their hexes | map |
 | Recon can split its moves; an overrun gives +1 move and the tank can fire again | moves left in the path ring; the marker gets its arrow and crosshair back | map, marker |
