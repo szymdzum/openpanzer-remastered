@@ -5,7 +5,7 @@
 //with the issue that describes the loss, a fix flips them
 import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
-import { until } from "./lifecycle";
+import { failRequests, freshGame, messagesShown, startState, until } from "./lifecycle";
 import { oldExport, oldLocalItems, withoutLosses, withoutUnknown } from "./saves";
 import type { SaveFile } from "../src/savegame";
 import type { UnitState } from "../src/state";
@@ -413,6 +413,27 @@ test("GameState restores a save from a file, and refuses a file that isn't one",
 	expect(await loadedAfter(old)).toEqual(JSON.parse(saved));
 	expect(done).toEqual(["fail", "done"]);
 });
+
+//#367: a save whose equipment file doesn't come fails to load as a scenario does (the game says it couldn't
+//load the scenario and ends), where it waited for good: a player's country's file, and a file a unit alone
+//needs (#286: pc1indi.xml's units of none of its countries are in file 31)
+test.each(["equipment-country-0.json", "equipment-country-31.json"])(
+	"GameState load of a save whose equipment file %s doesn't load fails, it doesn't wait for good (#367)", async (file) => {
+		const game = await freshGame();
+		await startState(game, "pc1indi.xml");
+		const saved = await exportGame();
+		const shown = await messagesShown();
+		const restore = failRequests(file, "error");
+		try {
+			expect(game.state.restoreFromString(saved)).toBe(true);
+			await until(() => shown.length > 0, "the load to fail", 5000);
+			await new Promise((r) => setTimeout(r, 50)); //the other files come in
+			expect(shown).toEqual(["Error Loading scenario pc1indi.xml"]);
+			expect([game.scenario.isLoaded, game.gameEnded]).toEqual([false, true]);
+		} finally {
+			restore();
+		}
+	});
 
 //#93: the save the game writes at a turn's start (the local save) is written once that turn's
 //reinforcements have arrived, so a reload during the turn has them (they arrive only once)

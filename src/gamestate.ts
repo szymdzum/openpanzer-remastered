@@ -273,7 +273,7 @@ export class GameState {
 			for (const p of state.players)
 				for (const country of coreCountries(p, state.units, {}))
 					players.push({ country, supportCountries: [] });
-			Equipment.addPlayersEquipment(players, onEquipmentLoaded.bind(null, read, onDone));
+			Equipment.addPlayersEquipment(players, onEquipmentLoaded.bind(null, read, onDone), loadFailed);
 		}
 
 		//Called once for each equipment file, the game is rebuilt after the last one, and after the files
@@ -281,7 +281,13 @@ export class GameState {
 		function onEquipmentLoaded(read: ReadSave, onDone: () => void) {
 			if (--Equipment.equipmentToLoad)
 				return;
-			Equipment.addUnitsEquipment(stateEquipment(read.save.state), () => rebuild(read, onDone));
+			Equipment.addUnitsEquipment(stateEquipment(read.save.state), () => rebuild(read, onDone), loadFailed);
+		}
+
+		//An equipment file that doesn't load fails the load as a scenario's does: the game's scenario
+		//stays the save's, not loaded, and the game says so and ends (#367: the load waited for good)
+		function loadFailed() {
+			Game.onScenarioLoadFinished(null, true);
 		}
 
 		function rebuild(read: ReadSave, onDone: () => void) {

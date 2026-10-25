@@ -22,8 +22,8 @@ export const scenarioPath = "resources/scenarios/data/";
 
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries and of the units; then ScenarioLoader.build makes the game (the
-//core's newGame, src/coreload.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load
-//calls it with scen.isLoaded false.
+//core's newGame, src/coreload.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load (an
+//equipment file too, #367) calls it with scen.isLoaded false.
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
 	//Who makes the game once its files are in (src/coreload.ts, set by game.ts)
@@ -93,13 +93,14 @@ export class ScenarioLoader {
 				const players = playerCountries(xmlData).concat(ScenarioLoader.coreCountries()
 					.map((country) => ({ country, supportCountries: [] as number[] })));
 				const imageSize: [number, number] = [img.width, img.height];
+				//(a file that doesn't load fails the load, #367)
 				Equipment.addPlayersEquipment(players, function() {
 					if (--Equipment.equipmentToLoad) //called after each file, the last one makes the game
 						return;
 					//(then the files of the units' equipment its countries don't have, #286)
 					Equipment.addUnitsEquipment(fileEquipment(readScenarioFile(xmlData)),
-						() => ScenarioLoader.build(scen, xmlData, imageSize));
-				});
+						() => ScenarioLoader.build(scen, xmlData, imageSize), loadFailed);
+				}, loadFailed);
 			}
 			img.onerror = loadFailed;
 		}
