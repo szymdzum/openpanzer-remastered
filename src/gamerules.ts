@@ -7,9 +7,10 @@
  *
  * The rules were the old engine's (reconstructed from the Panzer Marshal 3.2.14 bundle). They are the
  * core's now, over a world: rulesOn(source) takes where that world comes from. The running game's is
- * the world of the game's objects (src/mirror.ts rulesWorld: kept until something says it wrote into
- * them, under ?harness while toData of them is its state), so what the screen or the harness just wrote
- * into them is in it; the gamerules contract's reads the old counters (test/coreadapter.ts).
+ * the game's world (src/mirror.ts rulesWorld: the world kept, which the objects mirror; under ?harness
+ * the objects' while toData of them is its state, so what the harness just wrote into them is in it); the
+ * retreat's ranges are asked of a world made for them (src/commands.ts); the gamerules contract's reads
+ * the old counters (test/coreadapter.ts).
  * What a unit is by itself (the render loop asks it of every unit it draws) reads the unit object as
  * the core's unit state, on a world of the equipment alone.
  *
@@ -72,6 +73,7 @@ export interface GameRulesModule {
 	isInAttackRange(unit: Unit, targetUnit: Unit): boolean;
 	getEmbarkType(map: Hex[][], unit: Unit): number; //a unitClass
 	getDisembarkPositions(map: Hex[][], unit: Unit): Cell[];
+	getLandingPositions(unit: Unit): Cell[]; //of a unit leaving its carrier, the hexes its disembark gave it
 	getReinforcementDeployPositions(map: Hex[][], unit: Unit, row: number, col: number): Cell | null;
 	canEmbark(map: Hex[][], unit: Unit): boolean;
 	canDisembark(map: Hex[][], unit: Unit): boolean;
@@ -210,6 +212,7 @@ export function rulesOn(src: RulesSource): GameRulesModule {
 		},
 		getEmbarkType: (_map, u) => one(movement.embarkTypeOf)(u),
 		getDisembarkPositions: (_map, u) => one(movement.disembarkPositions)(u).map(cell),
+		getLandingPositions: (u) => one(movement.landingPositions)(u).map(cell),
 		getReinforcementDeployPositions: (_map, u, row, col) =>
 			cell(one((x, s) => movement.reinforcementDeployPosition(x, s, row, col))(u)),
 		canEmbark: (_map, u) => one(movement.canEmbark)(u),
@@ -239,7 +242,7 @@ export function rulesOn(src: RulesSource): GameRulesModule {
 	};
 }
 
-//The running game's world: made from the game's objects at the call (engineContext.world), the dice its stream
+//The running game's world (engineContext.world), the dice its stream
 const gameSource: RulesSource = {
 	world: () => engineContext.world(),
 	game: () => Rng.game,
@@ -248,3 +251,7 @@ const gameSource: RulesSource = {
 
 //(a module object: the harness assigns its members, docs/REFACTOR.md step 3)
 export var GameRules: GameRulesModule = rulesOn(gameSource);
+
+//The rules over a world made for a question of the screen's (the retreat's hexes, src/commands.ts), the
+//dice the game's
+export const rulesOver = (w: World): GameRulesModule => rulesOn({ ...gameSource, world: () => w });

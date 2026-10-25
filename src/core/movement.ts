@@ -469,6 +469,12 @@ export function disembarkPositions(w: World, u: UnitState): Position[] {
 	});
 }
 
+//The hexes a unit leaving its carrier (a negative carrier) can land on: its disembark hexes from aboard,
+//the ones the disembark gave it
+export function landingPositions(w: World, u: UnitState): Position[] {
+	return disembarkPositions(w, u.carrier < 0 ? { ...u, carrier: -u.carrier } : u);
+}
+
 export function canEmbark(w: World, u: UnitState): boolean {
 	return embarkTypeOf(w, u) > 0 || u.carrier < 0;
 }

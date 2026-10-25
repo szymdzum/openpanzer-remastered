@@ -26,9 +26,11 @@ import { GameMap, Player } from "./map";
 import { Scenario, type ScenarioOutcome } from "./scenario";
 import { Campaign, type CampaignScenario } from "./campaign";
 import { coreDriver, endGameTurn, handlerFor, removeDestroyed, startGameSession } from "./coresession";
-import { type AttackResult, type Command, type CommandType, Commands, type Executed, type MoveResult, type Refusal, type ResultOf } from "./commands";
+import { type AttackResult, backAboard, type Command, type CommandType, Commands, type Executed, type MoveResult, type Refusal,
+	type ResultOf } from "./commands";
 import { CombatLog } from "./combatlog";
 import { GameRules } from "./gamerules";
+import { MapSelection } from "./selection";
 import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./coreload";
 import { applyData, gameInputs, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
@@ -651,15 +653,16 @@ function localSideOf(players: Player[]): number {
 }
 
 //The game the engine plays in, made the running one: the programs are the session's controllers
-//(src/coresession.ts), the scenarios start on the core (src/coreload.ts), and the engine reads the game's
-//fields at the moment it needs them (src/context.ts), so what a harness or a test assigns to game.* is
-//seen as before
+//(src/coresession.ts), the scenarios start on the core (src/coreload.ts), the selection puts a unit back
+//aboard by the game's embark, and the engine reads the game's fields at the moment it needs them
+//(src/context.ts), so what a harness or a test assigns to game.* is seen as before
 export function runGame(g: Game) {
 	setGame(g);
 	AI.driver = coreDriver;
 	ScenarioLoader.build = buildOnCore;
 	ScenarioLoader.coreCountries = carriedCountries;
 	GameMap.removeDestroyed = removeDestroyed;
+	MapSelection.backAboard = (u) => backAboard(game.scenario, u.id);
 	setEngineContext({
 		scenario: function() { return game.scenario; },
 		campaign: function() { return game.campaign; },

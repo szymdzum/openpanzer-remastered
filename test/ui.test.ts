@@ -634,6 +634,79 @@ test("The old screen shows a unit the AI picked, a look at a hex and its turn's 
 	}
 }, 60_000);
 
+//Every write into the game's objects (the map, its hexes, players and units) while play runs, outside the
+//mirror's updates and loads (src/mirror.ts applyData, src/state.ts fromData), as class.field
+async function writesDuring(game: Game, play: () => Promise<void>): Promise<string[]> {
+	const written = new Set<string>(), stackLimit = Error.stackTraceLimit;
+	Error.stackTraceLimit = 100;
+	const watch = (o: object, name: string) => {
+		for (const key of Object.keys(o)) {
+			const d = Object.getOwnPropertyDescriptor(o, key)!;
+			if (!("value" in d) || typeof d.value === "function") continue;
+			let value: unknown = d.value;
+			Object.defineProperty(o, key, { configurable: true, enumerable: true, get: () => value, set: (v: unknown) => {
+				if (v !== value && !/\b(applyData|fromData)\b/.test(new Error().stack!)) written.add(name + "." + key);
+				value = v;
+			} });
+		}
+	};
+	const map = game.scenario.map;
+	watch(map, "GameMap");
+	for (const row of map.map) for (const h of row) watch(h, "Hex");
+	for (const p of map.getPlayers()) watch(p, "Player");
+	for (const u of map.getUnits()) watch(u, "Unit");
+	try {
+		await play();
+	} finally {
+		Error.stackTraceLimit = stackLimit;
+	}
+	return [...written].sort();
+}
+
+//The inventory of #376: what the old UI writes into the game's objects is the screen's own (the selected
+//unit and its hexes, the unit it animates), which the game's world doesn't hold; the rest it changes
+//through commands, which the mirror's updates write
+test("The old UI writes into the game's objects only what the screen owns, none of it the game's (#376)", async () => {
+	const { game, ui } = await uiGame("campaign:0:1");
+	const { GameRules } = await import("../src/gamerules");
+	const { uiSettings } = await import("../src/prototypes");
+	const { worldOf, gameInputs } = await import("../src/mirror");
+	const { toData } = await import("../src/state");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const own = () => map.getUnits().filter((u) => u.player.id === map.currentPlayer.id && u.getPos() !== null && !u.hasMoved);
+	const written = await writesDuring(game, async () => {
+		//A unit with a transport selected, inspected, shown mounted
+		const towed = own().find((u) => u.transport !== null)!;
+		ui.uiUnitSelect(towed);
+		document.getElementById("unit-info")!.style.display = "none";
+		ui.mainMenuButton("inspectunit");
+		document.getElementById("uTransport")!.click();
+		document.getElementById("uTransport")!.click();
+		//The units and purchase windows
+		ui.toggleUnitsAndEquipmentWindow(true);
+		ui.updateEquipmentWindow(1);
+		ui.toggleUnitsAndEquipmentWindow(false);
+		//An attack, then a move
+		const a = own().find((u) => GameRules.getUnitAttackCells(map.map, u, map.rows, map.cols).length > 0)!;
+		const target = GameRules.getUnitAttackCells(map.map, a, map.rows, map.cols)[0];
+		const d = map.map[target.row][target.col].getAttackableUnit(a, uiSettings.airMode)!;
+		ui.uiUnitSelect(a);
+		game.waitUIAnimation = true;
+		expect(ui.uiUnitAttack(a, d)).toBe(true);
+		await until(() => !game.waitUIAnimation, "the attack");
+		const unit = own().find((u) => GameRules.getMoveRange(map, u).some((c) => c.canMove))!;
+		ui.uiUnitSelect(unit);
+		const to = GameRules.getMoveRange(map, unit).find((c) => c.canMove)!;
+		expect(ui.uiUnitMove(unit, to.row, to.col)).toBe(true);
+		await until(() => !unit.hasAnimation && !game.waitUIAnimation, "the move");
+		ui.uiUnitSelect(null);
+	});
+	expect(written).toEqual(["GameMap.currentUnit", "Hex.isAttackSel", "Hex.isMoveSel", "Unit.hasAnimation"]);
+	//(the objects are still a copy of the game's world)
+	expect(JSON.stringify(toData(game.scenario, game).state)).toBe(JSON.stringify(worldOf(game.scenario, game, gameInputs(game)).state));
+}, 60_000);
+
 test("Opening the dossier window shows a dossier not set up yet as empty and leaves the player's as the game has it (#403)", async () => {
 	const { game } = await uiGame("campaign:0:1");
 	const { UIBuilder } = await import("../src/uibuilder");

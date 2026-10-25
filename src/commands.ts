@@ -6,32 +6,34 @@
  *
  * A command names its units by id and its hexes by cell, so it can be logged, saved, sent and written
  * by a program (docs/REFACTOR.md, step 4). The core plays it (src/core/step.ts: check, then the
- * command's handler); Commands.execute plays it whole in the running game, on the world of the game's
- * objects (src/mirror.ts), the objects updated to the world after it, and what the old engine did beside
- * the state where it did it: the selection's hexes, the combat log, the image cache.
+ * command's handler); Commands.execute plays it whole in the running game, on the game's world (src/mirror.ts),
+ * the objects updated to the world after it, and what the old engine did beside the state where it did
+ * it: the selection's hexes, the combat log, the image cache.
  *
  * A move and an attack are played to their end before anything is shown (#375): a move with its surprise
  * attack and its capture, an attack with its support fire, the destroyed units, the retreat or the
  * surrender and the victory. The screen then animates them from the result (the step's events, with what
  * the old animation read in between: the strengths and the facings at the shots). Within the step the
  * objects pass through the worlds of its checkpoints, where the old engine set the selection's hexes;
- * each piece starts from the objects' world, so the selection's changes to the units are in it.
+ * each piece starts from the game's world then, so a unit the selection put back aboard is in it.
  *
  * What the state doesn't hold, done on the objects as the old engine's commands did it: a move shows
  * the unit's new move and attack hexes, an attack clears the attack hexes, a resupply, a reinforcement,
  * a mount, an embark or a disembark clear the selection's hexes, a mount, an unmount, an embark and an
  * undo select the unit again, a disembark shows the hexes it can land on, a disband deselects. The
- * selection's own changes to the units (a unit leaving its carrier put back on it) are the objects' and
- * reach the next command's world.
+ * selection changes no unit itself: a unit it leaves while disembarking goes back aboard by the embark's
+ * step (backAboard, #376).
  */
 
 import { Cell, type combatResults, movMethod, movementResults, type Supply, unitClass } from "./prototypes";
 import { CombatLog } from "./combatlog";
-import { engineContext, touched } from "./context";
+import { engineContext } from "./context";
 import type { ReinforceResults } from "./map";
 import type { Scenario } from "./scenario";
 import type { Unit } from "./unit";
 import { applyData, checkedDifference, gameInputs, rulesWorld, stepWorld, unitObject } from "./mirror";
+import { rulesOver } from "./gamerules";
+import { createWorld } from "./core/create";
 import { attackResult } from "./core/combat";
 import type { Fighter, GameEvent } from "./core/events";
 import { begin, check, resume } from "./core/step";
@@ -139,7 +141,7 @@ export type ResultOf<T extends CommandType> = CommandResults[T];
 
 export type Executed<T extends CommandType> = { ok: true; result: ResultOf<T> } | { ok: false; refusal: Refusal };
 
-//The world of the game's objects now, for a step to start from
+//The game's world now, for a step to start from
 function worldNow(scenario: Scenario): World {
 	return stepWorld(scenario, engineContext.host(), gameInputs({ spotSide: engineContext.spotSide(), rules: engineContext.rules() }));
 }
@@ -446,7 +448,7 @@ function ending(scenario: Scenario, result: AttackResult, e: GameEvent, events: 
 function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[]) {
 	const m = scenario.map, u = result.defending.unit, before = m.currentUnit;
 	logCaptures(scenario, events);
-	showRetreatRanges(m, u);
+	showRetreatRanges(scenario, u);
 	if (before !== null) m.selectUnit(before);
 	const mr = movementOf(events, u.id, null);
 	const captured = events.find((e) => e.type === "captured" && e.unit === u.id);
@@ -457,16 +459,28 @@ function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[]
 
 //The retreated unit's move and attack hexes as the old retreat's move showed them: with the move's
 //points spent (Unit.move: a mounted unit's all of them; done unless a recon unit with points left),
-//which the retreat gives back after
-function showRetreatRanges(m: Scenario["map"], u: Unit) {
-	const kept = { moveLeft: u.moveLeft, hasMoved: u.hasMoved, hasOverstrength: u.hasOverstrength };
-	if (u.isMounted && u.transport !== null) u.moveLeft = 0;
-	if (u.unitData().uclass !== unitClass.recon || u.moveLeft <= 0) u.hasMoved = u.hasOverstrength = true;
-	touched();
-	m.setMoveRange(u);
-	m.setAttackRange(u);
-	Object.assign(u, kept);
-	touched();
+//which the retreat gave back after. Asked of the game's world with the unit so, made for them alone (the
+//old engine wrote the points into the unit and back)
+function showRetreatRanges(scenario: Scenario, u: Unit) {
+	const w = worldNow(scenario), s = unitById(w, u.id), spent = { ...s };
+	if (spent.isMounted && spent.transport !== null) spent.moveLeft = 0;
+	if (u.unitData().uclass !== unitClass.recon || spent.moveLeft <= 0) spent.hasMoved = spent.hasOverstrength = true;
+	const state = { ...w.state, units: w.state.units.map((x) => x === s ? spent : x) };
+	const moved = createWorld({ data: w.data, state }, w.equipment, { spotSide: w.spotSide, noFOW: w.noFOW, rules: w.rules,
+		destroyed: w.destroyed });
+	const rules = rulesOver(moved);
+	scenario.map.getSelection().setMoveRange(u, rules);
+	scenario.map.getSelection().setAttackRange(u, rules);
+}
+
+//A unit leaving its carrier put back on it: the selection left it, or it can't land any more (the old
+//selection's flip of its carrier, src/selection.ts). The embark's step alone: what the command shows
+//beside it (the unit selected again) is the selection's own business there. The hexes' counters stay as
+//they were until the next command, as the old flip left them (the world's sight has the unit aboard)
+export function backAboard(scenario: Scenario, unit: number) {
+	const b = begin(worldNow(scenario), { type: "embark", unit });
+	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
+	applyData(scenario, b.world, engineContext.host(), false);
 }
 
 export interface CommandsAPI {

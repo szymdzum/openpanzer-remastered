@@ -153,7 +153,6 @@ export interface Unit {
 	getMovesLeft(): number;
 	getAmmo(): number;
 	getFuel(): number;
-	toggleEmbark(): void;
 	getIcon(): string;
 	cleanup(): void;
 }
@@ -199,11 +198,6 @@ Unit.prototype.getFuel = function(): number {
 		return this.fuel;
 }
 
-//Switches between embarked (carrier > 0) and disembarked keeping the carrier (carrier < 0)
-Unit.prototype.toggleEmbark = function() {
-	this.carrier = -this.carrier;
-	touched();
-}
 Unit.prototype.getIcon = function(): string { return this.unitData().icon; }
 
 //frees memory associated with this object if possible

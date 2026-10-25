@@ -74,8 +74,8 @@ export interface Resumed {
 	checkpoint: Checkpoint | null;
 }
 
-//Goes on from a checkpoint to the next one. w is the world at the checkpoint, or one made again from
-//the screen's objects (which the screen may have changed meanwhile)
+//Goes on from a checkpoint to the next one. w is the world at the checkpoint, or the game's since (a unit
+//the selection put back aboard meanwhile)
 export function resume(w: World, cp: Checkpoint): Resumed {
 	const d = beginDraft(w);
 	const checkpoint = resumeFrom(d, cp);

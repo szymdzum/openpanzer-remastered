@@ -18,8 +18,8 @@ import type { RulesetName, World } from "./core/types";
 //needs them: Game sets a context that reads its own fields (game.ts), so a harness or a test
 //that assigns game.spotSide or game.campaign is seen as before. Without a game: no scenario,
 //no campaign, no side shown. host: the game as the state's campaign host (src/state.ts), which the
-//commands on the core read the state of the game with (src/commands.ts); world: the core's world of the
-//game's objects, which the rules read (src/gamerules.ts)
+//commands on the core read the state of the game with (src/commands.ts); world: the game's world, which
+//the rules read (src/gamerules.ts)
 export interface EngineContext {
 	scenario(): Scenario | null;
 	campaign(): Campaign | null;
@@ -27,7 +27,7 @@ export interface EngineContext {
 	spotSide(): number;
 	rules(): RulesetName;	//the rules the game plays by (src/core/rules.ts)
 	host(): CampaignHost | null;
-	world(): World; //the core's world of the game's objects now (src/mirror.ts rulesWorld), which the rules read
+	world(): World; //the game's world now (src/mirror.ts rulesWorld), which the rules read
 }
 
 export var engineContext: EngineContext = {
@@ -44,13 +44,14 @@ export function setEngineContext(context: EngineContext): void {
 	engineContext = context;
 }
 
-//How many times something said it wrote into the game's objects outside the mirror (src/mirror.ts):
-//the screen's carrier flips, the animation's facing, its sorts of the lists (#186, #187), a unit put on
-//a hex, a load. The world the screen's rules read is kept while this count stays (the harness writes
-//without saying: under ?harness the world is compared with the objects instead)
+//How many times the game's objects were set up by hand outside a step and said so (src/mirror.ts): a load,
+//the players' setup, a unit put on a hex, a test. The world is then made from them again when next asked;
+//otherwise the world kept is the game and what is written into the objects never reaches it. Never the
+//screen's: what changes the game is a command (#376). The harness writes without saying: under ?harness
+//the world is compared with the objects instead
 let writes = 0;
 
-//The game's objects were written to: the screen's rules read their world again
+//The game's objects were set up by hand: the game's world is made from them again
 export function touched(): void {
 	writes++;
 }
