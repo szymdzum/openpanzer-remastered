@@ -67,6 +67,9 @@ export function readGameFile(file: string): Save {
 	if (!fs.existsSync(file)) throw new Error(`no game at ${file}: start one with "new"`);
 	const save = JSON.parse(fs.readFileSync(file, "utf8")) as Save;
 	if (save.format !== "openpanzer-cli/1") throw new Error(`${file} is not a command-line game`);
+	//A game saved before the objectives at the start were kept (#256) has none: unknown, as the page's
+	//saves of then read (#364: the end of turn and status read them)
+	save.data.startObjectives ??= null;
 	return save;
 }
 
