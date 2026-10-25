@@ -1,9 +1,10 @@
 //The map's overlays beside the move area (#345, the MapOverlays card): the fog of war, the hatched hexes
 //the unit can reach but its side doesn't see, the enemy zone bars, the support fire arcs, and the plaques
-//of the objectives and the towns (#62). They draw what the view model computed (src/view/mapview.ts,
-//src/view/mapinfo.ts), at screen size at every map scale; colours and widths are the tokens'.
+//of the objectives and the towns (#62), and the deployment zone. They draw what the view model computed
+//(src/view/mapview.ts, mapinfo.ts, deploy.ts), at screen size at every map scale; colours and widths are the tokens'.
 import type { Position } from "../core/types";
-import { addHex, addHexesInView, atMap, atScreen, strokeLine, toScreen, type Viewport } from "./canvas";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport } from "./canvas";
+import type { Deployment } from "./deploy";
 import { CORNERS, EDGES, hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Edge } from "./mapview";
@@ -51,6 +52,39 @@ function boundsOf(hexes: Position[], vp: Viewport): { x0: number; y0: number; x1
 	const x0 = Math.min(...pts.map((p) => p.x)) - rx, x1 = Math.max(...pts.map((p) => p.x)) + rx;
 	const y0 = Math.min(...pts.map((p) => p.y)) - ry, y1 = Math.max(...pts.map((p) => p.y)) + ry;
 	return { x0, y0, x1, y1, h: y1 - y0 };
+}
+
+//The deployment zone (Deployment): a brass tint and a light inner line on each free hex, the line alone and fainter
+//on a taken one, and one brass outline round the whole zone over the dark under-stroke
+export function drawDeployZone(c: CanvasRenderingContext2D, vp: Viewport, d: Deployment) {
+	const free = new Set(d.free.map((h) => h.row * 65536 + h.col));
+	fillHexes(c, vp, d.free, MAP["hex-select"], 0.3);
+	for (const [hexes, alpha] of [[d.free, 1], [d.zone.filter((h) => !free.has(h.row * 65536 + h.col)), 0.64]] as const) {
+		if (hexes.length === 0) continue;
+		atMap(c, vp);
+		c.beginPath();
+		for (const h of hexes) addHex(c, h);
+		atScreen(c, vp);
+		c.globalAlpha = alpha;
+		c.lineWidth = 1;
+		c.strokeStyle = MAP["hex-deploy-line"];
+		c.stroke();
+		c.globalAlpha = 1;
+	}
+	if (d.outline.length === 0) return;
+	atMap(c, vp);
+	c.beginPath();
+	for (const e of d.outline) addEdge(c, e);
+	c.lineCap = "round";
+	strokeLine(c, vp, MAP["hex-select"], PX["hex-deploy-width"], PX["hex-shadow-width"]);
+}
+
+//The hex where the picked reserve unit would be placed: a light outline over the dark under-stroke
+export function drawPlaceOutline(c: CanvasRenderingContext2D, vp: Viewport, at: Position) {
+	atMap(c, vp);
+	c.beginPath();
+	addHex(c, at);
+	strokeLine(c, vp, MAP["hex-place"], PX["hex-deploy-width"], PX["hex-shadow-width"]);
 }
 
 //An enemy zone: a bar on the middle of the edge that faces the enemy, where the move ends

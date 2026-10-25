@@ -41,11 +41,17 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		if (r.ok) host.won(r.result);
 		shown();
 	};
+	//A new scenario or turn: the last one's pick dropped, the person's reserve to deploy from first (Deployment)
+	const deployment = () => {
+		store.pick(null);
+		store.startDeployment();
+	};
 	return {
 		//The scenario's briefing; a new scenario's units are none selected
 		showScenario() {
 			store.selected.value = null;
 			refresh();
+			deployment();
 			const w = store.world.value;
 			holding(w === null ? "" : w.data.name, w === null ? "" : w.data.description);
 		},
@@ -84,6 +90,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		//The next player's turn: the program's plays after the browser has drawn this one
 		turnChanged(next: () => void) {
 			refresh();
+			deployment();
 			setTimeout(next, 0);
 		},
 		unitsPlaced: refresh,

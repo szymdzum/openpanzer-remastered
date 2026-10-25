@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
+import type { Ghost } from "./deploy";
+import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
 import { drawMap, type Images, type Scene } from "./mapdraw";
@@ -98,7 +100,7 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value];
+				s.overview.value, s.deployment.value, s.ghost.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -199,7 +201,7 @@ class Painter {
 		const s = this.store;
 		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: hexGrid, units: s.units.peek(),
 			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek(),
-			strategic: s.overview.peek() };
+			strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek() };
 	}
 
 	//Where the map looks, when the scenario or the look asked changes (not when the side's first unit moves): the
@@ -268,6 +270,7 @@ export function MapView({ store }: { store: Store }) {
 	const size = mapSize(w, terrain, scale);
 	const path = store.path.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
+	const ghost = store.ghost.value;
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	return (
 		<div class={strategic ? "pm-mapview strategic" : "pm-mapview"}>
@@ -277,6 +280,16 @@ export function MapView({ store }: { store: Store }) {
 				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + "px" }} />
 			</div>
 			{end !== null && <PathTag store={store} at={toScreen(hexCentre(end.row, end.col), vp)} />}
+			{ghost !== null && <PlaceTag ghost={ghost} at={toScreen(hexCentre(ghost.row, ghost.col), vp)} gap={TOKENS.px["hex-w"] / 2 * scale + 6} />}
 		</div>
+	);
+}
+
+//The placing tag beside the hovered hex (Deployment): what a click does, how the unit lands, that it stays there
+function PlaceTag({ ghost, at, gap }: { ghost: Ghost; at: Point; gap: number }) {
+	return (
+		<Anchored hex={at} place="beside" gap={gap} class="pm-placetag">
+			<output><span class="t"><Icon name="deploy" size="sm" />{ghost.title}</span><span class="s">{ghost.note}</span></output>
+		</Anchored>
 	);
 }

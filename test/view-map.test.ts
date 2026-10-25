@@ -3,7 +3,7 @@
 //(src/view/mapview.ts) on hand-built worlds (test/coreworld.ts, test/smallgame.ts). What each hex shows, the
 //move path's tag, what a click does; the path and its numbers are checked against the move itself
 import { expect, test } from "vitest";
-import { handWorld, type HandUnit } from "./coreworld";
+import { deployWorld, handWorld, type HandUnit } from "./coreworld";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
@@ -18,9 +18,10 @@ import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid
 import { clickOn, mapUnits, outlineOf, pathOf, selectionOf } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
 import { strategicOf } from "../src/view/strategic";
+import { deploymentOf, ghostOf, placeOn, reserveOf } from "../src/view/deploy";
 
 const PZ_IIA = 140, BRUCKE = 111, WZ13 = 262, TP7 = 273, INFANTERIE = 115, PSW_222 = 117, OPEL_BLITZ = 157, ME_109 = 159;
-const KAWALERIA = 267, PZL_23 = 281;
+const KAWALERIA = 267, PZL_23 = 281, TRANSPORTSCHIFFE = 546;
 
 //A hand-built map seen by side 0, player 0's turn
 const hand = (units: HandUnit[], more: { rows?: number; cols?: number; terrain?: (r: number, c: number) => number;
@@ -325,6 +326,36 @@ test("The strategic map: a chip per unit of the layer the side sees, dimmed when
 	expect(ground.flags).toBe("resources/ui/flags/eqp-adlerkorps/flags_med.png");
 	expect(strategicOf({ ...w, data: { ...w.data, equipment: "eqp-pacific" } }, false).flags).toBe("resources/ui/flags/eqp-pacific/flags_med.png");
 	expect(strategicOf({ ...w, data: { ...w.data, equipment: "" } }, false).flags).toBe(ground.flags);
+});
+
+//Deployment: the zone is the core's deployment hexes, a free hex tinted and a taken one not; the picked unit's ghost
+//and tag where the deploy command takes it, landing as the core places it
+test("Deploying: the person's reserve, the zone with its free hexes, and the picked unit where a click would place it", () => {
+	const w = deployWorld();
+	expect(reserveOf(w)).toEqual([{ index: 1, name: "Infanterie", strength: 10 }, { index: 2, name: "Me-109E-3", strength: 10 }]);
+	expect(reserveOf({ ...w, state: { ...w.state, turn: { ...w.state.turn, currentPlayer: 1 } } })).toEqual([]);
+	const d = deploymentOf(w, 1)!;
+	expect(d.zone).toEqual([{ row: 1, col: 1 }, { row: 1, col: 2 }, { row: 2, col: 1 }, { row: 6, col: 6 }]);
+	expect(d.free).toEqual([{ row: 1, col: 1 }, { row: 2, col: 1 }, { row: 6, col: 6 }]);
+	expect(d.outline).toEqual(outlineOf(w, d.zone));
+	expect([d.unit.name, d.waiting]).toEqual(["Infanterie", 2]);
+	//the tank on the map, a unit not in the list, none picked: no zone
+	expect([deploymentOf(w, 0), deploymentOf(w, 7), deploymentOf(w, null)]).toEqual([null, null, null]);
+	//on a free hex of the zone: the infantry's ghost and tag; on the taken one or off the zone, nothing
+	expect(ghostOf(w, d, { row: 1, col: 1 })).toEqual({ row: 1, col: 1, icon: w.equipment[INFANTERIE].icon, facing: 2, title: "Place Infanterie",
+		note: "can't go back to the reserve" });
+	expect([ghostOf(w, d, { row: 1, col: 2 }), ghostOf(w, d, { row: 5, col: 5 }), ghostOf(w, d, null), ghostOf(w, null, { row: 1, col: 1 })])
+		.toEqual([null, null, null, null]);
+	//on the ocean it embarks on the transport; the fighter takes the air slot over the tank
+	expect(ghostOf(w, d, { row: 6, col: 6 })).toMatchObject({ icon: w.equipment[TRANSPORTSCHIFFE].icon, note: "embarked · can't go back to the reserve" });
+	expect(ghostOf(w, deploymentOf(w, 2), { row: 1, col: 2 })).toMatchObject({ title: "Place Me-109E-3", note: "air · can't go back to the reserve" });
+	//a click places it with the deploy command, which the core takes
+	const cmd = placeOn(w, d, { row: 6, col: 6 })!;
+	expect(cmd).toEqual({ type: "deploy", index: 1, to: { row: 6, col: 6 } });
+	const r = step(w, cmd);
+	if (r.ok === false) throw new Error(r.refusal.reason);
+	expect(unitById(r.world, r.world.state.map.hexes[hexIndex(w, 6, 6)].unit!)!.carrier).toBe(TRANSPORTSCHIFFE);
+	expect(placeOn(w, d, { row: 1, col: 2 })).toBeNull();
 });
 
 test("Every flag and objective has its plaque (#62): an objective +150 with its owner's side, a town +50", () => {

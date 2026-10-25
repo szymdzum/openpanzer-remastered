@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createWorld, type WorldOptions } from "../src/core/create";
 import type { EquipmentTable, GameState, ScenarioData, UnitState, World } from "../src/core/types";
-import type { Dossier, PlayerState } from "../src/state";
+import type { Dossier, OffMapUnit, PlayerState } from "../src/state";
+import { terrainType, unitClass } from "../src/prototypes";
 
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
 
@@ -69,6 +70,26 @@ export function handWorld(map: HandMap, equipment: EquipmentTable = germanyPolan
 		else hex.unit = id;
 	});
 	return createWorld({ data, state }, equipment, options);
+}
+
+//A core unit of player owner waiting in the reserve, fresh from the equipment
+export function reserveUnit(eqid: number, owner = 0, equipment: EquipmentTable = germanyPoland): OffMapUnit {
+	const e = equipment[eqid];
+	return { eqid, owner, transport: null, carrier: 0, strength: 10, moveLeft: e.movpoints, ammo: e.ammo, fuel: e.fuel, hits: 0, experience: 0,
+		entrenchment: 0, entrenchTicks: 0, leader: -1, facing: 2, flag: -1, isCore: true, isMounted: false, hasMoved: false, hasFired: false,
+		hasResupplied: false, hasOverstrength: false, isSurprised: false, tempSpotted: false };
+}
+
+//The Deployment card's case on a 10 x 10 map seen by side 0, player 0's turn: a German zone of four hexes, the one at
+//6,6 on the ocean and a Pz IIA (id 0, core list 0) on 1,2; in the reserve an Infanterie (core list 1) and a Me-109E-3
+//(2). Germany's naval transport is the Transportschiffe (546), which a ground unit deployed on the ocean embarks on
+export function deployWorld(): World {
+	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 1, col: 2 }, { eqid: 273, owner: 1, row: 8, col: 8 }],
+		terrain: (r, c) => r === 6 && c === 6 ? terrainType.Ocean : 0 }, germanyPoland, { spotSide: 0 });
+	for (const [row, col] of [[1, 1], [1, 2], [2, 1], [6, 6]]) w.data.hexes[row * 10 + col].deployment = 0;
+	w.state.players[0].core = [{ onMap: 0 }, { reserve: reserveUnit(115) }, { reserve: reserveUnit(159) }];
+	w.state.equipment.indexes["8"] = { unitclass: { [unitClass.navalTransport]: [546] } };
+	return w;
 }
 
 function player(id: number, country: number): PlayerState {

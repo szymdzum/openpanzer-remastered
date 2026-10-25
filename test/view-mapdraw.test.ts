@@ -2,9 +2,10 @@
 //The map's canvas (src/view/mapdraw.ts, #345) on a context that records what it is told: the MapOverlays
 //card's order, the tokens' colours and widths, and the overlays at screen size at every map scale (ZoomLevels)
 import { expect, test } from "vitest";
-import { handWorld } from "./coreworld";
+import { deployWorld, handWorld } from "./coreworld";
 import { fitViewport, toScreen, type Viewport } from "../src/view/canvas";
 import { strategicOf } from "../src/view/strategic";
+import { deploymentOf, ghostOf } from "../src/view/deploy";
 import { BRIDGE, drawMap, type Images, type Scene } from "../src/view/mapdraw";
 import { type MapUnit, mapUnits, pathOf, selectionOf } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
@@ -59,7 +60,7 @@ function scene(w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0
 	{ eqid: 273, owner: 1, row: 4, col: 4 }, { eqid: 273, owner: 1, row: 3, col: 1, facing: 12 }] }, undefined, { spotSide: 0 })): Scene {
 	const selection = selectionOf(w, 0);
 	return { terrain: sprite as CanvasImageSource, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: false, units: mapUnits(w, false, 0), selection,
-		path: pathOf(w, selection, { row: 4, col: 3 }), fog: null, support: null, plaques: [], strategic: null };
+		path: pathOf(w, selection, { row: 4, col: 3 }), fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null };
 }
 
 const vp = (scale: number, dpr = 2): Viewport => ({ x: 10, y: 20, width: 600, height: 400, scale, dpr });
@@ -120,7 +121,7 @@ test("A ring with the moves left; a light ring when the unit can move again; das
 	const path = pathOf(w, selection, far)!;
 	expect(path.cells.some((c) => !c.seen) && path.again).toBe(true);
 	const { ctx, ops } = recorder();
-	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: true, units: [], selection, path, fog: null, support: null, plaques: [], strategic: null }, vp(1), images);
+	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: true, units: [], selection, path, fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null }, vp(1), images);
 	expect(ops.some((o) => o.op === "stroke" && o.lineWidth === 1)).toBe(true); //the grid
 	expect(ops.some((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-move"] && o.dash.join() === "6,4")).toBe(true);
 	expect(ops.some((o) => o.op === "fill" && o.fillStyle === MAP["hex-move"] && o.zoom === 2)).toBe(true); //the light ring
@@ -133,7 +134,7 @@ test("A unit on a bridge of its side is drawn as the bridge; an image not loaded
 	const { ctx } = recorder();
 	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, lifted: false };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 3, cols: 3, grid: false, units: [unit, { ...unit, bridge: false, icon: "" }], selection: null, path: null,
-		fog: null, support: null, plaques: [], strategic: null },
+		fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null },
 		vp(1), (file) => {
 			drawn.push(file);
 			return file === "" ? null : sprite;
@@ -156,7 +157,7 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(selection.zones.length + selection.unseen.length).toBeGreaterThan(0);
 	const { ctx, ops } = recorder();
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 12, cols: 12, grid: false, units: mapUnits(w, false, 0), selection, path: null, fog: fogOf(w), support,
-		plaques: plaquesOf(w), strategic: null }, vp(2), images);
+		plaques: plaquesOf(w), strategic: null, deploy: null, ghost: null }, vp(2), images);
 	const at = (pred: (o: Op) => boolean) => ops.findIndex(pred);
 	const fog = at((o) => o.op === "fill" && o.fillStyle === MAP["hex-fog"]);
 	const hatch = ops.findIndex((o, i) => o.op === "clip" && i > fog); //(the first clip is the map's edge)
@@ -200,6 +201,34 @@ test("The air layer: a ring round the aircraft on top, lifted with its shadow; t
 	drawMap(ctx, { ...scene(w), units: mapUnits(w, false, null) }, vp(1), images);
 	expect(ops.some((o) => o.strokeStyle === MAP["hex-air"])).toBe(false);
 	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.globalAlpha)).toEqual([0.45, 1]);
+});
+
+//Deployment: the zone after the fog and before the sprites, its free hexes tinted with their light line, the taken one's
+//line alone, one brass outline at screen size; the placing hex outlined light, the picked unit drawn there at 55%
+test("The deployment zone: free hexes tinted, one brass outline, the placing outline and the picked unit at 55%", () => {
+	const w = deployWorld();
+	const deploy = deploymentOf(w, 1)!, ghost = ghostOf(w, deploy, { row: 1, col: 1 })!;
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { ...scene(w), selection: null, path: null, units: mapUnits(w, false, null), fog: fogOf(w), deploy, ghost }, vp(2), images);
+	const at = (pred: (o: Op) => boolean) => ops.findIndex(pred);
+	const fog = at((o) => o.op === "fill" && o.fillStyle === MAP["hex-fog"]);
+	const tint = at((o) => o.op === "fill" && o.fillStyle === MAP["hex-select"] && o.globalAlpha === 0.3);
+	const lines = ops.filter((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-deploy-line"]);
+	const outline = at((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"] && o.lineWidth === TOKENS.px["hex-deploy-width"]);
+	const place = at((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-place"] && o.lineWidth === TOKENS.px["hex-deploy-width"]);
+	const sprites = ops.filter((o) => o.op === "drawImage" && o.args.length === 9);
+	const order = [fog, tint, outline, place, ops.indexOf(sprites[0])];
+	expect(order.every((i) => i >= 0)).toBe(true);
+	expect([...order].sort((a, b) => a - b)).toEqual(order);
+	//the free hexes' line, then the taken one's fainter; at screen size
+	expect(lines.map((o) => [o.globalAlpha, o.zoom])).toEqual([[1, 2], [0.64, 2]]);
+	expect([ops[outline].zoom, ops[place].zoom]).toEqual([2, 2]);
+	//the tank, the enemy is in the fog, then the ghost at 55%
+	expect(sprites.map((o) => o.globalAlpha)).toEqual([1, 0.55]);
+	//a side without deployment hexes: nothing drawn
+	const { ctx: none, ops: nothing } = recorder();
+	drawMap(none, { ...scene(w), selection: null, path: null, deploy: { ...deploy, zone: [], free: [], outline: [] } }, vp(1), images);
+	expect(nothing.some((o) => o.strokeStyle === MAP["hex-deploy-line"] || o.lineWidth === TOKENS.px["hex-deploy-width"])).toBe(false);
 });
 
 test("The strategic map's viewport fits the whole map under the status bar, centred in the room left", () => {
