@@ -6,16 +6,16 @@
  *
  * A command names its units by id and its hexes by cell, so it can be logged, saved, sent and written
  * by a program (docs/REFACTOR.md, step 4). The core plays it (src/core/step.ts: check, then the
- * command's handler); Commands.execute plays it in the running game: on the world of the game's
- * objects (src/mirror.ts), checkpoint by checkpoint, the objects updated after each piece, and what the
- * old engine did beside the state where it did it: the selection's hexes, the combat log, the image
- * cache, and the hooks the UI animates and alerts with.
+ * command's handler); Commands.execute plays it whole in the running game, on the world of the game's
+ * objects (src/mirror.ts), the objects updated to the world after it, and what the old engine did beside
+ * the state where it did it: the selection's hexes, the combat log, the image cache.
  *
- * A move hands its finish to the animate hook (the UI calls it when the move's animation ends) and an
- * attack its own, which the UI calls when the attack's animation ends. Between the two the objects
- * show the state in between, as the old game did: the move made, the shots fired. What the UI or the
- * harness writes into the objects meanwhile (the animation's facing, #187) is in the world the finish
- * plays on: each piece starts from the objects' world (src/mirror.ts stepWorld).
+ * A move and an attack are played to their end before anything is shown (#375): a move with its surprise
+ * attack and its capture, an attack with its support fire, the destroyed units, the retreat or the
+ * surrender and the victory. The screen then animates them from the result (the step's events, with what
+ * the old animation read in between: the strengths and the facings at the shots). Within the step the
+ * objects pass through the worlds of its checkpoints, where the old engine set the selection's hexes;
+ * each piece starts from the objects' world, so the selection's changes to the units are in it.
  *
  * What the state doesn't hold, done on the objects as the old engine's commands did it: a move shows
  * the unit's new move and attack hexes, an attack clears the attack hexes, a resupply, a reinforcement,
@@ -68,90 +68,57 @@ export interface Refusal {
 	reason: string;
 }
 
-//One side of an attack, its strength before and after the attack (newstr is set once the shots are
-//fired: 0 while the attack's hooks run, as the old engine had it)
+//One side of an attack: its strength before and after the attack, what the animation draws it as (its
+//class before the shots: a mounted defender dismounts in them) and where it faced when they were fired (a
+//defender that retreated faces its retreat's way after)
 export interface AttackSide {
 	unit: Unit;
 	cell: Cell;
 	oldstr: number;
 	newstr: number;
 	leaderGain: boolean;
+	uclass: number;
+	facing: number;
 }
 
-//An attack as the UI's hooks read it
+//An attack played whole, as the screen shows it after the step (#375)
 export interface AttackResult {
 	attacking: AttackSide;
 	defending: AttackSide;
 	cr: combatResults; //the attack's results, the estimate when the attack didn't take place
 	support: Unit[]; //the units that fired in support of the defender, in order
 	attackStopped: boolean; //the support fire losses stopped the attack
-	//Set by the attack's finish
 	destroyed: Unit[]; //removed from the map after the attack, by their losses (attacker first)
 	retreat: Cell | null; //where the defender retreated to
-	retreatMove: movementResults | null; //the retreat's move, its end (the capture) is the caller's
+	retreatMove: movementResults | null; //the retreat's move: its capture, the victory it won
 	surrender: boolean; //the defender had nowhere to retreat to
 	victorySides: number[]; //the sides that won because the other one has no units left
+	events: GameEvent[]; //what the attack did, in order
 }
 
-//An attack command's hooks: onStart before the shots, onSupportShot after each support fire shot
-//(the unit and its cell), onAttack after the attack itself (not when it was stopped), then animate
-//gets the result and the finish to call when its animation ends (without animate the attack finishes
-//at once, with finish's hooks)
-export interface AttackCommandHooks {
-	onStart?(): void;
-	onSupportShot?(unit: Unit, cell: Cell): void;
-	onAttack?(result: AttackResult): void;
-	animate?(result: AttackResult, finish: (hooks?: FinishAttackHooks) => AttackResult): void;
-	finish?: FinishAttackHooks;
-}
-
-//The attack's finish: onLosses first, onDestroyed for each unit the strengths say is destroyed
-//(attacker first), afterCleanup once they are off the map, onRetreat after the retreat's move,
-//onSurrender after the surrendered unit is off, onVictory for a side whose enemy has no unit left
-export interface FinishAttackHooks {
-	onLosses?(result: AttackResult): void;
-	onDestroyed?(cell: Cell, unit: Unit): void;
-	afterCleanup?(result: AttackResult): void;
-	onRetreat?(unit: Unit, cell: Cell, mr: movementResults): void;
-	onSurrender?(cell: Cell, unit: Unit): void;
-	onVictory?(side: number): void;
-}
-
-//What a move's finish did: the surprise (the hidden unit hit, the attack's result, whose finish is
-//the caller's), the capture, the side the capture won for (-1: none)
+//A move played whole: the move, the surprise (the hidden unit hit, the attack on it played whole), the
+//capture, the side the capture won for (-1: none)
 export interface MoveResult {
 	move: movementResults;
+	at: Cell; //where the unit stopped, the path's end
+	facing: number; //where it faced there, before a surprise attack turned it
 	surprise: { cell: Cell; target: Unit | null; attack: AttackResult | null } | null;
 	capture: boolean;
 	victorySide: number;
+	events: GameEvent[]; //what the move did, its surprise attack's too, in order
 }
 
-//The move's finish, as the UI calls it when the move's animation ends: the surprise attack's hooks
-//(its animation finishes it later), the capture's and the victory's
-export interface FinishMoveHooks {
-	onSurprised?(cell: Cell, unit: Unit): void;
-	attackHooks?(attacker: Unit, target: Unit): AttackCommandHooks;
-	onCapture?(unit: Unit): void;
-	onVictory?(side: number): void;
+//What a command takes beside itself. reselect: after an attack's cleanup the selected unit is selected
+//again (cleared when the attack destroyed it), with its move hexes made again when it destroyed the
+//defender, as the old UI did there (D0.5 takes the selection out of the game's objects)
+export interface ExecuteOptions {
+	reselect?: boolean;
 }
 
-//A move command's hooks: animate gets the move and the finish to call when it ends. Without animate it
-//finishes at once with finish's hooks, the surprise attack with surprise's
-export interface MoveCommandHooks {
-	animate?(mr: movementResults, finish: (hooks?: FinishMoveHooks) => MoveResult): void;
-	finish?: FinishMoveHooks;
-	surprise?: FinishAttackHooks;
-}
-
-interface CommandHooks {
-	move: MoveCommandHooks;
-	attack: AttackCommandHooks;
-}
-export type HooksOf<T extends CommandType> = T extends keyof CommandHooks ? CommandHooks[T] : undefined;
-
-//What execute returns: the old engine's results. null where it returned nothing
+//What execute returns: the old engine's results (a move's and an attack's, the step played whole). null where
+//it returned nothing
 interface CommandResults {
-	move: movementResults;
+	move: MoveResult;
 	attack: AttackResult;
 	resupply: Supply;
 	reinforce: ReinforceResults;
@@ -191,17 +158,17 @@ function checkNow(scenario: Scenario, cmd: Command): Refusal | null {
 	return check(rulesWorld(scenario, engineContext.host(), gameInputs({ spotSide: engineContext.spotSide(), rules: engineContext.rules() })), cmd);
 }
 
-//Checks cmd, then plays it on the core and mirrors it, with the old commands' hooks
-function execute<C extends Command>(scenario: Scenario, cmd: C, hooks?: HooksOf<C["type"]>): Executed<C["type"]> {
+//Checks cmd, then plays it whole on the core and mirrors it
+function execute<C extends Command>(scenario: Scenario, cmd: C, options?: ExecuteOptions): Executed<C["type"]> {
 	const w = worldNow(scenario);
 	const refusal = check(w, cmd);
 	if (refusal !== null) return { ok: false, refusal };
-	return { ok: true, result: run(scenario, w, cmd, hooks) as ResultOf<C["type"]> };
+	return { ok: true, result: run(scenario, w, cmd, options || {}) as ResultOf<C["type"]> };
 }
 
-function run(scenario: Scenario, w: World, cmd: Command, hooks: unknown): unknown {
-	if (cmd.type === "move") return move(scenario, w, cmd, (hooks || {}) as MoveCommandHooks);
-	if (cmd.type === "attack") return attack(scenario, w, cmd, (hooks || {}) as AttackCommandHooks);
+function run(scenario: Scenario, w: World, cmd: Command, options: ExecuteOptions): unknown {
+	if (cmd.type === "move") return move(scenario, w, cmd, options);
+	if (cmd.type === "attack") return attack(scenario, w, cmd, options);
 	if (cmd.type === "disband") scenario.map.delCurrentUnit();
 	const b = begin(cmd.type === "disband" ? worldNow(scenario) : w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
@@ -311,7 +278,12 @@ function logCaptures(scenario: Scenario, events: GameEvent[]) {
 			CombatLog.addObjectiveCapture(new Cell(e.at.row, e.at.col), scenario.map.getUnitById(e.unit).player.side);
 }
 
-function move(scenario: Scenario, w: World, cmd: CommandOf<"move">, h: MoveCommandHooks): movementResults {
+//The move played whole: the move, then its surprise attack (on the hidden unit that stopped it) to its
+//end, or the capture's victory. The objects pass through the worlds of the step's checkpoints, here only,
+//for what the old engine did beside the state there: the moved unit's move and attack hexes on the world
+//of its move (the surprise attack's shots then clear the attack hexes), the combat log, the selection after
+//the attack's cleanup. Nothing outside sees them: the screen shows the step after it (#375)
+function move(scenario: Scenario, w: World, cmd: CommandOf<"move">, options: ExecuteOptions): MoveResult {
 	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
 	mirror(scenario, b.world);
@@ -322,56 +294,36 @@ function move(scenario: Scenario, w: World, cmd: CommandOf<"move">, h: MoveComma
 	const cp = b.checkpoint as MoveCheckpoint;
 	const mr = movementOf(b.events, cmd.unit, cp);
 	if (cp.win) mr.isVictorySide = unit.player.side;
-	const finish = (fh?: FinishMoveHooks) => finishMove(scenario, unit, mr, cp, fh);
-	if (h.animate) {
-		h.animate(mr, finish);
+	const result: MoveResult = { move: mr, at: unit.getPos(), facing: unit.facing, surprise: null, capture: mr.isCapture,
+		victorySide: mr.isVictorySide, events: b.events };
+	if (cp.surprise !== null) {
+		result.surprise = surprise(scenario, unit, cp, options);
+		if (result.surprise.attack !== null) result.events = [...b.events, ...result.surprise.attack.events];
 	} else {
-		const res = finish(h.finish);
-		if (res.surprise !== null && res.surprise.attack !== null) (res.surprise.attack as Finishing).finish(h.surprise);
+		mirror(scenario, resume(worldNow(scenario), cp).world);
 	}
-	return mr;
-}
-
-//Where a move waits for its animation's end
-type MoveCheckpoint = Extract<Checkpoint, { next: "surprise" }>;
-
-//An attack's result with the finish that ends it
-type Finishing = AttackResult & { finish(hooks?: FinishAttackHooks): AttackResult };
-
-//The old Actions.finishMove: the surprise attack on the hidden unit that stopped the move (its finish is
-//the caller's: the UI's when its animation ends, a headless caller's after this), the capture and the
-//victory
-function finishMove(scenario: Scenario, unit: Unit, mr: movementResults, cp: MoveCheckpoint, fh?: FinishMoveHooks): MoveResult {
-	const h = fh || {};
-	const result: MoveResult = { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
-	if (cp.surprise !== null) result.surprise = surprise(scenario, unit, cp, h);
-	else mirror(scenario, resume(worldNow(scenario), cp).world);
-	if (mr.isCapture && h.onCapture) h.onCapture(unit);
-	if (mr.isVictorySide >= 0 && h.onVictory) h.onVictory(mr.isVictorySide);
 	return result;
 }
 
-//The surprise attack: told, its target the unit of the mover's kind first (the one that stopped it, #77)
-//that the mover can attack, its shots as an attack's, animated by the target's hooks; the mover no
-//longer surprised
-function surprise(scenario: Scenario, unit: Unit, cp: MoveCheckpoint, h: FinishMoveHooks): MoveResult["surprise"] {
+//Where a move's surprise attack starts
+type MoveCheckpoint = Extract<Checkpoint, { next: "surprise" }>;
+
+//The old Actions.finishMove's surprise attack: its target the unit of the mover's kind first (the one that
+//stopped it, #77) that the mover can attack, its shots and its finish as an attack's; the mover no longer
+//surprised
+function surprise(scenario: Scenario, unit: Unit, cp: MoveCheckpoint, options: ExecuteOptions): NonNullable<MoveResult["surprise"]> {
 	const cell = new Cell(cp.surprise.row, cp.surprise.col);
-	if (h.onSurprised) h.onSurprised(cell, unit);
 	const target = scenario.map.map[cell.row][cell.col].getAttackableUnit(unit, unit.unitData().movmethod === movMethod.air);
 	if (target === null) {
 		mirror(scenario, resume(worldNow(scenario), cp).world);
 		return { cell, target, attack: null };
 	}
-	const ah = h.attackHooks ? h.attackHooks(unit, target) : {};
-	if (ah.onStart) ah.onStart();
 	const w = worldNow(scenario), sides = sidesOf(unit, target), estimate = estimateOf(w, unit, target);
 	const r = resume(w, cp);
 	mirror(scenario, r.world);
 	if (!r.events.some((e) => e.type === "fight" && !e.support && e.defender.unit === target.id))
 		throw new Error("Commands: the surprise attack's target isn't the screen's");
-	const shot = shots(scenario, r.events, sides, r.checkpoint, ah, estimate);
-	if (ah.animate) ah.animate(shot, (fhooks) => shot.finish(fhooks));
-	return { cell, target, attack: shot };
+	return { cell, target, attack: finishAttack(scenario, shots(scenario, r.events, sides, estimate), r.checkpoint, options) };
 }
 
 //The attack's estimate (Actions.resolveAttack's first combat result, before any shot)
@@ -383,22 +335,20 @@ function estimateOf(w: World, attacker: Unit, defender: Unit): combatResults {
 
 //The two sides before the attack: their units, cells and strengths
 function sidesOf(attacker: Unit, defender: Unit): [AttackSide, AttackSide] {
-	const side = (u: Unit): AttackSide => ({ unit: u, cell: u.getPos(), oldstr: u.strength, newstr: 0, leaderGain: false });
+	const side = (u: Unit): AttackSide => ({ unit: u, cell: u.getPos(), oldstr: u.strength, newstr: 0, leaderGain: false,
+		uclass: u.unitData().uclass, facing: u.facing });
 	return [side(attacker), side(defender)];
 }
 
-function attack(scenario: Scenario, w: World, cmd: CommandOf<"attack">, h: AttackCommandHooks): AttackResult {
+//The attack played whole: its shots, then its finish (the objects through its checkpoints as a move's)
+function attack(scenario: Scenario, w: World, cmd: CommandOf<"attack">, options: ExecuteOptions): AttackResult {
 	const m = scenario.map;
-	if (h.onStart) h.onStart();
 	const sides = sidesOf(m.getUnitById(cmd.unit), m.getUnitById(cmd.target));
 	const estimate = estimateOf(w, sides[0].unit, sides[1].unit);
 	const b = begin(w, cmd);
 	if ("refusal" in b) throw new Error("Commands: " + b.refusal.reason);
 	mirror(scenario, b.world);
-	const result = shots(scenario, b.events, sides, b.checkpoint, h, estimate);
-	if (h.animate) h.animate(result, (fh) => result.finish(fh));
-	else result.finish(h.finish);
-	return result;
+	return finishAttack(scenario, shots(scenario, b.events, sides, estimate), b.checkpoint, options);
 }
 
 //A unit of a fight as the combat log reads it, before or after
@@ -410,19 +360,19 @@ function logged(scenario: Scenario, f: Fighter, done: boolean) {
 }
 
 //The old Actions.resolveAttack after the shots: each fire in the combat log with the leaders it gave, the
-//attack hexes cleared by the attack itself, the support shots and the attack told to the hooks, the
-//result as the old one (the estimate's when there was no attack)
-function shots(scenario: Scenario, events: GameEvent[], sides: [AttackSide, AttackSide], cp: Checkpoint | null,
-	h: AttackCommandHooks, estimate: combatResults): Finishing {
-	const result = { attacking: sides[0], defending: sides[1], cr: estimate, support: [], attackStopped: false, destroyed: [],
-		retreat: null, retreatMove: null, surrender: false, victorySides: [] } as Finishing;
+//attack hexes cleared by the attack itself, the result as the old one (the estimate's when there was no
+//attack), the strengths and the facings after the shots
+function shots(scenario: Scenario, events: GameEvent[], sides: [AttackSide, AttackSide], estimate: combatResults): AttackResult {
+	const result: AttackResult = { attacking: sides[0], defending: sides[1], cr: estimate, support: [], attackStopped: false,
+		destroyed: [], retreat: null, retreatMove: null, surrender: false, victorySides: [], events: [...events] };
 	events.forEach((e, i) => {
 		if (e.type === "attackStopped") result.attackStopped = true;
-		if (e.type === "fight") fired(scenario, e, leadersAfter(events, i), result, h);
+		if (e.type === "fight") fired(scenario, e, leadersAfter(events, i), result);
 	});
-	result.attacking.newstr = result.attacking.unit.strength;
-	result.defending.newstr = result.defending.unit.strength;
-	result.finish = (fh) => finishAttack(scenario, result, cp, fh || {});
+	for (const side of sides) {
+		side.newstr = side.unit.strength;
+		side.facing = side.unit.facing;
+	}
 	return result;
 }
 
@@ -437,9 +387,8 @@ function leadersAfter(events: GameEvent[], i: number): number[] {
 }
 
 //One unit firing on another (Map.attackUnit and what resolveAttack did after it): the combat log with
-//the leaders, the attack hexes cleared by the attack itself, the hooks
-function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, leaders: number[], result: AttackResult,
-	h: AttackCommandHooks) {
+//the leaders, the attack hexes cleared by the attack itself
+function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, leaders: number[], result: AttackResult) {
 	const m = scenario.map;
 	//The fight's own turn: the bundle read a global map's, in the page the canvas's, undefined (#28)
 	const id = CombatLog.addCombatStart(logged(scenario, e.attacker, false), logged(scenario, e.defender, false), m.turn);
@@ -447,52 +396,54 @@ function fired(scenario: Scenario, e: Extract<GameEvent, { type: "fight" }>, lea
 	for (const l of leaders) CombatLog.addLeader(unitObject(m, l));
 	CombatLog.addCombatEnd(logged(scenario, e.attacker, true), logged(scenario, e.defender, true), id, e.support);
 	if (e.support) {
-		const u = unitObject(m, e.attacker.unit);
-		result.support.push(u);
-		if (h.onSupportShot) h.onSupportShot(u, new Cell(e.attacker.row, e.attacker.col));
+		result.support.push(unitObject(m, e.attacker.unit));
 		return;
 	}
 	result.cr = e.result as unknown as combatResults;
 	result.attacking.leaderGain = e.result.atkLeaderGain;
 	result.defending.leaderGain = e.result.defLeaderGain;
-	if (h.onAttack) h.onAttack(result);
 }
 
-//The old Actions.finishAttack: the losses told, the units destroyed (by the strengths in the result) off
-//the map, the selection's turn, the retreat or the surrender, the victory
-function finishAttack(scenario: Scenario, result: AttackResult, cp: Checkpoint | null, h: FinishAttackHooks): AttackResult {
-	if (h.onLosses) h.onLosses(result);
-	for (const side of [result.attacking, result.defending]) {
-		if (side.oldstr - side.newstr < side.oldstr) continue;
-		result.destroyed.push(side.unit);
-		if (h.onDestroyed) h.onDestroyed(side.cell, side.unit);
-	}
+//The old Actions.finishAttack: the units destroyed (by the strengths in the result) off the map, the
+//selection again (options.reselect), the retreat or the surrender, the victory
+function finishAttack(scenario: Scenario, result: AttackResult, cp: Checkpoint | null, options: ExecuteOptions): AttackResult {
+	for (const side of [result.attacking, result.defending])
+		if (side.oldstr - side.newstr >= side.oldstr) result.destroyed.push(side.unit);
 	if (cp === null) return result;
 	const cleaned = resume(worldNow(scenario), cp);
 	mirror(scenario, cleaned.world);
-	if (h.afterCleanup) h.afterCleanup(result);
+	if (options.reselect) reselectAfterAttack(scenario.map, result.attacking.unit, result.defending.unit);
 	const ended = resume(worldNow(scenario), cleaned.checkpoint);
 	mirror(scenario, ended.world);
-	for (const e of ended.events) ending(scenario, result, e, ended.events, h);
+	result.events.push(...cleaned.events, ...ended.events);
+	for (const e of ended.events) ending(scenario, result, e, ended.events);
 	return result;
 }
 
-//What the attack's end did, told: the retreat, the surrender, the victory
-function ending(scenario: Scenario, result: AttackResult, e: GameEvent, events: GameEvent[], h: FinishAttackHooks) {
-	if (e.type === "retreated") retreated(scenario, result, events, h);
-	if (e.type === "surrendered") {
-		result.surrender = true;
-		if (h.onSurrender) h.onSurrender(result.defending.cell, result.defending.unit);
+//The old UI's selection after the attack's cleanup (its uiReselectAfterAttack): cleared when its unit was
+//destroyed, else selected again, with its move hexes made again when it destroyed the defender (the old
+//game read the cleared selection when both units were destroyed: it threw, #326, #29)
+function reselectAfterAttack(m: Scenario["map"], attacker: Unit, defender: Unit) {
+	const u = m.currentUnit;
+	if (!u) return;
+	if (attacker.destroyed && u.id === attacker.id) {
+		m.delCurrentUnit();
+		return;
 	}
-	if (e.type === "victory") {
-		result.victorySides.push(e.side);
-		if (h.onVictory) h.onVictory(e.side);
-	}
+	m.selectUnit(u);
+	if (defender.destroyed && !u.hasMoved) m.setMoveRange(u);
+}
+
+//What the attack's end did: the retreat, the surrender, the victory
+function ending(scenario: Scenario, result: AttackResult, e: GameEvent, events: GameEvent[]) {
+	if (e.type === "retreated") retreated(scenario, result, events);
+	if (e.type === "surrendered") result.surrender = true;
+	if (e.type === "victory") result.victorySides.push(e.side);
 }
 
 //Map.retreatUnit: the retreat's move shows the unit's move and attack hexes as a move does, then the
-//unit selected before is selected again; the hook animates the retreat
-function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[], h: FinishAttackHooks) {
+//unit selected before is selected again
+function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[]) {
 	const m = scenario.map, u = result.defending.unit, before = m.currentUnit;
 	logCaptures(scenario, events);
 	showRetreatRanges(m, u);
@@ -500,10 +451,8 @@ function retreated(scenario: Scenario, result: AttackResult, events: GameEvent[]
 	const mr = movementOf(events, u.id, null);
 	const captured = events.find((e) => e.type === "captured" && e.unit === u.id);
 	if (captured !== undefined && captured.type === "captured" && captured.win) mr.isVictorySide = u.player.side;
-	const to = u.getPos();
-	result.retreat = to;
+	result.retreat = u.getPos();
 	result.retreatMove = mr;
-	if (h.onRetreat) h.onRetreat(u, to, mr);
 }
 
 //The retreated unit's move and attack hexes as the old retreat's move showed them: with the move's
@@ -520,22 +469,13 @@ function showRetreatRanges(m: Scenario["map"], u: Unit) {
 	touched();
 }
 
-//The end of a retreat's move (its animation's end): its capture and the victory it won
-function finishRetreat(unit: Unit, mr: movementResults, hooks?: FinishMoveHooks) {
-	const h = hooks || {};
-	if (mr.isCapture && h.onCapture) h.onCapture(unit);
-	if (mr.isVictorySide >= 0 && h.onVictory) h.onVictory(mr.isVictorySide);
-}
-
 export interface CommandsAPI {
 	check(scenario: Scenario, cmd: Command): Refusal | null;
-	execute<C extends Command>(scenario: Scenario, cmd: C, hooks?: HooksOf<C["type"]>): Executed<C["type"]>;
-	finishRetreat(unit: Unit, mr: movementResults, hooks?: FinishMoveHooks): void;
+	execute<C extends Command>(scenario: Scenario, cmd: C, options?: ExecuteOptions): Executed<C["type"]>;
 }
 
 //(a module object: the harness's and the contracts' Commands)
 export const Commands: CommandsAPI = {
 	check: checkNow,
 	execute: execute,
-	finishRetreat: finishRetreat,
 };

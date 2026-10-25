@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
 import type { Game } from "../src/game";
 import type { EqUserSelElement, UI } from "../src/ui";
-import type { AttackCommandHooks, AttackResult, FinishAttackHooks } from "../src/commands";
+import type { AttackResult, Executed, ExecuteOptions } from "../src/commands";
 import type { Unit } from "../src/unit";
 
 //Any property of it, called or not, is itself; as a number it is 0
@@ -262,13 +262,23 @@ test("A unit out of ammo and fuel shows both map tooltips with their own ids, an
 	expect(shown()).toEqual([]);
 }, 60_000);
 
+//The attack command played whole, its result changed by more as the UI then shows it (a retreat, a victory)
+async function attacksWith(more: (result: AttackResult) => void) {
+	const { Commands } = await import("../src/commands");
+	const execute = Commands.execute.bind(Commands);
+	vi.spyOn(Commands, "execute").mockImplementation(((scenario: never, cmd: { type: string }, options?: ExecuteOptions) => {
+		const r = execute(scenario, cmd as never, options) as Executed<"attack">;
+		if (cmd.type === "attack" && r.ok) more(r.result);
+		return r;
+	}) as unknown as typeof Commands.execute);
+}
+
 //The AI waits for every animation its action starts: a defender that retreats moves after the attack's
 //own animation, and the AI's next action came during that move while the turn loop ticked once a second
 //(#248). The attack's retreat put in by hand: the first attack of campaign:0:1 has none
 test("The AI's next action waits for the retreat its attack caused to end (#248)", async () => {
 	const { game, ui } = await uiGame("campaign:0:1");
 	const { GameRules } = await import("../src/gamerules");
-	const { Commands } = await import("../src/commands");
 	const { movementResults, uiSettings } = await import("../src/prototypes");
 	uiSettings.quickAnimation = true;
 	const map = game.scenario.map;
@@ -278,26 +288,17 @@ test("The AI's next action waits for the retreat its attack caused to end (#248)
 		for (const d of units.filter((u) => GameRules.isEnemy(a, u)))
 			if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
 	const [attacker, defender] = pair!;
-	const execute = Commands.execute.bind(Commands);
-	vi.spyOn(Commands, "execute").mockImplementation(((scenario: unknown, cmd: { type: string }, hooks?: AttackCommandHooks) => {
-		if (cmd.type !== "attack" || !hooks) return execute(scenario as never, cmd as never, hooks as never);
-		return execute(scenario as never, cmd as never, { ...hooks, animate: (result: AttackResult, finish: (h?: FinishAttackHooks) => AttackResult) =>
-			hooks.animate!(result, (h?: FinishAttackHooks) => {
-				const r = finish(h);
-				const mr = new movementResults(), at = defender.getPos();
-				mr.passedCells = [at, at];
-				h!.onRetreat!(defender, at, mr);
-				return r;
-			}) } as never);
-	}) as unknown as typeof Commands.execute);
-	//What the defender was doing each time the AI's wait was cleared
-	const cleared: boolean[] = [];
-	let wait = true;
-	Object.defineProperty(game, "waitUIAnimation", { configurable: true, get: () => wait,
-		set: (v: boolean) => { if (!v) cleared.push(defender.hasAnimation); wait = v; } });
+	await attacksWith((result) => {
+		const mr = new movementResults(), at = defender.getPos();
+		mr.passedCells = [at, at];
+		Object.assign(result, { retreat: at, retreatMove: mr });
+	});
+	//What the defender was doing when the AI's wait ended (the game's shown, src/oldscreen.ts)
+	const shown: boolean[] = [];
+	ui.whenShown(() => { shown.push(defender.hasAnimation); });
 	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
-	await until(() => !wait && !defender.hasAnimation, "the attack and the retreat");
-	expect(cleared).toEqual([false]);
+	await until(() => !game.waitUIAnimation && !defender.hasAnimation, "the attack and the retreat");
+	expect(shown).toEqual([false]);
 }, 60_000);
 
 //A unit the player's attack destroys leaves the map when the attack's animation ends. The end turn
@@ -336,24 +337,14 @@ test("The player's end of turn waits for the attack's animation: no destroyed un
 }, 60_000);
 
 //The current player's attacks, each ending the game with the next of winners winning (the attack's
-//onVictory as the elimination calls it): the title and the text of the message each told
+//victory as the elimination's): the title and the text of the message each told
 async function victoriesTold(game: Game, ui: UI, winners: number[]): Promise<string[][]> {
 	const { GameRules } = await import("../src/gamerules");
-	const { Commands } = await import("../src/commands");
 	const { UIBuilder } = await import("../src/uibuilder");
 	const { uiSettings } = await import("../src/prototypes");
 	uiSettings.quickAnimation = true;
 	const map = game.scenario.map, attacker = map.currentPlayer;
-	const execute = Commands.execute.bind(Commands);
-	vi.spyOn(Commands, "execute").mockImplementation(((scenario: unknown, cmd: { type: string }, hooks?: AttackCommandHooks) => {
-		if (cmd.type !== "attack" || !hooks) return execute(scenario as never, cmd as never, hooks as never);
-		return execute(scenario as never, cmd as never, { ...hooks, animate: (result: AttackResult, finish: (h?: FinishAttackHooks) => AttackResult) =>
-			hooks.animate!(result, (h?: FinishAttackHooks) => {
-				const r = finish(h);
-				h!.onVictory!(winners.shift()!);
-				return r;
-			}) } as never);
-	}) as unknown as typeof Commands.execute);
+	await attacksWith((result) => { result.victorySides.push(winners.shift()!); });
 	const message = vi.spyOn(UIBuilder, "message").mockImplementation(() => {});
 	const told: string[][] = [];
 	while (winners.length > 0) {
@@ -361,7 +352,6 @@ async function victoriesTold(game: Game, ui: UI, winners: number[]): Promise<str
 		for (const a of map.getUnits().filter((u) => u.player.id === attacker.id && !u.hasFired))
 			for (const d of map.getUnits().filter((u) => GameRules.isEnemy(a, u)))
 				if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
-		game.waitUIAnimation = true;
 		expect(ui.uiUnitAttack(pair![0], pair![1])).toBe(true);
 		await until(() => !game.waitUIAnimation, "the attack");
 		const [title, text] = message.mock.calls[message.mock.calls.length - 1];
@@ -400,7 +390,7 @@ test("A victory is told as a defeat to the person by the side they play now: the
 	expect(game.scenario.map.currentPlayer.side).toBe(0);
 	//(an Axis unit moved next to an Allied one, to attack it)
 	const { Commands } = await import("../src/commands");
-	expect(Commands.execute(game.scenario, { type: "move", unit: 3, to: { row: 8, col: 14 } }, { animate: (_mr, finish) => { finish({}); } }).ok).toBe(true);
+	expect(Commands.execute(game.scenario, { type: "move", unit: 3, to: { row: 8, col: 14 } }).ok).toBe(true);
 	const told = await victoriesTold(game, ui, [1]);
 	expect(told[0][0]).toBe("DEFEAT");
 	expect(told[0][1]).toContain("You have lost ! Your enemy " + countryOf(game, 1) + " on Allies side wins");
@@ -566,4 +556,33 @@ test("An attack that destroys both units, the last of their sides, still ends th
 	const { game } = await bothDestroyed(true);
 	expect(game.gameEnded).toBe(true);
 	expect(document.getElementById("message")!.textContent).toContain("wins by destroying all the enemy units");
+}, 60_000);
+
+//The old UI shows a unit the AI picked and a look at a hex a moment before the AI's next action, and the
+//next player's turn after the AI's: the turn loop's tick until #375 (#8). A message nothing waits for
+//closes
+test("The old screen shows a unit the AI picked, a look at a hex and its turn's end a moment before it goes on (#375)", async () => {
+	const { game, ui } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+	const map = game.scenario.map;
+	const info = vi.spyOn(ui, "uiEndTurnInfo");
+	vi.useFakeTimers();
+	try {
+		const went: string[] = [];
+		const unit = map.getUnits().find((u) => u.player === map.currentPlayer && u.getPos() !== null)!;
+		game.host.screen.view({ type: "select", unit: unit.id }, () => { went.push("select"); });
+		game.host.screen.view({ type: "viewport", at: unit.getPos() }, () => { went.push("viewport"); });
+		game.host.screen.turnChanged(() => { went.push("next"); });
+		expect([went, map.currentUnit]).toEqual([[], unit]);
+		vi.advanceTimersByTime(250);
+		expect(went).toEqual(["select", "viewport", "next"]);
+		expect(info).not.toHaveBeenCalled();
+		vi.advanceTimersByTime(2250);
+		expect(info).toHaveBeenCalledTimes(1);
+		//A message the session shows at a turn's start, which nothing waits for: its OK only closes it
+		game.host.screen.view({ type: "message", text: "Look here", at: unit.getPos() });
+		document.getElementById("gameToolTipOk")!.click();
+		expect(went).toEqual(["select", "viewport", "next"]);
+	} finally {
+		vi.useRealTimers();
+	}
 }, 60_000);

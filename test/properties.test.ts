@@ -21,8 +21,8 @@ import { cellName, load, violations, type Restored as World } from "./invariants
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";
-import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackResult, Command, FinishAttackHooks, Refusal } from "../src/commands";
+import type { Cell } from "../src/prototypes";
+import type { AttackResult, Command, Refusal } from "../src/commands";
 import { coreEngine } from "./coreengine";
 
 //What just happened, for the outcome: a move's (or a retreat's) capture, the side that ended its turn
@@ -137,49 +137,29 @@ function settle(p: Play, last?: OutcomeContext) {
 	if (p.Actions.checkOutcome(p.w.scenario, last)) p.ended = true;
 }
 
-//ui.ts uiAttackAnimationFinished without animations: the attack command's finish with the
-//selection refresh, a retreat's own move finished after the elimination check
-function finishAttack(p: Play, res: AttackResult, finish: (hooks?: FinishAttackHooks) => AttackResult) {
-	const m = p.w.m, a = res.attacking.unit, d = res.defending.unit;
-	finish({
-		afterCleanup() {
-			if (!m.currentUnit) return;
-			if (a.destroyed && m.currentUnit.id === a.id) m.delCurrentUnit();
-			else m.selectUnit(m.currentUnit);
-			if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
-		},
-	});
+//An attack shown (ui.ts uiAttackShown without animations): the outcome after it, then after the retreat's
+//move, which the UI shows after the elimination check
+function attacked(p: Play, res: AttackResult) {
 	settle(p);
-	if (res.retreatMove) retreated(p, d, res.retreatMove);
+	if (res.retreatMove) settle(p, { move: { victorySide: res.retreatMove.isVictorySide } });
 }
 
-//ui.ts uiMoveAnimationFinished for a retreat (Commands.finishRetreat), then the capture victory
-function retreated(p: Play, u: Unit, mr: movementResults) {
-	p.w.Commands.finishRetreat(u, mr);
-	settle(p, { move: { victorySide: mr.isVictorySide } });
-}
-
-//The attack command as ui.ts uiUnitAttack sends it, its finish called at once (the animation's end)
+//The attack command as ui.ts uiUnitAttack sends it, played whole with the selection refreshed
 function attack(p: Play, cmd: Command & { type: "attack" }) {
-	return p.w.Commands.execute(p.w.scenario, cmd, {
-		animate(res, finish) { if (res) finishAttack(p, res, finish); },
-	});
+	const r = p.w.Commands.execute(p.w.scenario, cmd, { reselect: true });
+	if (r.ok) attacked(p, r.result);
+	return r;
 }
 
-//The move command as ui.ts uiUnitMove sends it, finished as uiMoveAnimationFinished: the capture
-//victory, then the surprise attack (animated as an attack) finished last
+//The move command as ui.ts uiUnitMove sends it, shown as uiMoveShown shows it: the capture victory, then
+//the surprise attack
 function move(p: Play, cmd: Command & { type: "move" }) {
-	const { Commands, scenario } = p.w;
-	return Commands.execute(scenario, cmd, {
-		animate(_mr, finish) {
-			const surprise: { result: AttackResult | null; finish?: (hooks?: FinishAttackHooks) => AttackResult } = { result: null };
-			const r = finish({
-				attackHooks: () => ({ animate(res, fin) { surprise.result = res; surprise.finish = fin; } }),
-			});
-			settle(p, { move: r });
-			if (surprise.result && surprise.finish) finishAttack(p, surprise.result, surprise.finish);
-		},
-	});
+	const r = p.w.Commands.execute(p.w.scenario, cmd, { reselect: true });
+	if (r.ok) {
+		settle(p, { move: r.result });
+		if (r.result.surprise !== null && r.result.surprise.attack !== null) attacked(p, r.result.surprise.attack);
+	}
+	return r;
 }
 
 //ui.ts uiUnitSelect

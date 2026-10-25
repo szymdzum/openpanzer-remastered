@@ -146,16 +146,18 @@ dice, the defender's, then the attacker's leader roll and the defender's: `gener
 draws even when no level was gained), then `applyFight`, which changes it. The preview (#7) can
 resolve on a copy of the stream.
 
-**Checkpoints (#137).** The old UI animated a move and an attack and finished them from the
-animation's end, showing the state in between (the animation-combat script hashes every frame of
-it). `begin(world, command)` plays a command up to its first checkpoint, `resume(world, checkpoint)`
-from one to the next: a move stops once moved (`surprise` next: the surprise attack and the
-capture's victory), an attack once its shots are fired (`cleanUp` next: the destroyed units leave the
-map) and once they are gone (`end` next: the retreat or the surrender, the elimination victory). The
-world resumed from can be one made again from the screen's objects. The surprise attack hits the
-hidden unit of the mover's kind first, the one that stopped it (#77: the old game picked by the
-person's air mode toggle, for the AI's moves too). `step` passes every checkpoint at
-once on one draft; test/core-steps.test.ts played each of its commands both ways until #137.
+**Checkpoints (#137).** Until #375 the old UI animated a move and an attack and finished them from
+the animation's end, showing the state in between. `begin(world, command)` plays a command up to its
+first checkpoint, `resume(world, checkpoint)` from one to the next: a move stops once moved
+(`surprise` next: the surprise attack and the capture's victory), an attack once its shots are fired
+(`cleanUp` next: the destroyed units leave the map) and once they are gone (`end` next: the retreat or
+the surrender, the elimination victory). The world resumed from can be one made again from the
+screen's objects. The surprise attack hits the hidden unit of the mover's kind first, the one that
+stopped it (#77: the old game picked by the person's air mode toggle, for the AI's moves too). `step`
+passes every checkpoint at once on one draft; test/core-steps.test.ts played each of its commands both
+ways until #137. Since #375 the game's `Commands.execute` passes them all in one call too, the objects
+going through each checkpoint's world only for what the old engine did beside the state there (the
+selection's hexes); the screen shows the step after it, from its result (below, "The screen").
 
 **Undo (D5).** The state keeps `turn.undoable` as the old engine's slot decides it: a human
 player's move that spotted nothing new and wasn't surprised, cleared by an attack, a resupply, a
@@ -383,11 +385,16 @@ the player has clicked its message away, the prototype, the core units carried, 
 and the end of a game from its `SessionEnd`: a victory, which the old UI reports when the step that won it
 has been shown (its animation's end), and the turn limit, from the session when the turn ends. It decides
 who is told what and what follows; the screen only shows. Game's members (newScenario, newCampaign,
-continueCampaign, onScenarioLoadFinished, setupGameState...) hand on to it. It also runs the turn loop
-(#374): each tick of `game.loop` (`processTurn`), a program's next actions (`processAIActions`,
-`processAction`: the move and the attack played and shown by the screen, the view events shown, the
-other commands on the core) and the end of a turn (`endTurn`, on the session). It imports no UI module
-(test/headless.test.ts), and a whole campaign and a game's turns play on it in Node (test/host.test.ts).
+continueCampaign, onScenarioLoadFinished, setupGameState...) hand on to it. It also plays a program's turn
+(#374, #375): its actions one after the other (`processAIActions`, `processAction`: the move and the attack
+played and shown by the screen, the view events shown, the other commands on the core), each one the screen
+shows waited for until its `shown`, then the end of the turn (`endTurn`, on the session). No turn loop ticks
+since #375: the game goes on (`goOn`) when the screen calls a `shown`, when the player clicks a message away
+(the briefing; a campaign's outcome, then the next scenario loads), after the person's end of turn, and when
+the screen has shown the next player's turn (`turnChanged`'s callback). `processTurn` is left for the
+harness, which ticks it on its own clock and holds it with `game.waitUIAnimation` (until #378). It imports no
+UI module (test/headless.test.ts), and a whole campaign and a game's turns play on it in Node
+(test/host.test.ts).
 
 ## The screen (#374)
 
@@ -402,18 +409,22 @@ The host and the session's glue (src/coresession.ts) show the game through one i
 | `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | `UIBuilder.message` |
 | `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | `UIBuilder.showCampaignEnd`, `ui.mainMenuButton("options")` |
 | `reportScore`, `reportAchievement` | the host | `OSGlue` |
-| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | `ui.uiUnitMove`, `ui.uiUnitAttack` (the command played with the animation's hooks), the unit centered; shown at the animation's end |
-| `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: `uiSetUnitOnViewPort` and `uiUnitSelect`, `showGameToolTip` (shown: its OK), `uiSetCellOnViewPort`, `ui.mainMenuButton("mainmenu")` |
-| `aiTurnEnded()`, `turnChanged()` | the host, a program's turn ended | `UIBuilder.showAIStatus(false)`; 2.5 s later `ui.uiEndTurnInfo` unless the game ended |
+| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | `ui.uiUnitMove`, `ui.uiUnitAttack` (the command played whole, then animated), the unit centered; shown at the end of the step's last animation |
+| `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: `uiSetUnitOnViewPort` and `uiUnitSelect`, `showGameToolTip` (shown: its OK), `uiSetCellOnViewPort`, `ui.mainMenuButton("mainmenu")`; shown 250 ms later (#8) |
+| `aiTurnEnded()`, `turnChanged(next)` | the host, a program's turn ended | `UIBuilder.showAIStatus(false)`; 2.5 s later `ui.uiEndTurnInfo` unless the game ended; next 250 ms later |
 | `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | `ui.handleReinforcementDeployment`, `ui.showAlert(..., "Reinforced!")` |
 
-What the game waits on takes a callback, `shown`, which the screen calls once the player has seen it. The
-timing is still the old game's: the old UI calls it where its wait ended before (`animating(false)` in
-src/ui.ts at the move's or the attack's end, the tooltip's OK), and the turn loop still reads
-`game.waitUIAnimation` and `game.uiMessageClicked` (the harness sets them too). #375 makes the turn loop
-wait on `shown`. Until then the old UI plays a program's move and attack (its hooks finish the command at
-the animation's end and tell the host a victory); the screen that shows nothing (src/nullscreen.ts) plays
-them at once, with no animation, and tells the host their victories.
+What the game waits on takes a callback, `shown`, which the screen calls once the player has seen it. A move
+and an attack are played whole before anything is shown (#375): `Commands.execute` returns the step's
+result (`MoveResult`, `AttackResult`: the events, and what the old animation read in between, the
+strengths, the units' classes and facings at the shots, where the move stopped and which way the unit faced
+there), and the old UI animates it after: the move, the surprise, the hits, the losses, the explosions, the
+retreat's move or the surrender, then tells the host the victories where its animations end, and calls
+shown at the end of the last one (`animating(false)` in src/ui.ts). The screen that shows nothing
+(src/nullscreen.ts) calls it at once and tells the host the victories then. What the old UI's selection
+did after an attack's cleanup (the attacker selected again) is the command's `reselect` option, which the
+old UI asks for and the null screen doesn't. `game.waitUIAnimation` is kept, written by the old UI while it
+shows a step, for the harness and the command-line player, which wait on it (#378).
 
 ## The proof
 

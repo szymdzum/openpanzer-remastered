@@ -27,9 +27,11 @@
 //
 // Here the game plays on its core (#137). The player's actions (the AI's and the random ones: move,
 // attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband) go through
-// the game's command entry, src/commands.ts (env.Commands), as the game sends them: the move's and
-// the attack's finish (a surprise attack's too) through the command's animate hook, at once, with the
-// driver's hooks where the UI has its own (the selection refresh, the victories). The end of turn is
+// the game's command entry, src/commands.ts (env.Commands), as the game sends them: a move and an
+// attack played whole (#375) with the UI's selection refresh after the cleanup, then shown as the UI
+// shows them (the victories); the two units of an attack as they were at its shots, which the game
+// stopped at until then, played again on the core from the world before (env.Actions.shotUnits,
+// test/coreengine.ts). The end of turn is
 // the game's on its session (env.Actions.endTurn, test/coreengine.ts: src/coresession.ts's, the
 // reinforcements arrive in it), the players are the session's controllers (env.AI: the AI, the
 // tutorial; a human player's stand-in plays outside it). The end of the game (`ended`) is then what
@@ -44,12 +46,12 @@
 // (test/engine.test.ts).
 //
 // Where the driver still differs from the game, and why:
-// - Synchronous. In the game an attack's second half runs when its animation ends. For an AI
+// - Synchronous. On the reference an attack's second half runs when its animation ends. For an AI
 //   attack the AI waits for it (waitUIAnimation), the same order as here. A surprise attack's
 //   second half runs after uiMoveAnimationFinished cleared waitUIAnimation, so the AI's next
 //   action (or its end of turn and the save) can come first; here it comes after the move's
 //   capture and victory check, before the next action. A retreat's own move-finished part runs
-//   after the elimination check, as in the game
+//   after the elimination check, as in the game. Here the game plays the step whole (#375)
 // - The animations' and sounds' draws (sprite and sound variants, between the support fire shots)
 //   aren't made: they have their own stream in the game (#126), Math.random on the reference,
 //   where check() seeds Math.random per step anyway
@@ -202,11 +204,12 @@ function runEngineContract(env) {
 	// The victory checks after an action
 	const outcome = () => ({ victory: sc.checkVictory(), alive: [m.hasAliveUnits(0), m.hasAliveUnits(1)], ended });
 
-	// ui.js uiUnitAttack without animations and alerts: support fire, the attack or attack stopped
-	function resolved(a, d, res) {
+	// ui.js uiUnitAttack without animations and alerts: support fire, the attack or attack stopped. at: the
+	// two units as they were once the shots were fired (the attack played whole: X.shotUnits)
+	function resolved(a, d, res, at) {
 		return { a, d, aOld: res.attacking.oldstr, dOld: res.defending.oldstr, aNew: res.attacking.newstr,
 			dNew: res.defending.newstr, cr: res.cr, support: res.support.map((s) => s.id), stopped: res.attackStopped,
-			attacker: contractUnitState(a), defender: contractUnitState(d), res };
+			attacker: contractUnitState(at[0]), defender: contractUnitState(at[1]), res };
 	}
 	function resolveAttack(a, d) {
 		if (!a.getPos() || !d.getPos()) return null;
@@ -237,19 +240,16 @@ function runEngineContract(env) {
 		}
 	}
 
-	// ui.js uiAttackAnimationFinished without animations and alerts. finish: the attack command's
-	function finishAttack(r, finish) {
+	// ui.js uiAttackAnimationFinished without animations and alerts. played: the attack command played
+	// whole (its selection refreshed after the cleanup)
+	function finishAttack(r, played) {
 		const a = r.a, d = r.d;
-		if (finish) {
-			const victory = [];
-			const res = finish({
-				afterCleanup() { refreshSelection(a, d); },
-				onVictory(side) { victory.push(win(side, "elimination")); },
-			});
+		if (played) {
+			const victory = played.victorySides.map((side) => win(side, "elimination"));
 			settle();
-			const retreat = res.retreatMove ? { mr: res.retreatMove } : res.surrender ? "surrender" : null;
+			const retreat = played.retreatMove ? { mr: played.retreatMove } : played.surrender ? "surrender" : null;
 			// The retreat's move animation ends after this
-			if (res.retreatMove) Object.assign(retreat, moveFinished(d, res.retreatMove, retreatFinish(d, res.retreatMove)),
+			if (played.retreatMove) Object.assign(retreat, moveFinished(d, played.retreatMove, retreatFinish(played.retreatMove)),
 				{ unit: contractUnitState(d) });
 			return { cr: r.cr, support: r.support, stopped: r.stopped, attacker: r.attacker, defender: r.defender,
 				retreat, victory, outcome: outcome() };
@@ -276,38 +276,29 @@ function runEngineContract(env) {
 	// out of range)
 	function attack(a, d) {
 		if (C) {
-			let done = "no position";
-			C.execute(sc, { type: "attack", unit: a.id, target: d.id }, {
-				animate(res, finish) { done = finishAttack(resolved(a, d, res), finish); },
-			});
-			return done;
+			const cmd = { type: "attack", unit: a.id, target: d.id }, before = X.worldNow();
+			const r = C.execute(sc, cmd, { reselect: true });
+			return r.ok ? finishAttack(resolved(a, d, r.result, X.shotUnits(before, cmd, [a.id, d.id])), r.result) : "no position";
 		}
 		const r = resolveAttack(a, d);
 		return r ? finishAttack(r) : "no position";
 	}
 
-	// A retreat's move finish (Commands.finishRetreat): its capture and victory, no surprise
-	function retreatFinish(u, mr) {
-		return (hooks) => {
-			C.finishRetreat(u, mr, hooks);
-			return { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
-		};
+	// A retreat's move as the screen shows it: its capture and victory, no surprise
+	function retreatFinish(mr) {
+		return { move: mr, surprise: null, capture: mr.isCapture, victorySide: mr.isVictorySide };
 	}
 
-	// ui.js uiMoveAnimationFinished: the surprise attack (its second half after the rest), the
-	// capture victory. finish: the move command's
-	function moveFinished(u, mr, finish) {
-		let surprise = null, pending = null, pendingFinish = null, victory = null;
-		if (finish) {
-			const res = finish({
-				attackHooks(a, d) {
-					return { animate(r, fin) { pending = resolved(a, d, r); pendingFinish = fin; } };
-				},
-				onVictory(side) { victory = win(side, "capture"); },
-			});
-			settle({ move: res });
-			if (res.surprise) surprise = res.surprise.target ? (pending ? null : "no position") : "nothing to attack";
-			if (pending) surprise = finishAttack(pending, pendingFinish);
+	// ui.js uiMoveShown: the capture victory, the surprise attack. played: the move command played whole,
+	// shots: its surprise attack's units at the shots
+	function moveFinished(u, mr, played, shots) {
+		let surprise = null, pending = null, victory = null;
+		if (played) {
+			if (played.victorySide >= 0) victory = win(played.victorySide, "capture");
+			settle({ move: played });
+			const s = played.surprise;
+			if (s) surprise = s.target ? (s.attack ? null : "no position") : "nothing to attack";
+			if (s && s.attack) surprise = finishAttack(resolved(u, s.target, s.attack, shots([u.id, s.target.id])), s.attack);
 			return { surprise, victory };
 		}
 		if (u.isSurprised && mr.surpriseCell) {
@@ -328,10 +319,11 @@ function runEngineContract(env) {
 		m.setMoveRange(u);
 		let mr = null, after = null;
 		if (C) {
-			const r = C.execute(sc, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, {
-				animate(res, finish) { mr = res; after = moveFinished(u, mr, finish); },
-			});
+			const cmd = { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, before = X.worldNow();
+			const r = C.execute(sc, cmd, { reselect: true });
 			if (!r.ok) return { refused: r.refusal.reason, unit: contractUnitState(u), outcome: outcome() };
+			mr = r.result.move;
+			after = moveFinished(u, mr, r.result, (ids) => X.shotUnits(before, cmd, ids));
 		} else {
 			mr = m.moveUnit(u, cell.row, cell.col);
 			after = moveFinished(u, mr);

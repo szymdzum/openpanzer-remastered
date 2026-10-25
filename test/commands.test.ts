@@ -2,7 +2,7 @@
 //The player's commands (src/commands.ts) on a small map built by hand: what each one checks,
 //what it does on the core through the game's objects, and when the move and the attack finish
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { type AttackResult, Commands, type Command } from "../src/commands";
+import { Commands, type Command } from "../src/commands";
 import { engineContext, setEngineContext } from "../src/context";
 import { Equipment } from "../src/equipment";
 import { GameRules } from "../src/gamerules";
@@ -88,27 +88,15 @@ test("A move goes where the unit can get to, along the cells given or its move r
 	expect(refusal({ type: "move", unit: inf.id, to: to, cells: GameRules.getMoveRange(map, inf) })).toBeNull();
 
 	const r = execute(scenario, { type: "move", unit: inf.id, to: to });
-	expect(r.ok && r.result.passedCells.length).toBeGreaterThan(0);
+	expect(r.ok && r.result.move.passedCells.length).toBeGreaterThan(0);
 	expect(inf.getPos()).toEqual(to);
 	expect(inf.hasMoved).toBe(true);
 });
 
-test("A move finishes when the caller's animation ends, or at once", () => {
+test("A move is played whole before it is shown: the move, its surprise attack and the attack's end (#375)", () => {
 	const inf = unitAt(3, 3), to = reachable(inf);
-	let finish: (() => unknown) | null = null;
-	let captured = 0, animated: unknown = null;
-	const r = execute(scenario, { type: "move", unit: inf.id, to: to }, {
-		animate(mr, f) {
-			expect(inf.getPos()).toEqual(to); //moved already, finished later
-			animated = mr;
-			finish = () => f({ onCapture() { captured++; } });
-		},
-	});
-	expect(r.ok).toBe(true);
-	expect(finish).not.toBeNull();
-	const res = finish!() as { move: unknown; surprise: unknown };
-	expect(r.ok && res.move === r.result && animated === r.result).toBe(true);
-	expect([res.surprise, captured]).toEqual([null, 0]);
+	const r = execute(scenario, { type: "move", unit: inf.id, to: to });
+	expect(r.ok && [r.result.surprise, r.result.at, r.result.events.map((e) => e.type)]).toEqual([null, to, ["moved"]]);
 
 	//Into a hidden enemy: the move stops next to it, the surprise attack is resolved and finished in
 	//the same call
@@ -116,12 +104,13 @@ test("A move finishes when the caller's animation ends, or at once", () => {
 	const tank = unitAt(3, 7), enemy = unitAt(6, 7);
 	expect(map.map[6][7].isSpotted(0)).toBe(false);
 	Rng.game.state = 5;
-	const losses: Unit[] = [];
-	const s = execute(scenario, { type: "move", unit: tank.id, to: { row: 7, col: 7 } },
-		{ surprise: { onLosses(a) { losses.push(a.defending.unit); } } });
-	expect(s.ok && s.result.surpriseCell).toMatchObject({ row: 6, col: 7 });
+	const s = execute(scenario, { type: "move", unit: tank.id, to: { row: 7, col: 7 } });
+	expect(s.ok && s.result.move.surpriseCell).toMatchObject({ row: 6, col: 7 });
 	expect(tank.getPos()).toEqual({ row: 5, col: 7 });
-	expect([losses, tank.isSurprised]).toEqual([[enemy], false]);
+	expect(s.ok && s.result.at).toEqual({ row: 5, col: 7 });
+	const attack = s.ok && s.result.surprise !== null ? s.result.surprise.attack : null;
+	expect([attack && attack.defending.unit, attack && attack.defending.newstr, tank.isSurprised]).toEqual([enemy, enemy.strength, false]);
+	expect(s.ok && s.result.events.map((e) => e.type)).toContain("fight");
 });
 
 test("An attack needs both units and the target in range", () => {
@@ -136,36 +125,25 @@ test("An attack needs both units and the target in range", () => {
 	expect(refusal({ type: "attack", unit: inf.id, target: enemy.id })).toBeNull();
 });
 
-test("An attack fires its hooks in the combat's order and finishes when the caller says", () => {
+test("An attack is played whole: its shots, the destroyed units off the map, what the animation draws at the shots (#375)", () => {
 	setup(duel);
 	const inf = unitAt(6, 7), enemy = unitAt(7, 7);
 	Rng.game.state = 3;
-	const calls: string[] = [];
-	let finish: (() => AttackResult) | null = null;
-	const r = execute(scenario, { type: "attack", unit: inf.id, target: enemy.id }, {
-		onStart() { calls.push("start " + enemy.strength); },
-		onSupportShot() { calls.push("support"); },
-		onAttack(res) { calls.push("attack " + (res.attacking.unit === inf)); },
-		animate(result, f) {
-			calls.push("animate " + (result.defending.unit === enemy));
-			finish = () => f({ onLosses() { calls.push("losses"); } });
-		},
-	});
+	const r = execute(scenario, { type: "attack", unit: inf.id, target: enemy.id });
 	expect(r.ok).toBe(true);
-	expect(calls.filter((c) => c !== "support")).toEqual(["start 10", "attack true", "animate true"]);
-	expect(finish!().attacking.unit).toBe(inf);
-	expect(calls[calls.length - 1]).toBe("losses");
-	expect(enemy.strength).toBeLessThanOrEqual(10);
+	if (!r.ok) return;
+	const a = r.result.attacking, d = r.result.defending;
+	expect([a.unit, d.unit, a.oldstr, d.oldstr, d.newstr]).toEqual([inf, enemy, 10, 10, enemy.strength]);
+	expect([a.uclass, d.uclass]).toEqual([inf.unitData().uclass, enemy.unitData().uclass]);
+	//(the two face each other when they fire)
+	expect([a.facing, d.facing]).toEqual([inf.facing, enemy.facing]);
+	expect(r.result.events.filter((e) => e.type === "fight").length).toBeGreaterThan(0);
 
-	//Without animate it finishes at once
+	//The same dice give the same attack
 	setup(duel);
 	Rng.game.state = 3;
-	const finished: string[] = [];
-	const again = execute(scenario, { type: "attack", unit: unitAt(6, 7).id, target: unitAt(7, 7).id },
-		{ finish: { onLosses() { finished.push("losses"); } } });
-	expect(finished).toEqual(["losses"]);
-	expect(again.ok && [again.result.attacking.newstr, again.result.defending.newstr])
-		.toEqual(r.ok && [r.result.attacking.newstr, r.result.defending.newstr]);
+	const again = execute(scenario, { type: "attack", unit: unitAt(6, 7).id, target: unitAt(7, 7).id });
+	expect(again.ok && [again.result.attacking.newstr, again.result.defending.newstr]).toEqual([a.newstr, d.newstr]);
 });
 
 test("Resupply and reinforce a unit", () => {

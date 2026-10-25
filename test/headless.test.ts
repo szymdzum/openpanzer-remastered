@@ -75,12 +75,13 @@ test("The screen interface and the screen that shows nothing reach no UI module;
 	expect(direct).toContain("oldscreen");
 });
 
-test("game.ts starts no timer and no listener while it loads, main.ts does", () => {
+//No turn loop ticks: a program's turn goes on when the screen has shown its last action (#375)
+test("game.ts starts no timer and no listener while it loads, main.ts starts the game and no turn loop", () => {
 	const top = (file: string) => fs.readFileSync(path.join(root, "src", file), "utf8").split("\n")
 		.filter((l) => /^\S/.test(l) && !l.startsWith("//")).join("\n");
 	expect(top("game.ts")).not.toMatch(/setInterval|addEventListener/);
 	const main = fs.readFileSync(path.join(root, "src/main.ts"), "utf8");
-	expect(main).toMatch(/^game\.game\.loop = window\.setInterval\(game\.game\.processTurn, 250\);$/m);
+	expect(main).not.toMatch(/setInterval/);
 	expect(main).toMatch(/^window\.addEventListener\("load", game\.gameStart\);$/m);
 });
 

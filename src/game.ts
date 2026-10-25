@@ -26,7 +26,7 @@ import { game } from "./session";
 import type { CampaignProgress } from "./state";
 
 //Game is what the page, the harness and the tests hold of the running game: its fields, and the members that
-//hand the game's course and its turn loop to its host (src/host.ts), which keeps the campaign's progress and
+//hand the game's course and a program's turn to its host (src/host.ts), which keeps the campaign's progress and
 //shows the game on the old UI (src/oldscreen.ts). The constructor's body sets up the methods, typed as
 //declare fields (docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
 export class Game {
@@ -71,12 +71,14 @@ export class Game {
 
 		this.gameStarted = false; //Game not yet fully initialised
 		this.gameEnded = false; //Game ended in victory or defeat
-		this.waitUIAnimation = false; //A move or an attack still playing: the next AI action and the end turn button wait
+		//The old UI still showing a move or an attack: the harness and the command-line player wait on it (#378);
+		//the game itself waits on the screen's shown (#375)
+		this.waitUIAnimation = false;
 		this.spotSide = -1; //currently visible side on map
 		//The rules the game plays by (#53): the settings' at a new game, the save's at a load, kept through a
 		//campaign; classic until then, as the tests and the contracts play
 		this.rules = "classic";
-		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window //TODO change to event
+		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window, which then tells the host to go on
 
 		//Restores the last saved game, or starts the default scenario if there is none
 		this.init = function() {
@@ -85,14 +87,14 @@ export class Game {
 				this.newScenario.bind(this, "failRestore"));
 		}
 
-		//The turn loop is the host's (src/host.ts): each tick of this.loop, a program's next actions shown on
-		//the screen, the end of a turn. processTurn uses the global game: src/main.ts's interval calls it unbound
+		//A program's turn is the host's (src/host.ts). processTurn is the harness's turn loop (it ticks it on
+		//this.loop, harness/lib/harness.js) and the tests': it uses the global game, an interval calls it unbound
 		this.processTurn = function() { game.host.processTurn(); }
 		this.startTurn = function() {}
 		this.processAIActions = function() { this.host.processAIActions(); }
 		this.endTurn = function() { return this.host.endTurn(); }
 
-		this.loop = 0; //the turn loop's interval: src/main.ts starts it, not the module's loading
+		this.loop = 0; //the harness's turn loop interval (the game's own went, #375)
 		this.session = null;
 		this.host = new GameHost(this, oldScreen(this)); //the old UI shows it (src/oldscreen.ts)
 
