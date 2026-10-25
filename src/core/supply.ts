@@ -39,12 +39,13 @@ function isAirfieldAround(w: World, u: UnitState): boolean {
 	});
 }
 
-//Where a unit can resupply or reinforce: ground units anywhere, air units at an airfield, ships out
-//of a port (kept bug #19: the bundle checks for NOT being in a port)
+//Where a unit can resupply or reinforce: ground units anywhere, air units at an airfield, ships in a
+//port, as the PG2 manual says (#19: the original checked for NOT being in a port, so its ships took
+//supplies anywhere at sea and never in port)
 function canSupplyHere(w: World, u: UnitState): boolean {
 	if (isGround(w, u)) return true;
 	if (isAir(w, u) && isAirfieldAround(w, u)) return true;
-	return isSea(w, u) && w.data.hexes[hexIndex(w, u.row, u.col)].terrain !== terrainType.Port;
+	return isSea(w, u) && w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.Port;
 }
 
 //A unit that hasn't moved, fired or resupplied, short of ammo or fuel (its own or its transport's)
