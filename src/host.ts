@@ -370,12 +370,14 @@ export class GameHost {
 		this.continueCampaign(turnLimitResult(g.session.world, endedSide, this.getCampaignPlayer().side), endGameType.noTurnsLeft);
 	}
 
-	//The turn limit's outcome told to the sides played here (src/core/turn.ts turnLimitOutcome). In the
+	//The turn limit's outcome (src/core/turn.ts turnLimitOutcome), told by the sides a person plays now as a
+	//victory is (#385: it was told by the session's start, DEFEAT to a game of AIs, and the tutorial's person
+	//after the hand-over wasn't told their own): with no person or both sides played, only who won. In the
 	//classic rules the side that ended its last turn lost, as the original said. In the remaster's the
 	//defender that held out wins and the attacker that didn't take all its objectives loses (#256); with
 	//no attacker the side holding more objectives wins (#231)
 	turnLimitMessage(endedSide: number) {
-		const s = this.game.session, w = s.world;
+		const w = this.game.session.world, person = this.personSides();
 		const o = turnLimitOutcome(w, endedSide);
 		if (o.winner === -1) {
 			if (w.rules.defenderHoldsOut) this.screen.message("DRAW", "<br><br>Neither side holds more objectives");
@@ -384,8 +386,8 @@ export class GameHost {
 		}
 		const heldOut = attackerSide(w) === o.loser;
 		const held = heldOut ? " held the objectives to the end" : " held more objectives to the end";
-		if (s.localSide === 2) this.screen.message(outcomeNames[o.rating], "<br><br>The " + sideNames[o.winner] + " side" + held);
-		else if (s.localSide === o.winner) this.screen.message(outcomeNames[o.rating], "<br><br>You" + held);
+		if (person === 2 || person === -1) this.screen.message(outcomeNames[o.rating], "<br><br>The " + sideNames[o.winner] + " side" + held);
+		else if (person === o.winner) this.screen.message(outcomeNames[o.rating], "<br><br>You" + held);
 		else this.screen.message("DEFEAT", "<br><br>" + (heldOut ? "You didn't capture all the objectives in time"
 			: "The enemy held more objectives to the end"));
 	}
