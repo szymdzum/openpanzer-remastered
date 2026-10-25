@@ -11,6 +11,7 @@ import { attackResult, combatResult } from "../src/core/combat";
 import { moveRange, pathTo, shortestPath } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
 import { resupplyValue } from "../src/core/supply";
+import { captureAt } from "../src/core/moves";
 import { classicRules, moveCosts } from "../src/core/rules";
 import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
@@ -473,6 +474,25 @@ test("A liberator takes a flag for twice the prestige, the score as any unit", (
 	const moved = played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
 	expect(moved.world.state.players[0]).toMatchObject({ prestige: 100, score: 50 });
 	expect(moved.world.state.turn.undoable).toMatchObject({ prestigeGain: 100, scoreGain: 50 });
+});
+
+//The screen's move path says what a move would take before it is made (#32): the same flag or objective
+//and prestige the move's capture gives, nothing on a hex of its own side or without a flag, and nothing
+//for an aircraft
+test("What a move would capture is what the move captures: a flag +50, an objective +150, twice with a liberator", () => {
+	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 },
+		{ eqid: PZ_IIA, owner: 0, row: 4, col: 3, leader: leaderType.liberator }, { eqid: ME_109, owner: 0, row: 2, col: 1 }] });
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 1)], { owner: 1, flag: 15, victorySide: -1 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 3, 1)], { owner: 1, flag: 15, victorySide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 6, 1)], { owner: 0, flag: 7, victorySide: -1 });
+	const tank = unitById(w, 0), liberator = unitById(w, 1), plane = unitById(w, 2);
+	expect(captureAt(w, tank, { row: 5, col: 1 })).toEqual({ flag: true, objective: false, prestige: 50 });
+	expect(captureAt(w, tank, { row: 3, col: 1 })).toEqual({ flag: false, objective: true, prestige: 150 });
+	expect(captureAt(w, liberator, { row: 5, col: 1 })).toEqual({ flag: true, objective: false, prestige: 100 });
+	expect([captureAt(w, tank, { row: 6, col: 1 }), captureAt(w, tank, { row: 4, col: 2 }), captureAt(w, plane, { row: 5, col: 1 })])
+		.toEqual([null, null, null]);
+	const moved = played(step(w, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
+	expect(moved.events.find((e) => e.type === "captured")).toMatchObject({ flag: true, objective: false, prestige: 50 });
 });
 
 //A unit passes through its own side's units but can't stop on one of its kind: the hex holds one ground

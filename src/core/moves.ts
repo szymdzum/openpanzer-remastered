@@ -11,7 +11,7 @@ import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectiv
 import type { PathStep } from "./events";
 import { directionTo } from "./geometry";
 import { canPassInto, disembarkPositions, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
-import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState } from "./types";
+import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isSpotted, unitById, unitData } from "./world";
@@ -170,10 +170,19 @@ function undoFields(h: HexState): Pick<UndoState, "oldOwner" | "oldFlag" | "oldV
 }
 
 //A hex side can take: it has an owner or a flag, and isn't side's already
-function canTake(d: Draft, hex: number, side: number): boolean {
-	const h = d.state.map.hexes[hex];
+function canTake(w: World, hex: number, side: number): boolean {
+	const h = w.state.map.hexes[hex];
 	if (h.owner === -1) return h.flag !== -1;
-	return playerAt(d, h.owner).side !== side;
+	return playerAt(w, h.owner).side !== side;
+}
+
+//What u would take by ending its move on a hex, as capture() takes it: the flag or the objective and the
+//prestige they give, null when it takes nothing there. The screen's move path says it before the move
+export function captureAt(w: World, u: UnitState, at: Position): { flag: boolean; objective: boolean; prestige: number } | null {
+	const hex = hexIndex(w, at.row, at.col), h = w.state.map.hexes[hex];
+	if (!canCapture(w, u) || !canTake(w, hex, playerAt(w, u.owner).side)) return null;
+	const flag = h.flag !== -1 && h.victorySide === -1, objective = h.victorySide !== -1;
+	return { flag, objective, prestige: gains(flag, objective, hasLeader(w, u, leaderType.liberator) ? 2 : 1).prestige };
 }
 
 //What taking a flag or an objective gives
