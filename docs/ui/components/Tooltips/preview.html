@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens · In game" height=768 width=1366 subtitle="Hex tooltip, unit pins (low fuel, low ammo, out of supply), button tooltip and the AI status indicator" -->
+<!-- @dsCard group="Screens · In game" height=768 width=1366 subtitle="Hex tooltip with what the terrain does, unit pins (low fuel, no ammo), button tooltip and the AI status indicator" status="Ready" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
 
 <div class="pm pm-stage s1366">
@@ -22,16 +22,15 @@
     </div>
     <div class="msg"><b>Pz IIA</b> 1st Panzer · 3 of 5 moves left · hex 9,4 near Neidenburg</div>
   </header>
-  <div id="gameToolTip" class="pm-tip" style="left:920px;top:79px;width:270px">
-    <div class="hd"><svg class="i sm" aria-hidden="true"><use href="#pm-objective"/></svg>Janon<span class="grow"></span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
-    <div class="pm-muted">City · victory hex · held by Poland</div>
+  <div id="gameToolTip" class="pm-tip" style="left:920px;top:79px;width:300px">
+    <div class="hd"><svg class="i sm" aria-hidden="true"><use href="#pm-scenario"/></svg>Janow<span class="grow"></span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg></div>
+    <div class="pm-muted">City · held by Germany</div>
     <div class="pm-hr" style="margin:8px 0"></div>
-    <div style="display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:12px"><span>Defence</span><span class="pm-data">+3 entrench</span><span>Move cost</span><span class="pm-data">1</span><span>Supply</span><span class="pm-data">Yes</span></div>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12px"><span>Entrenchment</span><span class="pm-data">3 on arrival</span><span>Defence</span><span class="pm-data">+4 defending</span><span>Move cost</span><span class="pm-data">1 · Pz IIA, dry</span><span>Resupply</span><span class="pm-data">full, no enemy adjacent</span></div>
     <div style="display:flex;justify-content:flex-end;margin-top:8px"><button id="gameToolTipOk" class="pm-btn" style="min-height:36px">OK</button></div>
   </div>
   <span class="pm-pin low" style="left:218px;top:362px"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg>Low fuel</span>
   <span class="pm-pin critical" style="left:44px;top:440px"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg>No ammo</span>
-  <span class="pm-pin critical" style="left:212px;top:540px"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>Out of supply</span>
   
   <nav id="menu" class="pm-rail" aria-label="Game menu" style="">
     <div class="group"><button id="inspectunit" class="pm-btn icon" aria-label="Inspect unit" title="Inspect unit (I)"><svg class="i " aria-hidden="true"><use href="#pm-info"/></svg></button></div>

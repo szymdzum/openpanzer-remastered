@@ -4,3 +4,4 @@ The HUD on an iPad in portrait. The vertical rail would cover too much of the na
 - **Status bar:** it spans the width. Weather and ground become icons only, and tapping them shows the words. The unit list button (`#statusBarButton`) and the turn report button sit at its right end.
 - **Unit card:** it sits directly above the command bar and opens the full sheet from Stats.
 - The unit list opens as a 3-row grid over the lower half of the map.
+- The map, the markers and the odds card are those of `HudDesktop`: `MapOverlays` and `CombatOdds` (v2), with the touch inputs on its last line.

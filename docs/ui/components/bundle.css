@@ -139,6 +139,7 @@
 .pm-tip { position: absolute; z-index: var(--z-context); max-width: 300px; padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4); background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: var(--shadow-panel); font-size: 13px; line-height: 18px; }
 .pm-tip::before { content: ""; position: absolute; top: 18px; left: -8px; width: 14px; height: 14px; background: var(--panel); border-left: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); transform: rotate(45deg); }
 .pm-tip.right::before { left: auto; right: -8px; transform: rotate(-135deg); }
+.pm-tip.above::before { top: auto; bottom: -8px; left: 22px; transform: rotate(-45deg); }
 .pm-tip .hd { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 700; font-size: 14px; }
 .pm-pin { position: absolute; z-index: var(--z-map-overlay); display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 6px 0 4px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); font: 700 11px/1 var(--font-ui); letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0, 0, 0, .35); white-space: nowrap; }
 .pm-pin::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; width: 8px; height: 8px; background: var(--panel); border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); transform: rotate(45deg); }

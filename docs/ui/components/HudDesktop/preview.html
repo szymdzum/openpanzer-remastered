@@ -1,12 +1,34 @@
-<!-- @dsCard group="Screens · In game" height=1080 width=1920 subtitle="The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview" -->
+<!-- @dsCard group="Screens · In game" height=1080 width=1920 subtitle="The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview" status="Ready" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+.pm-scene{position:absolute;left:0;top:0;width:1632px;height:1577px;transform-origin:0 0;background:url(assets/map-ciechanow-full.jpg) no-repeat;image-rendering:auto;font-family:"Libre Franklin",Arial,sans-serif}
+.pm-scene .ov{position:absolute;inset:0;overflow:visible}
+.pm-scene .spr{position:absolute;width:80px;height:50px;background-image:url(assets/units-sheet2.png);background-repeat:no-repeat}
+.pm-scene .spr.ghost{opacity:.55}
+.pm-scene .mk{position:absolute;transform:translateX(-50%);height:11px;display:flex}
+.pm-scene .mk b{position:relative;padding:0 3px;height:11px;font:700 9px/11px Arial,sans-serif;color:#fff;background:#4f6b80;border:.5px solid rgba(0,0,0,.75)}
+.pm-scene .mk.en b{background:#9c3b22;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 50%,calc(100% - 3px) 100%,3px 100%,0 50%);padding:0 5px;border:0}
+.pm-scene .rd{position:absolute;right:100%;top:1px;height:9px;margin-right:1px;display:flex;gap:1px;align-items:center;padding:0 1.5px;background:rgba(20,22,15,.75)}
+.pm-scene .rd svg{width:7px;height:7px;display:block}
+.pm-scene .vet{display:flex;flex-direction:column-reverse;gap:.8px;margin-left:2px;padding:1px;background:rgba(20,22,15,.75);height:11px}
+.pm-scene .vet i{display:block;width:5px;height:1.4px;background:#d9a441}
+.pm-scene .sup{display:flex;align-items:center;margin-left:2px;padding:0 1.5px;height:11px;background:rgba(20,22,15,.75)}
+.pm-scene .sup svg{width:6px;height:8px;display:block}
+.pm-scene .sup.low svg{fill:#f2a93b}.pm-scene .sup.critical svg{fill:#ff5a45}
+.pm-scene .ent{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:1px}
+.pm-scene .ent i{width:5px;height:3px;border-radius:1.5px;background:#c8b27a;border:.5px solid #2b2519}
+.pm-scene .lab{position:absolute;transform:translateX(-50%);display:flex;align-items:center;gap:3px;height:15px;padding:0 5px;font:700 9px/15px "Courier Prime","Courier New",monospace;letter-spacing:.04em;text-transform:uppercase;color:#211c13;background:#e8dfc8;border:1px solid #2b2519;box-shadow:inset 0 -2px 0 var(--side),0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
+.pm-scene .lab:not(.obj){height:13px;line-height:13px;font-size:8px;background:#d9ceb2;border-color:#574c39}
+.pm-scene .lab.ax{--side:#4f6b80}.pm-scene .lab.al{--side:#9c3b22}
+.pm-scene .lab .star{width:8px;height:8px;background:#b48a2c;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.pm-scene .lab .rw{margin-left:3px;color:#6b4f12}
+.pm-scene .hexnote{position:absolute;transform:translateX(-50%);font:700 9px/1 "Courier Prime","Courier New",monospace;padding:2px 4px 1px;white-space:nowrap;border:1px solid #2b2519;color:#211c13;background:#f4eedd}
+.pm-scene .hexnote.crit{color:#fff;background:#a1221a}
+</style>
 
 <div class="pm pm-stage s1920">
   
-  <div class="pm-map" style="background-image:url(assets/map-ciechanow.jpg);transform:translate(0px,0px) scale(1.1765)" aria-hidden="true">
-    <svg class="hexes" width="1632" height="1040"><polygon class="sel" points="314,193 329,168 359,168 374,193 359,218 329,218"/><polygon class="tgt" points="359,218 374,193 404,193 419,218 404,243 374,243"/></svg>
-    <div class="spr" style="left:349px;top:191px;background-image:url(assets/units-sheet.png);background-position:-640px 0"></div><span class="pm-badge allied abs" style="left:378px;top:232px">8</span>
-  </div>
+  <div class="pm-scene" style="transform:translate(-165px,-480px) scale(1.5)" aria-hidden="true"><svg class="ov" width="1632" height="1577"><polygon points="735,650 765,650 780,675 765,700 735,700 720,675" style="fill:var(--hex-target);fill-opacity:.12;stroke:var(--hex-shadow)" stroke-width="4" stroke-opacity=".5"/><polygon points="735,650 765,650 780,675 765,700 735,700 720,675" fill="none" style="stroke:var(--hex-target)" stroke-width="2.4" stroke-dasharray="7 4"/><polygon points="690,625 720,625 735,650 720,675 690,675 675,650" fill="none" style="stroke:var(--hex-shadow)" stroke-width="5.5"/><polygon points="690,625 720,625 735,650 720,675 690,675 675,650" fill="none" style="stroke:var(--hex-select)" stroke-width="3"/></svg><div class="spr" style="left:665px;top:617px;background-image:url(assets/units-sheet2.png);background-position:-160px 0;"></div><div class="mk" style="left:705px;top:662px"><span class="rd"><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>10</b><span class="vet"><i></i></span></div><div class="spr" style="left:575px;top:467px;background-image:url(assets/units-sheet2.png);background-position:-0px 0;"></div><div class="mk" style="left:615px;top:512px"><span class="rd"><svg viewBox="0 0 8 8"><path d="M.5 4h6M4 1.2L6.8 4 4 6.8" fill="none" stroke="#fff" stroke-width="1.4"/></svg><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>10</b></div><div class="spr" style="left:710px;top:492px;background-image:url(assets/units1939.png);background-position:-0px 0;"></div><div class="mk" style="left:750px;top:537px"><span class="rd"><svg viewBox="0 0 8 8"><path d="M.5 4h6M4 1.2L6.8 4 4 6.8" fill="none" stroke="#fff" stroke-width="1.4"/></svg><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>10</b><span class="ent"><i></i></span></div><div class="spr" style="left:620px;top:592px;background-image:url(assets/units-sheet2.png);background-position:-320px 0;"></div><div class="mk" style="left:660px;top:637px"><span class="rd"><svg viewBox="0 0 8 8"><path d="M.5 4h6M4 1.2L6.8 4 4 6.8" fill="none" stroke="#fff" stroke-width="1.4"/></svg><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>6</b><span class="sup low"><svg viewBox="0 0 8 10"><path d="M4 .5C4 .5 7.2 4.4 7.2 6.4A3.2 3.2 0 0 1 .8 6.4C.8 4.4 4 .5 4 .5z"/></svg></span></div><div class="spr" style="left:800px;top:492px;background-image:url(assets/units-sheet2.png);background-position:-400px 0;"></div><div class="mk" style="left:840px;top:537px"><span class="rd"><svg viewBox="0 0 8 8"><path d="M.5 4h6M4 1.2L6.8 4 4 6.8" fill="none" stroke="#fff" stroke-width="1.4"/></svg><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>10</b><span class="vet"><i></i></span></div><div class="spr" style="left:620px;top:442px;background-image:url(assets/units1939.png);background-position:-160px 0;"></div><div class="mk" style="left:660px;top:487px"><span class="rd"><svg viewBox="0 0 8 8"><path d="M.5 4h6M4 1.2L6.8 4 4 6.8" fill="none" stroke="#fff" stroke-width="1.4"/></svg><svg viewBox="0 0 8 8"><circle cx="4" cy="4" r="2.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M4 0v1.4M4 6.6V8M0 4h1.4M6.6 4H8" stroke="#fff" stroke-width="1.1"/></svg></span><b>10</b><span class="ent"><i></i></span></div><div class="spr" style="left:710px;top:642px;background-image:url(assets/units-sheet2.png);background-position:-640px 0;transform:scaleX(-1);"></div><div class="mk en" style="left:750px;top:687px"><b>8</b></div><div class="spr" style="left:530px;top:742px;background-image:url(assets/units1939.png);background-position:-560px 0;transform:scaleX(-1);"></div><div class="mk en" style="left:570px;top:787px"><b>8</b><span class="ent"><i></i><i></i></span></div><div class="spr" style="left:440px;top:792px;background-image:url(assets/units1939.png);background-position:-640px 0;transform:scaleX(-1);"></div><div class="mk en" style="left:480px;top:837px"><b>7</b><span class="ent"><i></i></span></div><div class="lab al obj" style="left:525px;top:710px"><i class="star"></i>Mlawa<span class="rw">+150</span></div></div>
   
   <header id="statusbar" class="pm-panel pm-status" role="status" style="">
     <div class="row">
@@ -20,7 +42,7 @@
       <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
       <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>
     </div>
-    <div class="msg"><b>Pz IIA</b> 1st Panzer · 3 of 5 moves left · hex 9,4 near Neidenburg</div>
+    <div class="msg"><b>Pz IIA</b> 1st Panzer · moved, can still fire · 7TP next to it</div>
   </header>
   
   <nav id="menu" class="pm-rail" aria-label="Game menu" style="">
@@ -30,36 +52,39 @@
   </nav>
   <button class="pm-btn primary lg pm-endturn" style=""><svg class="i " aria-hidden="true"><use href="#pm-end-turn"/></svg>End turn</button>
   
-  <div id="unit-context" class="pm-panel pm-ctx" style="left:178px;top:132px" role="toolbar" aria-label="Unit actions">
+  <div id="unit-context" class="pm-panel pm-ctx" style="left:785px;top:382px" role="toolbar" aria-label="Unit actions">
     <button class="pm-btn" disabled><svg class="i " aria-hidden="true"><use href="#pm-resupply"/></svg>Supply<span class="n">moved</span></button>
     <button class="pm-btn" disabled><svg class="i " aria-hidden="true"><use href="#pm-reinforce"/></svg>Reinforce<span class="n">full</span></button>
     <span class="pm-sep"></span>
-    <button class="pm-btn is-hot"><svg class="i " aria-hidden="true"><use href="#pm-undo"/></svg>Undo move<span class="n">to 9,2</span></button>
+    <button class="pm-btn is-hot"><svg class="i " aria-hidden="true"><use href="#pm-undo"/></svg>Undo move<span class="n">to 10,15</span></button>
   </div>
   
-  <div id="gameToolTip" class="pm-panel pm-odds" style="left:507px;top:192px" role="tooltip">
+  <div id="gameToolTip" class="pm-panel pm-odds v2" style="left:1022px;top:408px" role="tooltip">
     <div class="head"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg><span class="t">Attack 7TP</span><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-pl"/></svg></div>
+    <div class="where">Open ground · adjacent</div>
     <div class="vs">
       <span>Pz IIA <span class="pm-muted">· yours</span></span><span class="pm-data">10 → 6</span><span class="bar" aria-hidden="true"><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="keep axis"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i><i class="loss"></i></span>
       <span>7TP <span class="pm-muted">· Polish</span></span><span class="pm-data">8 → 7</span><span class="bar" aria-hidden="true"><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="keep allied"></i><i class="loss"></i><i></i><i></i></span>
     </div>
-    <div class="verdict"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>Unfavourable</div>
-    <div class="hint">Hard attack 3 against ground defence 7. Estimated losses: you 4, enemy 1. Tap the hex again to attack.</div>
+    <div class="verdict bad"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>Unfavourable</div>
+    <div class="why"><div><svg class="i sm" aria-hidden="true"><use href="#pm-tank"/></svg><span>Hard attack 3 against ground defence 7</span><span class="fx "></span></div><div><svg class="i sm" aria-hidden="true"><use href="#pm-clock"/></svg><span>You fire first: initiative 7 against 6</span><span class="fx up">+1 atk</span></div></div>
+    <div class="advice">Hard attack 3 doesn't get through its armour. Send a tank with more, or shell it first.</div>
+    <div class="commit">Click to attack · Esc to cancel</div>
   </div>
   
   <section id="unit-info" class="pm-panel pm-info" aria-label="Selected unit" style="">
     <div>
       <div class="name"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Pz IIA</div>
       <div class="cls">1st Panzer · Tank · Core</div>
-      <span class="pm-stars" aria-label="Experience 2 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span>
-      <div class="leader"><svg class="i sm" aria-hidden="true"><use href="#pm-leader"/></svg>No leader yet</div>
+      <span class="pm-stars" aria-label="Experience 1 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span>
+      <div class="leader has"><svg class="i sm" aria-hidden="true"><use href="#pm-leader"/></svg>Battlefield Intelligence</div>
     </div>
     <div>
       <div class="pm-meter ok"><svg class="i sm" aria-hidden="true"><use href="#pm-strength"/></svg><span>Strength</span><span class="v">10/10</span><span class="track"><b style="width:100%"></b></span></div>
       <div class="pm-meter low"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg><span>Fuel<span class="st">Low</span></span><span class="v">18/50</span><span class="track"><b style="width:36%"></b></span></div>
       <div class="pm-meter critical"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg><span>Ammo<span class="st">Critical</span></span><span class="v">1/8</span><span class="track"><b style="width:12%"></b></span></div>
       <div class="pm-meter"><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrench</span><span class="v">0</span><span class="track"><b style="width:0"></b></span></div></div>
-    <div><div class="pm-stats "><div><span class="k">Soft atk</span><span class="n">5</span></div><div><span class="k">Hard atk</span><span class="n">3</span></div><div><span class="k">Air atk</span><span class="n">0</span></div><div><span class="k">Naval atk</span><span class="n">1</span></div><div><span class="k">Gnd def</span><span class="n">7</span></div><div><span class="k">Air def</span><span class="n">8</span></div><div><span class="k">Close def</span><span class="n">2</span></div><div><span class="k">Initiative</span><span class="n">7</span></div><div><span class="k">Range</span><span class="n">1</span></div><div><span class="k">Spotting</span><span class="n">2</span></div><div><span class="k">Move</span><span class="n">5</span></div><div><span class="k">Exp</span><span class="n">120</span></div></div></div>
+    <div><div class="pm-stats "><div><span class="k">Soft atk</span><span class="n">5</span></div><div><span class="k">Hard atk</span><span class="n">3</span></div><div><span class="k">Air atk</span><span class="n">0</span></div><div><span class="k">Naval atk</span><span class="n">1</span></div><div><span class="k">Gnd def</span><span class="n">7</span></div><div><span class="k">Air def</span><span class="n">8</span></div><div><span class="k">Close def</span><span class="n">2</span></div><div><span class="k">Initiative</span><span class="n">7</span></div><div><span class="k">Range</span><span class="n">1</span></div><div><span class="k">Spotting</span><span class="n">2</span></div><div><span class="k">Move</span><span class="n">6</span></div><div><span class="k">Exp</span><span class="n">120</span></div></div></div>
   </section>
 </div>
 <script>window.PM && PM.mount();</script>

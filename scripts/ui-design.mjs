@@ -35,9 +35,9 @@ function tokensCss() {
 	return "/* Generated from tokens.json by scripts/ui-design.mjs. Do not edit. */\n" + blocks.join("") + `:root {\n${fixed.join("")}${fonts.join("")}}\n`;
 }
 
-const CARD_DEFAULTS = { group: "Other", width: "1000", height: "800", subtitle: "" };
+const CARD_DEFAULTS = { group: "Other", width: "1000", height: "800", subtitle: "", status: "" };
 
-//The attributes of a preview's @dsCard line: its group, size and one-line subtitle
+//The attributes of a preview's @dsCard line: its group, size, one-line subtitle and whether it is ready to build
 function cardAttrs(head) {
 	const attrs = { ...CARD_DEFAULTS };
 	for (const m of head.matchAll(/(\w+)=(?:"([^"]*)"|(\d+))/g)) attrs[m[1]] = m[2] ?? m[3];
@@ -46,7 +46,7 @@ function cardAttrs(head) {
 
 function card(name) {
 	const a = cardAttrs(read(`components/${name}/preview.html`).split("\n")[0]);
-	return { name, group: a.group, width: Number(a.width), height: Number(a.height), subtitle: a.subtitle,
+	return { name, group: a.group, width: Number(a.width), height: Number(a.height), subtitle: a.subtitle, status: a.status,
 		readme: fs.existsSync(path.join(dir, "components", name, "README.md")) };
 }
 
@@ -85,16 +85,16 @@ function render(list, only) {
 	}
 }
 
-//README.md's gallery, between its two markers: every card by group, its render and its README
+//README.md's gallery, between its two markers: every card by group, its render, its README and its status
 function gallery(list) {
 	const file = path.join(dir, "README.md");
 	const readme = fs.readFileSync(file, "utf8");
 	let md = "<!-- gallery:start (written by scripts/ui-design.mjs) -->\n";
 	for (const [group, items] of Map.groupBy(list, (c) => c.group)) {
-		md += `\n### ${group}\n\n| Card | What it shows |\n|---|---|\n`;
+		md += `\n### ${group}\n\n| Card | What it shows | Status |\n|---|---|---|\n`;
 		for (const c of items) {
 			const name = c.readme ? `[${c.name}](components/${c.name}/README.md)` : c.name;
-			md += `| ${name}<br>[render](renders/${c.name}.webp) | ${c.subtitle.replaceAll("|", "\\|")} |\n`;
+			md += `| ${name}<br>[render](renders/${c.name}.webp) | ${c.subtitle.replaceAll("|", "\\|")} | ${c.status} |\n`;
 		}
 	}
 	md += "\n<!-- gallery:end -->";

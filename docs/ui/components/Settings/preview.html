@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="Settings at 1920×1080: theme switch, interface sliders and gameplay toggles" -->
+<!-- @dsCard group="Screens · Menus" height=1080 width=1920 subtitle="Settings at 1920×1080: theme switch, interface sliders, the rules new games play, and gameplay toggles" status="Ready" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
 
 <div class="pm pm-stage s1920">
@@ -12,6 +12,8 @@
         <div class="pm-setting"><span class="t">Interface width</span><input class="pm-range" type="range" min="800" max="1920" value="1366" style="--val:51%" aria-label="Interface width"><span class="val">1366</span></div>
         <div class="pm-setting"><span class="t">Interface scale</span><input class="pm-range" type="range" min="0.5" max="3" step="0.1" value="1" style="--val:20%" aria-label="Interface scale"><span class="val">1.0×</span></div>
         <div class="pm-setting"><span class="t">Game map scale</span><input class="pm-range" type="range" min="1" max="3" step="0.1" value="1" style="--val:0%" aria-label="Game map scale"><span class="val">1.0×</span></div>
+        <div class="pm-label" style="margin:24px 0 4px">Rules</div>
+        <div class="pm-setting"><span class="t">New games play<div class="h">Classic is Panzer Marshal 3.2.14 as it was.</div></span><div id="classicRules" class="pm-seg" role="radiogroup" aria-label="Rules for new games"><button class="is-on" role="radio" aria-checked="true">Remaster</button><button role="radio" aria-checked="false">Classic</button></div></div>
         <div class="pm-label" style="margin:24px 0 4px">Sound</div>
         <div class="pm-setting"><span class="t">Mute unit combat sounds</span><button id="muteUnitSounds" class="pm-toggle" role="switch" aria-checked="false"><span class="track"></span></button></div>
       </div>
