@@ -16,7 +16,7 @@ The move path preview from #32. With a unit selected, hovering a hex in its move
 | ends on a flag (`canCapture`) | takes Wieczfnia | +50 prestige |
 | ends on a victory hex | takes Mlawa · objective | +150 prestige · 2 left to win |
 | crosses unseen hexes | 6 moves left | unseen: ambush possible |
-| mounted unit | can't fire after this move | truck fuel 55 → 52 |
+| mounted unit | can't fire after this move | transport fuel 55 → 52 |
 | recon | 8 moves left | can move again |
 | fuel under a third after the move | 1 move left | fuel 9 → 5 of 47 · low, in `low` |
 
