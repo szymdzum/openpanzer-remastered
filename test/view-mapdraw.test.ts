@@ -21,11 +21,14 @@ interface Op {
 	strokeStyle: string;
 	fillStyle: string;
 	dash: number[];
+	globalAlpha: number;
+	shadowOffsetY: number;
 }
 
 function recorder() {
 	const ops: Op[] = [];
-	const state = { zoom: 1, lineWidth: 1, strokeStyle: "", fillStyle: "", dash: [] as number[] };
+	const state = { zoom: 1, lineWidth: 1, strokeStyle: "", fillStyle: "", dash: [] as number[], globalAlpha: 1, shadowOffsetY: 0 };
+	const saved: (typeof state)[] = [];
 	const ctx = new Proxy({} as Record<string | symbol, unknown>, {
 		get(target, name) {
 			if (name in state) return state[name as keyof typeof state];
@@ -33,6 +36,8 @@ function recorder() {
 			return (...args: unknown[]) => {
 				if (name === "setTransform") state.zoom = args[0] as number;
 				if (name === "setLineDash") state.dash = args[0] as number[];
+				if (name === "save") saved.push({ ...state });
+				if (name === "restore") Object.assign(state, saved.pop());
 				ops.push({ op: String(name), args, ...state, dash: [...state.dash] });
 				return name === "measureText" ? { width: 10 } : undefined;
 			};
@@ -125,7 +130,7 @@ test("A ring with the moves left; a light ring when the unit can move again; das
 test("A unit on a bridge of its side is drawn as the bridge; an image not loaded isn't drawn", () => {
 	const drawn: string[] = [];
 	const { ctx } = recorder();
-	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null };
+	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, lifted: false };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 3, cols: 3, grid: false, units: [unit, { ...unit, bridge: false, icon: "" }], selection: null, path: null,
 		fog: null, support: null, plaques: [] },
 		vp(1), (file) => {
@@ -168,4 +173,30 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(ops.filter((o) => o.op === "fillRect" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"])).map((o) => o.fillStyle))
 		.toEqual([MAP["map-allied"], MAP["map-axis"]]);
 	expect(ops.some((o) => o.op === "stroke" && o.dash.join() === "1.5,1.5" && o.strokeStyle === MAP.glint)).toBe(true);
+});
+
+//MapLayers and AirLayer: the other layer's unit dimmed to 45% without its marker; in the air layer the aircraft on top
+//lifted, its shadow on the ground at the map's scale, inside a dashed air ring drawn at screen size under the selection
+test("The air layer: a ring round the aircraft on top, lifted with its shadow; the ground unit under it dimmed, no marker", () => {
+	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 1 }, { eqid: 159, owner: 0, row: 4, col: 1 }] },
+		undefined, { spotSide: 0 });
+	for (const scale of [1, 2]) {
+		const { ctx, ops } = recorder();
+		drawMap(ctx, { ...scene(w), selection: selectionOf(w, 1), path: null, units: mapUnits(w, true, 1) }, vp(scale), images);
+		const ring = ops.findIndex((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-air"]);
+		expect(ops[ring]).toMatchObject({ zoom: 2, lineWidth: TOKENS.px["hex-air-width"], dash: [4, 3] });
+		expect(ops.some((o) => o.op === "fill" && o.fillStyle === MAP["hex-air-fill"])).toBe(true);
+		expect(ring).toBeLessThan(ops.findIndex((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"]));
+		const sprites = ops.filter((o) => o.op === "drawImage" && o.args.length === 9);
+		//the tank first, dimmed; the aircraft 4px higher with its shadow 9px under it, both in the map's pixels
+		expect(sprites.map((o) => [o.globalAlpha, o.shadowOffsetY])).toEqual([[0.45, 0], [1, 9 * scale * 2]]);
+		expect((sprites[0].args[6] as number) - (sprites[1].args[6] as number)).toBe(4);
+		//one marker: the aircraft's
+		expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["10"]);
+	}
+	//the ground layer: no ring, the aircraft dimmed under the tank
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { ...scene(w), units: mapUnits(w, false, null) }, vp(1), images);
+	expect(ops.some((o) => o.strokeStyle === MAP["hex-air"])).toBe(false);
+	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.globalAlpha)).toEqual([0.45, 1]);
 });

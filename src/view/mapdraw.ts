@@ -1,13 +1,13 @@
-//The map's canvas (#345): the terrain, the hex grid, the fog, the move area, the zones, the targets, the
-//support fire, the selection, the move path, the units and their markers, the plaques, in the MapOverlays
-//card's order. It draws what the map's view model (src/view/mapview.ts, mapinfo.ts) computed and decides nothing. Colours and line widths are the tokens'
+//The map's canvas (#345): the terrain, the hex grid, the fog, the air rings, the move area, the zones, the
+//targets, the support fire, the selection, the move path, the units and their markers, the plaques, in the
+//MapOverlays card's order. It draws what the map's view model (src/view/mapview.ts, mapinfo.ts) computed and decides nothing. Colours and line widths are the tokens'
 //(src/view/tokens.ts), the same in both themes.
 //
 //The canvas is the size of the screen, at the device's pixels (sharp on HiDPI, #31), and draws the part of
 //the map in view. The terrain and the sprites scale with the map (ZoomLevels); everything drawn on top
 //keeps its screen size: a line's path is laid out at the map's scale, then stroked at the screen's, so its
 //width is the token's in screen pixels, and the markers and the path's ring are drawn at screen points.
-import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport } from "./canvas";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
@@ -149,15 +149,43 @@ function drawPath(c: CanvasRenderingContext2D, vp: Viewport, path: Path) {
 	drawPathEnd(c, toScreen(hexCentre(last.row, last.col), vp), path);
 }
 
+//The air ring round each aircraft on top in the air layer (AirLayer): a light fill and a dashed line at screen size
+function drawAirRings(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) {
+	const lifted = units.filter((u) => u.lifted);
+	if (lifted.length === 0) return;
+	fillHexes(c, vp, lifted, MAP["hex-air-fill"], 1);
+	atMap(c, vp);
+	c.beginPath();
+	for (const u of lifted) addHex(c, u);
+	atScreen(c, vp);
+	c.setLineDash([4, 3]);
+	c.strokeStyle = MAP["hex-air"];
+	c.lineWidth = PX["hex-air-width"];
+	c.stroke();
+	c.setLineDash([]);
+}
+
+//How far an aircraft on top in the air layer is lifted, and its shadow on the ground, in the map's pixels (AirLayer)
+const LIFT = 4, SHADOW = { y: 9, blur: 2, alpha: 0.45 };
+
 //A unit's sprite: the strip has nine facings from south to north, the other seven are mirrored. Drawn at the
-//map's scale, its centre a little above the hex's to leave room for the marker
-function drawSprite(c: CanvasRenderingContext2D, u: MapUnit, images: Images) {
+//map's scale, its centre a little above the hex's to leave room for the marker. The other layer's unit is
+//dimmed to 45%; an aircraft on top in the air layer is lifted, its shadow on the ground under it (a canvas
+//shadow is in the device's pixels, whatever the transform)
+function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, images: Images) {
 	const img = images(u.bridge ? BRIDGE : u.icon);
 	if (img === null) return;
 	const w = img.width / 9, h = img.height, o = hexCentre(u.row, u.col);
 	const mirror = u.facing > 8, frame = mirror ? 16 - u.facing : u.facing;
-	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - 8);
+	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - 8 - (u.lifted ? LIFT : 0));
 	c.save();
+	if (u.dim) c.globalAlpha = 0.45;
+	if (u.lifted) {
+		const px = vp.scale * vp.dpr;
+		c.shadowColor = withAlpha(MAP.shade, SHADOW.alpha);
+		c.shadowOffsetY = SHADOW.y * px;
+		c.shadowBlur = SHADOW.blur * px;
+	}
 	if (mirror) {
 		c.translate(x + w / 2, 0);
 		c.scale(-1, 1);
@@ -300,10 +328,11 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
+	drawAirRings(c, vp, scene.units);
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
 	atMap(c, vp);
-	for (const u of scene.units) drawSprite(c, u, images);
+	for (const u of scene.units) drawSprite(c, vp, u, images);
 	atScreen(c, vp);
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));

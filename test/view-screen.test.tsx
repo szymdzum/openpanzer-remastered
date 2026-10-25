@@ -85,6 +85,10 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	const unit = g.scenario.map.getUnits().find((u) => u.player.type === playerType.humanLocal)!;
 	await act(() => { g.host.screen.view({ type: "select", unit: unit.id }, () => {}); });
 	expect(document.querySelector(".pm-status .msg b")!.textContent).toBe(unit.unitData().name);
+	//the status line starts with the air layer while it is on (AirLayer)
+	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
+	expect([...document.querySelectorAll(".pm-status .msg b")].map((b) => b.textContent)).toEqual(["Air layer", unit.unitData().name]);
+	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
 	const actions = [...document.querySelectorAll(".pm-actions button")];
 	expect(actions.map((b) => b.firstChild!.textContent)).toEqual(["Resupply", "Reinforce", "Mount", "Dismount", "Embark", "Disembark", "Undo move"]);
 	//An action the host refuses (sent anyway, as a stale control would): its reason in the status bar

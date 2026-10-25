@@ -6,6 +6,8 @@
 import { computed, signal } from "@preact/signals";
 import type { Command } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
+import { isAir } from "../core/units";
+import { unitById } from "../core/world";
 import type { GameHost } from "../host";
 import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
@@ -82,7 +84,18 @@ export function createStore(host: StoreHost) {
 				return;
 			}
 			selected.value = click.select;
+			//(a unit selected shows its layer, as the old UI did: an aircraft switches the air layer on)
+			const u = click.select === null ? null : unitById(w, click.select);
+			if (u !== null) airMode.value = isAir(w, u);
 			refused.value = null;
+		},
+
+		//The air layer on or off (AirLayer, the A key; the rail's button is the HUD's, D3). Leaving it deselects an
+		//aircraft, which would be underneath, as the old UI did
+		toggleAir() {
+			const w = world.value, u = w === null || selected.value === null ? null : unitById(w, selected.value);
+			if (airMode.value && u !== null && isAir(w!, u)) selected.value = null;
+			airMode.value = !airMode.value;
 		},
 
 		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again

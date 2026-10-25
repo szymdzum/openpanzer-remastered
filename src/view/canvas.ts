@@ -79,6 +79,12 @@ export function fillHexes(c: CanvasRenderingContext2D, vp: Viewport, hexes: Posi
 	c.globalAlpha = 1;
 }
 
+//A token's colour (#rrggbb) at an alpha, for what takes the alpha in its colour (a canvas shadow)
+export function withAlpha(colour: string, alpha: number): string {
+	const n = parseInt(colour.slice(1), 16);
+	return "rgba(" + (n >> 16) + ", " + ((n >> 8) & 255) + ", " + (n & 255) + ", " + alpha + ")";
+}
+
 //A path of the hexes in view (a hex more on each side), those keep says, laid out at the map's scale
 export function addHexesInView(c: CanvasRenderingContext2D, vp: Viewport, rows: number, cols: number, keep: (hex: number) => boolean) {
 	const v = inView(vp, rows, cols);

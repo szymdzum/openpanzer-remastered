@@ -46,6 +46,17 @@ export function setHexGrid(on: boolean) {
 	hexGrid = on;
 }
 
+//The map's own keys, until the HUD has every shortcut (D3): A the air layer. Not while a field takes the typing,
+//nor with a modifier (the browser's own shortcuts). Whether the key was the map's
+function mapKey(store: Store, e: KeyboardEvent): boolean {
+	const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]") !== null;
+	if (typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return false;
+	const k = e.key.toLowerCase();
+	if (k === "a") store.toggleAir();
+	else return false;
+	return true;
+}
+
 //Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it:
 //the hovered hex, a click on a hex. Attached while the map is on the page
 class Painter {
@@ -86,7 +97,11 @@ class Painter {
 			const at = this.cellOf(e);
 			if (at !== null) s.clickHex(at);
 		};
+		const key = (e: KeyboardEvent) => {
+			if (mapKey(s, e)) e.preventDefault();
+		};
 		addEventListener("resize", redraw);
+		addEventListener("keydown", key);
 		scroller.addEventListener("mousemove", move);
 		scroller.addEventListener("mouseleave", leave);
 		scroller.addEventListener("click", click);
@@ -94,6 +109,7 @@ class Painter {
 		return () => {
 			watch();
 			removeEventListener("resize", redraw);
+			removeEventListener("keydown", key);
 			scroller.removeEventListener("mousemove", move);
 			scroller.removeEventListener("mouseleave", leave);
 			scroller.removeEventListener("click", click);
