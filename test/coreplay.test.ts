@@ -1,8 +1,8 @@
 //The running game's commands on the core (src/commands.ts, #137): random command sequences on the engine
 //fixtures (test/commandgen.ts), played through the game's objects as the UI plays them (a move and an
 //attack whole, the selection refreshed after the attack's cleanup), the person clicking units between the
-//commands. After every command, two hashes: of toData's state, the selection's hexes and unit, the combat
-//log and the image cache; and of what the UI is told to show (the move's hexes and what the other side
+//commands. After every command, two hashes: of toData's state, the combat log and the image cache (not the
+//selection since #377: the old UI's); and of what the UI is told to show (the move's hexes and what the other side
 //saw of them, the surprise, the attack's sides with their strengths, classes and facings at the shots, the
 //combat result, the destroyed units, the retreat). Until the old engine went (#137) the old engine's
 //commands left the same game on the same sequences, up to where its counters drifted (#72, #73); the
@@ -109,17 +109,10 @@ function endTurn(p: Play) {
 		}
 }
 
-//The state and what the screen shows beside it
+//The state and what the game keeps beside it: the combat log, the image cache. Not the selection, the
+//old UI's (#377)
 function snapshot(w: World): string {
-	const m = w.m, hexes: string[] = [];
-	for (let r = 0; r < m.rows; r++)
-		for (let c = 0; c < m.cols; c++) {
-			const h = m.map[r][c];
-			hexes.push(`${+h.isMoveSel}${+h.isAttackSel}`);
-		}
-	return JSON.stringify({ state: w.toData(w.scenario, w.game).state, selected: m.currentUnit ? m.currentUnit.id : null,
-		moveCells: m.getCurrentMoveRange().map((c) => c.row + "," + c.col).join(" "), hexes: hexes.join(","),
-		log: w.CombatLog.log, images: m.getUnitImagesList() });
+	return JSON.stringify({ state: w.toData(w.scenario, w.game).state, log: w.CombatLog.log, images: w.m.getUnitImagesList() });
 }
 
 //A fixture loaded for a sequence: every player a person (but a campaign's other players), the side

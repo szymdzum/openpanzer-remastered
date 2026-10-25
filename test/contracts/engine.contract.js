@@ -140,17 +140,17 @@ function runEngineContract(env) {
 
 	const reinforcementCount = () => Object.keys(sc.reinforcements)
 		.reduce((n, t) => n + (sc.reinforcements[t] ? sc.reinforcements[t].length : 0), 0);
-	// What the state leaves out (docs/STATE.md D6, D10) and the contract still compares: the
-	// selection, the spotting and zone of control counters (set or not, as a hex tells them) and
-	// the side shown
+	// What the state leaves out (docs/STATE.md D10) and the contract still compares: the spotting and
+	// zone of control counters (set or not, as a hex tells them) and the side shown. Not the selection
+	// (D6): the old UI's, not the game's (#377)
 	function view() {
 		let hexes = "";
 		for (let r = 0; r < m.rows; r++)
 			for (let c = 0; c < m.cols; c++) {
 				const h = m.map[r][c];
-				hexes += [h.isMoveSel ? 1 : 0, h.isAttackSel ? 1 : 0, +h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(",") + ";";
+				hexes += [+h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(",") + ";";
 			}
-		return [m.currentUnit ? m.currentUnit.id : null, game.spotSide, hexes];
+		return [game.spotSide, hexes];
 	}
 	// The game's state as src/state.ts's toData reads it (#127), and the view. On the reference,
 	// which has no toData, the walk of the objects the contract compared before: record.sh still
@@ -169,11 +169,10 @@ function runEngineContract(env) {
 		for (let r = 0; r < m.rows; r++)
 			for (let c = 0; c < m.cols; c++) {
 				const h = m.map[r][c];
-				hexes += [h.owner, h.flag, h.victorySide, h.isMoveSel ? 1 : 0, h.isAttackSel ? 1 : 0,
-					h.unit ? h.unit.id : "", h.airunit ? h.airunit.id : "",
+				hexes += [h.owner, h.flag, h.victorySide, h.unit ? h.unit.id : "", h.airunit ? h.airunit.id : "",
 					+h.isZOC(0), +h.isZOC(1), +h.isSpotted(0), +h.isSpotted(1)].join(",") + ";";
 			}
-		return [m.turn, m.currentPlayer ? m.currentPlayer.id : null, m.currentUnit ? m.currentUnit.id : null,
+		return [m.turn, m.currentPlayer ? m.currentPlayer.id : null,
 			JSON.stringify(m.sidesVictoryHexes), sc.date.getTime(), sc.dayTurn, reinforcementCount(),
 			contractHash(contractSerialize(env.Equipment.equipmentIndexes)), game.spotSide].join("|")
 			+ "\n" + units.join("\n") + "\n" + ps.join("\n") + "\n" + hexes;
