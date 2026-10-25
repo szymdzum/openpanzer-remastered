@@ -6,7 +6,8 @@
 <title>Panzer Marshal UI</title>
 <!-- The design system's previews, live: npm run dev, then /docs/ui/. Each preview is a fragment;
      it runs in an iframe with tokens.css, the components' CSS (src/view/library.css), components/bundle.css
-     and components/bundle.js. -->
+     and components/bundle.js. Under a card that has components of its own, live.html shows them,
+     the real ones (src/view/), in Paper and Blackout. -->
 <style>
 	:root { color-scheme: light dark; --bg: #f3efe4; --ink: #211c13; --muted: #5d5340; --line: #cbbf9f; --on: #e6dbbd; }
 	@media (prefers-color-scheme: dark) { :root { --bg: #17190f; --ink: #ece6d2; --muted: #aaa892; --line: #3f443a; --on: #2f3424; } }
@@ -21,6 +22,8 @@
 	header a, header select { font: inherit; color: inherit; }
 	.stage { overflow: auto; padding: 16px; }
 	iframe { border: 0; display: block; background: #fff; transform-origin: 0 0; }
+	#live { width: 100%; }
+	.stage h2 { margin: 24px 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -33,7 +36,11 @@
 		<label>Theme <select id="theme"><option value="paper">Paper</option><option value="blackout">Blackout</option></select></label>
 		<label>Fit <input id="fit" type="checkbox" checked></label>
 	</header>
-	<div class="stage" id="stage"><iframe id="frame" title="Preview"></iframe></div>
+	<div class="stage" id="stage">
+		<iframe id="frame" title="Preview"></iframe>
+		<h2 id="livehd" hidden>Live components, Paper and Blackout</h2>
+		<iframe id="live" title="Live components" hidden></iframe>
+	</div>
 </main>
 <script type="module">
 	//The components' CSS, its @imports written in (the dev server may already have done it)
@@ -69,7 +76,15 @@
 		$("readme").hidden = !c.readme;
 		for (const b of $("list").querySelectorAll("button")) b.toggleAttribute("aria-current", b.dataset.name === c.name);
 		history.replaceState(null, "", `#${c.name}`);
+		$("live").hidden = $("livehd").hidden = true;
+		$("live").src = `live.html?card=${encodeURIComponent(c.name)}`;
 	}
+	//live.html says whether the card has components, and how tall they are
+	addEventListener("message", (e) => {
+		if (e.source !== $("live").contentWindow || !current || e.data.card !== current.name) return;
+		$("live").hidden = $("livehd").hidden = !e.data.built;
+		$("live").height = e.data.height;
+	});
 	function fit() {
 		if (!current) return;
 		const k = $("fit").checked ? Math.min(1, ($("stage").clientWidth - 32) / current.width) : 1;
