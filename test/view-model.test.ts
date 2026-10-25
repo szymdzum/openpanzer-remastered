@@ -52,36 +52,31 @@ test("End turn is only the person's, on their turn", () => {
 	expect(endTurnRefusal(world(smallGameUnits, 1))).toBe("Not your turn");
 });
 
-test("The selected unit as the side shown sees it, its actions with the core's refusals in plain words", () => {
+test("The selected unit as the side shown sees it", () => {
 	const w = world();
 	const tank = unitView(w, 1);
 	expect(tank).toMatchObject({ id: 1, className: "Tank", side: 0, own: true, at: { row: 4, col: 4 }, place: "", strength: 10, moved: false,
 		fired: false });
 	expect(tank.name).toBe(w.equipment[142].name);
 	expect([tank.moves, tank.movpoints]).toEqual([w.equipment[142].movpoints, w.equipment[142].movpoints]);
-	expect(tank.actions.map((a) => [a.label, a.refusal])).toEqual([
-		["Resupply", "Can't resupply"], ["Reinforce", "Can't reinforce"], ["Overstrength", "Can't reinforce"], ["Mount", "Can't mount"],
-		["Dismount", "Can't unmount"],
-		["Embark", "Can't embark"], ["Disembark", "Can't disembark"], ["Undo move", "Can't undo"]]);
-	expect(tank.actions[0].command).toEqual({ type: "resupply", unit: 1 });
 });
 
-test("A move the person made can be undone: the unit shows it moved and its Undo is on", () => {
+test("A unit the person moved shows it moved, where it is and its moves left", () => {
 	const moved = step(world(), { type: "move", unit: 1, to: { row: 4, col: 6 } });
 	expect(moved.ok).toBe(true);
 	const tank = moved.ok ? unitView(moved.world, 1) : null;
 	expect([tank.moved, tank.at, tank.moves]).toEqual([true, { row: 4, col: 6 }, 0]);
-	expect(tank.actions.find((a) => a.label === "Undo move").refusal).toBeNull();
 });
 
-test("An enemy unit shows only where the side shown sees it, and none of its actions are the person's", () => {
+test("An enemy unit shows only where the side shown sees it, and it isn't the person's to order", () => {
 	const w = world([[142, 0, 5, 5], [504, 1, 5, 6], [504, 1, 11, 11]]);
 	expect(unitView(w, 2)).toBeNull(); //(far in the fog)
 	const enemy = unitView(w, 1);
 	expect([enemy.side, enemy.own]).toEqual([1, false]);
-	expect(new Set(enemy.actions.map((a) => a.refusal))).toEqual(new Set(["Not your unit"]));
 	//On the AI's turn nothing is the person's
-	expect(unitView(world(smallGameUnits, 1), 1).actions[0].refusal).toBe("Not your turn");
+	expect(unitView(world(smallGameUnits, 1), 1).own).toBe(false);
+	expect(refusalOf(world(smallGameUnits, 1), { type: "resupply", unit: 1 })).toBe("Not your turn");
+	expect(refusalOf(w, { type: "resupply", unit: 1 })).toBe("Not your unit");
 	expect(unitView(w, 99)).toBeNull();
 });
 

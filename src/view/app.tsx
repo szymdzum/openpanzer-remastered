@@ -1,5 +1,5 @@
 //The new UI's root under ?ui=new (#380): for now the map (#345), the HUD so far (#346: the status bar, the game menu,
-//the unit info), the selected unit's actions, End turn and the message window, composed of the component library. The
+//the unit info; the context menu is the map's), End turn and the message window, composed of the component library. The
 //HUD (D3) and the windows (D5) replace them piece by piece. The components only read the
 //store's signals and send its commands: what they show and why a control is off is the view model's.
 import { Button } from "./button";
@@ -11,20 +11,6 @@ import { Panel, Scrim, Window } from "./panel";
 import { EndTurn, EndTurnQuestion, Rail } from "./rail";
 import { StatusBar } from "./statusbar";
 import type { Store } from "./store";
-
-//(a refusal for the Button: undefined when the action can be taken)
-const off = (refusal: string | null) => refusal === null ? undefined : refusal;
-
-//The selected unit's actions, each off with its reason (the unit context's, D3, with their amounts)
-function UnitActions({ store }: { store: Store }) {
-	const unit = store.unit.value;
-	if (unit === null || !unit.own) return null;
-	return (
-		<Panel class="pm-actions" label={unit.name}>
-			{unit.actions.map((a) => <Button key={a.label} disabled={off(a.refusal)} onClick={() => store.dispatch(a.command)}>{a.label}</Button>)}
-		</Panel>
-	);
-}
 
 //The units waiting in the reserve, until the reserve tray (Deployment, D5): one picked to place on the map, or
 //none to play on, the reserve kept for later
@@ -65,7 +51,6 @@ export function App({ store }: { store: Store }) {
 			<StatusBar store={store} />
 			<Rail store={store} />
 			<UnitInfoPanel store={store} />
-			<UnitActions store={store} />
 			<Reserve store={store} />
 			<EndTurn store={store} />
 			<EndTurnQuestion store={store} />

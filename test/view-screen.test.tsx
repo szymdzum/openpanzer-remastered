@@ -104,9 +104,9 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	expect(document.querySelector(".pm-status .msg span")!.textContent).toBe("air layer · click a place to zoom in there");
 	await key("a");
 	await key("z");
-	const actions = [...document.querySelectorAll(".pm-actions button")];
-	expect(actions.map((b) => b.firstChild!.textContent)).toEqual(["Resupply", "Reinforce", "Overstrength", "Mount", "Dismount", "Embark",
-		"Disembark", "Undo move"]);
+	//the unit's context menu over the map (UnitContext): Supply and Reinforce first, Undo last
+	const actions = [...document.querySelectorAll("#unit-context button")].map((b) => b.childNodes[1].textContent);
+	expect([actions[0], actions[1], actions[actions.length - 1]]).toEqual(["Supply", "Reinforce", "Undo move"]);
 	//An action the host refuses (sent anyway, as a stale control would): its reason in the status bar
 	const store = createStore(g.host);
 	await act(() => { store.dispatch({ type: "undo", unit: unit.id }); });

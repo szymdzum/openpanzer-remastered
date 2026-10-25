@@ -147,12 +147,13 @@ test("The unit keys play the selected unit's action as its button would, or say 
 	await key("KeyU");
 	expect(sent[sent.length - 1]).toEqual({ type: "undo", unit: 0 });
 	expect(store.unit.value!.at).toEqual({ row: 4, col: 3 });
-	//S, R, O, M, E: a full tank on its own can't; the first such action's reason in the status line
-	for (const [code, why] of [["KeyS", "Can't resupply"], ["KeyR", "Can't reinforce"], ["KeyO", "Can't reinforce"], ["KeyM", "Can't mount"],
-		["KeyE", "Can't embark"]]) {
-		await key(code);
-		expect(store.refused.value).toBe(why);
-	}
+	//S and R: a full tank can't; the action's reason in the status line. O, M and E: no such button for it, nothing
+	await key("KeyS");
+	expect(store.refused.value).toBe("Supply: full");
+	await key("KeyR");
+	expect(store.refused.value).toBe("Reinforce: full");
+	for (const code of ["KeyO", "KeyM", "KeyE"]) await key(code);
+	expect(store.refused.value).toBe("Reinforce: full");
 	expect(sent.length).toBe(2);
 	//No unit selected: nothing
 	await act(() => { store.clickHex({ row: 9, col: 9 }); });

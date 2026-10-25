@@ -111,7 +111,7 @@ export default defineConfig({
 				"src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/hexgrid.ts", "src/view/mapview.ts",
 				"src/view/mapdraw.ts", "src/view/mapinfo.ts", "src/view/canvas.ts", "src/view/overlays.ts", "src/view/strategic.ts",
-				"src/view/strategicdraw.ts", "src/view/deploy.ts", "src/view/shortcuts.ts", "src/view/unitinfo.ts"],
+				"src/view/strategicdraw.ts", "src/view/deploy.ts", "src/view/shortcuts.ts", "src/view/unitinfo.ts", "src/view/context.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -215,6 +215,8 @@ export default defineConfig({
 				"src/view/shortcuts.ts": { statements: 87, branches: 100, functions: 50, lines: 83 },
 				"src/view/infopanel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/unitinfo.ts": { statements: 95, branches: 100, functions: 83, lines: 93 },
+				"src/view/context.ts": { statements: 99, branches: 100, functions: 95, lines: 98 },
+				"src/view/contextmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 			},
 		},
 	},
