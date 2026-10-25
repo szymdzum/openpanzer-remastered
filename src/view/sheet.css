@@ -1,0 +1,6 @@
+/* BottomSheet (sheet.tsx; TabletUnitInfo): a window along the bottom edge, with a grip to drag it down */
+.pm-window.pm-sheet { left: 0; right: 0; bottom: 0; border-radius: 0; }
+.pm-sheet .grip { display: grid; place-items: center; padding: var(--space-2) 0 0; cursor: grab; touch-action: none; }
+.pm-sheet .grip span { width: 48px; height: 5px; background: var(--line); }
+.pm-sheet > .hd { padding-top: var(--space-2); }
+.pm-sheet > .hd .pm-title { font-size: 24px; line-height: 28px; }

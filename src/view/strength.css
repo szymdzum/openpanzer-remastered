@@ -1,0 +1,7 @@
+/* StrengthBar (strength.tsx): the segmented strength bar of the odds preview (CombatOdds, AttackPreview) */
+.pm-strength { height: 8px; display: flex; gap: 2px; }
+.pm-strength i { flex: 1; background: var(--panel-sunken); border: 1px solid var(--line); }
+.pm-strength i.keep.axis { background: var(--axis); border-color: var(--axis); }
+.pm-strength i.keep.allied { background: var(--allied); border-color: var(--allied); }
+.pm-strength i.loss { background: transparent; border: 1px dashed var(--critical); }
+.pm-strength i.sup { background: repeating-linear-gradient(135deg, transparent 0 2px, var(--critical) 2px 3px); border: 1px solid var(--critical); }
