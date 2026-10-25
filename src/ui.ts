@@ -1861,10 +1861,7 @@ function uiScaleMap(level: number) {
 					if (map.currentPlayer.type == playerType.humanLocal) {
 						//The log starts again before the next turn's start logs its resupplies and reinforcements (#86)
 						CombatLog.reset();
-						game.endTurn();
-						if (game.gameEnded && game.gameStarted) {
-							uiTurnLimitMessage();
-						} else {
+						if (!game.endTurn()) { //(at the turn limit the game told its end, #365)
 							countries = map.getCountriesBySide(game.spotSide);
 							UIBuilder.setDefaultUserSelections();
 							updateEquipmentWindow(unitClass.tank); //Refresh equipment window for the new player
@@ -1989,7 +1986,7 @@ function uiScaleMap(level: number) {
 		uiEndTurnInfo();
 	};
 
-	//Called from game when the AI's last turn ended the game (#256)
+	//Called from game when a side's last turn ended a single scenario (#256, #365)
 	this.uiTurnLimitMessage = uiTurnLimitMessage;
 
 	//Centers unit on player screen

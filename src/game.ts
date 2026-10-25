@@ -63,7 +63,7 @@ export class Game {
 	declare processTurn: () => void;
 	declare startTurn: () => void;
 	declare processAIActions: () => void;
-	declare endTurn: () => void;
+	declare endTurn: () => boolean; //true when the turn limit ended the game (the end announced)
 	declare setupGameState: () => void;
 	declare newScenario: (scenFile: string, scenIntro?: string) => void;
 	declare onScenarioLoadFinished: (scenIntro: string | null, isRestore: boolean) => void;
@@ -149,12 +149,11 @@ export class Game {
 				if (!processAction(this, action)) {
 					UIBuilder.showAIStatus(false);
 					game.waitUIAnimation = true;
-					game.endTurn();
+					if (game.endTurn())
+						return;
 					setTimeout(function() {
 						if (!game.gameEnded)
 							game.ui.uiEndTurnInfo();
-						else if (game.campaign === null && game.session?.ended?.kind === "turnLimit") //(the remaster's ends after the AI's last turn too, #256)
-							game.ui.uiTurnLimitMessage();
 					}, 2500);
 					return;
 				}
@@ -162,18 +161,24 @@ export class Game {
 		}
 
 		//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
-		//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit)
+		//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit), true
+		//then: the end is told, and the next turn's info isn't shown over it
 		this.endTurn = function() {
 			this.waitUIAnimation = false;
-			if (endGameTurn(this)) turnLimitReached(this);
+			if (!endGameTurn(this))
+				return false;
+			turnLimitReached(this);
+			return true;
 		}
 
-		//The game ended at the turn limit: in a campaign the scenario's outcome for the campaign player and the
+		//The game ended at the turn limit, told here whichever side's last turn ended it (the person's end turn
+		//button or the AI's turn, #365): in a campaign the scenario's outcome for the campaign player and the
 		//next scenario (in the classic rules a loss; in the remaster's a defender that held out wins, #256), a
 		//single scenario ends (the screen tells who won)
 		function turnLimitReached(game: Game) {
 			if (game.campaign === null) {
 				game.gameEnded = true;
+				game.ui.uiTurnLimitMessage();
 				return;
 			}
 			const s = game.session, end = s.ended as { side: number };
