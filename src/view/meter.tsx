@@ -5,9 +5,9 @@ import { Icon, type IconName } from "./icon";
 
 //ok, low and critical: the view model's verdict, never the colour alone (each low or critical
 //meter also says it in a word)
-export type Supply = "ok" | "low" | "critical";
+export type SupplyState = "ok" | "low" | "critical";
 
-const WORDS: Record<Supply, string | undefined> = { ok: undefined, low: "Low", critical: "Critical" };
+const WORDS: Record<SupplyState, string | undefined> = { ok: undefined, low: "Low", critical: "Critical" };
 
 type MeterProps = {
 	icon: IconName,
@@ -17,7 +17,7 @@ type MeterProps = {
 	//how full the track is, 0 to 1
 	fill: number,
 	//no state for a meter that has none (entrenchment)
-	state?: Supply,
+	state?: SupplyState,
 };
 
 export function Meter({ icon, label, value, fill, state }: MeterProps) {
@@ -46,6 +46,6 @@ export function Badge({ side, children }: { side: "axis" | "allied" | "neutral",
 }
 
 //A state in words for lists and tooltips: "Low fuel", "No ammo"
-export function Tag({ tone, icon, children }: { tone?: Supply, icon?: IconName, children: ComponentChildren }) {
+export function Tag({ tone, icon, children }: { tone?: SupplyState, icon?: IconName, children: ComponentChildren }) {
 	return <span class={tone ? "pm-tag pm-" + tone : "pm-tag"}>{icon && <Icon name={icon} size="sm" />}{children}</span>;
 }
