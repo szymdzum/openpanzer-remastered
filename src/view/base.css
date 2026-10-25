@@ -1,7 +1,7 @@
 /* The base of the new UI's components: the .pm root's type and colour, the icon sizes and the text helpers.
    Every component's CSS (src/view/*.css, in the order of library.css) takes its colours, spacing,
    radii and sizes from tokens.css (docs/ui/tokens.json) only. */
-.pm { font-family: var(--font-ui); color: var(--ink); font-size: 14px; line-height: 20px; -webkit-font-smoothing: antialiased; }
+.pm { font-family: var(--font-ui); color: var(--ink); font-size: var(--type-body-size); line-height: 20px; -webkit-font-smoothing: antialiased; }
 .pm *, .pm *::before, .pm *::after { box-sizing: border-box; }
 .pm button { font: inherit; color: inherit; }
 .pm h1, .pm h2, .pm h3, .pm p { margin: 0; }
@@ -13,9 +13,9 @@
 .pm .mark.lg { width: 34px; height: 34px; }
 .pm-muted { color: var(--ink-muted); }
 .pm-data { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; }
-.pm-label { font-size: 11px; line-height: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
-.pm-display { font-family: var(--font-display); font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.pm-title { font-family: var(--font-display); font-size: 20px; line-height: 24px; font-weight: 700; }
+.pm-label { font-size: var(--type-label-size); line-height: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-muted); }
+.pm-display { font-family: var(--font-display); font-size: var(--type-display-size); line-height: 32px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.pm-title { font-family: var(--font-display); font-size: var(--type-title-size); line-height: 24px; font-weight: 700; }
 .pm-sep { width: 1px; align-self: stretch; background: var(--line); flex: none; }
 .pm-hr { height: 1px; background: var(--line); border: 0; margin: 0; }
 .pm-prestige { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-ink); }

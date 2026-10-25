@@ -4,12 +4,12 @@
 .pm-window { position: absolute; z-index: var(--z-window); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: inset 0 0 0 4px var(--panel), inset 0 0 0 5px var(--line), var(--shadow-window); overflow: hidden; }
 .pm-window > .hd { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-4) var(--space-3) var(--space-6); border-bottom: 1px solid var(--line); }
 .pm-window > .hd .grow, .pm .grow { flex: 1; }
-.pm-window > .hd .sub { font-size: 13px; line-height: 18px; color: var(--ink-muted); }
+.pm-window > .hd .sub { font-size: var(--type-small-size); line-height: 18px; color: var(--ink-muted); }
 .pm-window > .bd { flex: 1; min-height: 0; padding: var(--space-4) var(--space-6); overflow: hidden; }
 .pm-window > .ft { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6); border-top: 1px solid var(--line-strong); }
 .pm-scrim { position: absolute; inset: 0; z-index: calc(var(--z-window) - 1); background: var(--scrim); }
-.pm-stamp { display: inline-block; font: 700 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--critical); border: 2px solid var(--critical); padding: 5px 9px 4px; transform: rotate(-4deg); white-space: nowrap; }
-.pm-stamp.lg { font-size: 20px; padding: 8px 14px 6px; border-width: 3px; }
+.pm-stamp { display: inline-block; font: 700 var(--type-stamp-size)/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--critical); border: 2px solid var(--critical); padding: 5px 9px 4px; transform: rotate(-4deg); white-space: nowrap; }
+.pm-stamp.lg { font-size: var(--type-title-size); padding: 8px 14px 6px; border-width: 3px; }
 .pm-stamp.ok { color: var(--ok); border-color: var(--ok); }
 /* Window is a <dialog> shown open in place: none of the browser's own dialog box */
 dialog.pm-window { inset: auto; width: auto; height: auto; margin: 0; padding: 0; color: inherit; max-width: none; max-height: none; }

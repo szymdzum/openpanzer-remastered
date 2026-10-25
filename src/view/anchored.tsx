@@ -3,12 +3,13 @@
 //measures itself and stays inside the screen, space-3 from its edges.
 import type { AriaRole, ComponentChildren } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { TOKENS } from "./tokens";
 
 type Point = { x: number, y: number };
 type Size = { width: number, height: number };
 
-//space-3 (tokens.json): the gap from the screen's edges
-const EDGE = 12;
+//the gap from the screen's edges
+const EDGE = TOKENS.px["space-3"];
 
 const clamp = (v: number, low: number, high: number) => Math.max(low, Math.min(v, high));
 

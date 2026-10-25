@@ -9,7 +9,7 @@ How to bring this system into `openpanzer-remastered`. It was first written as a
 | `css/tokens.css` | `tokens.css` (generated from `tokens.json`) | Custom properties, with one block per theme: `:root, [data-theme="paper"]` and `[data-theme="blackout"]`. |
 | `css/ui.css` | `src/view/library.css`, then `components/bundle.css` | The components' CSS (`src/view/*.css`), then the screens'. It replaces the current `dist/game/css/ui.css`. It contains no colors, only `var(--…)`. Drop the `.pm-stage` and `.pm-map` rules, which only frame the mockups. |
 | `src/view/sprite.ts`, `icon.tsx` | `components/bundle.js` | The `PM.icons` and `PM.nationMarks` maps, ported (test/icons.test.tsx keeps them the card's). `<IconSprite />` mounts the sprite once at the root. |
-| `resources/fonts/` | Zilla Slab 500/700, Libre Franklin 400/600/700, Courier Prime 400/700 | Self-host the woff2 files (all are under the OFL). Remove `openpanzer.ttf`, `openpanzer-menu.ttf`, `m04.ttf` and `m04b.TTF` once no glyph uses them. |
+| `src/view/fonts.css`, `src/view/fonts/` | Zilla Slab 500/700, Libre Franklin 400/600/700, Courier Prime 400/700 | Self-hosted woff2 files (all are under the OFL), in place. Remove `openpanzer.ttf`, `openpanzer-menu.ttf`, `m04.ttf` and `m04b.TTF` once no glyph uses them. |
 
 Load order: `tokens.css`, then `ui.css`. Fonts use `font-display: swap`. Courier New, Arial and Georgia are the fallbacks in the font stacks.
 

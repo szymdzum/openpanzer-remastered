@@ -20,7 +20,9 @@ is built from, and its source of truth.
 | Path | What it is |
 |---|---|
 | `tokens.json` | colors per theme, spacing, radius, sizes, z-index and the font families |
-| `tokens.css` | the same as custom properties, generated |
+| `tokens.css` | the same as custom properties, generated, with the type scale as `--type-<style>-size` and `-line` |
+| `src/view/tokens.ts` (the repo's) | the same tokens for the canvas, generated: colours by theme, the map's colours, lengths in pixels, durations in milliseconds |
+| `src/view/fonts.css`, `src/view/fonts/` (the repo's) | the three faces, self-hosted woff2 files (latin and latin-ext) under the OFL |
 | `src/view/*.css` (the repo's) | the components' CSS, one file per component or family, loaded in the order of `library.css`; colors only through `var(--…)` |
 | `components/bundle.css` | the screens' CSS and the mockup frames, loaded after the components', colors only through `var(--…)` |
 | `components/bundle.js` | the icon sprite (66 icons and the nation marks) and `PM.mount()`; `src/view/sprite.ts` is its port, kept the same by a test |
@@ -36,8 +38,11 @@ is built from, and its source of truth.
 - **Live:** `npm run dev`, then open `/docs/ui/` on the dev server. Pick a card, switch Paper and
   Blackout, open its README.
 - **After changing a card:** `node scripts/ui-design.mjs --render <Name>` refreshes its render
-  (headless Chrome and `cwebp`). Without arguments it rewrites `tokens.css`, `components.json`
-  and the gallery below.
+  (headless Chrome and `cwebp`). Without arguments it rewrites `tokens.css`, `src/view/tokens.ts`,
+  `components.json` and the gallery below. `--check` (a test runs it) fails on a colour or a font
+  size written in the CSS instead of its token, on a map colour (`hex-*`, `map-*`) drawn in a card
+  without its token, and on generated tokens older than `tokens.json`. Black or white at an alpha
+  is shading and may be written in.
 
 ## Gallery
 
