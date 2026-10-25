@@ -1,0 +1,60 @@
+//A panel anchored to a hex (principles.md, Layout): the unit context menu above the selected hex,
+//the odds preview beside the target. The map code gives the hex's centre on the screen; the panel
+//measures itself and stays inside the screen, space-3 from its edges.
+import type { AriaRole, ComponentChildren } from "preact";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
+
+type Point = { x: number, y: number };
+type Size = { width: number, height: number };
+
+//space-3 (tokens.json): the gap from the screen's edges
+const EDGE = 12;
+
+const clamp = (v: number, low: number, high: number) => Math.max(low, Math.min(v, high));
+
+//The top left corner that keeps a box of this size on the screen: a box larger than the screen
+//keeps its top left edge in view
+export function clampToScreen(at: Point, size: Size, screen: Size, edge = EDGE): Point {
+	return {
+		x: clamp(at.x, edge, screen.width - edge - size.width),
+		y: clamp(at.y, edge, screen.height - edge - size.height),
+	};
+}
+
+type Place = "above" | "beside";
+
+//Before the clamp: centred above the hex, or right of it and centred on it, `gap` away from its centre
+export function placeBy(hex: Point, size: Size, place: Place, gap: number): Point {
+	return place === "above"
+		? { x: hex.x - size.width / 2, y: hex.y - gap - size.height }
+		: { x: hex.x + gap, y: hex.y - size.height / 2 };
+}
+
+type AnchoredProps = {
+	//the hex's centre, in the pixels of the screen the panel is placed on
+	hex: Point,
+	place: Place,
+	//from the hex's centre to the panel's edge: half a hex at the map's zoom, and some air
+	gap: number,
+	//the screen's own class next to pm-panel: pm-ctx, pm-odds
+	class?: string,
+	role?: AriaRole,
+	label?: string,
+	children?: ComponentChildren,
+};
+
+//Hidden for the one layout pass it takes to measure itself, then placed before the browser paints
+export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label, children }: AnchoredProps) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [at, setAt] = useState<Point | null>(null);
+	useLayoutEffect(() => {
+		const box = ref.current;
+		const screen = (box.offsetParent as HTMLElement | null) ?? document.documentElement;
+		const size = { width: box.offsetWidth, height: box.offsetHeight };
+		const next = clampToScreen(placeBy({ x, y }, size, place, gap), size, { width: screen.clientWidth, height: screen.clientHeight });
+		setAt((old) => old && old.x === next.x && old.y === next.y ? old : next);
+	//new content may change the panel's size: measured again with it
+	}, [x, y, place, gap, children]);
+	const style = at ? { left: at.x + "px", top: at.y + "px" } : { visibility: "hidden" };
+	return <div ref={ref} class={extra ? "pm-panel " + extra : "pm-panel"} style={style} role={role} aria-label={label}>{children}</div>;
+}
