@@ -1,9 +1,10 @@
 /* The new UI's stylesheets in the game (?ui=new, src/view/screen.tsx), in the order docs/ui/handoff.md
    gives: the faces, the tokens (which declare the cascade layers), the components (library.css), the
    screens' rules of the cards until each screen is built here (components/bundle.css), then the
-   screen's own layout. */
+   screen's own layout. The cards' rules are written outside any layer; here they go in a layer nested
+   in components, which the components' own rules win over, so a card can't override a component. */
 @import url("./fonts.css");
 @import url("../../docs/ui/tokens.css");
 @import url("./library.css");
-@import url("../../docs/ui/components/bundle.css");
+@import url("../../docs/ui/components/bundle.css") layer(components.cards);
 @import url("./screen.css");
