@@ -335,20 +335,15 @@ test("The player's end of turn waits for the attack's animation: no destroyed un
 	expect(saved.state.map.hexes[at.row * saved.state.map.cols + at.col].unit).not.toBe(defender.id);
 }, 60_000);
 
-//The human's attack ends with a side left without units: the message names the side that won and why.
-//The old game asked whose turn it was, so the person whose last unit fell attacking was told they won,
-//by capturing all the victory hexes (#76)
-test("An elimination is told to the person as a defeat or a win by its side, by destroying all the units (#76)", async () => {
-	const { game, ui } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+//The current player's attacks, each ending the game with the next of winners winning (the attack's
+//onVictory as the elimination calls it): the title and the text of the message each told
+async function victoriesTold(game: Game, ui: UI, winners: number[]): Promise<string[][]> {
 	const { GameRules } = await import("../src/gamerules");
 	const { Commands } = await import("../src/commands");
 	const { UIBuilder } = await import("../src/uibuilder");
 	const { uiSettings } = await import("../src/prototypes");
 	uiSettings.quickAnimation = true;
-	const map = game.scenario.map;
-	const human = map.currentPlayer;
-	expect(human.side).toBe(0);
-	const winners = [1, 0];
+	const map = game.scenario.map, attacker = map.currentPlayer;
 	const execute = Commands.execute.bind(Commands);
 	vi.spyOn(Commands, "execute").mockImplementation(((scenario: unknown, cmd: { type: string }, hooks?: AttackCommandHooks) => {
 		if (cmd.type !== "attack" || !hooks) return execute(scenario as never, cmd as never, hooks as never);
@@ -361,9 +356,9 @@ test("An elimination is told to the person as a defeat or a win by its side, by 
 	}) as unknown as typeof Commands.execute);
 	const message = vi.spyOn(UIBuilder, "message").mockImplementation(() => {});
 	const told: string[][] = [];
-	for (let i = 0; i < 2; i++) {
+	while (winners.length > 0) {
 		let pair: [Unit, Unit] | undefined;
-		for (const a of map.getUnits().filter((u) => u.player.id === human.id && !u.hasFired))
+		for (const a of map.getUnits().filter((u) => u.player.id === attacker.id && !u.hasFired))
 			for (const d of map.getUnits().filter((u) => GameRules.isEnemy(a, u)))
 				if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
 		game.waitUIAnimation = true;
@@ -373,11 +368,50 @@ test("An elimination is told to the person as a defeat or a win by its side, by 
 		told.push([title, text.replace(/<[^>]*>/g, "")]);
 		game.gameEnded = false;
 	}
-	const country = (side: number) => map.getPlayers().find((p) => p.side === side)!.getCountryName();
+	return told;
+}
+
+const countryOf = (game: Game, side: number) => game.scenario.map.getPlayers().find((p) => p.side === side)!.getCountryName();
+
+//The human's attack ends with a side left without units: the message names the side that won and why.
+//The old game asked whose turn it was, so the person whose last unit fell attacking was told they won,
+//by capturing all the victory hexes (#76)
+test("An elimination is told to the person as a defeat or a win by its side, by destroying all the units (#76)", async () => {
+	const { game, ui } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+	expect(game.scenario.map.currentPlayer.side).toBe(0);
+	const told = await victoriesTold(game, ui, [1, 0]);
 	expect(told[0][0]).toBe("DEFEAT");
-	expect(told[0][1]).toContain("You have lost ! Your enemy " + country(1) + " on Allies side wins by destroying all the enemy units");
+	expect(told[0][1]).toContain("You have lost ! Your enemy " + countryOf(game, 1) + " on Allies side wins by destroying all the enemy units");
 	expect(told[1][0]).not.toBe("DEFEAT");
-	expect(told[1][1]).toContain("You have won this scenario ! " + country(0) + " on Axis side wins by destroying all the enemy units");
+	expect(told[1][1]).toContain("You have won this scenario ! " + countryOf(game, 0) + " on Axis side wins by destroying all the enemy units");
+}, 60_000);
+
+//The victory is told by the sides the person plays now, not the ones the session started with: past the
+//tutorial's hand-over the person plays the Axis and the AI the Allies (the session started with both
+//sides scripted, so an Allied victory was told as the person's win); in a game of AIs only nobody is
+//told they won or lost (#366)
+test("A victory is told as a defeat to the person by the side they play now: the tutorial after its hand-over, a game of AIs (#366)", async () => {
+	const { game, ui } = await uiGame("scripted:tutorial.xml");
+	const { playerType } = await import("../src/prototypes");
+	const { touched } = await import("../src/context");
+	//The hand-over (src/core/tutorial.ts handOver): the Axis to the person, the Allies to the AI
+	for (const p of game.scenario.map.getPlayers()) p.type = p.side === 0 ? playerType.humanLocal : playerType.aiLocal;
+	touched();
+	expect(game.scenario.map.currentPlayer.side).toBe(0);
+	//(an Axis unit moved next to an Allied one, to attack it)
+	const { Commands } = await import("../src/commands");
+	expect(Commands.execute(game.scenario, { type: "move", unit: 3, to: { row: 8, col: 14 } }, { animate: (_mr, finish) => { finish({}); } }).ok).toBe(true);
+	const told = await victoriesTold(game, ui, [1]);
+	expect(told[0][0]).toBe("DEFEAT");
+	expect(told[0][1]).toContain("You have lost ! Your enemy " + countryOf(game, 1) + " on Allies side wins");
+
+	vi.restoreAllMocks();
+	const ais = await uiGame("drpzop01.xml", [1, 1, 1, 1]);
+	const byAI = await victoriesTold(ais.game, ais.ui, [1, 0]);
+	expect(byAI.map((t) => t[0]), "a game of AIs").not.toContain("DEFEAT");
+	expect(byAI[0][1]).not.toContain("You have");
+	expect(byAI[0][1]).toContain(countryOf(ais.game, 1) + " on Allies side wins by destroying all the enemy units");
+	expect(byAI[1][1]).not.toContain("You have");
 }, 60_000);
 
 //The selected attacker's attack makes its defender surrender: the move hexes shown, which the next move
