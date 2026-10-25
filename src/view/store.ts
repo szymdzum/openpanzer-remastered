@@ -11,6 +11,7 @@ import { unitById } from "../core/world";
 import type { GameHost } from "../host";
 import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
+import { strategicOf } from "./strategic";
 import { endTurnRefusal, reasonOf, statusOf, unitView } from "./model";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
@@ -35,6 +36,8 @@ export function createStore(host: StoreHost) {
 	const airMode = signal(false);
 	const hover = signal<Position | null>(null);
 	const scale = signal(1);
+	//the strategic map: the whole map fit to the window (StrategicMap)
+	const strategic = signal(false);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -49,11 +52,15 @@ export function createStore(host: StoreHost) {
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
 	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value));
 	const selection = computed(() => world.value === null ? null : selectionOf(world.value, selected.value));
-	const path = computed(() => world.value === null || hover.value === null ? null : pathOf(world.value, selection.value, hover.value));
+	//(none of what the pointer shows on the strategic map, which has no cursor)
+	const pointed = computed(() => world.value === null || strategic.value ? null : hover.value);
+	const path = computed(() => pointed.value === null ? null : pathOf(world.value!, selection.value, pointed.value));
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
-	const support = computed(() => world.value === null ? null : supportOf(world.value, selection.value, hover.value, airMode.value));
+	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
 	const plaques = computed(() => world.value === null ? [] : plaquesOf(world.value));
+	//the strategic map's chips and objectives, while it is open
+	const overview = computed(() => world.value === null || !strategic.value ? null : strategicOf(world.value, airMode.value));
 
 	//The world as the host plays it now
 	const refresh = () => { world.value = host.world(); };
@@ -70,14 +77,19 @@ export function createStore(host: StoreHost) {
 
 	return {
 		dispatch,
-		world, selected, notes, refused, lookAt, airMode, hover, scale, side, sideName, turn, prestige, endTurn, unit, note, units,
-		selection, path, fog, support, plaques, refresh,
+		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, endTurn, unit, note,
+		units, selection, path, fog, support, plaques, overview, refresh,
 
-		//A click on a hex of the map: the selected unit's attack or move there, sent as the person's command,
-		//else the unit there selected (none on an empty hex)
+		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; else the selected
+		//unit's attack or move there, sent as the person's command, or the unit there selected (none on an empty hex)
 		clickHex(at: Position) {
 			const w = world.value;
 			if (w === null) return;
+			if (strategic.value) {
+				strategic.value = false;
+				lookAt.value = { row: at.row, col: at.col };
+				return;
+			}
 			const click = clickOn(w, selection.value, at, airMode.value);
 			if ("command" in click) {
 				dispatch(click.command);
@@ -96,6 +108,11 @@ export function createStore(host: StoreHost) {
 			const w = world.value, u = w === null || selected.value === null ? null : unitById(w, selected.value);
 			if (airMode.value && u !== null && isAir(w!, u)) selected.value = null;
 			airMode.value = !airMode.value;
+		},
+
+		//The strategic map open or closed (StrategicMap, the Z key; the rail's button is the HUD's, D3)
+		toggleStrategic() {
+			strategic.value = !strategic.value;
 		},
 
 		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again

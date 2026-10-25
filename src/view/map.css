@@ -25,6 +25,13 @@
 		scrollbar-color: var(--line-strong) var(--panel-sunken);
 	}
 
+	/* the strategic map: the whole map in the window, nothing to scroll (the scroll kept for when it closes); a
+	   click zooms back in there */
+	.pm-mapview.strategic .pm-mapview-scroll {
+		overflow: hidden;
+		cursor: zoom-in;
+	}
+
 	/* the move path's tag: the first line what happens, the next ones what it costs */
 	.pm-pathtag {
 		z-index: var(--z-map-overlay);

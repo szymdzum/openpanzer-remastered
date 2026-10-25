@@ -89,6 +89,16 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
 	expect([...document.querySelectorAll(".pm-status .msg b")].map((b) => b.textContent)).toEqual(["Air layer", unit.unitData().name]);
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
+	//on the strategic map, how to leave it (StrategicMap)
+	const key = (k: string) => act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: k })); });
+	await key("z");
+	//(drawn under the status bar)
+	await act(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+	expect(document.querySelector(".pm-status .msg")!.textContent).toBe("Strategic mapground layer · click a place to zoom in there");
+	await key("a");
+	expect(document.querySelector(".pm-status .msg span")!.textContent).toBe("air layer · click a place to zoom in there");
+	await key("a");
+	await key("z");
 	const actions = [...document.querySelectorAll(".pm-actions button")];
 	expect(actions.map((b) => b.firstChild!.textContent)).toEqual(["Resupply", "Reinforce", "Mount", "Dismount", "Embark", "Disembark", "Undo move"]);
 	//An action the host refuses (sent anyway, as a stale control would): its reason in the status bar

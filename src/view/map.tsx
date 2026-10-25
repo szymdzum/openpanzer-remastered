@@ -9,9 +9,10 @@ import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
-import { toScreen, type Viewport } from "./canvas";
+import { fitViewport, toScreen, type Viewport } from "./canvas";
 import { drawMap, type Images, type Scene } from "./mapdraw";
 import type { Store } from "./store";
+import { TOKENS } from "./tokens";
 
 type Picture = HTMLImageElement;
 
@@ -46,15 +47,24 @@ export function setHexGrid(on: boolean) {
 	hexGrid = on;
 }
 
-//The map's own keys, until the HUD has every shortcut (D3): A the air layer. Not while a field takes the typing,
-//nor with a modifier (the browser's own shortcuts). Whether the key was the map's
+//The map's own keys, until the HUD has every shortcut (D3): A the air layer, Z the strategic map. Not while a field
+//takes the typing, nor with a modifier (the browser's own shortcuts). Whether the key was the map's
 function mapKey(store: Store, e: KeyboardEvent): boolean {
 	const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]") !== null;
 	if (typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return false;
 	const k = e.key.toLowerCase();
 	if (k === "a") store.toggleAir();
+	else if (k === "z") store.toggleStrategic();
 	else return false;
 	return true;
+}
+
+//The strategic map fits the map under the status bar, so no objective hides behind it (StrategicMap): the
+//bar's foot from the map's top, and a little air, 0 without a bar
+function underStatusBar(scroller: HTMLElement): number {
+	const bar = scroller.closest(".pm-screen")?.querySelector(".pm-status");
+	if (bar === null || bar === undefined) return 0;
+	return Math.max(0, bar.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top) + TOKENS.px["space-1"];
 }
 
 //Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it:
@@ -87,7 +97,8 @@ class Painter {
 		const s = this.store;
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
-			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value];
+			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
+				s.overview.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -121,8 +132,8 @@ class Painter {
 	cellOf(e: MouseEvent): Position | null {
 		const w = this.store.world.peek(), s = this.scroller;
 		if (w === null || s === null) return null;
-		const box = s.getBoundingClientRect(), scale = this.store.scale.peek(), o = this.origin(s);
-		const p = { x: (e.clientX - box.left + o.x) / scale, y: (e.clientY - box.top + o.y) / scale };
+		const box = s.getBoundingClientRect(), vp = this.viewport(s);
+		const p = { x: (e.clientX - box.left + vp.x) / vp.scale, y: (e.clientY - box.top + vp.y) / vp.scale };
 		return cellAt(p, w.state.map.rows, w.state.map.cols);
 	}
 
@@ -135,10 +146,10 @@ class Painter {
 		});
 	}
 
-	//The map's size on the screen at its scale
-	size(): { width: number; height: number } {
+	//The map's size on the screen at a scale: its scale, or 1 for its own pixels
+	size(scale = this.store.scale.peek()): { width: number; height: number } {
 		const w = this.store.world.peek();
-		return mapSize(w, w === null ? null : this.cache.get(w.data.image), this.store.scale.peek());
+		return mapSize(w, w === null ? null : this.cache.get(w.data.image), scale);
 	}
 
 	//The screen's top left corner in the map's screen pixels: the scroll, less half the room left round a map
@@ -148,9 +159,12 @@ class Painter {
 		return { x: s.scrollLeft - Math.max(0, (s.clientWidth - size.width) / 2), y: s.scrollTop - Math.max(0, (s.clientHeight - size.height) / 2) };
 	}
 
+	//The part of the map on the screen: what the scroll shows, or the whole map on the strategic map
 	viewport(s: HTMLElement): Viewport {
+		const dpr = devicePixelRatio || 1;
+		if (this.store.strategic.peek()) return fitViewport(this.size(1), { width: s.clientWidth, height: s.clientHeight }, underStatusBar(s), dpr);
 		const o = this.origin(s);
-		return { x: o.x, y: o.y, width: s.clientWidth, height: s.clientHeight, scale: this.store.scale.peek(), dpr: devicePixelRatio || 1 };
+		return { x: o.x, y: o.y, width: s.clientWidth, height: s.clientHeight, scale: this.store.scale.peek(), dpr };
 	}
 
 	//Tells the component where the map is on the screen when that changed: the path's tag follows it
@@ -164,15 +178,15 @@ class Painter {
 	draw() {
 		const w = this.store.world.peek(), canvas = this.canvas, s = this.scroller;
 		if (canvas === null || s === null) return;
-		const vp = this.viewport(s), size = this.size();
-		this.report(vp, size);
+		const vp = this.viewport(s);
+		this.report(vp, this.size());
 		const width = Math.round(vp.width * vp.dpr), height = Math.round(vp.height * vp.dpr);
 		if (canvas.width !== width || canvas.height !== height) {
 			canvas.width = width;
 			canvas.height = height;
 		}
 		const c = canvas.getContext("2d");
-		if (c !== null && w !== null) drawMap(c, this.scene(w, { width: size.width / vp.scale, height: size.height / vp.scale }), vp, (f) => this.image(f));
+		if (c !== null && w !== null) drawMap(c, this.scene(w, this.size(1)), vp, (f) => this.image(f));
 	}
 
 	//A sprite or the terrain, once it has loaded
@@ -184,7 +198,8 @@ class Painter {
 	scene(w: World, size: { width: number; height: number }): Scene {
 		const s = this.store;
 		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: hexGrid, units: s.units.peek(),
-			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek() };
+			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek(),
+			strategic: s.overview.peek() };
 	}
 
 	//Where the map looks, when the scenario or the look asked changes (not when the side's first unit moves): the
@@ -241,6 +256,9 @@ export function MapView({ store }: { store: Store }) {
 
 	useEffect(() => painter.attach(canvas.current!, scroller.current!), [painter]);
 
+	//(the strategic map scrolls nothing: the scroll stays as it was for when it closes, map.css)
+	const strategic = store.strategic.value;
+
 	//A new scenario: the map looks at the side's first unit; a program's look at a hex (the tutorial's)
 	const data = w === null ? null : w.data;
 	const start = w === null ? null : firstOwnUnit(w);
@@ -252,9 +270,10 @@ export function MapView({ store }: { store: Store }) {
 	const end = path === null ? null : path.cells[path.cells.length - 1];
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	return (
-		<div class="pm-mapview">
+		<div class={strategic ? "pm-mapview strategic" : "pm-mapview"}>
 			<canvas ref={canvas} class="pm-mapview-canvas" aria-hidden="true" />
-			<div ref={scroller} class="pm-mapview-scroll" role="application" aria-label="Map" onScroll={() => painter.request()}>
+			<div ref={scroller} class="pm-mapview-scroll" role="application" aria-label={strategic ? "Strategic map" : "Map"}
+				onScroll={() => painter.request()}>
 				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + "px" }} />
 			</div>
 			{end !== null && <PathTag store={store} at={toScreen(hexCentre(end.row, end.col), vp)} />}

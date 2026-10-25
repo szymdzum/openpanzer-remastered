@@ -12,6 +12,8 @@ import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
 import { drawFog, drawHatch, drawPlaques, drawSupport, drawSupportTags, drawZones } from "./overlays";
+import type { Strategic } from "./strategic";
+import { drawStrategic } from "./strategicdraw";
 import { TOKENS } from "./tokens";
 
 const MAP = TOKENS.map, PX = TOKENS.px;
@@ -29,6 +31,7 @@ export interface Scene {
 	fog: Uint8Array | null; //1 on each hex the side shown doesn't see (src/view/mapinfo.ts)
 	support: Support | null; //the guns that fire if the hovered target is attacked
 	plaques: Plaque[];
+	strategic: Strategic | null; //the strategic map instead of the rest, the map fit to the window (src/view/strategic.ts)
 }
 
 //A sprite strip or the bridge by its file, null until it has loaded
@@ -325,7 +328,14 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	c.beginPath();
 	c.rect(0, 0, scene.size.width, scene.size.height);
 	c.clip();
+	//(the strategic map shrinks the terrain: smoothed, not pixelated; then only its chips and objectives)
+	c.imageSmoothingEnabled = scene.strategic !== null;
 	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
+	if (scene.strategic !== null) {
+		drawStrategic(c, vp, scene.strategic, images(scene.strategic.flags));
+		c.restore();
+		return;
+	}
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
 	drawAirRings(c, vp, scene.units);

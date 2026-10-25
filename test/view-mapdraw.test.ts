@@ -3,7 +3,8 @@
 //card's order, the tokens' colours and widths, and the overlays at screen size at every map scale (ZoomLevels)
 import { expect, test } from "vitest";
 import { handWorld } from "./coreworld";
-import { toScreen, type Viewport } from "../src/view/canvas";
+import { fitViewport, toScreen, type Viewport } from "../src/view/canvas";
+import { strategicOf } from "../src/view/strategic";
 import { BRIDGE, drawMap, type Images, type Scene } from "../src/view/mapdraw";
 import { type MapUnit, mapUnits, pathOf, selectionOf } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
@@ -58,7 +59,7 @@ function scene(w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0
 	{ eqid: 273, owner: 1, row: 4, col: 4 }, { eqid: 273, owner: 1, row: 3, col: 1, facing: 12 }] }, undefined, { spotSide: 0 })): Scene {
 	const selection = selectionOf(w, 0);
 	return { terrain: sprite as CanvasImageSource, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: false, units: mapUnits(w, false, 0), selection,
-		path: pathOf(w, selection, { row: 4, col: 3 }), fog: null, support: null, plaques: [] };
+		path: pathOf(w, selection, { row: 4, col: 3 }), fog: null, support: null, plaques: [], strategic: null };
 }
 
 const vp = (scale: number, dpr = 2): Viewport => ({ x: 10, y: 20, width: 600, height: 400, scale, dpr });
@@ -119,7 +120,7 @@ test("A ring with the moves left; a light ring when the unit can move again; das
 	const path = pathOf(w, selection, far)!;
 	expect(path.cells.some((c) => !c.seen) && path.again).toBe(true);
 	const { ctx, ops } = recorder();
-	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: true, units: [], selection, path, fog: null, support: null, plaques: [] }, vp(1), images);
+	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: true, units: [], selection, path, fog: null, support: null, plaques: [], strategic: null }, vp(1), images);
 	expect(ops.some((o) => o.op === "stroke" && o.lineWidth === 1)).toBe(true); //the grid
 	expect(ops.some((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-move"] && o.dash.join() === "6,4")).toBe(true);
 	expect(ops.some((o) => o.op === "fill" && o.fillStyle === MAP["hex-move"] && o.zoom === 2)).toBe(true); //the light ring
@@ -132,7 +133,7 @@ test("A unit on a bridge of its side is drawn as the bridge; an image not loaded
 	const { ctx } = recorder();
 	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, lifted: false };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 3, cols: 3, grid: false, units: [unit, { ...unit, bridge: false, icon: "" }], selection: null, path: null,
-		fog: null, support: null, plaques: [] },
+		fog: null, support: null, plaques: [], strategic: null },
 		vp(1), (file) => {
 			drawn.push(file);
 			return file === "" ? null : sprite;
@@ -155,7 +156,7 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(selection.zones.length + selection.unseen.length).toBeGreaterThan(0);
 	const { ctx, ops } = recorder();
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 12, cols: 12, grid: false, units: mapUnits(w, false, 0), selection, path: null, fog: fogOf(w), support,
-		plaques: plaquesOf(w) }, vp(2), images);
+		plaques: plaquesOf(w), strategic: null }, vp(2), images);
 	const at = (pred: (o: Op) => boolean) => ops.findIndex(pred);
 	const fog = at((o) => o.op === "fill" && o.fillStyle === MAP["hex-fog"]);
 	const hatch = ops.findIndex((o, i) => o.op === "clip" && i > fog); //(the first clip is the map's edge)
@@ -199,4 +200,41 @@ test("The air layer: a ring round the aircraft on top, lifted with its shadow; t
 	drawMap(ctx, { ...scene(w), units: mapUnits(w, false, null) }, vp(1), images);
 	expect(ops.some((o) => o.strokeStyle === MAP["hex-air"])).toBe(false);
 	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.globalAlpha)).toEqual([0.45, 1]);
+});
+
+test("The strategic map's viewport fits the whole map under the status bar, centred in the room left", () => {
+	//a wide map: its width fills the screen, the room under the bar split above and below it
+	expect(fitViewport({ width: 1000, height: 500 }, { width: 800, height: 600 }, 80, 2)).toEqual({ x: -0, y: -140, width: 800, height: 600,
+		scale: 0.8, dpr: 2 });
+	//a tall one: its height fills the room, centred across
+	expect(fitViewport({ width: 500, height: 1000 }, { width: 800, height: 600 }, 100, 1)).toMatchObject({ x: -275, y: -100, scale: 0.5 });
+	//nothing laid out yet: still a scale
+	expect(fitViewport({ width: 0, height: 0 }, { width: 0, height: 0 }, 0, 1).scale).toBeGreaterThan(0);
+});
+
+//StrategicMap: the terrain shrunk and smoothed, then only the chips and the objectives' large plaques, laid out in the
+//map's pixels: no grid, fog, area, path, sprite or marker
+test("The strategic map draws the terrain, a chip per unit with its flag, dimmed when it moved, and the objectives", () => {
+	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 1, hasMoved: true }, { eqid: 273, owner: 1, row: 4, col: 2 }] },
+		undefined, { spotSide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
+	w.data.hexes[hexIndex(w, 2, 2)].name = "Mława";
+	const strategic = strategicOf(w, false);
+	const view = fitViewport({ width: 600, height: 600 }, { width: 600, height: 400 }, 40, 2);
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { ...scene(w), grid: true, fog: fogOf(w), plaques: plaquesOf(w), strategic }, view, images);
+	expect(ops.filter((o) => o.op === "drawImage").map((o) => o.args.length)).toEqual([3, 9, 9, 9]); //the terrain, two flags, the plaque's flag
+	expect(ops.every((o) => o.op !== "drawImage" || o.zoom === 2 * view.scale)).toBe(true);
+	//the chips: the side shown's square with its edge, dimmed as it moved; the enemy's pointed, the flags from the strip
+	const chips = ops.filter((o) => o.op === "fill" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"]));
+	expect(chips.map((o) => [o.fillStyle, o.globalAlpha])).toEqual([[MAP["map-axis"], 0.55], [MAP["map-allied"], 1]]);
+	expect(ops.filter((o) => o.op === "drawImage" && o.args.length === 9).map((o) => o.args[1])).toEqual([7 * 21, 15 * 21, 15 * 21]);
+	//the objective: its name as written, its holder's bar; nothing else is written (no marker, no town, no move area)
+	expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["Mława"]);
+	expect(ops.some((o) => o.op === "fillRect" && o.fillStyle === MAP["map-allied"])).toBe(true);
+	expect(ops.some((o) => o.fillStyle === MAP["hex-fog"] || o.strokeStyle === MAP["hex-move"] || o.strokeStyle === MAP["hex-select"])).toBe(false);
+	//no flag strip yet: the chips without their flags
+	const { ctx: bare, ops: none } = recorder();
+	drawMap(bare, { ...scene(w), strategic }, view, (file) => file === strategic.flags ? null : sprite);
+	expect(none.filter((o) => o.op === "drawImage")).toHaveLength(1);
 });

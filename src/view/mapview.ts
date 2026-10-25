@@ -90,7 +90,7 @@ const STOP = 254;
 const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
 
 //The side shown sees a unit: its own, on a hex it spots, or one that fired from hiding
-function shown(w: World, u: UnitState): boolean {
+export function isShown(w: World, u: UnitState): boolean {
 	return sideOf(w, u) === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide));
 }
 
@@ -125,16 +125,21 @@ function mapUnit(w: World, u: UnitState, top: boolean, airMode: boolean, selecte
 //Hex.getUnit did, and selecting an aircraft switches the air layer on: src/view/store.ts)
 export function mapUnits(w: World, airMode: boolean, selected: UnitId | null): MapUnit[] {
 	const units: MapUnit[] = [];
+	eachSlot(w, airMode, (top, below) => {
+		if (below !== null && isShown(w, below)) units.push(mapUnit(w, below, false, airMode, selected));
+		if (top !== null && isShown(w, top)) units.push(mapUnit(w, top, true, airMode, selected));
+	});
+	return units;
+}
+
+//Each hex row by row, with the unit in the slot of the layer shown (airMode: the air slot) and the other slot's
+export function eachSlot(w: World, airMode: boolean, f: (top: UnitState | null, below: UnitState | null) => void) {
 	const { rows, cols } = w.state.map;
 	for (let row = 0; row < rows; row++)
 		for (let col = 0; col < cols; col++) {
-			const hex = hexIndex(w, row, col);
-			const air = airUnitAt(w, hex), ground = groundUnitAt(w, hex);
-			const top = airMode ? air : ground, below = airMode ? ground : air;
-			if (below !== null && shown(w, below)) units.push(mapUnit(w, below, false, airMode, selected));
-			if (top !== null && shown(w, top)) units.push(mapUnit(w, top, true, airMode, selected));
+			const hex = hexIndex(w, row, col), air = airUnitAt(w, hex), ground = groundUnitAt(w, hex);
+			f(airMode ? air : ground, airMode ? ground : air);
 		}
-	return units;
 }
 
 //The outline round a set of hexes: each edge whose neighbour isn't in it
@@ -151,7 +156,7 @@ export function outlineOf(w: World, hexes: Position[]): Edge[] {
 //The selected unit as the map shows it, null when there is none or the side shown doesn't see it
 export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	const u = id === null ? null : unitById(w, id);
-	if (u === null || u.row < 0 || !shown(w, u)) return null;
+	if (u === null || u.row < 0 || !isShown(w, u)) return null;
 	const at = { row: u.row, col: u.col };
 	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] };
 	const range = moveRange(w, u), side = sideOf(w, u);
@@ -261,5 +266,5 @@ export function clickOn(w: World, sel: Selection | null, at: Position, airMode: 
 	}
 	if (sel !== null && sel.area.some((c) => same(c, at))) return { command: { type: "move", unit: sel.unit, to: at } };
 	const u = unitAt(w, hexIndex(w, at.row, at.col), airMode);
-	return { select: u !== null && shown(w, u) ? u.id : null };
+	return { select: u !== null && isShown(w, u) ? u.id : null };
 }
