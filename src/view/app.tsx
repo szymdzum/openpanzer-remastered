@@ -1,9 +1,10 @@
-//The new UI's root under ?ui=new (#380): for now the map (#345), the status bar (#346), the selected unit with
-//its actions, End turn and the message window, composed of the component library. The
+//The new UI's root under ?ui=new (#380): for now the map (#345), the HUD so far (#346: the status bar, the game menu,
+//the unit info), the selected unit's actions, End turn and the message window, composed of the component library. The
 //HUD (D3) and the windows (D5) replace them piece by piece. The components only read the
 //store's signals and send its commands: what they show and why a control is off is the view model's.
 import { Button } from "./button";
 import { IconSprite } from "./icon";
+import { UnitInfoPanel } from "./infopanel";
 import { List } from "./list";
 import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
@@ -63,7 +64,8 @@ export function App({ store }: { store: Store }) {
 			<MapView store={store} />
 			<StatusBar store={store} />
 			<Rail store={store} />
-			{store.infoShown.value && <UnitActions store={store} />}
+			<UnitInfoPanel store={store} />
+			<UnitActions store={store} />
 			<Reserve store={store} />
 			<EndTurn store={store} />
 			<EndTurnQuestion store={store} />

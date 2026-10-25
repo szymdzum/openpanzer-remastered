@@ -15,6 +15,7 @@ import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
 import { type ActionKey, endTurnRefusal, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
+import { unitInfoOf } from "./unitinfo";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -67,6 +68,7 @@ export function createStore(host: StoreHost) {
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
+	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
@@ -164,7 +166,7 @@ export function createStore(host: StoreHost) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, toggleAir,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
