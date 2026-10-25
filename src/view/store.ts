@@ -7,6 +7,7 @@ import { computed, signal } from "@preact/signals";
 import type { Command } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
 import type { GameHost } from "../host";
+import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
 import { endTurnRefusal, reasonOf, statusOf, unitView } from "./model";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
@@ -27,6 +28,10 @@ export function createStore(host: StoreHost) {
 	const notes = signal<Note[]>([]);
 	const refused = signal<string | null>(null);
 	const lookAt = signal<Position | null>(null);
+	//The map's (D2): the layer shown (the air layer when true), the hex under the pointer, the map's scale
+	const airMode = signal(false);
+	const hover = signal<Position | null>(null);
+	const scale = signal(1);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -37,21 +42,49 @@ export function createStore(host: StoreHost) {
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
+	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
+	//the hovered hex (computed again only when the hovered hex changes, MovePath)
+	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value));
+	const selection = computed(() => world.value === null ? null : selectionOf(world.value, selected.value));
+	const path = computed(() => world.value === null || hover.value === null ? null : pathOf(world.value, selection.value, hover.value));
 
 	//The world as the host plays it now
 	const refresh = () => { world.value = host.world(); };
 
-	return {
-		world, selected, notes, refused, lookAt, side, sideName, turn, prestige, endTurn, unit, note, refresh,
+	//A person's command sent to the host: the screen shows the step at once (the animations are D4's),
+	//then its victories are told; refused, the reason, which the status bar shows until the next command
+	const dispatch = (cmd: Command): string | null => {
+		const r = host.command(cmd);
+		refresh();
+		if (r.ok) host.won(r.result);
+		refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
+		return refused.value;
+	};
 
-		//A person's command sent to the host: the screen shows the step at once (the animations are D4's),
-		//then its victories are told; refused, the reason, which the status bar shows until the next command
-		dispatch(cmd: Command): string | null {
-			const r = host.command(cmd);
-			refresh();
-			if (r.ok) host.won(r.result);
-			refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
-			return refused.value;
+	return {
+		dispatch,
+		world, selected, notes, refused, lookAt, airMode, hover, scale, side, sideName, turn, prestige, endTurn, unit, note, units,
+		selection, path, refresh,
+
+		//A click on a hex of the map: the selected unit's attack or move there, sent as the person's command,
+		//else the unit there selected (none on an empty hex)
+		clickHex(at: Position) {
+			const w = world.value;
+			if (w === null) return;
+			const click = clickOn(w, selection.value, at, airMode.value);
+			if ("command" in click) {
+				dispatch(click.command);
+				return;
+			}
+			selected.value = click.select;
+			refused.value = null;
+		},
+
+		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again
+		hoverHex(at: Position | null) {
+			const old = hover.value;
+			if (old === at || (old !== null && at !== null && old.row === at.row && old.col === at.col)) return;
+			hover.value = at;
 		},
 
 		//A message shown after those already open, one at a time

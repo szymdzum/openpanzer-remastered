@@ -1,5 +1,5 @@
 //A panel anchored to a hex (principles.md, Layout): the unit context menu above the selected hex,
-//the odds preview beside the target. The map code gives the hex's centre on the screen; the panel
+//the odds preview beside the target, the move path's tag below its end. The map code gives the hex's centre on the screen; the panel
 //measures itself and stays inside the screen, space-3 from its edges.
 import type { AriaRole, ComponentChildren } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -22,13 +22,12 @@ export function clampToScreen(at: Point, size: Size, screen: Size, edge = EDGE):
 	};
 }
 
-type Place = "above" | "beside";
+type Place = "above" | "below" | "beside";
 
-//Before the clamp: centred above the hex, or right of it and centred on it, `gap` away from its centre
+//Before the clamp: centred above or below the hex, or right of it and centred on it, `gap` away from its centre
 export function placeBy(hex: Point, size: Size, place: Place, gap: number): Point {
-	return place === "above"
-		? { x: hex.x - size.width / 2, y: hex.y - gap - size.height }
-		: { x: hex.x + gap, y: hex.y - size.height / 2 };
+	if (place === "beside") return { x: hex.x + gap, y: hex.y - size.height / 2 };
+	return { x: hex.x - size.width / 2, y: place === "above" ? hex.y - gap - size.height : hex.y + gap };
 }
 
 type AnchoredProps = {

@@ -109,7 +109,8 @@ export default defineConfig({
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
 				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/oldscreen.ts", "src/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
-				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts"],
+				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/hexgrid.ts", "src/view/mapview.ts",
+				"src/view/mapdraw.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -180,6 +181,10 @@ export default defineConfig({
 				"src/view/model.ts": { statements: 97, branches: 92, functions: 95, lines: 97 },
 				"src/view/screen.tsx": { statements: 100, branches: 75, functions: 100, lines: 100 },
 				"src/view/store.ts": { statements: 97, branches: 100, functions: 92, lines: 96 },
+				"src/view/hexgrid.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
+				"src/view/map.tsx": { statements: 97, branches: 87, functions: 96, lines: 100 },
+				"src/view/mapdraw.ts": { statements: 98, branches: 90, functions: 95, lines: 99 },
+				"src/view/mapview.ts": { statements: 96, branches: 95, functions: 92, lines: 98 },
 				"src/view/anchored.tsx": { statements: 100, branches: 78, functions: 100, lines: 100 },
 				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/controls.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
