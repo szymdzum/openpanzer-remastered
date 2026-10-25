@@ -12,7 +12,9 @@ import { GameHost, type HostScreen, runGame } from "../src/host";
 import type { Game } from "../src/game";
 import type { CampaignScenario } from "../src/campaign";
 import type { ScenarioOutcome } from "../src/scenario";
-import { outcomeNames, uiSettings } from "../src/prototypes";
+import { outcomeNames, playerType, sideNames, uiSettings } from "../src/prototypes";
+import { touched } from "../src/context";
+import { turnLimitOutcome } from "../src/core/turn";
 import { Rng } from "../src/rng";
 
 fakeMapImages();
@@ -93,3 +95,38 @@ test("The game host plays a campaign's chain of scenarios without the DOM: each 
 	expect([played.length > 2, prototypes > 0]).toEqual([true, true]);
 	expect((g.state as unknown as { saves: () => number }).saves(), "a save at each scenario's start").toBe(played.length);
 }, 120_000);
+
+//A single scenario started on the host, by the remaster's rules (the turn limit has a winner there, #256)
+async function remasterScenario(file: string, isAI: number[], told: string[][]): Promise<Game> {
+	uiSettings.isAI = isAI;
+	const g = headlessGame((game) => ({ ...noting([])(game), message(title, text) { told.push([title, text.replace(/<[^>]*>/g, "")]); } }));
+	g.rules = "remaster";
+	g.host.newScenario(file);
+	await until(() => loaded(g, null), file);
+	return g;
+}
+
+//The turn limit's outcome is told by the sides a person plays now, as the victory is since #366: nobody
+//is told they won or lost in a game of AIs, and past the tutorial's hand-over the person who plays the
+//Axis is told their own outcome. It was told by the sides the session started with: DEFEAT to a game of
+//AIs, the neutral message to the tutorial's person (#385)
+test("The turn limit's outcome is told by the sides a person plays now: neutral in a game of AIs, the person's own after the tutorial's hand-over (#385)", async () => {
+	const byAI: string[][] = [];
+	const ais = await remasterScenario("drpzop01.xml", [1, 1, 1, 1], byAI);
+	const players = ais.scenario.map.getPlayers(), last = players[players.length - 1].side;
+	const o = turnLimitOutcome(ais.session.world, last);
+	expect(o.winner, "the turn limit has a winner").not.toBe(-1);
+	ais.host.ended({ kind: "turnLimit", side: last });
+	expect(ais.gameEnded).toBe(true);
+	expect(byAI, "a game of AIs").toEqual([[outcomeNames[o.rating], "The " + sideNames[o.winner] + " side held the objectives to the end"]]);
+
+	const byPerson: string[][] = [];
+	const tutorial = await remasterScenario("tutorial.xml", [2, 2, 2, 2], byPerson);
+	//The hand-over (src/core/tutorial.ts handOver): the Axis to the person, the Allies to the AI
+	for (const p of tutorial.scenario.map.getPlayers()) p.type = p.side === 0 ? playerType.humanLocal : playerType.aiLocal;
+	touched();
+	//(the Axis attacks there: holding out, the Allies win)
+	expect(turnLimitOutcome(tutorial.session.world, 1).winner).toBe(1);
+	tutorial.host.ended({ kind: "turnLimit", side: 1 });
+	expect(byPerson, "the tutorial's person, the Axis").toEqual([["DEFEAT", "You didn't capture all the objectives in time"]]);
+});
