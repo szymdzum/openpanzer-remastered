@@ -58,6 +58,8 @@ export const TOKENS = {
 		"hex-move": "#f4eedd",
 		"hex-shadow": "#1d170b",
 		"hex-fog": "rgba(20, 22, 15, 0.42)",
+		shade: "#000000",
+		glint: "#ffffff",
 		"map-paper": "#e8dfc8",
 		"map-paper-raised": "#f4eedd",
 		"map-ink": "#211c13",

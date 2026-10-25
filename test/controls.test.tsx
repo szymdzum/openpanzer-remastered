@@ -64,7 +64,7 @@ describe("Input", () => {
 		fireEvent.input(field, { target: { value: "7f3a" } });
 		expect(onInput).toHaveBeenCalledWith("7f3a");
 		const bad = screen.getByRole("textbox", { name: "Bad" });
-		expect(bad.className).toBe("pm-input err");
+		expect(bad.className).toBe("pm-input");
 		expect(bad.getAttribute("aria-invalid")).toBe("true");
 	});
 });

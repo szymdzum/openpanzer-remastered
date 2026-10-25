@@ -1,0 +1,31 @@
+{
+	"extends": ["stylelint-config-standard"],
+	"plugins": ["./scripts/stylelint-rules.mjs"],
+	"rules": {
+		"openpanzer/rule-in-layer": true,
+		"openpanzer/motion-if-no-preference": true,
+		"selector-max-id": 0,
+		"selector-max-specificity": "0,3,1",
+		"declaration-no-important": true,
+		"color-no-hex": true,
+		"color-named": "never",
+		"function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch"],
+		"unit-allowed-list": ["px", "rem", "em", "ch", "%", "fr", "s", "ms", "deg", "dvh", "svh", "vh", "vw", "cqi", "cqb", "x"],
+		"declaration-property-unit-allowed-list": {
+			"/^(?!border|outline|box-shadow|text-shadow|stroke-width).+$/": ["rem", "em", "ch", "%", "fr", "s", "ms", "deg", "dvh", "svh", "vh", "vw", "cqi", "cqb", "x"]
+		},
+		"property-disallowed-list": [
+			"width", "height", "min-width", "min-height", "max-width", "max-height",
+			"top", "right", "bottom", "left",
+			"margin-top", "margin-right", "margin-bottom", "margin-left",
+			"padding-top", "padding-right", "padding-bottom", "padding-left",
+			"border-top", "border-right", "border-bottom", "border-left"
+		],
+		"declaration-property-value-disallowed-list": {
+			"text-align": ["left", "right"],
+			"float": ["left", "right"],
+			"clear": ["left", "right"]
+		},
+		"media-feature-name-allowed-list": ["pointer", "any-pointer", "hover", "any-hover", "orientation", "prefers-reduced-motion", "prefers-color-scheme"]
+	}
+}

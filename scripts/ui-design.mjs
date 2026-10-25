@@ -26,7 +26,7 @@ const view = path.join(dir, "..", "..", "src", "view");
 //The components' CSS: src/view/library.css with its @imports written in, in their order
 function libraryCss() {
 	return fs.readFileSync(path.join(view, "library.css"), "utf8")
-		.replace(/@import "\.\/([\w-]+\.css)";/g, (_, file) => fs.readFileSync(path.join(view, file), "utf8"));
+		.replace(/@import url\("\.\/([\w-]+\.css)"\);/g, (_, file) => fs.readFileSync(path.join(view, file), "utf8"));
 }
 
 //A token's value in a theme; a token with one value has it in every theme
@@ -48,25 +48,30 @@ function tokensCss() {
 	const fonts = Object.entries(t.type.families).map(([k, v]) => `\t--font-${k}: ${v};\n`);
 	//the type scale: each style's size and line height
 	const type = styles(t).map((st) => `\t--type-${st.name}-size: ${st.fontSize};\n\t--type-${st.name}-line: ${st.lineHeight};\n`);
-	return "/* Generated from tokens.json by scripts/ui-design.mjs. Do not edit. */\n" + blocks.join("") + `:root {\n${fixed.join("")}${fonts.join("")}${type.join("")}}\n`;
+	//in the tokens layer, the layers' order declared first (docs/ui/handoff.md, CSS)
+	const body = blocks.join("") + `:root {\n${fixed.join("")}${fonts.join("")}${type.join("")}}\n`;
+	return "/* Generated from tokens.json by scripts/ui-design.mjs. Do not edit. */\n" + `${LAYERS}\n@layer tokens {\n${body}}\n`;
 }
+
+const LAYERS = "@layer reset, tokens, base, components, utilities;";
 
 //The groups of tokens with one value in every theme
 const FIXED = ["spacing", "radius", "size", "stroke", "zIndex", "motion"];
 
 const styles = (t) => t.type.groups.flatMap((g) => g.styles);
 
+const pixels = (length) => parseFloat(length) * (length.endsWith("rem") ? 16 : 1);
 const quote = (key) => /^[a-z]+$/.test(key) ? key : JSON.stringify(key);
 const entries = (pairs, indent) => pairs.map(([k, v]) => `${indent}${quote(k)}: ${JSON.stringify(v)},\n`).join("");
 
 //The same tokens for the canvas: colours by theme and the map's own, which are the same in both;
-//lengths in pixels and durations in milliseconds as numbers
+//lengths in pixels (a rem is 16 of them at the default font size) and durations in milliseconds as numbers
 function tokensTs() {
 	const t = JSON.parse(read("tokens.json"));
 	const colors = t.color.tokens;
 	const themes = t.color.themes.map((th) => `\t\t${quote(th.id)}: {\n${entries(colors.filter((k) => typeof k.value !== "string").map((k) => [k.name, k.value[th.id]]), "\t\t\t")}\t\t},\n`);
-	const lengths = ["spacing", "size", "stroke"].flatMap((g) => t[g].tokens).map((k) => [k.name, parseFloat(k.value)]);
-	const sizes = styles(t).map((st) => [st.name, parseFloat(st.fontSize)]);
+	const lengths = ["spacing", "size", "stroke"].flatMap((g) => t[g].tokens).map((k) => [k.name, pixels(k.value)]);
+	const sizes = styles(t).map((st) => [st.name, pixels(st.fontSize)]);
 	const durations = t.motion.tokens.map((k) => [k.name, parseFloat(k.value) * (k.value.endsWith("ms") ? 1 : 1000)]);
 	return "// Generated from docs/ui/tokens.json by scripts/ui-design.mjs. Do not edit.\n"
 		+ "//The design tokens for what can't read CSS custom properties: the map's canvas draws its overlays\n"
@@ -94,8 +99,8 @@ const FONT_SIZE = /font-size\s*:\s*([^;}"]+)|font\s*:\s*(?:(?:italic|normal|bold
 //The colours of a line of CSS written in, but shading
 const colours = (code) => [...code.matchAll(COLOUR)].map((m) => m[0]).filter((c) => !SHADING.test(normal(c)));
 
-//The font sizes of a line of CSS that aren't a var(--…)
-const sizes = (code) => [...code.matchAll(FONT_SIZE)].map((m) => (m[1] ?? m[2]).trim()).filter((size) => /\d/.test(size) && !size.startsWith("var("));
+//The font sizes of a line of CSS written as a length, not a var(--…) (a share of the root's is fine: the Interface scale)
+const sizes = (code) => [...code.matchAll(FONT_SIZE)].map((m) => (m[1] ?? m[2]).trim()).filter((size) => /\d(px|pt|r?em)\b/.test(size) && !size.startsWith("var("));
 
 //The components' CSS and the screens' (bundle.css): every colour and font size from the tokens
 function checkCss(file, text, problems) {

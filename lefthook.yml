@@ -9,6 +9,9 @@ pre-commit:
     - name: lint
       glob: ["src/*.ts", "src/*.tsx", "test/*.ts", "test/*.tsx", "test/contracts/*.js"]
       run: npx oxlint --type-aware --deny-warnings {staged_files}
+    - name: stylelint
+      glob: ["src/view/*.css", "src/view/**/*.css"]
+      run: npx stylelint {staged_files}
     - name: typos
       # --force-exclude: the files _typos.toml excludes stay excluded when they are staged (fixtures)
       run: command -v typos >/dev/null && typos --force-exclude {staged_files} || true

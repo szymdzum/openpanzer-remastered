@@ -88,6 +88,9 @@ export default defineConfig({
 	oxc: { include: /\.tsx$/, jsx: { runtime: "automatic", importSource: "preact" } },
 	plugins: [blankTypes(), harnessSetters(), copyGameAssets(), cliBridge()],
 	optimizeDeps: { noDiscovery: true }, //the game has no dependencies, Preact (src/view/) is ESM as it is (and game/ has pages of its own)
+	//Baseline widely available (iPad Safari 17 and up, docs/ui/handoff.md, CSS); Lightning CSS lowers what the
+	//target lacks, the new UI's nesting included (test/css-build.test.ts checks it)
+	build: { target: "baseline-widely-available", cssMinify: "lightningcss" },
 	test: {
 		//the game's modules need a DOM; the page is served from /game/ like index.html
 		environment: "jsdom",

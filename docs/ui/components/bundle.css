@@ -18,7 +18,8 @@
 .pm-map .spr { position: absolute; width: 80px; height: 50px; background-repeat: no-repeat; }
 
 /* ============ select ============ */
-.pm-select { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--hit-target); padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); background: var(--panel-raised); font: 600 var(--type-body-size)/1 var(--font-ui); color: var(--ink); cursor: pointer; }
+/* a select is a button: it takes the root's font and colour, as the reset has a button do */
+.pm-select { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--hit-target); padding: 0 var(--space-3); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); background: var(--panel-raised); cursor: pointer; }
 
 /* ============ side marks ============ */
 .pm-side { display: inline-flex; align-items: center; gap: 8px; font: 700 var(--type-small-size)/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
@@ -30,7 +31,7 @@
 .pm-pin::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -4px; width: 8px; height: 8px; background: var(--panel); border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); transform: rotate(45deg); }
 .pm-pin.low { color: var(--low); } .pm-pin.critical { color: var(--critical); } .pm-pin.ok { color: var(--ok); }
 .pm-ai { position: absolute; z-index: var(--z-hud); display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px 10px 14px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-paper); box-shadow: inset 0 0 0 3px var(--panel), inset 0 0 0 4px var(--line), var(--shadow-panel); font: 700 var(--type-small-size)/1 var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
-.pm-ai .dot { width: 10px; height: 10px; border-radius: var(--radius-round); background: var(--allied); box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px var(--allied); animation: pm-blink var(--motion-blink) steps(2, jump-none) infinite; }
+.pm-ai .dot { width: 10px; height: 10px; border-radius: var(--radius-round); background: var(--allied); box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px var(--allied); }
 @keyframes pm-blink { 50% { opacity: .25; } }
 
 /* ============ HUD: status bar (#statusbar) ============ */
@@ -129,10 +130,11 @@
 .pm-entry .res { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font: 700 var(--type-small-size)/16px var(--font-mono); white-space: nowrap; }
 
 /* ============ start menu and out-of-game ============ */
-.pm-photo { position: absolute; inset: -4%; background-size: cover; background-position: 50% 40%; filter: grayscale(1) contrast(1.05); animation: pm-pan var(--motion-pan) ease-in-out infinite alternate; }
+.pm-photo { position: absolute; inset: -4%; background-size: cover; background-position: 50% 40%; filter: grayscale(1) contrast(1.05); }
 .pm-photo-tint { position: absolute; inset: 0; background: var(--photo-tint); }
 @keyframes pm-pan { from { transform: scale(1.05) translate(0, 0); } to { transform: scale(1.18) translate(-2%, 2%); } }
-@media (prefers-reduced-motion: reduce) { .pm-photo, .pm-ai .dot { animation: none; } }
+/* motion only for those who haven't asked for less of it */
+@media (prefers-reduced-motion: no-preference) { .pm-photo { animation: pm-pan var(--motion-pan) ease-in-out infinite alternate; } .pm-ai .dot { animation: pm-blink var(--motion-blink) steps(2, jump-none) infinite; } }
 .pm-wordmark { font: 700 var(--type-wordmark-size)/84px var(--font-display); letter-spacing: -.01em; color: var(--ink); }
 .pm-menu { display: flex; flex-direction: column; gap: var(--space-2); }
 .pm-menu .pm-btn { justify-content: flex-start; min-height: 52px; gap: 14px; font-size: var(--type-body-size); padding: 0 var(--space-4); }

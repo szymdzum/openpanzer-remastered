@@ -1,16 +1,117 @@
-/* Tabs and SegmentedControl (tabs.tsx; their cards). The segmented control is a fieldset: none of its own box */
-.pm-tabs { display: flex; gap: 2px; padding: 0 var(--space-3); border-bottom: 1px solid var(--line-strong); }
-.pm-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 88px; min-height: 56px; padding: 6px 8px 7px; border: 0; background: transparent; color: var(--ink-muted); font: 600 var(--type-label-size)/14px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
-.pm-tab .i { width: 22px; height: 22px; }
-.pm-tab .n { position: absolute; top: 5px; right: 12px; font: 700 var(--type-micro-size)/12px var(--font-mono); letter-spacing: 0; }
-.pm-tab.is-on { color: var(--ink); background: var(--panel-raised); box-shadow: inset 1px 0 0 var(--line), inset -1px 0 0 var(--line); }
-.pm-tab.is-on::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 3px; background: var(--accent); }
-.pm-tab:disabled { opacity: .45; cursor: default; }
-.pm-tabs.text .pm-tab { flex-direction: row; min-height: var(--hit-target); min-width: 0; padding: 0 var(--space-4); font-size: var(--type-note-size); }
-.pm-seg { justify-self: start; align-self: start; display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-paper); overflow: hidden; }
-.pm-seg button { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; min-width: 44px; padding: 0 12px; border: 0; background: var(--panel-raised); color: var(--ink-muted); font: 600 var(--type-small-size)/1 var(--font-ui); cursor: pointer; }
-.pm-seg button + button { border-left: 1px solid var(--line); }
-.pm-seg button.is-on { background: var(--ink); color: var(--panel-raised); }
-.pm-seg button:disabled { opacity: .5; cursor: default; }
-.pm-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-fieldset.pm-seg { margin: 0; padding: 0; min-inline-size: 0; }
+/* Tabs and SegmentedControl (tabs.tsx; their cards) */
+@layer components {
+	.pm-tabs {
+		display: flex;
+		gap: 0.125rem;
+		padding: 0 var(--space-3);
+		border-block-end: 1px solid var(--line-strong);
+	}
+
+	/* an icon tab: its caption takes the root's font, as the reset has a button do */
+	.pm-tab {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.1875rem;
+		min-inline-size: 5.5rem;
+		min-block-size: 3.5rem;
+		padding-block: 0.375rem 0.4375rem;
+		padding-inline: 0.5rem;
+		border: 0;
+		background: transparent;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		cursor: pointer;
+
+		/* an icon tab's icon, unless its markup sizes it (a text tab's small one) */
+		& .i:not(.sm, .lg) {
+			inline-size: 1.375rem;
+			block-size: 1.375rem;
+		}
+
+		& .n {
+			position: absolute;
+			inset-block-start: 0.3125rem;
+			inset-inline-end: 0.75rem;
+			font: 700 var(--type-micro-size) / var(--type-micro-line) var(--font-mono);
+			letter-spacing: 0;
+		}
+
+		&[aria-selected="true"] {
+			color: var(--ink);
+			background: var(--panel-raised);
+			box-shadow: inset 1px 0 0 var(--line), inset -1px 0 0 var(--line);
+
+			/* the brass bar on the bottom edge */
+			&::after {
+				content: "";
+				position: absolute;
+				inset-inline: 0.5rem;
+				inset-block-end: -0.0625rem;
+				block-size: 0.1875rem;
+				background: var(--accent);
+			}
+		}
+
+		&:disabled {
+			opacity: 0.45;
+			cursor: default;
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--focus);
+			outline-offset: 2px;
+		}
+	}
+
+	/* text tabs, 44px tall */
+	.pm-tabs.text .pm-tab {
+		flex-direction: row;
+		min-block-size: var(--hit-target);
+		min-inline-size: 0;
+		padding: 0 var(--space-4);
+		font-size: var(--type-note-size);
+	}
+
+	/* the segmented control, a fieldset with none of its own box. .is-on stages the pressed option in cards without aria-pressed */
+	.pm-seg {
+		place-self: start;
+		display: inline-flex;
+		margin: 0;
+		padding: 0;
+		min-inline-size: 0;
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-paper);
+		overflow: hidden;
+
+		& button {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.375rem;
+			min-block-size: 2.625rem;
+			min-inline-size: 2.75rem;
+			padding: 0 0.75rem;
+			border: 0;
+			background: var(--panel-raised);
+			color: var(--ink-muted);
+			font: 600 var(--type-small-size) / 1 var(--font-ui);
+			cursor: pointer;
+
+			& + button {
+				border-inline-start: 1px solid var(--line);
+			}
+
+			&:is([aria-pressed="true"], .is-on) {
+				background: var(--ink);
+				color: var(--panel-raised);
+			}
+
+			&:disabled {
+				opacity: 0.5;
+				cursor: default;
+			}
+		}
+	}
+}

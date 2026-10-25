@@ -57,7 +57,7 @@ type InputProps = {
 
 export function Input({ label, value, onInput, placeholder, invalid, id }: InputProps) {
 	return (
-		<input id={id} class={invalid ? "pm-input err" : "pm-input"} type="text" value={value} placeholder={placeholder}
+		<input id={id} class="pm-input" type="text" value={value} placeholder={placeholder}
 			aria-label={label} aria-invalid={invalid} onInput={(e) => onInput(e.currentTarget.value)} />
 	);
 }

@@ -1,17 +1,122 @@
 /* Meter, Stars, Badge and Tag (meter.tsx; the Meter card) */
-.pm-badge { display: inline-block; min-width: 22px; height: 16px; padding: 0 4px; font: 700 var(--type-label-size)/14px var(--font-mono); text-align: center; color: var(--on-side); background: var(--axis); border: 1px solid rgba(0, 0, 0, .7); }
-.pm-badge.allied { background: var(--allied); }
-.pm-badge.neutral { background: var(--neutral-side); }
-.pm-badge.abs { position: absolute; }
-.pm-tag { display: inline-flex; align-items: center; gap: 4px; font: 700 var(--type-micro-size)/12px var(--font-ui); letter-spacing: .06em; text-transform: uppercase; padding: 2px 5px; border: 1px solid currentColor; }
-.pm-meter { display: grid; grid-template-columns: 18px 1fr auto; gap: 0 6px; align-items: center; font-size: var(--type-small-size); line-height: 16px; }
-.pm-meter + .pm-meter { margin-top: 7px; }
-.pm-meter .v { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; }
-.pm-meter .st { font-size: var(--type-micro-size); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-left: 4px; }
-.pm-meter .track { grid-column: 2 / -1; height: 5px; margin-top: 3px; background: var(--panel-sunken); border: 1px solid var(--line); }
-.pm-meter .track b { display: block; height: 100%; background: var(--ink-muted); }
-.pm-meter.ok .track b { background: var(--ok); } .pm-meter.ok .i { color: var(--ok); }
-.pm-meter.low .track b { background: var(--low); } .pm-meter.low .i, .pm-meter.low .v, .pm-meter.low .st { color: var(--low); }
-.pm-meter.critical .track b { background: var(--critical); } .pm-meter.critical .i, .pm-meter.critical .v, .pm-meter.critical .st { color: var(--critical); }
-.pm-stars { display: inline-flex; gap: 2px; color: var(--accent-ink); }
-.pm-stars .off { color: var(--line); }
+@layer components {
+	/* the strength badge: the side's fill, the HTML form of the canvas counter */
+	.pm-badge {
+		display: inline-block;
+		min-inline-size: 1.375rem;
+		block-size: 1rem;
+		padding: 0 0.25rem;
+		font: 700 var(--type-label-size) / var(--type-label-line) var(--font-mono);
+		text-align: center;
+		color: var(--on-side);
+		background: var(--axis);
+		border: 1px solid color-mix(in srgb, var(--shade) 70%, transparent);
+
+		&.allied {
+			background: var(--allied);
+		}
+
+		&.neutral {
+			background: var(--neutral-side);
+		}
+
+		&.abs {
+			position: absolute;
+		}
+	}
+
+	/* a state in words */
+	.pm-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		font: 700 var(--type-micro-size) / var(--type-micro-line) var(--font-ui);
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		padding: 0.125rem 0.3125rem;
+		border: 1px solid currentcolor;
+	}
+
+	/* a supply meter: icon, label, typed value and a track; low and critical add their word */
+	.pm-meter {
+		display: grid;
+		grid-template-columns: 1.125rem 1fr auto;
+		gap: 0 0.375rem;
+		align-items: center;
+		font-size: var(--type-small-size);
+		line-height: 1rem;
+
+		& + .pm-meter {
+			margin-block-start: 0.4375rem;
+		}
+
+		& .v {
+			font-family: var(--font-mono);
+			font-weight: 700;
+			font-variant-numeric: tabular-nums;
+		}
+
+		& .st {
+			font-size: var(--type-micro-size);
+			font-weight: 700;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+			margin-inline-start: 0.25rem;
+		}
+
+		& .track {
+			grid-column: 2 / -1;
+			block-size: 0.3125rem;
+			margin-block-start: 0.1875rem;
+			background: var(--panel-sunken);
+			border: 1px solid var(--line);
+
+			& b {
+				display: block;
+				block-size: 100%;
+				background: var(--ink-muted);
+			}
+		}
+
+		&.ok {
+			& .track b {
+				background: var(--ok);
+			}
+
+			& .i {
+				color: var(--ok);
+			}
+		}
+
+		&.low {
+			& .track b {
+				background: var(--low);
+			}
+
+			& :is(.i, .v, .st) {
+				color: var(--low);
+			}
+		}
+
+		&.critical {
+			& .track b {
+				background: var(--critical);
+			}
+
+			& :is(.i, .v, .st) {
+				color: var(--critical);
+			}
+		}
+	}
+
+	/* experience: earned stars in brass */
+	.pm-stars {
+		display: inline-flex;
+		gap: 0.125rem;
+		color: var(--accent-ink);
+
+		& .off {
+			color: var(--line);
+		}
+	}
+}
