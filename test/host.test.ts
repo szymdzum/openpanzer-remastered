@@ -9,7 +9,8 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import { fakeMapImages, until } from "./lifecycle";
 import { GAME_DIR } from "./corefiles";
-import { GameHost, runGame } from "../src/host";
+import { GameHost } from "../src/host";
+import { headlessGame } from "./headlessgame";
 import type { Screen } from "../src/screen";
 import { nullScreen } from "../src/nullscreen";
 import type { Game } from "../src/game";
@@ -21,23 +22,6 @@ import { turnLimitOutcome } from "../src/core/turn";
 import { Rng } from "../src/rng";
 
 fakeMapImages();
-
-//The game the host plays: Game's fields, and the members the engine and the core's glue call on it
-//(src/coresession.ts, src/coreload.ts, src/mirror.ts), handed on to the host as Game hands them
-function headlessGame(screen: (g: Game) => Screen): Game {
-	let saves = 0;
-	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves }, campaign: null, scenario: null,
-		gameStarted: false, gameEnded: false, waitUIAnimation: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
-		session: null } as unknown as Game;
-	const host = new GameHost(g, screen(g));
-	Object.assign(g, { host,
-		getCampaignPlayer: () => host.getCampaignPlayer(),
-		getCampaignProgress: () => host.getCampaignProgress(),
-		setCampaignProgress: (...args: Parameters<GameHost["setCampaignProgress"]>) => host.setCampaignProgress(...args),
-		setCurrentSide: () => host.setCurrentSide() });
-	runGame(g);
-	return g;
-}
 
 //A screen that notes what the host asked it to show about the game's course; the dossier's close and the
 //message's OK pressed at once. The rest shows nothing
@@ -261,8 +245,13 @@ test("A program's look at a hex is shown on the screen and waited for (#375)", a
 test("The screen that shows nothing tells the host the victories a move and an attack won (#375)", async () => {
 	const { smallGame } = await import("./smallgame");
 	const ended: string[] = [];
-	const fake = (scenario: unknown) => ({ scenario, uiMessageClicked: false,
-		host: { ended(e: { side: number; how: string }) { ended.push(e.how + " " + e.side); } } }) as unknown as Game;
+	//(the host's own play and won, its end noted)
+	const fake = (scenario: unknown) => {
+		const g = { scenario, uiMessageClicked: false } as unknown as Game;
+		g.host = Object.assign(Object.create(GameHost.prototype) as GameHost, { game: g,
+			ended(e: { side: number; how: string }) { ended.push(e.how + " " + e.side); } });
+		return g;
+	};
 	//A German tank next to its side's objective, at (10, 10)
 	let game = fake(smallGame([[142, 0, 9, 10], [504, 1, 1, 1]]).scenario);
 	let shown = 0;

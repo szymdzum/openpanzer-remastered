@@ -26,7 +26,8 @@ import { GameMap, Player } from "./map";
 import { Scenario, type ScenarioOutcome } from "./scenario";
 import { Campaign, type CampaignScenario } from "./campaign";
 import { coreDriver, endGameTurn, handlerFor, removeDestroyed, startGameSession } from "./coresession";
-import { Commands } from "./commands";
+import { type AttackResult, type Command, type CommandType, Commands, type Executed, type MoveResult, type Refusal, type ResultOf } from "./commands";
+import { CombatLog } from "./combatlog";
 import { GameRules } from "./gamerules";
 import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./coreload";
 import { applyData, gameInputs, rulesWorld, worldOf } from "./mirror";
@@ -34,6 +35,7 @@ import { ScenarioLoader } from "./scenarioloader";
 import { endCampaignScenario, scenarioEnded } from "./core/campaign";
 import { attackerSide, turnLimitOutcome, turnLimitResult } from "./core/turn";
 import type { SessionEnd } from "./core/session";
+import type { World } from "./core/types";
 import { setEngineContext, touched } from "./context";
 import { defined } from "./util";
 import { game, setGame } from "./session";
@@ -411,6 +413,67 @@ export class GameHost {
 		return true;
 	}
 
+	//---- A screen that reads the core and sends the person's commands (the new UI, src/view/, #380)
+
+	//The running game's world, as the screen's rules read it: null while no scenario plays
+	world(): World | null {
+		const g = this.game;
+		return g.session === null ? null : rulesWorld(g.scenario, g, gameInputs(g));
+	}
+
+	//A command played whole on the core (Commands.execute): a program's move or attack the screen shows, a
+	//person's command. The victories it won are told once the screen has shown it (won)
+	play<C extends Command>(cmd: C): Executed<C["type"]> {
+		return Commands.execute(this.game.scenario, cmd);
+	}
+
+	//The victories a step won, told once the screen has shown the step (the old UI at its animation's end):
+	//a move's capture, then its surprise attack's; an attack's retreat that took its side's last objective,
+	//then the sides whose enemy has no unit left
+	won(result: ResultOf<CommandType>) {
+		for (const end of victoriesOf(result))
+			this.ended(end);
+	}
+
+	//A person's command from the screen, refused while a person can't play (personRefusal). The end of turn
+	//ends their turn (personEndTurn), the others are played whole (play)
+	command(cmd: Command): Executed<CommandType> {
+		const refusal = this.personRefusal();
+		if (refusal !== null) return { ok: false, refusal };
+		if (cmd.type !== "endTurn") return this.play(cmd);
+		this.personEndTurn();
+		return { ok: true, result: null };
+	}
+
+	//Why a person can't send a command now, null when they can: no game playing, a program's turn (or its
+	//action still shown), a message to click away first
+	personRefusal(): Refusal | null {
+		const g = this.game;
+		if (g.session === null || !g.gameStarted || g.gameEnded) return { reason: "No game is playing" };
+		if (this.showing || programPlays(g.scenario.map.currentPlayer)) return { reason: "Not your turn" };
+		return g.uiMessageClicked ? null : { reason: "Read the message first" };
+	}
+
+	//The person's end of turn (the old UI's End turn does the same, src/ui.ts): the combat log starts again
+	//before the next turn's start logs its resupplies and reinforcements (#86), then a program's turn plays,
+	//unless the turn limit ended the game (#365)
+	personEndTurn() {
+		CombatLog.reset();
+		if (!this.endTurn())
+			this.goOn();
+	}
+
+	//A message the player clicks away holds the game (a program's turn, the campaign's next scenario) until
+	//they do (the old UI's UIBuilder.message sets the same flag); then it goes on
+	holdForMessage() {
+		this.game.uiMessageClicked = false;
+	}
+
+	messageClosed() {
+		this.game.uiMessageClicked = true;
+		this.goOn();
+	}
+
 	//---- The end of the game
 
 	//The game ended as the session says (a victory when the step that won it has been shown, the turn
@@ -495,6 +558,27 @@ export class GameHost {
 				sides = sides === -1 || sides === p.side ? p.side : 2;
 		return sides;
 	}
+}
+
+//The victories a step won (the host's won), in the old UI's order: a move's capture, then its surprise
+//attack's; an attack's retreat that took its side's last objective, then the sides whose enemy has no unit left
+function victoriesOf(result: ResultOf<CommandType>): SessionEnd[] {
+	if (result === null || typeof result !== "object") return [];
+	if ("move" in result) return moveVictories(result);
+	return "attacking" in result ? attackVictories(result) : [];
+}
+
+function moveVictories(r: MoveResult): SessionEnd[] {
+	const capture: SessionEnd[] = r.victorySide >= 0 ? [{ kind: "victory", side: r.victorySide, how: "capture" }] : [];
+	return r.surprise === null ? capture : [...capture, ...attackVictories(r.surprise.attack)];
+}
+
+function attackVictories(r: AttackResult | null): SessionEnd[] {
+	if (r === null) return [];
+	const retreat = r.retreatMove;
+	const capture: SessionEnd[] = retreat !== null && retreat.isVictorySide >= 0
+		? [{ kind: "victory", side: retreat.isVictorySide, how: "capture" }] : [];
+	return [...capture, ...r.victorySides.map((side): SessionEnd => ({ kind: "victory", side, how: "elimination" }))];
 }
 
 //No current player also goes on to process a program's actions

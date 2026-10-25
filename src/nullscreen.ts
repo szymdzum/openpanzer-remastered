@@ -13,20 +13,11 @@
  */
 
 import type { Cell } from "./prototypes";
-import { type AttackResult, Commands } from "./commands";
 import type { Unit } from "./unit";
 import type { Game } from "./game";
 import type { Screen } from "./screen";
 
 export function nullScreen(g: Game): Screen {
-	const won = (side: number, how: "capture" | "elimination") => { g.host.ended({ kind: "victory", side, how }); };
-	//An attack's victories, as the old UI tells them: the defender's retreat that took its side's last
-	//objective, then a side whose enemy has no unit left
-	const attackWon = (a: AttackResult | null) => {
-		if (a === null) return;
-		if (a.retreatMove !== null && a.retreatMove.isVictorySide >= 0) won(a.retreatMove.isVictorySide, "capture");
-		for (const side of a.victorySides) won(side, "elimination");
-	};
 	const nothing = () => {};
 	return {
 		showScenario() { g.uiMessageClicked = true; },
@@ -41,18 +32,15 @@ export function nullScreen(g: Game): Screen {
 		reportScore: nothing,
 		reportAchievement: nothing,
 
-		//The move's capture victory first, then its surprise attack's
+		//The move's capture victory first, then its surprise attack's (the host's won)
 		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
-			const r = Commands.execute(g.scenario, { type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
-			if (r.ok) {
-				if (r.result.victorySide >= 0) won(r.result.victorySide, "capture");
-				if (r.result.surprise !== null) attackWon(r.result.surprise.attack);
-			}
+			const r = g.host.play({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
+			if (r.ok) g.host.won(r.result);
 			shown();
 		},
 		attack(attacker: Unit, target: Unit, shown: () => void) {
-			const r = Commands.execute(g.scenario, { type: "attack", unit: attacker.id, target: target.id });
-			if (r.ok) attackWon(r.result);
+			const r = g.host.play({ type: "attack", unit: attacker.id, target: target.id });
+			if (r.ok) g.host.won(r.result);
 			shown();
 		},
 		view(_event, shown?: () => void) {
