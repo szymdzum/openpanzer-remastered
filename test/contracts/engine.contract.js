@@ -53,8 +53,6 @@
 // - The animations' and sounds' draws (sprite and sound variants, between the support fire shots)
 //   aren't made: they have their own stream in the game (#126), Math.random on the reference,
 //   where check() seeds Math.random per step anyway
-// - The selection refresh after an attack reads map.currentUnit after it may have been deleted
-//   (#29): the game throws there and skips the retreat and the victory check, the driver guards it
 // - A surprise attack picks its target with uiSettings.airMode in the game (the human's last
 //   selection, ui.js handleUnitAttack); always ground first (false) here
 // - When an attack's animation chain is empty (carrier and naval transport attacks without
@@ -234,7 +232,7 @@ function runEngineContract(env) {
 		if (m.currentUnit) {
 			if (a.destroyed && m.currentUnit.id == a.id) m.delCurrentUnit();
 			else m.selectUnit(m.currentUnit);
-			// (the UI reads currentUnit here even after deleting it, #29: the driver checks it)
+			// (the selection is cleared by now when both units were destroyed, #29)
 			if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
 		}
 	}

@@ -37,7 +37,7 @@ import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
 import { attackerSide, turnLimitOutcome } from "./core/turn";
-import { type AttackCommandHooks, type AttackResult, type CommandType, Commands, type Executed, type FinishAttackHooks,
+import { type AttackCommandHooks, type AttackResult, type AttackSide, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
@@ -585,9 +585,29 @@ function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks
 	};
 }
 
+//Refresh map selections after an attack: the selection cleared when its unit was destroyed, else
+//selected again, with its move hexes made again when it destroyed the defender. The render range
+//they need, 0 for none. When both units were destroyed the old game read the cleared selection
+//there: it threw, and the game waited for the attack for good (#326, #29)
+function uiReselectAfterAttack(a: AttackSide, d: AttackSide): number {
+	const u = map.currentUnit;
+	if (!u)
+		return 0;
+	if (a.unit.destroyed && u.id == a.unit.id) {
+		map.delCurrentUnit(); //remove current selection if unit was destroyed in attack
+		R.drawCursor(a.cell); //refresh cursor or it gets stuck in attack cursor
+		return 0;
+	}
+	map.selectUnit(u);
+	if (!d.unit.destroyed || u.hasMoved)
+		return 0;
+	map.setMoveRange(u); //refresh move range if unit has destroyed another unit
+	return getRenderRange(u);
+}
+
 //Called when attack animation finishes: the rest of the combat is the attack command's finish
 function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finish: (hooks?: FinishAttackHooks) => AttackResult) {
-	var tmp: number, moveAnimationCBData: MoveAnimationCBData;
+	var moveAnimationCBData: MoveAnimationCBData;
 
 	var result = animationCBData.result;
 	var a = result.attacking;
@@ -611,21 +631,7 @@ function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finis
 			R.runAnimation(null);
 		},
 		afterCleanup: function() {
-			//Refresh map selections
-			if (map.currentUnit) {
-				if (a.unit.destroyed && map.currentUnit.id == a.unit.id) {
-					map.delCurrentUnit(); //remove current selection if unit was destroyed in attack
-					R.drawCursor(a.cell); //refresh cursor or it gets stuck in attack cursor
-				} else {
-					map.selectUnit(map.currentUnit);
-				}
-				//refresh move range if unit has destroyed another unit, currentUnit can be null by now
-				if (d.unit.destroyed && !map.currentUnit.hasMoved) {
-					map.setMoveRange(map.currentUnit);
-					tmp = getRenderRange(map.currentUnit);
-					if (tmp > renderRange) renderRange = tmp;
-				}
-			}
+			renderRange = Math.max(renderRange, uiReselectAfterAttack(a, d));
 
 			if (result.attackStopped)
 				uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "Attack Stopped ", false);
