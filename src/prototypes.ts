@@ -520,6 +520,8 @@ export function major_version(version: string): string {
 export let UNIT_MAX_EXPERIENCE = 500; //Experience cap of a unit
 export let UNIT_RETREAT_THRESHOLD = 0.6; //Percentage of losses for which a unit starts to retreat
 export let CURRENCY_MULTIPLIER = 12; //PG2 uses this multiplier for unit costs defined in equipment
+//The prestige icon in the game's texts: the windows' costs, the tutorial's messages ({prestige})
+export const CURRENCY_ICON = "<img src='resources/ui/dialogs/equipment/images/currency.png'/>";
 export let UPGRADE_PENALTY = 1.2; //Upgrade costs is multiplied with this value
 export let OVERSTRENGTH_PENALTY = 1.2; //Overstrength reinforcement costs is multiplied with this value
 export let SCENARIO_START_PRESTIGE = 2000; //Start prestige for scenarios played outside of a campaign

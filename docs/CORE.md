@@ -374,6 +374,21 @@ it against the session:
 | The plan | 7-35 ms | 3-30 ms (1.1-3x faster) |
 | The turn | 15-71 ms | 6-31 ms (1.3-3.2x faster) |
 
+## The game host (#373)
+
+The running game's course is `GameHost` (src/host.ts), outside the UI: a scenario started from its file
+or loaded from a save (the players' types and handlers, the sides played here, the session, the save), the
+campaign's chain (each scenario's end with `endCampaignScenario`, the outcome told, the next scenario once
+the player has clicked its message away, the prototype, the core units carried, the dossier at the end),
+and the end of a game from its `SessionEnd`: a victory, which the old UI reports when the step that won it
+has been shown (its animation's end), and the turn limit, from the session when the turn ends. It decides
+who is told what and what follows; the screen only shows, through the few calls of `HostScreen` (the
+scenario ready, a message, the dossier, the main menu, a failed load, a prototype, the platform's
+reports), which game.ts answers with the old UI for now and #374 turns into the screen interface. Game's
+members (newScenario, newCampaign, continueCampaign, onScenarioLoadFinished, setupGameState...) hand on
+to it; the turn loop's tick and the AI's actions on the screen stay in game.ts until #375. It imports
+no UI module (test/headless.test.ts), and a whole campaign plays on it in Node (test/host.test.ts).
+
 ## The proof
 
 Until the switch (#137) the core was proven against the old engine, which the tests ran beside it.

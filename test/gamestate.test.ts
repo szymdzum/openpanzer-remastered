@@ -5,7 +5,7 @@
 //with the issue that describes the loss, a fix flips them
 import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
-import { failRequests, freshGame, messagesShown, startState, until } from "./lifecycle";
+import { failRequests, fakeMapImages, freshGame, messagesShown, startState, until } from "./lifecycle";
 import { oldExport, oldLocalItems, withoutLosses, withoutUnknown } from "./saves";
 import type { SaveFile } from "../src/savegame";
 import type { UnitState } from "../src/state";
@@ -351,6 +351,22 @@ async function startup() {
 	return JSON.parse(await exportGame()) as SaveFile;
 }
 
+//A first start, no save there: the turn loop's ticks do nothing until a game has started, and the default
+//scenario starts with the AI on the Allies (Game.newScenario's "failRestore")
+test("A start without a save plays the default scenario, the AI on the Allies, the turn loop idle until then", async () => {
+	localStorage.clear();
+	vi.resetModules();
+	fakeMapImages();
+	const { game: fresh } = await import("../src/game");
+	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/prototypes");
+	clearInterval(fresh.loop);
+	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {}, mainMenuButton() {} } as unknown as typeof fresh.ui;
+	fresh.init();
+	fresh.processTurn(); //(no scenario yet: a tick that went on would throw)
+	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the default scenario");
+	expect([fresh.scenario.file, uiSettings.isAI]).toEqual([DEFAULT_SCENARIO, [0, 1, 0, 0]]);
+});
+
 //The local save (GameState.save) read back at startup gives the same game as the exported save
 test.each(fixtures("engine"))("GameState local save and startup restore %s", async (name) => {
 	localStorage.clear();
@@ -564,8 +580,9 @@ test("On the screen the remaster's turn limit ends the game once both sides have
 		game.state.restoreFromString(JSON.stringify(save));
 		await loadedAfter(old);
 		const outcomes: string[] = [];
-		game.continueCampaign = (o) => { outcomes.push(o); };
-		Object.assign(game.ui, { uiTurnLimitMessage() {} });
+		game.host.continueCampaign = (o) => { outcomes.push(o); };
+		const { UIBuilder } = await import("../src/uibuilder"); //(this load's modules)
+		Object.assign(UIBuilder, { message() {} });
 		const attacker = save.data.startObjectives[0] > save.data.startObjectives[1] ? 0 : 1;
 		game.endTurn();
 		expect([game.gameEnded, game.session.ended], name + ", the first side's last turn").toEqual([false, null]);
@@ -596,8 +613,9 @@ test("The turn limit's end is told once and the combat log stays closed over it,
 		game.state.restoreFromString(JSON.stringify(save));
 		await loadedAfter(old);
 		const screen: string[] = [];
-		game.continueCampaign = () => { screen.push("outcome"); }; //(the next scenario waits: not ended)
-		Object.assign(game.ui, { uiEndTurnInfo() { screen.push("turn info"); }, uiTurnLimitMessage() { screen.push("turn limit"); } });
+		game.host.continueCampaign = () => { screen.push("outcome"); }; //(the next scenario waits: not ended)
+		Object.assign(UIBuilder, { message() { screen.push("turn limit"); } });
+		Object.assign(game.ui, { uiEndTurnInfo() { screen.push("turn info"); } });
 		game.endTurn();
 		const last = game.scenario.map.currentPlayer;
 		last.handler = { getAction: (): null => null } as unknown as typeof last.handler; //(the AI's last turn: it ends it at once)

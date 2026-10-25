@@ -414,6 +414,38 @@ test("A victory is told as a defeat to the person by the side they play now: the
 	expect(byAI[1][1]).not.toContain("You have");
 }, 60_000);
 
+//The game host (src/host.ts) decides and the old UI shows: each of the host's screen calls is the old UI's
+//window or message, and what follows it is the host's (the OK, the dossier's close)
+test("The old UI shows what the game host asks: its messages, the dossier, the prototype, a failed load, the main menu (#373)", async () => {
+	const game = await freshGame();
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { OSGlue } = await import("../src/osglue");
+	const shown: unknown[][] = [];
+	const note = (name: string) => (...args: unknown[]) => { shown.push([name, ...args.filter((a) => typeof a !== "function")]); };
+	const message = vi.spyOn(UIBuilder, "message").mockImplementation(note("message"));
+	vi.spyOn(UIBuilder, "messageDynamic").mockImplementation(note("messageDynamic"));
+	const dossier = vi.spyOn(UIBuilder, "showCampaignEnd").mockImplementation((...args) => { note("showCampaignEnd")(...args); return true; });
+	vi.spyOn(UIBuilder, "showPrototypeAwardMessage").mockImplementation(note("showPrototypeAwardMessage"));
+	vi.spyOn(OSGlue, "reportScore").mockImplementation(note("reportScore"));
+	vi.spyOn(OSGlue, "reportAchievement").mockImplementation(note("reportAchievement"));
+	Object.assign(game.ui, { mainMenuButton: note("mainMenuButton"), setNewScenario: note("setNewScenario") });
+	const then = () => {};
+	const screen = game.host.screen;
+	screen.message("Victory", "won", then);
+	screen.campaignEnd("lose", "lost", then);
+	screen.showPrototype(142);
+	screen.loadFailed("x.xml");
+	screen.mainMenu();
+	screen.showScenario();
+	screen.reportScore(7);
+	screen.reportAchievement("c.json");
+	expect(shown).toEqual([["message", "Victory", "won"], ["showCampaignEnd", "lose", "lost"], ["showPrototypeAwardMessage", 142],
+		["messageDynamic", "Error", "Error Loading scenario x.xml"], ["mainMenuButton", "options"], ["setNewScenario"], ["reportScore", 7],
+		["reportAchievement", "c.json"]]);
+	expect([message.mock.calls[0][2], dossier.mock.calls[0][2]], "what follows is the host's").toEqual([then, then]);
+	vi.restoreAllMocks();
+});
+
 //The selected attacker's attack makes its defender surrender: the move hexes shown, which the next move
 //goes along, are made again without the surrendered unit, as after a unit destroyed. The old game
 //refreshed them before the surrender, so they kept the unit's hex out of reach and its zone of control

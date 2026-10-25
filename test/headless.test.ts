@@ -33,8 +33,8 @@ test("The engine modules load without a DOM", () => {
 		expect(m).toBeTruthy();
 });
 
-//What an engine module imports, followed through the imports that run (not `import type`)
-test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
+//What modules import, followed through the imports that run (not `import type`)
+function reachedFrom(modules: string[]): Set<string> {
 	const reached = new Set<string>();
 	const visit = (m: string) => {
 		if (reached.has(m)) return;
@@ -43,10 +43,24 @@ test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => 
 		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm))
 			if (!i[1]) visit(i[2]);
 	};
-	for (const m of ["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame", "mirror"]) visit(m);
-	const ui = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "aiscripted", "osglue", "main",
-		"coresession", "coreload"];
-	expect([...reached].filter((m) => ui.includes(m))).toEqual([]);
+	modules.forEach(visit);
+	return reached;
+}
+
+const uiModules = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "osglue", "main", "style", "sound"];
+
+test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
+	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame",
+		"mirror"]);
+	expect([...reached].filter((m) => [...uiModules, "aiscripted", "coresession", "coreload"].includes(m))).toEqual([]);
+});
+
+//The game host (src/host.ts) plays the game's course on the engine and on the game's glue to the core
+//(coresession, coreload): it reaches no UI module, no game.ts and no dom.ts either
+test("The game host's imports reach no UI module, no game.ts and no dom.ts", () => {
+	const reached = reachedFrom(["host"]);
+	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
+	expect(reached).toContain("coresession");
 });
 
 test("game.ts starts no timer and no listener while it loads, main.ts does", () => {

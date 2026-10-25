@@ -32,6 +32,11 @@ class MapImage {
 	}
 }
 
+//The map images "loaded" so, in jsdom and in Node
+export function fakeMapImages() {
+	(globalThis as unknown as { Image: unknown }).Image = MapImage;
+}
+
 //The pseudo-random generator record.js seeds Math.random with (harness.js mulberry32)
 export function mulberry32(a: number) {
 	return function() {
@@ -57,7 +62,7 @@ export async function until(cond: () => boolean, what: string, ms = 20_000) {
 export async function freshGame(): Promise<Game> {
 	vi.resetModules();
 	localStorage.clear();
-	(globalThis as unknown as { Image: unknown }).Image = MapImage;
+	fakeMapImages();
 	const { game } = await import("../src/game");
 	const { GameState } = await import("../src/gamestate");
 	clearInterval(game.loop);

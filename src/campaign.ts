@@ -163,9 +163,9 @@ export class Campaign {
 				campaignData = JSON.parse(req.responseText);
 				//Bug kept from the bundle: called as a plain function, so this was the
 				//global object and the campaign isLoaded stays false (a module is strict, this
-				//would be undefined: the global object is named). #27, kept: the harness traces
-				//compare campaign.isLoaded with the reference's
-				(window as Window & { isLoaded?: boolean }).isLoaded = true;
+				//would be undefined: the global object is named, window in the page, and Node's global
+				//without one). #27, kept: the harness traces compare campaign.isLoaded with the reference's
+				(globalThis as typeof globalThis & { isLoaded?: boolean }).isLoaded = true;
 				onFinished();
 			};
 			req.onload = function() {
