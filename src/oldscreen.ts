@@ -8,8 +8,7 @@
  * The UI's members are looked up on game.ui when the game calls (the tests and the harness put their own
  * in), the UIBuilder's on its module object. A program's move and attack are played by the old UI, which
  * plays the step whole and then animates it (src/ui.ts uiUnitMove, uiUnitAttack): shown is called when
- * its last animation ends, or here when it animates no move (#396: then before a surprise attack's
- * animation ends).
+ * its last animation ends.
  */
 
 import type { Cell } from "./prototypes";
@@ -31,29 +30,15 @@ const PICKED_MS = 250;
 //UI is a constructor function, not a class: this gives `new` on it a type
 export interface UIConstructor { new (game: Game): UI; }
 
-//shown, called once: by the UI at the animation's end, or here when there is none (the UI's own wait may
-//end then too)
-function once(shown: () => void): () => void {
-	let called = false;
-	return () => {
-		if (called) return;
-		called = true;
-		shown();
-	};
-}
-
 export function oldScreen(g: Game): Screen {
-	//The move or the attack played by the old UI: true when it animates it, which ends with shown. When
-	//it doesn't, the game goes on now
+	//The move or the attack played by the old UI, which calls shown once it has shown all of it: at its last
+	//animation's end, at once when it animates nothing. A move it doesn't animate (the side shown doesn't
+	//see it) can still run into a surprise attack it animates: the AI waits for that too (#396). The unit
+	//centered when the UI animates its move or attack
 	const played = (shown: () => void, play: () => boolean, unit: Unit) => {
-		const done = once(shown);
-		g.ui.whenShown(done);
-		if (play()) {
+		g.ui.whenShown(shown);
+		if (play())
 			g.ui.uiSetUnitOnViewPort(unit);
-		} else {
-			g.ui.whenShown(null);
-			done();
-		}
 	};
 	return {
 		showScenario() {
