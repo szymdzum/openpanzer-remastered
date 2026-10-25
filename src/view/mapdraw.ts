@@ -176,7 +176,7 @@ const LIFT = 4, SHADOW = { y: 9, blur: 2, alpha: 0.45 };
 
 //A unit's sprite: the strip has nine facings from south to north, the other seven are mirrored. Drawn at the
 //map's scale, its centre a little above the hex's to leave room for the marker. The other layer's unit is
-//dimmed to 45%; an aircraft on top in the air layer is lifted, its shadow on the ground under it (a canvas
+//dimmed to 75% (unit-under-alpha) when under another on a shared hex; an aircraft on top in the air layer is lifted, its shadow on the ground under it (a canvas
 //shadow is in the device's pixels, whatever the transform)
 function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, images: Images) {
 	const img = images(u.bridge ? BRIDGE : u.icon);
@@ -185,7 +185,7 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 	const mirror = u.facing > 8, frame = mirror ? 16 - u.facing : u.facing;
 	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - 8 - (u.lifted ? LIFT : 0));
 	c.save();
-	if (u.dim) c.globalAlpha = 0.45;
+	if (u.dim) c.globalAlpha = PX["unit-under-alpha"];
 	if (u.lifted) {
 		const px = vp.scale * vp.dpr;
 		c.shadowColor = withAlpha(MAP.shade, SHADOW.alpha);
@@ -205,7 +205,7 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 function drawGhost(c: CanvasRenderingContext2D, vp: Viewport, g: Ghost, images: Images) {
 	c.save();
 	c.globalAlpha = 0.55;
-	drawSprite(c, vp, { id: -1, row: g.row, col: g.col, icon: g.icon, facing: g.facing, side: -1, bridge: false, marker: null, dim: false,
+	drawSprite(c, vp, { id: -1, row: g.row, col: g.col, icon: g.icon, facing: g.facing, side: -1, bridge: false, marker: null, dim: false, chip: null,
 		lifted: false }, images);
 	c.restore();
 }
@@ -329,6 +329,28 @@ function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, p: Point
 	c.restore();
 }
 
+//The strength chip of a unit drawn under another on a shared hex: a small plate in its side's colour, up and
+//right of the hex's centre, at screen size, where the top unit's sprite and marker leave room
+function drawChip(c: CanvasRenderingContext2D, side: number, strength: number, p: Point) {
+	const text = String(strength), w = text.length * 5 + 5, x = Math.round(p.x + 12), y = Math.round(p.y - 22);
+	c.fillStyle = side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+	c.fillRect(x, y, w, 10);
+	c.strokeStyle = MAP.shade;
+	c.lineWidth = 1;
+	c.strokeRect(x, y, w, 10);
+	c.font = "bold 8px " + TOKENS.fonts.ui;
+	c.textAlign = "center";
+	c.textBaseline = "middle";
+	c.fillStyle = MAP.glint;
+	c.fillText(text, x + w / 2, y + 5.5);
+}
+
+//The chips of the units drawn under another
+function drawChips(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) {
+	for (const u of units)
+		if (u.chip !== null) drawChip(c, u.side, u.chip, toScreen(hexCentre(u.row, u.col), vp));
+}
+
 //The whole map in view, cleared first
 export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
 	c.setTransform(1, 0, 0, 1, 0, 0);
@@ -361,6 +383,7 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	atScreen(c, vp);
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
+	drawChips(c, vp, scene.units);
 	drawPlaques(c, vp, scene.plaques);
 	if (scene.support !== null) drawSupportTags(c, vp, scene.support);
 	c.restore();

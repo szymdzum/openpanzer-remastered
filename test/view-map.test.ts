@@ -72,24 +72,35 @@ test("The map shows the side's units and the enemies it sees, each with its mark
 	expect(enemy).toMatchObject({ side: 1, marker: { own: false, canMove: false, canFire: false, done: false, hits: 1 } });
 });
 
-//MapLayers: every hex has a ground and an air slot; the layer shown is on top with its marker, the other dimmed under it
-test("An aircraft over a ground unit is drawn under it dimmed without a marker, on top lifted in the air layer", () => {
+//MapLayers: on a shared hex the layer shown is on top with its marker, the other under it dimmed with a strength chip
+test("An aircraft over a ground unit is drawn under it dimmed with a chip, on top lifted in the air layer", () => {
 	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: ME_109, owner: 0, row: 4, col: 1 }]);
-	const look = (air: boolean) => mapUnits(w, air, null).map((u) => [u.id, u.marker !== null, u.dim, u.lifted]);
-	expect(look(false)).toEqual([[1, false, true, false], [0, true, false, false]]);
-	expect(look(true)).toEqual([[0, false, true, false], [1, true, false, true]]);
+	const look = (air: boolean) => mapUnits(w, air, null).map((u) => [u.id, u.marker !== null, u.dim, u.chip !== null, u.lifted]);
+	expect(look(false)).toEqual([[1, false, true, true, false], [0, true, false, false, false]]);
+	expect(look(true)).toEqual([[0, false, true, true, false], [1, true, false, false, true]]);
+	expect(mapUnits(w, false, null)[0].chip).toBe(w.state.units[1].strength);
 	//a click picks the layer's unit
 	expect([clickOn(w, null, { row: 4, col: 1 }, false), clickOn(w, null, { row: 4, col: 1 }, true)]).toEqual([{ select: 0 }, { select: 1 }]);
 });
 
-test("A unit alone on its hex is still in its own slot: an aircraft dimmed in the ground layer, a tank in the air layer", () => {
+test("A unit alone on its hex is drawn whole whatever the layer: marker, full opacity, an aircraft not lifted in the ground layer", () => {
 	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: ME_109, owner: 0, row: 6, col: 1 }]);
-	const look = (air: boolean) => mapUnits(w, air, null).map((u) => [u.id, u.marker !== null, u.dim, u.lifted]);
-	expect(look(false)).toEqual([[0, true, false, false], [1, false, true, false]]);
-	expect(look(true)).toEqual([[0, false, true, false], [1, true, false, true]]);
+	const look = (air: boolean) => mapUnits(w, air, null).map((u) => [u.id, u.marker !== null, u.dim, u.chip, u.lifted]);
+	expect(look(false)).toEqual([[0, true, false, null, false], [1, true, false, null, false]]);
+	expect(look(true)).toEqual([[0, true, false, null, false], [1, true, false, null, true]]);
 	//a click on either still selects it, in both layers, as the old UI's Hex.getUnit did
 	for (const air of [false, true])
 		expect([clickOn(w, null, { row: 4, col: 1 }, air), clickOn(w, null, { row: 6, col: 1 }, air)]).toEqual([{ select: 0 }, { select: 1 }]);
+});
+
+//An aircraft is stopped only by an enemy aircraft (canPassInto), which its side can't see coming whatever the hex:
+//no hatching for it, the fog says it all; a ground unit keeps the hatching on the hexes it can't see
+test("An aircraft's move area has no unseen hexes to hatch; a ground unit's has", () => {
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: ME_109, owner: 0, row: 8, col: 1 }]);
+	expect(selectionOf(w, 0)!.unseen.length).toBeGreaterThan(0);
+	const air = selectionOf(w, 1)!;
+	expect(air.area.some((c) => !w.sight.spot[0][hexIndex(w, c.row, c.col)])).toBe(true);
+	expect(air.unseen).toEqual([]);
 });
 
 //AirLayer: the Me-109E-3 over a hex with the PZL.23B above the 39 Kawaleria hits the cavalry in the ground layer, the

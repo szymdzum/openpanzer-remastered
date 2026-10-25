@@ -54,7 +54,7 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 
 | Card | What it shows | Status |
 |---|---|---|
-| [AirLayer](components/AirLayer/README.md)<br>[render](renders/AirLayer.webp) | Air layer at 1920×1080: aircraft on top with their markers, ground units dimmed underneath, the air target picked | Ready |
+| [AirLayer](components/AirLayer/README.md)<br>[render](renders/AirLayer.webp) | Air layer at 1920×1080: aircraft on top with their markers, ground units alone on a hex whole, those under an aircraft at 75% with a chip, the air target picked | Ready |
 | [AttackPreview](components/AttackPreview/README.md)<br>[render](renders/AttackPreview.webp) | The attack preview in four stages, from the target marks to the full breakdown, and the stage 1 cursor in each situation | Stages 0–2 ready; stage 3 needs the hit chance from the core first |
 | [CombatLog](components/CombatLog/README.md)<br>[render](renders/CombatLog.webp) | Combat log and turn summary (#combatLog) at 1920×1080 | Ready |
 | [CombatOdds](components/CombatOdds/README.md)<br>[render](renders/CombatOdds.webp) | Combat odds v2: overrun, rugged defense, a costly close combat and a safe bombardment, with the reasons and what happens next | Ready |
@@ -64,7 +64,7 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 | [GameMenu](components/GameMenu/README.md)<br>[render](renders/GameMenu.webp) | Game menu (#menu): the game's own buttons, open and folded, the labelled rail for touch, and every keyboard shortcut | Ready |
 | [HudDesktop](components/HudDesktop/README.md)<br>[render](renders/HudDesktop.webp) | The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview | Ready |
 | [HudLaptop](components/HudLaptop/README.md)<br>[render](renders/HudLaptop.webp) | The full HUD at 1366×768: the same elements, proving the map stays visible on a small laptop | Ready |
-| [MapLayers](components/MapLayers/README.md)<br>[render](renders/MapLayers.webp) | The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker, which is the target | Ready |
+| [MapLayers](components/MapLayers/README.md)<br>[render](renders/MapLayers.webp) | The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker on a shared hex, which is the target | Ready |
 | [MapOverlays](components/MapOverlays/README.md)<br>[render](renders/MapOverlays.webp) | The map layer: selection, move area, enemy zones, move path, attack target, support fire, fog, entrenchment, objectives and towns | Ready |
 | [MovePath](components/MovePath/README.md)<br>[render](renders/MovePath.webp) | Move path preview (#32): the route to the hovered hex, moves and fuel left, and where a move stops, captures, turns blind or ends firing | Ready |
 | [StatusBar](components/StatusBar/README.md)<br>[render](renders/StatusBar.webp) | Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message | Ready |

@@ -19,8 +19,8 @@ export function drawFog(c: CanvasRenderingContext2D, vp: Viewport, fog: Uint8Arr
 	c.fill();
 }
 
-//The hexes the unit can reach but its side doesn't see, hatched at 45 degrees instead of tinted: a hidden
-//enemy there is an ambush. The hatch is drawn at screen size inside the hexes, 6px apart
+//The hexes a ground unit can reach but its side doesn't see, hatched at 45 degrees instead of tinted: a hidden
+//enemy there is an ambush (an aircraft gets none: only an enemy aircraft could stop it). The hatch is drawn at screen size inside the hexes, 6px apart
 export function drawHatch(c: CanvasRenderingContext2D, vp: Viewport, hexes: Position[]) {
 	if (hexes.length === 0) return;
 	c.save();
@@ -38,9 +38,9 @@ export function drawHatch(c: CanvasRenderingContext2D, vp: Viewport, hexes: Posi
 		c.moveTo(x, box.y1);
 		c.lineTo(x + box.h, box.y0);
 	}
-	c.globalAlpha = 0.55;
-	c.strokeStyle = MAP["hex-move"];
-	c.lineWidth = 1.2;
+	c.globalAlpha = 1;
+	c.strokeStyle = MAP["hex-hatch"];
+	c.lineWidth = PX["hex-hatch-width"];
 	c.stroke();
 	c.restore();
 }

@@ -9,7 +9,7 @@ import { adjacent } from "../core/geometry";
 import { captureAt } from "../core/moves";
 import { isBridgeForSide, moveRange, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
-import { isGround, unitUsesAmmo, unitUsesFuel } from "../core/units";
+import { isAir, isGround, unitUsesAmmo, unitUsesFuel } from "../core/units";
 import { airUnitAt, ammoOf, fuelOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
 import { unitClass } from "../prototypes";
 import { canOrder } from "./model";
@@ -38,8 +38,9 @@ export interface MapUnit {
 	facing: number;
 	side: number;
 	bridge: boolean; //a ground unit on a bridge of its side is drawn as the bridge, unless selected
-	marker: Marker | null; //the unit shown on top of its hex has one, the one underneath none
-	dim: boolean; //in the other layer's slot (MapLayers): drawn underneath at 45%, without its marker
+	marker: Marker | null; //a unit alone on its hex or on top of it has one, the one underneath another none
+	dim: boolean; //in the other layer's slot of a shared hex (MapLayers): drawn underneath at 75%, with a chip instead of its marker
+	chip: number | null; //the strength chip of a unit drawn underneath: the one thing its marker would have told
 	lifted: boolean; //an aircraft on top in the air layer (AirLayer): lifted with a shadow inside a dashed air ring
 }
 
@@ -52,7 +53,7 @@ export interface Edge {
 
 //The selected unit on the map: its hex, and when the person can order it, where it can go and what it can
 //hit. The area is the core's move range: the hexes it can stop on (tinted, or hatched where its side doesn't
-//see: a hidden enemy there is an ambush), the hexes it only passes (friends: not tinted), the outline round
+//see: a hidden enemy there is an ambush; for an aircraft none: only an enemy aircraft stops it, MapOverlays), the hexes it only passes (friends: not tinted), the outline round
 //all of them with the unit's own hex, and a bar on each edge of the area that faces an enemy its side sees
 //and whose zone of control ends the move there
 export interface Selection {
@@ -109,25 +110,30 @@ function markerOf(w: World, u: UnitState): Marker {
 		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) };
 }
 
-//A unit as the map draws it: on top of its hex with its marker (lifted in the air layer), or in the other
-//layer's slot, dimmed underneath
-function mapUnit(w: World, u: UnitState, top: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
+//A unit as the map draws it: alone on its hex or on top of it, with its marker (lifted when it is the air
+//layer's), or in the other layer's slot of a shared hex, dimmed underneath with a strength chip
+function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
 	const side = sideOf(w, u);
 	const bridge = u.id !== selected && isGround(w, u) && isBridgeForSide(w, hexIndex(w, u.row, u.col), side);
 	return { id: u.id, row: u.row, col: u.col, icon: unitData(w, u).icon as unknown as string, facing: u.facing, side, bridge,
-		marker: top && u.strength > 0 ? markerOf(w, u) : null, dim: !top, lifted: top && airMode };
+		marker: !shared && u.strength > 0 ? markerOf(w, u) : null, dim: shared, chip: shared && u.strength > 0 ? u.strength : null,
+		lifted: top && airMode };
 }
 
 //The units the side shown sees, hex by hex, row by row (MapLayers): every hex has a ground slot and an air slot.
-//The slot of the layer shown (airMode: the air slot) is on top with its marker; the other one's unit is drawn
-//first, dimmed and without a marker, also when it is alone on its hex: an aircraft alone is still under the
-//ground layer, which tells which units a click deals with. (A click on it still selects it, as the old UI's
-//Hex.getUnit did, and selecting an aircraft switches the air layer on: src/view/store.ts)
+//A unit alone on its hex is drawn whole, with its marker, whatever the layer. Where both slots are taken the
+//one of the layer shown (airMode: the air slot) is on top with its marker; the other is drawn first, dimmed,
+//with a strength chip, and the layer still tells which unit a click deals with. (A click on a unit under it
+//still selects it, as the old UI's Hex.getUnit did, and selecting an aircraft switches the air layer on:
+//src/view/store.ts)
 export function mapUnits(w: World, airMode: boolean, selected: UnitId | null): MapUnit[] {
 	const units: MapUnit[] = [];
 	eachSlot(w, airMode, (top, below) => {
-		if (below !== null && isShown(w, below)) units.push(mapUnit(w, below, false, airMode, selected));
-		if (top !== null && isShown(w, top)) units.push(mapUnit(w, top, true, airMode, selected));
+		const shown = top !== null && isShown(w, top), underShown = below !== null && isShown(w, below);
+		//(a shared hex: the side sees what is on it, so both are drawn, or neither)
+		const shared = shown && underShown;
+		if (underShown) units.push(mapUnit(w, below, false, shared, airMode, selected));
+		if (shown) units.push(mapUnit(w, top, true, false, airMode, selected));
 	});
 	return units;
 }
@@ -165,7 +171,10 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	const targets: Position[] = [];
 	for (const c of attackCells(w, u))
 		if (!targets.some((t) => same(t, c))) targets.push({ row: c.row, col: c.col });
-	return { unit: u.id, at, range, area, unseen: area.filter((c) => !isSpotted(w, hexIndex(w, c.row, c.col), side)), outline,
+	//(an aircraft is stopped by an enemy aircraft only, in canPassInto, and the side can't know where one hides:
+	//the fog says it all, no hatching)
+	const unseen = isAir(w, u) ? [] : area.filter((c) => !isSpotted(w, hexIndex(w, c.row, c.col), side));
+	return { unit: u.id, at, range, area, unseen, outline,
 		zones: zoneEdges(w, u, range), targets };
 }
 
