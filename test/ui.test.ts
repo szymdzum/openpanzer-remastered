@@ -633,3 +633,22 @@ test("The old screen shows a unit the AI picked, a look at a hex and its turn's 
 		vi.useRealTimers();
 	}
 }, 60_000);
+
+test("Opening the dossier window shows a dossier not set up yet as empty and leaves the player's as the game has it (#403)", async () => {
+	const { game } = await uiGame("campaign:0:1");
+	const { UIBuilder } = await import("../src/uibuilder");
+	const { touched } = await import("../src/context");
+	const { worldOf, gameInputs } = await import("../src/mirror");
+	//A campaign saved before the dossier: the player has none
+	const player = game.getCampaignPlayer()!;
+	player.dossier = {};
+	touched();
+	const world = () => worldOf(game.scenario, game, gameInputs(game));
+	expect(world().state.players[player.id].dossier).toEqual({});
+	expect(UIBuilder.showDossier(true)).toBe(true);
+	const shown = [...document.querySelectorAll("#dossierDestroyed td")].map((td) => td.textContent);
+	expect(shown.length).toBeGreaterThan(0);
+	expect(shown.every((t) => t === "0")).toBe(true);
+	expect(player.dossier).toEqual({});
+	expect(world().state.players[player.id].dossier).toEqual({});
+}, 60_000);
