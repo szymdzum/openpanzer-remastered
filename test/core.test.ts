@@ -8,7 +8,7 @@ import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
 import { type Cell, leaderType, movMethod, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult } from "../src/core/combat";
-import { moveRange, pathTo, shortestPath } from "../src/core/movement";
+import { leaderMoves, moveRange, pathTo, shortestPath, unitMoveRange } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
 import { resupplyValue } from "../src/core/supply";
 import { captureAt } from "../src/core/moves";
@@ -220,6 +220,16 @@ test("A unit enters a hex only with the fuel to pay for it: a Pz IIA with 1 fuel
 	const { at } = tankWith(5, () => terrainType.Clear, { fuel: 2, leader: leaderType.aggressiveManeuver });
 	expect(at(4, 3)).toBeDefined();
 	expect(at(4, 4)).toBeUndefined();
+});
+
+test("The leaders' extra moves: a tank with any leader has its class leader's hex, Aggressive Maneuver one more (#346)", () => {
+	const tank = (leader: number) => handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, leader }] });
+	const moves = (leader: number) => { const w = tank(leader); return [leaderMoves(w, unitById(w, 0)), unitMoveRange(w, unitById(w, 0))]; };
+	const points = tank(-1).equipment[PZ_IIA].movpoints;
+	expect(classicRules.classLeaders[unitClass.tank]).toBe(leaderType.aggressiveTankManeuver);
+	expect(moves(-1)).toEqual([0, points]);
+	expect(moves(leaderType.tankKiller)).toEqual([1, points + 1]);
+	expect(moves(leaderType.aggressiveManeuver)).toEqual([2, points + 2]);
 });
 
 test("A hex that uses all the points (a mountain for a tank) takes any points left, at least one (#205)", () => {
