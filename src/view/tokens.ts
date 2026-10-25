@@ -72,6 +72,10 @@ export const TOKENS = {
 		"map-allied": "#9c3b22",
 		"map-paper-sunken": "#d9ceb2",
 		"map-sandbag": "#c8b27a",
+		"hex-air": "rgba(240, 246, 250, 0.75)",
+		"hex-air-fill": "rgba(206, 226, 238, 0.16)",
+		"hex-deploy-line": "rgba(255, 236, 190, 0.55)",
+		"hex-place": "#fff4d6",
 	},
 	px: {
 		"space-1": 4,
@@ -91,6 +95,8 @@ export const TOKENS = {
 		"hex-shadow-width": 5.5,
 		"hex-zone-width": 3,
 		"hex-support-width": 1.8,
+		"hex-air-width": 1.2,
+		"hex-deploy-width": 2.6,
 	},
 	fontPx: {
 		wordmark: 88,

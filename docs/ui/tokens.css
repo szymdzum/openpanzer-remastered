@@ -41,6 +41,10 @@
 	--map-allied: #9c3b22;
 	--map-paper-sunken: #d9ceb2;
 	--map-sandbag: #c8b27a;
+	--hex-air: rgba(240, 246, 250, 0.75);
+	--hex-air-fill: rgba(206, 226, 238, 0.16);
+	--hex-deploy-line: rgba(255, 236, 190, 0.55);
+	--hex-place: #fff4d6;
 	--scrim: rgba(20, 17, 10, 0.45);
 	--photo-tint: rgba(232, 223, 200, 0.18);
 	--shadow-panel: 0 2px 0 rgba(43, 37, 25, 0.35), 0 6px 14px rgba(20, 17, 10, 0.35);
@@ -86,6 +90,10 @@
 	--map-allied: #9c3b22;
 	--map-paper-sunken: #d9ceb2;
 	--map-sandbag: #c8b27a;
+	--hex-air: rgba(240, 246, 250, 0.75);
+	--hex-air-fill: rgba(206, 226, 238, 0.16);
+	--hex-deploy-line: rgba(255, 236, 190, 0.55);
+	--hex-place: #fff4d6;
 	--scrim: rgba(8, 9, 6, 0.6);
 	--photo-tint: rgba(20, 22, 15, 0.55);
 	--shadow-panel: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.45);
@@ -112,6 +120,8 @@
 	--hex-shadow-width: 5.5px;
 	--hex-zone-width: 3px;
 	--hex-support-width: 1.8px;
+	--hex-air-width: 1.2px;
+	--hex-deploy-width: 2.6px;
 	--z-map-overlay: 5;
 	--z-hud: 100;
 	--z-context: 150;
