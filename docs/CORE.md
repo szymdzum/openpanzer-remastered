@@ -382,12 +382,38 @@ campaign's chain (each scenario's end with `endCampaignScenario`, the outcome to
 the player has clicked its message away, the prototype, the core units carried, the dossier at the end),
 and the end of a game from its `SessionEnd`: a victory, which the old UI reports when the step that won it
 has been shown (its animation's end), and the turn limit, from the session when the turn ends. It decides
-who is told what and what follows; the screen only shows, through the few calls of `HostScreen` (the
-scenario ready, a message, the dossier, the main menu, a failed load, a prototype, the platform's
-reports), which game.ts answers with the old UI for now and #374 turns into the screen interface. Game's
-members (newScenario, newCampaign, continueCampaign, onScenarioLoadFinished, setupGameState...) hand on
-to it; the turn loop's tick and the AI's actions on the screen stay in game.ts until #375. It imports
-no UI module (test/headless.test.ts), and a whole campaign plays on it in Node (test/host.test.ts).
+who is told what and what follows; the screen only shows. Game's members (newScenario, newCampaign,
+continueCampaign, onScenarioLoadFinished, setupGameState...) hand on to it. It also runs the turn loop
+(#374): each tick of `game.loop` (`processTurn`), a program's next actions (`processAIActions`,
+`processAction`: the move and the attack played and shown by the screen, the view events shown, the
+other commands on the core) and the end of a turn (`endTurn`, on the session). It imports no UI module
+(test/headless.test.ts), and a whole campaign and a game's turns play on it in Node (test/host.test.ts).
+
+## The screen (#374)
+
+The host and the session's glue (src/coresession.ts) show the game through one interface, `Screen`
+(src/screen.ts), and nothing else. Its members, who calls them and what the old UI does for each
+(src/oldscreen.ts, a thin adapter over the old UI's functions):
+
+| Member | Called by | The old UI |
+|---|---|---|
+| `showScenario()` | the host, a scenario started or loaded | `ui.setNewScenario` (the briefing), or the first UI built with the main menu |
+| `loadFailed(file)`, `showPrototype(eqid)` | the host | `UIBuilder.messageDynamic`, `showPrototypeAwardMessage` |
+| `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | `UIBuilder.message` |
+| `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | `UIBuilder.showCampaignEnd`, `ui.mainMenuButton("options")` |
+| `reportScore`, `reportAchievement` | the host | `OSGlue` |
+| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | `ui.uiUnitMove`, `ui.uiUnitAttack` (the command played with the animation's hooks), the unit centered; shown at the animation's end |
+| `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: `uiSetUnitOnViewPort` and `uiUnitSelect`, `showGameToolTip` (shown: its OK), `uiSetCellOnViewPort`, `ui.mainMenuButton("mainmenu")` |
+| `aiTurnEnded()`, `turnChanged()` | the host, a program's turn ended | `UIBuilder.showAIStatus(false)`; 2.5 s later `ui.uiEndTurnInfo` unless the game ended |
+| `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | `ui.handleReinforcementDeployment`, `ui.showAlert(..., "Reinforced!")` |
+
+What the game waits on takes a callback, `shown`, which the screen calls once the player has seen it. The
+timing is still the old game's: the old UI calls it where its wait ended before (`animating(false)` in
+src/ui.ts at the move's or the attack's end, the tooltip's OK), and the turn loop still reads
+`game.waitUIAnimation` and `game.uiMessageClicked` (the harness sets them too). #375 makes the turn loop
+wait on `shown`. Until then the old UI plays a program's move and attack (its hooks finish the command at
+the animation's end and tell the host a victory); the screen that shows nothing (src/nullscreen.ts) plays
+them at once, with no animation, and tells the host their victories.
 
 ## The proof
 

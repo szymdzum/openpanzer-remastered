@@ -7,8 +7,8 @@
  *
  * The AI itself is the core's controller now: it plans its turn at the turn's start, in the session.
  * A handler only hands out the session's orders, as the old AI's actions (harness/replay.js wraps
- * getAction and hashes the state there), and Game.processAction plays them. A handler made while the
- * game runs (the replay's `new AI(player, map)`) joins its player to the session.
+ * getAction and hashes the state there), and the host's processAction plays them (src/host.ts). A
+ * handler made while the game runs (the replay's `new AI(player, map)`) joins its player to the session.
  */
 
 import type { GameMap, Player } from "./map";

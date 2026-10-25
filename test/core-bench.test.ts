@@ -170,7 +170,7 @@ test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core", async () =>
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
-//An AI action as the command the game sends for it (Game.processAction), null for what only the screen shows
+//An AI action as the command the game sends for it (the host's processAction), null for what only the screen shows
 function commandOf(A: Awaited<ReturnType<typeof load>>["actionType"], a: AIAction): Command | null {
 	const unit = a.param[0] as Unit | null, other = a.param[1] as Unit & { row: number; col: number };
 	if (unit === null) return null;

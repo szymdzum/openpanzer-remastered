@@ -7,23 +7,27 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The host decides; the screen only shows. It tells the screen what to show through the few calls of
- * HostScreen (a scenario ready, a message, the campaign's dossier, the main menu, a failed load, a
- * prototype awarded, the platform's reports), which the old UI answers for now (src/game.ts) and which
- * become the screen interface (#374). The timing is the old game's: a victory is told when the screen
- * says the step that won it has ended (the old UI's animation end), the end at the turn limit when the
- * turn ends (Game.endTurn), the campaign's next scenario loads once the player has clicked its message
- * away (the turn loop's tick, Game.processTurn), and the saves come where they came. Imports no UI
- * module, so a whole campaign plays on it without the DOM (test/host.test.ts).
+ * The host decides; the screen only shows. It tells the screen what to show through the screen
+ * interface (src/screen.ts), which the old UI implements (src/oldscreen.ts) and a program that shows
+ * nothing too (src/nullscreen.ts). It also runs the turn loop: each tick of game.loop, a program's next
+ * actions, shown on the screen, and the end of its turn. The timing is the old game's: a victory is told
+ * when the screen says the step that won it has ended (the old UI's animation end), the end at the turn
+ * limit when the turn ends (endTurn), the campaign's next scenario loads once the player has clicked its
+ * message away (the turn loop's tick, processTurn), a program's next action waits for the screen's
+ * animation and the next tick (#375 makes it wait on the screen's shown), and the saves come where they
+ * came. Imports no UI module, so a whole campaign and a game's turns play on it without the DOM
+ * (test/host.test.ts).
  */
 
-import { DEBUG_AI_MOVES, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames, uiSettings
-} from "./prototypes";
-import { AI } from "./ai";
+import { actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
+	uiSettings } from "./prototypes";
+import { AI, type AIAction } from "./ai";
 import { GameMap, Player } from "./map";
 import { Scenario, type ScenarioOutcome } from "./scenario";
 import { Campaign, type CampaignScenario } from "./campaign";
-import { coreDriver, handlerFor, removeDestroyed, startGameSession } from "./coresession";
+import { coreDriver, endGameTurn, handlerFor, removeDestroyed, startGameSession } from "./coresession";
+import { Commands } from "./commands";
+import { GameRules } from "./gamerules";
 import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./coreload";
 import { applyData, gameInputs, rulesWorld, worldOf } from "./mirror";
 import { ScenarioLoader } from "./scenarioloader";
@@ -35,27 +39,8 @@ import { defined } from "./util";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
-
-//What the host asks the screen to show, named for what the game needs. Each call only shows: what
-//follows (then) is the host's
-export interface HostScreen {
-	//The scenario started or loaded is ready: the screen set up for it (the first one builds the screen
-	//and opens the main menu)
-	showScenario(): void;
-	//The scenario's files didn't load: the game can't go on
-	loadFailed(file: string): void;
-	//A campaign's scenario starts with the prototype the brilliant victory before awarded (its eqid)
-	showPrototype(eqid: number): void;
-	//A message the player clicks away; then: what its OK does instead of closing it
-	message(title: string, text: string, then?: () => void): void;
-	//The campaign's end: the dossier with its outcome; then: what its close does
-	campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void): void;
-	//The main menu, once a game has ended
-	mainMenu(): void;
-	//The platform's score board and achievements (OSGlue)
-	reportScore(score: number): void;
-	reportAchievement(campaignFile: string): void;
-}
+import type { Unit } from "./unit";
+import type { Screen } from "./screen";
 
 //How a victory was won, as the loss texts and the campaign name it (endGameType)
 const endTypes = { capture: endGameType.moveCapture, elimination: endGameType.noEnemyLeft };
@@ -64,7 +49,7 @@ const endTypes = { capture: endGameType.moveCapture, elimination: endGameType.no
 //shows what it says. What a campaign keeps between its scenarios is here, as Game's closure kept it
 export class GameHost {
 	declare game: Game;
-	declare screen: HostScreen;
+	declare screen: Screen;		//what shows the game (src/screen.ts)
 	declare localSide: number;		//which sides play on this screen when the game started (localSideOf)
 	declare campaignPlayer: Player | null;	//the player that plays the campaign on this screen
 	declare savedPlayer: Player | null;	//its copy kept between the campaign's scenarios
@@ -75,7 +60,7 @@ export class GameHost {
 	declare awardPrototype: boolean;	//a brilliant victory awards a prototype unit in the next scenario
 	declare isCampaignStart: boolean;	//the campaign's first scenario: prestige, dossier and core units set
 
-	constructor(g: Game, screen: HostScreen) {
+	constructor(g: Game, screen: Screen) {
 		this.game = g;
 		this.screen = screen;
 		this.localSide = -1;
@@ -317,6 +302,62 @@ export class GameHost {
 				this.campaignPlayer = p;
 	}
 
+	//---- The turn loop
+
+	//Each tick of game.loop (src/main.ts): the campaign's next scenario once the player clicked its outcome
+	//away, else a program's next actions once the screen has shown the last one and the message is closed
+	processTurn() {
+		const g = this.game;
+		if (!g.gameStarted || g.gameEnded)
+			return;
+		if (this.nextScenarioWaiting() && g.uiMessageClicked) //Load next scenario in campaign chain
+			this.loadNextScenario();
+		else if (programPlays(g.scenario.map.currentPlayer) && !g.waitUIAnimation && g.uiMessageClicked)
+			this.processAIActions();
+	}
+
+	//The program's next actions: those the screen doesn't animate play on in the same tick, so the turn waits
+	//only for what the player watches, a unit picked, moving or attacking, a message (#8). No action left
+	//ends its turn, and the next player's is shown a little later
+	processAIActions() {
+		const g = this.game;
+		let action: AIAction;
+		do {
+			action = g.scenario.map.currentPlayer.handler.getAction();
+			if (!this.processAction(action)) {
+				this.screen.aiTurnEnded();
+				g.waitUIAnimation = true;
+				if (!this.endTurn())
+					this.screen.turnChanged();
+				return;
+			}
+		} while (unanimated.includes(action.type));
+	}
+
+	//Plays a program's action: the move and the attack played and shown by the screen, the view events
+	//shown, the others as the player's commands. The screen's wait (game.waitUIAnimation) holds the turn
+	//loop until shown. False when the program's turn should end
+	processAction(action: AIAction | null): boolean {
+		if (!action || !action.param) return false;
+		const g = this.game, show = shownActions[action.type];
+		if (show === undefined) return playCommand(g, action.type, action.param[0] as Unit | null);
+		show(this, action.param, () => { g.waitUIAnimation = false; });
+		return true;
+	}
+
+	//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
+	//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit), true
+	//then: the host tells the end (whichever side's last turn ended it, the person's end turn button or the
+	//program's turn, #365), and the next turn's info isn't shown over it
+	endTurn(): boolean {
+		const g = this.game;
+		g.waitUIAnimation = false;
+		if (!endGameTurn(g))
+			return false;
+		this.ended(g.session.ended);
+		return true;
+	}
+
 	//---- The end of the game
 
 	//The game ended as the session says (a victory when the step that won it has been shown, the turn
@@ -401,6 +442,57 @@ export class GameHost {
 				sides = sides === -1 || sides === p.side ? p.side : 2;
 		return sides;
 	}
+}
+
+//No current player also goes on to process a program's actions
+function programPlays(player: Player | null) {
+	return !player || player.type === playerType.aiLocal || player.type === playerType.aiScripted;
+}
+
+//The actions a program's turn shows on the screen (shown: the wait on it ended)
+type ShownAction = (host: GameHost, p: AIAction["param"], shown: () => void) => void;
+const shownActions: { [type: number]: ShownAction } = {
+	[actionType.move]: (host, p, shown) => {
+		//The selection (hashed, saved); the move takes its path from that same range
+		const g = host.game;
+		g.scenario.map.setMoveRange(p[0] as Unit);
+		g.waitUIAnimation = true;
+		host.screen.move(p[0] as Unit, p[1] as Cell, g.scenario.map.getCurrentMoveRange(), shown);
+	},
+	[actionType.attack]: (host, p, shown) => {
+		host.game.waitUIAnimation = true;
+		if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit)) host.screen.attack(p[0] as Unit, p[1] as Unit, shown);
+		else host.game.waitUIAnimation = false;
+	},
+	[actionType.select]: (host, p) => { host.screen.view({ type: "select", unit: p[0] ? (p[0] as Unit).id : null }); },
+	[actionType.message]: (host, p, shown) => {
+		host.game.waitUIAnimation = true;
+		host.screen.view({ type: "message", text: p[0] as string, at: p[1] as Cell }, shown);
+	},
+	[actionType.viewport]: (host, p) => { host.screen.view({ type: "viewport", at: p[0] as Cell }); },
+};
+
+//The actions the screen doesn't animate
+const unanimated = [actionType.resupply, actionType.reinforce, actionType.upgrade, actionType.buy, actionType.deploy,
+	actionType.mount, actionType.umount];
+
+//The commands a program's actions send as the player's (the AI's purchases and deployment are its turn
+//start's, its upgrades none: they pass)
+const commandOf: { [type: number]: "resupply" | "reinforce" | "mount" | "unmount" } = {
+	[actionType.resupply]: "resupply", [actionType.reinforce]: "reinforce", [actionType.mount]: "mount",
+	[actionType.umount]: "unmount" };
+const passing = [actionType.upgrade, actionType.buy, actionType.deploy];
+
+//A program's action other than a move, an attack and a view event: its command, on the core. The scripted
+//tutorial can queue no unit (#80), which the command refuses where the engine threw. False for the end of
+//its turn and an action unknown
+function playCommand(g: Game, type: number, unit: Unit | null): boolean {
+	const command = commandOf[type];
+	if (command !== undefined) {
+		Commands.execute(g.scenario, { type: command, unit: unit ? unit.id : -1 });
+		return true;
+	}
+	return passing.includes(type);
 }
 
 //A single scenario's player: isAI 1 is the AI, 2 the scripted AI, or as the scenario or the save says

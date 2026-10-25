@@ -1,14 +1,17 @@
 // @vitest-environment node
 //The game host (src/host.ts) without the DOM and without the old UI: a game of plain fields (what Game
 //holds), the files read from disk (test/setup.ts, the map images' sizes from test/lifecycle.ts), and a
-//screen that only notes what it is asked to show. The host starts the scenarios, plays the campaign's
-//chain and tells the end of the game, deciding what follows each
+//screen that shows nothing (src/nullscreen.ts) or only notes what it is asked to show. The host starts the
+//scenarios, plays the campaign's chain, plays the programs' turns and tells the end of the game, deciding
+//what follows each
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "vitest";
 import { fakeMapImages, until } from "./lifecycle";
 import { GAME_DIR } from "./corefiles";
-import { GameHost, type HostScreen, runGame } from "../src/host";
+import { GameHost, runGame } from "../src/host";
+import type { Screen } from "../src/screen";
+import { nullScreen } from "../src/nullscreen";
 import type { Game } from "../src/game";
 import type { CampaignScenario } from "../src/campaign";
 import type { ScenarioOutcome } from "../src/scenario";
@@ -21,7 +24,7 @@ fakeMapImages();
 
 //The game the host plays: Game's fields, and the members the engine and the core's glue call on it
 //(src/coresession.ts, src/coreload.ts, src/mirror.ts), handed on to the host as Game hands them
-function headlessGame(screen: (g: Game) => HostScreen): Game {
+function headlessGame(screen: (g: Game) => Screen): Game {
 	let saves = 0;
 	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves }, campaign: null, scenario: null,
 		gameStarted: false, gameEnded: false, waitUIAnimation: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
@@ -36,9 +39,10 @@ function headlessGame(screen: (g: Game) => HostScreen): Game {
 	return g;
 }
 
-//A screen that notes what it was asked to show; the dossier's close and the message's OK pressed at once
+//A screen that notes what the host asked it to show about the game's course; the dossier's close and the
+//message's OK pressed at once. The rest shows nothing
 function noting(told: string[]) {
-	return (g: Game): HostScreen => ({
+	return (g: Game): Screen => ({ ...nullScreen(g),
 		showScenario() { told.push("scenario " + g.scenario.file); },
 		loadFailed(file) { told.push("failed " + file); },
 		showPrototype() { told.push("prototype"); },
@@ -130,3 +134,58 @@ test("The turn limit's outcome is told by the sides a person plays now: neutral 
 	tutorial.host.ended({ kind: "turnLimit", side: 1 });
 	expect(byPerson, "the tutorial's person, the Axis").toEqual([["DEFEAT", "You didn't capture all the objectives in time"]]);
 });
+
+//The game's turns on the host with a screen that shows nothing (#374): the turn loop's ticks play the AI's
+//actions, each move and attack played and shown at once, and end its turns, as the old UI's game plays
+//them, with no window and no document
+test("A scenario's turns play through the game host on a screen that shows nothing (#374)", async () => {
+	expect([typeof window, typeof document]).toEqual(["undefined", "undefined"]);
+	uiSettings.classicRules = true;
+	uiSettings.isAI = [1, 1, 1, 1];
+	Rng.seed(374);
+	const played = { move: 0, attack: 0, shown: 0 };
+	const g = headlessGame((game) => {
+		const screen = nullScreen(game);
+		const counted = (shown: () => void) => () => { played.shown++; shown(); };
+		return { ...screen,
+			move(unit, to, cells, shown) { played.move++; screen.move(unit, to, cells, counted(shown)); },
+			attack(attacker, target, shown) { played.attack++; screen.attack(attacker, target, counted(shown)); } };
+	});
+	g.host.newScenario("drpzop01.xml");
+	await until(() => loaded(g, null), "drpzop01.xml");
+	expect(g.uiMessageClicked, "the briefing clicked away at once").toBe(true);
+	const m = g.scenario.map, start = m.turn, turns = 3;
+	for (let tick = 0; tick < 5000 && m.turn < start + turns && !g.gameEnded; tick++) {
+		g.host.processTurn();
+		expect(g.waitUIAnimation, "each action shown at once").toBe(false);
+	}
+	expect([m.turn, g.gameEnded]).toEqual([start + turns, false]);
+	expect(played.move > 0 && played.attack > 0, JSON.stringify(played)).toBe(true);
+	expect(played.shown).toBe(played.move + played.attack);
+	expect((g.state as unknown as { saves: () => number }).saves(), "a save at the start and at each turn's start")
+		.toBeGreaterThan(turns);
+}, 60_000);
+
+//The tutorial's script on the same screen: its messages pointing at hexes, each clicked away at once, its
+//selections and looks at hexes, played through the host to the hand-over past its 5th turn; then its end told
+test("The tutorial's script plays through the game host on a screen that shows nothing (#374)", async () => {
+	uiSettings.classicRules = true;
+	uiSettings.isAI = [2, 2, 2, 2];
+	Rng.seed(374);
+	const views: string[] = [];
+	const g = headlessGame((game) => {
+		const screen = nullScreen(game);
+		return { ...screen, view(event, shown) { views.push(event.type); screen.view(event, shown); } };
+	});
+	g.host.newScenario("tutorial.xml");
+	await until(() => loaded(g, null), "tutorial.xml");
+	const m = g.scenario.map;
+	for (let tick = 0; tick < 5000 && m.turn < 6 && !g.gameEnded; tick++) {
+		g.host.processTurn();
+		expect(g.waitUIAnimation, "each action shown at once").toBe(false);
+	}
+	expect([m.turn, g.gameEnded]).toEqual([6, false]);
+	expect(["message", "select", "mainMenu"].filter((v) => !views.includes(v)), "the view events shown").toEqual([]);
+	g.host.ended({ kind: "victory", side: 0, how: "capture" });
+	expect([g.gameEnded, g.uiMessageClicked]).toEqual([true, true]);
+}, 60_000);

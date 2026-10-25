@@ -1,7 +1,7 @@
 /**
  * Session - a game played headless on the core: the players' controllers, the turns in the old game's
- * order, the end of the game. What Game's turn loop does (processTurn, processAIActions, endTurn),
- * without the screen, the clock and the save
+ * order, the end of the game. What the game host's turn loop does (src/host.ts processTurn,
+ * processAIActions, endTurn), without the screen, the clock and the save
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -129,7 +129,7 @@ function shownSide(s: Session): number {
 	return s.localSide === 2 && current >= 0 ? s.world.state.players[current].side : s.localSide;
 }
 
-//The controller playing the player now, when a program plays it (Game.processTurn)
+//The controller playing the player now, when a program plays it (the game host's processTurn)
 function controllerOf(s: Session, player: number): Controller | null {
 	return isProgram(s.world.state.players[player].type) ? s.controllers[player] : null;
 }

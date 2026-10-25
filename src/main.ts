@@ -48,11 +48,14 @@ import * as mirror from "./mirror";
 import * as coresession from "./coresession";
 import * as coreload from "./coreload";
 import * as host from "./host";
+import * as screen from "./screen";
+import * as oldscreen from "./oldscreen";
+import * as nullscreen from "./nullscreen";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
 	rng, context, board, visibility, selection, undo, util, session, commands, state,
-	savegame, mirror, coresession, coreload, host];
+	savegame, mirror, coresession, coreload, host, screen, oldscreen, nullscreen];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import

@@ -1,6 +1,7 @@
 //The running game's turns on the core's session (src/coresession.ts, #137): a game of AI players played
-//through Game itself (processTurn, processAIActions, processAction and endTurn), its UI a stand-in
-//that finishes the move and the attack at once as the UI's animations do at their end. Every action
+//through Game itself (processTurn, processAIActions, processAction and endTurn: the host's, shown on the
+//old UI's screen, src/oldscreen.ts), its UI a stand-in that finishes the move and the attack at once as
+//the UI's animations do at their end. Every action
 //the handlers hand out is recorded as harness/replay.js records it (its getAction wrapped), with the
 //state then, and every end of turn, then a game saved in the middle of an AI's turn and loaded, played
 //on, and a campaign's next scenario: the actions, the states, the combat log, the image cache and what
@@ -150,6 +151,7 @@ function stand(game: Game, Commands: typeof import("../src/commands").Commands, 
 		},
 		uiSetUnitOnViewPort() {},
 		uiSetCellOnViewPort() {},
+		whenShown() {}, //(the game's wait ends with the move's and the attack's finish above)
 		showGameToolTip(text: string) { screen.push("tooltip " + text.length); },
 		showAlert(row: number, col: number, text: string, own: boolean) { screen.push(`alert ${row},${col} ${text} ${own}`); },
 		handleReinforcementDeployment() { screen.push("deployed"); },
