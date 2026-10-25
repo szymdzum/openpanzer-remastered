@@ -7,10 +7,9 @@
  */
 
 import type { CommandOf } from "../../commands";
-import { OVERSTRENGTH_PENALTY, scoreGains } from "../../prototypes";
-import { costPerStrength } from "../costs";
+import { scoreGains } from "../../prototypes";
 import { addScore, emit, writePlayer, writeUnit } from "../draft";
-import { canResupply, reinforceValue, resupplyValue } from "../supply";
+import { canResupply, reinforcement, reinforceValue, resupplyValue } from "../supply";
 import type { Draft, CommandHandler, Supply, UnitId } from "../types";
 import { unitById } from "../world";
 import { playerAt, unitCheck } from "./common";
@@ -57,13 +56,10 @@ export const reinforce: CommandHandler<CommandOf<"reinforce">> = {
 		d.state.turn.undoable = null;
 		const over = cmd.overstrength === true;
 		const u = unitById(d, cmd.unit);
-		const wanted = reinforceValue(d, u, over), s = resupplyValue(d, u);
-		const p = writePlayer(d, playerAt(d, u.owner).id);
-		const perStrength = Math.round(costPerStrength(d, u) * (over ? OVERSTRENGTH_PENALTY : 1));
-		let strength = (p.prestige / perStrength) >> 0;
+		const { wanted, perPoint, bought: strength } = reinforcement(d, u, over), s = resupplyValue(d, u);
 		if (strength < 1) return;
-		if (strength > wanted) strength = wanted;
-		p.prestige -= strength * perStrength;
+		const p = writePlayer(d, playerAt(d, u.owner).id);
+		p.prestige -= strength * perPoint;
 		addScore(d, p.id, scoreGains.reinforce, wanted);
 		const w = writeUnit(d, cmd.unit);
 		w.strength += strength;
