@@ -5,26 +5,27 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * A message is clicked away at once (the turn loop's game.uiMessageClicked set, or its then called), and
- * a program's move or attack is played with nothing animated: its command finishes at once and a victory
- * it won is told to the host then, as the old UI tells it at the animation's end (#375 moves both into
- * the step). What the old UI's hooks did to the selection beside the state (the attacker selected again
- * after its attack) isn't done: nothing is selected on a screen that shows nothing.
+ * A message is clicked away at once (game.uiMessageClicked set, or its then called), and a program's move
+ * or attack is played whole with nothing animated: a victory it won is told to the host at once, as the old
+ * UI tells it at the animation's end. What the old UI asks of the command beside the state (the attacker
+ * selected again after its attack) isn't asked: nothing is selected on a screen that shows nothing. The next
+ * player's turn after a program's is left to whoever plays the game (processTurn).
  */
 
 import type { Cell } from "./prototypes";
-import { Commands, type FinishAttackHooks } from "./commands";
+import { type AttackResult, Commands } from "./commands";
 import type { Unit } from "./unit";
 import type { Game } from "./game";
 import type { Screen } from "./screen";
 
 export function nullScreen(g: Game): Screen {
-	const won = (how: "capture" | "elimination") => (side: number) => { g.host.ended({ kind: "victory", side, how }); };
-	//An attack's end: the defender's retreat ends at once, its capture's victory told, then the victory of
-	//a side whose enemy has no unit left
-	const attackEnd: FinishAttackHooks = {
-		onRetreat(unit, _cell, mr) { Commands.finishRetreat(unit, mr, { onVictory: won("capture") }); },
-		onVictory: won("elimination"),
+	const won = (side: number, how: "capture" | "elimination") => { g.host.ended({ kind: "victory", side, how }); };
+	//An attack's victories, as the old UI tells them: the defender's retreat that took its side's last
+	//objective, then a side whose enemy has no unit left
+	const attackWon = (a: AttackResult | null) => {
+		if (a === null) return;
+		if (a.retreatMove !== null && a.retreatMove.isVictorySide >= 0) won(a.retreatMove.isVictorySide, "capture");
+		for (const side of a.victorySides) won(side, "elimination");
 	};
 	const nothing = () => {};
 	return {
@@ -40,19 +41,25 @@ export function nullScreen(g: Game): Screen {
 		reportScore: nothing,
 		reportAchievement: nothing,
 
+		//The move's capture victory first, then its surprise attack's
 		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
-			Commands.execute(g.scenario, { type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells },
-				{ finish: { onVictory: won("capture") }, surprise: attackEnd });
+			const r = Commands.execute(g.scenario, { type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
+			if (r.ok) {
+				if (r.result.victorySide >= 0) won(r.result.victorySide, "capture");
+				if (r.result.surprise !== null) attackWon(r.result.surprise.attack);
+			}
 			shown();
 		},
 		attack(attacker: Unit, target: Unit, shown: () => void) {
-			Commands.execute(g.scenario, { type: "attack", unit: attacker.id, target: target.id }, { finish: attackEnd });
+			const r = Commands.execute(g.scenario, { type: "attack", unit: attacker.id, target: target.id });
+			if (r.ok) attackWon(r.result);
 			shown();
 		},
 		view(_event, shown?: () => void) {
 			if (shown) shown();
 		},
 		aiTurnEnded: nothing,
+		//(the next turn is its caller's: a program playing headless goes on with processTurn)
 		turnChanged: nothing,
 
 		unitsPlaced: nothing,

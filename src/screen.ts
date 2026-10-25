@@ -8,10 +8,10 @@
  * The game decides, the screen shows. The old UI implements it (src/oldscreen.ts), the new UI will be a
  * second implementation (src/view/, #380), and a program that shows nothing a third (src/nullscreen.ts:
  * the headless tests, later the CLI and the arena). What the game waits on takes a callback, shown, which
- * the screen calls once the player has seen it: a program's move or attack, a message pointing at a hex.
- * The timing is still the old game's: the old UI calls shown where it ended the wait before (the move's
- * or the attack's animation end, the tooltip's OK), and the turn loop still reads game.waitUIAnimation
- * and game.uiMessageClicked, which the harness sets too. #375 makes the turn loop wait on shown instead.
+ * the screen calls once the player has seen it: a program's move or attack, played whole before it is
+ * shown (#375), a unit it picked, a message pointing at a hex. A program's next action waits for it: the
+ * old UI calls it at the end of the step's last animation, the null screen at once. The messages the
+ * player clicks away set game.uiMessageClicked and tell the host to go on (goOn).
  */
 
 import type { Cell } from "./prototypes";
@@ -24,15 +24,16 @@ export interface Screen {
 	//---- The game's course (the host)
 
 	//The scenario started or loaded is ready: the screen set up for it, its briefing shown (the first one
-	//builds the screen and opens the main menu). The turn loop waits until the briefing is clicked away
-	//(game.uiMessageClicked)
+	//builds the screen and opens the main menu). A program's turn waits until the briefing is clicked away
+	//(game.uiMessageClicked, then the host's goOn)
 	showScenario(): void;
 	//The scenario's files didn't load: the game can't go on
 	loadFailed(file: string): void;
 	//A campaign's scenario starts with the prototype the brilliant victory before awarded (its eqid)
 	showPrototype(eqid: number): void;
 	//A message the player clicks away; then: what its OK does instead of closing it. Without then, the OK
-	//closes it and the turn loop goes on (game.uiMessageClicked: a campaign's next scenario waits for it)
+	//closes it and the game goes on (game.uiMessageClicked and the host's goOn: a campaign's next scenario
+	//waits for it)
 	message(title: string, text: string, then?: () => void): void;
 	//The campaign's end: the dossier with its outcome; then: what its close does
 	campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void): void;
@@ -44,22 +45,23 @@ export interface Screen {
 
 	//---- A program's turn (the AI, the tutorial)
 
-	//A program's move, played and shown: until #375 the screen plays the move command with its animation
-	//(the old UI's hooks finish it when the animation ends, and tell the host a victory it won), and calls
-	//shown once the move and what it set off (a surprise attack, its retreat) have been shown. cells: the
-	//move hexes shown, where the path may go
+	//A program's move, played and shown: the screen plays the move command (whole: its surprise attack, the
+	//retreat, the capture), shows it, tells the host a victory it won when it has shown the step that won it,
+	//and calls shown once it has shown it all. cells: the move hexes shown, where the path may go
 	move(unit: Unit, to: Cell, cells: Cell[], shown: () => void): void;
 	//A program's attack, played and shown the same way
 	attack(attacker: Unit, target: Unit, shown: () => void): void;
 	//What a controller asks of the screen (src/core/controller.ts): a unit selected, a message pointing at a
 	//hex (shown: its OK), a look at a hex, the main menu (only once the screen is built), stuck (nothing to
-	//show). shown is called once the player has seen it; at once for all but the message
+	//show). shown is called once the player has seen it: a program's next action waits for its unit picked
+	//and its look at a hex (the old UI shows them a moment, #8) and for its message
 	view(event: ViewEvent, shown?: () => void): void;
 	//The program's turn ended (the AI's status shown finished)
 	aiTurnEnded(): void;
 	//The next player's turn after a program's: whose turn it is (a person's combat log, the AI's turn in
-	//progress), unless the game has ended by then
-	turnChanged(): void;
+	//progress), unless the game has ended by then. next: the game goes on with that turn (a program's
+	//plays), once the screen is ready for it; a screen that shows nothing leaves it to its caller
+	turnChanged(next: () => void): void;
 
 	//---- The events of the end of a turn (src/coresession.ts)
 

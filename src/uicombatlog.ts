@@ -148,6 +148,7 @@ function showScenarioInfo() {
 		makeHidden("ui-message");
 		game.uiMessageClicked = true;
 		makeVisible("combatLog");
+		game.host.goOn(); //(a program's turn paused under it goes on)
 	});
 }
 

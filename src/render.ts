@@ -45,10 +45,13 @@ export function deploysOn(map: GameMap, row: number, col: number, remaster: Set<
 	return hex.isDeployment > -1 && map.getPlayer(hex.isDeployment).side == map.currentPlayer.side;
 }
 
-//What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends
+//What Render.moveAnimation is given (see UI moveUnit): called back with itself when the move ends.
+//facing: the one drawn at the start, the unit's when not given (a move shown after its surprise attack
+//turned the unit)
 export interface MoveAnimationCBData {
 	unit: Unit;
 	moveResults: movementResults;
+	facing?: number;
 	cbfunc(moveAnimationCBData: MoveAnimationCBData): void;
 }
 
@@ -472,7 +475,8 @@ export class Render {
 				var cCell: pathCell, dCell: pathCell;
 				var xstep: number, ystep: number;
 				var actualFacing: number;
-				var drawnFacing = unit.facing; //the facing drawn along the path: the unit's stays the engine's (#187)
+				//the facing drawn along the path: the unit's stays the engine's (#187)
+				var drawnFacing = moveAnimationCBData.facing !== undefined ? moveAnimationCBData.facing : unit.facing;
 				var needRedraw = true;
 
 				this.movTimer = null;

@@ -9,14 +9,14 @@
  *
  * The host decides; the screen only shows. It tells the screen what to show through the screen
  * interface (src/screen.ts), which the old UI implements (src/oldscreen.ts) and a program that shows
- * nothing too (src/nullscreen.ts). It also runs the turn loop: each tick of game.loop, a program's next
- * actions, shown on the screen, and the end of its turn. The timing is the old game's: a victory is told
- * when the screen says the step that won it has ended (the old UI's animation end), the end at the turn
- * limit when the turn ends (endTurn), the campaign's next scenario loads once the player has clicked its
- * message away (the turn loop's tick, processTurn), a program's next action waits for the screen's
- * animation and the next tick (#375 makes it wait on the screen's shown), and the saves come where they
- * came. Imports no UI module, so a whole campaign and a game's turns play on it without the DOM
- * (test/host.test.ts).
+ * nothing too (src/nullscreen.ts). It also plays a program's turn: its actions one after the other, each
+ * one the screen shows waited for until the screen calls its shown (#375: there is no turn loop ticking
+ * any more), then the end of its turn. What goes on is told: the screen's shown, the message the player
+ * clicked away (goOn: then the campaign's next scenario loads), the person's end of turn, the screen once
+ * it has shown the next player's turn. A victory is told when the screen says the step that won it has
+ * been shown (the old UI's animation end), the end at the turn limit when the turn ends (endTurn), and the
+ * saves come where they came. Imports no UI module, so a whole campaign and a game's turns play on it
+ * without the DOM (test/host.test.ts).
  */
 
 import { actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
@@ -59,6 +59,10 @@ export class GameHost {
 	declare removeNonCampaignUnits: boolean;	//a later scenario of the campaign: its own units on the deployment hexes go
 	declare awardPrototype: boolean;	//a brilliant victory awards a prototype unit in the next scenario
 	declare isCampaignStart: boolean;	//the campaign's first scenario: prestige, dossier and core units set
+	declare showing: boolean;		//the screen shows a program's action: its next one waits for the shown
+	declare requests: number;		//the screen's requests made: only the last one's shown goes on
+	declare going: boolean;		//the game going on now (goOn)
+	declare again: boolean;		//asked to go on while it went on
 
 	constructor(g: Game, screen: Screen) {
 		this.game = g;
@@ -72,6 +76,10 @@ export class GameHost {
 		this.removeNonCampaignUnits = false;
 		this.awardPrototype = false;
 		this.isCampaignStart = false;
+		this.showing = false;
+		this.requests = 0;
+		this.going = false;
+		this.again = false;
 	}
 
 	//---- A scenario started or loaded
@@ -99,6 +107,7 @@ export class GameHost {
 		g.session = null;
 		this.startPlaying(isRestore);
 		g.waitUIAnimation = false;
+		this.stopShowing();
 		g.gameStarted = true;
 		this.needLoad = this.nextLoading = g.gameEnded = false;
 		if (g.campaign === null)
@@ -115,6 +124,7 @@ export class GameHost {
 		this.savedPlayer = null;
 		g.session = null;
 		this.startPlaying(true);
+		this.stopShowing();
 		g.gameStarted = true;
 		this.needLoad = this.nextLoading = g.gameEnded = false;
 		g.state.save();
@@ -302,47 +312,91 @@ export class GameHost {
 				this.campaignPlayer = p;
 	}
 
-	//---- The turn loop
+	//---- A program's turn
 
-	//Each tick of game.loop (src/main.ts): the campaign's next scenario once the player clicked its outcome
-	//away, else a program's next actions once the screen has shown the last one and the message is closed
-	processTurn() {
-		const g = this.game;
-		if (!g.gameStarted || g.gameEnded)
+	//The game goes on: the campaign's next scenario once the player has clicked its outcome away, else a
+	//program's actions, until one the screen shows (its shown goes on) or the end of its turn (the screen goes
+	//on with the next player's, turnChanged). Nothing while the screen shows a program's action or a message
+	//is open. Called again while it goes on (a screen that shows at once), it goes on in the same call
+	goOn() {
+		if (this.going) {
+			this.again = true;
 			return;
-		if (this.nextScenarioWaiting() && g.uiMessageClicked) //Load next scenario in campaign chain
+		}
+		this.going = true;
+		try {
+			do {
+				this.again = false;
+				this.goOnce();
+			} while (this.again);
+		} finally {
+			this.going = false;
+		}
+	}
+
+	//One round of goOn: nothing before the game has started, after its end, or while a message is open
+	goOnce() {
+		const g = this.game;
+		if (!g.gameStarted || g.gameEnded || !g.uiMessageClicked)
+			return;
+		if (this.nextScenarioWaiting()) //Load next scenario in campaign chain
 			this.loadNextScenario();
-		else if (programPlays(g.scenario.map.currentPlayer) && !g.waitUIAnimation && g.uiMessageClicked)
+		else if (!this.showing && programPlays(g.scenario.map.currentPlayer))
 			this.processAIActions();
 	}
 
-	//The program's next actions: those the screen doesn't animate play on in the same tick, so the turn waits
-	//only for what the player watches, a unit picked, moving or attacking, a message (#8). No action left
-	//ends its turn, and the next player's is shown a little later
+	//The harness's turn loop (harness/lib/harness.js ticks it, as the game's own did until #375) and the tests':
+	//the game goes on unless the old UI is showing a step (game.waitUIAnimation, which a harness script also
+	//sets to hold the turn; #378 moves the harness onto the screen's shown)
+	processTurn() {
+		if (!this.game.waitUIAnimation)
+			this.goOn();
+	}
+
+	//The program's actions: those the screen shows wait for its shown, the others play on at once (#8: an AI
+	//turn took a minute at an action a tick). No action left ends its turn, and the screen goes on with the
+	//next player's once it has shown it
 	processAIActions() {
 		const g = this.game;
-		let action: AIAction;
-		do {
-			action = g.scenario.map.currentPlayer.handler.getAction();
+		while (!this.showing && !g.gameEnded && !this.nextScenarioWaiting()) {
+			const action = g.scenario.map.currentPlayer.handler.getAction();
 			if (!this.processAction(action)) {
 				this.screen.aiTurnEnded();
-				g.waitUIAnimation = true;
 				if (!this.endTurn())
-					this.screen.turnChanged();
+					this.screen.turnChanged(() => this.goOn());
 				return;
 			}
-		} while (unanimated.includes(action.type));
+		}
 	}
 
 	//Plays a program's action: the move and the attack played and shown by the screen, the view events
-	//shown, the others as the player's commands. The screen's wait (game.waitUIAnimation) holds the turn
-	//loop until shown. False when the program's turn should end
+	//shown, the others as the player's commands. False when the program's turn should end
 	processAction(action: AIAction | null): boolean {
 		if (!action || !action.param) return false;
 		const g = this.game, show = shownActions[action.type];
 		if (show === undefined) return playCommand(g, action.type, action.param[0] as Unit | null);
-		show(this, action.param, () => { g.waitUIAnimation = false; });
+		show(this, action.param, this.request());
 		return true;
+	}
+
+	//What the program's next action waits for, until the screen calls the shown returned (once, and only the
+	//last request's: a scenario started since makes the one before stale)
+	request(): () => void {
+		const made = ++this.requests;
+		this.showing = true;
+		return () => {
+			if (made !== this.requests || !this.showing)
+				return;
+			this.showing = false;
+			if (!this.going)
+				this.goOn();
+		};
+	}
+
+	//Nothing is shown of a scenario that starts: what the screen still shows of the one before is stale
+	stopShowing() {
+		this.requests++;
+		this.showing = false;
 	}
 
 	//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
@@ -351,7 +405,6 @@ export class GameHost {
 	//program's turn, #365), and the next turn's info isn't shown over it
 	endTurn(): boolean {
 		const g = this.game;
-		g.waitUIAnimation = false;
 		if (!endGameTurn(g))
 			return false;
 		this.ended(g.session.ended);
@@ -449,32 +502,25 @@ function programPlays(player: Player | null) {
 	return !player || player.type === playerType.aiLocal || player.type === playerType.aiScripted;
 }
 
-//The actions a program's turn shows on the screen (shown: the wait on it ended)
+//The actions a program's turn shows on the screen, shown: the program's next action waits for it. A unit
+//picked and a look at a hex too: the screen shows them a moment before the next action (#8)
 type ShownAction = (host: GameHost, p: AIAction["param"], shown: () => void) => void;
 const shownActions: { [type: number]: ShownAction } = {
 	[actionType.move]: (host, p, shown) => {
 		//The selection (hashed, saved); the move takes its path from that same range
 		const g = host.game;
 		g.scenario.map.setMoveRange(p[0] as Unit);
-		g.waitUIAnimation = true;
 		host.screen.move(p[0] as Unit, p[1] as Cell, g.scenario.map.getCurrentMoveRange(), shown);
 	},
+	//(the range asked after the wait: a missing unit throws there and the turn waits for good, #80)
 	[actionType.attack]: (host, p, shown) => {
-		host.game.waitUIAnimation = true;
 		if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit)) host.screen.attack(p[0] as Unit, p[1] as Unit, shown);
-		else host.game.waitUIAnimation = false;
+		else shown();
 	},
-	[actionType.select]: (host, p) => { host.screen.view({ type: "select", unit: p[0] ? (p[0] as Unit).id : null }); },
-	[actionType.message]: (host, p, shown) => {
-		host.game.waitUIAnimation = true;
-		host.screen.view({ type: "message", text: p[0] as string, at: p[1] as Cell }, shown);
-	},
-	[actionType.viewport]: (host, p) => { host.screen.view({ type: "viewport", at: p[0] as Cell }); },
+	[actionType.select]: (host, p, shown) => { host.screen.view({ type: "select", unit: p[0] ? (p[0] as Unit).id : null }, shown); },
+	[actionType.message]: (host, p, shown) => { host.screen.view({ type: "message", text: p[0] as string, at: p[1] as Cell }, shown); },
+	[actionType.viewport]: (host, p, shown) => { host.screen.view({ type: "viewport", at: p[0] as Cell }, shown); },
 };
-
-//The actions the screen doesn't animate
-const unanimated = [actionType.resupply, actionType.reinforce, actionType.upgrade, actionType.buy, actionType.deploy,
-	actionType.mount, actionType.umount];
 
 //The commands a program's actions send as the player's (the AI's purchases and deployment are its turn
 //start's, its upgrades none: they pass)

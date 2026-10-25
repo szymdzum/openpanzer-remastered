@@ -31,13 +31,12 @@ import { attackAnimationByClass } from "./animation";
 import { GameRules } from "./gamerules";
 import type { Unit } from "./unit";
 import type { Player, ReinforceResults } from "./map";
-import { deploysOn, type MoveAnimationCBData, remasterDeployHexes, Render } from "./render";
+import { deploysOn, remasterDeployHexes, Render } from "./render";
 import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { type AttackCommandHooks, type AttackResult, type AttackSide, type CommandType, Commands, type Executed, type FinishAttackHooks,
-	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
+import { type AttackResult, type CommandType, Commands, type Executed, type MoveResult, type ResultOf } from "./commands";
 
 //The UI's public methods, assigned in the constructor. UI is a constructor function, as in the
 //bundle: src/oldscreen.ts types `new UI(game)` through its UIConstructor
@@ -401,13 +400,17 @@ function uiUnitSelect(unit: Unit | null) {
 	return true;
 }
 
-//The game's shown for the move or the attack it asked the screen for (src/oldscreen.ts), called when the
-//wait on it ends
+//The game's shown for the move or the attack it asked the screen for (src/oldscreen.ts), called once the
+//step has been shown
 let pendingShown: (() => void) | null = null;
 
-//A move or an attack playing (true) or no longer: the AI's next action and the player's end of turn wait
-//for it (game.waitUIAnimation, #58); when it ends, the game's shown is called
+//A move or an attack being shown: the player's end of turn waits for it (#58, #289)
+let showing = false;
+
+//A move or an attack being shown (true) or shown: then the game's shown is called. game.waitUIAnimation
+//says it to the harness and the command-line player, which wait on it (#378 moves them onto shown)
 function animating(playing: boolean) {
+	showing = playing;
 	game.waitUIAnimation = playing;
 	if (playing || pendingShown === null)
 		return;
@@ -416,13 +419,12 @@ function animating(playing: boolean) {
 	shown();
 }
 
-//handle the move of a unit to row,col destination: the move command, animated, finished when the
-//animation ends. True when the player sees it move
+//handle the move of a unit to row,col destination: the move command played whole (its surprise attack
+//too), then animated. True when the player sees it move
 //cells: the shown move range the player clicked in (it can be the disembark hexes or older than the state),
 //without it the move finds its path in the unit's move range
 function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
-	//Waited for until the move's finish (uiMoveAnimationFinished): the AI's next action, the player's end of
-	//turn (#58)
+	//Shown until its last animation ends (uiMoveShown): the player's end of turn waits (#58)
 	animating(true);
 	var mm = unit.unitData().movmethod;
 	if (GameRules.isTrain(unit))
@@ -430,66 +432,61 @@ function uiUnitMove(unit: Unit, row: number, col: number, cells?: Cell[]) {
 	//Save render properties before moving
 	var r = getRenderRange(unit);
 	var oldpos = unit.getPos();
-	var animated = false;
+	var selected = map.currentUnit;
 
-	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells }, {
-		animate: function(mr: movementResults, finish: (hooks?: FinishMoveHooks) => MoveResult) {
-			var moveAnimationCBData: MoveAnimationCBData = {
-				unit: unit,
-				moveResults: mr,
-				cbfunc: function(data: MoveAnimationCBData) { uiMoveAnimationFinished(data, finish); }
-			};
+	var moved = Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: row, col: col }, cells: cells },
+		{ reselect: true });
 
-			//No animation for moves the player can't see
-			if (!mr.isVisible) {
-				uiMoveAnimationFinished(moveAnimationCBData, finish);
-				return;
-			}
+	//No path there: the unit stays
+	if (!moved.ok) {
+		R.render(oldpos.row, oldpos.col, r);
+		animating(false);
+		return false;
+	}
 
-			soundData[moveSoundByMoveMethod[mm]].play();
-			unit.hasAnimation = true; //signal render that unit is going to be move animated
-			R.moveAnimation(moveAnimationCBData);
-			R.render(oldpos.row, oldpos.col, r);
-			animated = true;
-		}
-	});
+	var result = moved.result;
+	var shown = function() { uiMoveShown(unit, result, selected); };
+	//No animation for moves the player can't see
+	if (!result.move.isVisible) {
+		shown();
+		return false;
+	}
 
-	//No path there: the unit stays, finished as the engine's empty move
-	if (!moved.ok)
-		uiMoveAnimationFinished({ unit: unit, moveResults: new movementResults(), cbfunc: uiMoveAnimationFinished });
-
-	return animated;
+	soundData[moveSoundByMoveMethod[mm]].play();
+	unit.hasAnimation = true; //signal render that unit is going to be move animated
+	//(drawn facing the way it faced at the move's end: a surprise attack turned it after)
+	R.moveAnimation({ unit: unit, moveResults: result.move, facing: result.facing, cbfunc: shown });
+	R.render(oldpos.row, oldpos.col, r);
+	return true;
 }
 
-//Called when move animation finishes. finish: the move command's, the retreat's end for a retreat
-function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
-	finish?: (hooks?: FinishMoveHooks) => MoveResult | void) {
-	var mr = moveAnimationCBData.moveResults;
-	var unit = moveAnimationCBData.unit;
+//The move's animation ended (or there was none): the map drawn again, the surprise attack shown as an
+//attack is, its finish when its animation ends (the AI waits for it, #248), the capture and the victory
+//it won. selected: the unit selected before the move
+function uiMoveShown(unit: Unit, result: MoveResult, selected: Unit | null) {
 	var r = getRenderRange(unit);
-	var p = unit.getPos();
+	var p = result.at;
+	var attack = result.surprise !== null ? result.surprise.attack : null;
+	let attackShown = attack === null, told = false;
 
 	R.render(p.row, p.col, r);
-
-	if (!finish)
-		finish = function(hooks?: FinishMoveHooks) { Commands.finishRetreat(unit, mr, hooks); };
-	//The surprise attack is animated as an attack, its finish runs when its animation ends: the AI waits
-	//for it (its next action could come first, hidden while the turn loop ticked once a second, #248)
-	let surprise = false;
-	finish({
-		onSurprised: function(cell: Cell) { uiShowAlert(cell.row, cell.col, "Surprised"); },
-		attackHooks: function(attacker: Unit, target: Unit) {
-			const hooks = uiAttackHooks(attacker, target);
-			return { ...hooks, animate: function(result: AttackResult, end: (h?: FinishAttackHooks) => AttackResult) {
-				surprise = true;
-				hooks.animate(result, function(h?: FinishAttackHooks) { surprise = false; return end(h); });
-			} };
-		},
-		onCapture: function(u: Unit) { uiShowAlert(p.row, p.col, "Captured", u.player.side == game.spotSide || game.spotSide == 2); },
-		onVictory: uiMoveVictory
-	});
-
-	animating(surprise);
+	if (result.surprise !== null)
+		uiShowAlert(result.surprise.cell.row, result.surprise.cell.col, "Surprised");
+	if (attack !== null) {
+		UIBuilder.showAttackInfo(unit, result.surprise.target);
+		uiAttackShown(attack, selected, function() {
+			attackShown = true;
+			if (told)
+				animating(false);
+		});
+	}
+	if (result.capture)
+		uiShowAlert(p.row, p.col, "Captured", unit.player.side == game.spotSide || game.spotSide == 2);
+	if (result.victorySide >= 0)
+		uiMoveVictory(result.victorySide);
+	told = true;
+	if (attackShown)
+		animating(false);
 }
 
 //A side has won by capturing all its victory hexes, the move's animation ended: the game host tells it and
@@ -512,151 +509,162 @@ function handleUnitAttack(attackingUnit: Unit, row: number, col: number) {
 	return false;
 }
 
-//handle attack performed by attacking unit on the unit it attacks: the attack command, the combat itself is
-//the command's. Null when it can't attack it (a unit isn't on the map)
-//The attack is waited for until its finish (uiAttackAnimationFinished), as a move is
+//handle attack performed by attacking unit on the unit it attacks: the attack command played whole, then
+//shown. Null when it can't attack it (a unit isn't on the map)
+//The attack is shown until its animation ends (uiAttackAnimationFinished), as a move is
 function uiUnitAttack(attackingUnit: Unit, enemyUnit: Unit) {
 	animating(true);
-	const result = resultOf(Commands.execute(game.scenario, { type: "attack", unit: attackingUnit.id, target: enemyUnit.id },
-		uiAttackHooks(attackingUnit, enemyUnit)), null);
-	if (result === null) animating(false);
+	const cmd = { type: "attack" as const, unit: attackingUnit.id, target: enemyUnit.id };
+	const selected = map.currentUnit;
+	if (Commands.check(game.scenario, cmd) === null)
+		UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar, the units as they were
+	const result = resultOf(Commands.execute(game.scenario, cmd, { reselect: true }), null);
+	if (result === null)
+		animating(false);
+	else
+		uiAttackShown(result, selected, function() { animating(false); });
 	return result;
 }
 
-//The attack command's hooks: the info on the status bar, the hits animated as the combat goes (their
-//sprite picks draw from the cosmetic stream, not the dice's), then the render and the animation, which
-//finishes the attack when it ends
-function uiAttackHooks(attackingUnit: Unit, enemyUnit: Unit): AttackCommandHooks {
-	var renderRange = 7; //biggest attack range including support fire
-	var cpos = attackingUnit.getPos();
-	var epos = enemyUnit.getPos();
-	var cclass = attackingUnit.unitData().uclass;
-	var eclass = enemyUnit.unitData().uclass;
+//An attack played, shown: the hits as the combat went, then the render and the animation, whose end shows
+//the rest; done once it all has been shown
+function uiAttackShown(result: AttackResult, selected: Unit | null, done: () => void) {
+	var cpos = result.attacking.cell;
+	var epos = result.defending.cell;
+	var renderRange = uiAttackHits(result);
 
-	return {
-		onStart: function() {
-			UIBuilder.showAttackInfo(attackingUnit, enemyUnit); //Show info on status bar
-		},
-		onSupportShot: function(unit: Unit, sp: Cell) {
-			R.addAnimation(sp.row, sp.col, attackAnimationByClass[unit.unitData().uclass], unit.facing); //Hits by supporting units
-		},
-		onAttack: function(r: AttackResult) {
-			var cr = r.cr;
-			if (cr.isOverrun) {
-				uiShowAlert(epos.row - 0.2, epos.col - 0.6, "OverRun ", true);
-				renderRange = 1;
-			}
-			if (cr.isRugged && !cr.isOverrun)
-				uiShowAlert(epos.row - 0.2, epos.col - 0.6, "Rugged Defense ", false);
-
-			R.addAnimation(cpos.row, cpos.col, attackAnimationByClass[cclass], attackingUnit.facing);
-
-			if (!enemyUnit.destroyed && cr.defcanfire)
-				R.addAnimation(epos.row, epos.col, attackAnimationByClass[eclass], enemyUnit.facing); //Hits to the unit being attacked
-		},
-		animate: function(result: AttackResult, finish: (hooks?: FinishAttackHooks) => AttackResult) {
-			//Render so new unit facings are shown correctly
-			R.render(cpos.row, cpos.col, renderRange);
-			//Show the AI combats on map
-			if (uiSettings.markCombatUnits && map.currentPlayer.type == playerType.aiLocal) {
-				R.drawHexByCell(cpos, hexstyle.combat);
-				R.drawHexByCell(epos, hexstyle.combat);
-			}
-			var animationCBData: UIAttackAnimationData = { result: result,
-				cbfunc: function(data: UIAttackAnimationData) { uiAttackAnimationFinished(data, finish); } };
-			//An empty animation chain (a carrier or naval transport attack without support fire) calls back
-			//at once: the finish reads the new strengths, already set (the bundle set them after, #111)
-			R.runAnimation(animationCBData);
-		}
-	};
-}
-
-//Refresh map selections after an attack: the selection cleared when its unit was destroyed, else
-//selected again, with its move hexes made again when it destroyed the defender. The render range
-//they need, 0 for none. When both units were destroyed the old game read the cleared selection
-//there: it threw, and the game waited for the attack for good (#326, #29)
-function uiReselectAfterAttack(a: AttackSide, d: AttackSide): number {
-	const u = map.currentUnit;
-	if (!u)
-		return 0;
-	if (a.unit.destroyed && u.id == a.unit.id) {
-		map.delCurrentUnit(); //remove current selection if unit was destroyed in attack
-		R.drawCursor(a.cell); //refresh cursor or it gets stuck in attack cursor
-		return 0;
+	//Render so new unit facings are shown correctly
+	R.render(cpos.row, cpos.col, renderRange);
+	//Show the AI combats on map
+	if (uiSettings.markCombatUnits && map.currentPlayer.type == playerType.aiLocal) {
+		R.drawHexByCell(cpos, hexstyle.combat);
+		R.drawHexByCell(epos, hexstyle.combat);
 	}
-	map.selectUnit(u);
-	if (!d.unit.destroyed || u.hasMoved)
-		return 0;
-	map.setMoveRange(u); //refresh move range if unit has destroyed another unit
-	return getRenderRange(u);
+	var animationCBData: UIAttackAnimationData = { result: result,
+		cbfunc: function(data: UIAttackAnimationData) { uiAttackAnimationFinished(data, selected, done); } };
+	//An empty animation chain (a carrier or naval transport attack without support fire) calls back at once
+	R.runAnimation(animationCBData);
 }
 
-//Called when attack animation finishes: the rest of the combat is the attack command's finish
-function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, finish: (hooks?: FinishAttackHooks) => AttackResult) {
-	var moveAnimationCBData: MoveAnimationCBData;
+//The hits as the combat went (their sprite picks draw from the cosmetic stream, not the dice's), the units
+//drawn with their classes and facings at the shots: the support fire, then the attack itself unless the
+//support fire destroyed the attacker or stopped it. The render range they need
+function uiAttackHits(result: AttackResult) {
+	var a = result.attacking, d = result.defending, cr = result.cr;
+	var epos = d.cell;
 
+	for (const unit of result.support)
+		R.addAnimation(unit.getPos().row, unit.getPos().col, attackAnimationByClass[unit.unitData().uclass], unit.facing);
+
+	if (!result.events.some(function(e) { return e.type === "fight" && !e.support; }))
+		return 7; //biggest attack range including support fire
+
+	if (cr.isRugged && !cr.isOverrun)
+		uiShowAlert(epos.row - 0.2, epos.col - 0.6, "Rugged Defense ", false);
+	else if (cr.isOverrun)
+		uiShowAlert(epos.row - 0.2, epos.col - 0.6, "OverRun ", true);
+
+	R.addAnimation(a.cell.row, a.cell.col, attackAnimationByClass[a.uclass], a.facing);
+
+	if (d.newstr > 0 && cr.defcanfire)
+		R.addAnimation(epos.row, epos.col, attackAnimationByClass[d.uclass], d.facing); //Hits to the unit being attacked
+	return cr.isOverrun ? 1 : 7;
+}
+
+//Called when attack animation finishes: the losses, the units destroyed, the selection's cursor, the
+//leaders, the retreat (its move animated: the AI waits for it too, #248) or the surrender, the victory
+function uiAttackAnimationFinished(animationCBData: UIAttackAnimationData, selected: Unit | null, done: () => void) {
 	var result = animationCBData.result;
 	var a = result.attacking;
-	var d = result.defending;
-	var renderRange = GameRules.getUnitAttackRange(a.unit);
-	let retreating = false; //the AI waits for the retreat's move too (#248)
+	var renderRange = Math.max(GameRules.getUnitAttackRange(a.unit), uiAttackLosses(result, selected));
 
-	finish({
-		onLosses: function() {
-			var aloss = a.oldstr - a.newstr;
-			if (aloss > 0 && aloss < a.oldstr)
-				uiShowAlert(a.cell.row, a.cell.col, -aloss);
-
-			var dloss = d.oldstr - d.newstr;
-			if (dloss > 0 && dloss < d.oldstr)
-				uiShowAlert(d.cell.row, d.cell.col, -dloss);
-		},
-		//Explosion animation along with deleting units from map and refreshing selection
-		onDestroyed: function(cell: Cell) {
-			R.addAnimation(cell.row, cell.col, "explosion");
-			R.runAnimation(null);
-		},
-		afterCleanup: function() {
-			renderRange = Math.max(renderRange, uiReselectAfterAttack(a, d));
-
-			if (result.attackStopped)
-				uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "Attack Stopped ", false);
-
-			if (result.destroyed.indexOf(a.unit) < 0 && a.leaderGain && a.unit.player.side == game.spotSide)
-				uiShowAlert(a.cell.row - 0.2, a.cell.col - 0.6, "New Leader", true);
-
-			if (result.destroyed.indexOf(d.unit) < 0 && d.leaderGain && d.unit.player.side == game.spotSide)
-				uiShowAlert(d.cell.row - 0.2, d.cell.col - 0.6, "New Leader", true);
-		},
-		//Defender retreats on big losses or surrenders when it has nowhere to go
-		onRetreat: function(unit: Unit, rpos: Cell, mr: movementResults) {
-			uiShowAlert(rpos.row - 0.2, rpos.col - 0.6, "Retreat ", false);
-			retreating = true;
-			moveAnimationCBData = { unit: unit, moveResults: mr,
-				cbfunc: function(data: MoveAnimationCBData) { retreating = false; uiMoveAnimationFinished(data); } };
-			unit.hasAnimation = true;
-			R.moveAnimation(moveAnimationCBData);
-		},
-		onSurrender: function(cell: Cell) {
-			uiShowAlert(cell.row - 0.2, cell.col - 0.6, "Surrender ", false);
-			R.addAnimation(cell.row, cell.col, "explosion");
-			R.runAnimation(null);
-			//The surrendered unit is off the map only now, after the refresh above: the selected unit's move
-			//hexes, which its next move goes along, made again without it and its zone of control (#89)
-			if (map.currentUnit !== null && !map.currentUnit.hasMoved) {
-				map.setMoveRange(map.currentUnit);
-				renderRange = Math.max(renderRange, getRenderRange(map.currentUnit));
-			}
-		},
-		//A side without units left loses
-		onVictory: uiEliminationVictory
-	});
+	//Defender retreats on big losses or surrenders when it has nowhere to go
+	if (result.retreat !== null)
+		uiRetreat(result, done);
+	if (result.surrender)
+		renderRange = Math.max(renderRange, uiSurrender(result.defending.cell));
+	//A side without units left loses
+	for (const side of result.victorySides)
+		uiEliminationVictory(side);
 
 	if (result.destroyed.length > 0 || result.retreat !== null || result.surrender)
 		R.render(a.cell.row, a.cell.col, renderRange);
 
-	animating(retreating);
 	uiTurnInfo();
+	if (result.retreat === null)
+		done();
+}
+
+//The attack's losses and the units it destroyed (an explosion each), the selection's cursor and the
+//leaders gained. The render range the selection's move hexes need
+function uiAttackLosses(result: AttackResult, selected: Unit | null) {
+	for (const side of [result.attacking, result.defending]) {
+		var loss = side.oldstr - side.newstr;
+		if (loss > 0 && loss < side.oldstr)
+			uiShowAlert(side.cell.row, side.cell.col, -loss);
+	}
+	for (const side of [result.attacking, result.defending]) {
+		if (result.destroyed.indexOf(side.unit) < 0)
+			continue;
+		R.addAnimation(side.cell.row, side.cell.col, "explosion");
+		R.runAnimation(null);
+	}
+	var range = uiSelectionAfterAttack(result, selected);
+	uiAttackAlerts(result);
+	return range;
+}
+
+//The attack stopped by the support fire, the leaders the units the side shown gained
+function uiAttackAlerts(result: AttackResult) {
+	if (result.attackStopped)
+		uiShowAlert(result.attacking.cell.row - 0.2, result.attacking.cell.col - 0.6, "Attack Stopped ", false);
+	for (const side of [result.attacking, result.defending])
+		if (result.destroyed.indexOf(side.unit) < 0 && side.leaderGain && side.unit.player.side == game.spotSide)
+			uiShowAlert(side.cell.row - 0.2, side.cell.col - 0.6, "New Leader", true);
+}
+
+//The selection the command refreshed after the attack: the cursor, stuck in the attack cursor when the
+//selection's unit was destroyed; else the render range of its move hexes, made again when it destroyed the
+//defender
+function uiSelectionAfterAttack(result: AttackResult, selected: Unit | null) {
+	var a = result.attacking.unit, u = map.currentUnit;
+	if (selected !== null && a.destroyed && selected.id == a.id) {
+		R.drawCursor(result.attacking.cell);
+		return 0;
+	}
+	return u !== null && result.defending.unit.destroyed && !u.hasMoved ? getRenderRange(u) : 0;
+}
+
+//The defender's retreat, its move animated: done when it ends
+function uiRetreat(result: AttackResult, done: () => void) {
+	const unit = result.defending.unit, mr = result.retreatMove, at = result.retreat;
+	uiShowAlert(at.row - 0.2, at.col - 0.6, "Retreat ", false);
+	unit.hasAnimation = true;
+	R.moveAnimation({ unit: unit, moveResults: mr, cbfunc: function() { uiRetreatShown(unit, mr, done); } });
+}
+
+//The defender surrendered: an explosion. The render range the selection's move hexes need
+function uiSurrender(cell: Cell) {
+	uiShowAlert(cell.row - 0.2, cell.col - 0.6, "Surrender ", false);
+	R.addAnimation(cell.row, cell.col, "explosion");
+	R.runAnimation(null);
+	//The surrendered unit is off the map only now, after the refresh above: the selected unit's move
+	//hexes, which its next move goes along, made again without it and its zone of control (#89)
+	if (map.currentUnit === null || map.currentUnit.hasMoved)
+		return 0;
+	map.setMoveRange(map.currentUnit);
+	return getRenderRange(map.currentUnit);
+}
+
+//The retreat's move animation ended: the map drawn again, the capture and the victory it won
+function uiRetreatShown(unit: Unit, mr: movementResults, done: () => void) {
+	var p = unit.getPos();
+	R.render(p.row, p.col, getRenderRange(unit));
+	if (mr.isCapture)
+		uiShowAlert(p.row, p.col, "Captured", unit.player.side == game.spotSide || game.spotSide == 2);
+	if (mr.isVictorySide >= 0)
+		uiMoveVictory(mr.isVictorySide);
+	done();
 }
 
 //The end turn button's first click: it asks to be clicked again, until its animation ends
@@ -1803,9 +1811,9 @@ function uiScaleMap(level: number) {
 				break;
 			}
 			case "endturn": {
-				//Not while the player's move or attack plays: its finish takes the units it destroyed off the
-				//map, and the turn's end would save them and hand the next player a map they still stand on (#58)
-				if (game.waitUIAnimation)
+				//Not while the player's move or attack is shown: the step is the game's already, but the next
+				//player's turn would start under its animation (#58, #289)
+				if (showing)
 					break;
 				//The first click asks for confirmation until the button animation ends
 				var endTurnButton = $("endturn");
@@ -1838,6 +1846,7 @@ function uiScaleMap(level: number) {
 							updateUnitContextWindow();
 							uiEndTurnInfo();
 							uiMapRenderAndSelectUnit();
+							game.host.goOn(); //(a program's turn plays now)
 						}
 					}
 				}

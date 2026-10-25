@@ -13,29 +13,17 @@ import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
 import type { Command } from "../src/commands";
-import type { AttackResult } from "../src/commands";
 
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
-//the commands, finished at once, with the UI's selection refresh after an attack (#29 guarded)
-function refreshSelection(w: World, r: AttackResult) {
-	const { m } = w;
-	const a = r.attacking.unit, d = r.defending.unit;
-	if (m.currentUnit) {
-		if (a.destroyed && m.currentUnit.id == a.id) m.delCurrentUnit();
-		else m.selectUnit(m.currentUnit);
-		if (d.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
-	}
-}
+//the commands, played whole, with the UI's selection refresh after an attack (#29 guarded)
 function attack(w: World, a: Unit, d: Unit) {
-	w.Commands.execute(w.scenario, { type: "attack", unit: a.id, target: d.id },
-		{ finish: { afterCleanup: (r) => refreshSelection(w, r) } });
+	w.Commands.execute(w.scenario, { type: "attack", unit: a.id, target: d.id }, { reselect: true });
 }
 
 //src/host.ts processAction (move): the move range, then the move command
 function move(w: World, u: Unit, cell: Cell) {
 	w.m.setMoveRange(u);
-	w.Commands.execute(w.scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } },
-		{ surprise: { afterCleanup: (r) => refreshSelection(w, r) } });
+	w.Commands.execute(w.scenario, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } }, { reselect: true });
 }
 
 //A part of an AI action, for the step's name

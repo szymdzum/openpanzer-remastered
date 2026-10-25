@@ -9,6 +9,9 @@ export async function coreEngine() {
 	const { game } = await import("../src/game");
 	const { startGameSession, endGameTurn } = await import("../src/coresession");
 	const { applyData, gameInputs, mirrorDifference, unitObject, stepWorld } = await import("../src/mirror");
+	const { begin, resume } = await import("../src/core/step");
+	const { unitById } = await import("../src/core/world");
+	const { setUnitFields } = await import("../src/state");
 	const { aiController } = await import("../src/core/ai");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	const { AI } = await import("../src/ai");
@@ -16,13 +19,16 @@ export async function coreEngine() {
 	const { CombatLog } = await import("../src/combatlog");
 	const { GameRules } = await import("../src/gamerules");
 	const { Unit } = await import("../src/unit");
-	const { actionType, playerType } = await import("../src/prototypes");
+	const { Cell, actionType, playerType } = await import("../src/prototypes");
 	type Player = import("../src/map").Player;
 	type GameMap = import("../src/map").GameMap;
 	type Order = import("../src/core/controller").Order;
 	type Controller = import("../src/core/controller").Controller;
 	type World = import("../src/core/types").World;
 	type AIAction = import("../src/ai").AIAction;
+	type Command = import("../src/commands").Command;
+	type UnitState = import("../src/core/types").UnitState;
+	type Unit = import("../src/unit").Unit;
 
 	const worldNow = () => stepWorld(game.scenario, game, gameInputs(game));
 	const mirror = (w: World) => {
@@ -87,7 +93,28 @@ export async function coreEngine() {
 		}
 	}
 
+	//A unit's object as it was in the world given: a copy with the world's fields (its transport's too) and
+	//position
+	function asIn(u: Unit, s: UnitState): Unit {
+		const c = Object.assign(Object.create(Object.getPrototypeOf(u)), u) as Unit;
+		if (u.transport !== null) c.transport = Object.assign(Object.create(Object.getPrototypeOf(u.transport)), u.transport);
+		setUnitFields(c, s);
+		c.destroyed = s.strength <= 0;
+		c.getPos = () => s.row >= 0 ? new Cell(s.row, s.col) : null;
+		return c;
+	}
+
 	const Actions = {
+		worldNow,
+		//The units of an attack, or of a move's surprise attack, as they were once its shots were fired:
+		//the old UI's animation showed the objects there and the contract recorded them. The game plays the
+		//step whole since #375: played again on the core from the world before, to the shots
+		shotUnits(before: World, cmd: Command, ids: number[]): Unit[] {
+			const b = begin(before, cmd);
+			if (!b.ok || b.checkpoint === null) throw new Error("coreEngine: no shots");
+			const w = cmd.type === "move" ? resume(b.world, b.checkpoint).world : b.world;
+			return ids.map((id) => asIn(unit(id), unitById(w, id)));
+		},
 		//Map.deployNewUnitByEqId: a new unit of the owner on the hex, its zone of control and spotting on
 		deployNewUnitByEqId(eqid: number, row: number, col: number, owner: number) {
 			const m = game.scenario.map, u = new Unit(eqid);

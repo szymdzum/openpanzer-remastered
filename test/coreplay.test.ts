@@ -1,13 +1,14 @@
 //The running game's commands on the core (src/commands.ts, #137): random command sequences on the engine
-//fixtures (test/commandgen.ts), played through the game's objects with the hooks the UI gives (the
-//move's finish when its animation ends, the surprise attack's animated as an attack, an attack's finish
-//when its animation ends, the selection refreshed after the cleanup, a retreat's capture when its
-//animation ends), the person clicking units between the commands. After every command, its story: the
-//hooks called, in order, with what they were given (cells, units, strengths, the combat result, the
-//move's hexes and what the other side saw of them); toData's state, the selection's hexes and unit,
-//the combat log, the image cache. Until the old engine went (#137) the old engine's commands told the
-//same story on the same sequences, up to where its counters drifted (#72, #73); the hashes of the
-//stories then (test/coreplay.json.gz) pin them since
+//fixtures (test/commandgen.ts), played through the game's objects as the UI plays them (a move and an
+//attack whole, the selection refreshed after the attack's cleanup), the person clicking units between the
+//commands. After every command, two hashes: of toData's state, the selection's hexes and unit, the combat
+//log and the image cache; and of what the UI is told to show (the move's hexes and what the other side
+//saw of them, the surprise, the attack's sides with their strengths, classes and facings at the shots, the
+//combat result, the destroyed units, the retreat). Until the old engine went (#137) the old engine's
+//commands left the same game on the same sequences, up to where its counters drifted (#72, #73); the
+//states' hashes then pin it since. Until #375 the UI finished a move and an attack from the hooks it
+//animated with: the states after each command were recorded before that change (test/coreplay.json.gz),
+//the stories of the steps played whole after it
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -18,7 +19,7 @@ import { commandOf, type Sequence, sequences } from "./commandgen";
 import { load } from "./invariants";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackCommandHooks, AttackResult, Command, FinishAttackHooks } from "../src/commands";
+import type { AttackResult, Command, MoveResult } from "../src/commands";
 
 type World = Awaited<ReturnType<typeof loaded>>;
 
@@ -35,102 +36,54 @@ function moveStory(mr: movementResults): string {
 }
 
 function resultStory(r: AttackResult): string {
-	const side = (s: AttackResult["attacking"]) => `${unitName(s.unit)} ${cellName(s.cell)} ${s.oldstr}->${s.newstr} leader ${s.leaderGain}`;
+	const side = (s: AttackResult["attacking"]) => `${unitName(s.unit)} ${cellName(s.cell)} ${s.oldstr}->${s.newstr} leader ${s.leaderGain}`
+		+ ` class ${s.uclass} facing ${s.facing}`;
 	const cr = r.cr === null ? "none" : `${r.cr.kills}/${r.cr.losses} overrun ${r.cr.isOverrun} rugged ${r.cr.isRugged} fire ${r.cr.defcanfire}`;
-	return `${side(r.attacking)} | ${side(r.defending)} | ${cr} | support ${r.support.map(unitName).join(",")} stopped ${r.attackStopped}`
-		+ ` | destroyed ${r.destroyed.map(unitName).join(",")} retreat ${cellName(r.retreat)} surrender ${r.surrender} won ${r.victorySides.join(",")}`;
+	return `${side(r.attacking)} | ${side(r.defending)} | ${cr} | support ${r.support.map((u) => unitName(u) + " facing " + u.facing).join(",")}`
+		+ ` stopped ${r.attackStopped} | destroyed ${r.destroyed.map(unitName).join(",")} retreat ${cellName(r.retreat)}`
+		+ ` ${r.retreatMove === null ? "" : moveStory(r.retreatMove)} surrender ${r.surrender} won ${r.victorySides.join(",")}`
+		+ ` | ${r.events.map((e) => e.type).join(",")}`;
+}
+
+function surpriseStory(s: MoveResult["surprise"]): string {
+	if (s === null) return "none";
+	return `${cellName(s.cell)} ${unitName(s.target)} ${s.attack === null ? "no attack" : resultStory(s.attack)}`;
 }
 
 //One game played: the story of every command
 class Play {
 	story: string[] = [];
-	later: (() => void)[] = [];
 	declare readonly w: World;
 
 	constructor(w: World) {
 		this.w = w;
 	}
 
-	execute(cmd: Command, hooks?: unknown): { ok: boolean } {
-		return this.w.Commands.execute(this.w.scenario, cmd, hooks as never);
-	}
-
 	tell(what: string) {
 		this.story.push(what);
-	}
-
-	//The UI's attack hooks (ui.ts uiAttackHooks): the facing of the units the animations read, the
-	//animation's end later (the surprise attack's) or at once
-	attackHooks(a: Unit, d: Unit, deferred: boolean): AttackCommandHooks {
-		return {
-			onStart: () => this.tell(`start ${unitName(a)} ${unitName(d)}`),
-			onSupportShot: (u, c) => this.tell(`support ${unitName(u)} ${cellName(c)} facing ${u.facing}`),
-			onAttack: (r) => this.tell(`attack ${resultStory(r)} facing ${a.facing} ${d.facing} ${d.destroyed}`),
-			animate: (r, finish) => {
-				this.tell("animate " + resultStory(r));
-				if (deferred) this.later.push(() => finish(this.finishHooks(r)));
-				else finish(this.finishHooks(r));
-			},
-		};
-	}
-
-	//ui.ts uiAttackAnimationFinished's hooks, with its selection refresh
-	finishHooks(r: AttackResult): FinishAttackHooks {
-		const m = this.w.m;
-		return {
-			onLosses: () => this.tell("losses " + resultStory(r)),
-			onDestroyed: (c, u) => this.tell(`destroyed ${cellName(c)} ${unitName(u)}`),
-			afterCleanup: () => {
-				this.tell("cleanup " + unitName(m.currentUnit));
-				if (m.currentUnit) {
-					if (r.attacking.unit.destroyed && m.currentUnit.id === r.attacking.unit.id) m.delCurrentUnit();
-					else m.selectUnit(m.currentUnit);
-					if (r.defending.unit.destroyed && m.currentUnit && !m.currentUnit.hasMoved) m.setMoveRange(m.currentUnit);
-				}
-			},
-			onRetreat: (u, c, mr) => {
-				this.tell(`retreat ${unitName(u)} ${cellName(c)} ${moveStory(mr)}`);
-				this.later.push(() => this.w.Commands.finishRetreat(u, mr, {
-					onCapture: (x) => this.tell("retreat capture " + unitName(x)),
-					onVictory: (side) => this.tell("retreat victory " + side),
-				}));
-			},
-			onSurrender: (c, u) => this.tell(`surrender ${cellName(c)} ${unitName(u)}`),
-			onVictory: (side) => this.tell("victory " + side),
-		};
 	}
 
 	endTurn() {
 		endTurn(this);
 	}
 
-	//ui.ts uiUnitMove and uiMoveAnimationFinished: the finish, the surprise attack animated (its finish
-	//after the move's), the capture, the victory
-	move(cmd: Command & { type: "move" }) {
-		const m = this.w.m, unit = m.getUnitById(cmd.unit);
-		const finishHooks = {
-			onSurprised: (c: Cell, u: Unit) => this.tell(`surprised ${cellName(c)} ${unitName(u)}`),
-			onCapture: (u: Unit) => this.tell("capture " + unitName(u)),
-			onVictory: (side: number) => this.tell("move victory " + side),
-			attackHooks: (a: Unit, d: Unit) => this.attackHooks(a, d, true),
-		};
-		return this.execute(cmd, {
-			animate: (mr: movementResults, finish: (hooks: unknown) => unknown) => {
-				this.tell(`moved ${unitName(unit)} ${moveStory(mr)} hexes ${m.getCurrentMoveRange().length} current ${unitName(m.currentUnit)}`);
-				finish(finishHooks);
-			},
-		});
-	}
-
+	//The command as the UI plays it (ui.ts uiUnitMove, uiUnitAttack), what it is told
 	run(cmd: Command) {
 		if (cmd.type === "endTurn") return this.endTurn();
-		const r = cmd.type === "move" ? this.move(cmd)
-			: cmd.type === "attack" ? this.execute(cmd, this.attackHooks(this.w.m.getUnitById(cmd.unit), this.w.m.getUnitById(cmd.target), false))
-				: this.execute(cmd);
-		const result = (r as { result?: unknown }).result;
-		this.tell(!r.ok ? "refused " + JSON.stringify(r) : cmd.type === "move" ? "result " + moveStory(result as movementResults)
-			: cmd.type === "attack" ? "result " + resultStory(result as AttackResult) : "result " + JSON.stringify(result));
-		while (this.later.length) this.later.shift()();
+		const reselect = cmd.type === "move" || cmd.type === "attack";
+		const r = this.w.Commands.execute(this.w.scenario, cmd, { reselect });
+		if (!r.ok) {
+			this.tell("refused " + JSON.stringify(r));
+			return;
+		}
+		const result = r.result as unknown;
+		if (cmd.type === "move") {
+			const m = result as MoveResult;
+			this.tell(`moved ${moveStory(m.move)} at ${cellName(m.at)} facing ${m.facing} capture ${m.capture} win ${m.victorySide}`
+				+ ` surprise ${surpriseStory(m.surprise)} | ${m.events.map((e) => e.type).join(",")}`);
+		} else {
+			this.tell("result " + (cmd.type === "attack" ? resultStory(result as AttackResult) : JSON.stringify(result)));
+		}
 	}
 }
 
@@ -197,7 +150,7 @@ function click(w: World, pick: Sequence["steps"][number]) {
 	w.m.selectUnit(own[pick.unit % own.length]);
 }
 
-//The sequence: after each command its story and the snapshot, as hashes
+//The sequence: after each command the snapshot's hash and the story's
 async function play(seq: Sequence): Promise<string[]> {
 	const w = await loaded(seq);
 	const p = new Play(w);
@@ -209,18 +162,18 @@ async function play(seq: Sequence): Promise<string[]> {
 		p.story = [];
 		count(cmd.type);
 		p.run(cmd);
-		steps.push(createHash("sha1").update(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ") + "\n" + snapshot(w))
-			.digest("hex").slice(0, 12));
+		const hash = (text: string) => createHash("sha1").update(text).digest("hex").slice(0, 12);
+		steps.push(hash(JSON.stringify(cmd) + "\n" + snapshot(w)) + " " + hash(JSON.stringify(cmd) + "\n  " + p.story.join("\n  ")));
 	}
 	return steps;
 }
 
 //The hashes recorded, by sequence (UPDATE_CONTRACTS=1 writes them again, in a commit that names the
-//issue it fixes): the old engine's story was the same up to where its counters drifted
+//issue it fixes): the old engine's states were the same up to where its counters drifted
 const pinned = path.join(__dirname, "coreplay.json.gz");
 const recorded = () => JSON.parse(zlib.gunzipSync(fs.readFileSync(pinned)).toString("utf8")) as string[][];
 
-test("The game's commands on the core tell the UI what the old engine's did, and leave the same game", async () => {
+test("The game's commands on the core leave the same game as the old engine's, and tell the UI what they did", async () => {
 	const want = recorded(), got: string[][] = [];
 	for (const seq of fc.sample(sequences, { seed: 137, numRuns: want.length })) {
 		const steps = await play(seq);

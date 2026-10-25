@@ -974,10 +974,10 @@ UIBuilder.message = function(title: string, message: string, onOk?: () => void) 
 	$('message').innerHTML = message;
 	makeVisible('ui-message');
 	$('message').scrollTop = 0;
-	//TODO change to an event
 	game.uiMessageClicked = false;
+	//(clicked away, the game goes on: a program's turn, a campaign's next scenario)
 	if (typeof onOk !== "function")
-		$('uiokbut').onclick = function() { makeHidden('ui-message'); game.uiMessageClicked = true; };
+		$('uiokbut').onclick = function() { makeHidden('ui-message'); game.uiMessageClicked = true; game.host.goOn(); };
 	else
 		$('uiokbut').onclick = onOk;
 };

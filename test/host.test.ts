@@ -189,3 +189,97 @@ test("The tutorial's script plays through the game host on a screen that shows n
 	g.host.ended({ kind: "victory", side: 0, how: "capture" });
 	expect([g.gameEnded, g.uiMessageClicked]).toEqual([true, true]);
 }, 60_000);
+
+//A program's turn waits for the screen's shown, not for a tick (#375): a move or an attack held by the
+//screen holds the turn, the game told to go on meanwhile does nothing, the shown goes on to the next one.
+//A shown left from before a scenario started goes on with nothing. A screen that goes on with the next
+//player's turn at once plays it in the same call
+test("A program's next action waits for the screen's shown, and only the last request's (#375)", async () => {
+	uiSettings.classicRules = true;
+	uiSettings.isAI = [1, 1, 1, 1];
+	Rng.seed(375);
+	const held: (() => void)[] = [];
+	const log: string[] = [];
+	let turns = 0;
+	const g = headlessGame((game) => {
+		const screen = nullScreen(game);
+		const hold = (shown: () => void) => () => { held.push(shown); };
+		return { ...screen,
+			move(unit, to, cells, shown) { screen.move(unit, to, cells, hold(shown)); },
+			attack(attacker, target, shown) { screen.attack(attacker, target, hold(shown)); },
+			turnChanged(next) {
+				log.push("changed");
+				if (turns++ < 1) next();
+			} };
+	});
+	g.host.newScenario("drpzop01.xml");
+	await until(() => loaded(g, null), "drpzop01.xml");
+	const m = g.scenario.map, first = m.currentPlayer;
+	for (const p of m.getPlayers()) {
+		const getAction = p.handler.getAction.bind(p.handler);
+		p.handler.getAction = () => {
+			log.push("player " + p.id);
+			return getAction();
+		};
+	}
+	g.host.processTurn();
+	expect([held.length, g.host.showing], "the first move or attack held").toEqual([1, true]);
+	g.host.processTurn();
+	g.host.goOn();
+	expect(held.length, "nothing goes on while it is held").toBe(1);
+	held.shift()!();
+	expect(held.length, "its shown goes on to the next one").toBe(1);
+	const stale = held.shift()!;
+	g.host.stopShowing();
+	stale();
+	expect([held.length, g.host.showing], "a shown from before goes on with nothing").toEqual([0, false]);
+	//On to the end of the first player's turn, and at once through the next player's
+	for (let n = 0; n < 500 && turns === 0; n++) {
+		g.host.processTurn();
+		while (held.length > 0) held.shift()!();
+	}
+	const changed = log.indexOf("changed");
+	expect([log[changed - 1], log[changed + 1]], "the next player's turn played on in the same call")
+		.toEqual(["player " + first.id, "player " + m.getPlayers().find((p) => p !== first)!.id]);
+}, 60_000);
+
+//A look at a hex the program asks for is shown, and its next action waits for it as for a unit it picks
+test("A program's look at a hex is shown on the screen and waited for (#375)", async () => {
+	const views: string[] = [];
+	let shown: (() => void) | undefined;
+	const g = headlessGame((game) => ({ ...nullScreen(game), view(event, s) { views.push(event.type); shown = s; } }));
+	const { actionType } = await import("../src/prototypes");
+	expect(g.host.processAction({ type: actionType.viewport, param: [{ row: 1, col: 2 }] } as never)).toBe(true);
+	expect([views, g.host.showing]).toEqual([["viewport"], true]);
+	shown!();
+	expect(g.host.showing).toBe(false);
+});
+
+//The screen that shows nothing plays a program's move and attack whole and tells the host the victories
+//they won at once, in the old UI's order (#375): a move that took its side's last objective, an attack that
+//left the other side with no unit. Its messages are clicked away at once
+test("The screen that shows nothing tells the host the victories a move and an attack won (#375)", async () => {
+	const { smallGame } = await import("./smallgame");
+	const ended: string[] = [];
+	const fake = (scenario: unknown) => ({ scenario, uiMessageClicked: false,
+		host: { ended(e: { side: number; how: string }) { ended.push(e.how + " " + e.side); } } }) as unknown as Game;
+	//A German tank next to its side's objective, at (10, 10)
+	let game = fake(smallGame([[142, 0, 9, 10], [504, 1, 1, 1]]).scenario);
+	let shown = 0;
+	const screen = () => nullScreen(game);
+	const m = () => game.scenario.map;
+	m().setMoveRange(m().getUnitById(0));
+	screen().move(m().getUnitById(0), { row: 10, col: 10 } as never, m().getCurrentMoveRange(), () => { shown++; });
+	expect([ended.splice(0), shown]).toEqual([["capture 0"], 1]);
+	//A German tank against the last Soviet unit, left with one strength point
+	game = fake(smallGame([[142, 0, 5, 5], [504, 1, 5, 6]]).scenario);
+	m().getUnitById(1).strength = 1;
+	touched();
+	screen().attack(m().getUnitById(0), m().getUnitById(1), () => { shown++; });
+	expect([ended.splice(0), shown]).toEqual([["elimination 0"], 2]);
+	const s = screen();
+	s.message("title", "text");
+	let closed = false;
+	s.campaignEnd("victory", "text", () => { closed = true; });
+	expect([game.uiMessageClicked, closed]).toEqual([true, true]);
+});
