@@ -101,7 +101,7 @@ export default defineConfig({
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
 		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
 		//and the entry (main), of the new core (src/core/ and its commands) and of the new UI's
-		//components (src/view/)
+		//components, view model and screen (src/view/)
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
@@ -109,7 +109,7 @@ export default defineConfig({
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
 				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/oldscreen.ts", "src/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
-				"src/view/*.tsx"],
+				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -171,11 +171,15 @@ export default defineConfig({
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
-				"src/host.ts": { statements: 95, branches: 90, functions: 94, lines: 95 },
+				"src/host.ts": { statements: 96, branches: 90, functions: 97, lines: 96 },
 				"src/oldscreen.ts": { statements: 87, branches: 63, functions: 92, lines: 89 },
-				"src/nullscreen.ts": { statements: 78, branches: 75, functions: 75, lines: 80 },
+				"src/nullscreen.ts": { statements: 94, branches: 87, functions: 88, lines: 92 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
+				"src/view/app.tsx": { statements: 94, branches: 87, functions: 90, lines: 100 },
+				"src/view/model.ts": { statements: 97, branches: 92, functions: 95, lines: 97 },
+				"src/view/screen.tsx": { statements: 100, branches: 75, functions: 100, lines: 100 },
+				"src/view/store.ts": { statements: 97, branches: 100, functions: 92, lines: 96 },
 				"src/view/anchored.tsx": { statements: 100, branches: 78, functions: 100, lines: 100 },
 				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/controls.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
