@@ -429,3 +429,55 @@ test("The scenario info button of the combat log shows the description, and clos
 	expect([shown("ui-message"), shown("combatLog")]).toEqual([false, true]);
 	expect(document.getElementById("combatLogButton")!.getAttribute("selected")).toBe("on");
 }, 60_000);
+
+//The person's attack with its attacker selected (click the unit, then the enemy), both units at one
+//strength point with a leader that kills one more: the exchange destroys both. The selection refresh
+//cleared the destroyed attacker, then read the cleared selection's hasMoved: the TypeError skipped the
+//rest of the attack's finish, and the game waited for its end for good. With last, every other unit
+//of both sides taken off first
+async function bothDestroyed(last: boolean) {
+	const { game, ui } = await uiGame("drpzop01.xml", [0, 1, 1, 1]);
+	const { GameRules } = await import("../src/gamerules");
+	const { touched } = await import("../src/context");
+	const { leaderType, terrainType, uiSettings } = await import("../src/prototypes");
+	uiSettings.quickAnimation = true;
+	const map = game.scenario.map;
+	const free = (row: number, col: number) => GameRules.getAdjacent(row, col).filter((c) => c.row > 0 && c.col > 0
+		&& c.row < map.rows - 1 && c.col < map.cols - 1 && !map.map[c.row][c.col].unit && !map.map[c.row][c.col].airunit
+		&& map.map[c.row][c.col].terrain !== terrainType.Ocean && map.map[c.row][c.col].terrain !== terrainType.River);
+	const atk = map.getUnitById(40), def = map.getUnitById(72);
+	const d = def.getPos(), f = free(d.row, d.col)[0], from = atk.getPos();
+	map.map[from.row][from.col].delUnit(atk);
+	map.map[f.row][f.col].setUnit(atk);
+	def.tempSpotted = true;
+	for (const u of [atk, def]) {
+		u.strength = 1;
+		u.leader = leaderType.overwhelmingAttack;
+	}
+	if (last) {
+		for (const u of map.getUnits()) if (u !== atk && u !== def) u.destroyed = true;
+		map.updateUnitList();
+	}
+	touched();
+	map.selectUnit(atk);
+	game.waitUIAnimation = true;
+	expect(ui.uiUnitAttack(atk, def)).toBe(true);
+	await until(() => !game.waitUIAnimation, "the attack", 5000);
+	expect([atk.destroyed, def.destroyed]).toEqual([true, true]);
+	return { game, ui, map };
+}
+
+test("An attack that destroys both the selected attacker and its defender ends: the selection is cleared and the turn goes on (#326)", async () => {
+	const { ui, map } = await bothDestroyed(false);
+	expect(map.currentUnit).toBe(null);
+	const human = map.currentPlayer;
+	ui.mainMenuButton("endturn");
+	ui.mainMenuButton("endturn"); //the second click confirms
+	expect(map.currentPlayer).not.toBe(human);
+}, 60_000);
+
+test("An attack that destroys both units, the last of their sides, still ends the game (#29)", async () => {
+	const { game } = await bothDestroyed(true);
+	expect(game.gameEnded).toBe(true);
+	expect(document.getElementById("message")!.textContent).toContain("wins by destroying all the enemy units");
+}, 60_000);
