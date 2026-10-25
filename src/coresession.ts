@@ -15,9 +15,10 @@
  * stepWorld), so what the screen and the harness wrote into them is in it.
  */
 
-import { actionType, type Cell, playerType } from "./prototypes";
+import { actionType, type Cell, CURRENCY_ICON, playerType } from "./prototypes";
 import { CombatLog } from "./combatlog";
-import type { AIAction, AIDriver } from "./ai";
+import { AI, type AIAction, type AIDriver } from "./ai";
+import { AIScripted } from "./aiscripted";
 import type { GameMap, Player } from "./map";
 import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "./mirror";
 import { beginDraft, finishDraft } from "./core/draft";
@@ -29,7 +30,6 @@ import type { Command } from "./commands";
 import type { Controller, Order, ViewEvent } from "./core/controller";
 import type { GameEvent } from "./core/events";
 import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "./core/session";
-import { UIBuilder } from "./uibuilder";
 import type { Game } from "./game";
 import { game as running } from "./session";
 import type { Unit } from "./unit";
@@ -39,6 +39,12 @@ function controllerFor(type: number, player: number): Controller | null {
 	if (type === playerType.aiLocal) return aiController(player);
 	if (type === playerType.aiScripted) return tutorialController(player);
 	return null;
+}
+
+//The handler of a player a program plays, by its type (Game.setupPlayers): the scripted tutorial's or the
+//AI's, both handing out the session's orders (a handler made joins its player to the session)
+export function handlerFor(player: Player, map: GameMap): AI {
+	return player.type === playerType.aiScripted ? new AIScripted(player, map) : new AI(player, map);
 }
 
 //The game's world now, of its objects, with the side shown and the fog of war
@@ -116,7 +122,7 @@ type UnitOf = (id: number | null | undefined) => Unit | null;
 function viewAction(v: ViewEvent, u: UnitOf): AIAction | null {
 	switch (v.type) {
 		case "select": return { type: actionType.select, param: [u(v.unit)] };
-		case "message": return { type: actionType.message, param: [v.text.split("{prestige}").join(UIBuilder.currencyIcon), cell(v.at)] };
+		case "message": return { type: actionType.message, param: [v.text.split("{prestige}").join(CURRENCY_ICON), cell(v.at)] };
 		case "viewport": return { type: actionType.viewport, param: [cell(v.at)] };
 		default: return null;
 	}

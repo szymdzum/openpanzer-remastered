@@ -106,10 +106,10 @@ test("A campaign's core units waiting at HQ keep no id of the scenario before (#
 test("A campaign's next scenario loads once however many ticks of the turn loop pass while it loads (#64)", async () => {
 	const game = await campaign(0);
 	let loads = 0;
-	const finished = game.onScenarioLoadFinished;
-	game.onScenarioLoadFinished = function(this: Game, ...args: Parameters<Game["onScenarioLoadFinished"]>) {
+	const host = game.host, finished = host.scenarioLoaded.bind(host);
+	host.scenarioLoaded = (...args: Parameters<typeof host.scenarioLoaded>) => {
 		loads++;
-		finished.apply(this, args);
+		finished(...args);
 	};
 	const before = game.scenario;
 	game.continueCampaign("victory");

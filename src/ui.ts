@@ -13,9 +13,9 @@
  */
 
 import {
-	type Cell, CURRENCY_MULTIPLIER, DEFAULT_SCENARIO, endGameType, groundConditionNames, groundFontEncoding, mouseInfo,
-	movementResults, movMethod, movMethodNames, NATIVE_PLATFORM, outcomeNames,
-	playerType, roadType, sideNames, Supply, terrainNames, terrainType, uiSettings,
+	type Cell, CURRENCY_MULTIPLIER, DEFAULT_SCENARIO, groundConditionNames, groundFontEncoding, mouseInfo,
+	movementResults, movMethod, movMethodNames, NATIVE_PLATFORM,
+	playerType, roadType, Supply, terrainNames, terrainType, uiSettings,
 	unitClass, unitClassNames, unitTypeNames, weatherConditionNames, weatherFontEncoding
 } from "./prototypes";
 import { CombatLog } from "./combatlog";
@@ -36,7 +36,6 @@ import { UIBuilder } from "./uibuilder";
 import { UICombatLog } from "./uicombatlog";
 import type { Game } from "./game";
 import { Leaders } from "./leaders";
-import { attackerSide, turnLimitOutcome } from "./core/turn";
 import { type AttackCommandHooks, type AttackResult, type AttackSide, type CommandType, Commands, type Executed, type FinishAttackHooks,
 	type FinishMoveHooks, type MoveResult, type ResultOf } from "./commands";
 
@@ -60,7 +59,6 @@ export interface UI {
 	equipmentWindowButtons(id: string): void;
 	updateEquipmentWindow(eqclass?: number): void;
 	uiEndTurnInfo(): void;
-	uiTurnLimitMessage(): void;
 	uiSetUnitOnViewPort(unit: Unit | null): boolean;
 	uiSetCellOnViewPort(cell: Cell | null): boolean;
 	scaleMap(level: number): void; //the map scale slider passes its value string, coerced in the arithmetic
@@ -478,58 +476,15 @@ function uiMoveAnimationFinished(moveAnimationCBData: MoveAnimationCBData,
 	game.waitUIAnimation = surprise;
 }
 
-//A side has won by capturing all its victory hexes
+//A side has won by capturing all its victory hexes, the move's animation ended: the game host tells it and
+//says what follows (src/host.ts)
 function uiMoveVictory(side: number) {
-	uiVictory(side, endGameType.moveCapture);
+	game.host.ended({ kind: "victory", side, how: "capture" });
 }
 
-//A side has won because the other has no unit left
+//A side has won because the other has no unit left, the attack's animation ended
 function uiEliminationVictory(side: number) {
-	uiVictory(side, endGameType.noEnemyLeft);
-}
-
-//The sides a person plays now, by the players' types: -1 none, a side, or 2 both (hotseat). Not the
-//session's start: the tutorial hands the Axis to the person and the Allies to the AI past its 5th turn (#366)
-function personSides(): number {
-	let sides = -1;
-	for (const p of map.getPlayers())
-		if (p.type == playerType.humanLocal)
-			sides = sides == -1 || sides == p.side ? p.side : 2;
-	return sides;
-}
-
-//The scenario won by side, how (an endGameType value): told as a defeat to a person who played the
-//other side only, as a win to a person who played it, with the winner's country and score (#76: the old
-//game asked whose turn it was, so a person whose last unit fell attacking was told they won, and it
-//always said the hexes were captured). With no person playing, only who won (#366)
-function uiVictory(side: number, how: string) {
-	var victoryType = game.scenario.checkVictory();
-	if (game.campaign !== null) {
-		if (game.getCampaignPlayer().side == side)
-			game.continueCampaign(victoryType, how);
-		else
-			game.continueCampaign("lose", how);
-	} else {
-		var title, text;
-		var winner = map.getPlayers().find(function(p) { return p.side == side; }) || map.currentPlayer;
-		const person = personSides();
-		if (person == (~side & 1)) {
-			title = "DEFEAT";
-			text = "You have lost ! Your enemy ";
-		} else if (person == -1) {
-			title = outcomeNames[victoryType];
-			text = "";
-		} else {
-			title = outcomeNames[victoryType];
-			text = "You have won this scenario ! ";
-		}
-		var reason = how == endGameType.noEnemyLeft ? "destroying all the enemy units" : "capturing all victory hexes";
-		uiMessage(title, "<br/><br/><br/><br/>" + text + winner.getCountryName() + " on "
-			+ sideNames[side] + " side wins by " + reason + " with a final score of <b>"
-			+ winner.score + "</b>. ", function() { game.ui.mainMenuButton("options"); });
-
-		game.gameEnded = true;
-	}
+	game.host.ended({ kind: "victory", side, how: "elimination" });
 }
 
 //handle attack performed by attacking unit on row,col unit
@@ -1472,25 +1427,6 @@ function uiTurnInfo() {
 
 function uiMessage(title: string, message: string, cbfunc?: () => void) { UIBuilder.message(title, message, cbfunc); }
 
-//The game ended at the turn limit, told to the side that plays here (src/core/turn.ts turnLimitOutcome). In
-//the classic rules the side that ended its last turn lost, as the original said. In the remaster's the
-//defender that held out wins and the attacker that didn't take all its objectives loses (#256); with no
-//attacker the side holding more objectives wins (#231)
-function uiTurnLimitMessage() {
-	const s = game.session, end = s.ended, w = s.world;
-	const o = turnLimitOutcome(w, end !== null && end.kind === "turnLimit" ? end.side : -1);
-	if (o.winner === -1) {
-		if (w.rules.defenderHoldsOut) uiMessage("DRAW", "<br><br>Neither side holds more objectives");
-		else uiMessage("DEFEAT", "<br><br>You didn't capture the objectives in time");
-		return;
-	}
-	const heldOut = attackerSide(w) === o.loser;
-	const held = heldOut ? " held the objectives to the end" : " held more objectives to the end";
-	if (s.localSide === 2) uiMessage(outcomeNames[o.rating], "<br><br>The " + sideNames[o.winner] + " side" + held);
-	else if (s.localSide === o.winner) uiMessage(outcomeNames[o.rating], "<br><br>You" + held);
-	else uiMessage("DEFEAT", "<br><br>" + (heldOut ? "You didn't capture all the objectives in time" : "The enemy held more objectives to the end"));
-}
-
 //Centers the screen on a map cell
 function uiSetCellOnViewPort(cell: Cell | null) {
 	if (!cell || typeof cell === "undefined")
@@ -2002,7 +1938,6 @@ function uiScaleMap(level: number) {
 	};
 
 	//Called from game when a side's last turn ended a single scenario (#256, #365)
-	this.uiTurnLimitMessage = uiTurnLimitMessage;
 
 	//Centers unit on player screen
 	this.uiSetUnitOnViewPort = function(unit: Unit | null) {

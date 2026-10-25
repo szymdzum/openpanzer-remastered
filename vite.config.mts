@@ -104,7 +104,7 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/core/*.ts", "src/core/commands/*.ts",
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
@@ -166,6 +166,7 @@ export default defineConfig({
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
+				"src/host.ts": { statements: 94, branches: 86, functions: 92, lines: 95 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },

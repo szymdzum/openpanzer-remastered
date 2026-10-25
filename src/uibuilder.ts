@@ -13,7 +13,7 @@
  */
 
 import {
-	DEBUG_CAMPAIGN, difficultyType, newGameRules, outcomeNames, sideNames, type UISettings, uiSettings, unitClassNames,
+	CURRENCY_ICON, DEBUG_CAMPAIGN, difficultyType, newGameRules, outcomeNames, sideNames, type UISettings, uiSettings, unitClassNames,
 	VERSION
 } from "./prototypes";
 import { Equipment } from "./equipment";
@@ -120,7 +120,7 @@ UIBuilder.menuImgPath = "resources/ui/menu/images/";
 UIBuilder.eqImgPath = "resources/ui/dialogs/equipment/images/";
 
 //The prestige "currency" icon
-UIBuilder.currencyIcon = "<img src='" + UIBuilder.eqImgPath + "currency.png'/>";
+UIBuilder.currencyIcon = CURRENCY_ICON;
 //Icon shown for naval units replacements
 UIBuilder.navalReplacementIcon = "resources/units/images/le211.png";
 
@@ -290,10 +290,10 @@ UIBuilder.buildStartMenu = function() {
 
 	/* Campaign debug button */
 	if (DEBUG_CAMPAIGN) {
-		$('smCV').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.continueCampaign("victory"); };
-		$('smCVB').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.continueCampaign("briliant"); };
-		$('smCVT').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.continueCampaign("tactical"); };
-		$('smCL').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.continueCampaign("lose"); };
+		$('smCV').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.host.skipScenario("victory"); };
+		$('smCVB').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.host.skipScenario("briliant"); };
+		$('smCVT').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.host.skipScenario("tactical"); };
+		$('smCL').onclick = function() { makeHidden('smCamp'); makeHidden('startmenu'); game.host.skipScenario("lose"); };
 	}
 
 	//Add new scenario options(scenario list, description, players)
