@@ -4,10 +4,10 @@ pre-commit:
   parallel: true
   jobs:
     - name: types
-      glob: "*.{ts,mts}"
+      glob: "*.{ts,tsx,mts}"
       run: npm run -s check
     - name: lint
-      glob: ["src/*.ts", "test/*.ts", "test/contracts/*.js"]
+      glob: ["src/*.ts", "src/*.tsx", "test/*.ts", "test/*.tsx", "test/contracts/*.js"]
       run: npx oxlint --type-aware --deny-warnings {staged_files}
     - name: typos
       # --force-exclude: the files _typos.toml excludes stay excluded when they are staged (fixtures)

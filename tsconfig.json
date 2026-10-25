@@ -20,7 +20,10 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"erasableSyntaxOnly": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		//the new UI's components (src/view/*.tsx): Preact's JSX, which Vite compiles (vite.config.mts)
+		"jsx": "react-jsx",
+		"jsxImportSource": "preact"
 	},
-	"include": ["src/**/*.ts", "types/**/*.d.ts"]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "types/**/*.d.ts"]
 }

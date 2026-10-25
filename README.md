@@ -91,7 +91,8 @@ sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
 
 Vite blanks the types out with ts-blank-space instead of compiling: the browser runs src/ line
 for line and column for column (only the import paths change), so coverage and stack traces
-point at the source.
+point at the source. The new UI's components (`src/view/*.tsx`, Preact) are the exception: Vite
+compiles their JSX, with source maps.
 
 ## Verification
 

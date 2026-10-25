@@ -3,7 +3,7 @@
 # check its braces. Problems go back to the agent (exit 2), which fixes them right away.
 f=$(jq -r '.tool_input.file_path // empty')
 case "$f" in
-	*/src/*.ts|*/test/*.ts|*/test/*.js|*/test/contracts/*.js) ;;
+	*/src/*.ts|*/src/*.tsx|*/test/*.ts|*/test/*.tsx|*/test/*.js|*/test/contracts/*.js) ;;
 	*) exit 0 ;;
 esac
 [ -f "$f" ] || exit 0

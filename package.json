@@ -28,6 +28,7 @@
 	"devDependencies": {
 		"@stryker-mutator/core": "^10.0.0",
 		"@stryker-mutator/vitest-runner": "^10.0.0",
+		"@testing-library/preact": "^3.2.6",
 		"@types/node": "^24.19.0",
 		"@vitest/coverage-v8": "^5.0.3",
 		"fallow": "3.34.1",
@@ -42,5 +43,9 @@
 		"vitest": "^5.0.3"
 	},
 	"private": true,
-	"license": "GPL-2.0-or-later"
+	"license": "GPL-2.0-or-later",
+	"dependencies": {
+		"@preact/signals": "^2.11.3",
+		"preact": "^11.0.2"
+	}
 }
