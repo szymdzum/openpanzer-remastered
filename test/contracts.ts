@@ -114,7 +114,6 @@ export async function restoreState(state: string) {
 	vi.resetModules();
 	const { GameState } = await import("../src/gamestate");
 	const { game } = await import("../src/game");
-	clearInterval(game.loop); //the turn loop, record.js runs no clock while the contract plays
 	const setupGameState = game.setupGameState;
 	const loaded = new Promise<void>((resolve) => {
 		game.setupGameState = () => {

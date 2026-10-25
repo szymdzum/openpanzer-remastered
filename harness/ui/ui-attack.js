@@ -57,7 +57,7 @@ if (!window.__bounceLog) {
 }
 // move and attack animations run on intervals, which settle() doesn't wait for
 async function finish() {
-	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
+	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop);
 	await runClock(() => !animating(), 100000);
 	await settle();
 }

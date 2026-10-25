@@ -37,8 +37,8 @@ async function __attack(prefer) {
 	clickHex(t.getPos().row, t.getPos().col);
 	// an air unit over a ground unit: the first click on its hex can pick the other one
 	let clicks = 1;
-	if (!game.waitUIAnimation && clock.pendingTimeouts() === 0 && !u.hasFired) { clickHex(t.getPos().row, t.getPos().col); clicks++; }
-	for (let n = 0; n < 3000 && (game.waitUIAnimation || clock.pendingTimeouts() > 0); n++) {
+	if (allShown() && clock.pendingTimeouts() === 0 && !u.hasFired) { clickHex(t.getPos().row, t.getPos().col); clicks++; }
+	for (let n = 0; n < 3000 && (!allShown() || clock.pendingTimeouts() > 0); n++) {
 		if (!clock.step()) break;
 		const texts = Array.from(document.querySelectorAll("#game .textBounceRed, #game .textBounceGreen"))
 			.map((e) => e.className + ":" + e.textContent + "@" + e.parentNode.style.cssText);

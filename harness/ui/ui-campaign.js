@@ -8,7 +8,7 @@ const sel = () => $("eqUserSel");
 function boxes(list) { return Array.from($(list).children); }
 function keyCode(code, key) { window.dispatchEvent(new KeyboardEvent("keyup", { code, key: key || code.slice(3).toLowerCase(), bubbles: true })); }
 async function finish() {
-	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
+	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop);
 	await runClock(() => !animating() && clock.pendingTimeouts() === 0, 100000);
 	await settle();
 }
@@ -133,9 +133,9 @@ const steps = [
 		enemy.strength = 15; enemy.experience = 500;
 		const p = m.currentPlayer, type = p.type;
 		p.type = playerType.aiLocal;
-		game.waitUIAnimation = true;
+		holdForStep();
 		game.ui.uiUnitAttack(enemy, last);
-		await runClock(() => clock.pendingTimeouts() === 0 && !Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop), 100000);
+		await runClock(() => clock.pendingTimeouts() === 0 && !Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop), 100000);
 		p.type = type;
 		check(last.destroyed, "last unit destroyed");
 	}],

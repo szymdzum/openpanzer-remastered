@@ -32,7 +32,7 @@ async function next(game: Game, outcome: ScenarioOutcome): Promise<boolean> {
 	game.continueCampaign(outcome);
 	if (game.gameEnded) return false;
 	game.uiMessageClicked = true;
-	game.processTurn();
+	game.host.processTurn();
 	await until(() => game.scenario !== before && game.scenario !== null && game.scenario.isLoaded && game.gameStarted,
 		"the campaign's next scenario");
 	return true;
@@ -115,7 +115,7 @@ test("A campaign's next scenario loads once however many ticks of the turn loop 
 	game.continueCampaign("victory");
 	game.uiMessageClicked = true;
 	for (let tick = 0; tick < 50 && loads === 0; tick++) {
-		game.processTurn();
+		game.host.processTurn();
 		await Promise.resolve(); //(a step of the load between two ticks)
 	}
 	await until(() => game.scenario !== before && game.scenario !== null && game.scenario.isLoaded && game.gameStarted, "the next scenario");
@@ -135,7 +135,7 @@ test("The campaign's save stays while its next scenario loads, until the next sc
 	const before = game.scenario;
 	game.continueCampaign("victory");
 	game.uiMessageClicked = true;
-	game.processTurn();
+	game.host.processTurn();
 	expect(localStorage.getItem(SAVE), "the save while the next scenario loads").toBe(first);
 	await until(() => game.scenario !== before && game.scenario !== null && game.scenario.isLoaded && game.gameStarted, "the next scenario");
 	const saved = JSON.parse(localStorage.getItem(SAVE)) as SavedGame;

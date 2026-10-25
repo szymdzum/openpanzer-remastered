@@ -5,9 +5,11 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 
 - **Headless** (the default): the core (docs/CORE.md) plays without a browser from a save file. A
   turn of the AI takes well under a second: for the arena, tests, a program playing many games.
-- **Live** (`--live`): the game plays on its page, as a person sees it. The program's moves and
-  attacks go through the screen's own actions with their animations, its end of turn through the
-  button, and the AI then plays its turn on the screen. A person watches the program play.
+- **Live** (`--live`): the game plays on its page, as a person sees it. The program plays on the
+  game host and the screen the page runs (the old UI, or the new one under `?ui=new`, #378): its
+  moves and attacks shown by the screen as the AI's are, with their animations where the screen has
+  them, its end of turn the host's, and the AI then plays its turn on the screen. A person watches
+  the program play.
 
     npm run -s play -- help
     npm run -s play -- new drpzop01.xml --seed 7      # Panzer-Verbaende Ostpreussen, you play the Axis
@@ -21,14 +23,14 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 ## Live, on the game's page
 
     npm run play:live                                  # the dev server with the bridge, port 8644
-    # open http://127.0.0.1:8644/ in a browser (the page is the game's screen)
+    # open http://127.0.0.1:8644/ in a browser (the page is the game's screen; ?ui=new for the new UI)
     npm run -s play -- new drpzop01.xml --live         # or OPENPANZER_LIVE=http://127.0.0.1:8644 for every call
     npm run -s play -- move 1 0,15 --live              # the move is animated on the page, then the answer
 
 `npm run play:live` is the dev server with `OPENPANZER_CLI=1`: its `cliBridge` (vite.config.mts) adds
 cli/page.ts to the page and takes a call's words at `POST /__cli`, hands them to the page over the dev
-server's websocket and its answer back. The page plays them on the running game (its core world,
-src/mirror.ts) and answers with the same commands as headless; it waits for a move's or an attack's
+server's websocket and its answer back. The page plays them on the running game (the host's world,
+src/host.ts) and answers with the same commands as headless; it waits for a move's or an attack's
 animation, and for the AI's turn, before it answers. It doesn't know a turn's events, so it tells the
 fights the screen's combat log saw (cli/fightlog.ts: the enemy's attacks on the side's units, the
 support fire either side gave, #307), then what changed between the world before and after: the units

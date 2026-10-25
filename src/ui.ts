@@ -48,6 +48,7 @@ export interface UI {
 	showAlert(row: number, col: number, text: string | number, positive?: boolean): void;
 	showGameToolTip(text: string, row: number, col: number, onOk: () => void): void;
 	whenShown(shown: (() => void) | null): void;
+	showingStep(): boolean;
 	showSmallToolTip(text: string, row: number, col: number, color: number, id?: string, style?: number): void;
 	addSmallToolTips(unitsOnly?: boolean): void;
 	removeUnitToolTip(unitId: number): void;
@@ -404,14 +405,13 @@ function uiUnitSelect(unit: Unit | null) {
 //step has been shown
 let pendingShown: (() => void) | null = null;
 
-//A move or an attack being shown: the player's end of turn waits for it (#58, #289)
+//A move or an attack being shown: the player's end of turn waits for it (#58, #289), and so do the harness
+//and the command-line player (the screen's showingStep, #378)
 let showing = false;
 
-//A move or an attack being shown (true) or shown: then the game's shown is called. game.waitUIAnimation
-//says it to the harness and the command-line player, which wait on it (#378 moves them onto shown)
+//A move or an attack being shown (true) or shown: then the game's shown is called
 function animating(playing: boolean) {
 	showing = playing;
-	game.waitUIAnimation = playing;
 	if (playing || pendingShown === null)
 		return;
 	const shown = pendingShown;
@@ -1614,6 +1614,7 @@ function uiScaleMap(level: number) {
 
 	//What the game waits on while the move or the attack it asked for is shown (src/oldscreen.ts)
 	this.whenShown = function(shown: (() => void) | null) { pendingShown = shown; };
+	this.showingStep = function() { return showing; };
 
 	this.showSmallToolTip = function(text: string, row: number, col: number, color: number, id?: string, style?: number) {
 		var pos = R.cellToScreen(row, col, true);
