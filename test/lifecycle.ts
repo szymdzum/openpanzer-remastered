@@ -65,10 +65,9 @@ export async function freshGame(): Promise<Game> {
 	fakeMapImages();
 	const { game } = await import("../src/game");
 	const { GameState } = await import("../src/gamestate");
-	clearInterval(game.loop);
 	game.state = new GameState(game);
 	game.ui = { setNewScenario() {}, mainMenuButton() {}, handleReinforcementDeployment() {},
-		showAlert() {} } as unknown as Game["ui"];
+		showAlert() {}, showingStep: () => false } as unknown as Game["ui"];
 	return game;
 }
 

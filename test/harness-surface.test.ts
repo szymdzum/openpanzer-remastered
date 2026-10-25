@@ -80,14 +80,22 @@ test("The list of exports the harness uses is complete", async () => {
 	expect(harnessExports.filter((n) => names.has(n) && !used.has(n)), "no longer used, remove them from harnessExports").toEqual([]);
 });
 
-//What the engine contract calls only on the reference (record.sh), whose Game has it: the end of turn's
-//reinforcements, which arrive in the game's session here
-const referenceOnly = ["deployReinforcements"];
+//What the page scripts reach for only on the original game (reference/), whose Game has it: the end of turn's
+//reinforcements the engine contract calls (record.sh), which arrive in the game's session here; and its turn
+//loop and the flag it held on while the UI showed a step, which the harness reads where the game has no host
+//(harness/lib/harness.js: the host's processTurn and showingStep here, #378)
+const referenceOnly = ["deployReinforcements", "loop", "processTurn", "waitUIAnimation"];
 
 test("The game.* members the harness uses exist", async () => {
 	const { game } = await import("../src/game");
 	const missing = members(/(?<![\w$])game\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game) && !referenceOnly.includes(n));
 	expect(missing, "game members used by harness/ or test/contracts").toEqual([]);
+});
+
+test("The game.host.* members the harness uses exist", async () => {
+	const { game } = await import("../src/game");
+	const missing = members(/(?<![\w$])game\.host\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game.host));
+	expect(missing, "game.host members used by harness/ or test/contracts").toEqual([]);
 });
 
 //The UI is built when a scenario loads, not here: its members are what the UI constructor assigns

@@ -56,6 +56,10 @@ export interface Screen {
 	//show). shown is called once the player has seen it: a program's next action waits for its unit picked
 	//and its look at a hex (the old UI shows them a moment, #8) and for its message
 	view(event: ViewEvent, shown?: () => void): void;
+	//A step the screen is still showing, the program's or the person's: a move or an attack it animates (the
+	//old UI). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
+	//screen that shows each step at once has none
+	showingStep?(): boolean;
 	//The program's turn ended (the AI's status shown finished)
 	aiTurnEnded(): void;
 	//The next player's turn after a program's: whose turn it is (a person's combat log, the AI's turn in

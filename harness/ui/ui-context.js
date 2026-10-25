@@ -35,7 +35,7 @@ function select(u) {
 }
 function keyCode(code) { window.dispatchEvent(new KeyboardEvent("keyup", { code, key: code.slice(3).toLowerCase(), bubbles: true })); }
 async function finish() {
-	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
+	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop);
 	await runClock(() => !animating(), 100000);
 	await settle();
 }

@@ -392,7 +392,8 @@ shows waited for until its `shown`, then the end of the turn (`endTurn`, on the 
 since #375: the game goes on (`goOn`) when the screen calls a `shown`, when the player clicks a message away
 (the briefing; a campaign's outcome, then the next scenario loads), after the person's end of turn, and when
 the screen has shown the next player's turn (`turnChanged`'s callback). `processTurn` is left for the
-harness, which ticks it on its own clock and holds it with `game.waitUIAnimation` (until #378). It imports no
+harness, which ticks it on its own clock; it holds while the screen still shows a step (`showingStep`,
+#378). It imports no
 UI module (test/headless.test.ts), and a whole campaign and a game's turns play on it in Node
 (test/host.test.ts).
 
@@ -423,8 +424,13 @@ retreat's move or the surrender, then tells the host the victories where its ani
 shown at the end of the last one (`animating(false)` in src/ui.ts). The screen that shows nothing
 (src/nullscreen.ts) calls it at once and tells the host the victories then. What the old UI's selection
 did after an attack's cleanup (the attacker selected again) is the command's `reselect` option, which the
-old UI asks for and the null screen doesn't. `game.waitUIAnimation` is kept, written by the old UI while it
-shows a step, for the harness and the command-line player, which wait on it (#378).
+old UI asks for and the null screen doesn't. A screen that animates says while it shows a step, a
+program's or the person's (`showingStep`, optional: the old UI's animation; a screen that shows each step at
+once has none), and the host passes it on (`GameHost.showingStep`): the harness and the command-line player
+wait on it, where they waited on `game.waitUIAnimation` until #378 (the original game's flag, which the
+harness still reads there). The command-line player's live mode (cli/page.ts) plays on the host and the
+screen the page runs: a move or an attack through the screen's `move` and `attack`, as a program's, the
+selection as a `view` event, the other commands and the end of turn through the host's `command`.
 
 The new UI (`src/view/`, #380) is a second implementation, under `?ui=new`: `src/view/screen.tsx` reads the
 game only through the host (`world()`, the world the screen's rules read) and sends the person's commands

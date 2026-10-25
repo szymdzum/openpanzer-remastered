@@ -8,7 +8,7 @@ const U = (id) => M().getUnitById(id);
 const lowSupplyTip53 = (id) => id === "gsttu53" || id.startsWith("gsttu53-");
 function keyCode(code, key) { window.dispatchEvent(new KeyboardEvent("keyup", { code, key: key || code.slice(3).toLowerCase(), bubbles: true })); }
 async function finish() {
-	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
+	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop);
 	await runClock(() => !animating(), 100000);
 	await settle();
 }
@@ -197,9 +197,9 @@ const steps = [
 		// the AI's turn, the German side still the person's (the victory is told by the sides a person plays,
 		// #366): hold the turn loop until the attack is over
 		M().currentPlayer = enemy.player;
-		game.waitUIAnimation = true;
+		holdForStep();
 		game.ui.uiUnitAttack(enemy, last);
-		await runClock(() => clock.pendingTimeouts() === 0 && !Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop), 100000);
+		await runClock(() => clock.pendingTimeouts() === 0 && !Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop), 100000);
 		M().currentPlayer = p;
 		check(last.destroyed && game.gameEnded, "defeat: " + JSON.stringify([last.strength, last.destroyed, game.gameEnded, M().hasAliveUnits(0)]));
 		check(document.body.textContent.indexOf("You have lost") >= 0, "defeat message");

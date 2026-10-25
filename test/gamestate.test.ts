@@ -344,7 +344,6 @@ test("GameState refuses what isn't a save", async () => {
 async function startup() {
 	vi.resetModules(); //a new page, the local save stays
 	const { game: fresh } = await import("../src/game");
-	clearInterval(fresh.loop);
 	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {} } as unknown as typeof fresh.ui;
 	fresh.init();
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the startup restore");
@@ -359,10 +358,9 @@ test("A start without a save plays the default scenario, the AI on the Allies, t
 	fakeMapImages();
 	const { game: fresh } = await import("../src/game");
 	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/prototypes");
-	clearInterval(fresh.loop);
-	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {}, mainMenuButton() {} } as unknown as typeof fresh.ui;
+	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {}, mainMenuButton() {}, showingStep: () => false } as unknown as typeof fresh.ui;
 	fresh.init();
-	fresh.processTurn(); //(no scenario yet: a tick that went on would throw)
+	fresh.host.processTurn(); //(no scenario yet: a tick that went on would throw)
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the default scenario");
 	expect([fresh.scenario.file, uiSettings.isAI]).toEqual([DEFAULT_SCENARIO, [0, 1, 0, 0]]);
 });
@@ -621,7 +619,7 @@ test("The turn limit's end is told once and the combat log stays closed over it,
 		last.handler = { getAction: (): null => null } as unknown as typeof last.handler; //(the AI's last turn: it ends it at once)
 		vi.useFakeTimers();
 		try {
-			game.processAIActions();
+			game.host.processAIActions();
 			vi.advanceTimersByTime(3000);
 		} finally {
 			vi.useRealTimers();

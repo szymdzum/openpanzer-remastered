@@ -9,7 +9,7 @@ import type { Screen } from "../src/screen";
 export function headlessGame(screen: (g: Game) => Screen): Game {
 	let saves = 0;
 	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves }, campaign: null, scenario: null,
-		gameStarted: false, gameEnded: false, waitUIAnimation: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
+		gameStarted: false, gameEnded: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
 		session: null } as unknown as Game;
 	const host = new GameHost(g, screen(g));
 	Object.assign(g, { host,

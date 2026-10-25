@@ -1,13 +1,12 @@
 //The command-line player on the game's page (#279, "npm run play:live"): the dev server hands the page a
-//call's words (vite.config.mts cliBridge) and the page plays it as a person would, the moves and attacks
-//through the screen's own actions with their animations, the end of turn through its button, so the AI
-//then plays its turn on the screen. A person watches the game the program plays
+//call's words (vite.config.mts cliBridge) and the page plays it on the game host (src/host.ts) and the
+//screen the page runs (src/screen.ts: the old UI, or the new one under ?ui=new, #378): the moves and attacks
+//shown by the screen as a program's are, with their animations where it has them, the end of turn the
+//host's, so the AI then plays its turn on the screen. A person watches the game the program plays
 import type { Command } from "../src/commands";
-import { Commands } from "../src/commands";
 import { check } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { gameInputs, worldOf } from "../src/mirror";
-import { newGameRules, playerType, uiSettings } from "../src/prototypes";
+import { newGameRules, uiSettings } from "../src/prototypes";
 import { game } from "../src/session";
 import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageResultOf, parseArgs, runOn, UsageError } from "./commands";
 import { status } from "./board";
@@ -23,10 +22,18 @@ async function until(ready: () => boolean, limit: number) {
 	for (const end = Date.now() + limit; Date.now() < end && !ready(); ) await sleep(100);
 }
 
-const world = (): World => worldOf(game.scenario, game, gameInputs(game));
-const humanSide = () => game.scenario.map.getPlayers().find((p) => p.type === playerType.humanLocal)?.side ?? 0;
-const humanTurn = () => game.scenario.map.currentPlayer.type === playerType.humanLocal && !game.gameEnded;
-const settled = () => !game.waitUIAnimation;
+//The running game's world, as the screen reads it (the host's)
+function world(): World {
+	const w = game.host.world();
+	if (w === null) throw new UsageError("no game on the page: start one with \"new\"");
+	return w;
+}
+//The side the person plays (the AI the other, newGame), the Axis without one
+const humanSide = () => game.host.personSides() === 1 ? 1 : 0;
+//The person can play: their turn, nothing of the AI's still shown, no message to click away first
+const humanTurn = () => game.host.personRefusal() === null;
+//The screen has shown every step (no move or attack it still animates)
+const settled = () => !game.host.showingStep();
 let report: string[] = [];
 const fights = fightRecorder(CombatLog);
 
@@ -34,41 +41,42 @@ const fights = fightRecorder(CombatLog);
 //combat log, then what changed between the worlds before and after (#307)
 const turnReport = (before: World) => [...fightLines(world(), humanSide(), fights.take()), ...changes(before, world(), humanSide())];
 
-function show(id: number) {
-	const u = game.scenario.map.getUnitById(id);
-	if (!u) return;
-	game.ui.uiSetUnitOnViewPort(u);
-	game.ui.uiUnitSelect(u);
-}
+//The unit selected and looked at on the screen, as a program's pick is shown (null: none)
+const select = (unit: number | null) => game.host.screen.view({ type: "select", unit });
 
 type Animated = Extract<Command, { type: "move" | "attack" }>;
 
-//A move or an attack through the screen's actions, the unit selected first as a person selects it,
-//then the animation played to its end
+//A move or an attack shown by the screen as a program's is (src/screen.ts move, attack): the unit selected
+//first as a person selects it, the step played whole, then shown to its end (its shown). The move takes its
+//path from the unit's move range, as the host gives a program's
 async function animate(cmd: Animated) {
-	const map = game.scenario.map, unit = map.getUnitById(cmd.unit);
-	show(cmd.unit);
+	const screen = game.host.screen, map = game.scenario.map, unit = map.getUnitById(cmd.unit);
+	select(cmd.unit);
 	await sleep(300);
-	game.waitUIAnimation = true;
-	if (cmd.type === "move") game.ui.uiUnitMove(unit, cmd.to.row, cmd.to.col, map.getCurrentMoveRange());
-	else game.ui.uiUnitAttack(unit, map.getUnitById(cmd.target));
-	await until(settled, 30_000);
+	let shown = false;
+	const done = () => { shown = true; };
+	if (cmd.type === "move") {
+		map.setMoveRange(unit);
+		screen.move(unit, cmd.to, map.getCurrentMoveRange(), done);
+	} else {
+		screen.attack(unit, map.getUnitById(cmd.target), done);
+	}
+	await until(() => shown && settled(), 30_000);
 }
 
-//A command played as the screen plays it: a move or an attack animated, anything else as its button
+//A command played on the screen: a move or an attack shown as above, anything else as the person's command
+//through the host, its unit selected then
 async function animated(cmd: Command) {
 	if (cmd.type === "move" || cmd.type === "attack") return animate(cmd);
-	Commands.execute(game.scenario, cmd);
-	if ("unit" in cmd) show(cmd.unit);
+	game.host.command(cmd);
+	if ("unit" in cmd) select(cmd.unit);
 }
 
-//The end of turn as its button takes it (two clicks: the first asks for confirmation), then the AI's
-//turn on the screen until the person plays again
+//The person's end of turn on the host, nothing selected, then the AI's turn on the screen until the person
+//plays again
 async function endTurn() {
-	const button = document.getElementById("endturn");
-	button.click();
-	await sleep(150);
-	button.click();
+	select(null);
+	game.host.command({ type: "endTurn" });
 	await sleep(500);
 	await until(() => game.gameEnded || (humanTurn() && settled()), 30 * 60_000);
 }
@@ -78,7 +86,7 @@ const front: Front = {
 	get side() { return humanSide(); },
 	humanTurn,
 	act: async (cmd) => {
-		const refusal = humanTurn() ? check(world(), cmd) : { reason: "not your turn" };
+		const refusal = game.host.personRefusal() ?? check(world(), cmd);
 		if (refusal === null) await animated(cmd);
 		return { events: null, refusal };
 	},
@@ -93,12 +101,15 @@ const front: Front = {
 	result: () => pageResultOf(world(), game.session ? game.session.ended : null, game.gameEnded, humanSide()),
 };
 
-//The scenario's opening message would cover the map: closed once, after "new". Never on a later call: the
-//message shown then may be the end of the game, whose OK opens the main menu (#311)
-function uncover() {
-	for (const id of ["uiokbut"]) {
-		const b = document.getElementById(id);
-		if (b && b.offsetParent !== null) b.click();
+//The scenario's opening message would cover the map: closed after "new", by its OK on whichever screen
+//shows it (the old UI's; the new UI's, which shows its messages one after the other: the page's first
+//scenario's briefing can still be open before it). Never on a later call: the message shown then may be the
+//end of the game, whose OK opens the main menu (#311)
+async function uncover() {
+	const open = () => [...document.querySelectorAll<HTMLElement>("#uiokbut, .pm-message .ft button")].find((b) => b.offsetParent !== null);
+	for (let n = 0, b = open(); n < 5 && b !== undefined; n++, b = open()) {
+		b.click();
+		await sleep(200); //(the next message drawn)
 	}
 }
 
@@ -129,7 +140,7 @@ async function newGame(args: Args): Promise<Answer> {
 	["gameToolTip", "smScen", "startmenu"].forEach(hide);
 	await until(loaded, 30_000);
 	await sleep(500);
-	uncover();
+	await uncover();
 	report = humanTurn() ? [] : await firstAITurn();
 	return answer([`new game of ${file} on the page, you play ${SIDES[side]}, ${game.rules} rules`, ...report, ...status(world(), side)]);
 }

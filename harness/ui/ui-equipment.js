@@ -7,7 +7,7 @@ const U = (id) => M().getUnitById(id);
 const sel = () => $("eqUserSel");
 function boxes(list) { return Array.from($(list).children); }
 async function finish() {
-	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop);
+	const animating = () => Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== clock.loop);
 	await runClock(() => !animating(), 100000);
 	await settle();
 }

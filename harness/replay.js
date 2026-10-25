@@ -91,7 +91,7 @@ async function play(item) {
 	trace.ended = { turn: m.turn, gameEnded: game.gameEnded };
 
 	if (args.saveRestore !== false && game.scenario.map === m) {
-		await runClock(() => !game.waitUIAnimation, 20000);
+		await runClock(allShown, 20000);
 		game.state.save();
 		const before = snapshot();
 		const scen = game.scenario;

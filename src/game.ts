@@ -36,17 +36,12 @@ export class Game {
 	declare scenario: Scenario;
 	declare gameStarted: boolean;
 	declare gameEnded: boolean;
-	declare waitUIAnimation: boolean;
 	declare spotSide: number;
 	declare rules: RulesetName;
 	declare uiMessageClicked: boolean;
-	declare loop: number;
 	declare session: Session | null; //the core's session the game plays on (src/coresession.ts), null before a scenario
 	declare host: GameHost; //the game's course: scenarios, the campaign, the end (src/host.ts)
 	declare init: () => void;
-	declare processTurn: () => void;
-	declare startTurn: () => void;
-	declare processAIActions: () => void;
 	declare endTurn: () => boolean; //true when the turn limit ended the game (the end announced)
 	declare setupGameState: () => void;
 	declare newScenario: (scenFile: string, scenIntro?: string) => void;
@@ -71,9 +66,6 @@ export class Game {
 
 		this.gameStarted = false; //Game not yet fully initialised
 		this.gameEnded = false; //Game ended in victory or defeat
-		//The old UI still showing a move or an attack: the harness and the command-line player wait on it (#378);
-		//the game itself waits on the screen's shown (#375)
-		this.waitUIAnimation = false;
 		this.spotSide = -1; //currently visible side on map
 		//The rules the game plays by (#53): the settings' at a new game, the save's at a load, kept through a
 		//campaign; classic until then, as the tests and the contracts play
@@ -87,14 +79,9 @@ export class Game {
 				this.newScenario.bind(this, "failRestore"));
 		}
 
-		//A program's turn is the host's (src/host.ts). processTurn is the harness's turn loop (it ticks it on
-		//this.loop, harness/lib/harness.js) and the tests': it uses the global game, an interval calls it unbound
-		this.processTurn = function() { game.host.processTurn(); }
-		this.startTurn = function() {}
-		this.processAIActions = function() { this.host.processAIActions(); }
+		//A program's turn is the host's (src/host.ts), and so is the harness's turn loop (processTurn)
 		this.endTurn = function() { return this.host.endTurn(); }
 
-		this.loop = 0; //the harness's turn loop interval (the game's own went, #375)
 		this.session = null;
 		this.host = new GameHost(this, oldScreen(this)); //the old UI shows it (src/oldscreen.ts)
 

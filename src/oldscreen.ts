@@ -72,6 +72,8 @@ export function oldScreen(g: Game): Screen {
 			showView(g, event);
 			if (shown) setTimeout(shown, PICKED_MS);
 		},
+		//(none before the UI is built, at the first scenario's start)
+		showingStep() { return g.ui !== null && g.ui.showingStep(); },
 		aiTurnEnded() { UIBuilder.showAIStatus(false); },
 		//(the info a while after the "finished" status, which it replaces)
 		turnChanged(next: () => void) {

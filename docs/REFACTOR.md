@@ -195,7 +195,9 @@ nothing re-recorded, verify as before step 2):
 - **`defined()`** is in `src/util.ts`; dom.ts imports and re-exports it for the UI. `isChromeApp`
   stays in dom.ts (only gamestate.ts uses it).
 - **game.ts loads without side effects**: `main.ts` starts `game.loop` and adds the load listener;
-  the constructor sets `loop = 0`, so the harness's `clearInterval(game.loop)` still works.
+  the constructor sets `loop = 0`, so the harness's `clearInterval(game.loop)` still works. (Since
+  #378 Game has no loop: the harness keeps its tick on `clock.loop`, and clears `game.loop` only on
+  the original.)
 - **`src/context.ts`**: `engineContext` has `scenario()`, `campaign()`, `campaignPlayer()` and
   `spotSide()`; game.ts sets one that reads `game.*` at the call. Map, Player, Unit, the AI and the
   scenario loader use it; none imports game.ts. Without a game: nothing loaded, side -1. Unit.copy

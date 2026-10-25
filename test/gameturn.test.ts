@@ -115,7 +115,7 @@ async function play(item: string): Promise<string[]> {
 		trace.push("won\n" + state());
 		const won = game.scenario;
 		game.uiMessageClicked = true;
-		game.processTurn();
+		game.host.processTurn();
 		await until(() => game.scenario !== won && game.scenario.isLoaded && game.gameStarted, item + " next scenario");
 		traced.clear();
 		tick.clear();
@@ -141,7 +141,7 @@ function ticking(game: Game) {
 			const go = held;
 			held = null;
 			if (go) go();
-			else game.processTurn();
+			else game.host.processTurn();
 		},
 		clear() { held = null; },
 	};
@@ -164,6 +164,7 @@ function stand(game: Game, Commands: typeof import("../src/commands").Commands, 
 		uiSetUnitOnViewPort() {},
 		uiSetCellOnViewPort() {},
 		whenShown() {}, //(the game's wait ends at the next tick, ticking)
+		showingStep: () => false,
 		showGameToolTip(text: string) { screen.push("tooltip " + text.length); },
 		showAlert(row: number, col: number, text: string, own: boolean) { screen.push(`alert ${row},${col} ${text} ${own}`); },
 		handleReinforcementDeployment() { screen.push("deployed"); },

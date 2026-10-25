@@ -7,12 +7,13 @@
 // - domSnapshot(): the page DOM, attributes, classes and inline styles sorted
 // - canvasHashes(): pixel hash of every canvas on the page, after images have loaded
 // - human-like input helpers for UI scripts: click(), clickHex(), key(), settle()
+// - allShown(): the game has shown every step, holdForStep() before a script plays one on the AI's turn
 
 // Virtual clock: the game's timers (its 1s turn loop, animations, the attack sequence) run
 // from a queue in (time, creation order), advanced by the harness. Real timers would race.
 if (!window.__clock) {
 	const realSetTimeout = window.setTimeout.bind(window);
-	window.clearInterval(game.loop); // the bundle's turn loop runs on a real timer, stop it before patching
+	window.clearInterval(game.loop); // the original's turn loop runs on a real timer, stop it before patching (the remaster has none, #375)
 	// timers is a plain object, not a Map: the game replaces the global Map with its own class
 	const clock = window.__clock = { now: 0, seq: 0, timers: {}, realSetTimeout };
 	// Like a browser, an exception in a timer callback is reported and the game goes on
@@ -52,9 +53,9 @@ if (!window.__clock) {
 		runTimer(next);
 		return true;
 	};
-	// Pending timers other than the game's turn loop: one-shot timers and the intervals of
+	// Pending timers other than the turn loop (clock.loop): one-shot timers and the intervals of
 	// running animations (Render.moveAnimation, Animation frames)
-	clock.pendingTimeouts = () => Object.values(clock.timers).filter((t) => t.id !== game.loop).length;
+	clock.pendingTimeouts = () => Object.values(clock.timers).filter((t) => t.id !== clock.loop).length;
 	// CSS animation ends are real time events (the floating combat numbers of bounceText
 	// remove themselves on animationend, the end turn button re-arms on it): fire them from
 	// the virtual clock instead, a fixed 1s after the listener is added. Chrome only fires
@@ -109,7 +110,10 @@ if (!window.__clock) {
 	// is fixed, but headless Chrome fires a resize when it applies it, at a moment that depends on
 	// timing: a redraw at a random point of a step. Drop it, the UI has positioned the layers.
 	window.onresize = null;
-	game.loop = setInterval(game.processTurn, 1e3);
+	// The turn loop on the virtual clock, ticking every second as the original's did: the game host's
+	// processTurn (src/host.ts: the game goes on unless the screen still shows a step), the original's own
+	// game.processTurn where there is no host
+	clock.loop = setInterval(game.host ? () => game.host.processTurn() : game.processTurn, 1e3);
 	uiSettings.quickAnimation = true;
 	uiSettings.muteUnitSounds = true;
 	uiSettings.hdGraphics = false; // the remaster's @2x images (the harness runs at 1x anyway)
@@ -403,6 +407,22 @@ function key(k, keyCode) {
 	window.dispatchEvent(new KeyboardEvent("keyup", { key: k, code, keyCode, which: keyCode, bubbles: true }));
 }
 
+// The game has shown every step: the screen animates no move or attack, as the game host says (src/host.ts
+// showingStep, #378). The original game and a baseline before #378 don't say it: there game.waitUIAnimation,
+// which the game sets while the UI shows a step. A program's pick or look at a hex shown a moment (#8) is a
+// pending timer, which the waits count beside it
+const hostShows = () => !!(game.host && game.host.showingStep);
+function allShown() {
+	return hostShows() ? !game.host.showingStep() : !game.waitUIAnimation;
+}
+
+// A script plays a step through the old UI on the AI's turn: the turn loop must hold until it has been shown.
+// The game host holds while the screen shows it; the original game held on game.waitUIAnimation, which its
+// game set before asking the UI to show an AI's step (the UI only clears it at the end)
+function holdForStep() {
+	if (!hostShows()) game.waitUIAnimation = true;
+}
+
 // Runs the virtual clock until animations and one-shot timers are done and, when a human
 // plays, until it's a human's turn again (the game's turn loop lets the AI players act)
 async function settle(maxSteps) {
@@ -412,5 +432,5 @@ async function settle(maxSteps) {
 		const humans = m.getPlayers().filter((p) => p.type === playerType.humanLocal);
 		return humans.length === 0 || m.currentPlayer.type === playerType.humanLocal;
 	};
-	return runClock(() => !game.waitUIAnimation && clock.pendingTimeouts() === 0 && humanTurn(), maxSteps || 100000);
+	return runClock(() => allShown() && clock.pendingTimeouts() === 0 && humanTurn(), maxSteps || 100000);
 }

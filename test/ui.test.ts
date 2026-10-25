@@ -184,9 +184,8 @@ async function uiAttack(animated: boolean) {
 	const [attacker, defender] = pair!;
 	if (!animated) attackAnimationByClass.fill("none");
 	const execute = vi.spyOn(Commands, "execute");
-	game.waitUIAnimation = true;
 	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
-	await until(() => !game.waitUIAnimation, "the attack animation");
+	await until(() => !game.host.showingStep(), "the attack animation");
 	const executed = execute.mock.results.map((r) => r.value as { ok: boolean; result: unknown });
 	const result = executed.find((r, i) => execute.mock.calls[i][1].type === "attack" && r.ok)!.result as AttackResult;
 	return { destroyed: ids(result.destroyed), retreat: result.retreat, surrender: result.surrender,
@@ -297,7 +296,7 @@ test("The AI's next action waits for the retreat its attack caused to end (#248)
 	const shown: boolean[] = [];
 	ui.whenShown(() => { shown.push(defender.hasAnimation); });
 	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
-	await until(() => !game.waitUIAnimation && !defender.hasAnimation, "the attack and the retreat");
+	await until(() => !game.host.showingStep() && !defender.hasAnimation, "the attack and the retreat");
 	expect(shown).toEqual([false]);
 }, 60_000);
 
@@ -339,12 +338,12 @@ test("The AI's next action waits for the surprise attack of a move the player di
 	touched();
 	map.setMoveRange(mover);
 	const shown: boolean[] = [];
-	game.host.screen.move(mover, at, map.getCurrentMoveRange(), () => { shown.push(game.waitUIAnimation); });
+	game.host.screen.move(mover, at, map.getCurrentMoveRange(), () => { shown.push(game.host.showingStep()); });
 	const stopped = mover.getPos();
 	expect([GameRules.distance(stopped.row, stopped.col, at.row, at.col), hidden.hits > 0 || hidden.strength < 10],
 		"stopped next to the hidden unit, which it attacked").toEqual([1, true]);
 	expect(map.map[stopped.row][stopped.col].isSpotted(0), "the person's side didn't see it").toBe(false);
-	await until(() => !game.waitUIAnimation, "the surprise attack");
+	await until(() => !game.host.showingStep(), "the surprise attack");
 	expect(shown, "shown once the surprise attack has been shown").toEqual([false]);
 }, 60_000);
 
@@ -374,7 +373,7 @@ test("The player's end of turn waits for the attack's animation: no destroyed un
 	expect(ui.uiUnitAttack(attacker, defender)).toBe(true);
 	endTurn();
 	expect([map.currentPlayer, map.turn]).toEqual([human, turn]);
-	await until(() => !game.waitUIAnimation, "the attack animation");
+	await until(() => !game.host.showingStep(), "the attack animation");
 	expect(map.getUnits()).not.toContain(defender);
 	endTurn();
 	expect(map.currentPlayer).not.toBe(human);
@@ -400,7 +399,7 @@ async function victoriesTold(game: Game, ui: UI, winners: number[]): Promise<str
 			for (const d of map.getUnits().filter((u) => GameRules.isEnemy(a, u)))
 				if (pair === undefined && GameRules.canInitiateAttack(a, d) && GameRules.isInAttackRange(a, d)) pair = [a, d];
 		expect(ui.uiUnitAttack(pair![0], pair![1])).toBe(true);
-		await until(() => !game.waitUIAnimation, "the attack");
+		await until(() => !game.host.showingStep(), "the attack");
 		const [title, text] = message.mock.calls[message.mock.calls.length - 1];
 		told.push([title, text.replace(/<[^>]*>/g, "")]);
 		game.gameEnded = false;
@@ -508,9 +507,8 @@ test("After a surrender the attacker's move hexes no longer count the surrendere
 	map.selectUnit(atk);
 	const { Commands } = await import("../src/commands");
 	const execute = vi.spyOn(Commands, "execute");
-	game.waitUIAnimation = true;
 	expect(ui.uiUnitAttack(atk, def)).toBe(true);
-	await until(() => !game.waitUIAnimation, "the attack");
+	await until(() => !game.host.showingStep(), "the attack");
 	const r = execute.mock.results[0].value as { result: AttackResult };
 	expect([r.result.surrender, def.destroyed, map.currentUnit, atk.hasMoved]).toEqual([true, true, atk, false]);
 	const cells = (list: { row: number; col: number }[]) => list.map((c) => c.row + "," + c.col).sort();
@@ -583,9 +581,8 @@ async function bothDestroyed(last: boolean) {
 	}
 	touched();
 	map.selectUnit(atk);
-	game.waitUIAnimation = true;
 	expect(ui.uiUnitAttack(atk, def)).toBe(true);
-	await until(() => !game.waitUIAnimation, "the attack", 5000);
+	await until(() => !game.host.showingStep(), "the attack", 5000);
 	expect([atk.destroyed, def.destroyed]).toEqual([true, true]);
 	return { game, ui, map };
 }
@@ -692,14 +689,13 @@ test("The old UI writes into the game's objects only what the screen owns, none 
 		const target = GameRules.getUnitAttackCells(map.map, a, map.rows, map.cols)[0];
 		const d = map.map[target.row][target.col].getAttackableUnit(a, uiSettings.airMode)!;
 		ui.uiUnitSelect(a);
-		game.waitUIAnimation = true;
 		expect(ui.uiUnitAttack(a, d)).toBe(true);
-		await until(() => !game.waitUIAnimation, "the attack");
+		await until(() => !game.host.showingStep(), "the attack");
 		const unit = own().find((u) => GameRules.getMoveRange(map, u).some((c) => c.canMove))!;
 		ui.uiUnitSelect(unit);
 		const to = GameRules.getMoveRange(map, unit).find((c) => c.canMove)!;
 		expect(ui.uiUnitMove(unit, to.row, to.col)).toBe(true);
-		await until(() => !unit.hasAnimation && !game.waitUIAnimation, "the move");
+		await until(() => !unit.hasAnimation && !game.host.showingStep(), "the move");
 		ui.uiUnitSelect(null);
 	});
 	expect(written).toEqual(["GameMap.currentUnit", "Hex.isAttackSel", "Hex.isMoveSel", "Unit.hasAnimation"]);

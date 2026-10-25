@@ -141,7 +141,7 @@ test("A scenario's turns play through the game host on a screen that shows nothi
 	const m = g.scenario.map, start = m.turn, turns = 3;
 	for (let tick = 0; tick < 5000 && m.turn < start + turns && !g.gameEnded; tick++) {
 		g.host.processTurn();
-		expect(g.waitUIAnimation, "each action shown at once").toBe(false);
+		expect(g.host.showing, "each action shown at once").toBe(false);
 	}
 	expect([m.turn, g.gameEnded]).toEqual([start + turns, false]);
 	expect(played.move > 0 && played.attack > 0, JSON.stringify(played)).toBe(true);
@@ -166,7 +166,7 @@ test("The tutorial's script plays through the game host on a screen that shows n
 	const m = g.scenario.map;
 	for (let tick = 0; tick < 5000 && m.turn < 6 && !g.gameEnded; tick++) {
 		g.host.processTurn();
-		expect(g.waitUIAnimation, "each action shown at once").toBe(false);
+		expect(g.host.showing, "each action shown at once").toBe(false);
 	}
 	expect([m.turn, g.gameEnded]).toEqual([6, false]);
 	expect(["message", "select", "mainMenu"].filter((v) => !views.includes(v)), "the view events shown").toEqual([]);

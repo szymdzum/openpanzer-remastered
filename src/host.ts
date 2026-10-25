@@ -110,7 +110,6 @@ export class GameHost {
 		if (defined(intro)) g.scenario.setDescription(intro); //Set from campaign
 		g.session = null;
 		this.startPlaying(isRestore);
-		g.waitUIAnimation = false;
 		this.stopShowing();
 		g.gameStarted = true;
 		this.needLoad = this.nextLoading = g.gameEnded = false;
@@ -350,11 +349,18 @@ export class GameHost {
 	}
 
 	//The harness's turn loop (harness/lib/harness.js ticks it, as the game's own did until #375) and the tests':
-	//the game goes on unless the old UI is showing a step (game.waitUIAnimation, which a harness script also
-	//sets to hold the turn; #378 moves the harness onto the screen's shown)
+	//the game goes on unless the screen is still showing a step (the old UI's animation of a move or an
+	//attack, a program's or one a harness script plays)
 	processTurn() {
-		if (!this.game.waitUIAnimation)
+		if (!this.showingStep())
 			this.goOn();
+	}
+
+	//The screen still shows a step, a program's or the person's (the old UI animating a move or an attack):
+	//what the turn loop holds on, and what the harness and the command-line player wait on before they look
+	//or play on (#378). A screen that shows each step at once has no showingStep
+	showingStep(): boolean {
+		return this.screen.showingStep !== undefined && this.screen.showingStep();
 	}
 
 	//The program's actions: those the screen shows wait for its shown, the others play on at once (#8: an AI
