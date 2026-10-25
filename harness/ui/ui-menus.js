@@ -185,7 +185,7 @@ const steps = [
 		click("#buy");
 	}],
 	["the AI destroys the last German unit: defeat", async () => {
-		const p = M().currentPlayer, type = p.type;
+		const p = M().currentPlayer;
 		const last = U(54), enemy = U(55);
 		keyCode("Escape", "Escape");
 		check(M().currentUnit === null, "nothing selected");
@@ -194,12 +194,13 @@ const steps = [
 		enemy.strength = 15; enemy.experience = 500;
 		const e = enemy.getPos(), f = GameRules.getAdjacent(e.row, e.col).find((c) => !M().map[c.row][c.col].unit && M().map[c.row][c.col].terrain === terrainType.Clear);
 		teleport(last, f.row, f.col);
-		// the AI player has no handler here: hold the turn loop until the attack is over
-		p.type = playerType.aiLocal;
+		// the AI's turn, the German side still the person's (the victory is told by the sides a person plays,
+		// #366): hold the turn loop until the attack is over
+		M().currentPlayer = enemy.player;
 		game.waitUIAnimation = true;
 		game.ui.uiUnitAttack(enemy, last);
 		await runClock(() => clock.pendingTimeouts() === 0 && !Object.keys(clock.timers).some((k) => clock.timers[k].repeat && +k !== game.loop), 100000);
-		p.type = type;
+		M().currentPlayer = p;
 		check(last.destroyed && game.gameEnded, "defeat: " + JSON.stringify([last.strength, last.destroyed, game.gameEnded, M().hasAliveUnits(0)]));
 		check(document.body.textContent.indexOf("You have lost") >= 0, "defeat message");
 	}],

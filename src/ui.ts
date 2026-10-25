@@ -488,9 +488,20 @@ function uiEliminationVictory(side: number) {
 	uiVictory(side, endGameType.noEnemyLeft);
 }
 
+//The sides a person plays now, by the players' types: -1 none, a side, or 2 both (hotseat). Not the
+//session's start: the tutorial hands the Axis to the person and the Allies to the AI past its 5th turn (#366)
+function personSides(): number {
+	let sides = -1;
+	for (const p of map.getPlayers())
+		if (p.type == playerType.humanLocal)
+			sides = sides == -1 || sides == p.side ? p.side : 2;
+	return sides;
+}
+
 //The scenario won by side, how (an endGameType value): told as a defeat to a person who played the
-//other side only, with the winner's country and score (#76: the old game asked whose turn it was, so a
-//person whose last unit fell attacking was told they won, and it always said the hexes were captured)
+//other side only, as a win to a person who played it, with the winner's country and score (#76: the old
+//game asked whose turn it was, so a person whose last unit fell attacking was told they won, and it
+//always said the hexes were captured). With no person playing, only who won (#366)
 function uiVictory(side: number, how: string) {
 	var victoryType = game.scenario.checkVictory();
 	if (game.campaign !== null) {
@@ -501,9 +512,13 @@ function uiVictory(side: number, how: string) {
 	} else {
 		var title, text;
 		var winner = map.getPlayers().find(function(p) { return p.side == side; }) || map.currentPlayer;
-		if (game.session.localSide == (~side & 1)) {
+		const person = personSides();
+		if (person == (~side & 1)) {
 			title = "DEFEAT";
 			text = "You have lost ! Your enemy ";
+		} else if (person == -1) {
+			title = outcomeNames[victoryType];
+			text = "";
 		} else {
 			title = outcomeNames[victoryType];
 			text = "You have won this scenario ! ";
