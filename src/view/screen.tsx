@@ -1,9 +1,10 @@
 //The new UI as the game's screen (src/screen.ts, #380): the second implementation of the interface, beside
 //the old UI's (src/oldscreen.ts). It reads the game only through the host (its world, src/host.ts) and
-//sends the person's commands to it (src/view/store.ts). For now it animates nothing: a program's move or
-//attack is played whole, shown at once and its victories told then, and every shown is called at once
-//but a message's, which waits for its OK (the tutorial's orders too). The animations from the step's
-//events are D2-D4's, the main menu D6's.
+//sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
+//animated from its events (#347, src/view/beats.ts), its results and victories told when the last beat
+//ends, and its shown called then: the program's turn plays at a pace the person can follow. Every other
+//shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The main
+//menu is D6's.
 import { render } from "preact";
 import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
@@ -14,16 +15,20 @@ import type { ScenarioOutcome } from "../scenario";
 import type { Screen } from "../screen";
 import type { Unit } from "../unit";
 import { App } from "./app";
+import { pageSounds } from "./player";
 import { createStore } from "./store";
 import { applyTheme, type Theme } from "./theme";
 
 const nothing = () => {};
 
 //What the screen asks of the host: the store's, and the course of the game it shows
-type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed">;
+type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic">;
+
+//prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
+const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
-	const store = createStore(host);
+	const store = createStore(host, { sound: pageSounds(), still });
 	const { refresh } = store;
 	//(the map's scale and the hex grid as the settings saved them, as the old UI applies them at its start, until the
 	//Settings window has them, D6)
@@ -36,15 +41,16 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		host.holdForMessage();
 		show(title, html, then || (() => host.messageClosed()));
 	};
-	//A program's move or attack, played whole and shown at once: what it did to the side shown kept for the turn
-	//report (its events), its victories told, then the next action
+	//A program's move or attack, played whole: what it did to the side shown kept for the turn report (its events),
+	//then animated, its victories told, then the next action
 	const played = (r: ReturnType<ScreenHost["play"]>, events: GameEvent[], shown: () => void) => {
 		const before = store.world.value;
 		refresh();
-		store.told(before, events);
 		store.noteEnemy(events);
-		if (r.ok) host.won(r.result);
-		shown();
+		store.showStep(before, events, () => {
+			if (r.ok) host.won(r.result);
+			shown();
+		});
 	};
 	//A new scenario or turn: the last one's pick dropped, the person's reserve to deploy from first (Deployment), the
 	//labels over the map back (L cleared them for the turn)

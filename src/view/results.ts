@@ -76,8 +76,8 @@ function nameOf(before: World, after: World, id: UnitId): string {
 	return u === null ? "" : (after.equipment[u.eqid] || before.equipment[u.eqid]).name;
 }
 
-//Whether the side shown sees a hex, before or after the step; no side shown: every hex
-function seen(before: World, after: World, p: Position): boolean {
+//Whether the side shown sees a hex, before or after the step; no side shown: every hex (the step's beats too, beats.ts)
+export function seen(before: World, after: World, p: Position): boolean {
 	const side = after.spotSide;
 	if (side < 0 || side > 1 || after.noFOW) return true;
 	return isSpotted(before, hexIndex(before, p.row, p.col), side) || isSpotted(after, hexIndex(after, p.row, p.col), side);

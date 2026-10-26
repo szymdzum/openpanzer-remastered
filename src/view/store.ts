@@ -22,9 +22,17 @@ import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
 import { blockedOf, glanceOf, oddsOf } from "./odds";
 import { type News, type Results, resultsOf } from "./results";
+import { beatsFor } from "./beats";
+import { createPlayer, type Motion, type Stage } from "./player";
+import { hexCentre } from "./hexgrid";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
-export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
+export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic">>;
+
+//What the page gives the step's beats (src/view/player.ts): its sounds, and whether the person asked for reduced motion.
+//Without a page (the tests): silence and motion
+export type Page = Pick<Stage, "sound" | "still">;
+const QUIET_PAGE: Page = { sound: () => {}, still: () => false };
 
 //A message window: its title, its text (HTML: the scenarios' briefings and the tutorial's messages are the
 //game's own), the hex it points at (the map's, D2) and what its OK does
@@ -35,7 +43,7 @@ export interface Note {
 	ok: () => void;
 }
 
-export function createStore(host: StoreHost) {
+export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const world = signal<World | null>(null);
 	const selected = signal<UnitId | null>(null);
 	const notes = signal<Note[]>([]);
@@ -71,6 +79,15 @@ export function createStore(host: StoreHost) {
 	//until the next command
 	const results = signal<Results | null>(null);
 	const news = signal<News | null>(null);
+	//A step's beats while they play (src/view/player.ts): what the map draws over the units, the unit hidden from its hex
+	//while it moves; the map takes no click meanwhile
+	const motion = signal<Motion | null>(null);
+	const moving = signal<UnitId | null>(null);
+	let busy = false;
+	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
+	const cosmetic = host.cosmetic;
+	const player = createPlayer({ pick: cosmetic === undefined ? () => 0 : () => cosmetic.call(host), show: (m) => { motion.value = m; },
+		hide: (id) => { moving.value = id; }, centre: (p) => hexCentre(p.row, p.col), ...page });
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -100,13 +117,13 @@ export function createStore(host: StoreHost) {
 	//(the status bar's turn report button: the person's report, none while a program plays)
 	const reportRefusal = computed(() => world.value === null || turnReportOf(world.value, enemy.value) === null ? "No report to show"
 		: undefined);
-	//the selected unit's context menu (UnitContext), none while deploying or on the strategic map
-	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value ? null
-		: contextOf(world.value, selected.value, lost.value));
+	//the selected unit's context menu (UnitContext), none while deploying, on the strategic map or while a unit moves on it
+	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value
+		|| moving.value !== null ? null : contextOf(world.value, selected.value, lost.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
-	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value));
+	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value).filter((u) => u.id !== moving.value));
 	//the person's reserve, and the deployment zone while one of its units is picked
 	const reserve = computed(() => world.value === null ? [] : reserveOf(world.value));
 	const deployment = computed(() => world.value === null ? null : deploymentOf(world.value, deploying.value));
@@ -157,8 +174,7 @@ export function createStore(host: StoreHost) {
 	//A command played: what it told over the map, its victories, and why the undo went, which the core doesn't keep (the
 	//context menu says it, #316)
 	const played = (cmd: Command, before: World, result: Parameters<StoreHost["won"]>[0]) => {
-		tell(before, eventsOf(result));
-		host.won(result);
+		showStep(before, eventsOf(result), () => host.won(result));
 		const loss = undoLoss(before, cmd, world.value!);
 		if (loss !== null) lost.value = loss;
 	};
@@ -215,6 +231,21 @@ export function createStore(host: StoreHost) {
 		news.value = told.news;
 	};
 
+	//A step shown: its beats played, then what it told, then what follows (a person's victories, a program's next action).
+	//Without the world before it, nothing to play
+	const showStep = (before: World | null, events: GameEvent[], then: () => void) => {
+		if (before === null) {
+			then();
+			return;
+		}
+		busy = true;
+		player.play(beatsFor(before, world.value!, events), () => {
+			busy = false;
+			tell(before, events);
+			then();
+		});
+	};
+
 	//A tap or click closes the odds card; a finger's first tap on a target opens it there instead of attacking (true: the tap
 	//did that), its second on the same target goes on to attack
 	const firstTap = (w: World, at: Position, touch: boolean): boolean => {
@@ -251,12 +282,7 @@ export function createStore(host: StoreHost) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news,
-
-		//A program's step shown: what it told, from the world the screen showed before it
-		told(before: World | null, events: GameEvent[]) {
-			if (before !== null && world.value !== null) tell(before, events);
-		},
+		results, news, motion, showStep,
 
 		//The chips and the stamp faded (the status bar's line stays)
 		faded: () => {
@@ -269,7 +295,7 @@ export function createStore(host: StoreHost) {
 		//on a target opens its odds card and the second attacks (AttackPreview: no attack on the first tap)
 		clickHex(at: Position, touch = false) {
 			const w = world.value;
-			if (w === null) return;
+			if (w === null || busy) return;
 			//(the first click on the map closes the turn report, and does what it does)
 			banner.value = false;
 			if (strategic.value) {
@@ -388,9 +414,11 @@ export function createStore(host: StoreHost) {
 			notes.value = [...notes.value, n];
 		},
 
-		//Every open message dropped, its OK not run: a new scenario's start (#405)
+		//A new scenario's start: every open message dropped, its OK not run (#405), and the last step's beats stopped
 		clear() {
 			notes.value = [];
+			player.stop();
+			busy = false;
 		},
 
 		//The open message's OK: closed, then what it does
