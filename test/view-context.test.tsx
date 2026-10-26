@@ -190,7 +190,7 @@ function menuOf(w: World) {
 	});
 	store.refresh();
 	store.selected.value = 0;
-	render(<UnitContextMenu store={store} at={{ x: 200, y: 200 }} gap={30} />);
+	render(<UnitContextMenu store={store} at={{ x: 200, y: 200 }} gap={30} clear={[]} />);
 	return { store, sent };
 }
 

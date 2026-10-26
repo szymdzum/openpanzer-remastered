@@ -14,6 +14,7 @@ import { HexTooltip, Pins } from "./maptips";
 import { OddsCard } from "./oddscard";
 import { ResultMarks } from "./resultmarks";
 import type { Ghost } from "./deploy";
+import type { Selection } from "./mapview";
 import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
@@ -297,6 +298,9 @@ function useOddsRest(store: Store) {
 	}, [store, glance]);
 }
 
+//The hexes a click on the map must still reach under the unit's menu: its targets and the hexes it can stop on
+const reachable = (sel: Selection | null): Position[] => sel === null ? [] : [...sel.targets, ...sel.area];
+
 //What sits over the map at its hexes, placed from where the map is on the screen: the path's tag, the selected unit's
 //actions above its hex (UnitContext), the pins, the hex tooltip and the placing tag
 function Overlays({ store, view, scale }: { store: Store, view: View, scale: number }) {
@@ -309,7 +313,7 @@ function Overlays({ store, view, scale }: { store: Store, view: View, scale: num
 	return (
 		<>
 			{end !== null && <PathTag store={store} at={at(end)} />}
-			{menu !== null && <UnitContextMenu store={store} at={at(menu.at)} gap={half + 4} />}
+			{menu !== null && <UnitContextMenu store={store} at={at(menu.at)} gap={half + 4} clear={reachable(store.selection.value).map(at)} />}
 			<Pins pins={store.pins.value} where={(p) => { const c = at(p); return { x: c.x, y: c.y - half }; }} />
 			{tip !== null && <HexTooltip tip={tip} at={at(tip.at)} gap={side} onClose={() => store.restHex(null)} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}

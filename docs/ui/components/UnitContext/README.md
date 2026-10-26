@@ -23,4 +23,4 @@ The actions for the selected unit (`#unit-context`), in one row above its hex. T
 
 Today resupply also adds 1 ammo and 1 fuel when nothing is missing (#95). The menu shows only what is missing, so it doesn't promise that extra point.
 
-Keep `#unit-context`. Position it from the hex centre, clamped to the screen with `space-3` from the edges. `SupplyRules` has the divisors in one table.
+Keep `#unit-context`. Position it from the hex centre, clamped to the screen with `space-3` from the edges. It sits above the hex, or below it when the row above would cover a hex the unit can attack or stop on, so a click there still reaches the map (#429); where both would cover some, the side that covers fewer. `SupplyRules` has the divisors in one table.

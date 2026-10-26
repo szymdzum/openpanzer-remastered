@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { Facts, StatTable, Stats } from "../src/view/facts";
 import { StrengthBar } from "../src/view/strength";
-import { Anchored, clampToScreen, placeBy } from "../src/view/anchored";
+import { Anchored, clampToScreen, placeBy, placeClear } from "../src/view/anchored";
 import { BottomSheet } from "../src/view/sheet";
 
 afterEach(cleanup);
@@ -69,6 +69,14 @@ describe("Anchored", () => {
 		expect(placeBy({ x: 500, y: 400 }, size, "beside", 40)).toEqual({ x: 540, y: 350 });
 		expect(placeBy({ x: 500, y: 400 }, size, "before", 40)).toEqual({ x: 160, y: 350 });
 		expect(placeBy({ x: 500, y: 400 }, size, "below", 14)).toEqual({ x: 350, y: 414 });
+	});
+
+	test("A panel anchored above moves below when it would cover a hex a click must reach, and stays where it covers fewest (#429)", () => {
+		const hex = { x: 500, y: 400 }, above = { x: 350, y: 270 }, below = { x: 350, y: 430 };
+		expect(placeClear(hex, size, ["above", "below"], 30, screenSize, [])).toEqual(above);
+		expect(placeClear(hex, size, ["above", "below"], 30, screenSize, [{ x: 500, y: 340 }])).toEqual(below);
+		expect(placeClear(hex, size, ["above", "below"], 30, screenSize, [{ x: 500, y: 340 }, { x: 400, y: 480 }, { x: 600, y: 480 }])).toEqual(above);
+		expect(placeClear(hex, size, ["above"], 30, screenSize, [{ x: 500, y: 340 }])).toEqual(above);
 	});
 
 	test("clamped to the screen, space-3 from its edges", () => {

@@ -4,9 +4,12 @@
 import { useState } from "preact/hooks";
 import { Anchored } from "./anchored";
 import { Button } from "./button";
+import type { Point } from "./hexgrid";
 import type { Breakdown, ContextAction } from "./context";
 import { Icon } from "./icon";
 import type { Store } from "./store";
+
+const PLACES: ("above" | "below")[] = ["above", "below"];
 
 //The press that shows the tooltip on touch, where nothing hovers: one at a time, the finger's
 const LONG_PRESS = 500;
@@ -50,13 +53,14 @@ function Action({ action, onPlay, onTip }: { action: ContextAction, onPlay: () =
 }
 
 //Above the hex at the given point of the screen, gap from its centre
-export function UnitContextMenu({ store, at, gap }: { store: Store, at: { x: number, y: number }, gap: number }) {
+//(above the hex, or below it when the hexes above hold a target or a stop of the move, #429)
+export function UnitContextMenu({ store, at, gap, clear }: { store: Store, at: Point, gap: number, clear: Point[] }) {
 	const [tipped, setTipped] = useState<string | null>(null);
 	const menu = store.context.value;
 	if (menu === null) return null;
 	const tip = menu.actions.find((a) => a.label === tipped && a.tip !== null);
 	return (
-		<Anchored id="unit-context" hex={at} place="above" gap={gap} class="pm-ctx" role="toolbar" label="Unit actions">
+		<Anchored id="unit-context" hex={at} place={PLACES} clear={clear} gap={gap} class="pm-ctx" role="toolbar" label="Unit actions">
 			{menu.actions.map((a) => [
 				a.apart && <span key="sep" class="pm-sep" />,
 				<Action key={a.label} action={a} onPlay={() => store.dispatch(a.command)}
