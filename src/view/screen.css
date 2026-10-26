@@ -228,6 +228,45 @@
 			}
 		}
 
+		/* the turn report (CombatLog) in the middle, its reports scrolled under the summary; its entries are buttons that
+		   look like the card's rows */
+		& > .pm-log {
+			inset-block-start: 50%;
+			inset-inline-start: 50%;
+			translate: -50% -50%;
+			inline-size: min(62.5rem, 100% - 2 * var(--space-3));
+			max-block-size: calc(100dvh - 2 * var(--space-3));
+
+			& > .bd {
+				overflow-y: auto;
+			}
+
+			:where(.summary) :is(.more, .u) {
+				font-size: var(--type-note-size);
+			}
+
+			.pm-entry {
+				inline-size: 100%;
+				padding-inline: 0;
+				background: none;
+				border-inline: 0;
+				border-block-start: 0;
+				color: inherit;
+				font: inherit;
+				text-align: start;
+			}
+
+			:where(.res) .sub {
+				font-size: var(--type-label-size);
+			}
+
+			.quiet,
+			.hint {
+				margin: 0;
+				font-size: var(--type-small-size);
+			}
+		}
+
 		/* the reserve to deploy from, at the bottom in the middle until the reserve tray (D5) docks there */
 		& > .pm-reserve {
 			inset-block-end: var(--space-4);
@@ -241,7 +280,8 @@
 			overflow-y: auto;
 		}
 
-		/* a message in the middle of the screen, its text scrolled when it is long */
+		/* a message in the middle of the screen, its text scrolled when it is long: a briefing the full window, a notice
+		   the short one (MessageDialog) */
 		& > .pm-message {
 			inset-block-start: 50%;
 			inset-inline-start: 50%;
@@ -250,8 +290,19 @@
 			max-block-size: 90dvh;
 			z-index: var(--z-message);
 
+			&:where(.notice) {
+				inline-size: min(90vw, 30rem);
+			}
+
 			& > .bd {
 				overflow-y: auto;
+			}
+
+			.from {
+				display: inline-flex;
+				align-items: center;
+				gap: var(--space-2);
+				font-size: var(--type-note-size);
 			}
 		}
 	}

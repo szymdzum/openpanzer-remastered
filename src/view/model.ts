@@ -86,6 +86,8 @@ const WEATHER: Condition[] = [{ icon: "fair", word: "Fair" }, { icon: "overcast"
 	{ icon: "snow", word: "Snow" }];
 const GROUND: Condition[] = (["dry", "frozen", "mud"] as const).map((icon, i) => ({ icon, word: groundConditionNames[i] }));
 
+//The months as a date written in full says them ("1 September 1939")
+export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 //A date as the HUD writes it, "06 Sep 1939": the scenario's date is the local midnight the game started from

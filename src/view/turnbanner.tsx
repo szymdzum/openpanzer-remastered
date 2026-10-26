@@ -6,7 +6,7 @@ import { Icon, Mark } from "./icon";
 import type { Store } from "./store";
 import type { TurnReport } from "./turn";
 
-//(the full turn report and the dossier are windows, D5)
+//(the dossier is a window of its own, D5)
 const NOT_YET = "Not in the new UI yet";
 
 //The turns to win: the best outcome still open first in bold, the others after it, or the last turn's stake; under it
@@ -49,7 +49,7 @@ export function TurnBanner({ store }: { store: Store }) {
 				<span class="pm-label">Enemy turn</span>
 				{report.enemy.map((e) => <span key={e.text} class="ev"><span class={"pm-" + e.tone}><Icon name="attack" size="sm" /></span>{e.text}</span>)}
 				<span class="grow" />
-				<Button icon="document" disabled={NOT_YET}>Turn report</Button>
+				<Button icon="document" onClick={() => store.openLog()}>Turn report</Button>
 			</div>
 		</section>
 	);

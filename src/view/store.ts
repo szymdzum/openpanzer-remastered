@@ -19,6 +19,7 @@ import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
 import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
+import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -43,6 +44,8 @@ export interface Note {
 	html: string;
 	at: Position | null;
 	ok: () => void;
+	//a scenario's briefing (MessageDialog): the full window with its stamp; else a short notice
+	briefing?: boolean;
 }
 
 export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
@@ -73,6 +76,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
 	const enemy = signal<EnemyTurn>(quietTurn());
 	const banner = signal(false);
+	//the turn's log from the person's end of turn on, and the full turn report open (CombatLog)
+	const log = signal(emptyLog());
+	const logOpen = signal(false);
 	//the target whose odds card is open (AttackPreview, stage 2): the pointer rested on it, Shift held, or a finger tapped
 	//it (touch: the next tap on it attacks), null: none
 	const oddsAt = signal<Position | null>(null);
@@ -125,6 +131,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
 	const report = computed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
+	const combatLog = computed(() => world.value === null || !logOpen.value ? null : combatLogOf(world.value, log.value, enemy.value));
 	const ai = computed(() => world.value === null ? null : aiStatusOf(world.value));
 	//(the status bar's turn report button: the person's report, none while a program plays)
 	const reportRefusal = computed(() => world.value === null || turnReportOf(world.value, enemy.value) === null ? "No report to show"
@@ -172,6 +179,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		//command, which may play the program's whole turn and start the person's next)
 		if (cmd.type === "endTurn") {
 			enemy.value = quietTurn();
+			log.value = emptyLog();
+			logOpen.value = false;
 			selected.value = null;
 			banner.value = false;
 		}
@@ -252,6 +261,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			then();
 			return;
 		}
+		log.value = logStep(log.value, before, world.value!, events);
 		busy = true;
 		player.play(beatsFor(before, world.value!, events), () => {
 			busy = false;
@@ -299,7 +309,23 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news, motion, showStep, card, ...shops, tray,
+		results, news, motion, showStep, card, ...shops, tray, combatLog,
+
+		//The full turn report (the short one's Turn report), in place of the short one; closed
+		openLog() {
+			banner.value = false;
+			logOpen.value = true;
+		},
+
+		closeLog() {
+			logOpen.value = false;
+		},
+
+		//What a turn's start did (the screen's turnEvents): its resupplies and reinforcements in the log
+		logTurn(events: GameEvent[]) {
+			const w = host.world();
+			if (w !== null) log.value = logTurnStart(log.value, w, events);
+		},
 
 		//The unit card opened on the selected unit, or on an equipment entry of a country
 		openCard(entry?: { eqid: number, country: number }) {
@@ -386,10 +412,11 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			banner.value = open;
 		},
 
-		//The report's Briefing: the scenario's description in the message window
+		//The reports' Briefing (the short and the full one): the scenario's description in the message window, while one
+		//of them is open
 		briefing() {
-			const r = report.value;
-			if (r !== null) notes.value = [...notes.value, { title: r.briefing.title, html: r.briefing.html, at: null, ok: () => {} }];
+			const w = world.value;
+			if (w !== null && (report.value !== null || combatLog.value !== null)) notes.value = [...notes.value, { title: w.data.name, html: w.data.description, at: null, ok: () => {}, briefing: true }];
 		},
 
 		//The hex the pointer has rested on, or a finger held, for its tooltip; null: none
@@ -446,6 +473,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		//A new scenario's start: every open message dropped, its OK not run (#405), and the last step's beats stopped
 		clear() {
 			notes.value = [];
+			log.value = emptyLog();
+			logOpen.value = false;
 			player.stop();
 			busy = false;
 		},
