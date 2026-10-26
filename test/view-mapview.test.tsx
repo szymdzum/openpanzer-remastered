@@ -199,9 +199,9 @@ test("Deploying: the first reserve unit picked, its tag on a free hex, a click p
 	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
 	s.scrollLeft = s.scrollTop = 0;
 	//(the fighter picked in the reserve, then the infantry again)
-	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Me-109E-3/ })); });
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: /^Me-109E-3/ })); });
 	expect(store.deploying.value).toBe(2);
-	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Infanterie/ })); });
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: /^Infanterie/ })); });
 	await act(() => pointer("mousemove", 2, 1));
 	expect(document.querySelector(".pm-placetag")!.textContent).toBe("Place Infanterie" + "can't go back to the reserve");
 	//the taken hex: no tag, and a click there selects nothing while deploying (no move area drawn)
@@ -210,9 +210,9 @@ test("Deploying: the first reserve unit picked, its tag on a free hex, a click p
 	await act(() => pointer("click", 2, 1));
 	expect(h.sent).toEqual([{ type: "deploy", index: 1, to: { row: 2, col: 1 } }]);
 	expect(store.deploying.value).toBe(2);
-	//the picker: the fighter picked, then the infantry's gone; Done ends deploying, Deploy starts it again
-	const rows = () => [...document.querySelectorAll(".pm-reserve .pm-row")].map((r) => r.textContent);
-	expect(rows()).toEqual(["Me-109E-3 10"]);
+	//the tray: the fighter picked, then the infantry's gone; Done ends deploying, Deploy starts it again
+	const rows = () => [...document.querySelectorAll(".pm-deploy .pm-ucard")].map((r) => r.getAttribute("aria-label"));
+	expect(rows()).toEqual(["Me-109E-3, strength 10"]);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Done" })); });
 	expect([store.deploying.value, store.deployment.value]).toEqual([null, null]);
 	await act(() => pointer("click", 1, 2));
@@ -220,11 +220,11 @@ test("Deploying: the first reserve unit picked, its tag on a free hex, a click p
 	expect(store.selection.value!.area.length).toBeGreaterThan(0);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: /Deploy · 1 in reserve/ })); });
 	expect([store.deploying.value, store.selected.value, store.selection.value]).toEqual([2, null, null]);
-	await act(() => { fireEvent.click(screen.getByRole("radio", { name: /Me-109E-3/ })); });
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: /^Me-109E-3/ })); });
 	await act(() => pointer("click", 1, 2));
 	expect(h.sent[1]).toEqual({ type: "deploy", index: 2, to: { row: 1, col: 2 } });
 	//the reserve empty: deploying ends, the picker goes
-	expect([store.deploying.value, document.querySelector(".pm-reserve")]).toEqual([null, null]);
+	expect([store.deploying.value, document.querySelector(".pm-reserve"), document.querySelector(".pm-deploy")]).toEqual([null, null, null]);
 	await act(() => store.startDeployment());
 	expect(store.deploying.value).toBeNull();
 	//the host refuses the placement (a message to read first): the unit stays picked, the reason in the status line

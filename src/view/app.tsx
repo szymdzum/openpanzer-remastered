@@ -7,30 +7,14 @@ import { IconSprite } from "./icon";
 import { UnitInfoPanel } from "./infopanel";
 import { UnitCardPanel } from "./unitsheet";
 import { UnitStrip } from "./unitstrip";
+import { ReserveTray } from "./tray";
 import { ShopWindow } from "./shopwindow";
-import { List } from "./list";
 import { MapView } from "./map";
-import { Panel, Scrim, Window } from "./panel";
+import { Scrim, Window } from "./panel";
 import { EndTurn, EndTurnQuestion, Rail } from "./rail";
 import { StatusBar } from "./statusbar";
 import { AiIndicator, TurnBanner } from "./turnbanner";
 import type { Store } from "./store";
-
-//The units waiting in the reserve, until the reserve tray (Deployment, D5): one picked to place on the map, or
-//none to play on, the reserve kept for later
-function Reserve({ store }: { store: Store }) {
-	const reserve = store.reserve.value, picked = store.deployment.value;
-	if (reserve.length === 0) return null;
-	if (picked === null)
-		return <Panel class="pm-reserve"><Button icon="deploy" onClick={() => store.pick(reserve[0].index)}>Deploy · {reserve.length} in reserve</Button></Panel>;
-	return (
-		<Panel class="pm-reserve">
-			<List label="Reserve" groups={[{ rows: reserve.map((r) => ({ id: String(r.index), title: r.name, value: r.strength })) }]}
-				selected={String(picked.unit.index)} onSelect={(id) => store.pick(Number(id))} />
-			<Button onClick={() => store.pick(null)}>Done</Button>
-		</Panel>
-	);
-}
 
 //The open message, over the rest: the scenario's briefing, the game's outcome, the tutorial's orders
 function Message({ store }: { store: Store }) {
@@ -57,7 +41,7 @@ export function App({ store }: { store: Store }) {
 			<UnitInfoPanel store={store} />
 			<UnitCardPanel store={store} />
 			<UnitStrip store={store} />
-			<Reserve store={store} />
+			<ReserveTray store={store} />
 			<TurnBanner store={store} />
 			<AiIndicator store={store} />
 			<EndTurn store={store} />

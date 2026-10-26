@@ -104,15 +104,26 @@
 			}
 		}
 
-		/* the unit list (UnitList) under the status bar in the middle; its cards scroll sideways */
+		/* the unit list (UnitList) under the status bar in the middle, the reserve tray (Deployment) docked at the bottom
+		   where the unit info sits (nothing is selected while deploying); their cards scroll sideways */
 		& > .pm-unitlist {
 			inset-block-start: 5.5rem;
 			inset-inline-start: 50%;
 			translate: -50% 0;
 			inline-size: min(56.25rem, 100% - 2 * var(--space-3));
 
+			/* (the card's own transform would move it a second time) */
+			&:where(.pm-deploy) {
+				inset-block: auto var(--space-3);
+				transform: none;
+			}
+
 			.note {
 				font-size: var(--type-small-size);
+			}
+
+			.pm-data {
+				white-space: nowrap;
 			}
 
 			.pm-strip {

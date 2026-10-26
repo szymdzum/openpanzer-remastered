@@ -238,6 +238,7 @@ export default defineConfig({
 				"src/view/shop.ts": { statements: 96, branches: 92, functions: 97, lines: 99 },
 				"src/view/shopstate.ts": { statements: 90, branches: 84, functions: 94, lines: 97 },
 				"src/view/unitstrip.tsx": { statements: 100, branches: 82, functions: 100, lines: 100 },
+				"src/view/tray.tsx": { statements: 100, branches: 87, functions: 100, lines: 100 },
 				"src/view/shopwindow.tsx": { statements: 100, branches: 98, functions: 100, lines: 100 },
 			},
 		},

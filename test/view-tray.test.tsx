@@ -1,0 +1,63 @@
+//The reserve tray on the new UI (src/view/deploy.ts trayOf, src/view/tray.tsx; Deployment, #348) on the Deployment
+//card's hand-built world (deployWorld: a Pz IIA on the map, an Infanterie and a Me-109E-3 in the reserve): the tray
+//docked while deploying with the placed count, the unit picked, Upgrade on it, Done, and the unit list giving way to it
+import { afterEach, expect, test } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
+import { deployWorld, reserveUnit } from "./coreworld";
+import { step } from "../src/core/step";
+import type { World } from "../src/core/types";
+import { trayOf } from "../src/view/deploy";
+import { createStore } from "../src/view/store";
+import { ReserveTray } from "../src/view/tray";
+import { ShopWindow } from "../src/view/shopwindow";
+import { UnitStrip } from "../src/view/unitstrip";
+
+afterEach(cleanup);
+
+test("The tray has the reserve's units with their sprites, the one picked, and how many core units are on the map (#348)", () => {
+	const w = deployWorld();
+	expect(trayOf(w, 2)).toEqual({ placed: 1, total: 3, units: [
+		{ index: 1, name: "Infanterie", strength: 10, sprite: w.equipment[115].icon, picked: false },
+		{ index: 2, name: "Me-109E-3", strength: 10, sprite: w.equipment[159].icon, picked: true }] });
+	//a unit lost isn't counted
+	w.state.players[0].core.push({ lost: reserveUnit(115) });
+	expect(trayOf(w, 1).total).toBe(3);
+});
+
+function trayStore(w: World) {
+	let now = w;
+	const store = createStore({
+		world: () => now,
+		command: (cmd) => {
+			const r = step(now, cmd);
+			if ("refusal" in r) return { ok: false, refusal: r.refusal };
+			now = r.world;
+			return { ok: true, result: null };
+		},
+		won: () => {},
+	});
+	store.refresh();
+	render(<><UnitStrip store={store} /><ReserveTray store={store} /><ShopWindow store={store} /></>);
+	return store;
+}
+
+test("Deploying docks the tray with the card's ids; a card picks its unit; Upgrade opens the window on it; Done leaves the rest (#348)", async () => {
+	const store = trayStore(deployWorld());
+	await act(() => { store.toggleList(); store.startDeployment(); });
+	const tray = screen.getByRole("region", { name: "Reserve" });
+	expect([tray.id, tray.className]).toEqual(["container-unitlist", "pm-panel pm-unitlist pm-deploy"]);
+	expect(["hscroll-unitlist", "unitlist"].map((id) => tray.querySelector("#" + id) !== null)).toEqual([true, true]);
+	expect(tray.textContent).toContain("1 of 3 placed");
+	//the unit list gives way to the tray while deploying
+	expect(screen.queryByRole("region", { name: "Your units" })).toBeNull();
+	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Me-109E-3, strength 10" })); });
+	expect(store.deploying.value).toBe(2);
+	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Upgrade" })); });
+	expect(store.shop.value!.target).toBe("Me-109E-3");
+	expect(store.shop.value!.sell!.command).toEqual({ type: "sell", index: 2 });
+	await act(() => store.closeShop());
+	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Done" })); });
+	expect([store.deploying.value, screen.queryByRole("region", { name: "Reserve" })]).toEqual([null, null]);
+	expect(screen.getByRole("region", { name: "Your units" })).toBeTruthy();
+	expect(screen.getByRole("button", { name: "Deploy · 2 in reserve" })).toBeTruthy();
+});
