@@ -7,7 +7,8 @@ import { Icon, Mark } from "./icon";
 import { Panel } from "./panel";
 import type { Store } from "./store";
 
-//The windows the two buttons open come with the windows (D5): until then they are off with that reason
+//The unit list is a window (D5): until then its button is off with that reason. The turn report button opens the short
+//report again (TurnStart)
 const NOT_YET = "Not in the new UI yet";
 
 export function StatusBar({ store }: { store: Store }) {
@@ -28,7 +29,8 @@ export function StatusBar({ store }: { store: Store }) {
 				<span class="grow" />
 				{prestige !== null && <span class="cell pm-prestige" title="Prestige"><Icon name="prestige" size="sm" />{prestige}</span>}
 				<Button id="statusBarButton" icon="unit-list" label="Unit list" disabled={NOT_YET} />
-				<Button id="combatLogButton" icon="document" label="Turn report" disabled={NOT_YET} />
+				<Button id="combatLogButton" icon="document" label="Turn report" disabled={store.reportRefusal.value}
+					onClick={() => store.showReport(!store.banner.value)} />
 			</div>
 			<MapLine store={store} />
 		</Panel>

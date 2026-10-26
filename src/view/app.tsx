@@ -10,6 +10,7 @@ import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
 import { EndTurn, EndTurnQuestion, Rail } from "./rail";
 import { StatusBar } from "./statusbar";
+import { AiIndicator, TurnBanner } from "./turnbanner";
 import type { Store } from "./store";
 
 //The units waiting in the reserve, until the reserve tray (Deployment, D5): one picked to place on the map, or
@@ -52,6 +53,8 @@ export function App({ store }: { store: Store }) {
 			<Rail store={store} />
 			<UnitInfoPanel store={store} />
 			<Reserve store={store} />
+			<TurnBanner store={store} />
+			<AiIndicator store={store} />
 			<EndTurn store={store} />
 			<EndTurnQuestion store={store} />
 			<Message store={store} />
