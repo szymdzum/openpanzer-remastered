@@ -4,7 +4,7 @@
 //draws what the view model (src/view/odds.ts) computed, at screen size; colours are the tokens'.
 import { atScreen, toScreen, type Viewport } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
-import type { Blocked, Chip, Glance, Glyph } from "./odds";
+import type { Blocked, LossChip, Glance, Glyph } from "./odds";
 import { label } from "./overlays";
 import { TOKENS } from "./tokens";
 
@@ -70,7 +70,7 @@ function drawBlocked(c: CanvasRenderingContext2D, vp: Viewport, blocked: Blocked
 }
 
 //A loss chip: the loss typed on its side's colour, 0 when none; returns its width
-function chip(c: CanvasRenderingContext2D, ch: Chip, x: number, y: number): number {
+function chip(c: CanvasRenderingContext2D, ch: LossChip, x: number, y: number): number {
 	const text = ch.loss === 0 ? "0" : "−" + ch.loss;
 	c.font = "bold 12px " + TOKENS.fonts.mono;
 	const w = Math.ceil(c.measureText(text).width) + 8;
