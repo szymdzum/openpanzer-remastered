@@ -33,16 +33,9 @@ export interface Status {
 	yourTurn: boolean; //a person plays the current player on this screen
 }
 
-//An action on the selected unit: the command it sends and why it can't now (null: it can)
-//The keys that play a unit's action (GameMenu): M mount or dismount, E embark or disembark, S, R, O, U
+//The keys that play a unit's action (GameMenu): M mount or unmount, E embark or disembark, S, R, O, U; each is an
+//action of the unit context menu (src/view/context.ts)
 export type ActionKey = "mount" | "embark" | "resupply" | "reinforce" | "overstrength" | "undo";
-
-export interface Action {
-	label: string;
-	key: ActionKey;
-	command: Command;
-	refusal: string | null;
-}
 
 //The selected unit as the unit info shows it
 export interface UnitView {
@@ -62,7 +55,6 @@ export interface UnitView {
 	entrenchment: number;
 	moved: boolean;
 	fired: boolean;
-	actions: Action[];
 }
 
 //(the state's player of an id; a world without players has none)
@@ -169,19 +161,6 @@ export function stillToAct(names: string[]): string {
 	return (n === 1 ? "1 unit" : n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
 }
 
-//What a unit on the map can be told to do in place, in the unit context's order. The move and the attack
-//are the map's (D2), the purchases and the disband the windows' (D5), with their confirmations
-const ACTIONS: [string, ActionKey, (id: UnitId) => Command][] = [
-	["Resupply", "resupply", (unit) => ({ type: "resupply", unit })],
-	["Reinforce", "reinforce", (unit) => ({ type: "reinforce", unit })],
-	["Overstrength", "overstrength", (unit) => ({ type: "reinforce", unit, overstrength: true })],
-	["Mount", "mount", (unit) => ({ type: "mount", unit })],
-	["Dismount", "mount", (unit) => ({ type: "unmount", unit })],
-	["Embark", "embark", (unit) => ({ type: "embark", unit })],
-	["Disembark", "embark", (unit) => ({ type: "disembark", unit })],
-	["Undo move", "undo", (unit) => ({ type: "undo", unit })],
-];
-
 //The unit when it is on the map and the side shown sees it: its own, or an enemy on a hex it spots (no side shown:
 //no game is on the screen, nothing is seen)
 export function shownUnit(w: World, id: UnitId): UnitState | null {
@@ -200,16 +179,7 @@ export function unitView(w: World, id: UnitId): UnitView | null {
 	return { id, name: e.name, className: unitClassNames[e.uclass], side, own: turnRefusal(w, u) === null,
 		at: { row: u.row, col: u.col }, place: w.data.hexes[hexIndex(w, u.row, u.col)].name, strength: u.strength, moves: movesLeft(w, u),
 		movpoints: e.movpoints, fuel: fuelOf(u), ammo: ammoOf(u),
-		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired,
-		actions: ACTIONS.map(([label, key, command]) => ({ label, key, command: command(id), refusal: already(u, label) || refusalOf(w, command(id)) })) };
-}
-
-//Mount and Embark on a unit that is mounted or embarked already: the core would take them again, the old UI offered
-//the other one instead (Dismount, Disembark), and so do the M and E keys
-function already(u: UnitState, label: string): string | null {
-	if (label === "Mount" && u.isMounted) return "Mounted already";
-	if (label === "Embark" && u.carrier > 0) return "Embarked already";
-	return null;
+		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired };
 }
 
 //The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the

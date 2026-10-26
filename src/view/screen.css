@@ -112,6 +112,23 @@
 		}
 	}
 
+	/* the unit context menu over the map (UnitContext): its captions as written, in the card's small type, and the
+	   arithmetic of the hovered action beside the menu */
+	.pm-ctx {
+		.pm-btn {
+			text-transform: none;
+			letter-spacing: 0;
+			font: 600 var(--type-micro-size) / 0.75rem var(--font-ui);
+		}
+
+		.pm-ctxtip {
+			inset-block-start: 0;
+			inset-inline-start: calc(100% + var(--space-3));
+			inline-size: max-content;
+			max-inline-size: 20rem;
+		}
+	}
+
 	/* below 1280px the unit info keeps its identity and meters; the stat sheet opens under them with Stats (HudLaptop) */
 	@container screen (width < 80rem) {
 		.pm-screen > .pm-info {
