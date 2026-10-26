@@ -161,6 +161,11 @@ export function createStore(host: StoreHost) {
 			notes.value = [...notes.value, n];
 		},
 
+		//Every open message dropped, its OK not run: a new scenario's start (#405)
+		clear() {
+			notes.value = [];
+		},
+
 		//The open message's OK: closed, then what it does
 		close() {
 			const [top, ...rest] = notes.value;
