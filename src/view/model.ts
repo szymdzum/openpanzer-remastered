@@ -7,14 +7,28 @@ import type { Command, Refusal } from "../commands";
 import { check } from "../core/step";
 import type { PlayerState, Position, UnitId, UnitState, World } from "../core/types";
 import { ammoOf, fuelOf, hexIndex, isSpotted, movesLeft, unitById, unitData } from "../core/world";
-import { playerType, sideNames, unitClassNames } from "../prototypes";
+import { countryNames, groundConditionNames, playerType, sideNames, unitClassNames } from "../prototypes";
+import type { IconName, Nation } from "./icon";
 
-//The status bar's game state: whose turn it is and how far the scenario is
+//A state the status bar shows as an icon and a word: the weather, the ground
+export interface Condition {
+	icon: IconName;
+	word: string;
+}
+
+//The status bar's game state (StatusBar): whose turn it is, how far the scenario is, the conditions and the
+//rules it plays
 export interface Status {
 	turn: number;
 	maxTurns: number;
 	side: number; //the current player's side: 0 Axis, 1 Allies
 	sideName: string;
+	country: string; //the current player's country, as its equipment set names it
+	nation: Nation | null; //its flag, none for a country the icon set has no mark for
+	date: string; //"06 Sep 1939"
+	weather: Condition;
+	ground: Condition;
+	rules: string; //the rules the game plays, as the settings name them (#317)
 	prestige: number | null; //the person's player's, null when no person plays here
 	yourTurn: boolean; //a person plays the current player on this screen
 }
@@ -34,8 +48,10 @@ export interface UnitView {
 	side: number;
 	own: boolean; //the current person's unit: its actions can be sent
 	at: Position;
+	place: string; //the hex's name, "" for none
 	strength: number;
-	moves: number;
+	moves: number; //left this turn
+	movpoints: number; //what it has in a turn, as what it is now (its transport's when mounted)
 	fuel: number;
 	ammo: number;
 	experience: number;
@@ -65,11 +81,40 @@ export function yourPlayer(w: World): PlayerState | null {
 	return w.state.players.find((p) => p.type === playerType.humanLocal && p.side === w.spotSide) || null;
 }
 
+//The flags the icon set has, by the country names that fly them; the Axis is the Balkenkreuz alone (principles.md)
+const NATIONS: Record<string, Nation> = { "Germany": "de", "Afrika Korps": "de", "Italy": "it", "Poland": "pl", "Russia": "su",
+	"United Kingdom": "gb", "USA": "us", "U.S. Army": "us", "U.S. Marines": "us", "France": "fr" };
+
+//The weather by scenario.atmospheric, the ground by scenario.ground (groundCondition), as the card words them
+const WEATHER: Condition[] = [{ icon: "fair", word: "Fair" }, { icon: "overcast", word: "Overcast" }, { icon: "rain", word: "Rain" },
+	{ icon: "snow", word: "Snow" }];
+const GROUND: Condition[] = (["dry", "frozen", "mud"] as const).map((icon, i) => ({ icon, word: groundConditionNames[i] }));
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+//A date as the HUD writes it, "06 Sep 1939": the scenario's date is the local midnight the game started from
+export function dateOf(iso: string): string {
+	const d = new Date(iso);
+	return String(d.getDate()).padStart(2, "0") + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+}
+
+//A country's name in the scenario's equipment set, "" for none
+function countryOf(w: World, p: PlayerState | null): string {
+	const names = countryNames[w.data.equipment] || [];
+	return p === null ? "" : names[p.country] || "";
+}
+
 export function statusOf(w: World): Status {
-	const p = currentPlayer(w), you = yourPlayer(w);
-	const side = p === null ? -1 : p.side;
-	return { turn: w.state.turn.turn, maxTurns: w.state.scenario.maxTurns, side, sideName: side < 0 ? "" : sideNames[side],
-		prestige: you === null ? null : you.prestige, yourTurn: isYourTurn(w) };
+	const p = currentPlayer(w), you = yourPlayer(w), s = w.state.scenario;
+	const side = p === null ? -1 : p.side, country = countryOf(w, p);
+	return { turn: w.state.turn.turn, maxTurns: s.maxTurns, side, sideName: side < 0 ? "" : sideNames[side], country,
+		nation: NATIONS[country] || null, date: dateOf(s.date), weather: WEATHER[s.atmospheric], ground: GROUND[s.ground],
+		rules: w.rules.name === "classic" ? "Classic" : "Remaster", prestige: you === null ? null : you.prestige, yourTurn: isYourTurn(w) };
+}
+
+//Prestige as the HUD writes it, with a thousands separator: 3,056
+export function prestigeText(n: number): string {
+	return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 //A refusal in plain words, as a control shows it: the core's reasons are lower case phrases
@@ -125,7 +170,8 @@ export function unitView(w: World, id: UnitId): UnitView | null {
 	if (side !== w.spotSide && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide))) return null;
 	const e = unitData(w, u);
 	return { id, name: e.name, className: unitClassNames[e.uclass], side, own: turnRefusal(w, u) === null,
-		at: { row: u.row, col: u.col }, strength: u.strength, moves: movesLeft(w, u), fuel: fuelOf(u), ammo: ammoOf(u),
+		at: { row: u.row, col: u.col }, place: w.data.hexes[hexIndex(w, u.row, u.col)].name, strength: u.strength, moves: movesLeft(w, u),
+		movpoints: e.movpoints, fuel: fuelOf(u), ammo: ammoOf(u),
 		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired,
 		actions: ACTIONS.map(([label, command]) => ({ label, command: command(id), refusal: refusalOf(w, command(id)) })) };
 }

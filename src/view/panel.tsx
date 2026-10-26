@@ -19,12 +19,14 @@ function classes(base: string, place: Place) {
 }
 
 //A HUD panel: opaque over the map, never translucent (principles.md, Color)
-export function Panel({ children, role, label, ...place }: Place & {
+export function Panel({ children, role, label, id, ...place }: Place & {
 	children?: ComponentChildren,
 	role?: AriaRole,
 	label?: string,
+	//the id the harness, the tests and the shortcuts find it by (handoff.md, Element map)
+	id?: string,
 }) {
-	return <div class={classes("pm-panel", place)} style={place.style} role={role} aria-label={label}>{children}</div>;
+	return <div id={id} class={classes("pm-panel", place)} style={place.style} role={role} aria-label={label}>{children}</div>;
 }
 
 export function Stamp({ children, large, ok }: { children: ComponentChildren, large?: boolean, ok?: boolean }) {
