@@ -64,6 +64,8 @@ Every existing ID stays. Add the class to the element and replace its inner mark
 
 ## Combat odds preview (new)
 
+Left out of the port until after the switch (D8, #441): over a target the game shows only the old cursor's two losses.
+
 While a unit is selected, on `mousemove` over an enemy hex (or the first tap on touch), call `GameRules.calculateAttackResults(attacker, defender, true)`. The `estimate` flag already exists, and `ui.ts` calls it this way today. Read the losses and kills from the returned `combatResults`, then fill `#gameToolTip` in odds mode:
 
 - Draw two strength bars of 10 segments each: kept segments in the side color, lost segments as `.loss`.

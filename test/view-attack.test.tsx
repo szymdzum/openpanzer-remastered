@@ -1,7 +1,7 @@
-//The attack preview in the page (#347, AttackPreview and CombatOdds), in jsdom, on a store over a hand-built world whose
-//host plays the person's commands on the core: the odds card after the pointer rests 400 ms on a target or Shift is
-//held, closed by moving off it or Escape; on touch the first tap opens it and the second attacks. And the step's beats
-//after a command: the map takes no click while they play, a moving unit glides off its hex
+//The attack cursor in the page (#441), in jsdom, on a store over a hand-built world whose host plays the person's
+//commands on the core: the crosshair and the two losses over a target and nothing else, however long the pointer rests;
+//a click or a tap attacks at once, as the old UI did. And the step's beats after a command: the map takes no click while
+//they play, a moving unit glides off its hex
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
@@ -58,55 +58,24 @@ function pointer(type: string, row: number, col: number, init: PointerEventInit 
 	s.dispatchEvent(type.startsWith("pointer") ? new PointerEvent(type, at) : new MouseEvent(type, at));
 }
 
-const card = () => document.querySelector<HTMLElement>(".pm-odds");
-
-test("The odds card opens once the pointer rests 400 ms on a target, says what the estimate says, and closes off it or with Escape", async () => {
+test("Over a target the crosshair shows the two losses and no odds card opens, however long the pointer rests or Shift is held (#441)", async () => {
 	const { store, sent } = mapOf();
 	await act(() => pointer("mousemove", 4, 4));
-	expect(store.glance.value).toMatchObject({ yours: { loss: 6 }, theirs: { loss: 0 }, glyph: "rugged" });
+	expect(store.glance.value).toMatchObject({ at: { row: 4, col: 4 }, yours: { side: 0 }, theirs: { side: 1 } });
 	expect(document.querySelector(".pm-mapview")!.classList.contains("aiming")).toBe(true);
-	expect(card()).toBeNull();
-	await act(() => { vi.advanceTimersByTime(400); });
-	const c = card()!;
-	expect([c.id, c.className, c.getAttribute("role")]).toEqual(["gameToolTip", "pm-panel pm-odds", "tooltip"]);
-	expect(c.querySelector(".head")!.textContent).toBe("Attack 38 Piechota");
-	expect([...c.querySelectorAll(".vs .pm-data")].map((d) => d.textContent)).toEqual(["10 → 4", "9 → 9"]);
-	expect(c.querySelector(".verdict")!.className).toBe("verdict bad");
-	expect(c.querySelector(".why .key")!.textContent).toBe("Your defence drops to 0 and your attack is halved");
-	expect(c.querySelector(".pm-strength .sup")).not.toBeNull();
-	expect(c.querySelector(".advice")).not.toBeNull();
-	expect(c.querySelector(".commit")!.textContent).toBe("Click to attack anyway · Esc to cancel");
-	//(the hex tooltip doesn't open over it)
-	await act(() => { vi.advanceTimersByTime(400); });
-	expect(store.hexTip.value).toBeNull();
-	await act(() => store.shortcut({ menu: "escape" }));
-	expect([card(), store.selected.value]).toEqual([null, 0]);
-	//Shift opens it at once; the pointer moving off the target closes it
 	await act(() => { dispatchEvent(new KeyboardEvent("keydown", { key: "Shift" })); });
-	expect(card()).not.toBeNull();
+	await act(() => { vi.advanceTimersByTime(2000); });
+	expect(document.querySelector(".pm-odds")).toBeNull();
 	await act(() => pointer("mousemove", 6, 6));
-	expect([card(), store.glance.value]).toEqual([null, null]);
-	//(on a hex that isn't a target, nothing to open)
-	await act(() => store.showOdds({ row: 6, col: 6 }));
-	expect(store.odds.value).toBeNull();
+	expect(store.glance.value).toBeNull();
 	expect(sent).toEqual([]);
 });
 
-test("On touch the first tap on a target opens its card and the second attacks; a tap elsewhere closes it (AttackPreview)", async () => {
-	const { store, sent } = mapOf();
-	const tap = async (row: number, col: number) => {
-		await act(() => pointer("pointerdown", row, col, { pointerType: "touch" }));
-		await act(() => pointer("click", row, col));
-	};
-	await tap(4, 4);
-	expect(card()!.querySelector(".commit")!.textContent).toBe("Tap again to attack · tap elsewhere to cancel");
-	expect(sent).toEqual([]);
-	await tap(4, 3);
-	expect([card(), store.selected.value, sent]).toEqual([null, 0, []]);
-	await tap(4, 4);
-	await tap(4, 4);
+test("A finger's tap on a target attacks at once, as the old UI did (#441)", async () => {
+	const { sent } = mapOf();
+	await act(() => pointer("pointerdown", 4, 4, { pointerType: "touch" }));
+	await act(() => pointer("click", 4, 4));
 	expect(sent).toEqual([{ type: "attack", unit: 0, target: 1 }]);
-	expect(card()).toBeNull();
 });
 
 test("A mouse click on a target attacks at once, as before", async () => {

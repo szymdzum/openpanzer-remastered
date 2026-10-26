@@ -10,7 +10,6 @@ import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
 import { HexTooltip, Pins } from "./maptips";
-import { OddsCard } from "./oddscard";
 import { ResultMarks } from "./resultmarks";
 import type { Ghost } from "./deploy";
 import { Icon } from "./icon";
@@ -50,11 +49,8 @@ class ImageCache {
 	}
 }
 
-//How long the pointer rests on a hex, or a finger holds it, before its tooltip shows (Tooltips); on a target, before its
-//odds card shows (AttackPreview)
-const REST = 700, LONG_PRESS = 500, ODDS_REST = 400;
-//The odds card on the target's right clears the glance's chips there (src/view/attackdraw.ts)
-const GLANCE = 96;
+//How long the pointer rests on a hex, or a finger holds it, before its tooltip shows (Tooltips)
+const REST = 700, LONG_PRESS = 500;
 
 //The strategic map fits the map under the status bar, so no objective hides behind it (StrategicMap): the
 //bar's foot from the map's top, and a little air, 0 without a bar
@@ -95,7 +91,7 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.blocked.value, s.blockedAt.value, s.glance.value, s.results.value, s.motion.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.glance.value, s.results.value, s.motion.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -109,25 +105,16 @@ class Painter {
 			if (holding !== null) clearTimeout(holding);
 			holding = null;
 		};
-		//(a finger's tap opens a target's odds card first, AttackPreview)
-		let touch = false;
 		const press = (e: PointerEvent) => {
 			release();
-			touch = e.pointerType === "touch";
 			const at = this.cellOf(e);
 			if (e.pointerType === "touch" && at !== null) holding = setTimeout(() => s.restHex(at), LONG_PRESS);
 		};
 		const click = (e: MouseEvent) => {
 			const at = this.cellOf(e);
-			if (at !== null) s.clickHex(at, touch);
-		};
-		//Shift held over a target opens its odds card at once
-		const key = (e: KeyboardEvent) => {
-			const g = s.glance.peek();
-			if (e.key === "Shift" && g !== null) s.showOdds(g.at);
+			if (at !== null) s.clickHex(at);
 		};
 		addEventListener("resize", redraw);
-		addEventListener("keydown", key);
 		scroller.addEventListener("mousemove", move);
 		scroller.addEventListener("mouseleave", leave);
 		scroller.addEventListener("click", click);
@@ -137,7 +124,6 @@ class Painter {
 		return () => {
 			watch();
 			removeEventListener("resize", redraw);
-			removeEventListener("keydown", key);
 			scroller.removeEventListener("mousemove", move);
 			scroller.removeEventListener("mouseleave", leave);
 			scroller.removeEventListener("click", click);
@@ -211,12 +197,12 @@ class Painter {
 		this.preview(c, vp);
 	}
 
-	//The attack preview and a retreat's trail over the rest, then the beat playing (a moving unit, a shot, an explosion),
+	//The attack cursor and a retreat's trail over the rest, then the beat playing (a moving unit, a shot, an explosion),
 	//none on the strategic map
 	preview(c: CanvasRenderingContext2D, vp: Viewport) {
 		const s = this.store, results = s.results.peek(), motion = s.motion.peek();
 		if (s.strategic.peek()) return;
-		drawPreview(c, vp, { blocked: s.blocked.peek(), blockedAt: s.blockedAt.peek(), glance: s.glance.peek(), trail: results === null ? null : results.trail });
+		drawPreview(c, vp, { glance: s.glance.peek(), trail: results === null ? null : results.trail });
 		if (motion !== null) drawMotion(c, vp, motion, (f) => this.image(f));
 	}
 
@@ -287,21 +273,12 @@ function useRest(store: Store) {
 	}, [store, hover]);
 }
 
-//The odds card once the pointer rests on a target: a move to another hex starts the wait again
-function useOddsRest(store: Store) {
-	const glance = store.glance.value;
-	useEffect(() => {
-		const resting = glance === null ? null : setTimeout(() => store.showOdds(glance.at), ODDS_REST);
-		return () => { if (resting !== null) clearTimeout(resting); };
-	}, [store, glance]);
-}
-
 //What sits over the map at its hexes, placed from where the map is on the screen: the path's tag, the pins, the hex
 //tooltip and the placing tag
 function Overlays({ store, view, scale }: { store: Store, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
-	const path = store.path.value, tip = store.hexTip.value, ghost = store.ghost.value, odds = store.odds.value;
+	const path = store.path.value, tip = store.hexTip.value, ghost = store.ghost.value;
 	const results = store.results.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
 	const half = TOKENS.px["hex-h"] / 2 * scale, side = TOKENS.px["hex-w"] / 2 * scale;
@@ -312,7 +289,6 @@ function Overlays({ store, view, scale }: { store: Store, view: View, scale: num
 			{tip !== null && <HexTooltip tip={tip} at={at(tip.at)} gap={side} onClose={() => store.restHex(null)} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}
 			{results !== null && <ResultMarks results={results} where={at} half={half} gone={store.faded} />}
-			{odds !== null && <OddsCard odds={odds} at={at(odds.at)} gap={odds.away === "right" ? side + GLANCE : side + 6} />}
 		</>
 	);
 }
@@ -327,7 +303,6 @@ export function MapView({ store }: { store: Store }) {
 
 	useEffect(() => painter.attach(canvas.current!, scroller.current!), [painter]);
 	useRest(store);
-	useOddsRest(store);
 
 	//(the strategic map scrolls nothing: the scroll stays as it was for when it closes, map.css)
 	const strategic = store.strategic.value;

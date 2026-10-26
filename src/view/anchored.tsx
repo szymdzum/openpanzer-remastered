@@ -1,5 +1,5 @@
-//A panel anchored to a hex (principles.md, Layout): the unit context menu above the selected hex,
-//the odds preview beside the target, the move path's tag below its end. The map code gives the hex's centre on the screen; the panel
+//A panel anchored to a hex (principles.md, Layout): the move path's tag below its end, the hex tooltip and the
+//placing tag beside their hex. The map code gives the hex's centre on the screen; the panel
 //measures itself and stays inside the screen, space-3 from its edges.
 import type { AriaRole, ComponentChildren } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -38,7 +38,7 @@ type AnchoredProps = {
 	place: Place,
 	//from the hex's centre to the panel's edge: half a hex at the map's zoom, and some air
 	gap: number,
-	//the screen's own class next to pm-panel: pm-ctx, pm-odds
+	//the screen's own class next to pm-panel: pm-pathtag, pm-placetag
 	class?: string,
 	role?: AriaRole,
 	label?: string,

@@ -25,7 +25,7 @@ import { outcomeNames } from "../prototypes";
 import { contextOf } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
-import { blockedOf, glanceOf, oddsOf } from "./odds";
+import { glanceOf } from "./odds";
 import { type News, type Results, resultsOf } from "./results";
 import { beatsFor } from "./beats";
 import { createPlayer, type Motion, type Stage } from "./player";
@@ -82,10 +82,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the dossier open (Dossier), or the campaign's end over it with what its close does (CampaignEnd)
 	const dossierOpen = signal(false);
 	const ending = signal<{ outcome: Outcome, html: string, closed: () => void } | null>(null);
-	//the target whose odds card is open (AttackPreview, stage 2): the pointer rested on it, Shift held, or a finger tapped
-	//it (touch: the next tap on it attacks), null: none
-	const oddsAt = signal<Position | null>(null);
-	const oddsTouch = signal(false);
 	//What the last step told (CombatResults): its chips and stamp over the map until they fade, its line in the status bar
 	//until the next command
 	const results = signal<Results | null>(null);
@@ -129,7 +125,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		return selected.value === null ? null : unitCardOf(w, selected.value, open.unit === selected.value ? open.view : null);
 	});
 	//the hex tooltip of the hex rested on; the pins over the side playing's units, cleared with the labels (L)
-	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value || odds.value !== null ? null
+	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value ? null
 		: hexTipOf(world.value, rested.value, selected.value));
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
@@ -163,13 +159,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
 	const plaques = computed(() => world.value === null || !labels.value ? [] : plaquesOf(world.value));
-	//The attack preview (AttackPreview): the enemies in range the selected unit can't attack (stage 0) and the reason of
-	//the one pointed at, the losses at a glance over the pointed target (stage 1), the odds card (stage 2)
-	const blocked = computed(() => world.value === null ? [] : blockedOf(world.value, selection.value));
-	const blockedAt = computed(() => pointed.value === null ? null : blocked.value.find((b) => same(b.at, pointed.value!)) || null);
+	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
-	const odds = computed(() => world.value === null || strategic.value || oddsAt.value === null ? null
-		: oddsOf(world.value, selection.value, oddsAt.value, airMode.value, oddsTouch.value));
 	//the strategic map's chips and objectives, while it is open
 	const overview = computed(() => world.value === null || !strategic.value ? null : strategicOf(world.value, airMode.value));
 
@@ -190,7 +181,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			banner.value = false;
 		}
 		const r = host.command(cmd);
-		oddsAt.value = null;
 		news.value = null;
 		refresh();
 		//(a command played had a world to start from: with none, no game is playing and the host refuses it)
@@ -209,7 +199,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const select = (id: UnitId | null) => {
 		const w = world.value, u = w === null || id === null ? null : unitById(w, id);
 		selected.value = id;
-		oddsAt.value = null;
 		if (u !== null) airMode.value = isAir(w!, u);
 		refused.value = null;
 	};
@@ -265,17 +254,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		});
 	};
 
-	//A tap or click closes the odds card; a finger's first tap on a target opens it there instead of attacking (true: the tap
-	//did that), its second on the same target goes on to attack
-	const firstTap = (w: World, at: Position, touch: boolean): boolean => {
-		const open = oddsAt.value !== null && oddsTouch.value && same(oddsAt.value, at);
-		oddsAt.value = null;
-		if (!touch || open || glanceOf(w, selection.value, at, airMode.value) === null) return false;
-		oddsAt.value = at;
-		oddsTouch.value = true;
-		return true;
-	};
-
 	//The unit list and the equipment window (UnitList, Equipment)
 	const shops = createShopState({ world, deploying: deployment, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
 
@@ -291,8 +269,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		previous: () => cycle(-1),
 		//Escape deselects the unit; with none, Options
 		escape: () => {
-			if (oddsAt.value !== null) oddsAt.value = null;
-			else if (banner.value) banner.value = false;
+			if (banner.value) banner.value = false;
 			else if (selected.value !== null) select(null);
 			else notYet();
 		},
@@ -303,7 +280,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
-		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
+		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
 		results, news, motion, showStep, card, ...shops, tray, combatLog, dossier, campaignEnd,
 
 		//Either report's Dossier: the campaign's record over them
@@ -361,9 +338,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
 		//the picked unit placed there when it can go there; else the selected unit's attack or move there, sent as the
-		//person's command, or the unit there selected (none on an empty hex). touch: a finger's tap, whose first tap
-		//on a target opens its odds card and the second attacks (AttackPreview: no attack on the first tap)
-		clickHex(at: Position, touch = false) {
+		//person's command, or the unit there selected (none on an empty hex)
+		clickHex(at: Position) {
 			const w = world.value;
 			if (w === null || busy) return;
 			//(the first click on the map closes the turn report, and does what it does)
@@ -379,7 +355,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 				if (dispatch(place) === null) deploying.value = reserve.value.length === 0 ? null : reserve.value[0].index;
 				return;
 			}
-			if (firstTap(w, at, touch)) return;
 			const click = clickOn(w, selection.value, at, airMode.value);
 			if ("command" in click) {
 				dispatch(click.command);
@@ -463,21 +438,11 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			if (zone.length > 0) lookAt.value = zone[0];
 		},
 
-		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again. The
-		//pointer leaving the target of the odds card it opened closes it
+		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again
 		hoverHex(at: Position | null) {
 			const old = hover.value;
 			if (old === at || (old !== null && at !== null && old.row === at.row && old.col === at.col)) return;
 			hover.value = at;
-			if (oddsAt.value !== null && !oddsTouch.value) oddsAt.value = null;
-		},
-
-		//The odds card opened on a target the pointer rests on, or Shift held over it; on any other hex nothing
-		showOdds(at: Position) {
-			const w = world.value;
-			if (w === null || glanceOf(w, selection.value, at, airMode.value) === null) return;
-			oddsAt.value = { row: at.row, col: at.col };
-			oddsTouch.value = false;
 		},
 
 		//A message shown after those already open, one at a time
@@ -512,4 +477,3 @@ function eventsOf(result: unknown): GameEvent[] {
 	return result !== null && typeof result === "object" && "events" in result ? (result as { events: GameEvent[] }).events : [];
 }
 
-const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
