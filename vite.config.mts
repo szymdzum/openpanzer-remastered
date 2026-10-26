@@ -152,6 +152,7 @@ export default defineConfig({
 				"src/core/draft.ts": { statements: 97, branches: 90, functions: 96, lines: 99 },
 				"src/core/equipment.ts": { statements: 88, branches: 84, functions: 80, lines: 90 },
 				"src/core/fight.ts": { statements: 99, branches: 100, functions: 95, lines: 99 },
+				"src/core/estimate.ts": { statements: 90, branches: 73, functions: 87, lines: 96 },
 				"src/core/geometry.ts": { statements: 98, branches: 97, functions: 90, lines: 97 },
 				"src/core/movement.ts": { statements: 99, branches: 99, functions: 97, lines: 99 },
 				"src/core/moves.ts": { statements: 92, branches: 92, functions: 82, lines: 96 },
