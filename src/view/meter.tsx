@@ -18,14 +18,16 @@ type MeterProps = {
 	fill: number,
 	//no state for a meter that has none (entrenchment)
 	state?: SupplyState,
+	//a note in words after the label (the unit card's "enough for 3 moves")
+	note?: ComponentChildren,
 };
 
-export function Meter({ icon, label, value, fill, state }: MeterProps) {
+export function Meter({ icon, label, value, fill, state, note }: MeterProps) {
 	const word = state && WORDS[state];
 	return (
 		<div class={state ? "pm-meter " + state : "pm-meter"}>
 			<Icon name={icon} size="sm" />
-			<span>{label}{word && <span class="st">{word}</span>}</span>
+			<span>{label}{word && <span class="st">{word}</span>}{note}</span>
 			<span class="v">{value}</span>
 			<span class="track" aria-hidden="true"><b style={{ width: `${Math.round(fill * 100)}%` }} /></span>
 		</div>

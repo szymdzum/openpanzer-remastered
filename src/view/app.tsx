@@ -5,6 +5,7 @@
 import { Button } from "./button";
 import { IconSprite } from "./icon";
 import { UnitInfoPanel } from "./infopanel";
+import { UnitCardPanel } from "./unitsheet";
 import { List } from "./list";
 import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
@@ -52,6 +53,7 @@ export function App({ store }: { store: Store }) {
 			<StatusBar store={store} />
 			<Rail store={store} />
 			<UnitInfoPanel store={store} />
+			<UnitCardPanel store={store} />
 			<Reserve store={store} />
 			<TurnBanner store={store} />
 			<AiIndicator store={store} />

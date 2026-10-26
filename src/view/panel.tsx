@@ -80,7 +80,8 @@ function setCloser(id: string, close: (() => void) | undefined) {
 	else document.addEventListener("keydown", onEscape); //the same listener twice is added once
 }
 
-function useEscape(onClose: (() => void) | undefined) {
+//Esc closes the panel or window that calls it while it is open, the last opened first
+export function useEscape(onClose: (() => void) | undefined) {
 	const id = useId();
 	useLayoutEffect(() => setCloser(id, onClose), [id, onClose]);
 	useLayoutEffect(() => () => setCloser(id, undefined), [id]);
