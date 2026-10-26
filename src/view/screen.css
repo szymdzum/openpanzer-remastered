@@ -267,6 +267,55 @@
 			}
 		}
 
+		/* the dossier (Dossier) in the middle, its record scrolled; at the campaign's end the outcome's stamp over its
+		   closing words (CampaignEnd) */
+		& > .pm-dossier {
+			inset-block-start: 50%;
+			inset-inline-start: 50%;
+			translate: -50% -50%;
+			inline-size: min(62.5rem, 100% - 2 * var(--space-3));
+			max-block-size: calc(100dvh - 2 * var(--space-3));
+
+			& > .bd {
+				display: grid;
+				gap: var(--space-5);
+				overflow-y: auto;
+			}
+
+			.outcome {
+				display: grid;
+				justify-items: center;
+				gap: var(--space-4);
+				text-align: center;
+			}
+
+			.pm-table {
+				inline-size: 100%;
+			}
+
+			.medals {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--space-6);
+				margin-block-start: var(--space-2);
+			}
+
+			.medal {
+				display: grid;
+				justify-items: center;
+				gap: var(--space-1);
+
+				&:where(.none) {
+					opacity: 0.45;
+				}
+			}
+
+			.name,
+			.defeats {
+				font-size: var(--type-note-size);
+			}
+		}
+
 		/* the reserve to deploy from, at the bottom in the middle until the reserve tray (D5) docks there */
 		& > .pm-reserve {
 			inset-block-end: var(--space-4);
@@ -418,6 +467,51 @@
 				grid-column: 1 / -1;
 				border-block-start: 1px solid var(--line);
 			}
+		}
+	}
+
+	/* a medal: a generic ribbon, the disc gold, silver or bronze from the tokens (principles.md, Iconography) */
+	.pm-medal {
+		.rb {
+			fill: var(--axis);
+		}
+
+		.rw {
+			fill: var(--panel-raised);
+		}
+
+		.rr {
+			fill: var(--critical);
+		}
+
+		.ring {
+			fill: none;
+			stroke-width: 1.5;
+		}
+
+		&:where(.briliant) {
+			--metal: var(--accent);
+		}
+
+		&:where(.victory) {
+			--metal: color-mix(in srgb, var(--panel) 45%, var(--ink-muted));
+		}
+
+		&:where(.tactical) {
+			--metal: color-mix(in srgb, var(--accent) 55%, var(--critical));
+		}
+
+		.disc {
+			fill: var(--metal);
+			stroke-width: 3;
+		}
+
+		:is(.disc, .ring) {
+			stroke: color-mix(in srgb, var(--metal) 55%, var(--ink));
+		}
+
+		.star {
+			fill: color-mix(in srgb, var(--metal) 55%, var(--ink));
 		}
 	}
 }

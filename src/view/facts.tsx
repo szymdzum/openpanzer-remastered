@@ -35,18 +35,20 @@ type Cell = { value: ComponentChildren, tone?: "muted" | "critical" };
 
 type StatTableProps = {
 	caption: string,
+	//the id of the header row, where the harness finds the classes (#dossierClasses)
+	headId?: string,
 	columns: { label: string, icon?: IconName }[],
 	rows: { label: string, cells: Cell[], id?: string }[],
 };
 
 //Numbers by class, a row per count: the dossier's destroyed and lost units. A zero is muted, a
 //loss can be critical: the view model says which
-export function StatTable({ caption, columns, rows }: StatTableProps) {
+export function StatTable({ caption, headId, columns, rows }: StatTableProps) {
 	return (
 		<table class="pm-table">
 			<caption class="pm-label">{caption}</caption>
 			<thead>
-				<tr><th scope="col"><span class="pm-sr">Count</span></th>{columns.map((c) => <th key={c.label} scope="col" class="pm-label">{c.icon && <Icon name={c.icon} size="sm" />}{c.label}</th>)}</tr>
+				<tr id={headId}><th scope="col"><span class="pm-sr">Count</span></th>{columns.map((c) => <th key={c.label} scope="col" class="pm-label">{c.icon && <Icon name={c.icon} size="sm" />}{c.label}</th>)}</tr>
 			</thead>
 			<tbody>
 				{rows.map((r) => (

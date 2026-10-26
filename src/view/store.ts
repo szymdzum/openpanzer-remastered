@@ -20,6 +20,8 @@ import { unitInfoOf } from "./unitinfo";
 import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
+import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
+import { outcomeNames } from "../prototypes";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -79,6 +81,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the turn's log from the person's end of turn on, and the full turn report open (CombatLog)
 	const log = signal(emptyLog());
 	const logOpen = signal(false);
+	//the dossier open (Dossier), or the campaign's end over it with what its close does (CampaignEnd)
+	const dossierOpen = signal(false);
+	const ending = signal<{ outcome: Outcome, html: string, closed: () => void } | null>(null);
 	//the target whose odds card is open (AttackPreview, stage 2): the pointer rested on it, Shift held, or a finger tapped
 	//it (touch: the next tap on it attacks), null: none
 	const oddsAt = signal<Position | null>(null);
@@ -132,6 +137,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
 	const report = computed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
 	const combatLog = computed(() => world.value === null || !logOpen.value ? null : combatLogOf(world.value, log.value, enemy.value));
+	const dossier = computed(() => world.value === null || (!dossierOpen.value && ending.value === null) ? null : dossierOf(world.value));
+	const campaignEnd = computed(() => ending.value === null ? null : campaignEndOf(ending.value.outcome, ending.value.html));
 	const ai = computed(() => world.value === null ? null : aiStatusOf(world.value));
 	//(the status bar's turn report button: the person's report, none while a program plays)
 	const reportRefusal = computed(() => world.value === null || turnReportOf(world.value, enemy.value) === null ? "No report to show"
@@ -309,7 +316,27 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news, motion, showStep, card, ...shops, tray, combatLog,
+		results, news, motion, showStep, card, ...shops, tray, combatLog, dossier, campaignEnd,
+
+		//Either report's Dossier: the campaign's record over them
+		openDossier() {
+			dossierOpen.value = true;
+		},
+
+		//Its close: at the campaign's end, what the game asked (the main menu)
+		closeDossier() {
+			const end = ending.value;
+			dossierOpen.value = false;
+			ending.value = null;
+			if (end !== null) end.closed();
+		},
+
+		//The campaign's end (the screen's campaignEnd): the dossier under its outcome and closing words; with no campaign
+		//player to show (no world), the outcome as a message, as before
+		endCampaign(outcome: Outcome, html: string, then: () => void) {
+			if (world.value !== null && dossierOf(world.value) !== null) ending.value = { outcome, html, closed: then };
+			else notes.value = [...notes.value, { title: outcomeNames[outcome], html, at: null, ok: then }];
+		},
 
 		//The full turn report (the short one's Turn report), in place of the short one; closed
 		openLog() {
@@ -475,6 +502,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			notes.value = [];
 			log.value = emptyLog();
 			logOpen.value = false;
+			dossierOpen.value = false;
 			player.stop();
 			busy = false;
 		},

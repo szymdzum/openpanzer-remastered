@@ -9,6 +9,7 @@ import { UnitStrip } from "./unitstrip";
 import { ReserveTray } from "./tray";
 import { LogWindow } from "./logwindow";
 import { MessageDialog } from "./message";
+import { DossierWindow } from "./dossierwindow";
 import { ShopWindow } from "./shopwindow";
 import { MapView } from "./map";
 import { EndTurn, EndTurnQuestion, Rail } from "./rail";
@@ -33,6 +34,7 @@ export function App({ store }: { store: Store }) {
 			<EndTurnQuestion store={store} />
 			<ShopWindow store={store} />
 			<LogWindow store={store} />
+			<DossierWindow store={store} />
 			<MessageDialog store={store} />
 		</div>
 	);

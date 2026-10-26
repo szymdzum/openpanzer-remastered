@@ -6,9 +6,6 @@ import { Icon, Mark } from "./icon";
 import type { Store } from "./store";
 import type { TurnReport } from "./turn";
 
-//(the dossier is a window of its own, D5)
-const NOT_YET = "Not in the new UI yet";
-
 //The turns to win: the best outcome still open first in bold, the others after it, or the last turn's stake; under it
 //the scenario's track, the turns played in the side's colour, a tick for each deadline, a passed one struck through
 function TurnsToWin({ report }: { report: TurnReport }) {
@@ -36,7 +33,7 @@ export function TurnBanner({ store }: { store: Store }) {
 				<div><div class="pm-label">{report.label}</div><h2 class="pm-display">{report.title}</h2></div>
 				<span class="grow" />
 				<Button icon="info" label="Briefing" onClick={() => store.briefing()} />
-				{report.campaign && <Button icon="medal" label="Dossier" disabled={NOT_YET} />}
+				{report.campaign && <Button icon="medal" label="Dossier" onClick={() => store.openDossier()} />}
 				<Button variant="ghost" icon="close" label="Close" onClick={() => store.showReport(false)} />
 			</div>
 			<div class="grid">
