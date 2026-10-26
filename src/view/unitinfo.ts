@@ -9,7 +9,7 @@ import { unitUsesAmmo, unitUsesFuel } from "../core/units";
 import { ammoOf, fuelOf, hexIndex, unitData } from "../core/world";
 import { leaderDescriptions, terrainEntrenchment, unitClassNames } from "../prototypes";
 import type { IconName, Nation } from "./icon";
-import type { Supply } from "./meter";
+import type { SupplyState } from "./meter";
 import { countryName, nationOf, shownUnit } from "./model";
 
 //A supply meter: what it measures, "18/50", how full, and its state (none for entrenchment, or a unit that has none)
@@ -18,7 +18,7 @@ export interface Gauge {
 	label: string;
 	value: string;
 	fill: number;
-	state?: Supply;
+	state?: SupplyState;
 }
 
 //A leader as the tooltip words it (Leaders.description); classLeader: the one every unit of its class with a leader has
@@ -41,7 +41,7 @@ export interface UnitInfo {
 }
 
 //The Meter card's states: below half low, below a quarter critical
-export function supplyState(value: number, max: number): Supply {
+export function supplyState(value: number, max: number): SupplyState {
 	const share = max > 0 ? value / max : 1;
 	return share < 0.25 ? "critical" : share < 0.5 ? "low" : "ok";
 }
