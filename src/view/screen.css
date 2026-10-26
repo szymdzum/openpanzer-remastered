@@ -7,6 +7,14 @@
 		overflow: hidden;
 		background: var(--panel-sunken);
 
+		/* the status bar at least as wide as the card's, wider when its cells need it (the rules, a long country name),
+		   never wider than the screen */
+		& > .pm-status {
+			inline-size: max-content;
+			min-inline-size: min(45rem, 100% - 2 * var(--space-3));
+			max-inline-size: calc(100% - 2 * var(--space-3));
+		}
+
 		& > .pm-endturn {
 			position: absolute;
 			inset-block-end: var(--space-4);

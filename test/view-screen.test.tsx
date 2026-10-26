@@ -9,6 +9,7 @@ import { smallGame, smallGameData } from "./smallgame";
 import { nullScreen } from "../src/nullscreen";
 import { newScreen, startNewUI } from "../src/view/screen";
 import { createStore, type StoreHost } from "../src/view/store";
+import { prestigeText } from "../src/view/model";
 import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
 import { playerType, uiSettings } from "../src/prototypes";
@@ -48,8 +49,8 @@ test("A scenario plays a whole turn on the new screen: the briefing, the person'
 	expect(g.uiMessageClicked).toBe(false);
 	await act(() => { fireEvent.click(ok()); });
 	expect([screen.queryByRole("dialog"), g.uiMessageClicked]).toEqual([null, true]);
-	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn1/" + g.scenario.maxTurns, "Axis"]);
-	expect(document.querySelector(".pm-prestige")!.textContent).toBe(String(g.scenario.map.currentPlayer.prestige));
+	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn1/" + g.scenario.maxTurns, "Germany · Axis"]);
+	expect(document.querySelector(".pm-prestige")!.textContent).toBe(prestigeText(g.scenario.map.currentPlayer.prestige));
 	//The person ends the turn: the AI plays its turn through the host, then the person's next turn starts
 	expect(endTurn().hasAttribute("disabled")).toBe(false);
 	const ai = g.scenario.map.getPlayers().find((p) => p.side === 1)!;
@@ -57,7 +58,7 @@ test("A scenario plays a whole turn on the new screen: the briefing, the person'
 	await act(() => { fireEvent.click(endTurn()); });
 	await act(async () => { await until(() => g.scenario.map.currentPlayer.side === 0 && g.host.world()!.state.turn.turn === 2, "the person's next turn"); });
 	expect(ai.playedTurn).toBe(1);
-	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn2/" + g.scenario.maxTurns, "Axis"]);
+	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn2/" + g.scenario.maxTurns, "Germany · Axis"]);
 	expect(endTurn().hasAttribute("disabled")).toBe(false);
 }, 60_000);
 
