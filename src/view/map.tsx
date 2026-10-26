@@ -274,7 +274,7 @@ export function MapView({ store }: { store: Store }) {
 			<canvas ref={canvas} class="pm-mapview-canvas" aria-hidden="true" />
 			<div ref={scroller} class="pm-mapview-scroll" role="application" aria-label={strategic ? "Strategic map" : "Map"}
 				onScroll={() => painter.request()}>
-				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + "px" }} />
+				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + store.dockHeight.value + "px" }} />
 			</div>
 			<Overlays store={store} view={view} scale={scale} />
 		</div>

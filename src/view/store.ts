@@ -91,6 +91,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//its size: a strip, one row, or unfolded over the map
 	const cardView = signal<{ unit: UnitId, view: CardView } | null>(null);
 	const cardSize = signal<CardSize>("row");
+	//the dock's height over the bottom of the map in CSS pixels, which the map scrolls past so that its last row clears
+	//the dock (#453)
+	const dockHeight = signal(0);
 	let busy = false;
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
@@ -275,7 +278,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
-		results, news, motion, showStep, card, cardSize, ...shops, tray, combatLog, dossier, campaignEnd,
+		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd,
 
 		//Either report's Dossier: the campaign's record over them
 		openDossier() {

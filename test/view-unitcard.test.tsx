@@ -124,7 +124,7 @@ test("The edges the old window had: a train on rails, a fort with no ordinal, fi
 	expect(entryCardOf(w, 9002, 7).figures[1].value).toBe(1);
 });
 
-test("The screen keeps the dock's height in --dock-h (#441)", async () => {
+test("The screen keeps the dock's height in the store, for the map to scroll past (#441, #453)", async () => {
 	//(jsdom lays nothing out and has no ResizeObserver: one that reports at once, a dock 180px tall)
 	let watching = 0;
 	vi.stubGlobal("ResizeObserver", class {
@@ -136,8 +136,7 @@ test("The screen keeps the dock's height in --dock-h (#441)", async () => {
 	vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(180);
 	const store = createStore({ world: () => null, command: () => ({ ok: true, result: null }), won: () => {} });
 	const { unmount } = render(<App store={store} />);
-	const dock = document.querySelector<HTMLElement>(".pm-dock")!;
-	expect([dock.parentElement!.style.getPropertyValue("--dock-h"), watching]).toEqual(["180px", 1]);
+	expect([store.dockHeight.value, watching]).toEqual([180, 1]);
 	await act(() => unmount());
 	expect(watching).toBe(0);
 	vi.unstubAllGlobals();
