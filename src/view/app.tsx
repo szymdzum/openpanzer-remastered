@@ -6,6 +6,8 @@ import { Button } from "./button";
 import { IconSprite } from "./icon";
 import { UnitInfoPanel } from "./infopanel";
 import { UnitCardPanel } from "./unitsheet";
+import { UnitStrip } from "./unitstrip";
+import { ShopWindow } from "./shopwindow";
 import { List } from "./list";
 import { MapView } from "./map";
 import { Panel, Scrim, Window } from "./panel";
@@ -54,11 +56,13 @@ export function App({ store }: { store: Store }) {
 			<Rail store={store} />
 			<UnitInfoPanel store={store} />
 			<UnitCardPanel store={store} />
+			<UnitStrip store={store} />
 			<Reserve store={store} />
 			<TurnBanner store={store} />
 			<AiIndicator store={store} />
 			<EndTurn store={store} />
 			<EndTurnQuestion store={store} />
+			<ShopWindow store={store} />
 			<Message store={store} />
 		</div>
 	);

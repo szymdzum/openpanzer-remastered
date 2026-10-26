@@ -44,10 +44,12 @@ test("On the AI's turn the bar shows its side in the Allies' colour, and the per
 	expect(cells().pop()).toBe("80");
 });
 
-test("The unit list button is off until its window comes; the turn report button opens and closes the short report (#346)", async () => {
+test("The unit list button opens the unit list on the person's turn (#348); the turn report button opens and closes the short report (#346)", async () => {
 	const store = await shown(smallWorld(0));
 	const list = document.getElementById("statusBarButton")!, report = document.getElementById("combatLogButton") as HTMLButtonElement;
-	expect([list.getAttribute("aria-label"), list.hasAttribute("disabled"), list.title]).toEqual(["Unit list", true, "Not in the new UI yet"]);
+	expect([list.getAttribute("aria-label"), list.hasAttribute("disabled")]).toEqual(["Unit list", false]);
+	await act(() => { fireEvent.click(list); });
+	expect(store.listOpen.value).toBe(true);
 	expect([report.getAttribute("aria-label"), report.disabled]).toEqual(["Turn report", false]);
 	await act(() => { fireEvent.click(report); });
 	expect(store.banner.value).toBe(true);
@@ -57,6 +59,7 @@ test("The unit list button is off until its window comes; the turn report button
 	cleanup();
 	await shown(smallWorld(0, 1));
 	expect((document.getElementById("combatLogButton") as HTMLButtonElement).disabled).toBe(false);
+	expect(document.getElementById("statusBarButton")!.title).toBe("Not your turn");
 });
 
 test("The status line names the selected unit, its moves of its turn's and its hex with the place's name", async () => {
