@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens · In game" height=150 width=900 subtitle="Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message" status="Ready" -->
+<!-- @dsCard group="Screens · In game" height=150 width=900 subtitle="Status bar (#statusbar): side, turn, date, weather, ground, rules, prestige, turn report and status message" status="Ready" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
 
 <div class="pm pm-stage" style="width:900px;height:150px">
@@ -8,7 +8,7 @@
     
   </div>
   
-  <header id="statusbar" class="pm-panel pm-status" role="status" style="top:16px">
+  <header id="statusbar" class="pm-panel pm-status" role="status" style="top:16px;width:820px">
     <div class="row">
       <span class="pm-side"><svg class="mark sm" aria-hidden="true"><use href="#pm-flag-de"/></svg>Germany<span class="chip" aria-hidden="true"></span></span>
       <span class="pm-sep"></span>
@@ -16,6 +16,7 @@
       <span class="cell">06 Sep 1939</span>
       <span class="cell" title="Weather"><svg class="i sm" aria-hidden="true"><use href="#pm-fair"/></svg>Fair</span>
       <span class="cell" title="Ground"><svg class="i sm" aria-hidden="true"><use href="#pm-dry"/></svg>Dry</span>
+      <span class="cell" title="The rules this game plays"><span class="pm-label">Rules</span>Remaster</span>
       <span class="grow"></span>
       <span class="cell pm-prestige"><svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>3,056</span>
       <button id="statusBarButton" class="pm-btn" aria-label="Unit list" title="Unit list"><svg class="i sm" aria-hidden="true"><use href="#pm-unit-list"/></svg></button><button id="combatLogButton" class="pm-btn" aria-label="Turn report"><svg class="i sm" aria-hidden="true"><use href="#pm-document"/></svg></button>

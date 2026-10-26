@@ -67,7 +67,7 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 | [MapLayers](components/MapLayers/README.md)<br>[render](renders/MapLayers.webp) | The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker on a shared hex, which is the target | Ready |
 | [MapOverlays](components/MapOverlays/README.md)<br>[render](renders/MapOverlays.webp) | The map layer: selection, move area, enemy zones, move path, attack target, support fire, fog, entrenchment, objectives and towns | Ready |
 | [MovePath](components/MovePath/README.md)<br>[render](renders/MovePath.webp) | Move path preview (#32): the route to the hovered hex, moves and fuel left, and where a move stops, captures, turns blind or ends firing | Ready |
-| [StatusBar](components/StatusBar/README.md)<br>[render](renders/StatusBar.webp) | Status bar (#statusbar): side, turn, date, weather, ground, prestige, turn report and status message | Ready |
+| [StatusBar](components/StatusBar/README.md)<br>[render](renders/StatusBar.webp) | Status bar (#statusbar): side, turn, date, weather, ground, rules, prestige, turn report and status message | Ready |
 | [StrategicMap](components/StrategicMap/README.md)<br>[render](renders/StrategicMap.webp) | Strategic map at 1920×1080: the whole Ciechanow map, units as side chips, objectives as large plaques | Ready |
 | [SupplyRules](components/SupplyRules/README.md)<br>[render](renders/SupplyRules.webp) | Where to resupply and reinforce: the divisors the engine applies, with real numbers for one tank | Ready |
 | [Tooltips](components/Tooltips/README.md)<br>[render](renders/Tooltips.webp) | Hex tooltip with what the terrain does, unit pins (low fuel, no ammo), button tooltip and the AI status indicator | Ready |
