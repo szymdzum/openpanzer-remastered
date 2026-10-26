@@ -12,6 +12,7 @@ import { Anchored } from "./anchored";
 import { UnitContextMenu } from "./contextmenu";
 import { HexTooltip, Pins } from "./maptips";
 import { OddsCard } from "./oddscard";
+import { ResultMarks } from "./resultmarks";
 import type { Ghost } from "./deploy";
 import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
@@ -93,7 +94,7 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.blocked.value, s.blockedAt.value, s.glance.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.blocked.value, s.blockedAt.value, s.glance.value, s.results.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -204,9 +205,14 @@ class Painter {
 		const c = canvas.getContext("2d");
 		if (c === null || w === null) return;
 		drawMap(c, this.scene(w, this.size(1)), vp, (f) => this.image(f));
-		//(the attack preview over the rest, none on the strategic map)
-		const st = this.store;
-		if (!st.strategic.peek()) drawPreview(c, vp, { blocked: st.blocked.peek(), blockedAt: st.blockedAt.peek(), glance: st.glance.peek() });
+		this.preview(c, vp);
+	}
+
+	//The attack preview and a retreat's trail over the rest, none on the strategic map
+	preview(c: CanvasRenderingContext2D, vp: Viewport) {
+		const s = this.store, results = s.results.peek();
+		if (s.strategic.peek()) return;
+		drawPreview(c, vp, { blocked: s.blocked.peek(), blockedAt: s.blockedAt.peek(), glance: s.glance.peek(), trail: results === null ? null : results.trail });
 	}
 
 	//A sprite or the terrain, once it has loaded
@@ -291,6 +297,7 @@ function Overlays({ store, view, scale }: { store: Store, view: View, scale: num
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
 	const path = store.path.value, menu = store.context.value, tip = store.hexTip.value, ghost = store.ghost.value, odds = store.odds.value;
+	const results = store.results.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
 	const half = TOKENS.px["hex-h"] / 2 * scale, side = TOKENS.px["hex-w"] / 2 * scale;
 	return (
@@ -300,6 +307,7 @@ function Overlays({ store, view, scale }: { store: Store, view: View, scale: num
 			<Pins pins={store.pins.value} where={(p) => { const c = at(p); return { x: c.x, y: c.y - half }; }} />
 			{tip !== null && <HexTooltip tip={tip} at={at(tip.at)} gap={side} onClose={() => store.restHex(null)} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}
+			{results !== null && <ResultMarks results={results} where={at} half={half} gone={store.faded} />}
 			{odds !== null && <OddsCard odds={odds} at={at(odds.at)} gap={odds.away === "right" ? side + GLANCE : side + 6} />}
 		</>
 	);

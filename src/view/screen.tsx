@@ -39,7 +39,9 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	//A program's move or attack, played whole and shown at once: what it did to the side shown kept for the turn
 	//report (its events), its victories told, then the next action
 	const played = (r: ReturnType<ScreenHost["play"]>, events: GameEvent[], shown: () => void) => {
+		const before = store.world.value;
 		refresh();
+		store.told(before, events);
 		store.noteEnemy(events);
 		if (r.ok) host.won(r.result);
 		shown();

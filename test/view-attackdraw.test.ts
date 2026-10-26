@@ -44,14 +44,14 @@ const glance = (glyph: Glyph | null) => ({ at: { row: 4, col: 4 }, yours: { side
 test("Stage 0: a grey badge on each hex the unit can't attack, the reason under the one pointed at", () => {
 	const { ctx, ops } = recorder();
 	const blocked = [{ at: { row: 3, col: 1 }, reason: "Can't attack aircraft" }, { at: { row: 5, col: 2 }, reason: "No ammo" }];
-	drawPreview(ctx, vp, { blocked, blockedAt: blocked[0], glance: null });
+	drawPreview(ctx, vp, { blocked, blockedAt: blocked[0], glance: null, trail: null });
 	expect(ops.filter((o) => o.op === "fill" && o.fillStyle === MAP["map-paper-sunken"])).toHaveLength(2);
 	expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["Can't attack aircraft"]);
 });
 
 test("Stage 1: the brass crosshair, your loss on your side's colour, theirs on theirs (0 for none), one glyph in its tone", () => {
 	const { ctx, ops } = recorder();
-	drawPreview(ctx, vp, { blocked: [], blockedAt: null, glance: glance("rugged") });
+	drawPreview(ctx, vp, { blocked: [], blockedAt: null, glance: glance("rugged"), trail: null });
 	expect(ops.some((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"] && o.lineWidth === 2)).toBe(true);
 	const texts = ops.filter((o) => o.op === "fillText").map((o) => o.args[0]);
 	expect(texts).toEqual(["−6", "0"]);
@@ -59,9 +59,15 @@ test("Stage 1: the brass crosshair, your loss on your side's colour, theirs on t
 	expect([chip("−6").fillStyle, chip("0").fillStyle]).toEqual([MAP["map-axis"], MAP["map-allied"]]);
 	const square = (g: Glyph | null) => {
 		const r = recorder();
-		drawPreview(r.ctx, vp, { blocked: [], blockedAt: null, glance: glance(g) });
+		drawPreview(r.ctx, vp, { blocked: [], blockedAt: null, glance: glance(g), trail: null });
 		return r.ops.filter((o) => o.op === "fillRect" && o.args[2] === 16).map((o) => o.fillStyle);
 	};
 	expect([square("rugged"), square("overrun"), square("no-return"), square("support"), square(null)])
 		.toEqual([[MAP["map-critical"]], [MAP["map-ok"]], [MAP["map-ok"]], [MAP["map-low"]], []]);
+});
+
+test("A retreat just shown: a dashed light line from where the defender stood, over the dark under-stroke (CombatResults)", () => {
+	const { ctx, ops } = recorder();
+	drawPreview(ctx, vp, { blocked: [], blockedAt: null, glance: null, trail: { from: { row: 4, col: 4 }, to: { row: 3, col: 4 } } });
+	expect(ops.filter((o) => o.op === "stroke").map((o) => [o.strokeStyle, o.lineWidth])).toEqual([[MAP["hex-shadow"], 4], [MAP["map-paper-raised"], 2]]);
 });

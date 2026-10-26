@@ -131,5 +131,8 @@ export const TOKENS = {
 		"motion-pan": 60000,
 		"motion-crossfade": 20000,
 		"motion-blink": 1200,
+		"motion-hold": 2500,
+		"motion-hold-quick": 1000,
+		"motion-fade": 300,
 	},
 } as const;
