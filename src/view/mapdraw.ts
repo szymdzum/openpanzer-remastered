@@ -377,6 +377,8 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.ghost !== null) drawPlaceOutline(c, vp, scene.ghost);
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
+	//(the plaques beneath the units: a name never covers one, #438)
+	drawPlaques(c, vp, scene.plaques);
 	atMap(c, vp);
 	for (const u of scene.units) drawSprite(c, vp, u, images);
 	if (scene.ghost !== null) drawGhost(c, vp, scene.ghost, images);
@@ -384,7 +386,6 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
 	drawChips(c, vp, scene.units);
-	drawPlaques(c, vp, scene.plaques);
 	if (scene.support !== null) drawSupportTags(c, vp, scene.support);
 	c.restore();
 }
