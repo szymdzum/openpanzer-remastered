@@ -2,7 +2,8 @@
 //selected unit can't attack, with its reason under the pointer (stage 0), and over the pointed target a brass
 //crosshair with the two losses and at most one glyph (stage 1), where the old attack cursor showed two numbers. It
 //draws what the view model (src/view/odds.ts) computed, at screen size; colours are the tokens'.
-import { atScreen, toScreen, type Viewport } from "./canvas";
+import type { Position } from "../core/types";
+import { atMap, atScreen, strokeLine, toScreen, type Viewport } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { Blocked, LossChip, Glance, Glyph } from "./odds";
 import { label } from "./overlays";
@@ -34,12 +35,25 @@ export interface Preview {
 	blocked: Blocked[];
 	blockedAt: Blocked | null;
 	glance: Glance | null;
+	trail: { from: Position; to: Position } | null; //a retreat just shown (CombatResults): from where the defender stood
 }
 
 //Over the rest of the map, after the markers and the plaques
 export function drawPreview(c: CanvasRenderingContext2D, vp: Viewport, p: Preview) {
+	if (p.trail !== null) drawTrail(c, vp, p.trail.from, p.trail.to);
 	drawBlocked(c, vp, p.blocked, p.blockedAt);
 	if (p.glance !== null) drawGlance(c, vp, p.glance);
+}
+
+//A retreat's trail: a dashed line from where the defender stood to where it fell back, over the dark under-stroke
+function drawTrail(c: CanvasRenderingContext2D, vp: Viewport, from: Position, to: Position) {
+	atMap(c, vp);
+	const a = hexCentre(from.row, from.col), b = hexCentre(to.row, to.col);
+	c.beginPath();
+	c.moveTo(a.x, a.y);
+	c.lineTo(b.x, b.y);
+	c.lineCap = "butt";
+	strokeLine(c, vp, MAP["map-paper-raised"], 2, 4, [3, 3]);
 }
 
 //Stage 0: a grey crossed crosshair at the top right of each hex the unit can't attack; the reason under the one pointed at

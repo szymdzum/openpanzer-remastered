@@ -134,6 +134,9 @@
 	--motion-pan: 60s;
 	--motion-crossfade: 20s;
 	--motion-blink: 1.2s;
+	--motion-hold: 2.5s;
+	--motion-hold-quick: 1s;
+	--motion-fade: 300ms;
 	--font-display: "Zilla Slab", Rockwell, Georgia, serif;
 	--font-ui: "Libre Franklin", "Franklin Gothic Medium", Arial, sans-serif;
 	--font-mono: "Courier Prime", "Courier New", monospace;

@@ -1,5 +1,6 @@
 /* Combat on the map (issue 347): the odds card (oddscard.tsx; the CombatOdds card), #gameToolTip in odds mode, beside the
-   target. It doesn't take the pointer: the map under it keeps the hover and the click */
+   target, and after a combat its loss chips and stamp (resultmarks.tsx; the CombatResults card). None of them takes the
+   pointer: the map under them keeps the hover and the click */
 @layer components {
 	.pm-odds {
 		z-index: var(--z-context);
@@ -141,5 +142,94 @@
 	/* over a target the pointer aims: the attack preview's crosshair is drawn on the map */
 	.pm-mapview.aiming .pm-mapview-scroll {
 		cursor: crosshair;
+	}
+
+	/* the results of the last combat over the map, over the unit's context menu too: they fade once they have been read */
+	.pm-results {
+		position: absolute;
+		inset: 0;
+		z-index: var(--z-context);
+		pointer-events: none;
+		overflow: hidden;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.pm-results.fading {
+			animation: pm-results-fade var(--motion-fade) linear forwards;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.pm-results.fading {
+			visibility: hidden;
+		}
+	}
+
+	/* a loss chip right of the unit's strength plate, typed on critical; 0 on paper; its note in small caps */
+	.pm-hit {
+		position: absolute;
+		translate: 0 -50%;
+		padding-inline: 0.25rem;
+		font: 700 var(--type-label-size) / 0.875rem var(--font-mono);
+		white-space: nowrap;
+		color: var(--glint);
+		background: var(--map-critical);
+		border: 1px solid var(--map-edge);
+		box-shadow: 0 1px 3px color-mix(in srgb, var(--shade) 45%, transparent);
+
+		&.none {
+			color: var(--map-ink);
+			background: var(--map-paper);
+		}
+
+		& small {
+			margin-inline-start: 0.25rem;
+			font: 700 var(--type-map-small-size) / 1 var(--font-ui);
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+	}
+
+	/* the combat's stamp, rotated like a rubber stamp, in the colour of its meaning */
+	.pm-event {
+		--tone: var(--map-critical);
+
+		position: absolute;
+		translate: -50% -100%;
+		rotate: -3deg;
+		padding-block: 0.25rem 0.1875rem;
+		padding-inline: 0.5rem;
+		font: 700 var(--type-label-size) / 0.75rem var(--font-display);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		white-space: nowrap;
+		color: var(--tone);
+		background: var(--map-paper-raised);
+		border: 2px solid var(--tone);
+		box-shadow: 0 2px 4px color-mix(in srgb, var(--shade) 40%, transparent);
+
+		&.good {
+			--tone: var(--map-ok);
+		}
+
+		&.warn {
+			--tone: var(--map-low);
+		}
+
+		&.brass {
+			--tone: var(--map-brass);
+		}
+
+		& b {
+			margin-inline-start: 0.25rem;
+			font-family: var(--font-mono);
+			letter-spacing: 0;
+		}
+	}
+}
+
+@keyframes pm-results-fade {
+	to {
+		opacity: 0;
 	}
 }

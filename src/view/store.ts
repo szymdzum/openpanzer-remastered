@@ -21,6 +21,7 @@ import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
 import { blockedOf, glanceOf, oddsOf } from "./odds";
+import { type News, type Results, resultsOf } from "./results";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -66,6 +67,10 @@ export function createStore(host: StoreHost) {
 	//it (touch: the next tap on it attacks), null: none
 	const oddsAt = signal<Position | null>(null);
 	const oddsTouch = signal(false);
+	//What the last step told (CombatResults): its chips and stamp over the map until they fade, its line in the status bar
+	//until the next command
+	const results = signal<Results | null>(null);
+	const news = signal<News | null>(null);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -141,13 +146,21 @@ export function createStore(host: StoreHost) {
 		}
 		const r = host.command(cmd);
 		oddsAt.value = null;
+		news.value = null;
 		refresh();
-		if (r.ok) host.won(r.result);
-		//(why the undo went, which the core doesn't keep: the context menu says it, #316)
-		const loss = r.ok && before !== null && world.value !== null ? undoLoss(before, cmd, world.value) : null;
-		if (loss !== null) lost.value = loss;
+		//(a command played had a world to start from: with none, no game is playing and the host refuses it)
+		if (r.ok) played(cmd, before!, r.result);
 		refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
 		return refused.value;
+	};
+
+	//A command played: what it told over the map, its victories, and why the undo went, which the core doesn't keep (the
+	//context menu says it, #316)
+	const played = (cmd: Command, before: World, result: Parameters<StoreHost["won"]>[0]) => {
+		tell(before, eventsOf(result));
+		host.won(result);
+		const loss = undoLoss(before, cmd, world.value!);
+		if (loss !== null) lost.value = loss;
 	};
 
 	//A reserve unit picked to deploy (its core list index), or none: deploying ends. Nothing stays selected
@@ -194,6 +207,14 @@ export function createStore(host: StoreHost) {
 		airMode.value = !airMode.value;
 	};
 
+	//What a step told over the map and in the status bar (nothing to tell: the last results stay until they fade)
+	const tell = (before: World, events: GameEvent[]) => {
+		const told = resultsOf(before, world.value!, events);
+		if (told === null) return;
+		results.value = told;
+		news.value = told.news;
+	};
+
 	//A tap or click closes the odds card; a finger's first tap on a target opens it there instead of attacking (true: the tap
 	//did that), its second on the same target goes on to attack
 	const firstTap = (w: World, at: Position, touch: boolean): boolean => {
@@ -230,6 +251,17 @@ export function createStore(host: StoreHost) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
+		results, news,
+
+		//A program's step shown: what it told, from the world the screen showed before it
+		told(before: World | null, events: GameEvent[]) {
+			if (before !== null && world.value !== null) tell(before, events);
+		},
+
+		//The chips and the stamp faded (the status bar's line stays)
+		faded: () => {
+			results.value = null;
+		},
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
 		//the picked unit placed there when it can go there; else the selected unit's attack or move there, sent as the
@@ -372,5 +404,10 @@ export function createStore(host: StoreHost) {
 }
 
 export type Store = ReturnType<typeof createStore>;
+
+//The events of a command's result: a move's and an attack's carry theirs, the others none
+function eventsOf(result: unknown): GameEvent[] {
+	return result !== null && typeof result === "object" && "events" in result ? (result as { events: GameEvent[] }).events : [];
+}
 
 const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
