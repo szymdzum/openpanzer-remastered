@@ -28,3 +28,15 @@ chips and the context menu over the map.
 After, the same scene: the crosshair and the two losses, as the old cursor showed them.
 
 ![after](attack-after.jpg)
+
+## Moving: the hex tooltip and the path's label (#441)
+
+Before: the Pz IIA at San Climent selected, the pointer resting on a hex of its move area: the hex tooltip, the
+path's label, the context menu and the plaques together over the hexes around it.
+
+![before](move-before.jpg)
+
+After, the same scene (the pane drew the 1366×768 page smaller): the path and its ring only; the hex under the pointer
+is told in the status bar's second line ("Clear/Road (10,7)").
+
+![after](move-after.jpg)
