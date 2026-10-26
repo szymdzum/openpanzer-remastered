@@ -7,7 +7,7 @@ import { expect, test } from "vitest";
 import { nextRandom } from "../src/rng";
 import { Leaders } from "../src/leaders";
 import { type Cell, leaderType, movMethod, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
-import { attackResult, combatResult } from "../src/core/combat";
+import { attackResult, combatResult, inRiver } from "../src/core/combat";
 import { leaderMoves, moveRange, pathTo, shortestPath, unitMoveRange } from "../src/core/movement";
 import { attackCells } from "../src/core/attack";
 import { resupplyValue } from "../src/core/supply";
@@ -252,6 +252,11 @@ test("An enemy's zone of control stops a unit on a hex it can pay for: a Pz IIA 
 	expect(isZOC(two.w, hexIndex(two.w, 4, 3), 1)).toBe(true);
 	expect(two.at(4, 3)).toBeUndefined(); //1 + 2
 	expect(tankWith(3, forest, {}, enemy).at(4, 3)).toMatchObject({ cin: 1, cost: 254 });
+});
+
+test("A unit in a river or a stream without a road fights worse; a road over it, or other terrain, doesn't (#346)", () => {
+	expect([inRiver(terrainType.River, roadType.none), inRiver(terrainType.Stream, roadType.none), inRiver(terrainType.River, roadType.north),
+		inRiver(terrainType.Clear, roadType.none)]).toEqual([true, true, false, false]);
 });
 
 test("A hex that uses all the points uses them all, in points and fuel: a recon car entering a river with points left can't move on (#214)", () => {
