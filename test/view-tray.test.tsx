@@ -3,7 +3,7 @@
 //docked while deploying with the placed count, the unit picked, Upgrade on it, Done, and the unit list giving way to it
 import { afterEach, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
-import { deployWorld, reserveUnit } from "./coreworld";
+import { deployWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { trayOf } from "../src/view/deploy";
@@ -14,14 +14,11 @@ import { UnitStrip } from "../src/view/unitstrip";
 
 afterEach(cleanup);
 
-test("The tray has the reserve's units with their sprites, the one picked, and how many core units are on the map (#348)", () => {
+test("The tray has the reserve's units with their sprites and the one picked, no count the old list didn't have (#348, #441)", () => {
 	const w = deployWorld();
-	expect(trayOf(w, 2)).toEqual({ placed: 1, total: 3, units: [
+	expect(trayOf(w, 2)).toEqual({ units: [
 		{ index: 1, name: "Infanterie", strength: 10, sprite: w.equipment[115].icon, picked: false },
 		{ index: 2, name: "Me-109E-3", strength: 10, sprite: w.equipment[159].icon, picked: true }] });
-	//a unit lost isn't counted
-	w.state.players[0].core.push({ lost: reserveUnit(115) });
-	expect(trayOf(w, 1).total).toBe(3);
 });
 
 function trayStore(w: World) {
@@ -47,7 +44,7 @@ test("Deploying docks the tray with the card's ids; a card picks its unit; Upgra
 	const tray = screen.getByRole("region", { name: "Reserve" });
 	expect([tray.id, tray.className]).toEqual(["container-unitlist", "pm-panel pm-unitlist pm-deploy"]);
 	expect(["hscroll-unitlist", "unitlist"].map((id) => tray.querySelector("#" + id) !== null)).toEqual([true, true]);
-	expect(tray.textContent).toContain("1 of 3 placed");
+	expect(tray.textContent).not.toContain("placed");
 	//the unit list gives way to the tray while deploying
 	expect(screen.queryByRole("region", { name: "Your units" })).toBeNull();
 	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Me-109E-3, strength 10" })); });

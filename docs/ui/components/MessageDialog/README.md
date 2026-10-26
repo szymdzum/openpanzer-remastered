@@ -1,3 +1,5 @@
+**In the port (#441):** the briefing's foot has no country and day ("Germany · 1 September 1939"): the old message had none.
+
 The message dialog used for briefings, scenario intros and short notices. Its body is set in `typed` (Courier Prime 15/22) like a typed order sheet, with a stamp in the header.
 
 - Use the full window for briefings. Short notices (an autosave, an error) use the same window at 480px wide without the stamp.

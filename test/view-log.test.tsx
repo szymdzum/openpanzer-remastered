@@ -100,26 +100,22 @@ test("The window writes the summary and the five reports, the numbers in bold, t
 	const [tank, inf] = v.sections[0].entries;
 	expect(text(tank)).toBe(`Core 101st Pz IIA assaulted from Mława City (2,2): inflicted 3 casualties, lost 4 strength, 6 surviving in 1 assault, `
 		+ `1 attack defended. Gained +15 experience. 2 entrenchment lost, 0 left.`);
-	expect([tank.result, tank.sprite, tank.at]).toEqual([{ text: "−4", sub: "6 left", tone: "critical" }, e[PZ_IIA].icon, { row: 2, col: 2 }]);
+	expect([tank.destroyed, tank.sprite, tank.at]).toEqual([false, e[PZ_IIA].icon, { row: 2, col: 2 }]);
 	expect(text(inf)).toBe(`Auxiliary 1st Infanterie gave fire support from (4,4): inflicted 2 casualties. Gained +1 experience. Low on ammo, 1/${e[INFANTERIE].ammo} remaining.`);
-	expect(inf.result).toBeNull();
 	expect(text(v.sections[1].entries[0])).toBe(`Auxiliary 1st Infanterie resupplied automatically: ammo ${w.state.units[1].ammo}/${e[INFANTERIE].ammo}.`);
-	expect(v.sections[1].entries[0].result).toEqual({ text: "Full", sub: null, tone: "ok" });
 	expect(text(v.sections[2].entries[0])).toBe("Pz IIA arrived as a reinforcement at (2,2).");
 	const lead = v.sections[3].entries[0];
 	expect(text(lead)).toBe(`Core 101st Pz IIA won a leader: Aggressive Tank Maneuver, `
 		+ `${leaderDescriptions[leaderType.aggressiveTankManeuver][1].replace(/\.$/, "").toLowerCase()}; Battlefield Intelligence, `
 		+ `${leaderDescriptions[leaderType.battlefieldIntelligence][1].replace(/\.$/, "").toLowerCase()}.`);
-	expect(lead.star).toBe(true);
-	expect([text(v.sections[4].entries[0]), v.sections[4].entries[0].icon, v.sections[4].entries[0].result])
-		.toEqual(["Captured objective Mława at (2,2).", "objective", { text: "+150", sub: null, tone: "prestige" }]);
-	//a unit destroyed, an objective lost
+	expect([text(v.sections[4].entries[0]), v.sections[4].entries[0].icon]).toEqual(["Captured objective Mława at (2,2).", "objective"]);
+	//a unit destroyed, its line in critical as the old log's red one; an objective lost
 	const lostIt = logStep(emptyLog(), w, w, [fight(tp(2, [10, 0, 0, 6], [10, 0, 0, 5]), pz([3, 0, 0, 8], [0, 0, 0, 8])),
 		{ type: "captured", unit: 2, at: { row: 2, col: 2 }, flag: true, objective: true, prestige: 150, score: 0, win: false }]);
 	const after = combatLogOf(w, lostIt, quietTurn())!;
 	expect(text(after.sections[0].entries[0])).toBe("Core 101st Pz IIA defended Mława City (2,2): lost 3 strength, destroyed in 1 attack defended.");
-	expect(after.sections[0].entries[0].result).toEqual({ text: "−3", sub: "destroyed", tone: "critical" });
-	expect([text(after.sections[4].entries[0]), after.sections[4].entries[0].result]).toEqual(["Lost objective Mława at (2,2).", null]);
+	expect(after.sections[0].entries[0].destroyed).toBe(true);
+	expect(text(after.sections[4].entries[0])).toBe("Lost objective Mława at (2,2).");
 	expect(combatLogOf({ ...w, state: { ...w.state, players: w.state.players.map((p) => ({ ...p, type: 1 })) } }, log, quietTurn())).toBeNull();
 });
 
@@ -132,13 +128,13 @@ function logStore(w: World) {
 	return { store, set: (x: World) => { now = x; } };
 }
 
-test("Turn report in the short report opens the window; an entry looks at its hex; Briefing, Continue and Esc; End turn starts it again (#348)", async () => {
+test("Turn report in the short report opens the window over a scrim; an entry looks at its hex; Briefing, Continue and Esc; End turn starts it again (#348)", async () => {
 	const w = world(), { store } = logStore(w);
 	await act(() => { store.startTurn(); });
 	store.logTurn([{ type: "arrived", unit: 0, at: { row: 2, col: 2 } }]);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Turn report" })); });
 	const win = document.getElementById("combatLog")!;
-	expect([win.tagName, win.className]).toEqual(["DIALOG", "pm-window pm-log"]);
+	expect([win.tagName, win.className, win.previousElementSibling!.className]).toEqual(["DIALOG", "pm-window pm-log", "pm-scrim"]);
 	expect(within(win).getByRole("heading", { name: "Turn 1 report" })).toBeTruthy();
 	expect([...win.querySelectorAll(".quiet")].length).toBe(4);
 	await act(() => { fireEvent.click(win.querySelector(".pm-entry")!); });
@@ -146,7 +142,8 @@ test("Turn report in the short report opens the window; an entry looks at its he
 	await act(() => { fireEvent.click(within(win).getByRole("button", { name: "Briefing" })); });
 	const msg = document.getElementById("ui-message")!;
 	expect([msg.className, msg.querySelector(".pm-stamp")!.textContent, msg.querySelector("#uiokbut")!.textContent]).toEqual(["pm-window pm-message", "Secret", "Understood"]);
-	expect(msg.querySelector(".ft")!.textContent).toBe("Germany · 1 September 1939Understood");
+	//(no country and day at its foot: the old message had none)
+	expect(msg.querySelector(".ft")!.textContent).toBe("Understood");
 	expect(document.querySelector("#ui-message .pm-label")!.textContent).toBe("Briefing · Turn 1");
 	await act(() => { fireEvent.click(msg.querySelector("#uiokbut")!); });
 	await act(() => { fireEvent.keyDown(document, { key: "Escape" }); });

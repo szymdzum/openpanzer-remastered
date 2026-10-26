@@ -1,3 +1,5 @@
+**In the port (#441):** the window opens over a scrim like the other windows. Its entries are the old log's sentences, without the result column (the loss, Full, the prestige, the leader's star) and the sections' counts; a unit destroyed has its line in critical, as the old log wrote it in red. The footer's hint goes.
+
 The turn report. It opens at the start of each turn and from the button in the status bar. At the top are the objectives left, the turns left to a brilliant victory, the score, and the prestige with next turn's income. Below come the game's five reports as sections: unit combat, resupply, reinforcements, unit leaders and objectives.
 
 - Each entry is a row with a sprite, a sentence with the numbers typed in bold, and the result on the right: a loss in `critical`, a prestige cost or gain in `accent-ink`.

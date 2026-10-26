@@ -2,7 +2,7 @@
 //worlds: the old unit info window's facts laid out as the card (identity and tags, experience, condition in words,
 //attack and defence with what each is for, move, range, spotting and value, leaders), its transport and carrier views,
 //an equipment entry shown full and new, and the card in jsdom
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { germanyPoland, handWorld } from "./coreworld";
 import { step } from "../src/core/step";
@@ -12,6 +12,7 @@ import { createStore } from "../src/view/store";
 import { entryCardOf, ordinal, unitCardOf } from "../src/view/unitcard";
 import { UnitInfoPanel } from "../src/view/infopanel";
 import { UnitCardPanel } from "../src/view/unitsheet";
+import { App } from "../src/view/app";
 
 afterEach(cleanup);
 
@@ -168,4 +169,24 @@ test("Unit card in the unit info opens the card beside the map; its views, Next 
 	//an entry of the equipment window
 	await act(() => { store.openCard({ eqid: PZ_IIA, country: 7 }); });
 	expect(document.querySelector("#unit-card .uc-name")!.textContent).toBe(store.world.value!.equipment[PZ_IIA].name);
+});
+
+test("The screen keeps the dock's height, which the unit card stops above where the two meet (1366×768, #441)", async () => {
+	//(jsdom lays nothing out and has no ResizeObserver: one that reports at once, a dock 180px tall)
+	let watching = 0;
+	vi.stubGlobal("ResizeObserver", class {
+		declare report: () => void;
+		constructor(report: () => void) { this.report = report; }
+		observe() { watching++; this.report(); }
+		disconnect() { watching--; }
+	});
+	vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(180);
+	const store = createStore({ world: () => null, command: () => ({ ok: true, result: null }), won: () => {} });
+	const { unmount } = render(<App store={store} />);
+	const dock = document.querySelector<HTMLElement>(".pm-dock")!;
+	expect([dock.parentElement!.style.getPropertyValue("--dock-h"), watching]).toEqual(["180px", 1]);
+	await act(() => unmount());
+	expect(watching).toBe(0);
+	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 });

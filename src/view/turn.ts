@@ -8,7 +8,7 @@ import { sideOf, unitById, unitData } from "../core/world";
 import { outcomeNames, unitClass } from "../prototypes";
 import type { Nation } from "./icon";
 import { lost } from "./results";
-import { type Condition, countryName, dateOf, isYourTurn, MONTH_NAMES, nationOf, prestigeText, statusOf, yourPlayer } from "./model";
+import { type Condition, countryName, dateOf, isYourTurn, nationOf, prestigeText, statusOf, yourPlayer } from "./model";
 
 //What the enemy's turn did to the side shown, gathered from its steps' events
 export interface EnemyTurn {
@@ -110,19 +110,9 @@ export function turnReportOf(w: World, enemy: EnemyTurn): TurnReport | null {
 	};
 }
 
-//A briefing's header and foot (MessageDialog): "Briefing · Turn 1", and the person's country and the day,
-//"Germany · 1 September 1939"
-export interface BriefingLine {
-	label: string;
-	country: string;
-	nation: Nation | null;
-	line: string;
-}
-
-export function briefingLineOf(w: World): BriefingLine {
-	const you = yourPlayer(w), country = you === null ? "" : countryName(w, you.country), d = new Date(w.state.scenario.date);
-	const day = d.getDate() + " " + MONTH_NAMES[d.getMonth()] + " " + d.getFullYear();
-	return { label: "Briefing · Turn " + w.state.turn.turn, country, nation: nationOf(country), line: country === "" ? day : country + " · " + day };
+//A briefing's header (MessageDialog): "Briefing · Turn 1"
+export function briefingLabelOf(w: World): string {
+	return "Briefing · Turn " + w.state.turn.turn;
 }
 
 //The unit a person's turn starts on: their first ground unit, not a fighter or a bomber (uiMapRenderAndSelectUnit)

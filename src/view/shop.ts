@@ -51,7 +51,6 @@ export interface ClassTab {
 	uclass: number;
 	label: string;
 	icon: IconName;
-	count: number; //models in service this year
 }
 
 export interface Model {
@@ -64,14 +63,12 @@ export interface Model {
 	current: boolean; //what the unit has now
 }
 
-//A stat of the picked model beside the unit's: its value, its bar on the 0-15 scale (fuel and ammo on their own) and
-//the difference, typed +4, −1 or =
+//A stat of the picked model, as the old window showed an entry's: its value and its bar on the 0-15 scale (fuel and ammo
+//on their own)
 export interface Compare {
 	name: string;
 	value: number;
 	fill: number;
-	delta: string | null; //null: no unit to compare with
-	tone: "up" | "dn" | "";
 }
 
 export interface Transport {
@@ -96,13 +93,12 @@ export interface Shop {
 	sort: SortKey;
 	reverse: boolean;
 	models: Model[];
-	picked: { eqid: number, name: string, line: string, sprite: string, compare: Compare[], against: string | null } | null;
+	picked: { eqid: number, name: string, line: string, sprite: string, compare: Compare[] } | null;
 	transports: Transport[]; //none: the model goes on its own
 	target: string | null; //"1st Pz IIA": the unit the window works on
 	sell: ShopAction | null; //null: nothing to sell
 	upgrade: ShopAction | null; //null: nothing to upgrade
 	buy: ShopAction;
-	after: { action: string, prestige: string } | null;
 }
 
 //The side's countries, the player's own and its support countries, as Map.getCountriesBySide lists them
@@ -164,16 +160,10 @@ const STAT_ROWS: [string, keyof EquipmentEntry][] = [["Soft attack", "softatk"],
 const statOf = (e: EquipmentEntry, k: keyof EquipmentEntry) => k === "gunrange" ? Math.max(1, e[k]) : e[k] as number;
 const scaleOf = (k: keyof EquipmentEntry) => k === "fuel" ? 100 : k === "ammo" ? 20 : 15;
 
-function deltaOf(diff: number): Pick<Compare, "delta" | "tone"> {
-	if (diff === 0) return { delta: "=", tone: "" };
-	return diff > 0 ? { delta: "+" + diff, tone: "up" } : { delta: "−" + -diff, tone: "dn" };
-}
-
-function compareOf(e: EquipmentEntry, than: EquipmentEntry | null): Compare[] {
+function compareOf(e: EquipmentEntry): Compare[] {
 	return STAT_ROWS.map(([name, k]) => {
 		const value = statOf(e, k);
-		const delta = than === null ? { delta: null, tone: "" as const } : deltaOf(value - statOf(than, k));
-		return { name, value, fill: Math.min(1, Math.max(0, value) / scaleOf(k)), ...delta };
+		return { name, value, fill: Math.min(1, Math.max(0, value) / scaleOf(k)) };
 	});
 }
 
@@ -239,16 +229,8 @@ function sellOf(c: Pricing): ShopAction | null {
 	return { cost: sellCost(w, asUnit(unit)), refusal: r === null ? null : reasonOf(r), command };
 }
 
-function afterOf(p: PlayerState, upgrade: ShopAction | null, buy: ShopAction): Shop["after"] {
-	const left = (a: ShopAction) => prestigeText(p.prestige - a.cost);
-	if (upgrade !== null && upgrade.refusal === null) return { action: "upgrade", prestige: left(upgrade) };
-	return buy.refusal === null ? { action: "buying", prestige: left(buy) } : null;
-}
-
-function tabsOf(w: World, country: number, choice: ShopChoice): ClassTab[] {
-	return CLASSES.map((c) => ({ uclass: c, label: CLASS_NAMES[c] ?? unitClassNames[c], icon: classIcon(c)!,
-		count: modelsOf(w, country, c, choice.sort, choice.reverse).length }));
-}
+//The old window's eight classes, each its own tab
+const TABS: ClassTab[] = CLASSES.map((c) => ({ uclass: c, label: CLASS_NAMES[c] ?? unitClassNames[c], icon: classIcon(c)! }));
 
 function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model {
 	const e = w.equipment[eqid], label = SORTS.find((s) => s.key === sort)!.label;
@@ -256,12 +238,11 @@ function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model 
 	return { eqid, name: e.name, year: e.yearavailable, cost: unitCost(w, eqid), stat, sprite: e.icon as unknown as string, current: eqid === current };
 }
 
-//The model picked beside the unit's own (none to compare with when it is the same)
-function pickedOf(e: EquipmentEntry | null, eqid: number, own: EquipmentEntry | null): Shop["picked"] {
+//The model picked, with its stats
+function pickedOf(e: EquipmentEntry | null, eqid: number): Shop["picked"] {
 	if (e === null) return null;
-	const than = own === null || own === e ? null : own;
 	return { eqid, name: e.name, line: tagsOf(e, null).map((t) => t.text).join(" · ") + " · in service from " + e.yearavailable,
-		sprite: e.icon as unknown as string, compare: compareOf(e, than), against: than === null ? null : than.name };
+		sprite: e.icon as unknown as string, compare: compareOf(e) };
 }
 
 function transportList(w: World, list: number[], transport: number): Transport[] {
@@ -286,14 +267,14 @@ export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	const unit = targetOf(w, p, choice.target), target = unit === null ? null : choice.target;
 	const { transport, list } = transportsOf(w, choice, country, presetOf(w, unit, choice));
 	const year = yearOf(w), pricing: Pricing = { w, p, target, unit, eqid: choice.eqid, transport, year };
-	const upgrade = upgradeOf(pricing), buy = buyOf(pricing), own = unit === null ? null : w.equipment[unit.eqid];
+	const upgrade = upgradeOf(pricing), buy = buyOf(pricing);
 	return {
 		title: name + " · " + MONTH_NAMES[new Date(w.state.scenario.date).getMonth()] + " " + year,
-		country: { name, nation: nationOf(name), many: countries.length > 1 }, prestige: prestigeText(p.prestige), tabs: tabsOf(w, country, choice),
+		country: { name, nation: nationOf(name), many: countries.length > 1 }, prestige: prestigeText(p.prestige), tabs: TABS,
 		uclass: choice.uclass, sort: choice.sort, reverse: choice.reverse,
 		models: modelsOf(w, country, choice.uclass, choice.sort, choice.reverse).map((m) => modelOf(w, m, choice.sort, unit === null ? -1 : unit.eqid)),
-		picked: pickedOf(choice.eqid > 0 ? w.equipment[choice.eqid] : null, choice.eqid, own), transports: transportList(w, list, transport),
-		target: unit === null ? null : targetName(w, unit, target!), sell: sellOf(pricing), upgrade, buy, after: afterOf(p, upgrade, buy),
+		picked: pickedOf(choice.eqid > 0 ? w.equipment[choice.eqid] : null, choice.eqid), transports: transportList(w, list, transport),
+		target: unit === null ? null : targetName(w, unit, target!), sell: sellOf(pricing), upgrade, buy,
 	};
 }
 

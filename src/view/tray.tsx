@@ -1,6 +1,6 @@
 //The reserve tray (Deployment, #348): while the person deploys, their reserve docked at the bottom, the unit picked
-//to place on a brass hex, how many of their core units are on the map, Upgrade for the picked unit (the equipment
-//window, on it) and Done to leave the rest for later. With the reserve not empty and nothing picked, a button picks
+//to place on a brass hex, Upgrade for the picked unit (the equipment window, on it) and Done to leave the rest for
+//later. With the reserve not empty and nothing picked, a button picks
 //its first unit again. What it says is the view model's (src/view/deploy.ts trayOf).
 import { Button } from "./button";
 import { Icon } from "./icon";
@@ -21,8 +21,6 @@ export function ReserveTray({ store }: { store: Store }) {
 			<div class="hd">
 				<Icon name="deploy" />
 				<span class="pm-label">Deploy</span>
-				<span class="pm-data">{tray.placed} of {tray.total} placed</span>
-				<span class="pm-muted note">Brass hexes are your deployment zone. Units still here can be placed next turn.</span>
 				<span class="grow" />
 				<Button icon="upgrade" onClick={() => store.openShop({ index: picked.index })}>Upgrade</Button>
 				<Button variant="ghost" onClick={() => store.pick(null)}>Done</Button>

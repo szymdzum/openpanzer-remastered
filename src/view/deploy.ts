@@ -56,18 +56,14 @@ export function reserveOf(w: World): ReserveUnit[] {
 	return units;
 }
 
-//The reserve tray (Deployment): the reserve's units with their sprites, the one picked, and how many of the core
-//units are on the map
+//The reserve tray (Deployment): the reserve's units with their sprites, the one picked
 export interface Tray {
-	placed: number;
-	total: number;
 	units: (ReserveUnit & { sprite: string, picked: boolean })[];
 }
 
 export function trayOf(w: World, picked: number | null): Tray {
-	const core = w.state.players[w.state.turn.currentPlayer].core;
 	const units = reserveOf(w).map((r) => ({ ...r, sprite: listSprite(w.equipment[reserveAt(w, r.index)!.eqid]), picked: r.index === picked }));
-	return { placed: core.filter((c) => "onMap" in c).length, total: core.filter((c) => !("lost" in c)).length, units };
+	return { units };
 }
 
 //The zone of the side whose turn it is, with the reserve unit at index picked; null when it isn't in the reserve

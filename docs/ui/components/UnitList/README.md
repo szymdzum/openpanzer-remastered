@@ -1,3 +1,5 @@
+**In the port (#441):** the header says "Units" with its close button, no counts ("2 moved · 1 low on supply"): the old list had none.
+
 The player's units as a horizontal strip under the status bar, opened from the rail. Each card shows the sprite, strength badge, name and formation, plus warning icons for low fuel or ammo.
 
 - The selected unit has a 2px `ink` border. Units that have already moved are dimmed and marked "moved".
