@@ -13,7 +13,7 @@ import type { GameHost } from "../host";
 import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
-import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
+import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
 import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
@@ -139,6 +139,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the person's reserve, and the deployment zone while one of its units is picked
 	const reserve = computed(() => world.value === null ? [] : reserveOf(world.value));
 	const deployment = computed(() => world.value === null ? null : deploymentOf(world.value, deploying.value));
+	//the reserve tray while deploying (Deployment)
+	const tray = computed(() => deployment.value === null ? null : trayOf(world.value!, deploying.value));
 	//(no move area or target while deploying, as the old UI drew none in deploy mode)
 	const selection = computed(() => world.value === null || deployment.value !== null ? null : selectionOf(world.value, selected.value));
 	//(none of what the pointer shows on the strategic map, which has no cursor)
@@ -270,7 +272,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	};
 
 	//The unit list and the equipment window (UnitList, Equipment)
-	const shops = createShopState({ world, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
+	const shops = createShopState({ world, deploying: deployment, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
 
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
 	const menu: Record<MenuKey, () => void> = {
@@ -297,7 +299,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news, motion, showStep, card, ...shops,
+		results, news, motion, showStep, card, ...shops, tray,
 
 		//The unit card opened on the selected unit, or on an equipment entry of a country
 		openCard(entry?: { eqid: number, country: number }) {

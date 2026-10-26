@@ -11,6 +11,8 @@ import { isYourTurn } from "./model";
 
 interface Needs {
 	world: ReadonlySignal<World | null>;
+	//while deploying the reserve tray takes the unit list's place, as the old list showed the reserve then
+	deploying: ReadonlySignal<unknown>;
 	selected: ReadonlySignal<UnitId | null>;
 	select: (id: UnitId | null) => void;
 	look: (at: Position) => void;
@@ -19,12 +21,13 @@ interface Needs {
 
 export type ShopAct = "buy" | "upgrade" | "sell";
 
-export function createShopState({ world, selected, select, look, dispatch }: Needs) {
+export function createShopState({ world, deploying, selected, select, look, dispatch }: Needs) {
 	//the unit list open (the status bar's button), and the equipment window's picks while it is open
 	const listOpen = signal(false);
 	const choice = signal<ShopChoice | null>(null);
 
-	const unitList = computed(() => world.value === null || !listOpen.value ? null : unitListOf(world.value, selected.value));
+	const unitList = computed(() => world.value === null || !listOpen.value || deploying.value !== null ? null
+		: unitListOf(world.value, selected.value));
 	const shop = computed(() => world.value === null || choice.value === null ? null : shopOf(world.value, choice.value));
 	//why the unit list and the window can't open: the old ones opened on a person's turn only (undefined: they can)
 	const shopRefusal = computed(() => world.value === null ? "No game is playing" : isYourTurn(world.value) ? undefined : "Not your turn");
