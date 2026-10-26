@@ -44,10 +44,10 @@ type Fight = Of<"fight">;
 const find = <T extends GameEvent["type"]>(events: GameEvent[], type: T): Of<T> | undefined =>
 	events.find((e): e is Of<T> => e.type === type);
 const at = (f: { row: number; col: number }): Position => ({ row: f.row, col: f.col });
-//(the dice can kill more than a unit has: it loses what it had)
 //A loss as the chips write it: −6, and 0 for none
 const loss = (n: number) => n === 0 ? "0" : "−" + n;
-const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
+//The strength a fighter lost (the dice can kill more than a unit has: it loses what it had)
+export const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
 
 //The combat of a step read from its events: the attack itself (none when the support fire stopped it), the support
 //fire's shots, and what came after

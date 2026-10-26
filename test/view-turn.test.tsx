@@ -69,6 +69,11 @@ test("What the enemy's turn did, from its steps' events: the side's units attack
 	expect(turnReportOf(w, { attacked: [0, 2], lost: 0, objectives: 2 })!.enemy.map((l) => l.text)).toEqual(["2 of your units attacked", "2 objectives lost"]);
 });
 
+test("A destroyed unit counts as lost only the strength it had, though the dice killed more (#428)", () => {
+	const e = noteEnemy(quietTurn(), world(), [fight([4, 1, 10, 10], [0, 0, 1, -1])]);
+	expect(e.lost).toBe(1);
+});
+
 test("A person's turn starts on their first ground unit, never an aircraft; a program's on none (#346)", () => {
 	expect(firstUnitOf(world())).toBe(0);
 	//(the Me-109 first in the list: the infantry after it)

@@ -7,6 +7,7 @@ import type { UnitId, World } from "../core/types";
 import { sideOf, unitById, unitData } from "../core/world";
 import { outcomeNames, unitClass } from "../prototypes";
 import type { Nation } from "./icon";
+import { lost } from "./results";
 import { type Condition, countryName, dateOf, isYourTurn, nationOf, prestigeText, statusOf, yourPlayer } from "./model";
 
 //What the enemy's turn did to the side shown, gathered from its steps' events
@@ -21,9 +22,9 @@ export const quietTurn = (): EnemyTurn => ({ attacked: [], lost: 0, objectives: 
 //A fight: the side's fighters' losses (an attack on them, or the support fire their guns gave), and the defender
 //attacked when it was the side's
 function fought(turn: EnemyTurn, e: Extract<GameEvent, { type: "fight" }>, side: number): EnemyTurn {
-	const lost = [e.attacker, e.defender].reduce((n, f) => f.side === side ? n + Math.max(0, f.before.strength - f.after.strength) : n, 0);
+	const loss = [e.attacker, e.defender].reduce((n, f) => f.side === side ? n + lost(f) : n, 0);
 	const hit = !e.support && e.defender.side === side && !turn.attacked.includes(e.defender.unit);
-	return { ...turn, attacked: hit ? [...turn.attacked, e.defender.unit] : turn.attacked, lost: turn.lost + lost };
+	return { ...turn, attacked: hit ? [...turn.attacked, e.defender.unit] : turn.attacked, lost: turn.lost + loss };
 }
 
 //A capture: an objective the enemy took (who took it: the world after the step)
