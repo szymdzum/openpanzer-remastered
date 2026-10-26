@@ -170,8 +170,6 @@
 .uc-bars i { width: 22px; height: 6px; background: var(--panel-sunken); border: 1px solid var(--line); }
 .uc-bars i.on { background: var(--accent); border-color: var(--accent); }
 .uc-sec { margin-top: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
-.uc-note { margin-left: 6px; font-size: var(--type-label-size); font-weight: 400; color: var(--ink-muted); }
-.pm-meter.low .uc-note, .pm-meter.critical .uc-note { color: inherit; }
 .uc-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .uc-stat { display: grid; grid-template-columns: 62px 1fr 34px; gap: 0 8px; align-items: center; margin-bottom: 7px; }
 .uc-stat .k { font-size: var(--type-small-size); }
@@ -180,7 +178,6 @@
 .uc-stat .bar b.plus { background: var(--accent); }
 .uc-stat .v { font: 700 var(--type-data-size)/1 var(--font-mono); text-align: right; }
 .uc-stat .v em, .uc-four em { margin-left: 2px; font: 700 var(--type-label-size) var(--font-mono); font-style: normal; color: var(--accent-ink); }
-.uc-stat .h, .uc-four .h { grid-column: 1 / -1; font-size: var(--type-label-size); line-height: 14px; color: var(--ink-muted); }
 .uc-four { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 12px; padding: 0; background: var(--line); border: 1px solid var(--line); }
 .uc-four > div { display: grid; padding: 8px 10px; background: var(--panel-raised); }
 .uc-four .big { font: 700 var(--type-title-size)/24px var(--font-mono); }

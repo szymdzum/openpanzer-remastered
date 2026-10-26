@@ -165,14 +165,15 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	const zone = at((o) => o.op === "stroke" && o.lineWidth === TOKENS.px["hex-zone-width"] && o.strokeStyle === MAP["hex-target"]);
 	const arc = at((o) => o.op === "stroke" && o.lineWidth === TOKENS.px["hex-support-width"]);
 	const select = at((o) => o.op === "stroke" && o.strokeStyle === MAP["hex-select"]);
-	const plaque = at((o) => o.op === "fillText" && o.args[0] === "Mława  +150");
-	const tag = at((o) => o.op === "fillText" && o.args[0] === "support fire");
-	const order = [fog, hatch, zone, arc, select, plaque, tag];
+	const plaque = at((o) => o.op === "fillText" && o.args[0] === "Mława");
+	const order = [fog, hatch, zone, arc, select, plaque];
 	expect(order.every((i) => i >= 0)).toBe(true);
 	expect([...order].sort((a, b) => a - b)).toEqual(order);
 	expect([ops[zone].zoom, ops[arc].zoom, ops[arc].dash]).toEqual([2, 2, [5, 3]]);
 	expect(ops[ops.findIndex((o, i) => i > hatch && o.op === "stroke")]).toMatchObject({ strokeStyle: MAP["hex-hatch"], lineWidth: TOKENS.px["hex-hatch-width"] });
-	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Town  +50")).toBe(true);
+	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Town")).toBe(true);
+	//no "support fire" tags over the guns: the arcs say it (the old map had neither)
+	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "support fire")).toBe(false);
 	//the plaques beneath the units, at the foot of their hexes, see-through (#438)
 	const unitDrawn = at((o) => o.op === "drawImage" || (o.op === "fillText" && o.args[0] === "10"));
 	expect(plaque).toBeLessThan(unitDrawn);

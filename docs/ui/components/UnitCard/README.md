@@ -1,4 +1,4 @@
-**In the port (#441):** where the card and the unit info at the bottom meet (below about 1656px wide, 1366×768 among them), the card stops above the dock and its sheet scrolls. Its extras (the notes, the explanations, the leader's share) are #37's, the owner's call.
+**In the port (#441):** where the card and the unit info at the bottom meet (below about 1656px wide, 1366×768 among them), the card stops above the dock and its sheet scrolls. Its extras went on the owner's call (2026-10-26): the notes in words, the stats' explanations, the leader's share under the figures and the XP to the next bar. The card shows what the old unit info window showed, laid out as below; the lines on those extras describe the design, not the game.
 
 The full unit sheet: everything about one unit, written so a new player can read it without the manual.
 

@@ -172,16 +172,6 @@ export function label(c: CanvasRenderingContext2D, text: string, x: number, y: n
 	return { left, width };
 }
 
-//"support fire" over each gun
-export function drawSupportTags(c: CanvasRenderingContext2D, vp: Viewport, s: Support) {
-	atScreen(c, vp);
-	for (const g of s.guns) {
-		const p = toScreen(hexCentre(g.row, g.col), vp);
-		label(c, "support fire", p.x, p.y - PX["hex-h"] / 2 * vp.scale - 8, { size: TOKENS.fontPx["map-label"], height: 13,
-			paper: MAP["map-paper-raised"], ink: MAP["map-critical"], edge: MAP["map-edge"] });
-	}
-}
-
 //A five-pointed star
 export function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
 	c.beginPath();
@@ -197,9 +187,9 @@ export function star(c: CanvasRenderingContext2D, x: number, y: number, r: numbe
 	c.stroke();
 }
 
-//What a plaque says: its name as the data writes it, never re-cased (principles.md), and the prestige taking it gives
+//What a plaque says: its name as the data writes it, never re-cased (principles.md), as the old map's tooltip did
 function plaqueText(p: Plaque): string {
-	return (p.name !== "" ? p.name : p.objective ? "Objective" : "Town") + "  +" + p.prestige;
+	return p.name !== "" ? p.name : p.objective ? "Objective" : "Town";
 }
 
 //An objective on paper, room for its star; a town smaller and greyer

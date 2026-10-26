@@ -1,6 +1,6 @@
 //The unit card's view model (UnitCard, #348 with #37): everything the old unit info window said about a unit (uiInfo:
-//updateUnitInfoWindow), written out as the card's sheet: its identity and tags, its experience, its condition with a
-//note in words, every stat with what it is for, move, range, spotting and value, its leaders. The old window's
+//updateUnitInfoWindow), written out as the card's sheet, and no more (docs/ui/PLAN.md, a 1:1 port): its identity
+//and tags, its experience, its condition, every stat, move, range, spotting and value, its leaders. The old window's
 //buttons are the card's views: the unit itself, its transport, the carrier it rides. An equipment entry (the
 //equipment window's) is shown as the old window showed it, full and new. From the core's World and nothing else
 import { unitAttackRange } from "../core/attack";
@@ -25,24 +25,17 @@ export interface CardTag {
 	core: boolean; //the core tag, in brass
 }
 
-//A condition meter with its note in words ("enough for 3 moves")
-export interface CardGauge extends Gauge {
-	note: string | null;
-}
-
-//An attack or defence stat: its bar on the 0-15 scale, and what it is for
+//An attack or defence stat: its bar on the 0-15 scale
 export interface CardStat {
 	name: string;
 	value: number;
 	fill: number;
-	note: string;
 }
 
-//Move, range, spotting, value: the figure, and the line under it ("5 + 1 leader")
+//Move, range, spotting, value: the figure as the rules count it (a leader's hexes in it)
 export interface CardFigure {
 	label: string;
 	value: number;
-	note: string;
 	prestige: boolean;
 }
 
@@ -54,8 +47,8 @@ export interface UnitCard {
 	sprite: string; //the sprite strip's file
 	tags: CardTag[];
 	bars: number;
-	xp: string; //"120 XP, 80 to the next"
-	condition: CardGauge[];
+	xp: string; //"120 XP"
+	condition: Gauge[];
 	attack: CardStat[];
 	defence: CardStat[];
 	figures: CardFigure[];
@@ -99,14 +92,11 @@ export function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
 
 function xpOf(experience: number): { bars: number, xp: string } {
 	const bars = Math.min(MAX_BARS, Math.floor(experience / XP_BAR));
-	const xp = bars === MAX_BARS ? experience + " XP" : `${experience} XP, ${XP_BAR - experience % XP_BAR} to the next`;
-	return { bars, xp };
+	return { bars, xp: experience + " XP" };
 }
 
 //"1st Tank · Germany"; a unit with no country of its own (a fortification): its class alone
 const subOf = (what: string, country: string) => country === "" ? what : what + " · " + country;
-
-const plural = (n: number, one: string, many: string) => n + " " + (n === 1 ? one : many);
 
 //The supply the shown equipment has: its fuel and ammo, the unit's or its transport's
 interface Supply {
@@ -117,48 +107,35 @@ interface Supply {
 	dug: number; //the most entrenchment the hex gives, for the meter's fill
 }
 
-function conditionOf(e: EquipmentEntry, s: Supply): CardGauge[] {
+function conditionOf(e: EquipmentEntry, s: Supply): Gauge[] {
 	const fuel = usesFuel(e), ammo = e.ammo !== 0;
 	return [
-		{ icon: "strength", label: "Strength", value: s.strength + "/10", fill: Math.min(1, s.strength / 10), state: supplyState(s.strength, 10), note: null },
-		fuel ? { icon: "fuel", label: "Fuel", value: s.fuel + "/" + e.fuel, fill: Math.min(1, s.fuel / e.fuel), state: supplyState(s.fuel, e.fuel),
-			note: e.movpoints > 0 ? "enough for " + plural(Math.floor(s.fuel / e.movpoints), "move", "moves") : null }
-			: { icon: "fuel", label: "Fuel", value: "–", fill: 0, note: "uses none" },
-		ammo ? { icon: "ammo", label: "Ammo", value: s.ammo + "/" + e.ammo, fill: Math.min(1, s.ammo / e.ammo), state: supplyState(s.ammo, e.ammo),
-			note: s.ammo === 0 ? "no attacks left" : plural(s.ammo, "attack", "attacks") + " left" }
-			: { icon: "ammo", label: "Ammo", value: "–", fill: 0, note: "uses none" },
-		{ icon: "entrench", label: "Entrenchment", value: String(s.entrenchment), fill: s.dug > 0 ? Math.min(1, s.entrenchment / s.dug) : 0,
-			note: s.entrenchment === 0 ? "not dug in" : "dug in" },
+		{ icon: "strength", label: "Strength", value: s.strength + "/10", fill: Math.min(1, s.strength / 10), state: supplyState(s.strength, 10) },
+		fuel ? { icon: "fuel", label: "Fuel", value: s.fuel + "/" + e.fuel, fill: Math.min(1, s.fuel / e.fuel), state: supplyState(s.fuel, e.fuel) }
+			: { icon: "fuel", label: "Fuel", value: "–", fill: 0 },
+		ammo ? { icon: "ammo", label: "Ammo", value: s.ammo + "/" + e.ammo, fill: Math.min(1, s.ammo / e.ammo), state: supplyState(s.ammo, e.ammo) }
+			: { icon: "ammo", label: "Ammo", value: "–", fill: 0 },
+		{ icon: "entrench", label: "Entrenchment", value: String(s.entrenchment), fill: s.dug > 0 ? Math.min(1, s.entrenchment / s.dug) : 0 },
 	];
 }
 
-const stat = (name: string, value: number, note: string): CardStat => ({ name, value, fill: Math.min(1, Math.max(0, value) / SCALE), note });
+const stat = (name: string, value: number): CardStat => ({ name, value, fill: Math.min(1, Math.max(0, value) / SCALE) });
 
-//The stats as the old window listed them, each with what it is for
+//The stats as the old window listed them
 function statsOf(e: EquipmentEntry): { attack: CardStat[], defence: CardStat[] } {
 	return {
-		attack: [stat("Soft", e.softatk, "infantry, guns, trucks"), stat("Hard", e.hardatk, "tanks, armoured cars"),
-			stat("Air", e.airatk, "aircraft overhead"), stat("Naval", e.navalatk, "ships")],
-		defence: [stat("Ground", e.grounddef, "against ground attacks"), stat("Air", e.airdef, "against air attacks"),
-			stat("Close", e.closedef, "in cities and forests"), stat("Ranged", e.rangedefmod, "against fire from range"),
-			stat("Initiative", e.initiative, "who fires first")],
+		attack: [stat("Soft", e.softatk), stat("Hard", e.hardatk), stat("Air", e.airatk), stat("Naval", e.navalatk)],
+		defence: [stat("Ground", e.grounddef), stat("Air", e.airdef), stat("Close", e.closedef), stat("Ranged", e.rangedefmod),
+			stat("Initiative", e.initiative)],
 	};
 }
 
-//A figure with the leader's part said under it: "5 + 1 leader"
-function figure(label: string, base: number, bonus: number, note: string): CardFigure {
-	return { label, value: base + bonus, note: bonus > 0 ? `${base} + ${bonus} leader` : note, prestige: false };
-}
-
-const rangeNote = (range: number) => range <= 1 ? "adjacent only" : range + " hexes";
-
 function figuresOf(e: EquipmentEntry, move: number, range: number, spot: number, cost: number): CardFigure[] {
-	const gun = e.gunrange === 0 ? 1 : e.gunrange;
 	return [
-		figure("Move", e.movpoints, move, "hexes a turn"),
-		figure("Range", gun, range - gun, rangeNote(range)),
-		figure("Spotting", e.spotrange, spot - e.spotrange, "hexes of sight"),
-		{ label: "Value", value: cost, note: "prestige", prestige: true },
+		{ label: "Move", value: e.movpoints + move, prestige: false },
+		{ label: "Range", value: range, prestige: false },
+		{ label: "Spotting", value: spot, prestige: false },
+		{ label: "Value", value: cost, prestige: true },
 	];
 }
 

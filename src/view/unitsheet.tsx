@@ -46,7 +46,6 @@ function Stat({ s }: { s: CardStat }) {
 			<span class="k">{s.name}</span>
 			<span class="bar" aria-hidden="true"><b style={{ width: `${Math.round(s.fill * 100)}%` }} /></span>
 			<span class="v">{s.value}</span>
-			<span class="h">{s.note}</span>
 		</div>
 	);
 }
@@ -56,8 +55,7 @@ function Body({ card }: { card: UnitCard }) {
 		<>
 			<section class="uc-sec" aria-label="Condition">
 				<h3>Condition</h3>
-				{card.condition.map((m) => <Meter key={m.label} icon={m.icon} label={m.label} value={m.value} fill={m.fill} state={m.state}
-					note={m.note !== null && <span class="uc-note">{m.note}</span>} />)}
+				{card.condition.map((m) => <Meter key={m.label} icon={m.icon} label={m.label} value={m.value} fill={m.fill} state={m.state} />)}
 			</section>
 			<section class="uc-sec uc-two">
 				<div><h3>Attack</h3>{card.attack.map((s) => <Stat key={s.name} s={s} />)}</div>
@@ -68,7 +66,6 @@ function Body({ card }: { card: UnitCard }) {
 					<div key={f.label}>
 						<span class="pm-label">{f.label}</span>
 						<span class={f.prestige ? "big pm-prestige" : "big"}>{f.value}</span>
-						<span class="h">{f.note}</span>
 					</div>
 				))}
 			</section>
