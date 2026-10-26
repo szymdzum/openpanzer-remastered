@@ -1,6 +1,7 @@
 //The attack preview in the page (#347, AttackPreview and CombatOdds), in jsdom, on a store over a hand-built world whose
 //host plays the person's commands on the core: the odds card after the pointer rests 400 ms on a target or Shift is
-//held, closed by moving off it or Escape; on touch the first tap opens it and the second attacks
+//held, closed by moving off it or Escape; on touch the first tap opens it and the second attacks. And the step's beats
+//after a command: the map takes no click while they play, a moving unit glides off its hex
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
@@ -39,7 +40,7 @@ function mapOf() {
 			const r = step(w, cmd);
 			if ("refusal" in r) return { ok: false, refusal: r.refusal };
 			w = r.world;
-			return { ok: true, result: null };
+			return { ok: true, result: { events: r.events } } as ReturnType<StoreHost["command"]>;
 		},
 		won: () => {},
 	};
@@ -109,8 +110,27 @@ test("On touch the first tap on a target opens its card and the second attacks; 
 });
 
 test("A mouse click on a target attacks at once, as before", async () => {
-	const { sent } = mapOf();
+	const { store, sent } = mapOf();
 	await act(() => pointer("pointerdown", 4, 4, { pointerType: "mouse" }));
 	await act(() => pointer("click", 4, 4));
 	expect(sent).toEqual([{ type: "attack", unit: 0, target: 1 }]);
+	//(its shots play, the strips and sounds picked without a host's cosmetic stream; the map takes no click meanwhile)
+	await act(() => { vi.advanceTimersByTime(1); });
+	expect(store.motion.value).not.toBeNull();
+	await act(() => pointer("click", 4, 2));
+	expect(sent).toHaveLength(1);
+	await act(() => { vi.advanceTimersByTime(10000); });
+	expect(store.motion.value).toBeNull();
+});
+
+test("A move glides its unit along the path: the unit off its hex and its context menu gone until it arrives (#347)", async () => {
+	const { store, sent } = mapOf();
+	expect(store.context.value).not.toBeNull();
+	await act(() => pointer("pointerdown", 6, 3, { pointerType: "mouse" }));
+	await act(() => pointer("click", 6, 3));
+	expect(sent).toEqual([{ type: "move", unit: 0, to: { row: 6, col: 3 } }]);
+	await act(() => { vi.advanceTimersByTime(1); });
+	expect([store.context.value, store.units.value.some((u) => u.id === 0), store.motion.value!.sprite !== null]).toEqual([null, false, true]);
+	await act(() => { vi.advanceTimersByTime(5000); });
+	expect([store.context.value !== null, store.units.value.some((u) => u.id === 0), store.motion.value]).toEqual([true, true, null]);
 });

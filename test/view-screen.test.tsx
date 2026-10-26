@@ -14,6 +14,9 @@ import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
 import { playerType, uiSettings } from "../src/prototypes";
 import type { World } from "../src/core/types";
+import type { Command } from "../src/commands";
+import { step } from "../src/core/step";
+import { handWorld } from "./coreworld";
 import type { Game } from "../src/game";
 import type { GameHost } from "../src/host";
 
@@ -259,4 +262,34 @@ test("A campaign's prototype shown at the scenario's start stays, before the bri
 		await act(() => { fireEvent.click(ok()); });
 	}
 	expect(titles).toEqual(["Prototype", ""]);
+});
+
+test("A program's attack is animated before its shown: the AI's next action waits for the last beat; reduced motion keeps the pace (#347)", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	let w: World = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }, { eqid: 273, owner: 1, row: 4, col: 4 }] },
+		undefined, { spotSide: 0 });
+	w = { ...w, state: { ...w.state, rng: { game: 1, ai: 7 } } };
+	const host = { world: () => w, command: vi.fn(), won: vi.fn(), holdForMessage: vi.fn(), messageClosed: vi.fn(), cosmetic: vi.fn(() => 0.5),
+		play: vi.fn((cmd: Command) => {
+			const r = step(w, cmd);
+			if ("refusal" in r) return r;
+			w = r.world;
+			return { ok: true, result: { events: r.events } };
+		}) };
+	const reduce = vi.fn(() => ({ matches: true }));
+	vi.stubGlobal("matchMedia", reduce);
+	vi.useFakeTimers();
+	let s: ReturnType<typeof newScreen>;
+	await act(() => { s = newScreen(host as unknown as GameHost, root); });
+	const shown = vi.fn();
+	//(the screen shows the world before the attack, as it has after any step)
+	await act(() => { s.unitsPlaced(); });
+	await act(() => { s.attack({ id: 0 } as never, { id: 1 } as never, shown); });
+	expect([shown.mock.calls.length, host.won.mock.calls.length]).toEqual([0, 0]);
+	await act(() => { vi.advanceTimersByTime(10000); });
+	expect([shown.mock.calls.length, host.won.mock.calls.length, reduce.mock.calls.length > 0, host.cosmetic.mock.calls.length > 0])
+		.toEqual([1, 1, true, true]);
+	vi.useRealTimers();
+	vi.unstubAllGlobals();
 });

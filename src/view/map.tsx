@@ -19,6 +19,8 @@ import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
 import { drawMap, type Images, type Scene } from "./mapdraw";
 import { drawPreview } from "./attackdraw";
+import { SHEETS } from "./beats";
+import { drawMotion } from "./motiondraw";
 import type { Store } from "./store";
 import { TOKENS } from "./tokens";
 
@@ -94,10 +96,12 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.blocked.value, s.blockedAt.value, s.glance.value, s.results.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.blocked.value, s.blockedAt.value, s.glance.value, s.results.value, s.motion.value];
 			this.request();
 		});
 		const redraw = () => this.request();
+		//(the strips of the shots and the explosions loaded before the first step plays)
+		for (const sheet of SHEETS) this.cache.get(sheet.file);
 		const move = (e: MouseEvent) => s.hoverHex(this.cellOf(e));
 		const leave = () => s.hoverHex(null);
 		//a finger held on a hex opens its tooltip (Tooltips: nothing relies on hover); lifted or moved first, nothing
@@ -208,11 +212,13 @@ class Painter {
 		this.preview(c, vp);
 	}
 
-	//The attack preview and a retreat's trail over the rest, none on the strategic map
+	//The attack preview and a retreat's trail over the rest, then the beat playing (a moving unit, a shot, an explosion),
+	//none on the strategic map
 	preview(c: CanvasRenderingContext2D, vp: Viewport) {
-		const s = this.store, results = s.results.peek();
+		const s = this.store, results = s.results.peek(), motion = s.motion.peek();
 		if (s.strategic.peek()) return;
 		drawPreview(c, vp, { blocked: s.blocked.peek(), blockedAt: s.blockedAt.peek(), glance: s.glance.peek(), trail: results === null ? null : results.trail });
+		if (motion !== null) drawMotion(c, vp, motion, (f) => this.image(f));
 	}
 
 	//A sprite or the terrain, once it has loaded

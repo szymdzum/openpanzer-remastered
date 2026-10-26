@@ -1,6 +1,7 @@
 //A combat's results in the page (#347, CombatResults), in jsdom, on a store over a hand-built world whose host plays the
 //person's commands on the core: the chips and the stamp over the map after an attack, faded after 2.5 s (1 s with quick
-//animations), the same news in the status line until the next command; a program's step tells its own
+//animations), the same news in the status line until the next command; a program's step tells its own. And the
+//page's sounds the step's beats play (src/view/player.ts)
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
@@ -8,6 +9,7 @@ import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { terrainType, uiSettings } from "../src/prototypes";
 import { MapView } from "../src/view/map";
+import { pageSounds } from "../src/view/player";
 import { StatusBar } from "../src/view/statusbar";
 import { createStore, type StoreHost } from "../src/view/store";
 
@@ -40,6 +42,7 @@ function pageOf() {
 			return { ok: true, result: { events: r.events } } as ReturnType<StoreHost["command"]>;
 		},
 		won: () => {},
+		cosmetic: () => 0.5,
 	};
 	const store = createStore(host);
 	store.refresh();
@@ -50,9 +53,16 @@ function pageOf() {
 
 const line = () => document.querySelector(".msg")!.textContent;
 
+//The step's beats played to their end (src/view/player.ts): the map takes no click meanwhile, the results come after
+async function beatsPlayed(store: ReturnType<typeof pageOf>) {
+	for (let i = 0; i < 400 && store.results.value === null; i++) await act(() => { vi.advanceTimersByTime(50); });
+}
+
 test("After an attack its chips and stamp stand over the map, fade after 2.5 s and go; the status line keeps the news", async () => {
 	const store = pageOf();
 	await act(() => { store.clickHex({ row: 4, col: 4 }); });
+	expect(document.querySelector(".pm-results")).toBeNull();
+	await beatsPlayed(store);
 	const marks = document.querySelector(".pm-results")!;
 	expect(marks.querySelector(".pm-event")!.textContent).toBe("Rugged defense");
 	expect(marks.querySelector(".pm-event")!.className).toBe("pm-event bad");
@@ -68,19 +78,41 @@ test("After an attack its chips and stamp stand over the map, fade after 2.5 s a
 	expect(line()).not.toMatch(/rugged/);
 });
 
-test("With quick animations the results stay 1 s; a program's step shown tells its results too", async () => {
+test("With quick animations the results stay 1 s; a program's step shown tells its results after its beats, then goes on", async () => {
 	uiSettings.quickAnimation = true;
 	const store = pageOf();
 	const before = store.world.value;
 	await act(() => { store.clickHex({ row: 4, col: 4 }); });
+	await beatsPlayed(store);
 	await act(() => { vi.advanceTimersByTime(1000); });
 	expect(document.querySelector(".pm-results")!.className).toBe("pm-results fading");
 	await act(() => { vi.advanceTimersByTime(300); });
 	expect(document.querySelector(".pm-results")).toBeNull();
 	//(told again from the same step's events, as a program's step is told after it was played)
 	const events = step({ ...before!, state: { ...before!.state, rng: { game: 1, ai: 7 } } }, { type: "attack", unit: 0, target: 1 });
-	await act(() => store.told(before, "events" in events ? events.events : []));
-	expect(document.querySelector(".pm-results .pm-event")!.textContent).toBe("Rugged defense");
-	await act(() => store.told(null, []));
-	expect(document.querySelector(".pm-results")).not.toBeNull();
+	let next = 0;
+	await act(() => store.showStep(before, "events" in events ? events.events : [], () => next++));
+	expect(next).toBe(0);
+	await beatsPlayed(store);
+	expect([document.querySelector(".pm-results .pm-event")!.textContent, next]).toEqual(["Rugged defense", 1]);
+	//(nothing to play without the world before: what follows at once)
+	await act(() => store.showStep(null, [], () => next++));
+	expect(next).toBe(2);
+});
+
+test("The page's sounds: each file loaded once and played from its start; none while the unit sounds are muted", () => {
+	const played: string[] = [];
+	vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(function(this: HTMLMediaElement) {
+		played.push(this.src);
+		return Promise.reject(new Error("not allowed before the person touched the page"));
+	});
+	const sound = pageSounds();
+	sound("resources/sounds/fire/gun.wav");
+	sound("resources/sounds/fire/gun.wav");
+	expect(played).toHaveLength(2);
+	expect(played[0]).toMatch(/resources\/sounds\/fire\/gun\.wav$/);
+	uiSettings.muteUnitSounds = true;
+	sound("resources/sounds/fire/gun.wav");
+	uiSettings.muteUnitSounds = false;
+	expect(played).toHaveLength(2);
 });
