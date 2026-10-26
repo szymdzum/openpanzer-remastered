@@ -60,26 +60,26 @@ async function mapOf(w: World) {
 	return { ...h, store };
 }
 
-test("A click selects a unit, the hovered hex shows the path's tag, a click in the area moves the unit there (#345)", async () => {
+test("A click selects a unit, the hovered hex shows the path with no tag over it, a click in the area moves the unit there (#345, #441)", async () => {
 	const { store, sent, world } = await mapOf(handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 3 },
 		{ eqid: 273, owner: 1, row: 4, col: 6 }] }, undefined, { spotSide: 0 }));
 	expect(drawn).toBeGreaterThan(0);
 	await act(() => pointer("click", 4, 3));
 	expect(store.selected.value).toBe(0);
 	await act(() => pointer("mousemove", 4, 4));
-	expect(document.querySelector(".pm-pathtag output")!.textContent).toBe("4 moves leftfuel 50 → 49 of 50");
+	expect([store.path.value!.left, document.querySelector(".pm-pathtag")]).toEqual([4, null]);
 	const before = drawn;
 	await frame();
 	expect(drawn).toBeGreaterThan(before);
-	//the stop in the enemy zone: its tag in red
+	//the stop in the enemy zone
 	await act(() => pointer("mousemove", 4, 5));
-	expect(document.querySelector(".pm-pathtag")!.classList.contains("stop")).toBe(true);
+	expect(store.path.value!.stop).toBe(true);
 	await act(() => pointer("click", 4, 4));
 	expect(sent).toEqual([{ type: "move", unit: 0, to: { row: 4, col: 4 } }]);
 	expect(unitById(world(), 0)).toMatchObject({ row: 4, col: 4, hasMoved: true });
-	//off the map: no hex, no tag
+	//off the map: no hex, no path
 	await act(() => pointer("mouseleave", 0, 0));
-	expect([store.hover.value, document.querySelector(".pm-pathtag")]).toEqual([null, null]);
+	expect([store.hover.value, store.path.value]).toEqual([null, null]);
 	await act(() => pointer("click", -5, -5));
 	expect(store.selected.value).toBe(0);
 	//the same hex again: the hover kept as it is, the path not computed again
@@ -175,7 +175,7 @@ test("The strategic map: Z opens it, the pointer shows no path there, a click zo
 	const scale = 600 / 1000, left = (1000 - 870 * scale) / 2;
 	const at = (row: number, col: number) => ({ clientX: hexCentre(row, col).x * scale + left, clientY: hexCentre(row, col).y * scale });
 	await act(() => { s.dispatchEvent(new MouseEvent("mousemove", { ...at(4, 4), bubbles: true })); });
-	expect([store.hover.value, store.path.value, document.querySelector(".pm-pathtag")]).toEqual([{ row: 4, col: 4 }, null, null]);
+	expect([store.hover.value, store.path.value]).toEqual([{ row: 4, col: 4 }, null]);
 	expect(store.overview.value!.chips).toHaveLength(1);
 	await act(() => { s.dispatchEvent(new MouseEvent("click", { ...at(15, 12), bubbles: true })); });
 	expect([store.strategic.value, store.lookAt.value, store.selected.value]).toEqual([false, { row: 15, col: 12 }, 0]);
@@ -255,7 +255,7 @@ test("A map smaller than the screen sits in its middle, and a click finds the he
 	const c = hexCentre(4, 3);
 	await act(() => { s.dispatchEvent(new MouseEvent("click", { clientX: c.x + left, clientY: c.y + top, bubbles: true })); });
 	expect(store.selected.value).toBe(0);
-	//the tag is placed on the screen where the path ends
+	//the pointer finds the hex under it there too
 	await act(() => { s.dispatchEvent(new MouseEvent("mousemove", { clientX: hexCentre(4, 4).x + left, clientY: hexCentre(4, 4).y + top, bubbles: true })); });
-	expect(document.querySelector(".pm-pathtag")).not.toBeNull();
+	expect(store.hover.value).toEqual({ row: 4, col: 4 });
 });

@@ -1,6 +1,5 @@
-//A panel anchored to a hex (principles.md, Layout): the move path's tag below its end, the hex tooltip and the
-//placing tag beside their hex. The map code gives the hex's centre on the screen; the panel
-//measures itself and stays inside the screen, space-3 from its edges.
+//A panel anchored to a hex (principles.md, Layout): the placing tag beside its hex. The map code gives the hex's
+//centre on the screen; the panel measures itself and stays inside the screen, space-3 from its edges.
 import type { AriaRole, ComponentChildren } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { TOKENS } from "./tokens";
@@ -38,19 +37,17 @@ type AnchoredProps = {
 	place: Place,
 	//from the hex's centre to the panel's edge: half a hex at the map's zoom, and some air
 	gap: number,
-	//the screen's own class next to pm-panel: pm-pathtag, pm-placetag
+	//the screen's own class next to pm-panel: pm-placetag
 	class?: string,
 	role?: AriaRole,
 	label?: string,
 	children?: ComponentChildren,
 	//the id the harness, the tests and the shortcuts find it by (#unit-context)
 	id?: string,
-	//a tooltip with its pointer (#gameToolTip) instead of a HUD panel
-	tip?: boolean,
 };
 
 //Hidden for the one layout pass it takes to measure itself, then placed before the browser paints
-export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label, children, id, tip }: AnchoredProps) {
+export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label, children, id }: AnchoredProps) {
 	const ref = useRef<HTMLDivElement>(null);
 	const [at, setAt] = useState<Point | null>(null);
 	useLayoutEffect(() => {
@@ -62,6 +59,5 @@ export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label,
 	//new content may change the panel's size: measured again with it
 	}, [x, y, place, gap, children]);
 	const style = at ? { left: at.x + "px", top: at.y + "px" } : { visibility: "hidden" };
-	const base = tip ? "pm-tip" : "pm-panel";
-	return <div ref={ref} id={id} class={extra ? base + " " + extra : base} style={style} role={role} aria-label={label}>{children}</div>;
+	return <div ref={ref} id={id} class={extra ? "pm-panel " + extra : "pm-panel"} style={style} role={role} aria-label={label}>{children}</div>;
 }

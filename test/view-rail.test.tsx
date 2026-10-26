@@ -149,7 +149,7 @@ test("The unit keys play the selected unit's action as its button would, and do 
 	//U takes the move back
 	await key("KeyU");
 	expect(sent[sent.length - 1]).toEqual({ type: "undo", unit: 0 });
-	expect(store.unit.value!.at).toEqual({ row: 4, col: 3 });
+	expect(store.units.value.find((u) => u.id === 0)).toMatchObject({ row: 4, col: 3 });
 	//S, R, O, M and E: a full tank has no such button, nothing is sent or said, as the old UI's keys did
 	for (const code of ["KeyS", "KeyR", "KeyO", "KeyM", "KeyE"]) await key(code);
 	expect([sent.length, store.refused.value]).toEqual([2, null]);

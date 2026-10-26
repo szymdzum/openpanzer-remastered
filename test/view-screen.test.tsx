@@ -96,10 +96,11 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	await act(() => { fireEvent.click(ok()); });
 	const unit = g.scenario.map.getUnits().find((u) => u.player.type === playerType.humanLocal)!;
 	await act(() => { g.host.screen.view({ type: "select", unit: unit.id }, () => {}); });
-	expect(document.querySelector(".pm-status .msg b")!.textContent).toBe(unit.unitData().name);
+	//(the status line tells the hex under the pointer, none here: not the selected unit, #441)
+	expect(document.querySelector(".pm-status .msg")!.textContent).toBe("");
 	//the status line starts with the air layer while it is on (AirLayer)
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" })); });
-	expect([...document.querySelectorAll(".pm-status .msg b")].map((b) => b.textContent)).toEqual(["Air layer", unit.unitData().name]);
+	expect([...document.querySelectorAll(".pm-status .msg b")].map((b) => b.textContent)).toEqual(["Air layer"]);
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" })); });
 	//on the strategic map, how to leave it (StrategicMap)
 	const key = (k: string) => act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: k, code: "Key" + k.toUpperCase() })); });

@@ -1,3 +1,5 @@
+**In the port (#441):** the tag under the ring is left out until after the switch (D8). The route and its end ring or stop square stay for now, the owner's call: the old UI draws no path (docs/ui/port-audit.md). A click in the move area moves at once, on touch too.
+
 The move path preview from #32. With a unit selected, hovering a hex in its move area draws the route `moveUnit` will take: `getShortestPath` over the same move range, so the preview and the move can't disagree. On touch, the first tap on a hex shows the path, and a second tap on the same hex moves, as with attacks.
 
 **Drawn on the canvas** (hex layer, at screen-size line widths):

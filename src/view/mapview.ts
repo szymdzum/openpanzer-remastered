@@ -6,11 +6,10 @@
 import type { Command } from "../commands";
 import { attackableUnit, attackCells } from "../core/attack";
 import { adjacent } from "../core/geometry";
-import { captureAt } from "../core/moves";
 import { isBridgeForSide, moveRange, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
-import { isAir, isGround, unitUsesAmmo, unitUsesFuel } from "../core/units";
-import { airUnitAt, ammoOf, fuelOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
+import { isAir, isGround, unitUsesAmmo } from "../core/units";
+import { airUnitAt, ammoOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
 import { unitClass } from "../prototypes";
 import { canOrder } from "./model";
 
@@ -67,21 +66,14 @@ export interface Selection {
 	targets: Position[]; //the hexes with a unit it can attack, each once
 }
 
-//A line of the path's tag: its text and how it reads (a gain, a warning, low on fuel)
-export interface TagLine {
-	text: string;
-	tone: "" | "gain" | "warn" | "low";
-}
-
 //The path to the hovered hex (MovePath): the hexes from the unit's (seen: the side sees them, else the line
-//turns dashed), how it ends (a ring with the moves left, light when the unit can move again, or a stop
-//square in an enemy zone) and the tag under it: what happens, then what it costs
+//turns dashed) and how it ends (a ring with the moves left, light when the unit can move again, or a stop
+//square in an enemy zone)
 export interface Path {
 	cells: (Position & { seen: boolean })[];
 	stop: boolean;
 	left: number;
 	again: boolean;
-	lines: TagLine[];
 }
 
 //What a click on a hex does: a command for the host, or a unit selected (null: none)
@@ -190,7 +182,7 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 //The edges of the move range where an enemy zone of control ends the move (a hex that stops it, though its
 //terrain doesn't) facing an enemy the unit's side sees: ground and naval units cast a zone, aircraft none.
 //A hidden enemy's zone ends the move too, as in the original (#282), but has no enemy to face: no bar there,
-//the path's tag still says the move stops
+//the path's stop square still says the move stops
 function zoneEdges(w: World, u: UnitState, range: MoveCell[]): Edge[] {
 	const side = sideOf(w, u), edges: Edge[] = [];
 	for (const c of range) {
@@ -205,35 +197,12 @@ function zoneEdges(w: World, u: UnitState, range: MoveCell[]): Edge[] {
 	return edges;
 }
 
-const plural = (n: number, one: string, many: string) => n + " " + (n === 1 ? one : many);
-
 //What the path's last hex costs, as the move pays it (src/core/moves.ts): its cost, but a hex that stops
 //the move costs its terrain in an enemy zone, all the points left on a terrain that takes them all
 function lastCost(w: World, u: UnitState, end: Position & { cost: number }, before: number): { used: number; zone: boolean } {
 	if (end.cost < STOP) return { used: before + end.cost, zone: false };
 	const terrain = terrainCost(w, u, end);
 	return terrain >= STOP ? { used: Math.max(unitMoveRange(w, u), before + 1), zone: false } : { used: before + terrain, zone: true };
-}
-
-//The move's fuel, as the move burns it: the transport's when mounted, none on a carrier or for a unit that
-//uses none. Low under a third of the tank
-function fuelLine(w: World, u: UnitState, used: number): TagLine | null {
-	if (!unitUsesFuel(w, u) || u.carrier !== 0) return null;
-	const fuel = fuelOf(u), max = unitData(w, u).fuel, after = fuel - used;
-	const low = after < max / 3;
-	const text = (u.isMounted ? "transport fuel " : "fuel ") + fuel + " → " + after + " of " + max + (low ? " · low" : "");
-	return { text, tone: low ? "low" : "" };
-}
-
-//What the move takes at its end: the flag or the objective, with the objectives its side has left after it
-function captureLines(w: World, u: UnitState, end: Position): TagLine[] {
-	const taken = captureAt(w, u, end);
-	if (taken === null) return [];
-	const name = w.data.hexes[hexIndex(w, end.row, end.col)].name;
-	if (!taken.objective) return [{ text: "takes " + name, tone: "" }, { text: "+" + taken.prestige + " prestige", tone: "gain" }];
-	const left = w.state.objectives[sideOf(w, u)].filter((c) => !same(c, end)).length;
-	return [{ text: "takes " + name + " · objective", tone: "" },
-		{ text: "+" + taken.prestige + " prestige · " + (left === 0 ? "the last objective" : left + " left to win"), tone: "gain" }];
 }
 
 //What the move to the path's end leaves (src/core/moves.ts payMove): the points it uses, whether an enemy zone
@@ -249,20 +218,6 @@ function moveOutcome(w: World, u: UnitState, steps: PathCell[]): { used: number;
 
 const isMounted = (u: UnitState) => u.isMounted && u.transport !== null;
 
-//The tag's lines: what happens (a stop, a capture, a move that leaves the unit unable to fire, the moves
-//left), then what it costs or risks
-function tagLines(w: World, u: UnitState, to: Position, m: ReturnType<typeof moveOutcome>, unseen: boolean): TagLine[] {
-	const line = (text: string, tone: TagLine["tone"] = ""): TagLine => ({ text, tone });
-	const capture = m.zone ? [] : captureLines(w, u, to);
-	const lines = m.zone ? [line("stops: enemy zone"), line(plural(Math.max(unitMoveRange(w, u) - m.used, 0), "move", "moves") + " unused")]
-		: capture.length > 0 ? capture
-		: [line(isMounted(u) ? "can't fire after this move" : plural(m.left, "move", "moves") + " left")];
-	if (unseen) lines.push(line("unseen: ambush possible", "warn"));
-	if (m.again) lines.push(line("can move again"));
-	const fuel = fuelLine(w, u, m.used);
-	return fuel === null ? lines : [...lines, fuel];
-}
-
 //The path the move to a hex of the area would take (the move command's own: the shortest path through the
 //move range), null for a hex outside the area
 export function pathOf(w: World, sel: Selection | null, to: Position): Path | null {
@@ -272,7 +227,7 @@ export function pathOf(w: World, sel: Selection | null, to: Position): Path | nu
 	if (steps.length < 2) return null;
 	const m = moveOutcome(w, u, steps);
 	const cells = steps.map((c) => ({ row: c.row, col: c.col, seen: isSpotted(w, hexIndex(w, c.row, c.col), side) }));
-	return { cells, stop: m.zone, left: m.left, again: m.again, lines: tagLines(w, u, to, m, cells.some((c) => !c.seen)) };
+	return { cells, stop: m.zone, left: m.left, again: m.again };
 }
 
 //A click on a hex: an attack on a target there, a move to a hex of the area, else the unit the layer shows

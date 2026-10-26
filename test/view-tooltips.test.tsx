@@ -1,15 +1,16 @@
 //The new UI's tooltips (src/view/hextip.ts, src/view/maptips.tsx, the rail's, Tooltips, #346) on hand-built worlds: the
-//hex tooltip with what the terrain does from the rules, the pins over units low on fuel or out of ammo, the rail's
-//tooltip with each button's key; in jsdom, the rest that opens the hex tooltip, the long press on touch, L
+//hex under the pointer told in the status line as the old #locmsg (#441), the pins over units low on fuel or out of
+//ammo, the rail's tooltip with each button's key; in jsdom, no tooltip over the map however long the pointer rests, L
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { act, cleanup, fireEvent, render } from "@testing-library/preact";
 import { handWorld, type HandUnit } from "./coreworld";
 import type { World } from "../src/core/types";
 import { terrainType } from "../src/prototypes";
-import { hexTipOf, pinsOf } from "../src/view/hextip";
+import { locationOf, pinsOf } from "../src/view/hextip";
 import { hexCentre } from "../src/view/hexgrid";
 import { MapView } from "../src/view/map";
 import { Rail } from "../src/view/rail";
+import { StatusBar } from "../src/view/statusbar";
 import { createStore } from "../src/view/store";
 
 beforeEach(() => {
@@ -39,27 +40,17 @@ function world(units: HandUnit[] = [{ eqid: PZ_IIA, owner: 0, row: 4, col: 4 }])
 	return w;
 }
 
-const rows = (w: World, row: number, col: number, unit: number | null = 0) => Object.fromEntries(hexTipOf(w, { row, col }, unit)!.rows);
-
-test("The hex tooltip names the place, its flag and holder, and what its terrain does from the rules (#346)", () => {
-	const w = world(), name = w.equipment[PZ_IIA].name;
-	expect(hexTipOf(w, { row: 2, col: 2 }, 0)).toEqual({ at: { row: 2, col: 2 }, name: "Janow", nation: "de", line: "City · held by Germany · objective",
-		rows: [["Entrenchment", "3 on arrival"], ["Defence", "+4 defending"], ["Move cost", `1 · ${name}, dry`],
-			["Resupply", "full, no enemy next to it"]] });
-	//a river without a road: the enemy fights better; with one, nothing
-	expect(rows(w, 5, 5).Defence).toBe("the enemy +4 attack and defence");
-	expect(rows(w, 5, 6).Defence).toBeUndefined();
-	//a mountain stops a tank; the ocean can't be entered: no move cost; none without a unit selected
-	expect([rows(w, 6, 6)["Move cost"], rows(w, 9, 3)["Move cost"], rows(w, 3, 3, null)["Move cost"], rows(w, 3, 3, 99)["Move cost"]])
-		.toEqual([`stops · ${name}, dry`, undefined, undefined, undefined]);
-	expect([rows(w, 7, 7).Resupply, rows(w, 8, 8).Resupply, rows(w, 9, 3).Resupply, rows(w, 3, 3).Resupply]).toEqual([
-		"full for Germany aircraft; ÷1.3 on the ground", "full for ships; ÷1.3 on the ground", "none: ships take it in a port", "÷1.3, less next to enemies"]);
-	//an airfield without a flag
-	Object.assign(w.state.map.hexes[77], { flag: -1 });
-	expect(rows(w, 7, 7).Resupply).toBe("full for its country's aircraft; ÷1.3 on the ground");
-	expect([rows(w, 3, 3).Entrenchment, rows(w, 1, 1).Deploys, rows(w, 3, 3).Deploys]).toEqual(["none", "units of Poland", undefined]);
-	expect(hexTipOf(w, { row: 3, col: 3 }, null)).toMatchObject({ name: "Clear", nation: null, line: "Clear" });
-	expect([hexTipOf(w, { row: -1, col: 0 }, null), hexTipOf(w, { row: 10, col: 0 }, null)]).toEqual([null, null]);
+test("The status line tells the hex under the pointer as the old #locmsg: the unit the side sees, the place, the transports, the terrain and road (#441)", () => {
+	const w = world([{ eqid: PZ_IIA, owner: 0, row: 2, col: 2 }, { eqid: TP7, owner: 1, row: 8, col: 1 }]), name = w.equipment[PZ_IIA].name;
+	expect(locationOf(w, { row: 2, col: 2 }, false)).toEqual({ unit: name, text: "Janow · City (2,2)" });
+	expect(locationOf(w, { row: 5, col: 6 }, false)).toEqual({ unit: null, text: "River/Road (5,6)" });
+	//the current player's transports where they board
+	Object.assign(w.state.players[0], { airTransports: 2, navalTransports: 1 });
+	expect([locationOf(w, { row: 7, col: 7 }, false)!.text, locationOf(w, { row: 8, col: 8 }, false)!.text])
+		.toEqual(["Air transports: 2 · Airfield (7,7)", "Naval transports: 1 · Port (8,8)"]);
+	//the enemy in the fog isn't named; off the map, nothing
+	expect(locationOf(w, { row: 8, col: 1 }, false)!.unit).toBeNull();
+	expect([locationOf(w, { row: -1, col: 0 }, false), locationOf(w, { row: 10, col: 0 }, false)]).toEqual([null, null]);
 });
 
 test("Pins: Low fuel below a quarter of the tank, No ammo with none left, over the side playing's units only (#346)", () => {
@@ -89,37 +80,20 @@ function pointer(type: string, row: number, col: number, more: object = {}) {
 	s.dispatchEvent(new Make(type, { clientX: c.x - s.scrollLeft, clientY: c.y - s.scrollTop, bubbles: true, ...more }));
 }
 
-test("The hex tooltip opens once the pointer rests on a hex, and closes when it moves on; its OK closes it (#346)", async () => {
+test("No tooltip opens over the map, however long the pointer rests or a finger holds; the status line tells the hex (#441)", async () => {
 	vi.useFakeTimers();
 	const store = mapOf(world());
+	render(<StatusBar store={store} />);
 	await act(() => pointer("mousemove", 2, 2));
+	await act(() => pointer("pointerdown", 2, 2, { pointerType: "touch" }));
+	await act(() => { vi.advanceTimersByTime(2000); });
 	expect(document.getElementById("gameToolTip")).toBeNull();
-	await act(() => { vi.advanceTimersByTime(800); });
-	const tip = document.getElementById("gameToolTip")!;
-	expect([tip.className, tip.getAttribute("role"), tip.querySelector(".hd")!.textContent]).toEqual(["pm-tip", "tooltip", "Janow"]);
-	expect([...tip.querySelectorAll("dt")].map((d) => d.textContent)).toEqual(["Entrenchment", "Defence", "Resupply"]);
-	await act(() => pointer("mousemove", 3, 3));
-	expect(document.getElementById("gameToolTip")).toBeNull();
-	await act(() => { vi.advanceTimersByTime(800); });
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "OK" })); });
-	expect([document.getElementById("gameToolTip"), store.hexTip.value]).toEqual([null, null]);
-	//none on the strategic map
-	await act(() => store.restHex({ row: 2, col: 2 }));
+	expect(document.querySelector(".pm-status .msg")!.textContent).toBe("Janow · City (2,2)");
+	await act(() => pointer("mousemove", 4, 4));
+	expect(document.querySelector(".pm-status .msg b")!.textContent).toBe(store.world.value!.equipment[PZ_IIA].name);
+	//on the strategic map, how to leave it instead
 	await act(() => store.shortcut({ menu: "zoom" }));
-	expect(store.hexTip.value).toBeNull();
-});
-
-test("A finger held on a hex opens its tooltip; lifted or moved first, nothing; a mouse press neither (#346)", async () => {
-	vi.useFakeTimers();
-	const store = mapOf(world());
-	await act(() => pointer("pointerdown", 2, 2, { pointerType: "touch" }));
-	await act(() => pointer("pointerup", 2, 2));
-	await act(() => pointer("pointerdown", 3, 3, { pointerType: "mouse" }));
-	await act(() => { vi.advanceTimersByTime(600); });
-	expect(store.hexTip.value).toBeNull();
-	await act(() => pointer("pointerdown", 2, 2, { pointerType: "touch" }));
-	await act(() => { vi.advanceTimersByTime(600); });
-	expect(store.hexTip.value!.name).toBe("Janow");
+	expect(store.located.value).toBeNull();
 });
 
 test("The pins stand over their units on the map, a second over the first; L clears them until the next turn (#346)", async () => {

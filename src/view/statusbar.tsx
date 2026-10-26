@@ -37,7 +37,8 @@ export function StatusBar({ store }: { store: Store }) {
 }
 
 //The status line: on the strategic map how to leave it (StrategicMap); while deploying what a click does (Deployment);
-//else the layer shown first (AirLayer), then a refusal, the last combat's news (CombatResults) or the selected unit
+//else the layer shown first (AirLayer), then a refusal, the last combat's news (CombatResults) or the hex under the
+//pointer, as the old UI's #locmsg told it
 function MapLine({ store }: { store: Store }) {
 	const air = store.airMode.value, deploy = store.deployment.value;
 	if (store.strategic.value)
@@ -47,11 +48,10 @@ function MapLine({ store }: { store: Store }) {
 	return <output class="msg">{air && <b>Air layer</b>}<Said store={store} /></output>;
 }
 
-//A refusal, else the last combat's news, else the selected unit
+//A refusal, else the last combat's news, else the hex under the pointer: the unit on it, then the place
 function Said({ store }: { store: Store }) {
-	const unit = store.unit.value, news = store.news.value;
+	const at = store.located.value, news = store.news.value;
 	if (store.refused.value !== null) return <span>{store.refused.value}</span>;
 	if (news !== null) return <span><b>{news.name}</b> {news.text}</span>;
-	return unit === null ? null
-		: <span><b>{unit.name}</b> {unit.className} · {unit.moves} of {unit.movpoints} moves left · hex {unit.at.row},{unit.at.col}{unit.place !== "" && " · " + unit.place}</span>;
+	return at === null ? null : <span>{at.unit !== null && <><b>{at.unit}</b> · </>}{at.text}</span>;
 }
