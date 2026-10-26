@@ -46,9 +46,19 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		store.pick(null);
 		store.startDeployment();
 	};
+	//A scenario's start, its prototype then its briefing: what the screen still showed of the scenario before goes,
+	//its OKs not run, so a stale briefing's OK can't let a program play under the new one (#405). The prototype
+	//shown first is the new scenario's own
+	let starting = false;
+	const startScenario = () => {
+		if (!starting) store.clear();
+		starting = true;
+	};
 	return {
 		//The scenario's briefing; a new scenario's units are none selected
 		showScenario() {
+			startScenario();
+			starting = false;
 			store.selected.value = null;
 			refresh();
 			deployment();
@@ -57,6 +67,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		},
 		loadFailed(file: string) { show("Error", "Error loading scenario " + file, nothing); },
 		showPrototype(eqid: number) {
+			startScenario();
 			const w = host.world();
 			const name = w === null || w.equipment[eqid] === undefined ? "a prototype" : w.equipment[eqid].name;
 			show("Prototype", "For your brilliant victory you receive " + name + " as a prototype unit.", nothing);
