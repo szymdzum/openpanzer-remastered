@@ -35,11 +35,13 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	store.scale.value = uiSettings.zoomLevel;
 	store.hexGrid.value = uiSettings.hexGrid;
 	render(<App store={store} />, root);
-	const show = (title: string, html: string, ok: () => void, at: Position | null = null) => store.show({ title, html, at, ok });
-	//A message the player clicks away: the game waits for it (a program's turn, a campaign's next scenario)
-	const holding = (title: string, html: string, then?: () => void) => {
+	const show = (title: string, html: string, ok: () => void, at: Position | null = null, briefing = false) =>
+		store.show({ title, html, at, ok, briefing });
+	//A message the player clicks away: the game waits for it (a program's turn, a campaign's next scenario); a briefing
+	//is the full window (MessageDialog)
+	const holding = (title: string, html: string, then?: () => void, briefing = false) => {
 		host.holdForMessage();
-		show(title, html, then || (() => host.messageClosed()));
+		show(title, html, then || (() => host.messageClosed()), null, briefing);
 	};
 	//A program's move or attack, played whole: what it did to the side shown kept for the turn report (its events),
 	//then animated, its victories told, then the next action
@@ -76,7 +78,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			refresh();
 			deployment();
 			const w = store.world.value;
-			holding(w === null ? "" : w.data.name, w === null ? "" : w.data.description);
+			holding(w === null ? "" : w.data.name, w === null ? "" : w.data.description, undefined, true);
 		},
 		loadFailed(file: string) { show("Error", "Error loading scenario " + file, nothing); },
 		showPrototype(eqid: number) {
@@ -85,7 +87,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			const name = w === null || w.equipment[eqid] === undefined ? "a prototype" : w.equipment[eqid].name;
 			show("Prototype", "For your brilliant victory you receive " + name + " as a prototype unit.", nothing);
 		},
-		message: holding,
+		message(title: string, text: string, then?: () => void) { holding(title, text, then); },
 		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { show(outcomeNames[outcome], text, then); },
 		//(the main menu is D6's)
 		mainMenu: nothing,
@@ -123,6 +125,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		unitsPlaced: refresh,
 		//(the alert on the map is D3's)
 		reinforced: refresh,
+		//(the turn report's resupplies and reinforcements)
+		turnEvents(events: GameEvent[]) { store.logTurn(events); },
 	};
 }
 
