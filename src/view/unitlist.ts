@@ -46,6 +46,11 @@ function byList(w: World) {
 	};
 }
 
+//The sprite a list shows of an entry: its own, a generic one for the larger ships
+export function listSprite(e: EquipmentEntry): string {
+	return e.uclass > unitClass.submarine ? NAVAL_ICON : e.icon as unknown as string;
+}
+
 const warning = (low: boolean, value: number, max: number): SupplyState | null => low ? supplyState(value, max) : null;
 
 function listUnit(w: World, u: UnitState, selected: UnitId | null): ListUnit {
@@ -54,7 +59,7 @@ function listUnit(w: World, u: UnitState, selected: UnitId | null): ListUnit {
 	const order = own.uclass === unitClass.fortification ? "" : ordinal(u.id);
 	return {
 		id: u.id, name: own.name, sub: [order, done].filter(Boolean).join(" · "), strength: u.strength,
-		sprite: own.uclass > unitClass.submarine ? NAVAL_ICON : own.icon as unknown as string,
+		sprite: listSprite(own),
 		fuel: warning(unitUsesFuel(w, u) && fuelOf(u) < LOW_FUEL, fuelOf(u), now.fuel),
 		ammo: warning(unitUsesAmmo(w, u) && ammoOf(u) < LOW_AMMO, ammoOf(u), now.ammo),
 		moved: u.hasMoved, selected: u.id === selected,
