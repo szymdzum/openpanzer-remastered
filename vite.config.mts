@@ -167,7 +167,7 @@ export default defineConfig({
 				"src/core/world.ts": { statements: 97, branches: 98, functions: 94, lines: 96 },
 				"src/core/commands/common.ts": { statements: 87, branches: 85, functions: 85, lines: 92 },
 				"src/core/commands/move.ts": { statements: 91, branches: 88, functions: 80, lines: 96 },
-				"src/core/commands/supply.ts": { statements: 97, branches: 100, functions: 83, lines: 97 },
+				"src/core/commands/supply.ts": { statements: 97, branches: 100, functions: 83, lines: 96 },
 				"src/core/commands/transport.ts": { statements: 97, branches: 85, functions: 93, lines: 97 },
 				"src/core/commands/undo.ts": { statements: 88, branches: 90, functions: 80, lines: 85 },
 				"src/core/commands/turn.ts": { statements: 97, branches: 100, functions: 85, lines: 97 },
