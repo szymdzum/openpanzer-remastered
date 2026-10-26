@@ -20,6 +20,7 @@ import { unitInfoOf } from "./unitinfo";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
+import { blockedOf, glanceOf, oddsOf } from "./odds";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -61,6 +62,10 @@ export function createStore(host: StoreHost) {
 	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
 	const enemy = signal<EnemyTurn>(quietTurn());
 	const banner = signal(false);
+	//the target whose odds card is open (AttackPreview, stage 2): the pointer rested on it, Shift held, or a finger tapped
+	//it (touch: the next tap on it attacks), null: none
+	const oddsAt = signal<Position | null>(null);
+	const oddsTouch = signal(false);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -81,7 +86,7 @@ export function createStore(host: StoreHost) {
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
 	//the hex tooltip of the hex rested on; the pins over the side playing's units, cleared with the labels (L)
-	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value ? null
+	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value || odds.value !== null ? null
 		: hexTipOf(world.value, rested.value, selected.value));
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
@@ -110,6 +115,13 @@ export function createStore(host: StoreHost) {
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
 	const plaques = computed(() => world.value === null || !labels.value ? [] : plaquesOf(world.value));
+	//The attack preview (AttackPreview): the enemies in range the selected unit can't attack (stage 0) and the reason of
+	//the one pointed at, the losses at a glance over the pointed target (stage 1), the odds card (stage 2)
+	const blocked = computed(() => world.value === null ? [] : blockedOf(world.value, selection.value));
+	const blockedAt = computed(() => pointed.value === null ? null : blocked.value.find((b) => same(b.at, pointed.value!)) || null);
+	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
+	const odds = computed(() => world.value === null || strategic.value || oddsAt.value === null ? null
+		: oddsOf(world.value, selection.value, oddsAt.value, airMode.value, oddsTouch.value));
 	//the strategic map's chips and objectives, while it is open
 	const overview = computed(() => world.value === null || !strategic.value ? null : strategicOf(world.value, airMode.value));
 
@@ -128,6 +140,7 @@ export function createStore(host: StoreHost) {
 			banner.value = false;
 		}
 		const r = host.command(cmd);
+		oddsAt.value = null;
 		refresh();
 		if (r.ok) host.won(r.result);
 		//(why the undo went, which the core doesn't keep: the context menu says it, #316)
@@ -147,6 +160,7 @@ export function createStore(host: StoreHost) {
 	const select = (id: UnitId | null) => {
 		const w = world.value, u = w === null || id === null ? null : unitById(w, id);
 		selected.value = id;
+		oddsAt.value = null;
 		if (u !== null) airMode.value = isAir(w!, u);
 		refused.value = null;
 	};
@@ -180,6 +194,17 @@ export function createStore(host: StoreHost) {
 		airMode.value = !airMode.value;
 	};
 
+	//A tap or click closes the odds card; a finger's first tap on a target opens it there instead of attacking (true: the tap
+	//did that), its second on the same target goes on to attack
+	const firstTap = (w: World, at: Position, touch: boolean): boolean => {
+		const open = oddsAt.value !== null && oddsTouch.value && same(oddsAt.value, at);
+		oddsAt.value = null;
+		if (!touch || open || glanceOf(w, selection.value, at, airMode.value) === null) return false;
+		oddsAt.value = at;
+		oddsTouch.value = true;
+		return true;
+	};
+
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
 	const menu: Record<MenuKey, () => void> = {
 		inspect: () => { infoShown.value = !infoShown.value; },
@@ -192,7 +217,8 @@ export function createStore(host: StoreHost) {
 		previous: () => cycle(-1),
 		//Escape deselects the unit; with none, Options
 		escape: () => {
-			if (banner.value) banner.value = false;
+			if (oddsAt.value !== null) oddsAt.value = null;
+			else if (banner.value) banner.value = false;
 			else if (selected.value !== null) select(null);
 			else notYet();
 		},
@@ -203,12 +229,13 @@ export function createStore(host: StoreHost) {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
-		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
+		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
 		//the picked unit placed there when it can go there; else the selected unit's attack or move there, sent as the
-		//person's command, or the unit there selected (none on an empty hex)
-		clickHex(at: Position) {
+		//person's command, or the unit there selected (none on an empty hex). touch: a finger's tap, whose first tap
+		//on a target opens its odds card and the second attacks (AttackPreview: no attack on the first tap)
+		clickHex(at: Position, touch = false) {
 			const w = world.value;
 			if (w === null) return;
 			//(the first click on the map closes the turn report, and does what it does)
@@ -224,6 +251,7 @@ export function createStore(host: StoreHost) {
 				if (dispatch(place) === null) deploying.value = reserve.value.length === 0 ? null : reserve.value[0].index;
 				return;
 			}
+			if (firstTap(w, at, touch)) return;
 			const click = clickOn(w, selection.value, at, airMode.value);
 			if ("command" in click) {
 				dispatch(click.command);
@@ -306,11 +334,21 @@ export function createStore(host: StoreHost) {
 			if (zone.length > 0) lookAt.value = zone[0];
 		},
 
-		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again
+		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again. The
+		//pointer leaving the target of the odds card it opened closes it
 		hoverHex(at: Position | null) {
 			const old = hover.value;
 			if (old === at || (old !== null && at !== null && old.row === at.row && old.col === at.col)) return;
 			hover.value = at;
+			if (oddsAt.value !== null && !oddsTouch.value) oddsAt.value = null;
+		},
+
+		//The odds card opened on a target the pointer rests on, or Shift held over it; on any other hex nothing
+		showOdds(at: Position) {
+			const w = world.value;
+			if (w === null || glanceOf(w, selection.value, at, airMode.value) === null) return;
+			oddsAt.value = { row: at.row, col: at.col };
+			oddsTouch.value = false;
 		},
 
 		//A message shown after those already open, one at a time
@@ -334,3 +372,5 @@ export function createStore(host: StoreHost) {
 }
 
 export type Store = ReturnType<typeof createStore>;
+
+const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
