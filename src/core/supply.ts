@@ -6,14 +6,15 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { terrainType, unitClass } from "../prototypes";
+import { OVERSTRENGTH_PENALTY, terrainType, unitClass } from "../prototypes";
+import { costPerStrength } from "./costs";
 import { adjacent } from "./geometry";
 import type { Supply, UnitState, World } from "./types";
 import { isAir, isGround, isSea } from "./units";
 import { groundUnitAt, hexIndex, onMap, playerOf, sideOf, unitData } from "./world";
 
 //The enemy ground units on the hexes around the unit
-function adjacentEnemies(w: World, u: UnitState): number {
+export function adjacentEnemies(w: World, u: UnitState): number {
 	const side = sideOf(w, u);
 	let enemies = 0;
 	for (const c of adjacent(u.row, u.col)) {
@@ -42,7 +43,7 @@ function isAirfieldAround(w: World, u: UnitState): boolean {
 //Where a unit can resupply or reinforce: ground units anywhere, air units at an airfield, ships in a
 //port, as the PG2 manual says (#19: the original checked for NOT being in a port, so its ships took
 //supplies anywhere at sea and never in port)
-function canSupplyHere(w: World, u: UnitState): boolean {
+export function canSupplyHere(w: World, u: UnitState): boolean {
 	if (isGround(w, u)) return true;
 	if (isAir(w, u) && isAirfieldAround(w, u)) return true;
 	return isSea(w, u) && w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.Port;
@@ -93,7 +94,7 @@ export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supp
 		tFuel = t.fuel - u.transport.fuel;
 	}
 	const enemies = adjacentEnemies(w, u);
-	const inCity = w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.City;
+	const inCity = isInCity(w, u);
 	if (isTurnStart && (enemies > 0 || !inCity)) return supply(0, 0, 0, 0);
 
 	const divisor = supplyDivisor(inCity, enemies);
@@ -102,6 +103,23 @@ export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supp
 	tAmmo = tAmmo / divisor[0] / divisor[1];
 	tFuel = tFuel / divisor[0] / divisor[1];
 	return supply(Math.round(ammo), Math.round(fuel), Math.round(tAmmo), Math.round(tFuel));
+}
+
+//The unit stands in a city: everything it is missing comes back there, when no enemy is next to it
+export function isInCity(w: World, u: UnitState): boolean {
+	return w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.City;
+}
+
+//The two divisions of what a resupply gives the unit where it stands (resupplyValue): outside a city, then by the
+//enemies around; none for air and naval units, which get all they are missing
+export function resupplyDivisors(w: World, u: UnitState): [number, number] {
+	return isAir(w, u) || isSea(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u));
+}
+
+//The same of a reinforcement (reinforceValue): air units get all of it, the others are divided as a resupply on the
+//ground is, ships too
+export function reinforceDivisors(w: World, u: UnitState): [number, number] {
+	return isAir(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u));
 }
 
 //A share of what is missing, at least 1 when anything is (#95: the old engine gave 1 also when
@@ -126,7 +144,16 @@ export function reinforceValue(w: World, u: UnitState, overstrength = false): nu
 	if (!canReinforce(w, u, overstrength)) return 0;
 	let strength = overstrength ? 10 + Math.round(u.experience / 100) - u.strength : 10 - u.strength;
 	if (isAir(w, u)) return strength;
-	const divisor = supplyDivisor(w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.City, adjacentEnemies(w, u));
+	const divisor = reinforceDivisors(w, u);
 	strength = strength / divisor[0] / divisor[1];
 	return Math.round(strength);
+}
+
+//What a reinforcement buys (Player.reinforceUnit): the points the unit can get, the price of one (overstrength costs
+//OVERSTRENGTH_PENALTY times more) and the points its player's prestige pays for, no more than it can get
+export function reinforcement(w: World, u: UnitState, overstrength = false): { wanted: number; perPoint: number; bought: number } {
+	const wanted = reinforceValue(w, u, overstrength);
+	const perPoint = Math.round(costPerStrength(w, u) * (overstrength ? OVERSTRENGTH_PENALTY : 1));
+	const affordable = (playerOf(w, u).prestige / perPoint) >> 0;
+	return { wanted, perPoint, bought: affordable < 1 ? 0 : Math.min(affordable, wanted) };
 }
