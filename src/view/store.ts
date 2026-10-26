@@ -10,7 +10,7 @@ import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
 import { unitById, unitData } from "../core/world";
 import type { GameHost } from "../host";
-import { fogOf, plaquesOf, supportOf } from "./mapinfo";
+import { fogOf, mapPlaques, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
@@ -21,7 +21,7 @@ import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
-import { outcomeNames } from "../prototypes";
+import { outcomeNames, uiSettings } from "../prototypes";
 import { contextOf } from "./context";
 import { locationOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -155,7 +155,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
-	const plaques = computed(() => world.value === null || !labels.value ? [] : plaquesOf(world.value));
+	const plaques = computed(() => world.value === null || !labels.value ? [] : mapPlaques(world.value, uiSettings.showDetailInfoToolTips));
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
 	//the strategic map's chips and objectives, while it is open

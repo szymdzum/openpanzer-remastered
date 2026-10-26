@@ -12,7 +12,7 @@ import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
 import type { Deployment, Ghost } from "./deploy";
-import { drawDeployZone, drawFog, drawHatch, drawPlaceOutline, drawPlaques, drawSupport, drawSupportTags, drawZones } from "./overlays";
+import { drawDeployZone, drawFog, drawHatch, drawPlaceOutline, drawPlaques, drawSupport, drawZones } from "./overlays";
 import type { Strategic } from "./strategic";
 import { drawStrategic } from "./strategicdraw";
 import { TOKENS } from "./tokens";
@@ -386,6 +386,5 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	for (const u of scene.units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
 	drawChips(c, vp, scene.units);
-	if (scene.support !== null) drawSupportTags(c, vp, scene.support);
 	c.restore();
 }

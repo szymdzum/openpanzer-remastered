@@ -4,7 +4,6 @@
 import { attackableUnit, supportFireUnits } from "../core/attack";
 import type { Position, World } from "../core/types";
 import { hexIndex, isSpotted, sideOf, unitById } from "../core/world";
-import { prestigeGains } from "../prototypes";
 import type { Selection } from "./mapview";
 
 //The hexes the side shown doesn't see, by hex index (row * cols + col): 1 under the fog. Null without fog:
@@ -36,7 +35,7 @@ export function supportOf(w: World, sel: Selection | null, hover: Position | nul
 	return guns.length === 0 ? null : { attacker: sel.at, target: { row: hover.row, col: hover.col }, guns };
 }
 
-//A plaque over a flag or an objective (#62): its name, what taking it gives, its owner's side (-1: none) and the
+//A plaque over a flag or an objective (#62): its name, its owner's side (-1: none) and the
 //flag on it (a country in the flag strip, -1: none; the strategic map shows it). Every objective has one, also
 //without a flag (the old map marked those only with showHiddenVictoryHexes)
 export interface Plaque {
@@ -44,7 +43,6 @@ export interface Plaque {
 	col: number;
 	name: string;
 	objective: boolean;
-	prestige: number;
 	side: number;
 	flag: number;
 }
@@ -58,8 +56,13 @@ export function plaquesOf(w: World): Plaque[] {
 			if (h.flag === -1 && h.victorySide === -1) continue;
 			const objective = h.victorySide !== -1;
 			plaques.push({ row, col, name: w.data.hexes[hex].name, objective,
-				prestige: objective ? prestigeGains.objectiveCapture : prestigeGains.flagCapture,
 				side: h.owner === -1 ? -1 : w.state.players[h.owner].side, flag: h.flag });
 		}
 	return plaques;
+}
+
+//The plaques the map shows: the objectives always, the other towns only with the setting the old map's tooltips
+//read for them (showDetailInfoToolTips, src/ui.ts addSmallToolTips)
+export function mapPlaques(w: World, towns: boolean): Plaque[] {
+	return plaquesOf(w).filter((p) => p.objective || towns);
 }

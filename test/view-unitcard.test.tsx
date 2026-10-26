@@ -33,49 +33,47 @@ function world(): World {
 test("The unit card names the unit as the old window did: its ordinal, class and country, tags for what the rules care about (#348)", () => {
 	const w = world(), e = w.equipment[PZ_IIA];
 	expect(unitCardOf(w, 0, null)).toMatchObject({ unit: 0, name: e.name, nation: "de", sub: "101st Tank · Germany",
-		sprite: e.icon, bars: 1, xp: "120 XP, 80 to the next", view: "unit", views: ["unit"], next: true });
+		sprite: e.icon, bars: 1, xp: "120 XP", view: "unit", views: ["unit"], next: true });
 	expect(unitCardOf(w, 0, null)!.tags).toEqual([{ text: "Tank", icon: "tank", core: false }, { text: "Hard target", icon: null, core: false },
 		{ text: "Tracked", icon: null, core: false }, { text: "Core", icon: null, core: true }]);
 	//an enemy seen: Auxiliary, and no Next unit for a unit not the side's own
-	expect(unitCardOf(w, 3, null)).toMatchObject({ nation: "pl", next: false, bars: 0, xp: "0 XP, 100 to the next" });
+	expect(unitCardOf(w, 3, null)).toMatchObject({ nation: "pl", next: false, bars: 0, xp: "0 XP" });
 	expect(unitCardOf(w, 3, null)!.tags[3]).toEqual({ text: "Auxiliary", icon: null, core: false });
 	expect(unitCardOf(w, 99, null)).toBeNull();
 	expect([1, 2, 3, 4, 11, 12, 13, 21, 111, -1].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "111st", ""]);
 });
 
-test("Its condition says in words what the fuel and ammo are good for, and whether it is dug in (#37)", () => {
+test("Its condition is the old window's: strength, fuel, ammo and entrenchment, with no notes beyond it (#441)", () => {
 	const w = world(), e = w.equipment[PZ_IIA];
 	const [strength, fuel, ammo, dug] = unitCardOf(w, 0, null)!.condition;
-	expect(strength).toMatchObject({ label: "Strength", value: "10/10", state: "ok", note: null });
-	expect(fuel).toMatchObject({ label: "Fuel", value: `18/${e.fuel}`, note: `enough for ${Math.floor(18 / e.movpoints)} moves` });
-	expect(ammo).toMatchObject({ label: "Ammo", value: `1/${e.ammo}`, state: "critical", note: "1 attack left" });
+	expect(strength).toEqual({ icon: "strength", label: "Strength", value: "10/10", fill: 1, state: "ok" });
+	expect(fuel).toMatchObject({ label: "Fuel", value: `18/${e.fuel}` });
+	expect(ammo).toMatchObject({ label: "Ammo", value: `1/${e.ammo}`, state: "critical" });
 	//(a city entrenches 3 at once, then up to 5 levels more)
-	expect(dug).toMatchObject({ label: "Entrenchment", value: "4", fill: 4 / 8, note: "dug in" });
+	expect(dug).toMatchObject({ label: "Entrenchment", value: "4", fill: 4 / 8 });
 	//walking infantry burns no fuel
-	expect(unitCardOf(w, 2, "unit")!.condition[1]).toMatchObject({ value: "–", note: "uses none" });
-	expect(unitCardOf(w, 3, null)!.condition[3].note).toBe("not dug in");
+	expect(unitCardOf(w, 2, "unit")!.condition[1]).toEqual({ icon: "fuel", label: "Fuel", value: "–", fill: 0 });
 });
 
-test("Attack and defence are the old window's stats with what each is for; move, range and spotting say what the leaders add (#37)", () => {
+test("Attack and defence are the old window's stats; move, range and spotting count the leaders in, as the rules do (#37, #441)", () => {
 	const w = world(), e = w.equipment[PZ_IIA], card = unitCardOf(w, 0, null)!;
-	expect(card.attack.map((s) => [s.name, s.value, s.note])).toEqual([["Soft", e.softatk, "infantry, guns, trucks"],
-		["Hard", e.hardatk, "tanks, armoured cars"], ["Air", e.airatk, "aircraft overhead"], ["Naval", e.navalatk, "ships"]]);
+	expect(card.attack.map((s) => [s.name, s.value])).toEqual([["Soft", e.softatk], ["Hard", e.hardatk], ["Air", e.airatk], ["Naval", e.navalatk]]);
 	expect(card.defence.map((s) => [s.name, s.value])).toEqual([["Ground", e.grounddef], ["Air", e.airdef], ["Close", e.closedef],
 		["Ranged", e.rangedefmod], ["Initiative", e.initiative]]);
 	expect(card.attack[0].fill).toBe(e.softatk / 15);
 	//the tank's class leader adds a hex to Move
 	expect(card.figures).toEqual([
-		{ label: "Move", value: e.movpoints + 1, note: `${e.movpoints} + 1 leader`, prestige: false },
-		{ label: "Range", value: 1, note: "adjacent only", prestige: false },
-		{ label: "Spotting", value: e.spotrange, note: "hexes of sight", prestige: false },
-		{ label: "Value", value: e.cost * 12, note: "prestige", prestige: true }]);
+		{ label: "Move", value: e.movpoints + 1, prestige: false },
+		{ label: "Range", value: 1, prestige: false },
+		{ label: "Spotting", value: e.spotrange, prestige: false },
+		{ label: "Value", value: e.cost * 12, prestige: true }]);
 	expect(card.leaders.map((l) => [l.name, l.description, l.classLeader])).toEqual([
 		["Battlefield Intelligence", leaderDescriptions[leaderType.battlefieldIntelligence][1], false],
 		["Aggressive Tank Maneuver", leaderDescriptions[leaderType.aggressiveTankManeuver][1], true]]);
 	//a marksman's gun reaches a hex further
 	const gun = handWorld({ rows: 6, cols: 6, units: [{ eqid: LEFH18, owner: 0, row: 2, col: 2, leader: leaderType.marksman }] }, undefined, { spotSide: 0 });
 	const g = gun.equipment[LEFH18];
-	expect(unitCardOf(gun, 0, null)!.figures[1]).toEqual({ label: "Range", value: g.gunrange + 1, note: `${g.gunrange} + 1 leader`, prestige: false });
+	expect(unitCardOf(gun, 0, null)!.figures[1]).toEqual({ label: "Range", value: g.gunrange + 1, prestige: false });
 });
 
 test("A gun on its tractor opens on the tractor, as the old window did, and shows the gun itself in its unit view (#348)", () => {
@@ -113,9 +111,9 @@ test("The edges the old window had: a train on rails, a fort with no ordinal, fi
 	const w = handWorld({ rows: 6, cols: 6, units: [{ eqid: 9001, owner: 0, row: 1, col: 1, experience: 520, ammo: 0 },
 		{ eqid: 9002, owner: 0, row: 3, col: 3 }] }, odd, { spotSide: 0 });
 	const train = unitCardOf(w, 0, null)!;
-	expect([train.tags[2].text, train.bars, train.xp, train.condition[2].note]).toEqual(["Rail road", 5, "520 XP", "no attacks left"]);
+	expect([train.tags[2].text, train.bars, train.xp, train.condition[2].value]).toEqual(["Rail road", 5, "520 XP", `0/${pz.ammo}`]);
 	const fort = unitCardOf(w, 1, null)!;
-	expect([fort.sub, fort.condition[1].note, fort.figures[1].value]).toEqual(["Fortification", null, 1]);
+	expect([fort.sub, fort.figures[1].value]).toEqual(["Fortification", 1]);
 	expect(entryCardOf(w, 9002, 7).figures[1].value).toBe(1);
 });
 
@@ -146,7 +144,7 @@ test("Unit card in the unit info opens the card beside the map; its views, Next 
 	expect(card.querySelectorAll(".uc-sec .pm-meter").length).toBe(4);
 	expect([...card.querySelectorAll(".uc-stat .k")].map((k) => k.textContent)).toEqual(["Soft", "Hard", "Air", "Naval", "Ground", "Air", "Close",
 		"Ranged", "Initiative"]);
-	expect(card.querySelector(".uc-note")!.textContent).toMatch(/^enough for \d+ moves?$/);
+	expect(card.querySelector(".uc-note")).toBeNull();
 	//the transport view pressed; the unit's own on a click
 	expect(screen.getByRole("button", { name: "Transport" }).getAttribute("aria-pressed")).toBe("true");
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Unit" })); });
