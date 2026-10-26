@@ -10,7 +10,7 @@ import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
 import type { Position } from "../core/types";
 import type { GameHost } from "../host";
-import { type Cell, outcomeNames, uiSettings } from "../prototypes";
+import { type Cell, uiSettings } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
 import type { Screen } from "../screen";
 import type { Unit } from "../unit";
@@ -88,7 +88,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			show("Prototype", "For your brilliant victory you receive " + name + " as a prototype unit.", nothing);
 		},
 		message(title: string, text: string, then?: () => void) { holding(title, text, then); },
-		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { show(outcomeNames[outcome], text, then); },
+		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { store.endCampaign(outcome, text, then); },
 		//(the main menu is D6's)
 		mainMenu: nothing,
 		//(no platform score board on the web: the old UI's OSGlue does nothing there either)

@@ -37,6 +37,7 @@ export function LogWindow({ store }: { store: Store }) {
 			<span class="pm-muted hint">Select an entry to centre the map on it.</span>
 			<span class="grow" />
 			<Button icon="info" onClick={() => store.briefing()}>Briefing</Button>
+			{log.campaign && <Button icon="medal" onClick={() => store.openDossier()}>Dossier</Button>}
 			<Button variant="primary" onClick={close}>Continue</Button>
 		</>
 	);

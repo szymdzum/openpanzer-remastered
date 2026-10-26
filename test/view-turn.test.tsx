@@ -140,13 +140,13 @@ test("A turn start while the reserve is being deployed opens the report and sele
 	expect(document.querySelector("#combatLog .cell.vic .w")!.textContent).toBe("No outcome left to win");
 });
 
-test("In a campaign the report has the dossier, off until its window; the end of the person's turn closes the report (#346)", async () => {
+test("In a campaign the report has the dossier (#348); the end of the person's turn closes the report (#346)", async () => {
 	//(a campaign's state, as the world of a campaign's scenario has it)
 	const w = world();
 	const store = storeOf({ ...w, state: { ...w.state, campaign: {} as never } });
 	await act(() => store.showReport(true));
 	const dossier = screen.getByRole("button", { name: "Dossier" }) as HTMLButtonElement;
-	expect([dossier.disabled, dossier.title]).toEqual([true, "Not in the new UI yet"]);
+	expect(dossier.disabled).toBe(false);
 	expect(screen.getByRole("region", { name: "Turn 4 of 17" }).querySelector(".cell.vic .w")!.textContent).toBe("10 for Brilliant · 12 Victory · 14 Tactical");
 	await act(() => { store.noteEnemy([fight([4, 1, 10, 9], [0, 0, 10, 7])]); });
 	expect(store.enemy.value.lost).toBe(3);
