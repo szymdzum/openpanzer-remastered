@@ -39,9 +39,9 @@ Set `data-theme="paper"` or `data-theme="blackout"` on the game root. The System
 ## Layout and touch
 
 - Design at 1366×768 first and confirm at 1920×1080. **Persistent chrome:** the status bar is centered at the top, the rail is centered on the right, unit info is centered at the bottom, and End turn sits bottom right. It covers about 21% of the screen at 1366 and 13% at 1920. The corners and the middle band stay map.
-- **Hex-anchored elements:** the unit context menu sits above the selected hex, and the odds preview beside the target hex. Both are clamped to the screen with `space-3` from the edges.
-- Everything tappable is at least `hit-target` (44px) on each side. Context buttons are 62×54, and rail buttons 48×46 (56×52 on tablet).
-- Nothing relies on hover. Rail buttons have an `aria-label` and show text labels on touch. The odds preview opens on the first tap on an enemy hex, and the second tap attacks. Long-press opens the hex tooltip.
+- **The map stays clear around the selected unit (#441):** the unit context menu docks at the bottom above the unit info, as the old UI's did; over a target the attack cursor shows the two losses and nothing else. What floats over the map is the old UI's amount, one thing at a time, and nothing covers a hex the selected unit can move to or attack. A panel that is anchored to a hex is clamped to the screen with `space-3` from the edges.
+- Everything tappable is at least `hit-target` (44px) on each side under `(pointer: coarse)`. Context buttons are 32px with a mouse, and rail buttons 48×46 (56×52 on tablet).
+- Nothing relies on hover. Rail buttons have an `aria-label` and show text labels on touch. A tap on an enemy hex attacks, as in the old UI. Long-press opens the hex tooltip.
 - **Tablet:** on iPad landscape the rail grows and unit info turns compact. In portrait the rail becomes a labelled command bar along the bottom. On both, the full unit sheet opens as a bottom sheet, and the equipment window is full screen.
 - Spacing comes from `space-1` to `space-8`. Panels use `space-3` padding at 1366, and `space-4` at 1920 and on tablet.
 - Corners are `radius-paper` (2px), near-square like cut paper. Only toggle knobs, slider thumbs and the AI dot are round.
@@ -77,7 +77,7 @@ The rules below decide a player's move, and the engine already knows each of the
 
 ### Attacking
 
-The estimate (`calculateCombatResults(..., estimate = true)`) needs no dice, and several outcomes that feel random are decided by it. Show them before the attack, not after.
+The estimate (`calculateCombatResults(..., estimate = true)`) needs no dice, and several outcomes that feel random are decided by it. Show them before the attack, not after. Until the switch (D8) the port shows only the old cursor's two losses (#441); the rows marked "odds" wait for the odds card, after it.
 
 | Rule | Show | Where |
 | --- | --- | --- |

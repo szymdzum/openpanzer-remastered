@@ -1,3 +1,5 @@
+**Left out of the port (#441):** the game doesn't open this card until after the switch (D8). Over a target, the cursor shows the old UI's two losses only (AttackPreview, stage 1). The card below is the design for when it comes back, one addition at a time.
+
 The combat odds preview: before an attack, what each side will lose, the one word that sums it up, why, and what happens next. Hover an enemy hex with a unit selected, or tap it once on touch; a second tap or a click attacks.
 
 Everything on the card comes from the engine's estimate, `GameRules.calculateCombatResults(attacker, defender, units, false, true)`, which uses no dice. The four examples are that estimate for these exact units, run in the game (Ciechanów, Polish 1939 equipment).

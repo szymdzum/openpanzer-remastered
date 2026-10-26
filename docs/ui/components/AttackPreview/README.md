@@ -1,3 +1,5 @@
+**In the port (#441):** only stage 1's crosshair and its two losses, the numbers the old cursor showed (`calculateCombatResults` with the support fire its side sees, `combatResult` in the core); no glyph. Stage 0's grey badges, stage 2's card and stage 3 are left out until after the switch (D8); a click or a tap on a target attacks at once, as the old UI did. The stages below are the design for then.
+
 The attack preview as four stages, from marking the targets to the full arithmetic, each one adding to the last. The reasoning, the measurements and the rules behind it are in the "Attack preview: a UX study" section.
 
 - **0 · Targets**, on selecting a unit: a dashed red outline and a small crosshair badge on every enemy the unit can attack (`MapOverlays`). An enemy in range it can't attack gets a grey badge with the reason.
