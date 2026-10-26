@@ -128,10 +128,11 @@ test("A scenario's turns play through the game host on a screen that shows nothi
 	uiSettings.isAI = [1, 1, 1, 1];
 	Rng.seed(374);
 	const played = { move: 0, attack: 0, shown: 0 };
+	const told: string[] = [];
 	const g = headlessGame((game) => {
 		const screen = nullScreen(game);
 		const counted = (shown: () => void) => () => { played.shown++; shown(); };
-		return { ...screen,
+		return { ...screen, turnEvents(events) { told.push(...events.map((e) => e.type)); },
 			move(unit, to, cells, shown) { played.move++; screen.move(unit, to, cells, counted(shown)); },
 			attack(attacker, target, shown) { played.attack++; screen.attack(attacker, target, counted(shown)); } };
 	});
@@ -146,6 +147,10 @@ test("A scenario's turns play through the game host on a screen that shows nothi
 	expect([m.turn, g.gameEnded]).toEqual([start + turns, false]);
 	expect(played.move > 0 && played.attack > 0, JSON.stringify(played)).toBe(true);
 	expect(played.shown).toBe(played.move + played.attack);
+	//each turn's start told the screen what it did (#348): the start's own events (the automatic resupplies among
+	//them), the reinforcements' arrivals
+	expect(told.filter((t) => t === "turnStarted").length).toBeGreaterThanOrEqual(turns);
+	expect(told.includes("arrived"), told.join()).toBe(true);
 	expect((g.state as unknown as { saves: () => number }).saves(), "a save at the start and at each turn's start")
 		.toBeGreaterThan(turns);
 }, 60_000);

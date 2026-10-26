@@ -20,6 +20,7 @@ import type { ScenarioOutcome } from "./scenario";
 import type { ViewEvent } from "./core/controller";
 import type { Position } from "./state";
 import type { Command, CommandType, Executed } from "./commands";
+import type { GameEvent } from "./core/events";
 
 export interface Screen {
 	//---- The game's course (the host)
@@ -79,4 +80,8 @@ export interface Screen {
 	unitsPlaced(): void;
 	//A reinforcement arrived on a hex the side shown sees; own: it is the side shown's
 	reinforced(at: Position, own: boolean): void;
+	//What a turn's start did that no command's result carries: a player's turn started (the automatic resupply of
+	//its idle units), the reinforcements arrived. A screen that keeps a turn report reads them (the new UI's
+	//CombatLog, #348); the others have none
+	turnEvents?(events: GameEvent[]): void;
 }
