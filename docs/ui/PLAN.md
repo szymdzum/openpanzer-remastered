@@ -41,6 +41,7 @@ done. The designs it builds are in this folder (README.md). The order was decide
   reason, extra numbers), the port leaves it out and the pull request lists it. Playing D3 and D4
   showed why: each card looked right alone, but together their extras covered the map (#437, #438,
   #441). Additions wait until after the switch (D8), one at a time, each played before the next.
+  port-audit.md lists each piece of the game screen beside the old UI's, with what is ported and what is cut.
 - **The map stays quiet; a window may be rich.** The rule bites hardest on the map during play:
   what floats over it (menus, cards, tooltips, labels) is the old UI's amount, one thing at a
   time. A window the person opens on purpose, with the game waiting (the after-action report, the
