@@ -1,7 +1,7 @@
 # Building the new UI
 
-Stage D of docs/REFACTOR.md (#130): the war room interface, built on the core instead of ported
-from the old UI. This page says how the work is split, in what order, and how a piece is judged
+Stage D of docs/REFACTOR.md (#130): the war room interface, built on the core rather than on the
+old UI's objects, and showing what the old UI shows. This page says how the work is split, in what order, and how a piece is judged
 done. The designs it builds are in this folder (README.md). The order was decided on 2026-10-25.
 
 ## Shape
@@ -33,10 +33,16 @@ done. The designs it builds are in this folder (README.md). The order was decide
 - **An early switch.** `?ui=new` starts the game on the new UI only until a whole game plays on
   it. Then it becomes the default and the old UI is deleted (D8). Tablets (D7) and the attack
   preview's breakdown come after, on the new UI only.
-- **The designs are the spec.** Each piece names the cards it builds (`components/<Name>/`): the
-  README for the rules and ids, the render for the look. Where code and card disagree, the card
-  is fixed first, then the code. Cards that show what the game doesn't do are fixed before they
-  are built (#379).
+- **A 1:1 port of the old UI (decided 2026-10-26).** The new UI shows and does what the old UI
+  shows and does: the same information, the same actions, the same behaviour, built the new way
+  (Preact, signals, the tokens and the CSS rules of handoff.md). The cards in this folder give the
+  look: layout, type, colour, icons, accessibility. They are not the spec for content or behaviour.
+  Where a card adds something the old UI doesn't have (a panel, a filter, a disabled state with its
+  reason, extra numbers), the port leaves it out and the pull request lists it. Playing D3 and D4
+  showed why: each card looked right alone, but together their extras covered the map (#437, #438,
+  #441). Additions wait until after the switch (D8), one at a time, each played before the next.
+- **Played before the next piece.** The owner plays each piece for a few minutes before the next
+  one builds on it; what they find becomes an issue.
 - **No new mechanics.** The UI shows what the core already knows (principles.md, "What the map has
   to show"). A number the core can't give yet (the hit chance for the attack preview's range) is a
   core change of its own, with its test, before the UI uses it.
@@ -76,9 +82,10 @@ controllers' view events (D1c); a better tutorial is #38, after the switch.
 One issue per phase, split further when a phase is more than a pull request can review. Each
 issue lists its cards, the element ids and events it uses, and these checks:
 
+- **Shows and does what the old UI does:** the same content and actions, checked against the old
+  code (`src/ui.ts`, `src/uibuilder.ts`...), with the left-out extras of the card listed.
 - **Looks like the card** in Paper and Blackout at 1366×768 and 1920×1080 (and the tablet sizes
   in D7): a screenshot of the game next to the render in the pull request.
-- **Behaves as the README says:** inputs, states, refusals, keyboard and touch.
 - **Accessible:** the checklist in handoff.md (contrast, labels, focus, reduced motion).
 - **Tested:** view-model logic in unit tests on a hand-built world (`smallGame()`).
 - **The contracts and verify unchanged,** except where a D0 step says it changes them (D0.3's
@@ -86,7 +93,7 @@ issue lists its cards, the element ids and events it uses, and these checks:
 
 ## Keeping the designs in step
 
-This folder is the source of truth from now on. A design change is made here (the card's
+This folder is the source of truth for the look. A design change is made here (the card's
 preview.html and README.md), then `node scripts/ui-design.mjs --render <Name>` refreshes its
 render, in the same pull request as the code that needs it. The Design System artifact on
 claude.ai is republished from here when a review needs it.
