@@ -7,13 +7,14 @@ import { computed, signal } from "@preact/signals";
 import type { Command } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
-import { unitById } from "../core/world";
+import { unitById, unitData } from "../core/world";
 import type { GameHost } from "../host";
 import { fogOf, plaquesOf, supportOf } from "./mapinfo";
-import { clickOn, mapUnits, pathOf, selectionOf } from "./mapview";
+import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
-import { endTurnRefusal, prestigeText, reasonOf, statusOf, unitView } from "./model";
+import { type ActionKey, endTurnRefusal, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
+import type { MenuKey, Shortcut } from "./shortcuts";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -41,6 +42,13 @@ export function createStore(host: StoreHost) {
 	const strategic = signal(false);
 	//the reserve unit picked to deploy, by its place in the core list (Deployment), null: none
 	const deploying = signal<number | null>(null);
+	//The HUD's (GameMenu): the hex grid drawn, the unit info shown (Inspect unit), the rail's middle group open, the
+	//labels over the map (L clears them until the next turn), the units End turn warns of while it asks (#8)
+	const hexGrid = signal(false);
+	const infoShown = signal(true);
+	const railOpen = signal(true);
+	const labels = signal(true);
+	const asking = signal<string[] | null>(null);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -58,6 +66,7 @@ export function createStore(host: StoreHost) {
 	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
+	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
@@ -74,7 +83,7 @@ export function createStore(host: StoreHost) {
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
-	const plaques = computed(() => world.value === null ? [] : plaquesOf(world.value));
+	const plaques = computed(() => world.value === null || !labels.value ? [] : plaquesOf(world.value));
 	//the strategic map's chips and objectives, while it is open
 	const overview = computed(() => world.value === null || !strategic.value ? null : strategicOf(world.value, airMode.value));
 
@@ -97,10 +106,65 @@ export function createStore(host: StoreHost) {
 		if (index !== null) selected.value = null;
 	};
 
+	//A unit selected, or none: a unit shows its layer, as the old UI did (an aircraft switches the air layer on)
+	const select = (id: UnitId | null) => {
+		const w = world.value, u = w === null || id === null ? null : unitById(w, id);
+		selected.value = id;
+		if (u !== null) airMode.value = isAir(w!, u);
+		refused.value = null;
+	};
+
+	//A unit key (M, E, S, R, O, U): the selected unit's action of that key that it can take now, sent as its button
+	//sends it; none it can take, the reason of the first in the status line (the same rule and refusal as the button)
+	const unitKey = (key: ActionKey) => {
+		const actions = unit.value === null ? [] : unit.value.actions.filter((a) => a.key === key);
+		const ready = actions.find((a) => a.refusal === null);
+		if (ready !== undefined) dispatch(ready.command);
+		else if (actions.length > 0) refused.value = actions[0].refusal;
+	};
+
+	//N and P: the next or previous unit that hasn't moved, selected and in the middle of the map
+	const cycle = (direction: 1 | -1) => {
+		const w = world.value;
+		if (w === null || selected.value === null) return;
+		const next = neighbourUnit(w, selected.value, direction), u = unitById(w, next)!;
+		select(next);
+		lookAt.value = { row: u.row, col: u.col };
+	};
+
+	//The windows Buy and Options open come with the windows and the menus (D5, D6): the status line says so
+	const notYet = () => { refused.value = "Not in the new UI yet"; };
+
+	//The air layer on or off (AirLayer, the A key and the rail's button). Leaving it deselects an aircraft, which
+	//would be underneath, as the old UI did
+	const toggleAir = () => {
+		const w = world.value, u = w === null || selected.value === null ? null : unitById(w, selected.value);
+		if (airMode.value && u !== null && isAir(w!, u)) selected.value = null;
+		airMode.value = !airMode.value;
+	};
+
+	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
+	const menu: Record<MenuKey, () => void> = {
+		inspect: () => { infoShown.value = !infoShown.value; },
+		buy: notYet,
+		hex: () => { hexGrid.value = !hexGrid.value; },
+		air: () => toggleAir(),
+		zoom: () => { strategic.value = !strategic.value; },
+		labels: () => { labels.value = false; },
+		next: () => cycle(1),
+		previous: () => cycle(-1),
+		//Escape deselects the unit; with none, Options
+		escape: () => {
+			if (selected.value !== null) select(null);
+			else notYet();
+		},
+	};
+
+
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
@@ -125,24 +189,34 @@ export function createStore(host: StoreHost) {
 				dispatch(click.command);
 				return;
 			}
-			selected.value = click.select;
-			//(a unit selected shows its layer, as the old UI did: an aircraft switches the air layer on)
-			const u = click.select === null ? null : unitById(w, click.select);
-			if (u !== null) airMode.value = isAir(w, u);
-			refused.value = null;
+			select(click.select);
 		},
 
-		//The air layer on or off (AirLayer, the A key; the rail's button is the HUD's, D3). Leaving it deselects an
-		//aircraft, which would be underneath, as the old UI did
-		toggleAir() {
-			const w = world.value, u = w === null || selected.value === null ? null : unitById(w, selected.value);
-			if (airMode.value && u !== null && isAir(w!, u)) selected.value = null;
-			airMode.value = !airMode.value;
+		//A key or a rail button (GameMenu)
+		shortcut(sc: Shortcut) {
+			if ("unit" in sc) unitKey(sc.unit);
+			else menu[sc.menu]();
 		},
 
-		//The strategic map open or closed (StrategicMap, the Z key; the rail's button is the HUD's, D3)
-		toggleStrategic() {
-			strategic.value = !strategic.value;
+		//End turn: on at once when every unit has done what it can; else the question, with the units that can still
+		//act (#8)
+		askEndTurn() {
+			const w = world.value;
+			if (w === null || endTurn.value !== null) return;
+			const ready = unitsToAct(w);
+			if (ready.length === 0) dispatch({ type: "endTurn" });
+			else asking.value = ready.map((u) => unitData(w, u).name);
+		},
+
+		//The rail's middle group folded or open (#mainmenu)
+		toggleRail() {
+			railOpen.value = !railOpen.value;
+		},
+
+		//The question's answer: the turn ended, or played on
+		answerEndTurn(end: boolean) {
+			asking.value = null;
+			if (end) dispatch({ type: "endTurn" });
 		},
 
 		pick,

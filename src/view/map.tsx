@@ -43,24 +43,6 @@ class ImageCache {
 	}
 }
 
-//The hex grid setting (Settings, D6), off until then
-let hexGrid = false;
-export function setHexGrid(on: boolean) {
-	hexGrid = on;
-}
-
-//The map's own keys, until the HUD has every shortcut (D3): A the air layer, Z the strategic map. Not while a field
-//takes the typing, nor with a modifier (the browser's own shortcuts). Whether the key was the map's
-function mapKey(store: Store, e: KeyboardEvent): boolean {
-	const typing = e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]") !== null;
-	if (typing || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return false;
-	const k = e.key.toLowerCase();
-	if (k === "a") store.toggleAir();
-	else if (k === "z") store.toggleStrategic();
-	else return false;
-	return true;
-}
-
 //The strategic map fits the map under the status bar, so no objective hides behind it (StrategicMap): the
 //bar's foot from the map's top, and a little air, 0 without a bar
 function underStatusBar(scroller: HTMLElement): number {
@@ -100,7 +82,7 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -110,11 +92,7 @@ class Painter {
 			const at = this.cellOf(e);
 			if (at !== null) s.clickHex(at);
 		};
-		const key = (e: KeyboardEvent) => {
-			if (mapKey(s, e)) e.preventDefault();
-		};
 		addEventListener("resize", redraw);
-		addEventListener("keydown", key);
 		scroller.addEventListener("mousemove", move);
 		scroller.addEventListener("mouseleave", leave);
 		scroller.addEventListener("click", click);
@@ -122,7 +100,6 @@ class Painter {
 		return () => {
 			watch();
 			removeEventListener("resize", redraw);
-			removeEventListener("keydown", key);
 			scroller.removeEventListener("mousemove", move);
 			scroller.removeEventListener("mouseleave", leave);
 			scroller.removeEventListener("click", click);
@@ -199,7 +176,7 @@ class Painter {
 	//What the canvas draws now, from the store
 	scene(w: World, size: { width: number; height: number }): Scene {
 		const s = this.store;
-		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: hexGrid, units: s.units.peek(),
+		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: s.hexGrid.peek(), units: s.units.peek(),
 			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek(),
 			strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek() };
 	}
