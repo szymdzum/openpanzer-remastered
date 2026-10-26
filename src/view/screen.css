@@ -43,19 +43,34 @@
 			z-index: var(--z-hud);
 		}
 
-		/* the selected unit's actions on the left until the context menu takes them, clear of the unit info */
-		& > .pm-actions {
-			inset-block-start: 50%;
-			inset-inline-start: var(--space-3);
-			translate: 0 -50%;
+		/* the bottom in the middle, as the old UI stacked it: the unit context menu (UnitContext) over the unit info
+		   (UnitInfo), clear of the map around the selected unit. The dock itself takes no click, its panels do */
+		& > .pm-dock {
+			position: absolute;
+			inset-block-end: var(--space-3);
+			inset-inline-start: 50%;
+			translate: -50% 0;
+			z-index: var(--z-hud);
 			display: flex;
 			flex-direction: column;
+			align-items: center;
 			gap: var(--space-2);
-			padding: var(--space-3);
+			pointer-events: none;
+
+			& > * {
+				pointer-events: auto;
+			}
+
+			/* (in the dock's flow: the card places it alone at the bottom) */
+			& > .pm-panel {
+				position: relative;
+				inset: auto;
+				transform: none;
+			}
 		}
 
 		/* the unit info (UnitInfo): its leader a button that looks like the card's line, its tooltip above the panel */
-		& > .pm-info {
+		& .pm-info {
 			.leader {
 				padding: 0;
 				border: 0;
@@ -356,23 +371,6 @@
 		}
 	}
 
-	/* the unit context menu over the map (UnitContext): its captions as written, in the card's small type, and the
-	   arithmetic of the hovered action beside the menu */
-	.pm-ctx {
-		.pm-btn {
-			text-transform: none;
-			letter-spacing: 0;
-			font: 600 var(--type-micro-size) / 0.75rem var(--font-ui);
-		}
-
-		.pm-ctxtip {
-			inset-block-start: 0;
-			inset-inline-start: calc(100% + var(--space-3));
-			inline-size: max-content;
-			max-inline-size: 20rem;
-		}
-	}
-
 	/* the hex tooltip (#gameToolTip, Tooltips): what the terrain does as two columns of facts; its OK only on touch,
 	   where a finger opened it */
 	.pm-mapview > .pm-tip {
@@ -450,7 +448,7 @@
 
 	/* below 1280px the unit info keeps its identity and meters; the stat sheet opens under them with Stats (HudLaptop) */
 	@container screen (width < 80rem) {
-		.pm-screen > .pm-info {
+		.pm-dock > .pm-info {
 			grid-template-columns: auto auto;
 			inline-size: auto;
 

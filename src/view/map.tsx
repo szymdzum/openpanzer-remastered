@@ -1,6 +1,6 @@
 //The map (#345): the canvas the map is drawn on (src/view/mapdraw.ts) under a scrolling layer that takes
-//the pointer, and over it the move path's tag (MovePath), the selected unit's context menu (UnitContext, #346), the
-//pins over units low on supply and the hex tooltip (Tooltips, #346). A click selects, moves or attacks through the
+//the pointer, and over it the move path's tag (MovePath), the pins over units low on supply and the hex tooltip
+//(Tooltips, #346). A click selects, moves or attacks through the
 //store (src/view/store.ts), which asks the view model (src/view/mapview.ts) what it does. The canvas is
 //drawn again, once a frame at most, when what it shows changes: the world, the selection, the hovered
 //hex, the scroll, the window's size, an image that loaded.
@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
-import { UnitContextMenu } from "./contextmenu";
 import { HexTooltip, Pins } from "./maptips";
 import { OddsCard } from "./oddscard";
 import { ResultMarks } from "./resultmarks";
@@ -297,19 +296,18 @@ function useOddsRest(store: Store) {
 	}, [store, glance]);
 }
 
-//What sits over the map at its hexes, placed from where the map is on the screen: the path's tag, the selected unit's
-//actions above its hex (UnitContext), the pins, the hex tooltip and the placing tag
+//What sits over the map at its hexes, placed from where the map is on the screen: the path's tag, the pins, the hex
+//tooltip and the placing tag
 function Overlays({ store, view, scale }: { store: Store, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
-	const path = store.path.value, menu = store.context.value, tip = store.hexTip.value, ghost = store.ghost.value, odds = store.odds.value;
+	const path = store.path.value, tip = store.hexTip.value, ghost = store.ghost.value, odds = store.odds.value;
 	const results = store.results.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
 	const half = TOKENS.px["hex-h"] / 2 * scale, side = TOKENS.px["hex-w"] / 2 * scale;
 	return (
 		<>
 			{end !== null && <PathTag store={store} at={at(end)} />}
-			{menu !== null && <UnitContextMenu store={store} at={at(menu.at)} gap={half + 4} />}
 			<Pins pins={store.pins.value} where={(p) => { const c = at(p); return { x: c.x, y: c.y - half }; }} />
 			{tip !== null && <HexTooltip tip={tip} at={at(tip.at)} gap={side} onClose={() => store.restHex(null)} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}

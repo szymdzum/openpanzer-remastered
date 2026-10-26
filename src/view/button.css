@@ -1,6 +1,5 @@
-/* Button (button.tsx; the Button card). Its second line is drawn where the unit context menu is
-   (components/bundle.css, .pm-ctx): the only place a button has one. The .is-hot, .is-down, .is-focus
-   and .is-disabled classes only stage those states in the cards. */
+/* Button (button.tsx; the Button card). The .is-hot, .is-down, .is-focus and .is-disabled classes only
+   stage those states in the cards. */
 @layer components {
 	/* the caption takes the root's font: the reset makes a button inherit it */
 	.pm-btn {
