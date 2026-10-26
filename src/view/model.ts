@@ -104,15 +104,25 @@ export function dateOf(iso: string): string {
 
 //A country's name in the scenario's equipment set, "" for none
 function countryOf(w: World, p: PlayerState | null): string {
+	return p === null ? "" : countryName(w, p.country);
+}
+
+//A country's name by its index in the scenario's equipment set, "" for one it doesn't name
+export function countryName(w: World, country: number): string {
 	const names = countryNames[w.data.equipment] || [];
-	return p === null ? "" : names[p.country] || "";
+	return names[country] || "";
+}
+
+//The flag of a country by its name, null for one the icon set has no mark for
+export function nationOf(country: string): Nation | null {
+	return NATIONS[country] || null;
 }
 
 export function statusOf(w: World): Status {
 	const p = currentPlayer(w), you = yourPlayer(w), s = w.state.scenario;
 	const side = p === null ? -1 : p.side, country = countryOf(w, p);
 	return { turn: w.state.turn.turn, maxTurns: s.maxTurns, side, sideName: side < 0 ? "" : sideNames[side], country,
-		nation: NATIONS[country] || null, date: dateOf(s.date), weather: WEATHER[s.atmospheric], ground: GROUND[s.ground],
+		nation: nationOf(country), date: dateOf(s.date), weather: WEATHER[s.atmospheric], ground: GROUND[s.ground],
 		rules: w.rules.name === "classic" ? "Classic" : "Remaster", prestige: you === null ? null : you.prestige, yourTurn: isYourTurn(w) };
 }
 
@@ -172,19 +182,34 @@ const ACTIONS: [string, ActionKey, (id: UnitId) => Command][] = [
 	["Undo move", "undo", (unit) => ({ type: "undo", unit })],
 ];
 
-//A unit as the side shown sees it, null when it isn't on the map or is an enemy hidden in the fog
-export function unitView(w: World, id: UnitId): UnitView | null {
+//The unit when it is on the map and the side shown sees it: its own, or an enemy on a hex it spots (no side shown:
+//no game is on the screen, nothing is seen)
+export function shownUnit(w: World, id: UnitId): UnitState | null {
 	const u = unitById(w, id);
 	if (u === null || u.row < 0) return null;
 	const side = w.state.players[u.owner].side;
-	//(no side shown: no game is on the screen, nothing is seen)
-	if (side !== w.spotSide && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide))) return null;
+	return side === w.spotSide || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) ? u : null;
+}
+
+//A unit as the side shown sees it, null when it isn't on the map or is an enemy hidden in the fog
+export function unitView(w: World, id: UnitId): UnitView | null {
+	const u = shownUnit(w, id);
+	if (u === null) return null;
+	const side = w.state.players[u.owner].side;
 	const e = unitData(w, u);
 	return { id, name: e.name, className: unitClassNames[e.uclass], side, own: turnRefusal(w, u) === null,
 		at: { row: u.row, col: u.col }, place: w.data.hexes[hexIndex(w, u.row, u.col)].name, strength: u.strength, moves: movesLeft(w, u),
 		movpoints: e.movpoints, fuel: fuelOf(u), ammo: ammoOf(u),
 		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired,
-		actions: ACTIONS.map(([label, key, command]) => ({ label, key, command: command(id), refusal: refusalOf(w, command(id)) })) };
+		actions: ACTIONS.map(([label, key, command]) => ({ label, key, command: command(id), refusal: already(u, label) || refusalOf(w, command(id)) })) };
+}
+
+//Mount and Embark on a unit that is mounted or embarked already: the core would take them again, the old UI offered
+//the other one instead (Dismount, Disembark), and so do the M and E keys
+function already(u: UnitState, label: string): string | null {
+	if (label === "Mount" && u.isMounted) return "Mounted already";
+	if (label === "Embark" && u.carrier > 0) return "Embarked already";
+	return null;
 }
 
 //The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the

@@ -6,6 +6,7 @@
 		inset: 0;
 		overflow: hidden;
 		background: var(--panel-sunken);
+		container: screen / inline-size;
 
 		/* the status bar at least as wide as the card's, wider when its cells need it (the rules, a long country name),
 		   never wider than the screen */
@@ -42,14 +43,45 @@
 			z-index: var(--z-hud);
 		}
 
+		/* the selected unit's actions on the left until the context menu takes them, clear of the unit info */
 		& > .pm-actions {
-			inset-block-end: var(--space-4);
-			inset-inline-start: var(--space-4);
+			inset-block-start: 50%;
+			inset-inline-start: var(--space-3);
+			translate: 0 -50%;
 			display: flex;
-			flex-wrap: wrap;
+			flex-direction: column;
 			gap: var(--space-2);
 			padding: var(--space-3);
-			max-inline-size: 40rem;
+		}
+
+		/* the unit info (UnitInfo): its leader a button that looks like the card's line, its tooltip above the panel */
+		& > .pm-info {
+			.leader {
+				padding: 0;
+				border: 0;
+				background: none;
+				font-family: inherit;
+				cursor: pointer;
+			}
+
+			.pm-info-tip {
+				position: absolute;
+				inset-block-end: calc(100% + var(--space-2));
+				inset-inline-start: var(--space-4);
+				inline-size: max-content;
+				max-inline-size: 20rem;
+			}
+
+			:where(.pm-info-tip) .hd {
+				display: flex;
+				align-items: center;
+				gap: var(--space-1);
+			}
+
+			.stats-toggle {
+				display: none;
+				margin-block-start: var(--space-2);
+			}
 		}
 
 		/* the reserve to deploy from, at the bottom in the middle until the reserve tray (D5) docks there */
@@ -76,6 +108,28 @@
 
 			& > .bd {
 				overflow-y: auto;
+			}
+		}
+	}
+
+	/* below 1280px the unit info keeps its identity and meters; the stat sheet opens under them with Stats (HudLaptop) */
+	@container screen (width < 80rem) {
+		.pm-screen > .pm-info {
+			grid-template-columns: auto auto;
+			inline-size: auto;
+
+			.stats-toggle {
+				display: inline-flex;
+			}
+
+			.sheet {
+				display: none;
+			}
+
+			&:has(:where(.stats-toggle[aria-pressed="true"])) .sheet {
+				display: block;
+				grid-column: 1 / -1;
+				border-block-start: 1px solid var(--line);
 			}
 		}
 	}
