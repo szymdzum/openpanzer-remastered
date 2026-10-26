@@ -127,8 +127,7 @@ export interface LogEntry {
 	sprite: string | null;
 	icon: IconName | null; //an objective's flag in place of a sprite
 	words: Words;
-	result: { text: string, sub: string | null, tone: "critical" | "prestige" | "ok" } | null;
-	star: boolean; //a leader won
+	destroyed: boolean; //a unit of the side lost: its line in critical, as the old log wrote it in red
 	at: Position;
 }
 
@@ -189,20 +188,18 @@ function combatEntry(w: World, u: Fought): LogEntry {
 	if (u.ammo < e.ammo / 4) words.push(" Low on ammo, ", { b: u.ammo + "/" + e.ammo }, " remaining.");
 	if (u.entrenchLost > 0) words.push(" ", { b: String(u.entrenchLost) }, " entrenchment lost, ", { b: String(u.entrench) }, " left.");
 	else if (u.entrench > 0) words.push(" Entrenchment ", { b: String(u.entrench) }, ".");
-	const result = u.losses > 0 ? { text: "−" + u.losses, sub: u.strength > 0 ? u.strength + " left" : "destroyed", tone: "critical" as const } : null;
-	return { sprite: spriteOf(w, u.eqid), icon: null, words, result, star: false, at: u.at };
+	return { sprite: spriteOf(w, u.eqid), icon: null, words, destroyed: u.losses > 0 && u.strength <= 0, at: u.at };
 }
 
 function resupplyEntry(w: World, r: TurnLog["resupply"][number]): LogEntry {
 	const e = w.equipment[r.eqid], uses = e.fuel > 0;
 	const words: Words = [...unitWords(w, r), " resupplied automatically: ammo ", { b: r.ammo + "/" + e.ammo },
 		...(uses ? [", fuel ", { b: r.fuel + "/" + e.fuel }] : []), "."];
-	const full = r.ammo >= e.ammo && (!uses || r.fuel >= e.fuel);
-	return { sprite: spriteOf(w, r.eqid), icon: null, words, result: full ? { text: "Full", sub: null, tone: "ok" } : null, star: false, at: r.at };
+	return { sprite: spriteOf(w, r.eqid), icon: null, words, destroyed: false, at: r.at };
 }
 
 function reinforceEntry(w: World, r: Logged): LogEntry {
-	return { sprite: spriteOf(w, r.eqid), icon: null, star: false, at: r.at, result: null,
+	return { sprite: spriteOf(w, r.eqid), icon: null, destroyed: false, at: r.at,
 		words: [{ b: w.equipment[r.eqid].name }, ` arrived as a reinforcement at (${r.at.row},${r.at.col}).`] };
 }
 
@@ -210,14 +207,13 @@ function leaderEntry(w: World, l: TurnLog["leaders"][number]): LogEntry {
 	const named = (i: number): Words => [{ b: leaderDescriptions[i][0] }, ", " + leaderDescriptions[i][1].replace(/\.$/, "").toLowerCase()];
 	const leaders = l.classLeader === -1 || l.classLeader === l.leader ? named(l.leader) : [...named(l.classLeader), "; ", ...named(l.leader)];
 	return { sprite: w.equipment[l.eqid].icon as unknown as string, icon: null, words: [...unitWords(w, l), " won a leader: ", ...leaders, "."],
-		result: null, star: true, at: l.at };
+		destroyed: false, at: l.at };
 }
 
 function objectiveEntry(w: World, o: TurnLog["objectives"][number]): LogEntry {
 	const name = w.data.hexes[o.at.row * w.state.map.cols + o.at.col].name;
-	return { sprite: null, icon: "objective", star: false, at: o.at,
-		words: [o.ours ? "Captured objective " : "Lost objective ", { b: name }, ` at (${o.at.row},${o.at.col}).`],
-		result: o.ours ? { text: "+" + o.prestige, sub: null, tone: "prestige" } : null };
+	return { sprite: null, icon: "objective", destroyed: false, at: o.at,
+		words: [o.ours ? "Captured objective " : "Lost objective ", { b: name }, ` at (${o.at.row},${o.at.col}).`] };
 }
 
 const byCore = (a: Fought, b: Fought) => a.isCore === b.isCore ? a.id - b.id : a.isCore ? -1 : 1;

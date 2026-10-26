@@ -1,3 +1,5 @@
+**In the port (#441):** where the card and the unit info at the bottom meet (below about 1656px wide, 1366×768 among them), the card stops above the dock and its sheet scrolls. Its extras (the notes, the explanations, the leader's share) are #37's, the owner's call.
+
 The full unit sheet: everything about one unit, written so a new player can read it without the manual.
 
 Opens from the unit info panel, a long press on a unit, the unit list and the equipment window. On desktop it sits beside the map as a panel; on tablet it is the bottom sheet (`TabletUnitInfo`).

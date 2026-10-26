@@ -1,7 +1,6 @@
 //The equipment window (Equipment, #348): buy new units and upgrade or sell the one chosen, opened with B or the rail's
-//Buy and upgrade. From the top: the title, the country button and the prestige; the class tabs with their counts; the
-//sort and the models in service; the picked model beside the unit it would replace, and its transport; the action bar
-//with the prices and the prestige left. What it says and why a button is off is the view model's (src/view/shop.ts).
+//Buy and upgrade. From the top: the title, the country button and the prestige; the class tabs; the sort and the
+//models in service; the picked model's stats, and its transport; the action bar with the prices. What it says and why a button is off is the view model's (src/view/shop.ts).
 import { Button } from "./button";
 import { Icon, Mark } from "./icon";
 import { Scrim, useEscape, Window } from "./panel";
@@ -28,8 +27,6 @@ function Tools({ shop, store }: { shop: Shop, store: Store }) {
 				{OTHERS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
 			</select>
 			<Button id="eqSortOrderBut" icon="sort" label={shop.reverse ? "Sort ascending" : "Sort descending"} onClick={store.shopReverse} />
-			<span class="grow" />
-			<span class="pm-muted count">{shop.models.length === 1 ? "1 model" : shop.models.length + " models"} in service</span>
 		</div>
 	);
 }
@@ -60,15 +57,13 @@ function Detail({ shop, store }: { shop: Shop, store: Store }) {
 			<div class="top"><span class="spr" aria-hidden="true" style={frameStyle(p.sprite)} /><div><h2 class="pm-title">{p.name}</h2><div class="pm-muted line">{p.line}</div></div></div>
 			<table class="pm-cmp">
 				<thead>
-					<tr><th class="hdr" scope="col">Stat</th><th class="hdr n" scope="col">{p.name}</th><td class="hdr" aria-hidden="true" />
-						<th class="hdr d" scope="col">{p.against === null ? "" : "vs " + p.against}</th></tr>
+					<tr><th class="hdr" scope="col">Stat</th><th class="hdr n" scope="col">{p.name}</th><td class="hdr" aria-hidden="true" /></tr>
 				</thead>
 				<tbody>
 					{p.compare.map((c) => (
 						<tr key={c.name}>
 							<th scope="row">{c.name}</th><td class="n">{c.value}</td>
 							<td class="bar" aria-hidden="true"><b style={{ width: `${Math.round(c.fill * 100)}%` }} /></td>
-							<td class={c.tone === "" ? "d" : "d " + c.tone}>{c.delta}</td>
 						</tr>
 					))}
 				</tbody>
@@ -93,7 +88,6 @@ function Actions({ shop, store }: { shop: Shop, store: Store }) {
 		<>
 			<span>{shop.target === null ? "Buying new units" : <>Upgrading <b>{shop.target}</b></>}</span>
 			<span class="grow" />
-			{shop.after !== null && <span class="after">Prestige after {shop.after.action} <b>{shop.after.prestige}</b></span>}
 			{shop.sell !== null && <Button id="eqSellBut" icon="coin" cost={shop.sell.cost} disabled={shop.sell.refusal ?? undefined} onClick={act("sell")}>Sell</Button>}
 			{shop.upgrade !== null && <Button id="eqUpgradeBut" icon="upgrade" cost={priced(shop.upgrade)}
 				disabled={shop.upgrade.refusal ?? undefined} onClick={act("upgrade")}>Upgrade</Button>}
@@ -124,7 +118,7 @@ export function ShopWindow({ store }: { store: Store }) {
 			<Window id="equipment" class="pm-eq" title="Equipment" sub={shop.title} stamp="Requisition" tools={tools} 
 				footer={<div id="eqActionsContainer" class="actions"><Actions shop={shop} store={store} /></div>}>
 				<Tabs id="eqSelClass" label="Unit class" selected={String(shop.uclass)} onSelect={(c) => store.shopClass(+c)}
-					tabs={shop.tabs.map((t) => ({ id: String(t.uclass), label: t.label, icon: t.icon, count: t.count, disabled: t.count === 0 }))} />
+					tabs={shop.tabs.map((t) => ({ id: String(t.uclass), label: t.label, icon: t.icon }))} />
 				<div class="body">
 					<div class="list"><Tools shop={shop} store={store} /><Models shop={shop} store={store} /></div>
 					<Detail shop={shop} store={store} />

@@ -31,8 +31,6 @@ export interface ListUnit {
 
 export interface UnitList {
 	units: ListUnit[];
-	moved: number;
-	low: number; //low on fuel or ammo
 }
 
 //The core units first, then by class, name and id (the old list's order)
@@ -71,5 +69,5 @@ export function unitListOf(w: World, selected: UnitId | null): UnitList {
 	const p = w.state.turn.currentPlayer;
 	const own = isYourTurn(w) ? w.state.units.filter((u) => u.row >= 0 && u.owner === p).sort(byList(w)) : [];
 	const units = own.map((u) => listUnit(w, u, selected));
-	return { units, moved: units.filter((u) => u.moved).length, low: units.filter((u) => u.fuel !== null || u.ammo !== null).length };
+	return { units };
 }

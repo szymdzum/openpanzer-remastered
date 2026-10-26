@@ -133,14 +133,6 @@
 				transform: none;
 			}
 
-			.note {
-				font-size: var(--type-small-size);
-			}
-
-			.pm-data {
-				white-space: nowrap;
-			}
-
 			.pm-strip {
 				overflow-x: auto;
 			}
@@ -184,10 +176,6 @@
 				font-size: var(--type-title-size);
 			}
 
-			.count {
-				font-size: var(--type-note-size);
-			}
-
 			.sortmore {
 				inline-size: auto;
 			}
@@ -212,7 +200,7 @@
 
 			/* (the columns as wide as the models' names in the header) */
 			.pm-cmp {
-				grid-template-columns: 1fr auto 1fr auto;
+				grid-template-columns: 1fr auto 1fr;
 			}
 
 			.pm-cmp :is(thead, tbody, tr) {
@@ -243,8 +231,8 @@
 			}
 		}
 
-		/* the turn report (CombatLog) in the middle, its reports scrolled under the summary; its entries are buttons that
-		   look like the card's rows */
+		/* the turn report (CombatLog) in the middle over its scrim, its reports scrolled under the summary; its entries are
+		   buttons that look like the card's rows */
 		& > .pm-log {
 			inset-block-start: 50%;
 			inset-inline-start: 50%;
@@ -271,12 +259,12 @@
 				text-align: start;
 			}
 
-			:where(.res) .sub {
-				font-size: var(--type-label-size);
+			/* a unit lost, in critical as the old log wrote it in red */
+			:where(.lost) .txt {
+				color: var(--critical);
 			}
 
-			.quiet,
-			.hint {
+			.quiet {
 				margin: 0;
 				font-size: var(--type-small-size);
 			}
@@ -361,13 +349,6 @@
 			& > .bd {
 				overflow-y: auto;
 			}
-
-			.from {
-				display: inline-flex;
-				align-items: center;
-				gap: var(--space-2);
-				font-size: var(--type-note-size);
-			}
 		}
 	}
 
@@ -410,6 +391,14 @@
 		&:where(.axis) .dot {
 			background: var(--axis);
 			box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px var(--axis);
+		}
+	}
+
+	/* where the unit card and the dock at the bottom meet (the card's 460px from the left, the 712px unit info in the
+	   middle: below about 1656px), the card stops above the dock, whose height the screen keeps in --dock-h (app.tsx) */
+	@container screen (width < 104rem) {
+		.pm-screen > .pm-unitcard {
+			max-block-size: calc(100dvh - 5.5rem - var(--dock-h, 0rem) - 2 * var(--space-3));
 		}
 	}
 

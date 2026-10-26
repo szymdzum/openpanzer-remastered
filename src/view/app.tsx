@@ -17,15 +17,30 @@ import { EndTurn, EndTurnQuestion, Rail } from "./rail";
 import { StatusBar } from "./statusbar";
 import { AiIndicator, TurnBanner } from "./turnbanner";
 import type { Store } from "./store";
+import { useEffect, useRef } from "preact/hooks";
+
+//The dock's height on the screen as --dock-h, which the unit card stops above where the two would meet (screen.css)
+function useDockHeight() {
+	const dock = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = dock.current!, screen = el.parentElement!;
+		if (typeof ResizeObserver !== "function") return undefined;
+		const watch = new ResizeObserver(() => screen.style.setProperty("--dock-h", el.offsetHeight + "px"));
+		watch.observe(el);
+		return () => watch.disconnect();
+	}, []);
+	return dock;
+}
 
 export function App({ store }: { store: Store }) {
+	const dock = useDockHeight();
 	return (
 		<div class="pm pm-screen">
 			<IconSprite />
 			<MapView store={store} />
 			<StatusBar store={store} />
 			<Rail store={store} />
-			<div class="pm-dock">
+			<div ref={dock} class="pm-dock">
 				<UnitContextMenu store={store} />
 				<UnitInfoPanel store={store} />
 			</div>

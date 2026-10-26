@@ -1,3 +1,5 @@
+**In the port (#441):** the reserve tray's header has no "N of M placed" count and no note: the old deployment list had neither.
+
 Deploy mode: what the player sees when a campaign scenario starts with core units in reserve, or a later turn still has some (`uiShowDeploymentWindow`). Today it is grey hexes with a "Z" glyph and the unit list at the top. Nothing about the rules changes here.
 
 **The zone.** Every hex whose `isDeployment` is the current player, including the supply cities that have no `deploy` attribute (`scenarioloader.ts` reads `supply` into `isDeployment`). In Ciechanow that is 13 hexes in three groups plus Neidenburg and Soldau.

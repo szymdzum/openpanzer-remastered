@@ -44,8 +44,7 @@ export function UnitStrip({ store }: { store: Store }) {
 	return (
 		<section id="container-unitlist" class="pm-panel pm-unitlist" aria-label="Your units">
 			<div class="hd">
-				<span class="pm-label">Units</span><span class="pm-data">{list.units.length}</span>
-				<span class="pm-muted note">{list.moved} moved · {list.low} low on supply</span>
+				<span class="pm-label">Units</span>
 				<span class="grow" />
 				<Button icon="close" label="Close" onClick={store.toggleList} />
 			</div>

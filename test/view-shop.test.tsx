@@ -48,7 +48,6 @@ test("The unit list has the player's units on the map, core first, then by class
 	const list = unitListOf(world(), 1);
 	expect(list.units.map((u) => [u.id, u.sub, u.selected])).toEqual([[1, "1st", true], [0, "101st · moved", false], [2, "2nd", false]]);
 	expect(list.units[1]).toMatchObject({ name: "Pz IIA", strength: 10, moved: true, ammo: "critical", fuel: null });
-	expect([list.moved, list.low]).toEqual([1, 1]);
 	//the old list's order: core first, then class, name, id
 	const many = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 1, col: 1 }, { eqid: PZ_IA, owner: 0, row: 1, col: 2 },
 		{ eqid: INFANTERIE, owner: 0, row: 1, col: 3 }, { eqid: PZ_IA, owner: 0, row: 1, col: 4 }, { eqid: PZ_IIIE, owner: 0, row: 1, col: 5, isCore: true },
@@ -63,12 +62,12 @@ test("The unit list has the player's units on the map, core first, then by class
 	expect(unitListOf(world((x) => { x.state.players[0].type = playerType.aiLocal; }), null).units).toEqual([]);
 });
 
-test("The window lists the class's models in service this year by cost, with each class's count; a sort and its reverse (#348)", () => {
+test("The window lists the class's models in service this year by cost, its tabs without counts as the old window's; a sort and its reverse (#348)", () => {
 	const shop = shopOf(world(), base)!;
 	expect(shop.title).toBe("Germany · September 1939");
 	expect(shop.prestige).toBe("300");
 	expect(shop.tabs.map((t) => t.label)).toEqual(["Infantry", "Tank", "Recon", "Anti-tank", "Artillery", "Anti-air", "Fighter", "Bomber"]);
-	expect(shop.tabs[1].count).toBe(9);
+	expect(shop.tabs[1]).toEqual({ uclass: unitClass.tank, label: "Tank", icon: "tank" });
 	expect(shop.models.map((m) => m.name)).toEqual(["Pz IA", "Pz IB", "Pz IIA", "Pz IID", "Pz 35(t)", "Pz 38(t)A", "Pz IIIE", "Pz IVC", "Pz IVD"]);
 	expect(shop.models[0]).toMatchObject({ eqid: PZ_IA, year: 1934, cost: 180, stat: null, current: false });
 	const hard = shopOf(world(), { ...base, sort: "hardatk" })!;
@@ -90,12 +89,11 @@ test("Opened on a unit it shows its class with its model current; a better one p
 	const better = shopOf(w, { ...choice, eqid: PZ_IIIE })!;
 	const cost = upgradeCost(w, w.state.units[0], PZ_IIIE, -1);
 	expect(better.upgrade).toEqual({ cost, refusal: null, command: { type: "upgrade", unit: 0, eqid: PZ_IIIE, transport: -1 } });
-	expect(better.after).toEqual({ action: "upgrade", prestige: String(300 - cost) });
-	expect(better.picked).toMatchObject({ name: "Pz IIIE", against: "Pz IIA", line: "Tank · Hard target · Tracked · in service from 1939" });
+	expect(better.picked).toMatchObject({ name: "Pz IIIE", line: "Tank · Hard target · Tracked · in service from 1939" });
+	//its stats as the old window showed an entry's, no difference to the unit's (#441)
 	const e = w.equipment;
 	expect(better.picked!.compare.find((c) => c.name === "Hard attack")).toEqual({ name: "Hard attack", value: e[PZ_IIIE].hardatk,
-		fill: e[PZ_IIIE].hardatk / 15, delta: "+" + (e[PZ_IIIE].hardatk - e[PZ_IIA].hardatk), tone: "up" });
-	expect(better.picked!.compare.find((c) => c.name === "Range")!.delta).toBe("=");
+		fill: e[PZ_IIIE].hardatk / 15 });
 	//too dear: the old window's words
 	const poor = world((x) => { x.state.players[0].prestige = 50; });
 	expect(shopOf(poor, { ...choice, eqid: PZ_IVD })!.upgrade!.refusal).toBe(`Need ${upgradeCost(w, w.state.units[0], PZ_IVD, -1) - 50} more prestige to upgrade`);
@@ -115,7 +113,6 @@ test("Buy new: the model and its transport at the core's price; refused for pres
 	//an infantry model with a truck: both priced
 	const inf = shopOf(w, { ...base, uclass: unitClass.infantry, eqid: INFANTERIE, transport: OPEL })!;
 	expect(inf.buy).toMatchObject({ cost: unitCost(w, INFANTERIE, OPEL), command: { type: "buy", eqid: INFANTERIE, transport: OPEL } });
-	expect(inf.after).toEqual({ action: "buying", prestige: String(300 - unitCost(w, INFANTERIE, OPEL)) });
 });
 
 test("The transports that carry the model, with None; the unit's own is picked until another is, pressed again none (#348)", () => {
@@ -173,7 +170,8 @@ test("The unit list opens from the status bar's button; a card pressed selects i
 	const list = screen.getByRole("region", { name: "Your units" });
 	expect(list.id).toBe("container-unitlist");
 	expect(["hscroll-unitlist", "unitlist"].map((id) => list.querySelector("#" + id) !== null)).toEqual([true, true]);
-	expect(list.textContent).toContain("1 moved · 1 low on supply");
+	//(no counts in its header: the old list had none)
+	expect(list.textContent).not.toContain("low on supply");
 	const card = within(list).getByRole("button", { name: "Pz IIA 101st · moved, strength 10, low ammo" });
 	expect(card.className).toBe("pm-ucard is-done");
 	await act(() => { fireEvent.click(card); });
@@ -189,7 +187,7 @@ test("B opens the window on the selected unit; a model picked, Upgrade and Buy n
 	const win = document.getElementById("equipment")!;
 	expect(["eqSelClass", "eqUnitList", "eqActionsContainer", "eqSelCountryButton", "currentPrestige", "eqCloseBut", "eqSellBut", "eqUpgradeBut",
 		"eqNewBut", "eqSortOrderBut"].filter((id) => win.querySelector("#" + id) === null)).toEqual([]);
-	expect(within(win).getByRole("tab", { name: "Tank 9" }).getAttribute("aria-selected")).toBe("true");
+	expect(within(win).getByRole("tab", { name: "Tank" }).getAttribute("aria-selected")).toBe("true");
 	await act(() => { fireEvent.click(within(win).getByRole("button", { name: /^Pz IIIE,/ })); });
 	expect(store.shop.value!.picked!.name).toBe("Pz IIIE");
 	const cost = store.shop.value!.upgrade!.cost;
