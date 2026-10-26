@@ -27,14 +27,17 @@ function costsOf(w: World, movmethod: number): number[] {
 	return moveCosts(w.rules, w.state.scenario.ground, movmethod);
 }
 
+//The hexes the unit's leaders add to its moves: Aggressive Tank Maneuver and Aggressive Maneuver, one each
+export function leaderMoves(w: World, u: UnitState): number {
+	return (hasLeader(w, u, leaderType.aggressiveTankManeuver) ? 1 : 0) + (hasLeader(w, u, leaderType.aggressiveManeuver) ? 1 : 0);
+}
+
 //The most hexes a unit can move, terrain aside: its moves left and the leaders' extra hex, no more
 //than its fuel (#205: the leaders' hex came after the fuel, so a move could end below 0 fuel). A
 //towed gun without transport (not a fortification) moves 1
 export function unitMoveRange(w: World, u: UnitState): number {
-	let range = movesLeft(w, u);
+	let range = movesLeft(w, u) + leaderMoves(w, u);
 	const ud = unitData(w, u);
-	if (hasLeader(w, u, leaderType.aggressiveTankManeuver)) range += 1;
-	if (hasLeader(w, u, leaderType.aggressiveManeuver)) range += 1;
 	if (unitUsesFuel(w, u) && fuelOf(u) < range) range = fuelOf(u);
 	if (ud.movmethod === movMethod.towed && u.transport === null && range === 0 && ud.uclass !== unitClass.fortification)
 		range = 1;
