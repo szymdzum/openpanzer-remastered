@@ -11,6 +11,7 @@ import { type MapUnit, mapUnits, pathOf, selectionOf } from "../src/view/mapview
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
 import { hexIndex } from "../src/core/world";
 import { TOKENS } from "../src/view/tokens";
+import { hexCentre } from "../src/view/hexgrid";
 
 const MAP = TOKENS.map;
 
@@ -145,7 +146,7 @@ test("A unit on a bridge of its side is drawn as the bridge; an image not loaded
 
 //The overlays beside the move area: the fog, the hatched unseen hexes, the zone bars, the support fire and the
 //plaques, at screen size (the scale 2 here), in the card's order
-test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's order at screen size", () => {
+test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's order at screen size, the plaques under the units (#438)", () => {
 	const w = handWorld({ rows: 12, cols: 12, units: [{ eqid: 140, owner: 0, row: 4, col: 3 }, { eqid: 273, owner: 1, row: 4, col: 4 },
 		{ eqid: 262, owner: 1, row: 5, col: 5 }, { eqid: 273, owner: 1, row: 9, col: 9, tempSpotted: true }] }, undefined, { spotSide: 0 });
 	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
@@ -172,6 +173,11 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect([ops[zone].zoom, ops[arc].zoom, ops[arc].dash]).toEqual([2, 2, [5, 3]]);
 	expect(ops[ops.findIndex((o, i) => i > hatch && o.op === "stroke")]).toMatchObject({ strokeStyle: MAP["hex-hatch"], lineWidth: TOKENS.px["hex-hatch-width"] });
 	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Town  +50")).toBe(true);
+	//the plaques beneath the units, at the foot of their hexes, see-through (#438)
+	const unitDrawn = at((o) => o.op === "drawImage" || (o.op === "fillText" && o.args[0] === "10"));
+	expect(plaque).toBeLessThan(unitDrawn);
+	expect(ops[plaque].globalAlpha).toBe(0.7);
+	expect(ops[plaque].args[2] as number).toBeGreaterThan(toScreen(hexCentre(2, 2), vp(2)).y);
 	//the town's owner bar in the axis colour, the objective's in the allied; the revealed enemy's plate dotted
 	expect(ops.filter((o) => o.op === "fillRect" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"])).map((o) => o.fillStyle))
 		.toEqual([MAP["map-allied"], MAP["map-axis"]]);
