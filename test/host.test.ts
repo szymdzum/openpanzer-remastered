@@ -272,3 +272,14 @@ test("The screen that shows nothing tells the host the victories a move and an a
 	s.campaignEnd("victory", "text", () => { closed = true; });
 	expect([game.uiMessageClicked, closed]).toEqual([true, true]);
 });
+
+test("The screen's sprite and sound picks come from the cosmetic stream: the dice and the AI's draws don't move (#347)", () => {
+	Rng.seed(347);
+	const g = headlessGame(noting([]));
+	const game = Rng.game.state, ai = Rng.ai.state, cosmetic = Rng.cosmetic.state;
+	const n = g.host.cosmetic();
+	expect(n).toBeGreaterThanOrEqual(0);
+	expect(n).toBeLessThan(1);
+	expect([Rng.game.state, Rng.ai.state]).toEqual([game, ai]);
+	expect(Rng.cosmetic.state).not.toBe(cosmetic);
+});
