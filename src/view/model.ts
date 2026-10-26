@@ -7,7 +7,7 @@ import type { Command, Refusal } from "../commands";
 import { check } from "../core/step";
 import type { PlayerState, Position, UnitId, UnitState, World } from "../core/types";
 import { ammoOf, fuelOf, hexIndex, isSpotted, movesLeft, unitById, unitData } from "../core/world";
-import { countryNames, groundConditionNames, playerType, sideNames, unitClassNames } from "../prototypes";
+import { countryNames, groundConditionNames, playerType, sideNames, unitClass, unitClassNames } from "../prototypes";
 import type { IconName, Nation } from "./icon";
 
 //A state the status bar shows as an icon and a word: the weather, the ground
@@ -103,6 +103,20 @@ function countryOf(w: World, p: PlayerState | null): string {
 export function countryName(w: World, country: number): string {
 	const names = countryNames[w.data.equipment] || [];
 	return names[country] || "";
+}
+
+//The icon of a unit class (the equipment window's class tabs, the unit card's tag), null for a class the icon set has
+//none for (a fortification, a transport)
+const CLASS_ICONS: Partial<Record<number, IconName>> = {
+	[unitClass.infantry]: "infantry", [unitClass.tank]: "tank", [unitClass.recon]: "recon", [unitClass.antiTank]: "antitank",
+	[unitClass.flak]: "antiair", [unitClass.artillery]: "artillery", [unitClass.airDefence]: "antiair", [unitClass.fighter]: "fighter",
+	[unitClass.tacticalBomber]: "bomber", [unitClass.levelBomber]: "bomber", [unitClass.submarine]: "naval", [unitClass.destroyer]: "naval",
+	[unitClass.battleship]: "naval", [unitClass.carrier]: "naval", [unitClass.battleCruiser]: "naval", [unitClass.cruiser]: "naval",
+	[unitClass.lightCruiser]: "naval",
+};
+
+export function classIcon(uclass: number): IconName | null {
+	return CLASS_ICONS[uclass] || null;
 }
 
 //The flag of a country by its name, null for one the icon set has no mark for
