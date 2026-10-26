@@ -41,10 +41,12 @@ type AnchoredProps = {
 	role?: AriaRole,
 	label?: string,
 	children?: ComponentChildren,
+	//the id the harness, the tests and the shortcuts find it by (#unit-context)
+	id?: string,
 };
 
 //Hidden for the one layout pass it takes to measure itself, then placed before the browser paints
-export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label, children }: AnchoredProps) {
+export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label, children, id }: AnchoredProps) {
 	const ref = useRef<HTMLDivElement>(null);
 	const [at, setAt] = useState<Point | null>(null);
 	useLayoutEffect(() => {
@@ -56,5 +58,5 @@ export function Anchored({ hex: { x, y }, place, gap, class: extra, role, label,
 	//new content may change the panel's size: measured again with it
 	}, [x, y, place, gap, children]);
 	const style = at ? { left: at.x + "px", top: at.y + "px" } : { visibility: "hidden" };
-	return <div ref={ref} class={extra ? "pm-panel " + extra : "pm-panel"} style={style} role={role} aria-label={label}>{children}</div>;
+	return <div ref={ref} id={id} class={extra ? "pm-panel " + extra : "pm-panel"} style={style} role={role} aria-label={label}>{children}</div>;
 }

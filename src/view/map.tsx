@@ -1,5 +1,5 @@
 //The map (#345): the canvas the map is drawn on (src/view/mapdraw.ts) under a scrolling layer that takes
-//the pointer, and the move path's tag (MovePath) over it. A click selects, moves or attacks through the
+//the pointer, and over it the move path's tag (MovePath) and the selected unit's context menu (UnitContext, #346). A click selects, moves or attacks through the
 //store (src/view/store.ts), which asks the view model (src/view/mapview.ts) what it does. The canvas is
 //drawn again, once a frame at most, when what it shows changes: the world, the selection, the hovered
 //hex, the scroll, the window's size, an image that loaded.
@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
+import { UnitContextMenu } from "./contextmenu";
 import type { Ghost } from "./deploy";
 import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
@@ -248,6 +249,8 @@ export function MapView({ store }: { store: Store }) {
 	const path = store.path.value;
 	const end = path === null ? null : path.cells[path.cells.length - 1];
 	const ghost = store.ghost.value;
+	//(the selected unit's actions above its hex, UnitContext)
+	const menu = store.context.value;
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	return (
 		<div class={strategic ? "pm-mapview strategic" : "pm-mapview"}>
@@ -257,6 +260,8 @@ export function MapView({ store }: { store: Store }) {
 				<div class="pm-mapview-area" style={{ inlineSize: size.width + "px", blockSize: size.height + "px" }} />
 			</div>
 			{end !== null && <PathTag store={store} at={toScreen(hexCentre(end.row, end.col), vp)} />}
+			{menu !== null && <UnitContextMenu store={store} at={toScreen(hexCentre(menu.at.row, menu.at.col), vp)}
+				gap={TOKENS.px["hex-h"] / 2 * scale + 4} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={toScreen(hexCentre(ghost.row, ghost.col), vp)} gap={TOKENS.px["hex-w"] / 2 * scale + 6} />}
 		</div>
 	);

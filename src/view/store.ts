@@ -16,6 +16,7 @@ import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
 import { type ActionKey, endTurnRefusal, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
+import { contextOf, type UndoLoss, undoLoss } from "./context";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -50,6 +51,8 @@ export function createStore(host: StoreHost) {
 	const railOpen = signal(true);
 	const labels = signal(true);
 	const asking = signal<string[] | null>(null);
+	//why the last undo went, from the step that took it (src/view/context.ts undoLoss)
+	const lost = signal<UndoLoss | null>(null);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -69,6 +72,9 @@ export function createStore(host: StoreHost) {
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
+	//the selected unit's context menu (UnitContext), none while deploying or on the strategic map
+	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value ? null
+		: contextOf(world.value, selected.value, lost.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
@@ -95,9 +101,13 @@ export function createStore(host: StoreHost) {
 	//A person's command sent to the host: the screen shows the step at once (the animations are D4's),
 	//then its victories are told; refused, the reason, which the status bar shows until the next command
 	const dispatch = (cmd: Command): string | null => {
+		const before = world.value;
 		const r = host.command(cmd);
 		refresh();
 		if (r.ok) host.won(r.result);
+		//(why the undo went, which the core doesn't keep: the context menu says it, #316)
+		const loss = r.ok && before !== null && world.value !== null ? undoLoss(before, cmd, world.value) : null;
+		if (loss !== null) lost.value = loss;
 		refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
 		return refused.value;
 	};
@@ -119,10 +129,10 @@ export function createStore(host: StoreHost) {
 	//A unit key (M, E, S, R, O, U): the selected unit's action of that key that it can take now, sent as its button
 	//sends it; none it can take, the reason of the first in the status line (the same rule and refusal as the button)
 	const unitKey = (key: ActionKey) => {
-		const actions = unit.value === null ? [] : unit.value.actions.filter((a) => a.key === key);
-		const ready = actions.find((a) => a.refusal === null);
-		if (ready !== undefined) dispatch(ready.command);
-		else if (actions.length > 0) refused.value = actions[0].refusal;
+		const action = context.value === null ? undefined : context.value.actions.find((a) => a.key === key);
+		if (action === undefined) return;
+		if (action.refusal === null) dispatch(action.command);
+		else refused.value = action.label + ": " + action.refusal;
 	};
 
 	//N and P: the next or previous unit that hasn't moved, selected and in the middle of the map
@@ -166,7 +176,7 @@ export function createStore(host: StoreHost) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, toggleAir,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
