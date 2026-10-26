@@ -22,7 +22,7 @@ import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
 import { outcomeNames } from "../prototypes";
-import { contextOf, type UndoLoss, undoLoss } from "./context";
+import { contextOf } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
 import { blockedOf, glanceOf, oddsOf } from "./odds";
@@ -71,8 +71,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const railOpen = signal(true);
 	const labels = signal(true);
 	const asking = signal<string[] | null>(null);
-	//why the last undo went, from the step that took it (src/view/context.ts undoLoss)
-	const lost = signal<UndoLoss | null>(null);
 	//the hex the pointer rests on, or a finger held (the hex tooltip, Tooltips), null: none
 	const rested = signal<Position | null>(null);
 	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
@@ -145,7 +143,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		: undefined);
 	//the selected unit's context menu (UnitContext), none while deploying, on the strategic map or while a unit moves on it
 	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value
-		|| moving.value !== null ? null : contextOf(world.value, selected.value, lost.value));
+		|| moving.value !== null ? null : contextOf(world.value, selected.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
@@ -196,17 +194,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		news.value = null;
 		refresh();
 		//(a command played had a world to start from: with none, no game is playing and the host refuses it)
-		if (r.ok) played(cmd, before!, r.result);
+		if (r.ok) showStep(before!, eventsOf(r.result), () => host.won(r.result));
 		refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
 		return refused.value;
-	};
-
-	//A command played: what it told over the map, its victories, and why the undo went, which the core doesn't keep (the
-	//context menu says it, #316)
-	const played = (cmd: Command, before: World, result: Parameters<StoreHost["won"]>[0]) => {
-		showStep(before, eventsOf(result), () => host.won(result));
-		const loss = undoLoss(before, cmd, world.value!);
-		if (loss !== null) lost.value = loss;
 	};
 
 	//A reserve unit picked to deploy (its core list index), or none: deploying ends. Nothing stays selected
@@ -224,13 +214,11 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		refused.value = null;
 	};
 
-	//A unit key (M, E, S, R, O, U): the selected unit's action of that key that it can take now, sent as its button
-	//sends it; none it can take, the reason of the first in the status line (the same rule and refusal as the button)
+	//A unit key (M, E, S, R, O, U): the selected unit's action of that key, sent as its button sends it; nothing when the
+	//menu doesn't show it, as the old UI's keys did
 	const unitKey = (key: ActionKey) => {
 		const action = context.value === null ? undefined : context.value.actions.find((a) => a.key === key);
-		if (action === undefined) return;
-		if (action.refusal === null) dispatch(action.command);
-		else refused.value = action.label + ": " + action.refusal;
+		if (action !== undefined) dispatch(action.command);
 	};
 
 	//N and P: the next or previous unit that hasn't moved, selected and in the middle of the map
@@ -314,7 +302,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
 		results, news, motion, showStep, card, ...shops, tray, combatLog, dossier, campaignEnd,
 

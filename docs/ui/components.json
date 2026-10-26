@@ -398,9 +398,9 @@
 	{
 		"name": "UnitContext",
 		"group": "Screens · In game",
-		"width": 1440,
-		"height": 1000,
-		"subtitle": "Unit context menu (#unit-context) with the real amounts: what Supply and Reinforce will give, the cost, why an action is missing",
+		"width": 1000,
+		"height": 412,
+		"subtitle": "Unit context menu (#unit-context): the old menu's icon buttons, docked at the bottom above the unit info, only the actions the unit can take now",
 		"status": "Ready",
 		"readme": true
 	},

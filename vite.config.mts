@@ -218,7 +218,7 @@ export default defineConfig({
 				"src/view/shortcuts.ts": { statements: 87, branches: 100, functions: 50, lines: 83 },
 				"src/view/infopanel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/unitinfo.ts": { statements: 95, branches: 100, functions: 83, lines: 93 },
-				"src/view/context.ts": { statements: 99, branches: 100, functions: 95, lines: 98 },
+				"src/view/context.ts": { statements: 97, branches: 100, functions: 88, lines: 96 },
 				"src/view/contextmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/hextip.ts": { statements: 97, branches: 100, functions: 85, lines: 96 },
 				"src/view/maptips.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },

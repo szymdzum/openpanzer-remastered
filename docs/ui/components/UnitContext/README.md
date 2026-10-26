@@ -1,26 +1,25 @@
-The actions for the selected unit (`#unit-context`), in one row above its hex. These are the six the game has (`updateUnitContextWindow`): Supply, Reinforce, Overstrength, Mount or Unmount, Embark or Disembark, and Undo move. Upgrade and disband are in the equipment window, and there is no entrench action, so none of them is here.
+The actions for the selected unit (`#unit-context`), as the old UI's menu (`updateUnitContextWindow`, src/ui.ts:742): the same buttons, by the same rules, in the same place (#437, the 1:1 port rule of PLAN.md).
 
-**Every button says what it will do,** in a second line computed with the same functions the action uses:
+**Where:** docked at the bottom in the middle, just above the unit info (UnitInfo), as the old `#unit-context` stood (game/css/ui.css). It never covers the map around the selected unit, so every hex it can move to or attack stays clickable (#429).
 
-- **Supply:** `getResupplyValue` gives "+5 ammo · +14 fuel". For a mounted unit, the transport's fuel is added in.
-- **Reinforce:** `getReinforceValue` gives the points, capped by what the prestige buys (`reinforceUnit`). The cost is `calculateUnitCostPerStrength` times the points: "+2 · 56". When the prestige covers only part, it says "+1 of 2 · 28" in `low`.
-- **Overstrength:** the same, up to 10 plus one per experience bar, at ×1.2 the cost (`OVERSTRENGTH_PENALTY`).
-- **Mount:** names the transport. **Embark:** names the kind, naval or air.
-- **Undo move:** names the hex the unit goes back to.
+**What:** one small icon button for each action the unit can take now, in the old menu's order. An action it can't take isn't there. No button, no menu.
 
-**Tooltip on hover or long-press** (`.pm-ctxtip`): the arithmetic behind the number. Missing points, each divisor that applied, what it gets, the cost, what it also refills, and the best case: "In a city with no enemy next to it: +4 for 112". Last comes the line every player needs and the game never says: **either action ends the unit's turn** (`Unit.resupply` sets `hasMoved` and `hasFired`).
-
-**An action that isn't possible stays, disabled, with the reason as its second line.** Today it disappears. Supply, Reinforce and Undo are always there; Overstrength, Mount and Embark only appear where they could apply.
-
-| Reason | When (code) |
+| Action | Shown when (the old menu's rule) |
 | --- | --- |
-| moved | `hasMoved`, `hasFired`, or `hasOverstrength` (set by moving or firing) |
-| full | nothing missing |
-| needs 28 | prestige below one point (today the button is hidden) |
-| no airfield | aircraft without an airfield next to it |
-| not in port | ship out of a port (#19) |
-| revealed units / ambushed / after an attack | the undo slot was cleared (`lastMove`) |
+| Mount or Unmount | `canMount`: a ground unit with a transport, before it moves |
+| Embark or Disembark | `canEmbark` or `canDisembark` |
+| Supply | `canResupply`: it hasn't moved, fired or resupplied, misses ammo or fuel, and can be supplied where it stands |
+| Reinforce | the prestige for one point at the unit's price (`calculateUnitCostPerStrength`), and `canReinforce` |
+| Overstrength | the same, with `canReinforce(…, true)`: full strength and an experience bar |
+| Undo move | its move is the last one the turn can take back |
 
-Today resupply also adds 1 ammo and 1 fuel when nothing is missing (#95). The menu shows only what is missing, so it doesn't promise that extra point.
+**Tooltip and name:** what the action is, then what it gives, computed with the functions the action runs. It is the button's title on hover and its accessible name; the key that plays it (M, E, S, R, O, U) is its `aria-keyshortcuts`.
 
-Keep `#unit-context`. Position it from the hex centre, clamped to the screen with `space-3` from the edges. `SupplyRules` has the divisors in one table.
+- Supply: "Supply: +5 ammo, +14 fuel" (`getResupplyValue`; a mounted unit's transport's share added in).
+- Reinforce, Overstrength: "Reinforce: +2 for 56 prestige", or "+1 of 2 for 28 prestige" when the prestige pays for part of it (`getReinforceValue`, `reinforceUnit`; overstrength at ×1.2, `OVERSTRENGTH_PENALTY`).
+- Mount: "Mount: on Opel Blitz". Embark: "Embark: naval transport".
+- Undo move: "Undo move: back to 10,18".
+
+**Size:** 32 px buttons in one row; under `(pointer: coarse)` the full hit target (`--hit-target`).
+
+Left out, as the old menu had none of them (#437): a second line under each button, disabled actions with their reasons (#316), and the sum behind Supply and Reinforce in a tooltip. They may come back after the switch (D8), one at a time.

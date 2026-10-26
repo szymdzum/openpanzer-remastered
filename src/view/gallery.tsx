@@ -220,21 +220,10 @@ function Hex({ x, y }: { x: number, y: number }) {
 
 function UnitContextCard() {
 	return (
-		<Stage height={200}>
-			<Hex x={300} y={150} />
-			<Anchored hex={{ x: 300, y: 150 }} place="above" gap={30} class="pm-ctx" role="toolbar" label="Unit actions">
-				<Button icon="resupply" line="+5 ammo · +14 fuel">Supply</Button>
-				<Button icon="reinforce" line="+1 of 2" cost={28} partial>Reinforce</Button>
-				<span class="pm-sep" />
-				<Button icon="undo" disabled="revealed units" line="to 10,18">Undo move</Button>
-			</Anchored>
-			{/* clamped: a hex at the right edge keeps its menu on the stage */}
-			<Hex x={880} y={150} />
-			<Anchored hex={{ x: 880, y: 150 }} place="above" gap={30} class="pm-ctx" role="toolbar" label="Unit actions at the edge">
-				<Button icon="resupply" disabled="moved" line="+5 ammo">Supply</Button>
-				<Button icon="reinforce" disabled="needs 28" line="+2" cost={56}>Reinforce</Button>
-			</Anchored>
-		</Stage>
+		<Panel class="pm-ctx" static role="toolbar" label="Unit actions">
+			{([["resupply", "Supply: +5 ammo, +14 fuel"], ["reinforce", "Reinforce: +1 of 2 for 28 prestige"], ["undo", "Undo move: back to 10,18"]] as const)
+				.map(([icon, tip]) => <button key={icon} type="button" class="pm-btn icon" title={tip} aria-label={tip}><Icon name={icon} /></button>)}
+		</Panel>
 	);
 }
 

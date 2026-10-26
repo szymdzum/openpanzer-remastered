@@ -142,7 +142,7 @@ test("N and P select the next and previous unit of the player that hasn't moved,
 	expect([neighbourUnit(w, 0, 1), neighbourUnit(w, 0, -1), neighbourUnit(w, 4, 1), neighbourUnit(w, 99, 1)]).toEqual([1, 3, 4, 99]);
 });
 
-test("The unit keys play the selected unit's action as its button would, or say why it can't (#346)", async () => {
+test("The unit keys play the selected unit's action as its button would, and do nothing for an action it doesn't show (#437)", async () => {
 	const { store, sent } = railOf();
 	await act(() => { store.clickHex({ row: 4, col: 3 }); });
 	await act(() => { store.clickHex({ row: 4, col: 4 }); });
@@ -150,14 +150,9 @@ test("The unit keys play the selected unit's action as its button would, or say 
 	await key("KeyU");
 	expect(sent[sent.length - 1]).toEqual({ type: "undo", unit: 0 });
 	expect(store.unit.value!.at).toEqual({ row: 4, col: 3 });
-	//S and R: a full tank can't; the action's reason in the status line. O, M and E: no such button for it, nothing
-	await key("KeyS");
-	expect(store.refused.value).toBe("Supply: full");
-	await key("KeyR");
-	expect(store.refused.value).toBe("Reinforce: full");
-	for (const code of ["KeyO", "KeyM", "KeyE"]) await key(code);
-	expect(store.refused.value).toBe("Reinforce: full");
-	expect(sent.length).toBe(2);
+	//S, R, O, M and E: a full tank has no such button, nothing is sent or said, as the old UI's keys did
+	for (const code of ["KeyS", "KeyR", "KeyO", "KeyM", "KeyE"]) await key(code);
+	expect([sent.length, store.refused.value]).toEqual([2, null]);
 	//No unit selected: nothing
 	await act(() => { store.clickHex({ row: 9, col: 9 }); });
 	await key("KeyS");
