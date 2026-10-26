@@ -2,7 +2,7 @@
 //through it, the person's commands sent from its controls, the AI's turn shown, the tutorial's orders
 //clicked through; and its signals (src/view/store.ts), which render again only what changed
 import { afterEach, expect, test, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { fakeMapImages, until } from "./lifecycle";
 import { headlessGame } from "./headlessgame";
 import { smallGame, smallGameData } from "./smallgame";
@@ -39,7 +39,7 @@ async function playing(file: string, ai: number[], rules: "classic" | "remaster"
 }
 
 const ok = () => screen.getByRole("button", { name: "OK" });
-const endTurn = () => screen.getByRole("button", { name: /End turn/ });
+const endTurn = () => document.querySelector<HTMLButtonElement>("#endturn button")!;
 const turnShown = () => document.querySelector(".pm-status .cell")!.textContent;
 
 test("A scenario plays a whole turn on the new screen: the briefing, the person's End turn, the AI's turn, the next turn (#380)", async () => {
@@ -56,6 +56,10 @@ test("A scenario plays a whole turn on the new screen: the briefing, the person'
 	const ai = g.scenario.map.getPlayers().find((p) => p.side === 1)!;
 	expect(ai.playedTurn).toBe(-1);
 	await act(() => { fireEvent.click(endTurn()); });
+	//(its units can all still act: End turn asks first, #8)
+	const question = screen.getByRole("dialog");
+	expect(question.querySelector("p")!.textContent).toMatch(/^\d+ units can still move or fire: /);
+	await act(() => { fireEvent.click(within(question).getByRole("button", { name: "End turn" })); });
 	await act(async () => { await until(() => g.scenario.map.currentPlayer.side === 0 && g.host.world()!.state.turn.turn === 2, "the person's next turn"); });
 	expect(ai.playedTurn).toBe(1);
 	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn2/" + g.scenario.maxTurns, "Germany · Axis"]);
@@ -87,11 +91,11 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	await act(() => { g.host.screen.view({ type: "select", unit: unit.id }, () => {}); });
 	expect(document.querySelector(".pm-status .msg b")!.textContent).toBe(unit.unitData().name);
 	//the status line starts with the air layer while it is on (AirLayer)
-	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
+	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" })); });
 	expect([...document.querySelectorAll(".pm-status .msg b")].map((b) => b.textContent)).toEqual(["Air layer", unit.unitData().name]);
-	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a" })); });
+	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "a", code: "KeyA" })); });
 	//on the strategic map, how to leave it (StrategicMap)
-	const key = (k: string) => act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: k })); });
+	const key = (k: string) => act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: k, code: "Key" + k.toUpperCase() })); });
 	await key("z");
 	//(drawn under the status bar)
 	await act(() => new Promise((r) => requestAnimationFrame(() => r(null))));
@@ -101,7 +105,8 @@ test("The selected unit's actions are sent to the host, and a refusal shows in t
 	await key("a");
 	await key("z");
 	const actions = [...document.querySelectorAll(".pm-actions button")];
-	expect(actions.map((b) => b.firstChild!.textContent)).toEqual(["Resupply", "Reinforce", "Mount", "Dismount", "Embark", "Disembark", "Undo move"]);
+	expect(actions.map((b) => b.firstChild!.textContent)).toEqual(["Resupply", "Reinforce", "Overstrength", "Mount", "Dismount", "Embark",
+		"Disembark", "Undo move"]);
 	//An action the host refuses (sent anyway, as a stale control would): its reason in the status bar
 	const store = createStore(g.host);
 	await act(() => { store.dispatch({ type: "undo", unit: unit.id }); });

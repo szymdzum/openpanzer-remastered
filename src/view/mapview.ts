@@ -104,6 +104,15 @@ function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove"
 	return { canMove, canFire, noAmmo: fires && !canFire, done: !canMove && !fires };
 }
 
+//The current player's units that can still move or fire this turn: what End turn warns of when a person plays it (#8)
+export function unitsToAct(w: World): UnitState[] {
+	return w.state.units.filter((u) => {
+		if (u.row < 0) return false;
+		const r = readiness(w, u, true);
+		return r.canMove || r.canFire;
+	});
+}
+
 function markerOf(w: World, u: UnitState): Marker {
 	const own = sideOf(w, u) === w.spotSide;
 	return { strength: u.strength, own, ...readiness(w, u, own), bars: Math.min(Math.floor(u.experience / 100), 5),

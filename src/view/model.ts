@@ -34,8 +34,12 @@ export interface Status {
 }
 
 //An action on the selected unit: the command it sends and why it can't now (null: it can)
+//The keys that play a unit's action (GameMenu): M mount or dismount, E embark or disembark, S, R, O, U
+export type ActionKey = "mount" | "embark" | "resupply" | "reinforce" | "overstrength" | "undo";
+
 export interface Action {
 	label: string;
+	key: ActionKey;
 	command: Command;
 	refusal: string | null;
 }
@@ -149,16 +153,23 @@ export function endTurnRefusal(w: World): string | null {
 	return refusalOf(w, { type: "endTurn" });
 }
 
+//End turn's question (#8): how many of the person's units can still move or fire, and the first of them by name
+export function stillToAct(names: string[]): string {
+	const n = names.length, shown = names.slice(0, 6).join(", ");
+	return (n === 1 ? "1 unit" : n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
+}
+
 //What a unit on the map can be told to do in place, in the unit context's order. The move and the attack
 //are the map's (D2), the purchases and the disband the windows' (D5), with their confirmations
-const ACTIONS: [string, (id: UnitId) => Command][] = [
-	["Resupply", (unit) => ({ type: "resupply", unit })],
-	["Reinforce", (unit) => ({ type: "reinforce", unit })],
-	["Mount", (unit) => ({ type: "mount", unit })],
-	["Dismount", (unit) => ({ type: "unmount", unit })],
-	["Embark", (unit) => ({ type: "embark", unit })],
-	["Disembark", (unit) => ({ type: "disembark", unit })],
-	["Undo move", (unit) => ({ type: "undo", unit })],
+const ACTIONS: [string, ActionKey, (id: UnitId) => Command][] = [
+	["Resupply", "resupply", (unit) => ({ type: "resupply", unit })],
+	["Reinforce", "reinforce", (unit) => ({ type: "reinforce", unit })],
+	["Overstrength", "overstrength", (unit) => ({ type: "reinforce", unit, overstrength: true })],
+	["Mount", "mount", (unit) => ({ type: "mount", unit })],
+	["Dismount", "mount", (unit) => ({ type: "unmount", unit })],
+	["Embark", "embark", (unit) => ({ type: "embark", unit })],
+	["Disembark", "embark", (unit) => ({ type: "disembark", unit })],
+	["Undo move", "undo", (unit) => ({ type: "undo", unit })],
 ];
 
 //A unit as the side shown sees it, null when it isn't on the map or is an enemy hidden in the fog
@@ -173,5 +184,15 @@ export function unitView(w: World, id: UnitId): UnitView | null {
 		at: { row: u.row, col: u.col }, place: w.data.hexes[hexIndex(w, u.row, u.col)].name, strength: u.strength, moves: movesLeft(w, u),
 		movpoints: e.movpoints, fuel: fuelOf(u), ammo: ammoOf(u),
 		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired,
-		actions: ACTIONS.map(([label, command]) => ({ label, command: command(id), refusal: refusalOf(w, command(id)) })) };
+		actions: ACTIONS.map(([label, key, command]) => ({ label, key, command: command(id), refusal: refusalOf(w, command(id)) })) };
+}
+
+//The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the
+//list; the unit itself when it is the only one (Map.getUnitNeighbor with onlyNotMoved)
+export function neighbourUnit(w: World, id: UnitId, direction: 1 | -1): UnitId {
+	const u = unitById(w, id);
+	if (u === null) return id;
+	const list = w.state.units.filter((x) => x.owner === u.owner && x.row >= 0 && (x.id === id || !x.hasMoved));
+	const at = list.findIndex((x) => x.id === id);
+	return at < 0 ? id : list[(at + direction + list.length) % list.length].id;
 }
