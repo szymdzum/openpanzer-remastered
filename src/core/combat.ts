@@ -39,7 +39,7 @@ function leaderStep(name: string, leader: number, run: (f: Fight, atk: boolean, 
 }
 
 //In a river or a stream, with no road
-function inRiver(terrain: number, road: number): boolean {
+export function inRiver(terrain: number, road: number): boolean {
 	return (terrain === terrainType.River || terrain === terrainType.Stream) && road === roadType.none;
 }
 
