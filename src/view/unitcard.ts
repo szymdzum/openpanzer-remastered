@@ -1,5 +1,5 @@
-//The unit card's view model (UnitCard, #348 with #37): everything the old unit info window said about a unit (uiInfo:
-//updateUnitInfoWindow), written out as the card's sheet, and no more (docs/ui/PLAN.md, a 1:1 port): its identity
+//The unit card's view model (UnitInfo, #348 with #37): everything the old unit info window said about a unit (uiInfo:
+//updateUnitInfoWindow), for the one card docked at the bottom, and no more (docs/ui/PLAN.md, a 1:1 port): its identity
 //and tags, its experience, its condition, every stat, move, range, spotting and value, its leaders. The old window's
 //buttons are the card's views: the unit itself, its transport, the carrier it rides. An equipment entry (the
 //equipment window's) is shown as the old window showed it, full and new. From the core's World and nothing else
@@ -18,6 +18,9 @@ import { type Gauge, type LeaderLine, leadersOf, supplyState } from "./unitinfo"
 //What the card shows of a unit: itself, the transport it has (mounted or not), the carrier it rides
 export type CardView = "unit" | "transport" | "carrier";
 
+//How much of the map the card takes: a strip (name and supply), one row, or unfolded over the map
+export type CardSize = "strip" | "row" | "full";
+
 //A tag under the name: what the rules care about
 export interface CardTag {
 	text: string;
@@ -25,9 +28,10 @@ export interface CardTag {
 	core: boolean; //the core tag, in brass
 }
 
-//An attack or defence stat: its bar on the 0-15 scale
+//An attack or defence stat: its bar on the 0-15 scale; short: its name in the folded card's sheet
 export interface CardStat {
 	name: string;
+	short: string;
 	value: number;
 	fill: number;
 }
@@ -46,12 +50,13 @@ export interface UnitCard {
 	sub: string; //"1st Tank · Germany"
 	sprite: string; //the sprite strip's file
 	tags: CardTag[];
-	bars: number;
+	stars: number; //one per 100 XP, five at most
 	xp: string; //"120 XP"
 	condition: Gauge[];
 	attack: CardStat[];
 	defence: CardStat[];
 	figures: CardFigure[];
+	sheet: { name: string, value: number }[]; //the folded card's twelve: attack, defence, initiative, range, spotting, move
 	leaders: LeaderLine[];
 	//the views it has besides the one shown (the old window's transport and carrier buttons), and the one shown
 	views: CardView[];
@@ -61,7 +66,7 @@ export interface UnitCard {
 
 //The stats' scale: the bars run to 15
 const SCALE = 15;
-const XP_BAR = 100, MAX_BARS = 5;
+const XP_STAR = 100, MAX_STARS = 5;
 
 //A unit's ordinal as the old window wrote it before the name (UIBuilder.unitIDToOrdinal): 1st, 2nd, 11th, 101st for 0
 export function ordinal(id: number): string {
@@ -90,9 +95,8 @@ export function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
 	return tags;
 }
 
-function xpOf(experience: number): { bars: number, xp: string } {
-	const bars = Math.min(MAX_BARS, Math.floor(experience / XP_BAR));
-	return { bars, xp: experience + " XP" };
+function xpOf(experience: number): { stars: number, xp: string } {
+	return { stars: Math.min(MAX_STARS, Math.floor(experience / XP_STAR)), xp: experience + " XP" };
 }
 
 //"1st Tank · Germany"; a unit with no country of its own (a fortification): its class alone
@@ -119,14 +123,15 @@ function conditionOf(e: EquipmentEntry, s: Supply): Gauge[] {
 	];
 }
 
-const stat = (name: string, value: number): CardStat => ({ name, value, fill: Math.min(1, Math.max(0, value) / SCALE) });
+const stat = (name: string, short: string, value: number): CardStat => ({ name, short, value, fill: Math.min(1, Math.max(0, value) / SCALE) });
 
 //The stats as the old window listed them
 function statsOf(e: EquipmentEntry): { attack: CardStat[], defence: CardStat[] } {
 	return {
-		attack: [stat("Soft", e.softatk), stat("Hard", e.hardatk), stat("Air", e.airatk), stat("Naval", e.navalatk)],
-		defence: [stat("Ground", e.grounddef), stat("Air", e.airdef), stat("Close", e.closedef), stat("Ranged", e.rangedefmod),
-			stat("Initiative", e.initiative)],
+		attack: [stat("Soft", "Soft atk", e.softatk), stat("Hard", "Hard atk", e.hardatk), stat("Air", "Air atk", e.airatk),
+			stat("Naval", "Naval atk", e.navalatk)],
+		defence: [stat("Ground", "Gnd def", e.grounddef), stat("Air", "Air def", e.airdef), stat("Close", "Close def", e.closedef),
+			stat("Ranged", "Ranged def", e.rangedefmod), stat("Initiative", "Initiative", e.initiative)],
 	};
 }
 
@@ -137,6 +142,13 @@ function figuresOf(e: EquipmentEntry, move: number, range: number, spot: number,
 		{ label: "Spotting", value: spot, prestige: false },
 		{ label: "Value", value: cost, prestige: true },
 	];
+}
+
+//The folded sheet: every attack and defence stat by its short name, then range, spotting and move (value waits unfolded)
+function sheetOf(stats: { attack: CardStat[], defence: CardStat[] }, figures: CardFigure[]): UnitCard["sheet"] {
+	const [move, range, spotting] = figures;
+	return [...stats.attack, ...stats.defence].map((s) => ({ name: s.short, value: s.value }))
+		.concat([range, spotting, move].map((f) => ({ name: f.label, value: f.value })));
 }
 
 //The views a unit has: itself, and its transport when it has one; the carrier while it rides one
@@ -167,12 +179,13 @@ export function unitCardOf(w: World, id: UnitId, view: CardView | null): UnitCar
 	//(range and spotting as the rules count them, the leaders' hexes in them: the unit's own data, as the panel shows it)
 	const range = t === null ? unitAttackRange(w, { ...u, isMounted: false, carrier: 0 }) : (e.gunrange || 1);
 	const spot = t === null ? unitSpotRange(w, { ...u, isMounted: false, carrier: 0 }) : e.spotrange;
+	const stats = statsOf(e), figures = figuresOf(e, leaderMoves(w, u), range, spot, unitCost(w, u.eqid, u.transport === null ? undefined : u.transport.eqid));
 	return {
 		unit: id, name: own.name, nation: nationOf(country), sub: subOf(order + unitClassNames[own.uclass], country),
 		sprite: e.icon as unknown as string, tags: tagsOf(e, u.isCore), ...xpOf(u.experience),
 		condition: conditionOf(e, { strength: u.strength, fuel: t === null ? u.fuel : t.fuel, ammo: t === null ? u.ammo : t.ammo,
 			entrenchment: u.entrenchment, dug }),
-		...statsOf(e), figures: figuresOf(e, leaderMoves(w, u), range, spot, unitCost(w, u.eqid, u.transport === null ? undefined : u.transport.eqid)),
+		...stats, figures, sheet: sheetOf(stats, figures),
 		leaders: leadersOf(w, u.leader, own.uclass), views, view: shown, next: w.state.players[u.owner].side === w.spotSide,
 	};
 }
@@ -180,10 +193,11 @@ export function unitCardOf(w: World, id: UnitId, view: CardView | null): UnitCar
 //The card of an equipment entry (the equipment window's, a carrier's): new and full, as the old window filled it
 export function entryCardOf(w: World, eqid: number, country: number): UnitCard {
 	const e = w.equipment[eqid], name = countryName(w, country);
+	const stats = statsOf(e), figures = figuresOf(e, 0, e.gunrange || 1, e.spotrange, unitCost(w, eqid));
 	return {
 		unit: null, name: e.name, nation: nationOf(name), sub: subOf(unitClassNames[e.uclass], name), sprite: e.icon as unknown as string,
 		tags: tagsOf(e, null), ...xpOf(0),
 		condition: conditionOf(e, { strength: 10, fuel: e.fuel, ammo: e.ammo, entrenchment: 0, dug: 0 }),
-		...statsOf(e), figures: figuresOf(e, 0, e.gunrange || 1, e.spotrange, unitCost(w, eqid)), leaders: [], views: [], view: "unit", next: false,
+		...stats, figures, sheet: sheetOf(stats, figures), leaders: [], views: [], view: "unit", next: false,
 	};
 }

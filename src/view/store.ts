@@ -16,8 +16,7 @@ import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
 import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
-import { unitInfoOf } from "./unitinfo";
-import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
+import { type CardSize, type CardView, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
@@ -88,10 +87,10 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//while it moves; the map takes no click meanwhile
 	const motion = signal<Motion | null>(null);
 	const moving = signal<UnitId | null>(null);
-	//The unit card open (UnitCard): the selected unit's, in the view picked for that unit (none: the one it opens on), or
-	//an equipment entry's (the equipment window's); null: closed
-	const cardOpen = signal<{ unit: UnitId | null, view: CardView | null } | { eqid: number, country: number } | null>(null);
-	const closeCard = () => { cardOpen.value = null; };
+	//The unit card at the bottom (UnitInfo): the view picked for a unit (none, or another unit's: the one it opens on), and
+	//its size: a strip, one row, or unfolded over the map
+	const cardView = signal<{ unit: UnitId, view: CardView } | null>(null);
+	const cardSize = signal<CardSize>("row");
 	let busy = false;
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
@@ -114,12 +113,10 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
-	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
 	const card = computed(() => {
-		const w = world.value, open = cardOpen.value;
-		if (w === null || open === null) return null;
-		if ("eqid" in open) return entryCardOf(w, open.eqid, open.country);
-		return selected.value === null ? null : unitCardOf(w, selected.value, open.unit === selected.value ? open.view : null);
+		const w = world.value, id = selected.value, picked = cardView.value;
+		if (w === null || id === null) return null;
+		return unitCardOf(w, id, picked !== null && picked.unit === id ? picked.view : null);
 	});
 	//the pins over the side playing's units, cleared with the labels (L)
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
@@ -276,9 +273,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
+		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
-		results, news, motion, showStep, card, ...shops, tray, combatLog, dossier, campaignEnd,
+		results, news, motion, showStep, card, cardSize, ...shops, tray, combatLog, dossier, campaignEnd,
 
 		//Either report's Dossier: the campaign's record over them
 		openDossier() {
@@ -316,16 +313,14 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			if (w !== null) log.value = logTurnStart(log.value, w, events);
 		},
 
-		//The unit card opened on the selected unit, or on an equipment entry of a country
-		openCard(entry?: { eqid: number, country: number }) {
-			cardOpen.value = entry === undefined ? { unit: selected.value, view: null } : entry;
+		//The unit card as a strip, one row, or unfolded over the map
+		sizeCard(size: CardSize) {
+			cardSize.value = size;
 		},
-
-		closeCard,
 
 		//One of the selected unit's views on the card: itself, its transport, its carrier
 		viewCard(view: CardView) {
-			cardOpen.value = { unit: selected.value, view };
+			if (selected.value !== null) cardView.value = { unit: selected.value, view };
 		},
 
 		//The chips and the stamp faded (the status bar's line stays)

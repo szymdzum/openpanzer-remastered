@@ -69,56 +69,6 @@
 			}
 		}
 
-		/* the unit info (UnitInfo): its leader a button that looks like the card's line, its tooltip above the panel */
-		& .pm-info {
-			.leader {
-				padding: 0;
-				border: 0;
-				background: none;
-				font-family: inherit;
-				cursor: pointer;
-			}
-
-			.pm-info-tip {
-				position: absolute;
-				inset-block-end: calc(100% + var(--space-2));
-				inset-inline-start: var(--space-4);
-				inline-size: max-content;
-				max-inline-size: 20rem;
-			}
-
-			:where(.pm-info-tip) .hd {
-				display: flex;
-				align-items: center;
-				gap: var(--space-1);
-			}
-
-			.stats-toggle {
-				display: none;
-				margin-block-start: var(--space-2);
-			}
-		}
-
-		/* the unit card (UnitCard) beside the map on the left, under the status bar and clear of End turn's row; its sheet
-		   scrolls when the screen is shorter than it */
-		& > .pm-unitcard {
-			position: absolute;
-			inset-block-start: 5.5rem;
-			inset-inline-start: var(--space-3);
-			z-index: var(--z-hud);
-			inline-size: min(28.75rem, 100% - 2 * var(--space-3));
-			max-block-size: calc(100dvh - 5.5rem - var(--space-3));
-			overflow-y: auto;
-			padding-block-end: var(--space-4);
-
-			.uc-tools {
-				display: flex;
-				align-items: center;
-				gap: var(--space-2);
-				margin-block-end: var(--space-3);
-			}
-		}
-
 		/* the unit list (UnitList) under the status bar in the middle, the reserve tray (Deployment) docked at the bottom
 		   where the unit info sits (nothing is selected while deploying); their cards scroll sideways */
 		& > .pm-unitlist {
@@ -391,36 +341,6 @@
 		&:where(.axis) .dot {
 			background: var(--axis);
 			box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px var(--axis);
-		}
-	}
-
-	/* where the unit card and the dock at the bottom meet (the card's 460px from the left, the 712px unit info in the
-	   middle: below about 1656px), the card stops above the dock, whose height the screen keeps in --dock-h (app.tsx) */
-	@container screen (width < 104rem) {
-		.pm-screen > .pm-unitcard {
-			max-block-size: calc(100dvh - 5.5rem - var(--dock-h, 0rem) - 2 * var(--space-3));
-		}
-	}
-
-	/* below 1280px the unit info keeps its identity and meters; the stat sheet opens under them with Stats (HudLaptop) */
-	@container screen (width < 80rem) {
-		.pm-dock > .pm-info {
-			grid-template-columns: auto auto;
-			inline-size: auto;
-
-			.stats-toggle {
-				display: inline-flex;
-			}
-
-			.sheet {
-				display: none;
-			}
-
-			&:has(:where(.stats-toggle[aria-pressed="true"])) .sheet {
-				display: block;
-				grid-column: 1 / -1;
-				border-block-start: 1px solid var(--line);
-			}
 		}
 	}
 

@@ -70,7 +70,7 @@ done. The designs it builds are in this folder (README.md). The order was decide
 | D2 Map | #345 | the canvas: terrain, markers, overlays at screen size, move area, zones, move path (#32), targets, fog, air layer, strategic map, deployment zone (cards: MapOverlays, MovePath, MapLayers, AirLayer, StrategicMap, ZoomLevels) | D1c |
 | D3 HUD | #346 | status bar, game menu and every shortcut, End turn, unit info, context menu with real amounts, tooltips, AI indicator, turn banner (cards: HudDesktop, HudLaptop, StatusBar, GameMenu, UnitInfo, UnitContext, SupplyRules, Tooltips, TurnStart, TurnBanner) | D1c |
 | D4 Combat | #347 | attack preview stages 0-2, odds card, combat results, the animations and sounds from the events (cards: AttackPreview, CombatOdds, CombatResults) | D2, D3 |
-| D5 Windows | #348 | turn report, unit list, equipment, unit card, deployment, messages, dossier, campaign end (cards: CombatLog, UnitList, Equipment, UnitCard, Deployment, MessageDialog, Dossier, CampaignEnd) | D3 |
+| D5 Windows | #348 | turn report, unit list, equipment, the unit card unfolded (in UnitInfo since #441), deployment, messages, dossier, campaign end (cards: CombatLog, UnitList, Equipment, Deployment, MessageDialog, Dossier, CampaignEnd) | D3 |
 | D6 Menus | #349 | start menu, new game, campaign and scenario selection, settings with the rules choice, save and load (cards: StartMenu, NewGame, CampaignSelect, ScenarioSelect, Settings, SaveLoad) | D1c |
 | D8 Switch | #351 | the new UI by default, the old one deleted, verify's UI part replaced by the new UI's tests | D0, D2-D6 |
 | D7 Tablet | #350 | touch layouts and the two-tap rules (cards: TabletHudLandscape, TabletHudPortrait, TabletUnitInfo, TabletEquipmentLandscape, TabletEquipmentPortrait) | D8 |
