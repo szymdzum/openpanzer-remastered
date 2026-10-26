@@ -5,9 +5,9 @@
 //words, or the screen's own reason (not your turn, not your unit) where the core doesn't ask.
 import type { Command, Refusal } from "../commands";
 import { check } from "../core/step";
-import type { PlayerState, Position, UnitId, UnitState, World } from "../core/types";
-import { ammoOf, fuelOf, hexIndex, isSpotted, movesLeft, unitById, unitData } from "../core/world";
-import { countryNames, groundConditionNames, playerType, sideNames, unitClass, unitClassNames } from "../prototypes";
+import type { PlayerState, UnitId, UnitState, World } from "../core/types";
+import { hexIndex, isSpotted, unitById } from "../core/world";
+import { countryNames, groundConditionNames, playerType, sideNames, unitClass } from "../prototypes";
 import type { IconName, Nation } from "./icon";
 
 //A state the status bar shows as an icon and a word: the weather, the ground
@@ -36,26 +36,6 @@ export interface Status {
 //The keys that play a unit's action (GameMenu): M mount or unmount, E embark or disembark, S, R, O, U; each is an
 //action of the unit context menu (src/view/context.ts)
 export type ActionKey = "mount" | "embark" | "resupply" | "reinforce" | "overstrength" | "undo";
-
-//The selected unit as the unit info shows it
-export interface UnitView {
-	id: UnitId;
-	name: string;
-	className: string;
-	side: number;
-	own: boolean; //the current person's unit: its actions can be sent
-	at: Position;
-	place: string; //the hex's name, "" for none
-	strength: number;
-	moves: number; //left this turn
-	movpoints: number; //what it has in a turn, as what it is now (its transport's when mounted)
-	fuel: number;
-	ammo: number;
-	experience: number;
-	entrenchment: number;
-	moved: boolean;
-	fired: boolean;
-}
 
 //(the state's player of an id; a world without players has none)
 const playerOf = (w: World, id: number): PlayerState | null => w.state.players[id] || null;
@@ -184,18 +164,6 @@ export function shownUnit(w: World, id: UnitId): UnitState | null {
 	if (u === null || u.row < 0) return null;
 	const side = w.state.players[u.owner].side;
 	return side === w.spotSide || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) ? u : null;
-}
-
-//A unit as the side shown sees it, null when it isn't on the map or is an enemy hidden in the fog
-export function unitView(w: World, id: UnitId): UnitView | null {
-	const u = shownUnit(w, id);
-	if (u === null) return null;
-	const side = w.state.players[u.owner].side;
-	const e = unitData(w, u);
-	return { id, name: e.name, className: unitClassNames[e.uclass], side, own: turnRefusal(w, u) === null,
-		at: { row: u.row, col: u.col }, place: w.data.hexes[hexIndex(w, u.row, u.col)].name, strength: u.strength, moves: movesLeft(w, u),
-		movpoints: e.movpoints, fuel: fuelOf(u), ammo: ammoOf(u),
-		experience: u.experience, entrenchment: u.entrenchment, moved: u.hasMoved, fired: u.hasFired };
 }
 
 //The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the

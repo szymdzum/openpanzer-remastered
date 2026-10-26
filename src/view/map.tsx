@@ -1,6 +1,5 @@
 //The map (#345): the canvas the map is drawn on (src/view/mapdraw.ts) under a scrolling layer that takes
-//the pointer, and over it the move path's tag (MovePath), the pins over units low on supply and the hex tooltip
-//(Tooltips, #346). A click selects, moves or attacks through the
+//the pointer, and over it the pins over units low on supply (Tooltips, #346), the placing tag and the combat's results. A click selects, moves or attacks through the
 //store (src/view/store.ts), which asks the view model (src/view/mapview.ts) what it does. The canvas is
 //drawn again, once a frame at most, when what it shows changes: the world, the selection, the hovered
 //hex, the scroll, the window's size, an image that loaded.
@@ -9,7 +8,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { Position, World } from "../core/types";
 import { sideOf } from "../core/world";
 import { Anchored } from "./anchored";
-import { HexTooltip, Pins } from "./maptips";
+import { Pins } from "./maptips";
 import { ResultMarks } from "./resultmarks";
 import type { Ghost } from "./deploy";
 import { Icon } from "./icon";
@@ -49,8 +48,6 @@ class ImageCache {
 	}
 }
 
-//How long the pointer rests on a hex, or a finger holds it, before its tooltip shows (Tooltips)
-const REST = 700, LONG_PRESS = 500;
 
 //The strategic map fits the map under the status bar, so no objective hides behind it (StrategicMap): the
 //bar's foot from the map's top, and a little air, 0 without a bar
@@ -99,17 +96,6 @@ class Painter {
 		for (const sheet of SHEETS) this.cache.get(sheet.file);
 		const move = (e: MouseEvent) => s.hoverHex(this.cellOf(e));
 		const leave = () => s.hoverHex(null);
-		//a finger held on a hex opens its tooltip (Tooltips: nothing relies on hover); lifted or moved first, nothing
-		let holding: ReturnType<typeof setTimeout> | null = null;
-		const release = () => {
-			if (holding !== null) clearTimeout(holding);
-			holding = null;
-		};
-		const press = (e: PointerEvent) => {
-			release();
-			const at = this.cellOf(e);
-			if (e.pointerType === "touch" && at !== null) holding = setTimeout(() => s.restHex(at), LONG_PRESS);
-		};
 		const click = (e: MouseEvent) => {
 			const at = this.cellOf(e);
 			if (at !== null) s.clickHex(at);
@@ -118,8 +104,6 @@ class Painter {
 		scroller.addEventListener("mousemove", move);
 		scroller.addEventListener("mouseleave", leave);
 		scroller.addEventListener("click", click);
-		scroller.addEventListener("pointerdown", press);
-		for (const end of ["pointerup", "pointercancel", "pointermove"]) scroller.addEventListener(end, release);
 		void document.fonts?.ready.then(redraw);
 		return () => {
 			watch();
@@ -127,9 +111,6 @@ class Painter {
 			scroller.removeEventListener("mousemove", move);
 			scroller.removeEventListener("mouseleave", leave);
 			scroller.removeEventListener("click", click);
-			scroller.removeEventListener("pointerdown", press);
-			for (const end of ["pointerup", "pointercancel", "pointermove"]) scroller.removeEventListener(end, release);
-			release();
 			this.canvas = this.scroller = null;
 		};
 	}
@@ -173,7 +154,7 @@ class Painter {
 		return { x: o.x, y: o.y, width: s.clientWidth, height: s.clientHeight, scale: this.store.scale.peek(), dpr };
 	}
 
-	//Tells the component where the map is on the screen when that changed: the path's tag follows it
+	//Tells the component where the map is on the screen when that changed: what sits over the hexes follows it
 	report(vp: Viewport, size: { width: number; height: number }) {
 		const v = this.view;
 		if (vp.x === v.x && vp.y === v.y && size.width === v.width && size.height === v.height) return;
@@ -252,41 +233,16 @@ function mapSize(w: World | null, terrain: Picture | null, scale: number): { wid
 	return { width: size.width * scale, height: size.height * scale };
 }
 
-//The move path's tag under its end (MovePath): what happens, then what it costs
-function PathTag({ store, at }: { store: Store; at: Point }) {
-	const path = store.path.value;
-	if (path === null) return null;
-	return (
-		<Anchored hex={at} place="below" gap={14} class={path.stop ? "pm-pathtag stop" : "pm-pathtag"}>
-			<output>{path.lines.map((l, i) => i === 0 ? <b key={i}>{l.text}</b> : <span key={i} class={l.tone || undefined}>{l.text}</span>)}</output>
-		</Anchored>
-	);
-}
-
-//The hex tooltip once the pointer rests on a hex: a move starts the wait again
-function useRest(store: Store) {
-	const hover = store.hover.value;
-	useEffect(() => {
-		store.restHex(null);
-		const resting = hover === null ? null : setTimeout(() => store.restHex(hover), REST);
-		return () => { if (resting !== null) clearTimeout(resting); };
-	}, [store, hover]);
-}
-
-//What sits over the map at its hexes, placed from where the map is on the screen: the path's tag, the pins, the hex
-//tooltip and the placing tag
+//What sits over the map at its hexes, placed from where the map is on the screen: the pins, the placing tag and the
+//combat's results
 function Overlays({ store, view, scale }: { store: Store, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
-	const path = store.path.value, tip = store.hexTip.value, ghost = store.ghost.value;
-	const results = store.results.value;
-	const end = path === null ? null : path.cells[path.cells.length - 1];
+	const ghost = store.ghost.value, results = store.results.value;
 	const half = TOKENS.px["hex-h"] / 2 * scale, side = TOKENS.px["hex-w"] / 2 * scale;
 	return (
 		<>
-			{end !== null && <PathTag store={store} at={at(end)} />}
 			<Pins pins={store.pins.value} where={(p) => { const c = at(p); return { x: c.x, y: c.y - half }; }} />
-			{tip !== null && <HexTooltip tip={tip} at={at(tip.at)} gap={side} onClose={() => store.restHex(null)} />}
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}
 			{results !== null && <ResultMarks results={results} where={at} half={half} gone={store.faded} />}
 		</>
@@ -302,7 +258,6 @@ export function MapView({ store }: { store: Store }) {
 	const w = store.world.value, scale = store.scale.value, look = store.lookAt.value;
 
 	useEffect(() => painter.attach(canvas.current!, scroller.current!), [painter]);
-	useRest(store);
 
 	//(the strategic map scrolls nothing: the scroll stays as it was for when it closes, map.css)
 	const strategic = store.strategic.value;

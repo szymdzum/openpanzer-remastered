@@ -14,7 +14,7 @@ import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
-import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
+import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
 import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
@@ -23,7 +23,7 @@ import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
 import { outcomeNames } from "../prototypes";
 import { contextOf } from "./context";
-import { hexTipOf, pinsOf } from "./hextip";
+import { locationOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
 import { glanceOf } from "./odds";
 import { type News, type Results, resultsOf } from "./results";
@@ -71,8 +71,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const railOpen = signal(true);
 	const labels = signal(true);
 	const asking = signal<string[] | null>(null);
-	//the hex the pointer rests on, or a finger held (the hex tooltip, Tooltips), null: none
-	const rested = signal<Position | null>(null);
 	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
 	const enemy = signal<EnemyTurn>(quietTurn());
 	const banner = signal(false);
@@ -115,7 +113,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const ground = computed(() => status.value === null ? null : status.value.ground);
 	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
-	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
 	const card = computed(() => {
@@ -124,9 +121,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		if ("eqid" in open) return entryCardOf(w, open.eqid, open.country);
 		return selected.value === null ? null : unitCardOf(w, selected.value, open.unit === selected.value ? open.view : null);
 	});
-	//the hex tooltip of the hex rested on; the pins over the side playing's units, cleared with the labels (L)
-	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value ? null
-		: hexTipOf(world.value, rested.value, selected.value));
+	//the pins over the side playing's units, cleared with the labels (L)
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
 	const report = computed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
@@ -154,6 +149,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//(none of what the pointer shows on the strategic map, which has no cursor)
 	const pointed = computed(() => world.value === null || strategic.value ? null : hover.value);
 	const ghost = computed(() => pointed.value === null ? null : ghostOf(world.value!, deployment.value, pointed.value));
+	//the hex under the pointer as the status line tells it, where the old UI's #locmsg did
+	const located = computed(() => pointed.value === null ? null : locationOf(world.value!, pointed.value, airMode.value));
 	const path = computed(() => pointed.value === null ? null : pathOf(world.value!, selection.value, pointed.value));
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
@@ -279,7 +276,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
+		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
 		results, news, motion, showStep, card, ...shops, tray, combatLog, dossier, campaignEnd,
 
@@ -407,11 +404,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		briefing() {
 			const w = world.value;
 			if (w !== null && (report.value !== null || combatLog.value !== null)) notes.value = [...notes.value, { title: w.data.name, html: w.data.description, at: null, ok: () => {}, briefing: true }];
-		},
-
-		//The hex the pointer has rested on, or a finger held, for its tooltip; null: none
-		restHex(at: Position | null) {
-			rested.value = at;
 		},
 
 		//The rail's middle group folded or open (#mainmenu)

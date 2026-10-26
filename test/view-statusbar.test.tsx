@@ -62,20 +62,18 @@ test("The unit list button opens the unit list on the person's turn (#348); the 
 	expect(document.getElementById("statusBarButton")!.title).toBe("Not your turn");
 });
 
-test("The status line names the selected unit, its moves of its turn's and its hex with the place's name", async () => {
+test("The status line tells the hex under the pointer, as the old #locmsg: the unit there and the place, not the selected unit (#441)", async () => {
 	const store = await shown(smallWorld(0));
 	const w = store.world.value!;
 	await act(() => { store.selected.value = 1; });
-	const e = w.equipment[142];
-	expect(document.querySelector("#statusbar .msg")!.textContent)
-		.toBe(`${e.name} Tank · ${e.movpoints} of ${e.movpoints} moves left · hex 4,4 · Ciechanow`);
-	//A refusal instead of the unit, until the next command
+	expect(document.querySelector("#statusbar .msg")!.textContent).toBe("");
+	await act(() => store.hoverHex({ row: 4, col: 4 }));
+	const said = document.querySelector("#statusbar .msg")!.textContent!;
+	expect([said.startsWith(w.equipment[142].name + " · Ciechanow · "), said.endsWith(" (4,4)")]).toEqual([true, true]);
+	//A refusal instead, until the next command
 	await act(() => { store.refused.value = "Not enough prestige"; });
 	expect(document.querySelector("#statusbar .msg")!.textContent).toBe("Not enough prestige");
 	await act(() => { store.refused.value = null; });
-	//(a hex without a name: none)
-	await act(() => { store.selected.value = 0; });
-	expect(document.querySelector("#statusbar .msg")!.textContent).toMatch(/ · hex 3,3$/);
 	//No game: an empty bar
 	const empty = createStore({ world: () => null, command: () => ({ ok: true, result: null }), won: () => {} });
 	cleanup();

@@ -371,39 +371,6 @@
 		}
 	}
 
-	/* the hex tooltip (#gameToolTip, Tooltips): what the terrain does as two columns of facts; its OK only on touch,
-	   where a finger opened it */
-	.pm-mapview > .pm-tip {
-		inline-size: max-content;
-		max-inline-size: 20rem;
-
-		.facts {
-			display: grid;
-			grid-template-columns: auto 1fr;
-			gap: 0.1875rem var(--space-3);
-			margin-block: var(--space-2) 0;
-			padding-block-start: var(--space-2);
-			border-block-start: 1px solid var(--line);
-			font-size: var(--type-note-size);
-		}
-
-		dd {
-			margin: 0;
-		}
-
-		.ok {
-			display: none;
-			justify-content: flex-end;
-			margin-block-start: var(--space-2);
-		}
-	}
-
-	@media (pointer: coarse) {
-		.pm-mapview > .pm-tip .ok {
-			display: flex;
-		}
-	}
-
 	/* a unit's pins stand on its hex's top edge, a second one over the first */
 	.pm-mapview > .pm-pin {
 		translate: -50% -100%;

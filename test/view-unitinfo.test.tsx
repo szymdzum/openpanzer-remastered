@@ -153,7 +153,7 @@ test("The unit info is the selected unit itself, read by its id: after it mounts
 	await act(() => store.shortcut({ menu: "next" }));
 	expect(store.info.value!.id).toBe(1);
 	await act(() => store.shortcut({ menu: "previous" }));
-	expect([store.selected.value, store.info.value!.id, store.unit.value!.id]).toEqual([0, 0, 0]);
+	expect([store.selected.value, store.info.value!.id]).toEqual([0, 0]);
 	await act(() => store.shortcut({ unit: "mount" }));
 	expect([store.refused.value, store.world.value!.state.units[0].isMounted]).toEqual([null, false]);
 });

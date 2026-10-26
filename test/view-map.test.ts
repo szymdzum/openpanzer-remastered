@@ -13,7 +13,7 @@ import { adjacent } from "../src/core/geometry";
 import { moveRange } from "../src/core/movement";
 import { hexIndex, unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
-import { leaderType, roadType, terrainType } from "../src/prototypes";
+import { roadType, terrainType } from "../src/prototypes";
 import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
 import { clickOn, mapUnits, outlineOf, pathOf, selectionOf } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
@@ -26,9 +26,6 @@ const KAWALERIA = 267, PZL_23 = 281, TRANSPORTSCHIFFE = 546;
 //A hand-built map seen by side 0, player 0's turn
 const hand = (units: HandUnit[], more: { rows?: number; cols?: number; terrain?: (r: number, c: number) => number;
 	road?: (r: number, c: number) => number } = {}) => handWorld({ rows: 10, cols: 10, units, ...more }, undefined, { spotSide: 0 });
-
-const textOf = (w: World, sel: ReturnType<typeof selectionOf>, row: number, col: number) =>
-	pathOf(w, sel, { row, col })!.lines.map((l) => l.text);
 
 test("A hex's centre is in the hex, the map's points are in the hex they are drawn in, off the map in none", () => {
 	expect([hexCentre(0, 0), hexCentre(0, 1), hexCentre(2, 3)]).toEqual([{ x: -15, y: 0 }, { x: 30, y: 25 }, { x: 120, y: 125 }]);
@@ -144,8 +141,8 @@ test("The move area is the core's move range: tinted where the unit can stop, fr
 });
 
 //The path's ring says what the move leaves: for every hex of the area, on roads, rivers and next to an enemy,
-//the moves and the fuel the tag shows are the unit's after the move, and the route is the one it takes
-test("The move path is the move's: its hexes, the moves left and the fuel are the unit's after the move (#32)", () => {
+//the moves it shows are the unit's after the move, and the route is the one it takes
+test("The move path is the move's: its hexes and the moves left are the unit's after the move (#32)", () => {
 	const terrain = (r: number, c: number) => (r + 2 * c) % 7 === 0 ? terrainType.Forest : (r * c) % 11 === 5 ? terrainType.River : 0;
 	const road = (r: number) => r === 5 ? roadType.north | roadType.south : 0;
 	for (const eqid of [PZ_IIA, PSW_222]) {
@@ -158,7 +155,7 @@ test("The move path is the move's: its hexes, the moves left and the fuel are th
 			if (!moved.ok) throw new Error("refused");
 			//(into the hidden enemy: the move stops before it, as the path's unseen hexes warn)
 			if (moved.events.some((e) => e.type === "surprised")) {
-				expect(path.lines).toContainEqual({ text: "unseen: ambush possible", tone: "warn" });
+				expect(path.cells.some((c) => !c.seen)).toBe(true);
 				continue;
 			}
 			const after = unitById(moved.world, 0);
@@ -166,7 +163,6 @@ test("The move path is the move's: its hexes, the moves left and the fuel are th
 			expect(path.cells.map((c) => ({ row: c.row, col: c.col }))).toEqual(event!.type === "moved" && event!.path.map((c) => ({ row: c.row, col: c.col })));
 			expect(path.left).toBe(Math.max(after.moveLeft, 0));
 			expect(path.again).toBe(!after.hasMoved);
-			expect(path.lines[path.lines.length - 1].text).toMatch(new RegExp("^fuel 5\\d → " + after.fuel + " of 5\\d"));
 		}
 	}
 });
@@ -176,33 +172,13 @@ test("A path into an enemy zone stops there: the stop square and the moves it le
 	const sel = selectionOf(w, 0)!;
 	const path = pathOf(w, sel, { row: 4, col: 3 })!;
 	expect([path.stop, path.left, path.again]).toEqual([true, 0, false]);
-	expect(path.lines.map((l) => l.text)).toEqual(["stops: enemy zone", "3 moves unused", "fuel 50 → 48 of 50"]);
-	expect(textOf(w, sel, 4, 2)).toEqual(["4 moves left", "fuel 50 → 49 of 50"]);
+	expect(pathOf(w, sel, { row: 4, col: 2 })).toMatchObject({ stop: false, left: 4 });
 	//a hex outside the area: no path, the area's edge is the answer
 	expect([pathOf(w, sel, { row: 8, col: 8 }), pathOf(w, sel, { row: 9, col: 9 }), pathOf(w, sel, { row: 4, col: 1 }), pathOf(w, null, { row: 4, col: 2 })])
 		.toEqual([null, null, null, null]);
 });
 
-test("A path ending on a flag or an objective says what it takes and what is left to win", () => {
-	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }]);
-	Object.assign(w.state.map.hexes[hexIndex(w, 5, 1)], { owner: 1, flag: 15 });
-	Object.assign(w.state.map.hexes[hexIndex(w, 3, 1)], { owner: 1, flag: 15, victorySide: 0 });
-	w.data.hexes[hexIndex(w, 5, 1)].name = "Wieczfnia";
-	w.data.hexes[hexIndex(w, 3, 1)].name = "Mlawa";
-	w.state.objectives[0].push({ row: 3, col: 1 }, { row: 9, col: 9 });
-	const sel = selectionOf(w, 0)!;
-	expect(textOf(w, sel, 5, 1)).toEqual(["takes Wieczfnia", "+50 prestige", "fuel 50 → 49 of 50"]);
-	expect(pathOf(w, sel, { row: 3, col: 1 })!.lines.slice(0, 2)).toEqual([{ text: "takes Mlawa · objective", tone: "" },
-		{ text: "+150 prestige · 1 left to win", tone: "gain" }]);
-	w.state.objectives[0].pop();
-	expect(textOf(w, sel, 3, 1)[1]).toBe("+150 prestige · the last objective");
-	//a liberator's prestige is twice
-	const lib = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, leader: leaderType.liberator }]);
-	Object.assign(lib.state.map.hexes[hexIndex(lib, 5, 1)], { owner: 1, flag: 15 });
-	expect(textOf(lib, selectionOf(lib, 0), 5, 1)[1]).toBe("+100 prestige");
-});
-
-test("A path past what the side sees warns of an ambush; a mounted unit can't fire after; recon can move again; low fuel", () => {
+test("A path past what the side sees is unseen; a mounted unit has no moves left after; recon can move again", () => {
 	//the infantry sees 1 hex: the truck's path beyond it is unseen
 	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 1, col: 1, isMounted: true, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 20 } }],
 		{ rows: 14, cols: 14 });
@@ -211,19 +187,14 @@ test("A path past what the side sees warns of an ambush; a mounted unit can't fi
 	const path = pathOf(w, sel, far)!;
 	expect(path.cells.some((c) => !c.seen)).toBe(true);
 	expect(path.left).toBe(0);
-	expect(path.lines[0].text).toBe("can't fire after this move");
-	expect(path.lines).toContainEqual({ text: "unseen: ambush possible", tone: "warn" });
-	expect(path.lines[path.lines.length - 1].text).toMatch(/^transport fuel 20 → \d+ of 55 · low$/);
-	expect(path.lines[path.lines.length - 1].tone).toBe("low");
 	const recon = hand([{ eqid: PSW_222, owner: 0, row: 4, col: 1 }]);
 	const rsel = selectionOf(recon, 0)!;
 	//(wheels: a clear hex costs 2)
 	expect(pathOf(recon, rsel, { row: 4, col: 2 })).toMatchObject({ left: 7, again: true });
-	expect(textOf(recon, rsel, 4, 2)).toEqual(["7 moves left", "can move again", "fuel 55 → 53 of 55"]);
 	const plane = hand([{ eqid: ME_109, owner: 0, row: 4, col: 1 }]);
-	expect(textOf(plane, selectionOf(plane, 0), 4, 2)[0]).toBe("14 moves left");
+	expect(pathOf(plane, selectionOf(plane, 0), { row: 4, col: 2 })!.left).toBe(14);
 	const one = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1, moveLeft: 2 }]);
-	expect(textOf(one, selectionOf(one, 0), 4, 2)[0]).toBe("1 move left");
+	expect(pathOf(one, selectionOf(one, 0), { row: 4, col: 2 })!.left).toBe(1);
 });
 
 test("A click attacks a target, moves to a hex of the area, else selects the unit there or none", () => {

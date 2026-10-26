@@ -1,3 +1,5 @@
+**In the port (#441):** the hex tooltip is left out until after the switch (D8): nothing opens over the map when the pointer rests or a finger holds. What the old UI said of the hex under the pointer goes to the status bar's line, as its `#locmsg` did (`updateStatusBarLocation`, src/ui.ts:1350): the unit there that the side sees, the place's name, the current player's air or naval transports on an airfield or a port, the terrain with "/Road" and "(row,col)". The pins, the rail's tooltip and the AI indicator stay. The hex tooltip below is the design for later.
+
 Three kinds of tooltip, plus the AI indicator.
 
 - **Hex tooltip** (`#gameToolTip`): a panel with a pointer, shown on hover or long-press over a hex. It holds the place name and its flag, the terrain, whether it is a victory hex and who holds it, and what the terrain does, each value from the engine:

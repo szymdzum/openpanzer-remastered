@@ -1,65 +1,35 @@
-//What the hex tooltip and the unit pins say (Tooltips, #346), from the core's World and nothing else: the place, who
-//holds it, and what its terrain does to a unit there, each value from the rule that applies it; and the side
-//playing's units low on fuel or out of ammo. Plain TypeScript tested on hand-built worlds (test/view-tooltips.test.tsx)
-import { inRiver } from "../core/combat";
-import { terrainCost } from "../core/movement";
+//What the status line says of the hex under the pointer, as the old UI's #locmsg (updateStatusBarLocation,
+//src/ui.ts:1350), and the pins over the side playing's units low on fuel or out of ammo (Tooltips, #346), from the core's
+//World and nothing else. Plain TypeScript tested on hand-built worlds (test/view-tooltips.test.tsx)
 import type { Position, UnitId, World } from "../core/types";
 import { unitLowAmmo, unitLowFuel } from "../core/units";
-import { hexIndex, onMap, unitById, unitData } from "../core/world";
-import { groundConditionNames, terrainEntrenchment, terrainNames, terrainType } from "../prototypes";
-import type { IconName, Nation } from "./icon";
-import { countryName, nationOf } from "./model";
+import { hexIndex, onMap, unitAt, unitData } from "../core/world";
+import { roadType, terrainNames, terrainType } from "../prototypes";
+import type { IconName } from "./icon";
+import { isShown } from "./mapview";
 
-export interface HexTip {
-	at: Position;
-	name: string; //the place's name, else its terrain's
-	nation: Nation | null; //the flag on it
-	line: string; //"City · held by Germany · objective"
-	rows: [string, string][];
+//The hex under the pointer: the unit on it the side sees, in the layer shown (null: none), then its name, the current
+//player's transports there, its terrain and road and where it is, "Llucmacanes · City/Road (9,15)"
+export interface Location {
+	unit: string | null;
+	text: string;
 }
 
-//The move costs that end a move, and that can't be entered (src/core/rules.ts)
-const STOP = 254, NO_ENTRY = 255;
-
-//What entering the hex costs the unit, "stops" where it ends its move; none where it can't go
-function moveCost(w: World, at: Position, unit: UnitId | null): [string, string][] {
-	const u = unit === null ? null : unitById(w, unit);
-	if (u === null || u.row < 0) return [];
-	const cost = terrainCost(w, u, at);
-	if (cost >= NO_ENTRY) return [];
-	const ground = groundConditionNames[w.state.scenario.ground].toLowerCase();
-	return [["Move cost", (cost >= STOP ? "stops" : String(cost)) + " · " + unitData(w, u).name + ", " + ground]];
+//The air transports on an airfield, the naval ones in a port, of the current player, when it has any
+function transportsAt(w: World, terrain: number): string {
+	const p = w.state.players[w.state.turn.currentPlayer];
+	if (terrain === terrainType.Airfield && p.airTransports > 0) return "Air transports: " + p.airTransports;
+	if (terrain === terrainType.Port && p.navalTransports > 0) return "Naval transports: " + p.navalTransports;
+	return "";
 }
 
-//A terrain step of the combat where there is one (src/core/combat.ts): the city's, the river's
-function defence(w: World, terrain: number, road: number): [string, string][] {
-	const steps = new Set(w.rules.combat.map((s) => s.name));
-	if (terrain === terrainType.City && steps.has("city")) return [["Defence", "+4 defending"]];
-	if (inRiver(terrain, road) && steps.has("river")) return [["Defence", "the enemy +4 attack and defence"]];
-	return [];
-}
-
-//How much a unit's resupply gives here (resupplyValue, src/core/supply.ts)
-function resupply(w: World, terrain: number, flag: number): string {
-	if (terrain === terrainType.City) return "full, no enemy next to it";
-	if (terrain === terrainType.Airfield) return `full for ${countryName(w, flag) || "its country's"} aircraft; ÷1.3 on the ground`;
-	if (terrain === terrainType.Port) return "full for ships; ÷1.3 on the ground";
-	if (terrain === terrainType.Ocean) return "none: ships take it in a port";
-	return "÷1.3, less next to enemies";
-}
-
-//The hex tooltip of a hex of the map, null off it; unit: the selected unit, whose move cost it shows
-export function hexTipOf(w: World, at: Position, unit: UnitId | null): HexTip | null {
+//The hex as the status line tells it, null off the map
+export function locationOf(w: World, at: Position, airMode: boolean): Location | null {
 	if (!onMap(w, at.row, at.col)) return null;
-	const i = hexIndex(w, at.row, at.col), d = w.data.hexes[i], h = w.state.map.hexes[i];
-	const holder = h.owner >= 0 && w.state.players[h.owner] !== undefined ? countryName(w, w.state.players[h.owner].country) : "";
-	const line = [terrainNames[d.terrain], holder !== "" && "held by " + holder, h.victorySide >= 0 && "objective"].filter(Boolean).join(" · ");
-	const dug = terrainEntrenchment[d.terrain];
-	const rows: [string, string][] = [["Entrenchment", dug > 0 ? dug + " on arrival" : "none"], ...defence(w, d.terrain, d.road),
-		...moveCost(w, at, unit), ["Resupply", resupply(w, d.terrain, h.flag)]];
-	const deploys = d.deployment >= 0 && w.state.players[d.deployment] !== undefined ? countryName(w, w.state.players[d.deployment].country) : "";
-	if (deploys !== "") rows.push(["Deploys", "units of " + deploys]);
-	return { at, name: d.name || terrainNames[d.terrain], nation: h.flag >= 0 ? nationOf(countryName(w, h.flag)) : null, line, rows };
+	const i = hexIndex(w, at.row, at.col), d = w.data.hexes[i], u = unitAt(w, i, airMode);
+	const terrain = terrainNames[d.terrain] + (d.road > roadType.none ? "/Road" : "") + " (" + at.row + "," + at.col + ")";
+	return { unit: u !== null && isShown(w, u) ? unitData(w, u, true).name : null,
+		text: [d.name || "", transportsAt(w, d.terrain), terrain].filter(Boolean).join(" · ") };
 }
 
 //A pin over a unit: its supply state in a word, with its icon and tone
