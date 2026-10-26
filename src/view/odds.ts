@@ -26,7 +26,7 @@ export interface Blocked {
 export type Glyph = "rugged" | "overrun" | "support" | "no-return";
 
 //A side's estimated loss, in its side's colour
-export interface Chip {
+export interface LossChip {
 	side: number;
 	loss: number;
 }
@@ -34,8 +34,8 @@ export interface Chip {
 //Stage 1 at the hovered target: your loss, theirs, at most one glyph
 export interface Glance {
 	at: Position;
-	yours: Chip;
-	theirs: Chip;
+	yours: LossChip;
+	theirs: LossChip;
 	glyph: Glyph | null;
 }
 
