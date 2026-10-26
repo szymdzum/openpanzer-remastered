@@ -17,6 +17,7 @@ import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
 import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
+import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -83,6 +84,10 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//while it moves; the map takes no click meanwhile
 	const motion = signal<Motion | null>(null);
 	const moving = signal<UnitId | null>(null);
+	//The unit card open (UnitCard): the selected unit's, in the view picked for that unit (none: the one it opens on), or
+	//an equipment entry's (the equipment window's); null: closed
+	const cardOpen = signal<{ unit: UnitId | null, view: CardView | null } | { eqid: number, country: number } | null>(null);
+	const closeCard = () => { cardOpen.value = null; };
 	let busy = false;
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
@@ -107,6 +112,12 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
+	const card = computed(() => {
+		const w = world.value, open = cardOpen.value;
+		if (w === null || open === null) return null;
+		if ("eqid" in open) return entryCardOf(w, open.eqid, open.country);
+		return selected.value === null ? null : unitCardOf(w, selected.value, open.unit === selected.value ? open.view : null);
+	});
 	//the hex tooltip of the hex rested on; the pins over the side playing's units, cleared with the labels (L)
 	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value || odds.value !== null ? null
 		: hexTipOf(world.value, rested.value, selected.value));
@@ -282,7 +293,19 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news, motion, showStep,
+		results, news, motion, showStep, card,
+
+		//The unit card opened on the selected unit, or on an equipment entry of a country
+		openCard(entry?: { eqid: number, country: number }) {
+			cardOpen.value = entry === undefined ? { unit: selected.value, view: null } : entry;
+		},
+
+		closeCard,
+
+		//One of the selected unit's views on the card: itself, its transport, its carrier
+		viewCard(view: CardView) {
+			cardOpen.value = { unit: selected.value, view };
+		},
 
 		//The chips and the stamp faded (the status bar's line stays)
 		faded: () => {

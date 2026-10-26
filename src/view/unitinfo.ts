@@ -53,7 +53,7 @@ function gauge(icon: IconName, label: string, value: number, max: number, used: 
 }
 
 //The unit's leaders, its own and its class's (hasLeader, src/core/units.ts), as the game words them
-function leadersOf(w: World, leader: number, uclass: number): LeaderLine[] {
+export function leadersOf(w: World, leader: number, uclass: number): LeaderLine[] {
 	if (leader === -1) return [];
 	const line = (l: number, classLeader: boolean) => ({ name: leaderDescriptions[l][0], description: leaderDescriptions[l][1], classLeader });
 	const cls = w.rules.classLeaders[uclass];

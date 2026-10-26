@@ -1,7 +1,7 @@
 //The unit info panel (UnitInfo, #346): everything about the selected unit, in three columns: its identity (flag, name,
 //class, core or auxiliary, experience, leader), its supply meters and its full stat sheet. What it says is the view
 //model's (src/view/unitinfo.ts unitInfoOf); Inspect unit (I) shows or hides it. The leader's tooltip opens on hover,
-//focus or a tap, above the panel, never over the unit's name.
+//focus or a tap, above the panel, never over the unit's name. Unit card opens the full sheet (UnitCard).
 import { useState } from "preact/hooks";
 import { Stats } from "./facts";
 import { Icon, Mark } from "./icon";
@@ -47,6 +47,7 @@ export function UnitInfoPanel({ store }: { store: Store }) {
 				<div class="cls">{info.line}</div>
 				<Stars earned={info.stars} />
 				<Leader key={info.id} leaders={info.leaders} />
+				<button type="button" class="pm-btn ghost card-open" aria-controls="unit-card" onClick={() => store.openCard()}>Unit card</button>
 				<button type="button" class="pm-btn ghost stats-toggle" aria-pressed={stats} aria-controls="statsRowContainer"
 					onClick={() => setStats(!stats)}>Stats</button>
 			</div>
