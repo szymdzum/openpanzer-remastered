@@ -17,6 +17,7 @@ import { type ActionKey, endTurnRefusal, neighbourUnit, prestigeText, reasonOf, 
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
+import { hexTipOf, pinsOf } from "./hextip";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -53,6 +54,8 @@ export function createStore(host: StoreHost) {
 	const asking = signal<string[] | null>(null);
 	//why the last undo went, from the step that took it (src/view/context.ts undoLoss)
 	const lost = signal<UndoLoss | null>(null);
+	//the hex the pointer rests on, or a finger held (the hex tooltip, Tooltips), null: none
+	const rested = signal<Position | null>(null);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -72,6 +75,10 @@ export function createStore(host: StoreHost) {
 	const unit = computed(() => world.value === null || selected.value === null ? null : unitView(world.value, selected.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
 	const info = computed(() => world.value === null || selected.value === null ? null : unitInfoOf(world.value, selected.value));
+	//the hex tooltip of the hex rested on; the pins over the side playing's units, cleared with the labels (L)
+	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value ? null
+		: hexTipOf(world.value, rested.value, selected.value));
+	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the selected unit's context menu (UnitContext), none while deploying or on the strategic map
 	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value ? null
 		: contextOf(world.value, selected.value, lost.value));
@@ -176,7 +183,7 @@ export function createStore(host: StoreHost) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, toggleAir,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
@@ -218,6 +225,11 @@ export function createStore(host: StoreHost) {
 			const ready = unitsToAct(w);
 			if (ready.length === 0) dispatch({ type: "endTurn" });
 			else asking.value = ready.map((u) => unitData(w, u).name);
+		},
+
+		//The hex the pointer has rested on, or a finger held, for its tooltip; null: none
+		restHex(at: Position | null) {
+			rested.value = at;
 		},
 
 		//The rail's middle group folded or open (#mainmenu)
