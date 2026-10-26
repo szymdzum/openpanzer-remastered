@@ -40,6 +40,7 @@ import type { SessionEnd } from "./core/session";
 import type { World } from "./core/types";
 import { setEngineContext, touched } from "./context";
 import { defined } from "./util";
+import { Rng } from "./rng";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
@@ -427,6 +428,12 @@ export class GameHost {
 	world(): World | null {
 		const g = this.game;
 		return g.session === null ? null : rulesWorld(g.scenario, g, gameInputs(g));
+	}
+
+	//A number in [0, 1) of the cosmetic stream, for the screen's sprite and sound picks: never the game's or the
+	//AI's, whose order of draws is behavior (src/rng.ts)
+	cosmetic(): number {
+		return Rng.cosmeticRandom();
 	}
 
 	//A command played whole on the core (Commands.execute): a program's move or attack the screen shows, a
