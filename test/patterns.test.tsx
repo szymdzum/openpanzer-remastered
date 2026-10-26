@@ -67,6 +67,7 @@ describe("Anchored", () => {
 	test("placed centred above or below the hex, or beside it and centred on it", () => {
 		expect(placeBy({ x: 500, y: 400 }, size, "above", 30)).toEqual({ x: 350, y: 270 });
 		expect(placeBy({ x: 500, y: 400 }, size, "beside", 40)).toEqual({ x: 540, y: 350 });
+		expect(placeBy({ x: 500, y: 400 }, size, "before", 40)).toEqual({ x: 160, y: 350 });
 		expect(placeBy({ x: 500, y: 400 }, size, "below", 14)).toEqual({ x: 350, y: 414 });
 	});
 

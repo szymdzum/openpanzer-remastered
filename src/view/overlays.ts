@@ -146,7 +146,7 @@ function arrowHead(c: CanvasRenderingContext2D, from: Point, tip: Point) {
 }
 
 //How a label looks: its type size and height, its paper, ink and edge, the room left of its text (a star's)
-interface Look {
+export interface Look {
 	size: number;
 	height: number;
 	paper: string;
@@ -156,7 +156,7 @@ interface Look {
 }
 
 //A label on the map at screen size, centred at x with its top at y: text on paper with a thin edge
-function label(c: CanvasRenderingContext2D, text: string, x: number, y: number, look: Look): { left: number; width: number } {
+export function label(c: CanvasRenderingContext2D, text: string, x: number, y: number, look: Look): { left: number; width: number } {
 	c.font = "bold " + look.size + "px " + TOKENS.fonts.mono;
 	const lead = look.lead || 0, textWidth = Math.ceil(c.measureText(text).width);
 	const width = textWidth + 10 + lead, left = Math.round(x - width / 2);
