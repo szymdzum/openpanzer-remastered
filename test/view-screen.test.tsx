@@ -63,6 +63,9 @@ test("A scenario plays a whole turn on the new screen: the briefing, the person'
 	await act(async () => { await until(() => g.scenario.map.currentPlayer.side === 0 && g.host.world()!.state.turn.turn === 2, "the person's next turn"); });
 	expect(ai.playedTurn).toBe(1);
 	expect([turnShown(), document.querySelector(".pm-side")!.textContent]).toEqual(["Turn2/" + g.scenario.maxTurns, "Germany · Axis"]);
+	//the person's turn starts with its short report and its first ground unit selected (TurnStart, #346)
+	expect(screen.getByRole("region", { name: "Turn 2 of " + g.scenario.maxTurns }).id).toBe("combatLog");
+	expect(document.querySelector("#unit-info")).not.toBeNull();
 	expect(endTurn().hasAttribute("disabled")).toBe(false);
 }, 60_000);
 

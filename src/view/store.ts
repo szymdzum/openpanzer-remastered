@@ -5,6 +5,7 @@
 //reason for the status bar.
 import { computed, signal } from "@preact/signals";
 import type { Command } from "../commands";
+import type { GameEvent } from "../core/events";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
 import { unitById, unitData } from "../core/world";
@@ -13,11 +14,12 @@ import { fogOf, plaquesOf, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf } from "./deploy";
-import { type ActionKey, endTurnRefusal, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
+import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, unitView } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
+import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won
 export type StoreHost = Pick<GameHost, "world" | "command" | "won">;
@@ -56,6 +58,9 @@ export function createStore(host: StoreHost) {
 	const lost = signal<UndoLoss | null>(null);
 	//the hex the pointer rests on, or a finger held (the hex tooltip, Tooltips), null: none
 	const rested = signal<Position | null>(null);
+	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
+	const enemy = signal<EnemyTurn>(quietTurn());
+	const banner = signal(false);
 
 	const status = computed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
@@ -79,6 +84,12 @@ export function createStore(host: StoreHost) {
 	const hexTip = computed(() => world.value === null || rested.value === null || strategic.value ? null
 		: hexTipOf(world.value, rested.value, selected.value));
 	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
+	//the turn report while it is open; the program's turn in progress (the AI indicator)
+	const report = computed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
+	const ai = computed(() => world.value === null ? null : aiStatusOf(world.value));
+	//(the status bar's turn report button: the person's report, none while a program plays)
+	const reportRefusal = computed(() => world.value === null || turnReportOf(world.value, enemy.value) === null ? "No report to show"
+		: undefined);
 	//the selected unit's context menu (UnitContext), none while deploying or on the strategic map
 	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value ? null
 		: contextOf(world.value, selected.value, lost.value));
@@ -109,6 +120,13 @@ export function createStore(host: StoreHost) {
 	//then its victories are told; refused, the reason, which the status bar shows until the next command
 	const dispatch = (cmd: Command): string | null => {
 		const before = world.value;
+		//(the person's turn ending: the enemy's starts quiet, nothing stays selected under it, the report goes; before the
+		//command, which may play the program's whole turn and start the person's next)
+		if (cmd.type === "endTurn") {
+			enemy.value = quietTurn();
+			selected.value = null;
+			banner.value = false;
+		}
 		const r = host.command(cmd);
 		refresh();
 		if (r.ok) host.won(r.result);
@@ -174,7 +192,8 @@ export function createStore(host: StoreHost) {
 		previous: () => cycle(-1),
 		//Escape deselects the unit; with none, Options
 		escape: () => {
-			if (selected.value !== null) select(null);
+			if (banner.value) banner.value = false;
+			else if (selected.value !== null) select(null);
 			else notYet();
 		},
 	};
@@ -183,7 +202,7 @@ export function createStore(host: StoreHost) {
 	return {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
-		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, toggleAir,
+		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
@@ -192,6 +211,8 @@ export function createStore(host: StoreHost) {
 		clickHex(at: Position) {
 			const w = world.value;
 			if (w === null) return;
+			//(the first click on the map closes the turn report, and does what it does)
+			banner.value = false;
 			if (strategic.value) {
 				strategic.value = false;
 				lookAt.value = { row: at.row, col: at.col };
@@ -225,6 +246,35 @@ export function createStore(host: StoreHost) {
 			const ready = unitsToAct(w);
 			if (ready.length === 0) dispatch({ type: "endTurn" });
 			else asking.value = ready.map((u) => unitData(w, u).name);
+		},
+
+		//A program's step shown: what it did to the side shown, for the next turn's report
+		noteEnemy(events: GameEvent[]) {
+			if (world.value !== null) enemy.value = noteEnemy(enemy.value, world.value, events);
+		},
+
+		//A person's turn starts (TurnStart): the short report under the status bar, and unless the reserve is being
+		//deployed, the first ground unit selected and in the middle of the map
+		startTurn() {
+			const w = world.value;
+			if (w === null || !isYourTurn(w)) return;
+			banner.value = true;
+			const first = deployment.value === null ? firstUnitOf(w) : null;
+			if (first === null) return;
+			select(first);
+			const u = unitById(w, first)!;
+			lookAt.value = { row: u.row, col: u.col };
+		},
+
+		//The report's close (×), or the status bar's turn report button: closed, or open again
+		showReport(open: boolean) {
+			banner.value = open;
+		},
+
+		//The report's Briefing: the scenario's description in the message window
+		briefing() {
+			const r = report.value;
+			if (r !== null) notes.value = [...notes.value, { title: r.briefing.title, html: r.briefing.html, at: null, ok: () => {} }];
 		},
 
 		//The hex the pointer has rested on, or a finger held, for its tooltip; null: none

@@ -1,7 +1,7 @@
 //The new UI's status bar (src/view/statusbar.tsx, StatusBar, #346) in jsdom, on the small game built by hand: the
 //cells the card has, the rules the game plays (#317), the two window buttons off until their windows, the status line
 import { afterEach, expect, test } from "vitest";
-import { act, cleanup, render } from "@testing-library/preact";
+import { act, cleanup, fireEvent, render } from "@testing-library/preact";
 import { smallGame, smallGameData } from "./smallgame";
 import { worldOf } from "../src/mirror";
 import { remasterRules } from "../src/core/rules";
@@ -44,12 +44,19 @@ test("On the AI's turn the bar shows its side in the Allies' colour, and the per
 	expect(cells().pop()).toBe("80");
 });
 
-test("The unit list and turn report buttons are named and off with their reason until their windows come (#346)", async () => {
-	await shown(smallWorld(0));
-	for (const [id, name] of [["statusBarButton", "Unit list"], ["combatLogButton", "Turn report"]]) {
-		const b = document.getElementById(id)!;
-		expect([b.getAttribute("aria-label"), b.hasAttribute("disabled"), b.title]).toEqual([name, true, "Not in the new UI yet"]);
-	}
+test("The unit list button is off until its window comes; the turn report button opens and closes the short report (#346)", async () => {
+	const store = await shown(smallWorld(0));
+	const list = document.getElementById("statusBarButton")!, report = document.getElementById("combatLogButton") as HTMLButtonElement;
+	expect([list.getAttribute("aria-label"), list.hasAttribute("disabled"), list.title]).toEqual(["Unit list", true, "Not in the new UI yet"]);
+	expect([report.getAttribute("aria-label"), report.disabled]).toEqual(["Turn report", false]);
+	await act(() => { fireEvent.click(report); });
+	expect(store.banner.value).toBe(true);
+	await act(() => { fireEvent.click(report); });
+	expect(store.banner.value).toBe(false);
+	//on the AI's turn the person's report still opens (the person plays the side shown)
+	cleanup();
+	await shown(smallWorld(0, 1));
+	expect((document.getElementById("combatLogButton") as HTMLButtonElement).disabled).toBe(false);
 });
 
 test("The status line names the selected unit, its moves of its turn's and its hex with the place's name", async () => {

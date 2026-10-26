@@ -6,6 +6,7 @@
 //events are D2-D4's, the main menu D6's.
 import { render } from "preact";
 import type { ViewEvent } from "../core/controller";
+import type { GameEvent } from "../core/events";
 import type { Position } from "../core/types";
 import type { GameHost } from "../host";
 import { type Cell, outcomeNames, uiSettings } from "../prototypes";
@@ -35,9 +36,11 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		host.holdForMessage();
 		show(title, html, then || (() => host.messageClosed()));
 	};
-	//A program's move or attack, played whole and shown at once: its victories told, then the next action
-	const played = (r: ReturnType<ScreenHost["play"]>, shown: () => void) => {
+	//A program's move or attack, played whole and shown at once: what it did to the side shown kept for the turn
+	//report (its events), its victories told, then the next action
+	const played = (r: ReturnType<ScreenHost["play"]>, events: GameEvent[], shown: () => void) => {
 		refresh();
+		store.noteEnemy(events);
 		if (r.ok) host.won(r.result);
 		shown();
 	};
@@ -83,10 +86,12 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		reportAchievement: nothing,
 
 		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
-			played(host.play({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells }), shown);
+			const r = host.play({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
+			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
 		},
 		attack(attacker: Unit, target: Unit, shown: () => void) {
-			played(host.play({ type: "attack", unit: attacker.id, target: target.id }), shown);
+			const r = host.play({ type: "attack", unit: attacker.id, target: target.id });
+			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
 		},
 		view(event: ViewEvent, shown?: () => void) {
 			if (event.type === "message") {
@@ -104,6 +109,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		turnChanged(next: () => void) {
 			refresh();
 			deployment();
+			store.startTurn();
 			setTimeout(next, 0);
 		},
 		unitsPlaced: refresh,

@@ -186,6 +186,24 @@
 		}
 	}
 
+	/* the short turn report hangs under the status bar, clear of the middle where the turn's first unit is (TurnStart);
+	   the AI indicator sits at the bottom in the middle, its dot in the side's colour */
+	.pm-screen > .pm-turn {
+		inset-block-start: 5.5rem;
+		inline-size: min(45rem, 100% - 2 * var(--space-3));
+	}
+
+	.pm-screen > .pm-ai {
+		inset-block-end: var(--space-6);
+		inset-inline-start: 50%;
+		translate: -50% 0;
+
+		&:where(.axis) .dot {
+			background: var(--axis);
+			box-shadow: 0 0 0 3px var(--panel), 0 0 0 4px var(--axis);
+		}
+	}
+
 	/* below 1280px the unit info keeps its identity and meters; the stat sheet opens under them with Stats (HudLaptop) */
 	@container screen (width < 80rem) {
 		.pm-screen > .pm-info {
