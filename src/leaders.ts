@@ -11,7 +11,7 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, there is no 2.9 counterpart.
  */
 
-import { leaderType, unitClass } from "./prototypes";
+import { leaderDescriptions, leaderType, unitClass } from "./prototypes";
 import type { Unit } from "./unit";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none
@@ -28,8 +28,8 @@ export var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module
 //unit with a leader also has, the others are the random leaders a unit can get (the core's
 //classicRules holds the same lists, src/core/rules.ts)
 Leaders.unitClassLeaders = {};
-//[name, description] by leaderType
-Leaders.description = [];
+//[name, description] by leaderType (src/prototypes.ts: the new UI reads them there)
+Leaders.description = leaderDescriptions;
 
 Leaders.unitClassLeaders[unitClass.none] = [];
 Leaders.unitClassLeaders[unitClass.infantry] = [
@@ -121,139 +121,6 @@ Leaders.unitClassLeaders[unitClass.battleCruiser] = [];
 Leaders.unitClassLeaders[unitClass.cruiser] = [];
 Leaders.unitClassLeaders[unitClass.lightCruiser] = [];
 
-//Leader name and description, by leaderType
-Leaders.description[leaderType.mechanizedVeteran] = [
-	"Mechanized Veteran",
-	"Air Defence unit may move and fire in the same turn."
-];
-Leaders.description[leaderType.tankKiller] = [
-	"Tank Killer",
-	"Anti-Tank unit will not receive a penalty for movement into combat."
-];
-Leaders.description[leaderType.marksman] = [
-	"Marksman",
-	"The artillery unit attack range is increased by one hex."
-];
-Leaders.description[leaderType.skilledInterceptor] = [
-	"Skilled Interceptor",
-	"Fighter unit can intercept multiple enemy fighters in the defensive phase."
-];
-Leaders.description[leaderType.tenaciousDefense] = [
-	"Tenacious Defense",
-	"The infantry unit ground defense factor is increased by 4."
-];
-Leaders.description[leaderType.eliteReconVeteran] = [
-	"Elite Recon Veteran",
-	"Recon unit spotting range is increased by two hexes."
-];
-Leaders.description[leaderType.skilledAssault] = [
-	"Skilled Assault",
-	"The tactical bomber cannot be surprised (out of the sun) while moving."
-];
-Leaders.description[leaderType.aggressiveTankManeuver] = [
-	"Aggressive Tank Maneuver",
-	"Tank movement factor is increased by 1."
-];
-Leaders.description[leaderType.aggressiveAttack] = [
-	"Aggressive Attack",
-	"Each of the unit attack values is increased by 2."
-];
-Leaders.description[leaderType.aggressiveManeuver] = [
-	"Aggressive Maneuver",
-	"The unit movement factor is increased by 1."
-];
-Leaders.description[leaderType.allWeatherCombat] = [
-	"All Weather Combat",
-	"The air unit is not affected by weather conditions. Note: This can only be awarded air units."
-];
-Leaders.description[leaderType.alpineTraining] = [
-	"Alpine Training",
-	"When moving the unit treats forest and mountain hexes as clear terrain."
-];
-Leaders.description[leaderType.battlefieldIntelligence] = [
-	"Battlefield Intelligence",
-	"The unit cannot be surprised."
-];
-Leaders.description[leaderType.bridging] = [
-	"Bridging",
-	"When moving the unit treats passable river hexes as rough terrain."
-];
-Leaders.description[leaderType.combatSupport] = [
-	"Combat Support",
-	"The unit provides both Resilience and Skilled Ground Attack abilities to all adjoining units during combat phases. Will aid inflicting losses and save from loses by 2 to 3 points each battle."
-];
-Leaders.description[leaderType.determinedDefense] = [
-	"Determined Defense",
-	"Each of the unit defense factors is increased by 2."
-];
-Leaders.description[leaderType.devastatingFire] = [
-	"Devastating Fire",
-	"The unit may fire twice in a turn."
-];
-Leaders.description[leaderType.ferociousDefense] = [
-	"Ferocious Defense",
-	"The unit entrenchment cannot be ignored by enemy units."
-];
-Leaders.description[leaderType.fireDiscipline] = [
-	"Fire Discipline",
-	"The unit will expend only one-half of an ammunition point each time it attacks."
-];
-Leaders.description[leaderType.firstStrike] = [
-	"First Strike",
-	"The unit will fire first against an enemy unit if it wins the initiative in a combat round."
-];
-Leaders.description[leaderType.forestCamouflage] = [
-	"Forest Camouflage",
-	"If in a forest hex the unit cannot be spotted by enemy units unless they move adjacent to it."
-];
-Leaders.description[leaderType.infiltrationTactics] = [
-	"Infiltration Tactics",
-	"The unit ignores enemy unit entrenchment when calculating combat results."
-];
-Leaders.description[leaderType.influence] = [
-	"Influence",
-	"Allows the unit to upgrade to better equipment at reduced prestige point cost."
-];
-Leaders.description[leaderType.liberator] = [
-	"Liberator",
-	"You receive double the normal number of prestige points for all objective and victory hexes captured by the unit."
-];
-Leaders.description[leaderType.overwatch] = [
-	"Overwatch",
-	"The unit will fire at any enemy unit that moves within its range. The enemy unit is automatically surprised, allowing your unit to fire first and at the enemy\u2019s close assault, rather than its ground defense, factor."
-];
-Leaders.description[leaderType.overwhelmingAttack] = [
-	"Overwhelming Attack",
-	"When attacking the unit will have an indeterminate number of the suppression points it would otherwise inflict converted to kills."
-];
-Leaders.description[leaderType.reconMovement] = [
-	"Recon Movement",
-	"The unit is permitted phased movement, just like reconnaissance units."
-];
-Leaders.description[leaderType.resilience] = [
-	"Resilience",
-	"The unit will suffer 1 to 3 fewer step casualties than normal units when attacked."
-];
-Leaders.description[leaderType.shockTactics] = [
-	"Shock Tactics",
-	"Any suppression which the unit inflicts on an enemy unit will last the entire player turn, not just the specific combat round."
-];
-Leaders.description[leaderType.skilledGroundAttack] = [
-	"Skilled Ground Attack",
-	"The unit will inflict 1 to 3 more step casualties than normal units when attacking."
-];
-Leaders.description[leaderType.skilledReconnaissance] = [
-	"Skilled Reconnaissance",
-	"The unit spotting range is increased by one hex."
-];
-Leaders.description[leaderType.streetFighter] = [
-	"Street Fighter",
-	"The unit ignores an enemy unit city entrenchment when calculating combat results."
-];
-Leaders.description[leaderType.superiorManeuver] = [
-	"Superior Maneuver",
-	"The unit may bypass enemy unit zones of control."
-];
 
 //The class leader of a unit that has a leader, -1 otherwise
 Leaders.getUnitClassLeader = function(unit) {

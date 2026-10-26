@@ -130,7 +130,7 @@ export default defineConfig({
 				"src/game.ts": { statements: 86, branches: 80, functions: 78, lines: 87 },
 				"src/gamerules.ts": { statements: 96, branches: 97, functions: 96, lines: 97 },
 				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
-				"src/leaders.ts": { statements: 87, branches: 50, functions: 50, lines: 88 },
+				"src/leaders.ts": { statements: 76, branches: 50, functions: 50, lines: 78 },
 				"src/map.ts": { statements: 95, branches: 84, functions: 96, lines: 94 },
 				"src/prototypes.ts": { statements: 85, branches: 0, functions: 42, lines: 85 },
 				"src/rng.ts": { statements: 93, branches: 100, functions: 85, lines: 93 },
