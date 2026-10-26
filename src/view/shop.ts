@@ -12,7 +12,7 @@ import { isTransportable } from "../core/units";
 import { unitById } from "../core/world";
 import { unitClass, unitClassNames } from "../prototypes";
 import type { IconName, Nation } from "./icon";
-import { classIcon, countryName, isYourTurn, nationOf, prestigeText, reasonOf } from "./model";
+import { classIcon, countryName, isYourTurn, MONTH_NAMES, nationOf, prestigeText, reasonOf } from "./model";
 import { ordinal, tagsOf } from "./unitcard";
 
 //The unit the window works on: one on the map, or a core unit off it by its place in the core list (the reserve)
@@ -104,8 +104,6 @@ export interface Shop {
 	buy: ShopAction;
 	after: { action: string, prestige: string } | null;
 }
-
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 //The side's countries, the player's own and its support countries, as Map.getCountriesBySide lists them
 export function sideCountries(w: World, side: number): number[] {
@@ -290,7 +288,7 @@ export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	const year = yearOf(w), pricing: Pricing = { w, p, target, unit, eqid: choice.eqid, transport, year };
 	const upgrade = upgradeOf(pricing), buy = buyOf(pricing), own = unit === null ? null : w.equipment[unit.eqid];
 	return {
-		title: name + " · " + MONTHS[new Date(w.state.scenario.date).getMonth()] + " " + year,
+		title: name + " · " + MONTH_NAMES[new Date(w.state.scenario.date).getMonth()] + " " + year,
 		country: { name, nation: nationOf(name), many: countries.length > 1 }, prestige: prestigeText(p.prestige), tabs: tabsOf(w, country, choice),
 		uclass: choice.uclass, sort: choice.sort, reverse: choice.reverse,
 		models: modelsOf(w, country, choice.uclass, choice.sort, choice.reverse).map((m) => modelOf(w, m, choice.sort, unit === null ? -1 : unit.eqid)),

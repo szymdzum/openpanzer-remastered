@@ -41,7 +41,8 @@ async function playing(file: string, ai: number[], rules: "classic" | "remaster"
 	return g;
 }
 
-const ok = () => screen.getByRole("button", { name: "OK" });
+//The message's one button: Understood on a briefing, Continue on the other messages (MessageDialog)
+const ok = () => screen.getByRole("button", { name: /^(Understood|Continue)$/ });
 const endTurn = () => document.querySelector<HTMLButtonElement>("#endturn button")!;
 const turnShown = () => document.querySelector(".pm-status .cell")!.textContent;
 
