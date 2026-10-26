@@ -154,6 +154,7 @@ export function endGameTurn(game: Game): boolean {
 		started = true;
 		mirrored(game);
 		for (const e of events) if (e.type === "resupplied") CombatLog.addResupply(m.getUnitById(e.unit));
+		game.host.screen.turnEvents?.(events);
 		if (st !== null && st.type === playerType.aiLocal) game.host.screen.unitsPlaced();
 		if (st !== null) show(game, st.view);
 	};
@@ -183,6 +184,7 @@ function arrived(game: Game, events: GameEvent[]) {
 			game.host.screen.reinforced(e.at, game.spotSide === u.player.side);
 	}
 	if (any) game.host.screen.unitsPlaced();
+	if (any) game.host.screen.turnEvents?.(events.filter((e) => e.type === "arrived"));
 }
 
 //GameMap.updateUnitList: the units marked destroyed off the map (the harness takes a side's units away
