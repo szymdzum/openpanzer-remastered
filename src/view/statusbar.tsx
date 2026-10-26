@@ -7,9 +7,8 @@ import { Icon, Mark } from "./icon";
 import { Panel } from "./panel";
 import type { Store } from "./store";
 
-//The unit list is a window (D5): until then its button is off with that reason. The turn report button opens the short
-//report again (TurnStart)
-const NOT_YET = "Not in the new UI yet";
+//The unit list button opens the strip of the person's units (UnitList); the turn report button opens the short report
+//again (TurnStart)
 
 export function StatusBar({ store }: { store: Store }) {
 	const prestige = store.prestigeShown.value, nation = store.nation.value, weather = store.weather.value, ground = store.ground.value;
@@ -28,7 +27,7 @@ export function StatusBar({ store }: { store: Store }) {
 				<span class="cell" title="The rules this game plays"><span class="pm-label">Rules</span>{store.rules.value}</span>
 				<span class="grow" />
 				{prestige !== null && <span class="cell pm-prestige" title="Prestige"><Icon name="prestige" size="sm" />{prestige}</span>}
-				<Button id="statusBarButton" icon="unit-list" label="Unit list" disabled={NOT_YET} />
+				<Button id="statusBarButton" icon="unit-list" label="Unit list" disabled={store.shopRefusal.value} onClick={() => store.toggleList()} />
 				<Button id="combatLogButton" icon="document" label="Turn report" disabled={store.reportRefusal.value}
 					onClick={() => store.showReport(!store.banner.value)} />
 			</div>

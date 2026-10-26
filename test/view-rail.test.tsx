@@ -44,7 +44,7 @@ const key = (code: string, more: KeyboardEventInit = {}, on: EventTarget = windo
 	act(() => { on.dispatchEvent(new KeyboardEvent("keydown", { code, key: code.replace("Key", "").toLowerCase(), bubbles: true, ...more })); });
 const button = (id: string) => document.getElementById(id) as HTMLButtonElement;
 
-test("The rail has the game's buttons in the card's groups, each named with its shortcut; Buy and Options are off until their windows", () => {
+test("The rail has the game's buttons in the card's groups, each named with its shortcut; Options is off until its window", () => {
 	railOf();
 	const groups = [...document.querySelectorAll("#menu .group")].map((g) => [...g.querySelectorAll("button")].map((b) => b.id));
 	expect(groups).toEqual([["inspectunit"], ["buy", "hex", "air", "zoom", "options"], ["mainmenu"]]);
@@ -52,8 +52,8 @@ test("The rail has the game's buttons in the card's groups, each named with its 
 	//(the key in the rail's tooltip, test/view-tooltips.test.tsx, and for screen readers)
 	expect(["inspectunit", "hex", "air", "zoom"].map((id) => [button(id).getAttribute("aria-label"), button(id).getAttribute("aria-keyshortcuts")]))
 		.toEqual([["Inspect unit", "I"], ["Hex grid", "H"], ["Air layer", "A"], ["Strategic map", "Z"]]);
-	expect([button("buy").disabled, button("buy").title, button("options").title, button("options").getAttribute("aria-keyshortcuts")])
-		.toEqual([true, "Buy and upgrade: Not in the new UI yet", "Options: Not in the new UI yet", "Escape"]);
+	expect([button("buy").disabled, button("buy").hasAttribute("title"), button("options").title, button("options").getAttribute("aria-keyshortcuts")])
+		.toEqual([false, false, "Options: Not in the new UI yet", "Escape"]);
 	//the toggles say whether they are on; Inspect unit and the fold don't
 	expect(["hex", "air", "zoom"].map((id) => button(id).getAttribute("aria-pressed"))).toEqual(["false", "false", "false"]);
 	expect(button("inspectunit").hasAttribute("aria-pressed")).toBe(false);
@@ -89,9 +89,11 @@ test("Every key the old UI reads: I, H, A, Z, L and B, by their physical keys; n
 	expect(store.plaques.value).toEqual([]);
 	await key("KeyL");
 	expect(store.labels.value).toBe(false);
-	//B: the window isn't in the new UI yet, the status line says so
+	//B: the equipment window opens, and closes again (#348)
 	await key("KeyB");
-	expect(store.refused.value).toBe("Not in the new UI yet");
+	expect([store.shop.value !== null, button("buy").getAttribute("aria-pressed")]).toEqual([true, "true"]);
+	await key("KeyB");
+	expect(store.shop.value).toBeNull();
 	await key("KeyH", { ctrlKey: true });
 	await key("KeyH", { repeat: true });
 	await key("KeyQ");

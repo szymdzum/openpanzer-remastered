@@ -104,6 +104,119 @@
 			}
 		}
 
+		/* the unit list (UnitList) under the status bar in the middle; its cards scroll sideways */
+		& > .pm-unitlist {
+			inset-block-start: 5.5rem;
+			inset-inline-start: 50%;
+			translate: -50% 0;
+			inline-size: min(56.25rem, 100% - 2 * var(--space-3));
+
+			.note {
+				font-size: var(--type-small-size);
+			}
+
+			.pm-strip {
+				overflow-x: auto;
+			}
+
+			.cards {
+				display: flex;
+				gap: var(--space-2);
+			}
+
+			.pm-ucard {
+				font: inherit;
+				color: inherit;
+			}
+
+			.sub {
+				font-size: var(--type-label-size);
+				line-height: 0.875rem;
+			}
+		}
+
+		/* the equipment window (Equipment) in the middle, as large as the screen lets it; its models and its detail
+		   scroll inside it, and the detail goes under the models where the window is narrow */
+		& > .pm-eq {
+			inset-block-start: 50%;
+			inset-inline-start: 50%;
+			translate: -50% -50%;
+			inline-size: min(65rem, 100% - 2 * var(--space-3));
+			block-size: min(43rem, 100dvh - 2 * var(--space-3));
+			container: eq / inline-size;
+
+			& > .bd {
+				display: flex;
+				flex-direction: column;
+				padding: 0;
+			}
+
+			.prestige {
+				display: inline-flex;
+				align-items: center;
+				gap: var(--space-1);
+				font-size: var(--type-title-size);
+			}
+
+			.count {
+				font-size: var(--type-note-size);
+			}
+
+			.sortmore {
+				inline-size: auto;
+			}
+
+			.pm-grid {
+				grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+				overflow-y: auto;
+			}
+
+			.pm-card {
+				font: inherit;
+				color: inherit;
+			}
+
+			.detail {
+				overflow-y: auto;
+			}
+
+			.line {
+				font-size: var(--type-note-size);
+			}
+
+			/* (the columns as wide as the models' names in the header) */
+			.pm-cmp {
+				grid-template-columns: 1fr auto 1fr auto;
+			}
+
+			.pm-cmp :is(thead, tbody, tr) {
+				display: contents;
+			}
+
+			.pm-cmp th {
+				font-weight: 400;
+				text-align: start;
+			}
+
+			.transport {
+				display: grid;
+				gap: var(--space-2);
+			}
+
+			.actions {
+				display: flex;
+				flex: 1;
+				align-items: center;
+				gap: var(--space-3);
+			}
+		}
+
+		@container eq (width < 50rem) {
+			.pm-eq .body {
+				grid-template-columns: 1fr;
+			}
+		}
+
 		/* the reserve to deploy from, at the bottom in the middle until the reserve tray (D5) docks there */
 		& > .pm-reserve {
 			inset-block-end: var(--space-4);

@@ -145,6 +145,6 @@ test("The rail's tooltip shows a button's label and key beside it on hover or fo
 	expect(tip()!.textContent).toBe("Hide menu");
 	await act(() => { fireEvent.blur(document.getElementById("mainmenu")!); });
 	//enabled buttons have no title of their own (the tooltip says it), disabled ones say why
-	expect([document.getElementById("zoom")!.hasAttribute("title"), document.getElementById("buy")!.title])
-		.toEqual([false, "Buy and upgrade: Not in the new UI yet"]);
+	expect([document.getElementById("zoom")!.hasAttribute("title"), document.getElementById("options")!.title])
+		.toEqual([false, "Options: Not in the new UI yet"]);
 });

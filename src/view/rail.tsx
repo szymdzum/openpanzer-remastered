@@ -82,7 +82,8 @@ export function Rail({ store }: { store: Store }) {
 			</div>
 			{open && (
 				<div id="slidemenu" class="group">
-					<RailButton onHint={setHint} id="buy" icon="depot" label="Buy and upgrade" keyName="B" disabled={NOT_YET} />
+					<RailButton onHint={setHint} id="buy" icon="depot" label="Buy and upgrade" keyName="B" pressed={store.shop.value !== null}
+						disabled={store.shopRefusal.value} onClick={key({ menu: "buy" })} />
 					<RailButton onHint={setHint} id="hex" icon="grid" label="Hex grid" keyName="H" pressed={store.hexGrid.value} onClick={key({ menu: "hex" })} />
 					<RailButton onHint={setHint} id="air" icon="air" label="Air layer" keyName="A" pressed={store.airMode.value} onClick={key({ menu: "air" })} />
 					<RailButton onHint={setHint} id="zoom" icon="map" label="Strategic map" keyName="Z" pressed={store.strategic.value} onClick={key({ menu: "zoom" })} />
