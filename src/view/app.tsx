@@ -18,21 +18,22 @@ import { AiIndicator, TurnBanner } from "./turnbanner";
 import type { Store } from "./store";
 import { useEffect, useRef } from "preact/hooks";
 
-//The dock's height on the screen as --dock-h (screen.css)
-function useDockHeight() {
-	const dock = useRef<HTMLDivElement>(null);
+//The room the dock takes at the screen's bottom, kept in the store: the map scrolls past it (#453)
+function useDockHeight(store: Store) {
+	const dock = useRef<HTMLDivElement>(null), height = store.dockHeight;
 	useEffect(() => {
-		const el = dock.current!, screen = el.parentElement!;
+		const el = dock.current!;
 		if (typeof ResizeObserver !== "function") return undefined;
-		const watch = new ResizeObserver(() => screen.style.setProperty("--dock-h", el.offsetHeight + "px"));
+		//(its height and the gap under it, which it sits above the screen's bottom by)
+		const watch = new ResizeObserver(() => { height.value = el.offsetHeight + (parseFloat(getComputedStyle(el).bottom) || 0); });
 		watch.observe(el);
 		return () => watch.disconnect();
-	}, []);
+	}, [height]);
 	return dock;
 }
 
 export function App({ store }: { store: Store }) {
-	const dock = useDockHeight();
+	const dock = useDockHeight(store);
 	return (
 		<div class="pm pm-screen">
 			<IconSprite />

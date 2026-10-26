@@ -124,6 +124,14 @@ test("The map looks at the side's first unit when the scenario starts, and at a 
 	await frame();
 });
 
+test("The map scrolls past its last row by the dock's height, so the unit card never hides the bottom rows and their units (#453)", async () => {
+	const { store } = await mapOf(handWorld({ rows: 30, cols: 30, units: [{ eqid: 140, owner: 0, row: 29, col: 20 }] }, undefined, { spotSide: 0 }));
+	const area = document.querySelector<HTMLElement>(".pm-mapview-area")!;
+	expect(area.style.blockSize).toBe(30 * 50 + "px");
+	await act(() => { store.dockHeight.value = 180; });
+	expect(area.style.blockSize).toBe(30 * 50 + 180 + "px");
+});
+
 test("No game playing: a click on the map does nothing, the map is empty", async () => {
 	const store = createStore({ world: () => null, command: () => ({ ok: false, refusal: { reason: "No game is playing" } }), won: () => {} });
 	store.refresh();
