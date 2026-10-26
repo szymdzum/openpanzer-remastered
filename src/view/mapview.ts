@@ -96,12 +96,14 @@ function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove"
 	return { canMove, canFire, noAmmo: fires && !canFire, done: !canMove && !fires };
 }
 
-//The current player's units that can still move or fire this turn: what End turn warns of when a person plays it (#8)
+//The current player's units that can still do something this turn: move, or fire at a target in range (the core's
+//attack cells); what End turn warns of when a person plays it (#8). A unit with its shot but nothing to hit isn't one
+//(#436), though its marker still shows the shot
 export function unitsToAct(w: World): UnitState[] {
 	return w.state.units.filter((u) => {
 		if (u.row < 0) return false;
 		const r = readiness(w, u, true);
-		return r.canMove || r.canFire;
+		return r.canMove || (r.canFire && attackCells(w, u).length > 0);
 	});
 }
 

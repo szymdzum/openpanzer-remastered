@@ -15,7 +15,7 @@ import { hexIndex, unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
 import { roadType, terrainType } from "../src/prototypes";
 import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
-import { clickOn, mapUnits, outlineOf, pathOf, selectionOf } from "../src/view/mapview";
+import { clickOn, mapUnits, outlineOf, pathOf, selectionOf, unitsToAct } from "../src/view/mapview";
 import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
 import { strategicOf } from "../src/view/strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf } from "../src/view/deploy";
@@ -352,4 +352,15 @@ test("Every flag and objective has its plaque (#62): an objective +150 with its 
 		{ row: 5, col: 5, name: "Grudusk", objective: false, prestige: 50, side: 0, flag: 7 },
 		{ row: 7, col: 1, name: "", objective: true, prestige: 150, side: -1, flag: -1 },
 	]);
+});
+
+test("End turn warns only of the units that can still move or fire at a target in range, not of a shot with nothing to hit (#436)", () => {
+	//both tanks have moved and kept their shot: the one next to the Polish tank can fire, the other has nothing in range
+	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3, hasMoved: true }, { eqid: PZ_IIA, owner: 0, row: 8, col: 8, hasMoved: true },
+		{ eqid: TP7, owner: 1, row: 4, col: 4 }]);
+	expect(unitsToAct(w).map((u) => u.id)).toEqual([0]);
+	//(a unit that hasn't moved is counted whether or not it has a target)
+	expect(unitsToAct(hand([{ eqid: PZ_IIA, owner: 0, row: 8, col: 8 }])).map((u) => u.id)).toEqual([0]);
+	//its marker still shows the shot it has
+	expect(mapUnits(w, false, null).find((u) => u.id === 1)!.marker).toMatchObject({ canMove: false, canFire: true });
 });
