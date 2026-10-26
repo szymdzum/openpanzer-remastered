@@ -18,6 +18,7 @@ import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { unitInfoOf } from "./unitinfo";
 import { type CardView, entryCardOf, unitCardOf } from "./unitcard";
+import { createShopState } from "./shopstate";
 import { contextOf, type UndoLoss, undoLoss } from "./context";
 import { hexTipOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -268,10 +269,13 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		return true;
 	};
 
+	//The unit list and the equipment window (UnitList, Equipment)
+	const shops = createShopState({ world, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
+
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
 	const menu: Record<MenuKey, () => void> = {
 		inspect: () => { infoShown.value = !infoShown.value; },
-		buy: notYet,
+		buy: () => shops.toggleShop(),
 		hex: () => { hexGrid.value = !hexGrid.value; },
 		air: () => toggleAir(),
 		zoom: () => { strategic.value = !strategic.value; },
@@ -293,7 +297,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, unit, note, hexGrid, infoShown, railOpen, labels, asking, askingText, info, context, lost, hexTip, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, blocked, blockedAt, glance, odds,
-		results, news, motion, showStep, card,
+		results, news, motion, showStep, card, ...shops,
 
 		//The unit card opened on the selected unit, or on an equipment entry of a country
 		openCard(entry?: { eqid: number, country: number }) {

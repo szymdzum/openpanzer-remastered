@@ -87,7 +87,7 @@ function moveName(e: EquipmentEntry): string {
 	return e.uclass <= unitClass.airDefence && e.movmethod === movMethod.deepnaval ? "Rail road" : movMethodNames[e.movmethod];
 }
 
-function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
+export function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
 	const tags: CardTag[] = [
 		{ text: unitClassNames[e.uclass], icon: classIcon(e.uclass), core: false },
 		{ text: unitTypeNames[e.target] + " target", icon: null, core: false },

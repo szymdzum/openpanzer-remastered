@@ -113,7 +113,7 @@ export default defineConfig({
 				"src/view/mapdraw.ts", "src/view/mapinfo.ts", "src/view/canvas.ts", "src/view/overlays.ts", "src/view/strategic.ts",
 				"src/view/strategicdraw.ts", "src/view/deploy.ts", "src/view/shortcuts.ts", "src/view/unitinfo.ts", "src/view/context.ts", "src/view/hextip.ts", "src/view/turn.ts",
 				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
-				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts"],
+				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -234,6 +234,11 @@ export default defineConfig({
 				"src/view/motiondraw.ts": { statements: 92, branches: 75, functions: 66, lines: 95 },
 				"src/view/unitcard.ts": { statements: 98, branches: 98, functions: 94, lines: 97 },
 				"src/view/unitsheet.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/unitlist.ts": { statements: 96, branches: 93, functions: 90, lines: 94 },
+				"src/view/shop.ts": { statements: 96, branches: 92, functions: 97, lines: 99 },
+				"src/view/shopstate.ts": { statements: 90, branches: 84, functions: 94, lines: 97 },
+				"src/view/unitstrip.tsx": { statements: 100, branches: 82, functions: 100, lines: 100 },
+				"src/view/shopwindow.tsx": { statements: 100, branches: 98, functions: 100, lines: 100 },
 			},
 		},
 	},
