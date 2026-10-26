@@ -40,3 +40,14 @@ After, the same scene (the pane drew the 1366×768 page smaller): the path and i
 is told in the status bar's second line ("Clear/Road (10,7)").
 
 ![after](move-after.jpg)
+
+## The town plaques (#438)
+
+At the pane's own size (not 1366×768), the tutorial's start. Before: the plaques on the top edge of their hexes, over
+the units above them.
+
+![before](plaques-before.jpg)
+
+After: at the foot of their hexes, beneath the units, at 70%.
+
+![after](plaques-after.jpg)
