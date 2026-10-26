@@ -387,15 +387,6 @@
 		"readme": true
 	},
 	{
-		"name": "UnitCard",
-		"group": "Screens · In game",
-		"width": 1000,
-		"height": 920,
-		"subtitle": "The full unit sheet: identity, experience, condition in words, every stat with what it is for, leader abilities and the next upgrade",
-		"status": "Ready",
-		"readme": true
-	},
-	{
 		"name": "UnitContext",
 		"group": "Screens · In game",
 		"width": 1000,
@@ -407,9 +398,9 @@
 	{
 		"name": "UnitInfo",
 		"group": "Screens · In game",
-		"width": 900,
-		"height": 300,
-		"subtitle": "Unit info panel (#unit-info): identity, supply meters and the full stat sheet",
+		"width": 1100,
+		"height": 760,
+		"subtitle": "The unit card (#unit-info), docked at the bottom in three sizes: one row of identity, condition and the short stat sheet; unfolded, a band above it of every stat, the figures, the experience and the leaders; hidden, a strip of the name and supply",
 		"status": "Ready",
 		"readme": true
 	},

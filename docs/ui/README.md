@@ -73,9 +73,8 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 | [Tooltips](components/Tooltips/README.md)<br>[render](renders/Tooltips.webp) | Hex tooltip with what the terrain does, unit pins (low fuel, no ammo), button tooltip and the AI status indicator | Ready |
 | [TurnBanner](components/TurnBanner/README.md)<br>[render](renders/TurnBanner.webp) | The short turn report (#combatLog) through a scenario: early, late, last turn, Blackout | Ready |
 | [TurnStart](components/TurnStart/README.md)<br>[render](renders/TurnStart.webp) | Start of a turn at 1920×1080: the short turn report under the status bar, the first unit selected | Ready |
-| [UnitCard](components/UnitCard/README.md)<br>[render](renders/UnitCard.webp) | The full unit sheet: identity, experience, condition in words, every stat with what it is for, leader abilities and the next upgrade | Ready |
 | [UnitContext](components/UnitContext/README.md)<br>[render](renders/UnitContext.webp) | Unit context menu (#unit-context): the old menu's icon buttons, docked at the bottom above the unit info, only the actions the unit can take now | Ready |
-| [UnitInfo](components/UnitInfo/README.md)<br>[render](renders/UnitInfo.webp) | Unit info panel (#unit-info): identity, supply meters and the full stat sheet | Ready |
+| [UnitInfo](components/UnitInfo/README.md)<br>[render](renders/UnitInfo.webp) | The unit card (#unit-info), docked at the bottom in three sizes: one row of identity, condition and the short stat sheet; unfolded, a band above it of every stat, the figures, the experience and the leaders; hidden, a strip of the name and supply | Ready |
 | [UnitList](components/UnitList/README.md)<br>[render](renders/UnitList.webp) | Unit list (#container-unitlist) as a strip under the status bar | Ready |
 | [ZoomLevels](components/ZoomLevels/README.md)<br>[render](renders/ZoomLevels.webp) | Detail by zoom: what the map shows at the strategic fit, at 1×, and at the 2–3× map scale, and why markers keep their size | Ready |
 

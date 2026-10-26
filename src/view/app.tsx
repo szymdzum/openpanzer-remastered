@@ -5,7 +5,6 @@
 import { IconSprite } from "./icon";
 import { UnitContextMenu } from "./contextmenu";
 import { UnitInfoPanel } from "./infopanel";
-import { UnitCardPanel } from "./unitsheet";
 import { UnitStrip } from "./unitstrip";
 import { ReserveTray } from "./tray";
 import { LogWindow } from "./logwindow";
@@ -19,7 +18,7 @@ import { AiIndicator, TurnBanner } from "./turnbanner";
 import type { Store } from "./store";
 import { useEffect, useRef } from "preact/hooks";
 
-//The dock's height on the screen as --dock-h, which the unit card stops above where the two would meet (screen.css)
+//The dock's height on the screen as --dock-h (screen.css)
 function useDockHeight() {
 	const dock = useRef<HTMLDivElement>(null);
 	useEffect(() => {
@@ -44,7 +43,6 @@ export function App({ store }: { store: Store }) {
 				<UnitContextMenu store={store} />
 				<UnitInfoPanel store={store} />
 			</div>
-			<UnitCardPanel store={store} />
 			<UnitStrip store={store} />
 			<ReserveTray store={store} />
 			<TurnBanner store={store} />

@@ -217,7 +217,7 @@ export default defineConfig({
 				"src/view/rail.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/shortcuts.ts": { statements: 87, branches: 100, functions: 50, lines: 83 },
 				"src/view/infopanel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/unitinfo.ts": { statements: 95, branches: 100, functions: 83, lines: 93 },
+				"src/view/unitinfo.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(the one uncovered: the harness setter every module gets)
 				"src/view/context.ts": { statements: 97, branches: 100, functions: 88, lines: 96 },
 				"src/view/contextmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/hextip.ts": { statements: 95, branches: 100, functions: 75, lines: 93 },
@@ -233,7 +233,6 @@ export default defineConfig({
 				"src/view/player.ts": { statements: 98, branches: 100, functions: 94, lines: 98 },
 				"src/view/motiondraw.ts": { statements: 92, branches: 75, functions: 66, lines: 95 },
 				"src/view/unitcard.ts": { statements: 98, branches: 98, functions: 92, lines: 97 }, //(the one uncovered: the harness setter every module gets)
-				"src/view/unitsheet.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/unitlist.ts": { statements: 96, branches: 92, functions: 88, lines: 94 },
 				"src/view/shop.ts": { statements: 96, branches: 91, functions: 96, lines: 98 },
 				"src/view/shopstate.ts": { statements: 90, branches: 84, functions: 94, lines: 97 },
