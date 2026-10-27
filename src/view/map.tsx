@@ -88,7 +88,7 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.glance.value, s.results.value, s.motion.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.glance.value, s.results.value, s.motion.value, s.marks.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -197,7 +197,7 @@ class Painter {
 		const s = this.store;
 		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: s.hexGrid.peek(), units: s.units.peek(),
 			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek(),
-			strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek() };
+			strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek(), marks: s.marks.peek() };
 	}
 
 	//Where the map looks, when the scenario or the look asked changes (not when the side's first unit moves): the

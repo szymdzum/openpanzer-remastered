@@ -133,7 +133,7 @@ test("A ring with the moves left; a light ring when the unit can move again; das
 test("A unit on a bridge of its side is drawn as the bridge; an image not loaded isn't drawn", () => {
 	const drawn: string[] = [];
 	const { ctx } = recorder();
-	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, chip: null, lifted: false };
+	const unit: MapUnit = { id: 0, row: 1, col: 1, icon: "a.png", facing: 0, side: 0, bridge: true, marker: null, dim: false, chip: null, lifted: false, current: false };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 3, cols: 3, grid: false, units: [unit, { ...unit, bridge: false, icon: "" }], selection: null, path: null,
 		fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null },
 		vp(1), (file) => {
@@ -283,4 +283,22 @@ test("The strategic map draws the terrain, a chip per unit with its flag, dimmed
 	const { ctx: bare, ops: none } = recorder();
 	drawMap(bare, { ...scene(w), strategic }, view, (file) => file === strategic.flags ? null : sprite);
 	expect(none.filter((o) => o.op === "drawImage")).toHaveLength(1);
+});
+
+test("Mark own units on map tints the hexes of the units whose turn it is, Mark enemy strength in red fills the enemy's plates in red, as the old map (#464)", () => {
+	const fills = (marks: Scene["marks"]) => {
+		const { ctx, ops } = recorder();
+		drawMap(ctx, { ...scene(), marks }, vp(1), images);
+		return ops.filter((o) => o.op === "fill").map((o) => o.fillStyle + "@" + o.globalAlpha);
+	};
+	const off = fills(undefined);
+	//the plates in the sides' colours, nothing tinted
+	expect(off).not.toContain(MAP["map-axis"] + "@0.3");
+	expect(off).not.toContain(MAP["map-critical"] + "@1");
+	expect(fills({ own: false, enemy: false })).toEqual(off);
+	//the German tank's hex tinted (the turn is Germany's), the Polish plate the side sees red instead of its side's colour
+	const on = fills({ own: true, enemy: true });
+	expect(on.filter((f) => f === MAP["map-axis"] + "@0.3")).toHaveLength(1);
+	expect(on.filter((f) => f === MAP["map-critical"] + "@1")).toHaveLength(1);
+	expect(on.filter((f) => f === MAP["map-allied"] + "@1").length).toBe(off.filter((f) => f === MAP["map-allied"] + "@1").length - 1);
 });
