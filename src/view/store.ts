@@ -35,6 +35,7 @@ import { createNewGame, type NewGameHost } from "./newgamestate";
 import { createSettings, type SettingsHost } from "./settingsstate";
 import { settingSignals } from "./uisettings";
 import { createSaveLoad, type SaveLoadHost } from "./saveloadstate";
+import { stableComputed } from "./stable";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won; the new games
 //the start menu starts (none in the tests of the map and the HUD)
@@ -112,7 +113,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const player = createPlayer({ pick: cosmetic === undefined ? () => 0 : () => cosmetic.call(host), show: (m) => { motion.value = m; },
 		hide: (id) => { moving.value = id; }, centre: (p) => hexCentre(p.row, p.col), ...page });
 
-	const status = computed(() => world.value === null ? null : statusOf(world.value));
+	const status = stableComputed(() => world.value === null ? null : statusOf(world.value));
 	//(each a value of its own: the status bar's cells render again only when theirs changes)
 	const side = computed(() => status.value === null ? -1 : status.value.side);
 	const sideName = computed(() => status.value === null ? "" : status.value.sideName);
@@ -128,24 +129,24 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
-	const card = computed(() => {
+	const card = stableComputed(() => {
 		const w = world.value, id = selected.value, picked = cardView.value;
 		if (w === null || id === null) return null;
 		return unitCardOf(w, id, picked !== null && picked.unit === id ? picked.view : null);
 	});
 	//the pins over the side playing's units, cleared with the labels (L)
-	const pins = computed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
+	const pins = stableComputed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
 	//the turn report while it is open; the program's turn in progress (the AI indicator)
-	const report = computed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
-	const combatLog = computed(() => world.value === null || !logOpen.value ? null : combatLogOf(world.value, log.value, enemy.value));
-	const dossier = computed(() => world.value === null || (!dossierOpen.value && ending.value === null) ? null : dossierOf(world.value));
+	const report = stableComputed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
+	const combatLog = stableComputed(() => world.value === null || !logOpen.value ? null : combatLogOf(world.value, log.value, enemy.value));
+	const dossier = stableComputed(() => world.value === null || (!dossierOpen.value && ending.value === null) ? null : dossierOf(world.value));
 	const campaignEnd = computed(() => ending.value === null ? null : campaignEndOf(ending.value.outcome, ending.value.html));
-	const ai = computed(() => world.value === null ? null : aiStatusOf(world.value));
+	const ai = stableComputed(() => world.value === null ? null : aiStatusOf(world.value));
 	//(the status bar's turn report button: the person's report, none while a program plays)
 	//(the report is there whenever the person has a side, turn.ts turnReportOf)
 	const reportRefusal = computed(() => world.value === null || yourPlayer(world.value) === null ? "No report to show" : undefined);
 	//the selected unit's context menu (UnitContext), none while deploying, on the strategic map or while a unit moves on it
-	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value
+	const context = stableComputed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value
 		|| moving.value !== null ? null : contextOf(world.value, selected.value));
 	const note = computed(() => notes.value.length === 0 ? null : notes.value[0]);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to

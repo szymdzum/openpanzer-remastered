@@ -113,7 +113,7 @@ export default defineConfig({
 				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
 				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
-				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts"],
+				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -237,6 +237,7 @@ export default defineConfig({
 				"src/view/logwindow.tsx": { statements: 100, branches: 94, functions: 100, lines: 100 },
 				"src/view/message.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/html.ts": { statements: 97, branches: 95, functions: 90, lines: 96 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/stable.ts": { statements: 95, branches: 100, functions: 85, lines: 93 }, //(the one uncovered: the harness setter)
 				"src/view/dossier.ts": { statements: 93, branches: 78, functions: 91, lines: 95 },
 				"src/view/dossierwindow.tsx": { statements: 100, branches: 95, functions: 100, lines: 100 },
 				"src/view/tray.tsx": { statements: 100, branches: 87, functions: 100, lines: 100 },
