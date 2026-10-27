@@ -46,14 +46,11 @@
 	"overrides": [
 		{
 			"files": [
-				"src/actions.ts",
 				"src/ai.ts",
 				"src/board.ts",
 				"src/combatlog.ts",
 				"src/commands.ts",
 				"src/context.ts",
-				"src/coreplay.ts",
-				"src/corerules.ts",
 				"src/equipment.ts",
 				"src/gamerules.ts",
 				"src/host.ts",
@@ -169,13 +166,10 @@
 		},
 		{
 			"files": [
-				"src/ai.ts",
-				"src/aiscripted.ts",
 				"src/board.ts",
 				"src/campaign.ts",
 				"src/dom.ts",
 				"src/equipment.ts",
-				"src/gamerules.ts",
 				"src/gamestate.ts",
 				"src/leaders.ts",
 				"src/map.ts",
@@ -183,7 +177,6 @@
 				"src/scenarioloader.ts",
 				"src/selection.ts",
 				"src/undo.ts",
-				"src/unit.ts",
 				"test/contracts/engine.contract.js",
 				"test/invariants.test.ts",
 				"test/outcome.test.ts"
@@ -202,10 +195,8 @@
 		},
 		{
 			"files": [
-				"src/ai.ts",
 				"src/combatlog.ts",
 				"src/equipment.ts",
-				"src/gamerules.ts",
 				"src/leaders.ts"
 			],
 			"rules": {
@@ -214,8 +205,6 @@
 		},
 		{
 			"files": [
-				"src/ai.ts",
-				"src/aiscripted.ts",
 				"src/campaign.ts",
 				"src/combatlog.ts",
 				"src/context.ts",
@@ -235,7 +224,6 @@
 		},
 		{
 			"files": [
-				"src/actions.ts",
 				"src/prototypes.ts"
 			],
 			"rules": {
@@ -246,7 +234,6 @@
 			"files": [
 				"src/ai.ts",
 				"src/dom.ts",
-				"src/equipment.ts",
 				"src/gamestate.ts"
 			],
 			"rules": {
@@ -255,44 +242,10 @@
 		},
 		{
 			"files": [
-				"src/actions.ts",
-				"src/gamerules.ts"
-			],
-			"rules": {
-				"typescript/no-for-in-array": "off"
-			}
-		},
-		{
-			"files": [
 				"test/contracts.ts"
 			],
 			"rules": {
 				"typescript/no-implied-eval": "off"
-			}
-		},
-		{
-			"files": [
-				"test/headless.test.ts"
-			],
-			"rules": {
-				"typescript/no-misused-spread": "off"
-			}
-		},
-		{
-			"files": [
-				"src/game.ts"
-			],
-			"rules": {
-				"typescript/no-this-alias": "off"
-			}
-		},
-		{
-			"files": [
-				"src/ai.ts",
-				"test/invariants.test.ts"
-			],
-			"rules": {
-				"typescript/unbound-method": "off"
 			}
 		},
 		{
