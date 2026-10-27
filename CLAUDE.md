@@ -20,6 +20,7 @@ game plays.
 | `npm run check`, `npm run lint` | seconds | after every edit (the hooks in `.claude/settings.json` lint each edited file and check the types when you stop) |
 | `npm run gate` | 1-2 min | before every commit: what CI runs (types, lint, fallow audit, tests with coverage); `typos` too if installed (`brew install typos-cli`) |
 | `npm test` (`npm run test:coverage` in CI, with per-file coverage floors) | ~40 s | after every small step |
+| `npm run e2e` | ~1 min, one Chrome | the new UI's end-to-end test (test/e2e/game.ts); CI runs it on every pull request (`ci.yml` e2e) |
 | `npm run verify` | 3-4 min, up to 6 Chromes | on GitHub: a required check on every pull request, run against its base branch when it touches `src/`, `harness/` or `game/` (`verify.yml`: four shards side by side, a few minutes; adding the label judges without playing again). Locally only to debug a difference |
 
 Locally, compare with main: `BASELINE_REF=origin/main npm run verify`. One verify at a time on
