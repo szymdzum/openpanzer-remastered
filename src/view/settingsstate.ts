@@ -2,7 +2,7 @@
 //changed them, and what they change on the new UI at once (the interface's width and scale, the map's scale, the world
 //the fog of war and the labels are read from). Its OK saves them on the host, applies the interface scale a switch
 //suggested, reloads the page when a switch needs it, and goes back to the start menu.
-import { computed, type Signal, signal } from "@preact/signals";
+import { computed, type ReadonlySignal, type Signal, signal } from "@preact/signals";
 import type { GameHost } from "../host";
 import { uiSettings } from "../prototypes";
 import { menuBack, type MenuState } from "./menus";
@@ -51,6 +51,8 @@ export function createSettings({ host, menu, scale, refresh, reload }: SettingsI
 
 	return {
 		settings, uiScale, uiWidth,
+		//(what reads a setting itself, outside the window, reads this too to follow its changes: the map's plaques, #467)
+		settingsChanged: changed as ReadonlySignal<number>,
 
 		//A slider moved: applied at once, as the old window's buttons applied it
 		slide(key: SliderSetting["key"], v: number) {
