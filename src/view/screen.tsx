@@ -10,7 +10,6 @@ import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
 import type { Position, UnitId } from "../core/types";
 import type { GameHost } from "../host";
-import { uiSettings } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
 import type { Screen } from "../screen";
 import { App } from "./app";
@@ -40,8 +39,6 @@ function downloadOn(page: Document) {
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location), download: downloadOn(root.ownerDocument) });
 	const { refresh } = store;
-	//(the map's scale as the settings saved it, as the old UI applied it at its start)
-	store.scale.value = uiSettings.zoomLevel;
 	//The interface's scale and width as the settings say, on the page's root: every rem scales from its font size, and the
 	//windows the old interface width sized take it (base.css, screen.css)
 	effect(() => {
