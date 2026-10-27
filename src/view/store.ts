@@ -103,8 +103,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const dockHeight = signal(0);
 	//The start menu's window shown, none while the game shows (StartMenu)
 	const menu = signal(MENU_CLOSED);
-	//A step's beats playing (src/view/player.ts): the map takes no click meanwhile, and the screen tells the host it is still
-	//showing a step (#459)
+	//A step's beats playing (src/view/player.ts): the map takes no click meanwhile, the screen tells the host it is still
+	//showing a step (#459), and the person's commands wait for it, as the old UI's End turn waited (#465, #58, #289)
 	const showing = signal(false);
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
@@ -187,6 +187,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//A person's command sent to the host: the screen shows the step at once (the animations are D4's),
 	//then its victories are told; refused, the reason, which the status bar shows until the next command
 	const dispatch = (cmd: Command): string | null => {
+		//(nothing while a step is shown: its End turn would start the next player's turn under it, #465)
+		if (showing.value) return null;
 		const before = world.value;
 		//(the person's turn ending: the enemy's starts quiet, nothing stays selected under it, the report goes; before the
 		//command, which may play the program's whole turn and start the person's next)
@@ -408,7 +410,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		//act (#8)
 		askEndTurn() {
 			const w = world.value;
-			if (w === null || endTurn.value !== null) return;
+			if (w === null || endTurn.value !== null || showing.value) return;
 			const ready = unitsToAct(w);
 			if (ready.length === 0) dispatch({ type: "endTurn" });
 			else asking.value = ready.map((u) => unitData(w, u).name);
