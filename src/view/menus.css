@@ -43,9 +43,22 @@
 			border-block-end: 1px solid var(--line);
 		}
 
+		.pm-wordmark {
+			margin: 0;
+		}
+
 		.links {
 			display: flex;
 			gap: var(--space-1);
+
+			& > a {
+				color: var(--ink);
+			}
+		}
+
+		/* the card's menu items: their icon and caption at the start */
+		.pm-menu > .pm-btn {
+			justify-content: flex-start;
 		}
 
 		.credits {
