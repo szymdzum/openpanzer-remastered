@@ -19,7 +19,7 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, type Cell, DEBUG_AI_MOVES, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
+import { actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
 	uiSettings } from "./prototypes";
 import { AI, type AIAction } from "./ai";
 import { GameMap, Player } from "./map";
@@ -291,6 +291,37 @@ export class GameHost {
 	//The campaign menu's debug buttons: the scenario ended with the outcome they name
 	skipScenario(outcome: ScenarioOutcome) {
 		this.continueCampaign(outcome);
+	}
+
+	//---- A new game from the start menu (the new UI's menus, #349): as the old UI's start menu starts them (src/ui.ts
+	//startMenuButton, src/uibuilder.ts buildStartMenu)
+
+	//The tutorial: no campaign, the fog of war on, both sides played by its script, on the classic rules its script
+	//was planned and checked on (#188). The settings aren't saved, as the old menu didn't
+	startTutorial() {
+		const g = this.game;
+		g.campaign = null;
+		uiSettings.noFOW = false;
+		uiSettings.isAI[0] = 2;
+		uiSettings.isAI[1] = 2;
+		g.rules = "classic";
+		this.newScenario(DEFAULT_SCENARIO);
+	}
+
+	//A single scenario, its file and the briefing to show (the scenario list's): no campaign, the rules of the
+	//settings, and the settings saved (the sides the AI plays)
+	startScenario(file: string, intro: string) {
+		const g = this.game;
+		g.campaign = null;
+		g.rules = newGameRules();
+		this.newScenario(file, intro);
+		g.state.saveSettings();
+	}
+
+	//A campaign, its index in the campaign list and its difficulty (difficultyType), and the settings saved
+	startCampaign(index: number, difficulty: number) {
+		this.newCampaign(index, difficulty);
+		this.game.state.saveSettings();
 	}
 
 	//The campaign's player, null outside a campaign
