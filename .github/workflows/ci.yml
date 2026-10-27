@@ -3,7 +3,7 @@
 # (vite.config.mts), on every pull request and on main. The tests need the game's data
 # (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
 # npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step. The job e2e plays one
-# short game through the new UI in headless Chrome (test/e2e/game.ts), with the images and sounds from Git LFS.
+# short game through the UI in headless Chrome (test/e2e/game.ts), with the images and sounds from Git LFS.
 name: CI
 
 on:
@@ -40,7 +40,7 @@ jobs:
       - uses: crate-ci/typos@v1
       - run: npm run test:coverage
 
-  # The new UI's end-to-end test: a campaign game from the start menu to its second scenario, through the page's
+  # The UI's end-to-end test: a campaign game from the start menu to its second scenario, through the page's
   # element ids and keys, in the runner's Google Chrome (test/e2e/game.ts)
   e2e:
     runs-on: ubuntu-latest

@@ -13,14 +13,8 @@ type Game = Awaited<ReturnType<typeof freshGame>>;
 
 const SAVE = "openpanzer-game-3.2"; //(GameState's save name, MAJOR_VERSION 3.2)
 
-async function silenced(game: Game) {
-	const { UIBuilder } = await import("../src/uibuilder");
-	Object.assign(UIBuilder, { message() {}, messageDynamic() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
-	return game;
-}
-
 async function campaign(index: number, difficulty = 1) {
-	const game = await silenced(await freshGame());
+	const game = await freshGame();
 	await startState(game, `campaign:${index}:${difficulty}`);
 	return game;
 }
@@ -73,12 +67,12 @@ test("A campaign's next scenario starts as the scenario loaded alone, and its sa
 		for (let step = 0; step < 2 && await next(game, "victory"); step++) {
 			const file = game.scenario.file, country = game.campaign.country;
 			const started = await data(game), save = localStorage.getItem(SAVE);
-			const alone = await silenced(await freshGame());
+			const alone = await freshGame();
 			await startState(alone, file);
 			const [want, got] = [alike(await data(alone), country), alike(started, country)];
 			for (const k of Object.keys(want) as (keyof typeof want)[])
 				if (JSON.stringify(want[k]) !== JSON.stringify(got[k])) problems.push(`${file} ${k}`);
-			game = await silenced(await freshGame());
+			game = await freshGame();
 			localStorage.setItem(SAVE, save);
 			game.state.restore(game.onScenarioLoadFinished.bind(game, null, true), () => problems.push(file + " no save"));
 			await until(() => game.scenario !== null && game.scenario.isLoaded && game.gameStarted, file + " restored");

@@ -1,5 +1,5 @@
-//The new UI's end-to-end test (#351): one short campaign game played in headless Chrome on the dev server, through the
-//new UI's element ids and keys, as a person plays it. The start menu, a new campaign (Arctic Storms: its first scenario
+//The UI's end-to-end test (#351): one short campaign game played in headless Chrome on the dev server, through the
+//UI's element ids and keys, as a person plays it. The start menu, a new campaign (Arctic Storms: its first scenario
 //goes on to the second whatever its outcome), a unit bought in the equipment window and deployed, a move, the unit list
 //and the unit card, End turn with the AI's turn played out, the turn report and the dossier, an attack and its result, a
 //save to a file and its load back (the same game after it, by toData: src/state.ts), then the turns ended until the
@@ -12,7 +12,7 @@
 //
 //	npm run e2e                    Chrome from CHROME (a path to its executable), else the installed Google Chrome; a
 //	                               failed step leaves the page's screenshot in harness/out/e2e-failure.png
-//	E2E_QUERY=ui=new npm run e2e   the page's query: the new UI's flag while the old UI is the default
+//	E2E_QUERY=theme=paper npm run e2e   the page's query, none by default
 import { type Browser, chromium, type Locator, type Page } from "playwright-core";
 import { createServer } from "vite";
 import { createHash } from "node:crypto";
@@ -21,7 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import type { Position, World } from "../../src/core/types";
 
-const QUERY = process.env.E2E_QUERY ?? "ui=new";
+const QUERY = process.env.E2E_QUERY ?? "";
 const SEED = 351;
 //The campaign played, by its title in the list, its two first scenarios, and the most turns the first may last
 const CAMPAIGN = "Arctic Storms";
@@ -52,7 +52,7 @@ const errors: string[] = [];
 let page: Page;
 let downloads = "";
 
-//An element of the new UI (its root holds every window of it; the old UI's markup has some of the same ids)
+//An element of the UI (its root holds every window of it)
 const ui = (selector: string, options?: { hasText?: string | RegExp }) => page.locator(".pm-screen " + selector, options);
 
 async function shown(what: Locator, timeout = SHOWN_MS) {

@@ -128,10 +128,9 @@ export function failRequests(file: string, how: "error" | "empty"): () => void {
 	};
 }
 
-//The texts of the messages the game shows (UIBuilder.messageDynamic), from now on: a load that fails says so
-export async function messagesShown(): Promise<string[]> {
-	const { UIBuilder } = await import("../src/uibuilder");
+//The scenario files the game tells its screen it couldn't load (loadFailed), from now on
+export function failedLoads(game: Game): string[] {
 	const shown: string[] = [];
-	UIBuilder.messageDynamic = (_title: string, message: string) => { shown.push(message); };
+	game.host.screen = { ...game.host.screen, loadFailed(file: string) { shown.push(file); } };
 	return shown;
 }

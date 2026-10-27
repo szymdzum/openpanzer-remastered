@@ -64,15 +64,13 @@ test("The game host's imports reach no UI module, no game.ts and no dom.ts", () 
 });
 
 //The game shows itself through the screen interface (src/screen.ts, #374): the host, the session's glue and
-//the screen that shows nothing reach no UI module, and game.ts reaches the old UI only through its screen
-//(src/oldscreen.ts)
-test("The screen interface and the screen that shows nothing reach no UI module; game.ts reaches the old UI only through its screen (#374)", () => {
+//the screen that shows nothing reach no UI module, and game.ts none of the old UI's; the page gives the host
+//the UI's screen (src/main.ts, #351)
+test("The screen interface and the screen that shows nothing reach no UI module, game.ts none of the old UI's (#374, #351)", () => {
 	const reached = reachedFrom(["screen", "nullscreen", "coresession", "commands"]);
 	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
-	const direct = [...fs.readFileSync(path.join(root, "src/game.ts"), "utf8")
-		.matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm)].filter((i) => !i[1]).map((i) => i[2]);
-	expect(direct.filter((m) => ["ui", "uibuilder", "uicombatlog", "render", "animation", "osglue"].includes(m))).toEqual([]);
-	expect(direct).toContain("oldscreen");
+	const oldUI = ["ui", "uibuilder", "uicombatlog", "render", "animation", "style", "sound"];
+	expect([...reachedFrom(["game"])].filter((m) => oldUI.includes(m))).toEqual([]);
 });
 
 //The new UI (src/view/, #380) reads the game through the core, the game host and the screen interface: what

@@ -1,7 +1,7 @@
 //The running game's turns on the core's session (src/coresession.ts, #137): a game of AI players played
-//through Game itself (processTurn, processAIActions, processAction and endTurn: the host's, shown on the
-//old UI's screen, src/oldscreen.ts), its UI a stand-in that plays the move and the attack whole, as the UI
-//does before it animates them. The game goes on one tick at a time, as the turn loop ticked until #375:
+//through Game itself (processTurn, processAIActions, processAction and endTurn: the host's), shown on a
+//stand-in for the old UI's screen (src/oldscreen.ts until #351) that plays the move and the attack whole, as
+//the old UI did before it animated them. The game goes on one tick at a time, as the turn loop ticked until #375:
 //each action the screen shows, and each turn's end, waits for the next tick. Every action
 //the handlers hand out is recorded as harness/replay.js records it (its getAction wrapped), with the
 //state then, and every end of turn, then a game saved in the middle of an AI's turn and loaded, played
@@ -18,6 +18,7 @@ import type { Game } from "../src/game";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
 import type { AIAction } from "../src/ai";
+import type { Screen } from "../src/screen";
 
 //harness/replay.sh's items: a few in CI, all with CORE_ALL_ITEMS=1
 const ITEMS = process.env.CORE_ALL_ITEMS
@@ -40,7 +41,7 @@ async function play(item: string): Promise<string[]> {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
 	const { Commands } = await import("../src/commands");
-	const { UIBuilder } = await import("../src/uibuilder");
+	const { unitObject } = await import("../src/mirror");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
 	const { CombatLog } = await import("../src/combatlog");
@@ -51,9 +52,7 @@ async function play(item: string): Promise<string[]> {
 	Rng.seed(seed);
 	Math.random = mulberry32(seed);
 	const screen: string[] = [];
-	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {}, showCampaignEnd() {},
-		showPrototypeAwardMessage(eqid: number) { screen.push("prototype " + eqid); } });
-	game.ui = stand(game, Commands, screen) as unknown as Game["ui"];
+	game.host.screen = stand(game, Commands, unitObject, screen);
 	const tick = ticking(game);
 	await startState(game, item.startsWith("campaign:") ? item + ":0" : item, [1, 1, 1, 1]);
 	const trace: string[] = [];
@@ -147,30 +146,48 @@ function ticking(game: Game) {
 	};
 }
 
-//The UI as Game calls it: the move and the attack played whole, the rest recorded or nothing
-function stand(game: Game, Commands: typeof import("../src/commands").Commands, screen: string[]) {
+//The screen the record was made on: the old UI's (src/oldscreen.ts until #351) over a stand-in of the UI, each
+//call as the old screen made it of the stand-in. The move and the attack played whole, the unit the AI picked
+//selected on the map, what the screen was asked to show recorded, its messages and windows nothing (the old
+//UIBuilder's were stubbed); the game's wait for a step shown ends at the next tick (ticking)
+function stand(game: Game, Commands: typeof import("../src/commands").Commands, unitObject: typeof import("../src/mirror").unitObject,
+	screen: string[]): Screen {
+	const map = () => game.scenario.map;
+	const nothing = () => {};
 	return {
-		uiUnitMove(unit: Unit, row: number, col: number) {
-			return Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row, col } }).ok;
+		showScenario: nothing,
+		loadFailed: nothing,
+		showPrototype(eqid: number) { screen.push("prototype " + eqid); },
+		message: nothing,
+		campaignEnd: nothing,
+		mainMenu() { screen.push("menu options"); },
+		reportScore: nothing,
+		reportAchievement: nothing,
+		move(unit: Unit, to: Cell, cells: Cell[]) {
+			map().getSelection().showMoveCells(cells as import("../src/prototypes").extendedCell[]);
+			Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: to.row, col: to.col } });
 		},
-		uiUnitAttack(a: Unit, d: Unit) {
-			return Commands.execute(game.scenario, { type: "attack", unit: a.id, target: d.id }).ok;
+		attack(a: Unit, d: Unit) {
+			Commands.execute(game.scenario, { type: "attack", unit: a.id, target: d.id });
 		},
-		uiUnitSelect(u: Unit | null) {
-			if (u === null) return false;
-			game.scenario.map.delCurrentUnit();
-			return game.scenario.map.selectUnit(u);
+		view(event, shown) {
+			if (event.type === "message") {
+				screen.push("tooltip " + event.text.length);
+				return;
+			}
+			if (event.type === "select" && event.unit !== null) {
+				map().delCurrentUnit();
+				map().selectUnit(unitObject(map(), event.unit));
+			}
+			if (event.type === "mainMenu") screen.push("menu mainmenu");
+			if (shown) setTimeout(shown, 250);
 		},
-		uiSetUnitOnViewPort() {},
-		uiSetCellOnViewPort() {},
-		whenShown() {}, //(the game's wait ends at the next tick, ticking)
+		played(cmd, done) { map().getSelection().after(cmd, done); },
 		showingStep: () => false,
-		showGameToolTip(text: string) { screen.push("tooltip " + text.length); },
-		showAlert(row: number, col: number, text: string, own: boolean) { screen.push(`alert ${row},${col} ${text} ${own}`); },
-		handleReinforcementDeployment() { screen.push("deployed"); },
-		mainMenuButton(id: string) { screen.push("menu " + id); },
-		uiEndTurnInfo() {},
-		setNewScenario() {},
+		aiTurnEnded: nothing,
+		turnChanged(next: () => void) { setTimeout(next, 250); },
+		unitsPlaced() { screen.push("deployed"); },
+		reinforced(at, own) { screen.push(`alert ${at.row},${at.col} Reinforced! ${own}`); },
 	};
 }
 
@@ -227,10 +244,9 @@ test("The handlers plan nothing themselves: they hand out the session's orders",
 test("The AI plays its resupplies, reinforcements and mounts without waiting for the screen (#8)", async () => {
 	const game = await freshGame();
 	const { Commands } = await import("../src/commands");
-	const { UIBuilder } = await import("../src/uibuilder");
+	const { unitObject } = await import("../src/mirror");
 	const { actionType } = await import("../src/prototypes");
-	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {} });
-	game.ui = stand(game, Commands, []) as unknown as Game["ui"];
+	game.host.screen = stand(game, Commands, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 1, 1, 1]);
 	const map = game.scenario.map, unit = map.getUnits().find((u) => u.player === map.currentPlayer) as Unit;
@@ -253,10 +269,9 @@ test("The AI plays its resupplies, reinforcements and mounts without waiting for
 test("A new game's first player, the AI, plays its first turn on the screen (#292)", async () => {
 	const game = await freshGame();
 	const { Commands } = await import("../src/commands");
-	const { UIBuilder } = await import("../src/uibuilder");
+	const { unitObject } = await import("../src/mirror");
 	const { actionType } = await import("../src/prototypes");
-	Object.assign(UIBuilder, { showAIStatus() {}, message() {}, messageDynamic() {} });
-	game.ui = stand(game, Commands, []) as unknown as Game["ui"];
+	game.host.screen = stand(game, Commands, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 0, 0, 0]);
 	const map = game.scenario.map, first = map.currentPlayer;

@@ -1,6 +1,5 @@
-//The new UI as the game's screen (src/screen.ts, #380): the second implementation of the interface, beside
-//the old UI's (src/oldscreen.ts). It reads the game only through the host (its world, src/host.ts) and
-//sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
+//The UI as the game's screen (src/screen.ts, #380), beside the one that shows nothing (src/nullscreen.ts). It
+//reads the game only through the host (its world, src/host.ts) and sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
 //animated from its events (#347, src/view/beats.ts), its results and victories told when the last beat
 //ends, and its shown called then: the program's turn plays at a pace the person can follow. Every other
 //shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The start menu opens over
@@ -160,13 +159,10 @@ function themeOf(search: string): Theme {
 	return t === "paper" || t === "blackout" ? t : "system";
 }
 
-//?ui=new (src/main.ts): the new UI on the page instead of the old one, which isn't built. The new UI's
-//stylesheets and faces loaded, the old UI's stylesheet and markup set aside (nothing reads them without
-//the old UI), data-theme set, and the new screen given to the host before the game starts
+//The UI on the page (src/main.ts, #351): its stylesheets and faces loaded, its root added, data-theme set, and the
+//screen given to the host before the game starts
 export function startNewUI(host: GameHost, page: Document = document) {
 	void import("./game.css");
-	for (const link of page.querySelectorAll<HTMLLinkElement>("link[rel=stylesheet]")) link.disabled = true;
-	for (const old of page.body.children) (old as HTMLElement).hidden = true;
 	const root = page.createElement("div");
 	page.body.append(root);
 	applyTheme(themeOf(page.location.search), page.documentElement);

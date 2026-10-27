@@ -1,6 +1,6 @@
 //The command-line player on the game's page (#279, "npm run play:live"): the dev server hands the page a
 //call's words (vite.config.mts cliBridge) and the page plays it on the game host (src/host.ts) and the
-//screen the page runs (src/screen.ts: the old UI, or the new one under ?ui=new, #378): the moves and attacks
+//screen the page runs (src/screen.ts: the UI's, src/view/screen.tsx, #378): the moves and attacks
 //shown by the screen as a program's are, with their animations where it has them, the end of turn the
 //host's, so the AI then plays its turn on the screen. A person watches the game the program plays
 import type { Command } from "../src/commands";

@@ -119,31 +119,29 @@ compiles their JSX, with source maps.
 
 ## Verification
 
-Every change is compared with a reference in headless Chrome, step by step: game state, DOM and
-canvas pixels. The reference is the original game (`reference/`: the 3.2.14 source
+Every change is compared with a reference in headless Chrome, step by step: the game's state before
+every AI action, at every turn's end and after a save and its load. The reference is the original game (`reference/`: the 3.2.14 source
 reconstructed from its bundle, on the same assets, served on 8643), or with `BASELINE_REF=<git
 ref>` this repo at that commit on its own Vite. The remaster runs on the Vite dev server (8644);
 the scripts start the servers when they're not running.
 
-    npm run verify               # both below, about 3 minutes
-    harness/replay.sh            # 16 scenarios, campaigns and the tutorial played AI vs AI
-    harness/ui-replay.sh         # 24 scripts of user steps (harness/ui/), or some of them
+    npm run verify               # harness/replay.sh: 16 scenarios, campaigns and the tutorial played AI vs AI
     BASELINE_REF=origin/main npm run verify   # against main: what a pull request changes
 
 Pull requests run verify on GitHub Actions against their base branch (`.github/workflows/
-verify.yml`): main differs from the original on purpose (the unit markers), so against main a
-refactor comes out identical and a deliberate change shows only itself. There the game plays in four
-shards side by side (the AI games, the UI scripts in thirds), main's own traces are played into the
-cache after each push to main, and the label `behavior-change` is judged without playing again.
+verify.yml`): main differs from the original on purpose, so against main a refactor comes out
+identical and a deliberate change shows only itself. There main's own traces are played into the cache
+after each push to main, and the label `behavior-change` is judged without playing again. The page's
+DOM and canvases aren't compared since the UI that draws them was replaced (#351): the UI has its own
+test, below.
 
-Every item and script plays in its own Chrome, several at once (JOBS, default 3/4 of the
-cores). The reference's traces are cached per item in harness/out/baseline, until the reference
+Every item plays in its own Chrome, several at once (JOBS, default 3/4 of the cores). The reference's traces are cached per item in harness/out/baseline, until the reference
 or the harness changes. A step that waits for loads until the timeout is reported: it usually
 means a stuck request.
 
-A refactor must leave both identical. A deliberate change shows exactly what it changed.
+A refactor must leave it identical. A deliberate change shows exactly what it changed.
 
-The new UI has its own end-to-end test: one short campaign game played in headless Chrome on the dev
+The UI has its own end-to-end test: one short campaign game played in headless Chrome on the dev
 server through the page's element ids and keys, as a person plays it. The start menu, a new campaign,
 a unit bought and deployed, a move, the unit list and the unit card, the AI's turns, an attack, the
 dossier, a save to a file and its load back (the same game after it), the scenario's end and the
