@@ -24,13 +24,23 @@ const nothing = () => {};
 
 //What the screen asks of the host: the store's, and the course of the game it shows
 type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial"
-	| "startScenario" | "startCampaign" | "campaignFlow" | "saveSettings">;
+	| "startScenario" | "startCampaign" | "campaignFlow" | "saveSettings" | "exportGame" | "loadGame" | "saveToCloud" | "loadFromCloud">;
 
 //prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
 const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+//A saved game downloaded as a file, as the old window did: a link to its text, clicked
+function downloadOn(page: Document) {
+	return (name: string, text: string) => {
+		const link = page.createElement("a");
+		link.download = name;
+		link.href = "data:application/force-download," + encodeURIComponent(text);
+		link.click();
+	};
+}
+
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
-	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location) });
+	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location), download: downloadOn(root.ownerDocument) });
 	const { refresh } = store;
 	//(the map's scale and the hex grid as the settings saved them, as the old UI applies them at its start)
 	store.scale.value = uiSettings.zoomLevel;

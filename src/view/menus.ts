@@ -64,11 +64,6 @@ export const NEW_GAME_BUTTONS: MenuEntry[] = [
 	{ id: "tutorial", title: "Tutorial", icon: "help", hint: "Learn the basic mechanics of the game. First turns are automatically played by the computer but later the control is given to the player." },
 ];
 
-//The windows the new UI doesn't have yet (#349): their buttons are off with why
-export const NOT_YET: Partial<Record<MenuButton, string>> = {
-	saveload: "Not in the new UI yet",
-};
-
 //The old start menu's links beside its logo: the manual, the game's page, its Facebook page and its issues
 export const MENU_LINKS: { href: string, label: string, icon: IconName }[] = [
 	{ href: "https://nicupavel.github.io/openpanzer-manual/", label: "Manual", icon: "help" },
