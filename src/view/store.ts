@@ -29,9 +29,11 @@ import { type News, type Results, resultsOf } from "./results";
 import { beatsFor } from "./beats";
 import { createPlayer, type Motion, type Stage } from "./player";
 import { hexCentre } from "./hexgrid";
+import { MENU_CLOSED, type MenuButton, menuAfter, menuToggled } from "./menus";
 
-//What the store asks of the game host: the world it plays, the person's commands, the victories they won
-export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic">>;
+//What the store asks of the game host: the world it plays, the person's commands, the victories they won; the new games
+//the start menu starts (none in the tests of the map and the HUD)
+export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic" | "startTutorial">>;
 
 //What the page gives the step's beats (src/view/player.ts): its sounds, and whether the person asked for reduced motion.
 //Without a page (the tests): silence and motion
@@ -94,6 +96,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the dock's height over the bottom of the map in CSS pixels, which the map scrolls past so that its last row clears
 	//the dock (#453)
 	const dockHeight = signal(0);
+	//The start menu's window shown, none while the game shows (StartMenu)
+	const menu = signal(MENU_CLOSED);
 	let busy = false;
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
@@ -216,9 +220,6 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		lookAt.value = { row: u.row, col: u.col };
 	};
 
-	//The windows Buy and Options open come with the windows and the menus (D5, D6): the status line says so
-	const notYet = () => { refused.value = "Not in the new UI yet"; };
-
 	//The air layer on or off (AirLayer, the A key and the rail's button). Leaving it deselects an aircraft, which
 	//would be underneath, as the old UI did
 	const toggleAir = () => {
@@ -255,12 +256,13 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const shops = createShopState({ world, deploying: deployment, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
 
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
-	const menu: Record<MenuKey, () => void> = {
+	const menuKeys: Record<MenuKey, () => void> = {
 		inspect: () => { infoShown.value = !infoShown.value; },
 		buy: () => shops.toggleShop(),
 		hex: () => { hexGrid.value = !hexGrid.value; },
 		air: () => toggleAir(),
 		zoom: () => { strategic.value = !strategic.value; },
+		options: () => { menu.value = menuToggled(menu.value); },
 		labels: () => { labels.value = false; },
 		next: () => cycle(1),
 		previous: () => cycle(-1),
@@ -268,7 +270,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		escape: () => {
 			if (banner.value) banner.value = false;
 			else if (selected.value !== null) select(null);
-			else notYet();
+			else menu.value = menuToggled(menu.value);
 		},
 	};
 
@@ -278,7 +280,13 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
-		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd,
+		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu,
+
+		//A button of the start menu: its window, or the game; the tutorial starts on the host
+		startMenu(button: MenuButton) {
+			menu.value = menuAfter(menu.value, button);
+			if (button === "tutorial" && host.startTutorial) host.startTutorial();
+		},
 
 		//Either report's Dossier: the campaign's record over them
 		openDossier() {
@@ -361,7 +369,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		//A key or a rail button (GameMenu)
 		shortcut(sc: Shortcut) {
 			if ("unit" in sc) unitKey(sc.unit);
-			else menu[sc.menu]();
+			else menuKeys[sc.menu]();
 		},
 
 		//End turn: on at once when every unit has done what it can; else the question, with the units that can still

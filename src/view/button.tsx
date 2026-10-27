@@ -18,6 +18,8 @@ type ButtonProps = {
 	cost?: number,
 	//why the action can't be taken now (a Refusal): set, the button is disabled and shows it as its title
 	disabled?: string,
+	//else a hint the pointer shows as its title (the old start menu's new game buttons said what they start there)
+	title?: string,
 	onClick?: () => void,
 	//the id the harness, the tests and the shortcuts find it by (handoff.md, Element map)
 	id?: string,
@@ -39,11 +41,11 @@ function classesOf(variant: ButtonProps["variant"], large: boolean | undefined, 
 	return ["pm-btn", variant, large && "lg", iconOnly && "icon"].filter(Boolean).join(" ");
 }
 
-export function Button({ children, variant, large, icon, label, cost, disabled, onClick, id }: ButtonProps) {
+export function Button({ children, variant, large, icon, label, cost, disabled, title, onClick, id }: ButtonProps) {
 	const iconOnly = children === undefined && cost === undefined;
 	const classes = classesOf(variant, large, iconOnly);
 	const off = disabled !== undefined;
-	const ref = useTitle(disabled);
+	const ref = useTitle(off ? disabled : title);
 	const small = !large && !iconOnly;
 	//no handler when disabled: jsdom (and a synthetic click in some browsers) still fires one on a disabled button
 	return (

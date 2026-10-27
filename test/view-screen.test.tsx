@@ -38,8 +38,12 @@ async function playing(file: string, ai: number[], rules: "classic" | "remaster"
 	g.rules = rules;
 	g.host.newScenario(file);
 	await until(() => g.gameStarted, file);
+	//(the first scenario opens the start menu over its briefing: the game goes on under it, #349)
+	await act(() => { fireEvent.click(continueGame()); });
 	return g;
 }
+
+const continueGame = () => screen.getByRole("button", { name: "Continue Game" });
 
 //The message's one button: Understood on a briefing, Continue on the other messages (MessageDialog)
 const ok = () => screen.getByRole("button", { name: /^(Understood|Continue)$/ });
@@ -260,6 +264,7 @@ test("A campaign's prototype shown at the scenario's start stays, before the bri
 		s.showPrototype(142);
 		s.showScenario();
 	});
+	await act(() => { fireEvent.click(continueGame()); });
 	const titles: string[] = [];
 	while (screen.queryByRole("dialog") !== null) {
 		titles.push(screen.getByRole("dialog").querySelector("h1")!.textContent);

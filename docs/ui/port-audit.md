@@ -73,6 +73,13 @@ The old UI's stylesheet, game/css/ui.css, is one minified line: its rows name th
 | Dossier and campaign end (src/view/dossierwindow.tsx:40, src/view/dossier.ts) | the reports' Dossier, a campaign's end | `#dossier` (src/uibuilder.ts:1159 `showDossier`, :1119 `showCampaignEnd`): casualties by class, the medals | port |
 | End turn's question (rail.tsx:114) | see the HUD | — | owner decides (see the HUD) |
 
+## Menus (D6, #349)
+
+| Piece | What it shows, when | Old UI | Verdict |
+|---|---|---|---|
+| Start menu (src/view/startmenu.tsx, src/view/menus.ts) | over the first scenario's briefing, from Options (the rail's, Esc with no unit selected), at a game's end | `#startmenu`, `#smMain` (src/uibuilder.ts:176 `buildStartMenu`, src/ui.ts:1721 `startMenuButton`, :1874 `options`): the six photographs, the logo with the version and four links, New Game, Settings, Save / Load, Continue Game, the credits | port: the wordmark in place of the raster logo. The card's "Operational command · Remastered" label, its photograph credit, Continue only with a save and its scenario and turn, the counts on the entries and New game's entries always shown are cut |
+| New Game panel (startmenu.tsx) | the start menu's New Game | `#smNewGame`: Campaigns, Scenarios, Tutorial, their descriptions in their titles | port; the descriptions stay hints, as the card's always-shown descriptions and the tutorial's "Minorca · 1939" are cut. Load game in the panel is cut: Save / Load is the main window's |
+
 ## What this round changes
 
 The pull requests that follow this page, each on the one before:
