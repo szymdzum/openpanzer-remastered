@@ -1,5 +1,5 @@
-/* The new screen's layout under ?ui=new (app.tsx): where its panels sit until the map (D2) and the HUD
-   (D3) place them. The look is the components' and the cards' own. */
+/* The game screen's layout (app.tsx): where its panels and windows sit over the map. The look is the
+   components' and the cards' own. */
 @layer components {
 	.pm-screen {
 		position: fixed;

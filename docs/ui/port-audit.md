@@ -1,6 +1,6 @@
 # The new UI against the old: what is ported, what is cut
 
-Every piece of the new UI's game screen (`?ui=new`, src/view/) beside the old UI's piece that does the same, with a
+Every piece of the new UI's game screen (src/view/; `?ui=new` until #351 made it the only UI) beside the old UI's piece that does the same, with a
 verdict under the 1:1 port rule (PLAN.md, "A 1:1 port of the old UI" and "The map stays quiet; a window may be
 rich"). Written on 2026-10-26, after the owner's playtest of D3-D5 (#441, #437, #438). The old UI's code it points
 at (src/ui.ts, src/uibuilder.ts, src/render.ts, game/css/ui.css...) was deleted at the switch (D8, #351): its

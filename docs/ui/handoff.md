@@ -7,7 +7,7 @@ How to bring this system into `openpanzer-remastered`. It was first written as a
 | Add to the game | From this system | Notes |
 | --- | --- | --- |
 | `css/tokens.css` | `tokens.css` (generated from `tokens.json`) | Custom properties, with one block per theme: `:root, [data-theme="paper"]` and `[data-theme="blackout"]`. |
-| `css/ui.css` | `src/view/library.css`, then `components/bundle.css` | The components' CSS (`src/view/*.css`), then the screens'. It replaces the current `dist/game/css/ui.css`. It contains no colors, only `var(--…)`. Drop the `.pm-stage` and `.pm-map` rules, which only frame the mockups. |
+| `css/ui.css` | `src/view/library.css`, then `components/bundle.css` | The components' CSS (`src/view/*.css`), then the screens'. It replaced the old UI's `game/css/ui.css`, deleted in #351. It contains no colors, only `var(--…)`. Drop the `.pm-stage` and `.pm-map` rules, which only frame the mockups. |
 | `src/view/sprite.ts`, `icon.tsx` | `components/bundle.js` | The `PM.icons` and `PM.nationMarks` maps, ported (test/icons.test.tsx keeps them the card's). `<IconSprite />` mounts the sprite once at the root. |
 | `src/view/fonts.css`, `src/view/fonts/` | Zilla Slab 700, Libre Franklin 400/600/700, Courier Prime 400/700 | Self-hosted woff2 files (all are under the OFL), in place. Remove `openpanzer.ttf`, `openpanzer-menu.ttf`, `m04.ttf` and `m04b.TTF` once no glyph uses them. |
 
@@ -55,18 +55,18 @@ Every existing ID stays. Add the class to the element and replace its inner mark
 | `#equipment` | `pm-window pm-eq` | `.hd`, `#eqSelClass.pm-tabs`, `.body` (`.list` with `#eqUnitList.pm-grid` of `.pm-card`, and `.detail` with `.pm-cmp` and `#eqTransportList`), and `#eqActionsContainer.ft`. |
 | `#combatLog` | `pm-window pm-log` | `.summary`, then a `.sec` and `.pm-entry` rows per report. |
 | `#smState` | `pm-window pm-save` | `.sec` for File and Cloud; `#cloudid.pm-input`; `#cloudid_lastsaves.pm-list` of `.pm-row`; `#diskloaderror.msg`. |
-| `#smNewGame` | inside `#smMain` | `#smNewGameContent.pm-choices` of `.pm-choice` (icon, title, count, description). |
+| `#smNewGame` | inside `#smMain` | `#smNewGameContent.pm-choices` of `.pm-choice` (icon, title, count, description). The port renders `nav#smNewGame.pm-menu` of buttons instead, the old entries' hints in their titles (src/view/startmenu.tsx). |
 | `#combatLog` (short, at turn start) | `pm-panel pm-turn` | `.hd`, `.grid` of four `.cell` (objectives, turns to win with `.track`, prestige, ground), `.ft` with the enemy turn counts. `.last` on the last turn. |
 | `#container-unitlist` (deploy mode) | `pm-panel pm-unitlist pm-deploy` | Docked at the bottom; `.hd` with the placed count and Upgrade. The ghost tag on the map is `.pm-placetag`. |
 | `#dossier` | `pm-window` | Medal SVG, `.pm-stamp`, `.pm-facts`, `.pm-stats.cols6`. |
-| `#gameToolTip` | `pm-tip`, or `pm-panel pm-odds` in odds mode | Odds mode is new (see below). |
-| `.smallToolTip` | `pm-pin low`, or `pm-pin critical` | An icon plus a word. |
+| `#gameToolTip` | `pm-tip`, or `pm-panel pm-odds` in odds mode | Odds mode is new (see below). Cut from the port with the hex tooltip (#441): nothing renders it. |
+| `.smallToolTip` | `pm-pin low`, or `pm-pin critical` | An icon plus a word. The port draws the `.pm-pin` spans only (src/view/maptips.tsx). |
 
 ## Combat odds preview (new)
 
 Left out of the port until after the switch (D8, #441): over a target the game shows only the old cursor's two losses.
 
-While a unit is selected, on `mousemove` over an enemy hex (or the first tap on touch), call `GameRules.calculateAttackResults(attacker, defender, true)`. The `estimate` flag already exists, and `ui.ts` calls it this way today. Read the losses and kills from the returned `combatResults`, then fill `#gameToolTip` in odds mode:
+While a unit is selected, on `mousemove` over an enemy hex (or the first tap on touch), call `GameRules.calculateAttackResults(attacker, defender, true)`. The `estimate` flag already exists, and the old `ui.ts` called it this way (before #351). Read the losses and kills from the returned `combatResults`, then fill `#gameToolTip` in odds mode:
 
 - Draw two strength bars of 10 segments each: kept segments in the side color, lost segments as `.loss`.
 - Type the change: `10 → 6`.

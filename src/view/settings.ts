@@ -1,6 +1,6 @@
-//The settings window (Settings, #349): the old settings list (src/uibuilder.ts buildStartMenu), its three sliders and its
-//switches, the same keys in uiSettings, so the saved settings are the old UI's and a setting changed on one UI holds
-//on the other. Plain TypeScript on the settings it is given.
+//The settings window (Settings, #349): the old settings list (src/uibuilder.ts buildStartMenu before #351), its three
+//sliders and its switches, the same keys in uiSettings, so the settings saved by the old UI still hold. Plain TypeScript
+//on the settings it is given.
 import type { UISettings } from "../prototypes";
 
 //A slider: its setting, its title, its step and range (the interface width's least is the small UI's width)

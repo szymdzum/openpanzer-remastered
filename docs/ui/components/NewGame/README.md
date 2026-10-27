@@ -5,4 +5,4 @@ The start menu when there is nothing to continue: the first run, or after a game
 - Tutorial says what it loads: `tutorial.xml`, the Battle of Minorca, 1939. The computer plays the first turns, then hands over.
 - Load game opens `SaveLoad`.
 
-Keep `#smMain`, `#smNewGame`, `#smNewGameContent` and the button ids `newcampaign`, `newscenario`, `tutorial`, `saveload` and `settings`, which `startMenuButton` switches on.
+Keep `#smMain`, `#smNewGame` and the button ids `newcampaign`, `newscenario`, `tutorial`, `saveload` and `settings`, which the old `startMenuButton` switched on and the end-to-end test clicks (`#smNewGameContent` went with the old UI in #351).

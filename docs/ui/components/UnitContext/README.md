@@ -1,6 +1,6 @@
 The actions for the selected unit (`#unit-context`), as the old UI's menu (`updateUnitContextWindow`, src/ui.ts:742): the same buttons, by the same rules, in the same place (#437, the 1:1 port rule of PLAN.md).
 
-**Where:** docked at the bottom in the middle, just above the unit info (UnitInfo), as the old `#unit-context` stood (game/css/ui.css). It never covers the map around the selected unit, so every hex it can move to or attack stays clickable (#429).
+**Where:** docked at the bottom in the middle, just above the unit info (UnitInfo), as the old `#unit-context` stood (game/css/ui.css, before #351). It never covers the map around the selected unit, so every hex it can move to or attack stays clickable (#429).
 
 **What:** one small icon button for each action the unit can take now, in the old menu's order. An action it can't take isn't there. No button, no menu.
 
