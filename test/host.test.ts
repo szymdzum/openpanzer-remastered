@@ -167,8 +167,7 @@ test("A scenario's turns play through the game host on a screen that shows nothi
 		const screen = nullScreen(game);
 		const counted = (shown: () => void) => () => { played.shown++; shown(); };
 		return { ...screen, turnEvents(events) { told.push(...events.map((e) => e.type)); },
-			move(unit, to, cells, shown) { played.move++; screen.move(unit, to, cells, counted(shown)); },
-			attack(attacker, target, shown) { played.attack++; screen.attack(attacker, target, counted(shown)); } };
+			step(cmd, done, shown) { played[cmd.type]++; screen.step(cmd, done, counted(shown)); } };
 	});
 	g.host.newScenario("drpzop01.xml");
 	await until(() => loaded(g, null), "drpzop01.xml");
@@ -296,8 +295,7 @@ test("A program's next action waits for the screen's shown, and only the last re
 		const screen = nullScreen(game);
 		const hold = (shown: () => void) => () => { held.push(shown); };
 		return { ...screen,
-			move(unit, to, cells, shown) { screen.move(unit, to, cells, hold(shown)); },
-			attack(attacker, target, shown) { screen.attack(attacker, target, hold(shown)); },
+			step(cmd, done, shown) { screen.step(cmd, done, hold(shown)); },
 			turnChanged(next) {
 				log.push("changed");
 				if (turns++ < 1) next();
@@ -346,8 +344,8 @@ test("A program's look at a hex is shown on the screen and waited for (#375)", a
 	expect(g.host.showing).toBe(false);
 });
 
-//The screen that shows nothing plays a program's move and attack whole and tells the host the victories
-//they won at once, in the old UI's order (#375): a move that took its side's last objective, an attack that
+//The host plays a program's move and attack whole, the screen that shows nothing shows them at once, and the host
+//tells the victories they won then, in the old UI's order (#375, review A12): a move that took its side's last objective, an attack that
 //left the other side with no unit. Its messages are clicked away at once
 test("The screen that shows nothing tells the host the victories a move and an attack won (#375)", async () => {
 	const { smallGame } = await import("./smallgame");
@@ -355,7 +353,7 @@ test("The screen that shows nothing tells the host the victories a move and an a
 	//(the host's own play and won, its end noted)
 	const fake = (scenario: unknown) => {
 		const g = { scenario, uiMessageClicked: false } as unknown as Game;
-		g.host = Object.assign(Object.create(GameHost.prototype) as GameHost, { game: g,
+		g.host = Object.assign(Object.create(GameHost.prototype) as GameHost, { game: g, screen: nullScreen(g),
 			ended(e: { side: number; how: string }) { ended.push(e.how + " " + e.side); } });
 		return g;
 	};
@@ -365,13 +363,13 @@ test("The screen that shows nothing tells the host the victories a move and an a
 	const screen = () => nullScreen(game);
 	const m = () => game.scenario.map;
 	m().setMoveRange(m().getUnitById(0));
-	screen().move(0, { row: 10, col: 10 }, m().getCurrentMoveRange(), () => { shown++; });
+	game.host.playShown({ type: "move", unit: 0, to: { row: 10, col: 10 }, cells: m().getCurrentMoveRange() }, () => { shown++; });
 	expect([ended.splice(0), shown]).toEqual([["capture 0"], 1]);
 	//A German tank against the last Soviet unit, left with one strength point
 	game = fake(smallGame([[142, 0, 5, 5], [504, 1, 5, 6]]).scenario);
 	m().getUnitById(1).strength = 1;
 	touched();
-	screen().attack(0, 1, () => { shown++; });
+	game.host.playShown({ type: "attack", unit: 0, target: 1 }, () => { shown++; });
 	expect([ended.splice(0), shown]).toEqual([["elimination 0"], 2]);
 	const s = screen();
 	s.message("title", "text");

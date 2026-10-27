@@ -47,20 +47,16 @@ const select = (unit: number | null) => game.host.screen.view({ type: "select", 
 
 type Animated = Extract<Command, { type: "move" | "attack" }>;
 
-//A move or an attack shown by the screen as a program's is (src/screen.ts move, attack): the unit selected
+//A move or an attack played and shown as a program's is (the host's playShown, src/screen.ts step): the unit selected
 //first as a person selects it, the step played whole, then shown to its end (its shown). The move takes its
 //path from the unit's move range, as the host gives a program's
 async function animate(cmd: Animated) {
-	const screen = game.host.screen, map = game.scenario.map, unit = map.getUnitById(cmd.unit);
+	const map = game.scenario.map, unit = map.getUnitById(cmd.unit);
 	select(cmd.unit);
 	await sleep(300);
 	let shown = false;
 	const done = () => { shown = true; };
-	if (cmd.type === "move") {
-		screen.move(cmd.unit, cmd.to, GameRules.getMoveRange(map, unit), done);
-	} else {
-		screen.attack(cmd.unit, cmd.target, done);
-	}
+	game.host.playShown(cmd.type === "move" ? { ...cmd, cells: GameRules.getMoveRange(map, unit) } : cmd, done);
 	await until(() => shown && settled(), 30_000);
 }
 

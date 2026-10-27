@@ -8,10 +8,11 @@ import { render } from "preact";
 import { effect } from "@preact/signals";
 import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
-import type { Position, UnitId } from "../core/types";
+import type { Position } from "../core/types";
 import type { GameHost } from "../host";
 import type { ScenarioOutcome } from "../scenario";
-import type { Screen } from "../screen";
+import type { Screen, ShownCommand } from "../screen";
+import type { CommandType, Executed } from "../commands";
 import { App } from "./app";
 import { pageSounds } from "./player";
 import { createStore } from "./store";
@@ -20,7 +21,7 @@ import { applyTheme, type Theme } from "./theme";
 const nothing = () => {};
 
 //What the screen asks of the host: the store's, and the course of the game it shows
-type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial"
+type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial"
 	| "startScenario" | "startCampaign" | "campaignFlow" | "saveSettings" | "exportGame" | "loadGame" | "saveToCloud" | "loadFromCloud">;
 
 //prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
@@ -55,16 +56,14 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		host.holdForMessage();
 		show(title, html, then || (() => host.messageClosed()), null, briefing);
 	};
-	//A program's move or attack, played whole: what it did to the side shown kept for the turn report (its events),
-	//then animated, its victories told, then the next action
-	const played = (r: ReturnType<ScreenHost["play"]>, events: GameEvent[], shown: () => void) => {
+	//A program's move or attack, played whole by the host: what it did to the side shown kept for the turn report (its
+	//events), then animated from the world before it (the store's, not read again yet), then the host goes on (its
+	//victories, the next action)
+	const played = (events: GameEvent[], shown: () => void) => {
 		const before = store.world.value;
 		refresh();
 		store.noteEnemy(events);
-		store.showStep(before, events, () => {
-			if (r.ok) host.won(r.result);
-			shown();
-		});
+		store.showStep(before, events, shown);
 	};
 	//A new scenario or turn: the last one's pick dropped, the person's reserve to deploy from first (Deployment), the
 	//labels over the map back (L cleared them for the turn)
@@ -111,13 +110,9 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		reportScore: nothing,
 		reportAchievement: nothing,
 
-		move(unit: UnitId, to: Position, cells: Position[], shown: () => void) {
-			const r = host.play({ type: "move", unit, to: { row: to.row, col: to.col }, cells });
-			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
-		},
-		attack(attacker: UnitId, target: UnitId, shown: () => void) {
-			const r = host.play({ type: "attack", unit: attacker, target });
-			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
+		step(_cmd: ShownCommand, done: Executed<CommandType>, shown: () => void) {
+			const r = done.ok ? done.result : null;
+			played(r !== null && typeof r === "object" && "events" in r ? r.events : [], shown);
 		},
 		view(event: ViewEvent, shown?: () => void) {
 			if (event.type === "message") {
