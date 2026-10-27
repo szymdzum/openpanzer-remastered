@@ -7,7 +7,7 @@
 //the map in view. The terrain and the sprites scale with the map (ZoomLevels); everything drawn on top
 //keeps its screen size: a line's path is laid out at the map's scale, then stroked at the screen's, so its
 //width is the token's in screen pixels, and the markers and the path's ring are drawn at screen points.
-import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, sideColour, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, nearView, sideColour, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
@@ -386,21 +386,23 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	}
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
+	//(only the units and the plaques that can show on the screen, in their order)
+	const near = nearView(vp), units = scene.units.filter(near), plaques = scene.plaques.filter(near);
 	const marks = marksOf(scene);
-	drawOwnTint(c, vp, scene.units, marks.own);
-	drawAirRings(c, vp, scene.units);
+	drawOwnTint(c, vp, units, marks.own);
+	drawAirRings(c, vp, units);
 	if (scene.deploy !== null) drawDeployZone(c, vp, scene.deploy);
 	if (scene.ghost !== null) drawPlaceOutline(c, vp, scene.ghost);
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
 	//(the plaques beneath the units: a name never covers one, #438)
-	drawPlaques(c, vp, scene.plaques);
+	drawPlaques(c, vp, plaques);
 	atMap(c, vp);
-	for (const u of scene.units) drawSprite(c, vp, u, images);
+	for (const u of units) drawSprite(c, vp, u, images);
 	if (scene.ghost !== null) drawGhost(c, vp, scene.ghost, images);
 	atScreen(c, vp);
-	for (const u of scene.units)
+	for (const u of units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, marks.enemy, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
-	drawChips(c, vp, scene.units);
+	drawChips(c, vp, units);
 	c.restore();
 }

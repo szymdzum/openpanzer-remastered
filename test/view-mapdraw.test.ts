@@ -157,8 +157,10 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	expect(support).not.toBeNull();
 	expect(selection.zones.length + selection.unseen.length).toBeGreaterThan(0);
 	const { ctx, ops } = recorder();
+	//(a screen tall enough to show the revealed enemy at 9,9: what can't show isn't drawn)
+	const tall: Viewport = { ...vp(2), height: 1000 };
 	drawMap(ctx, { terrain: null, size: { width: 600, height: 600 }, rows: 12, cols: 12, grid: false, units: mapUnits(w, false, 0), selection, path: null, fog: fogOf(w), support,
-		plaques: plaquesOf(w), strategic: null, deploy: null, ghost: null }, vp(2), images);
+		plaques: plaquesOf(w), strategic: null, deploy: null, ghost: null }, tall, images);
 	const at = (pred: (o: Op) => boolean) => ops.findIndex(pred);
 	const fog = at((o) => o.op === "fill" && o.fillStyle === MAP["hex-fog"]);
 	const hatch = ops.findIndex((o, i) => o.op === "clip" && i > fog); //(the first clip is the map's edge)
@@ -178,7 +180,7 @@ test("Fog, hatching, zone bars, support fire and plaques are drawn in the card's
 	const unitDrawn = at((o) => o.op === "drawImage" || (o.op === "fillText" && o.args[0] === "10"));
 	expect(plaque).toBeLessThan(unitDrawn);
 	expect(ops[plaque].globalAlpha).toBe(0.7);
-	expect(ops[plaque].args[2] as number).toBeGreaterThan(toScreen(hexCentre(2, 2), vp(2)).y);
+	expect(ops[plaque].args[2] as number).toBeGreaterThan(toScreen(hexCentre(2, 2), tall).y);
 	//the town's owner bar in the axis colour, the objective's in the allied; the revealed enemy's plate dotted
 	expect(ops.filter((o) => o.op === "fillRect" && (o.fillStyle === MAP["map-axis"] || o.fillStyle === MAP["map-allied"])).map((o) => o.fillStyle))
 		.toEqual([MAP["map-allied"], MAP["map-axis"]]);
@@ -301,4 +303,22 @@ test("Mark own units on map tints the hexes of the units whose turn it is, Mark 
 	expect(on.filter((f) => f === MAP["map-axis"] + "@0.3")).toHaveLength(1);
 	expect(on.filter((f) => f === MAP["map-critical"] + "@1")).toHaveLength(1);
 	expect(on.filter((f) => f === MAP["map-allied"] + "@1").length).toBe(off.filter((f) => f === MAP["map-allied"] + "@1").length - 1);
+});
+
+//Culled to the view (review F1): a unit, its marker and a plaque whose hex is far off the screen are drawn not at all;
+//one whose sprite or marker reaches onto the screen from a hex just past its edge is drawn
+test("Only the units and plaques that can show on the screen are drawn: one far off isn't, one just past the edge is", () => {
+	const w = handWorld({ rows: 40, cols: 40, units: [{ eqid: 140, owner: 0, row: 2, col: 2 }, { eqid: 140, owner: 0, row: 35, col: 35 },
+		{ eqid: 140, owner: 0, row: 9, col: 2 }] }, undefined, { spotSide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 36, 36)], { owner: 0, flag: 7 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 3, 3)], { owner: 0, flag: 7 });
+	//(the screen ends at 9,2's top: its sprite and plate show over the edge)
+	const screen: Viewport = { x: 0, y: 0, width: 600, height: hexCentre(9, 2).y - 20, scale: 1, dpr: 1 };
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { terrain: null, size: { width: 1800, height: 2000 }, rows: 40, cols: 40, grid: false, units: mapUnits(w, false, null), selection: null,
+		path: null, fog: null, support: null, plaques: plaquesOf(w), strategic: null, deploy: null, ghost: null }, screen, images);
+	const sprites = ops.filter((o) => o.op === "drawImage").map((o) => o.args[6]);
+	expect(sprites).toEqual([Math.floor(hexCentre(2, 2).y - 25 - 8), Math.floor(hexCentre(9, 2).y - 25 - 8)]);
+	expect(ops.filter((o) => o.op === "fillText" && o.args[0] === "Town").length).toBe(1);
+	expect(ops.filter((o) => o.op === "fillText" && o.args[0] === "10").length).toBe(2);
 });

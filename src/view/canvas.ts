@@ -48,6 +48,21 @@ export function inView(vp: Viewport, rows: number, cols: number): { r0: number; 
 		r0: Math.max(0, Math.floor(y0 / h) - 1), r1: Math.min(rows - 1, Math.ceil(y1 / h) + 1) };
 }
 
+//How far past its hex's centre something drawn for a hex reaches: a unit's sprite at the map's scale (the largest strip's
+//frame is 160 by 120, drawn a little above the centre, an aircraft lifted with its shadow under it), and at the screen's a
+//marker, a chip or a plaque (a town's name)
+const REACH_MAP = 100, REACH_SCREEN = 160;
+
+//Whether what is drawn for a hex can show on the screen (review F1): what can't is left out, which changes no pixel
+export function nearView(vp: Viewport): (at: Position) => boolean {
+	const m = REACH_MAP * vp.scale + REACH_SCREEN;
+	const x0 = vp.x - m, y0 = vp.y - m, x1 = vp.x + vp.width + m, y1 = vp.y + vp.height + m;
+	return (at) => {
+		const p = hexCentre(at.row, at.col), x = p.x * vp.scale, y = p.y * vp.scale;
+		return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+	};
+}
+
 export function addHex(c: CanvasRenderingContext2D, at: Position) {
 	const o = hexCentre(at.row, at.col);
 	c.moveTo(o.x + CORNERS[0].x, o.y + CORNERS[0].y);
