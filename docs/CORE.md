@@ -429,7 +429,7 @@ command left selected (`MapSelection.after`: the attacker selected again after a
 hexes...), for the program's other commands too (the screen's optional `played`). The UI and the null screen
 have none; the pinned game turns' stand-in for the old screen (test/gameturn.test.ts) and the engine contract
 still ask it. A screen that animates says while it shows a step, a program's or the person's (`showingStep`,
-optional: the old UI had it, the UI doesn't yet, #459), and the host passes it on (`GameHost.showingStep`):
+optional: the UI's says while its beats play, #459), and the host passes it on (`GameHost.showingStep`):
 the harness and the command-line player wait on it, where they waited on `game.waitUIAnimation` until #378
 (the original game's flag, which the harness still reads there). The command-line player's live mode
 (cli/page.ts) plays on the host and the screen the page runs: a move or an attack through the screen's
