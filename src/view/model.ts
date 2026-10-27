@@ -160,13 +160,14 @@ export function stillToAct(names: string[]): string {
 	return plural(n, "1 unit", n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
 }
 
-//The unit when it is on the map and the side shown sees it: its own, or an enemy on a hex it spots (no side shown:
-//no game is on the screen, nothing is seen)
+//The unit when it is on the map and the side shown sees it: its own, an enemy on a hex it spots, or one that fired
+//from hiding, as the map shows it (src/view/mapview.ts isShown; the old unit info did too, #483). No side shown: no
+//game is on the screen, nothing is seen
 export function shownUnit(w: World, id: UnitId): UnitState | null {
 	const u = unitById(w, id);
 	if (u === null || u.row < 0) return null;
 	const side = w.state.players[u.owner].side;
-	return side === w.spotSide || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) ? u : null;
+	return side === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) ? u : null;
 }
 
 //The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the

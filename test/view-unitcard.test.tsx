@@ -142,3 +142,11 @@ test("The screen keeps the dock's height in the store, for the map to scroll pas
 	vi.unstubAllGlobals();
 	vi.restoreAllMocks();
 });
+
+test("An enemy that fired from hiding shows its card, as the map shows it and the old unit info did (#483)", () => {
+	const hidden = (tempSpotted: boolean) => handWorld({ rows: 10, cols: 10, units: [{ eqid: PZ_IIA, owner: 0, row: 1, col: 1 },
+		{ eqid: TP7, owner: 1, row: 9, col: 9, tempSpotted }] }, undefined, { spotSide: 0 });
+	//(far from the side's tank, on a hex it doesn't spot: no card while it hides)
+	expect(unitCardOf(hidden(false), 1, null)).toBeNull();
+	expect(unitCardOf(hidden(true), 1, null)).toMatchObject({ unit: 1, name: hidden(true).equipment[TP7].name });
+});
