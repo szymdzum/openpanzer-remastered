@@ -208,7 +208,7 @@ export let actionType = {
 	endturn: 10,
 	message: 11,
 	viewport: 12
-};
+} as const; //(literal types: a program's action is a union by its type, src/ai.ts AIAction)
 
 //The AI's settings: what it buys, when it reinforces and resupplies, how it scores
 export interface AIConfig {

@@ -160,8 +160,8 @@ test("The screen shows the host's messages, the campaign's end and the view even
 	//A program's move and attack played by the host and shown at once; the other events shown at once
 	const next = vi.fn();
 	await act(() => {
-		s.move({ id: 1 } as never, { row: 2, col: 3 } as never, [], next);
-		s.attack({ id: 1 } as never, { id: 2 } as never, next);
+		s.move(1, { row: 2, col: 3 }, [], next);
+		s.attack(1, 2, next);
 		s.view({ type: "viewport", at: { row: 0, col: 0 } }, next);
 		s.view({ type: "mainMenu" });
 		s.mainMenu();
@@ -291,7 +291,7 @@ test("A program's attack is animated before its shown: the AI's next action wait
 	const shown = vi.fn();
 	//(the screen shows the world before the attack, as it has after any step)
 	await act(() => { s.unitsPlaced(); });
-	await act(() => { s.attack({ id: 0 } as never, { id: 1 } as never, shown); });
+	await act(() => { s.attack(0, 1, shown); });
 	expect([shown.mock.calls.length, host.won.mock.calls.length]).toEqual([0, 0]);
 	await act(() => { vi.advanceTimersByTime(10000); });
 	expect([shown.mock.calls.length, host.won.mock.calls.length, reduce.mock.calls.length > 0, host.cosmetic.mock.calls.length > 0])

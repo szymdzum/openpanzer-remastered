@@ -14,11 +14,9 @@
  * player clicks away set game.uiMessageClicked and tell the host to go on (goOn).
  */
 
-import type { Cell } from "./prototypes";
-import type { Unit } from "./unit";
 import type { ScenarioOutcome } from "./scenario";
 import type { ViewEvent } from "./core/controller";
-import type { Position } from "./state";
+import type { Position, UnitId } from "./state";
 import type { Command, CommandType, Executed } from "./commands";
 import type { GameEvent } from "./core/events";
 
@@ -49,10 +47,11 @@ export interface Screen {
 
 	//A program's move, played and shown: the screen plays the move command (whole: its surprise attack, the
 	//retreat, the capture), shows it, tells the host a victory it won when it has shown the step that won it,
-	//and calls shown once it has shown it all. cells: the move hexes shown, where the path may go
-	move(unit: Unit, to: Cell, cells: Cell[], shown: () => void): void;
+	//and calls shown once it has shown it all. cells: the move hexes shown, where the path may go. The units by
+	//their ids, as the core's commands name them: no object of the old engine reaches the screen
+	move(unit: UnitId, to: Position, cells: Position[], shown: () => void): void;
 	//A program's attack, played and shown the same way
-	attack(attacker: Unit, target: Unit, shown: () => void): void;
+	attack(attacker: UnitId, target: UnitId, shown: () => void): void;
 	//What a controller asks of the screen (src/core/controller.ts): a unit selected, a message pointing at a
 	//hex (shown: its OK), a look at a hex, the main menu (only once the screen is built), stuck (nothing to
 	//show). shown is called once the player has seen it: a program's next action waits for its unit picked

@@ -105,7 +105,7 @@ function unitOf(game: Game, id: number | null | undefined): Unit | null {
 	return id === null || id === undefined || id < 0 ? null : unitObject(game.scenario.map, id);
 }
 
-const cell = (c: { row: number; col: number }) => ({ row: c.row, col: c.col }) as Cell;
+const cell = (c: { row: number; col: number }): Cell => ({ row: c.row, col: c.col });
 
 //An order as the old handler's action (the host's processAction plays it): null, no order, ends the turn
 function actionOf(game: Game, order: Order | null): AIAction | null {
@@ -128,15 +128,16 @@ function viewAction(v: ViewEvent, u: UnitOf): AIAction | null {
 }
 
 //The commands a program sends in its turn, with the units' objects
-const commandTypes: Partial<Record<Command["type"], number>> = { move: actionType.move, attack: actionType.attack,
-	resupply: actionType.resupply, reinforce: actionType.reinforce, mount: actionType.mount, unmount: actionType.umount };
+const unitActions = { resupply: actionType.resupply, reinforce: actionType.reinforce, mount: actionType.mount,
+	unmount: actionType.umount } as const;
 
 function commandAction(c: Command, u: UnitOf): AIAction {
-	const type = commandTypes[c.type];
-	if (type === undefined) throw new Error("CoreSession: no action for " + c.type);
-	if (c.type === "move") return { type, param: [u(c.unit), cell(c.to)] };
-	if (c.type === "attack") return { type, param: [u(c.unit), u(c.target)] };
-	return { type, param: [u((c as { unit: number }).unit)] };
+	switch (c.type) {
+		case "move": return { type: actionType.move, param: [u(c.unit), cell(c.to)] };
+		case "attack": return { type: actionType.attack, param: [u(c.unit), u(c.target)] };
+		case "resupply": case "reinforce": case "mount": case "unmount": return { type: unitActions[c.type], param: [u(c.unit)] };
+		default: throw new Error("CoreSession: no action for " + c.type);
+	}
 }
 
 //Game.endTurn on the session: the selection cleared (Map.endTurn), the end of turn and the next

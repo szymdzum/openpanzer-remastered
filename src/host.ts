@@ -19,7 +19,7 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
+import { actionType, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
 	uiSettings } from "./prototypes";
 import { AI, type AIAction } from "./ai";
 import { GameMap, Player } from "./map";
@@ -45,7 +45,6 @@ import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
 import type { CloudField } from "./gamestate";
-import type { Unit } from "./unit";
 import type { Screen } from "./screen";
 
 //How a victory was won, as the loss texts and the campaign name it (endGameType)
@@ -446,10 +445,7 @@ export class GameHost {
 	//shown, the others as the player's commands. False when the program's turn should end
 	processAction(action: AIAction | null): boolean {
 		if (!action || !action.param) return false;
-		const g = this.game, show = shownActions[action.type];
-		if (show === undefined) return playCommand(g, action.type, action.param[0] as Unit | null);
-		show(this, action.param, this.request());
-		return true;
+		return showAction(this, action, () => this.request()) || playCommand(this.game, action);
 	}
 
 	//What the program's next action waits for, until the screen calls the shown returned (once, and only the
@@ -663,43 +659,54 @@ function programPlays(player: Player | null) {
 	return !player || player.type === playerType.aiLocal || player.type === playerType.aiScripted;
 }
 
-//The actions a program's turn shows on the screen, shown: the program's next action waits for it. A unit
-//picked and a look at a hex too: the screen shows them a moment before the next action (#8)
-type ShownAction = (host: GameHost, p: AIAction["param"], shown: () => void) => void;
-const shownActions: { [type: number]: ShownAction } = {
-	//(the move takes its path in the unit's move range, which the old UI shows)
-	[actionType.move]: (host, p, shown) => {
-		host.screen.move(p[0] as Unit, p[1] as Cell, GameRules.getMoveRange(host.game.scenario.map, p[0] as Unit), shown);
-	},
-	//(the range asked after the wait: a missing unit throws there and the turn waits for good, #80)
-	[actionType.attack]: (host, p, shown) => {
-		if (GameRules.isInAttackRange(p[0] as Unit, p[1] as Unit)) host.screen.attack(p[0] as Unit, p[1] as Unit, shown);
-		else shown();
-	},
-	[actionType.select]: (host, p, shown) => { host.screen.view({ type: "select", unit: p[0] ? (p[0] as Unit).id : null }, shown); },
-	[actionType.message]: (host, p, shown) => { host.screen.view({ type: "message", text: p[0] as string, at: p[1] as Cell }, shown); },
-	[actionType.viewport]: (host, p, shown) => { host.screen.view({ type: "viewport", at: p[0] as Cell }, shown); },
-};
+//The actions a program's turn shows on the screen, played and shown there: the program's next action waits for its
+//shown, asked for (request) before anything else is. A unit picked and a look at a hex too: the screen shows them a
+//moment before the next action (#8). False for an action the screen doesn't show
+function showAction(host: GameHost, a: AIAction, request: () => () => void): boolean {
+	switch (a.type) {
+		//(the move takes its path in the unit's move range, which the old UI shows)
+		case actionType.move: {
+			const shown = request(), [unit, to] = a.param;
+			const cells = GameRules.getMoveRange(host.game.scenario.map, unit);
+			host.screen.move(unit.id, to, cells, shown);
+			return true;
+		}
+		//(the range asked after the wait: a missing unit throws there and the turn waits for good, #80)
+		case actionType.attack: {
+			const shown = request(), [attacker, target] = a.param;
+			if (GameRules.isInAttackRange(attacker, target)) host.screen.attack(attacker.id, target.id, shown);
+			else shown();
+			return true;
+		}
+		case actionType.select: {
+			const shown = request();
+			host.screen.view({ type: "select", unit: a.param[0] ? a.param[0].id : null }, shown);
+			return true;
+		}
+		case actionType.message: host.screen.view({ type: "message", text: a.param[0], at: a.param[1] }, request()); return true;
+		case actionType.viewport: host.screen.view({ type: "viewport", at: a.param[0] }, request()); return true;
+		default: return false;
+	}
+}
 
 //The commands a program's actions send as the player's (the AI's purchases and deployment are its turn
 //start's, its upgrades none: they pass)
-const commandOf: { [type: number]: "resupply" | "reinforce" | "mount" | "unmount" } = {
-	[actionType.resupply]: "resupply", [actionType.reinforce]: "reinforce", [actionType.mount]: "mount",
-	[actionType.umount]: "unmount" };
-const passing = [actionType.upgrade, actionType.buy, actionType.deploy];
+const commandOf = { [actionType.resupply]: "resupply", [actionType.reinforce]: "reinforce", [actionType.mount]: "mount",
+	[actionType.umount]: "unmount" } as const;
+const passing: number[] = [actionType.upgrade, actionType.buy, actionType.deploy];
 
 //A program's action other than a move, an attack and a view event: its command, on the core. The scripted
 //tutorial can queue no unit (#80), which the command refuses where the engine threw. False for the end of
 //its turn and an action unknown
-function playCommand(g: Game, type: number, unit: Unit | null): boolean {
-	const command = commandOf[type];
-	if (command !== undefined) {
-		const cmd = { type: command, unit: unit ? unit.id : -1 };
+function playCommand(g: Game, a: AIAction): boolean {
+	if (a.type === actionType.resupply || a.type === actionType.reinforce || a.type === actionType.mount || a.type === actionType.umount) {
+		const unit = a.param[0];
+		const cmd = { type: commandOf[a.type], unit: unit ? unit.id : -1 };
 		const done = Commands.execute(g.scenario, cmd);
 		if (g.host.screen.played) g.host.screen.played(cmd, done);
 		return true;
 	}
-	return passing.includes(type);
+	return passing.includes(a.type);
 }
 
 //A single scenario's player: isAI 1 is the AI, 2 the scripted AI, or as the scenario or the save says
