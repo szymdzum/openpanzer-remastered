@@ -1,7 +1,6 @@
-//The new UI's root under ?ui=new (#380): for now the map (#345), the HUD so far (#346: the status bar, the game menu,
-//the unit context menu docked above the unit info at the bottom, as the old UI's), End turn, the message window and the
-//start menu over them all (#349), composed of the component library. The
-//HUD (D3) and the windows (D5) replace them piece by piece. The components only read the
+//The UI's root (#380): the map (#345), the HUD (#346: the status bar, the game menu, the unit context menu docked above
+//the unit info at the bottom, as the old UI's), End turn, the windows (#348), the message window and the start menu over
+//them all (#349), composed of the component library. The components only read the
 //store's signals and send its commands: what they show and why a control is off is the view model's.
 import { IconSprite } from "./icon";
 import { UnitContextMenu } from "./contextmenu";

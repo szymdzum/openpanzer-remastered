@@ -16,7 +16,7 @@ The game menu (`#menu`) has the buttons the game builds in `UIBuilder.buildMainM
 - **Map scale** stays in Settings (Game map scale), as today. There are no zoom buttons on the rail.
 - Toggles carry `aria-pressed` and use the `is-on` style: `panel-sunken`, a 3px `accent` edge and an `accent-ink` icon. Each button has an `aria-label` and a tooltip with its shortcut. On touch the rail shows labels (`.pm-rail.labels`).
 
-**Keyboard.** Every key the game reads (`handleKeyboard`, `src/ui.ts`), listed on the card and in each button's tooltip:
+**Keyboard.** Every key the game reads (`src/view/shortcuts.ts`, the old `handleKeyboard` of `src/ui.ts` before #351), listed on the card and in each button's tooltip:
 
 | Key | Does |
 | --- | --- |

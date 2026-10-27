@@ -320,8 +320,7 @@ export class GameHost {
 		this.game.state.saveSettings();
 	}
 
-	//The settings saved (uiSettings), as the old settings window's OK and the start menu's starts save them: a setting
-	//changed on one UI holds on the other
+	//The settings saved (uiSettings), as the old settings window's OK and the start menu's starts saved them
 	saveSettings() {
 		this.game.state.saveSettings();
 	}
@@ -532,7 +531,7 @@ export class GameHost {
 		return g.uiMessageClicked ? null : { reason: "Read the message first" };
 	}
 
-	//The person's end of turn (the old UI's End turn does the same, src/ui.ts): the combat log starts again
+	//The person's end of turn (as the old UI's End turn did, src/ui.ts before #351): the combat log starts again
 	//before the next turn's start logs its resupplies and reinforcements (#86), then a program's turn plays,
 	//unless the turn limit ended the game (#365)
 	personEndTurn() {

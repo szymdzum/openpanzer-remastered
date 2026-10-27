@@ -1,8 +1,8 @@
-//What the new UI animates after a step (#347): a step is played whole in the core, then shown from its events as a
+//What the UI animates after a step (#347): a step is played whole in the core, then shown from its events as a
 //row of beats, each a unit moving along its path, a unit firing or an explosion, with its sound. The beats and their
-//order are the old UI's (src/ui.ts uiUnitMove, uiAttackHits, uiAttackLosses, uiRetreat, uiSurrender), its sprite strips
-//and sound files as they are; which variant plays is picked later, from the cosmetic stream (src/view/player.ts). The
-//old animation.ts and sound.ts go with the old UI at the switch (D8). Plain functions of the worlds and the events,
+//order are the old UI's (src/ui.ts uiUnitMove, uiAttackHits, uiAttackLosses, uiRetreat, uiSurrender, before #351), its
+//sprite strips and sound files as they are; which variant plays is picked later, from the cosmetic stream
+//(src/view/player.ts). Plain functions of the worlds and the events,
 //tested without the DOM (test/view-beats.test.ts)
 import type { Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";

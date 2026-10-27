@@ -6,7 +6,7 @@ Deploy mode: what the player sees when a campaign scenario starts with core unit
 
 - A free hex gets a brass tint with a light inner line. The whole group gets one brass outline over a dark under-stroke, so it reads on fields, forest and town alike.
 - A hex that already holds a unit keeps the outline but loses the tint.
-- Move and attack hexes are not drawn in deploy mode, as today (`render.ts` skips them while `deployMode` is on).
+- Move and attack hexes are not drawn in deploy mode, as the old UI drew none (`render.ts` skipped them while `deployMode` was on, before #351).
 
 **Placing.** The selected reserve unit is drawn at 55% on the hex under the pointer, with a white hex outline and a tag: "Place Pz IIIE · can't go back to the reserve". A click places it (`deployPlayerUnit`). There is no way to take a unit back to the reserve, so the tag says so. After a placement the next unit in the list is selected, as `updateEquipmentWindow` does today.
 

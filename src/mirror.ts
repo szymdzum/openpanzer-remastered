@@ -6,21 +6,22 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The core's world is the game; the objects hold what the old UI drew and the harness reads. After
- * each step or checkpoint applyData updates them in place to the world's state, by unit id, keeping
- * each object (the UI compares units with === and keeps them in closures), and keeps that world: the
- * next step and the screen's rules start from it, not from the objects. What the screen writes into
- * them (its selection's hexes, the unit it animates) is the screen's and never reaches the game: what
- * changes the game is a command (a unit left while disembarking goes back aboard by the embark,
- * src/selection.ts). The world is made from the objects only where they were set up outside a step and
- * said so (touched, src/context.ts: a load, the players' setup, a test), the streams moved outside a step
- * (a seed) or the campaign went on; and under ?harness (mirrorOptions.cache off), whose scripts set up
- * their games by writing into the objects anywhere: there the world kept is compared with the objects
+ * The core's world is the game; the objects hold what the harness, the contracts and the old engine's
+ * own code read. After each step or checkpoint applyData updates them in place to the world's state, by
+ * unit id, keeping each object (code that holds one sees it change), and keeps that world: the next step
+ * and the screen's rules start from it, not from the objects. What is written into them outside a step
+ * (the old selection's hexes, src/selection.ts) never reaches the game: what changes the game is a command
+ * (a unit left while disembarking goes back aboard by the embark, src/selection.ts). The world is made
+ * from the objects only where they were set up outside a step and said so (touched, src/context.ts: a
+ * load, the players' setup, a test), the streams moved outside a step (a seed) or the campaign went on;
+ * and under ?harness (mirrorOptions.cache off), whose scripts set up their games by writing into the
+ * objects anywhere: there the world kept is compared with the objects
  * (savedAs, src/state.ts) whenever it is asked for and made again from them when they differ, until the
  * harness plays on the game host (#378). mirrorDifference says when the two differ.
  *
  * The spotting and zone of control are the core's, computed from the units (D10: no drift, #72, #73):
- * applyData writes the world's sight into the hexes' counters, which the screen reads.
+ * applyData writes the world's sight into the hexes' counters, which the old engine's rules and the harness
+ * read.
  */
 
 import { Cell, uiSettings } from "./prototypes";

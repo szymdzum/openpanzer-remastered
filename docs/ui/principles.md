@@ -91,7 +91,7 @@ The estimate (`calculateCombatResults(..., estimate = true)`) needs no dice, and
 | Entrenchment adds to defence and every hit takes one level | sandbags under the strength plate | marker |
 | Every hit this turn is −2 defence for later attacks (`hits`, not from artillery, forts or ships) | a red "−2" tag after the plate | marker |
 | A weak or badly hit defender retreats, or surrenders with no free hex behind it (gr:791) | "will retreat" or "no room: surrenders" from the estimate | odds |
-| Support fire losses can stop an attack before it starts (ui.ts:580) | "attack may be stopped" when the support losses reach the retreat line | odds |
+| Support fire losses can stop an attack before it starts (ui.ts:580, before #351) | "attack may be stopped" when the support losses reach the retreat line | odds |
 
 ### Seeing
 

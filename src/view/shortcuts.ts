@@ -1,4 +1,4 @@
-//The keyboard shortcuts of the new UI (GameMenu, #346): every key the old UI reads (handleKeyboard, src/ui.ts), by the
+//The keyboard shortcuts (GameMenu, #346): every key the old UI read (handleKeyboard, src/ui.ts before #351), by the
 //same physical keys (KeyboardEvent.code, so a French or German layout plays the same keys) and Escape by its name.
 //Plain TypeScript: the store (src/view/store.ts) does what each one says.
 import type { ActionKey } from "./model";

@@ -1,5 +1,5 @@
 //The game's names harness/ and the contracts reach for: with ?harness, src/main.ts exposes every
-//module's exports as page globals, and the scripts use them, game.* and game.ui.* by name. Renaming
+//module's exports as page globals, and the scripts use them, and game.* by name (game.ui.* only on the original, below). Renaming
 //one breaks npm run verify and npm run record for a reason that isn't a behavior change, so this
 //says it in seconds, with the names
 import fs from "node:fs";
