@@ -156,3 +156,15 @@ test("Show optional objectives tooltips shows or hides the towns' plaques at onc
 	store.toggleSetting("showDetailInfoToolTips");
 	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2]]);
 });
+
+test("Mark own units on map and Mark enemy strength in red reach the map as soon as they're switched (#464)", () => {
+	Object.assign(uiSettings, { markOwnUnits: false, markEnemyUnits: false });
+	const w = handWorld({ rows: 4, cols: 4, units: [] });
+	const store = createStore({ world: () => w, command: vi.fn(), won: vi.fn() });
+	store.refresh();
+	expect(store.marks.value).toEqual({ own: false, enemy: false });
+	store.toggleSetting("markOwnUnits");
+	expect(store.marks.value).toEqual({ own: true, enemy: false });
+	store.toggleSetting("markEnemyUnits");
+	expect(store.marks.value).toEqual({ own: true, enemy: true });
+});

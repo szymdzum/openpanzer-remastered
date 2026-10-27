@@ -169,6 +169,11 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		void settings.settingsChanged.value;
 		return world.value === null || !labels.value ? [] : mapPlaques(world.value, uiSettings.showDetailInfoToolTips);
 	});
+	//The old map's marks the settings ask for (#464), read again when a setting changed
+	const marks = computed(() => {
+		void settings.settingsChanged.value;
+		return { own: uiSettings.markOwnUnits, enemy: uiSettings.markEnemyUnits };
+	});
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
 	//the strategic map's chips and objectives, while it is open
@@ -297,7 +302,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		dispatch,
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
-		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
+		units, selection, path, fog, support, plaques, marks, overview, deploying, reserve, deployment, ghost, refresh, glance,
 		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu, ...newGame, ...settings, ...saveLoad,
 
 		//A button of the start menu: its window, or the game; the tutorial starts on the host

@@ -35,6 +35,9 @@ export interface Scene {
 	strategic: Strategic | null; //the strategic map instead of the rest, the map fit to the window (src/view/strategic.ts)
 	deploy: Deployment | null; //the deployment zone while a reserve unit is picked (src/view/deploy.ts)
 	ghost: Ghost | null; //the picked reserve unit on the hovered hex where a click places it
+	//The old map's two settings (#464): the hexes of the units of the player whose turn it is tinted (Mark own units on
+	//map), the enemy's strength plates in red (Mark enemy strength in red); both off when not given
+	marks?: { own: boolean; enemy: boolean };
 }
 
 //A sprite strip or the bridge by its file, null until it has loaded
@@ -155,6 +158,16 @@ function drawPath(c: CanvasRenderingContext2D, vp: Viewport, path: Path) {
 	drawPathEnd(c, toScreen(hexCentre(last.row, last.col), vp), path);
 }
 
+//The old map's marks (#464), none when the scene doesn't give them
+const NO_MARKS = { own: false, enemy: false };
+const marksOf = (scene: Scene) => scene.marks === undefined ? NO_MARKS : scene.marks;
+
+//Mark own units on map (#464): the hexes of the units of the player whose turn it is tinted, as the old map's ownunit
+//hexes were
+function drawOwnTint(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[], on: boolean) {
+	if (on) fillHexes(c, vp, units.filter((u) => u.current), MAP["map-axis"], 0.3);
+}
+
 //The air ring round each aircraft on top in the air layer (AirLayer): a light fill and a dashed line at screen size
 function drawAirRings(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) {
 	const lifted = units.filter((u) => u.lifted);
@@ -206,7 +219,7 @@ function drawGhost(c: CanvasRenderingContext2D, vp: Viewport, g: Ghost, images: 
 	c.save();
 	c.globalAlpha = 0.55;
 	drawSprite(c, vp, { id: -1, row: g.row, col: g.col, icon: g.icon, facing: g.facing, side: -1, bridge: false, marker: null, dim: false, chip: null,
-		lifted: false }, images);
+		lifted: false, current: false }, images);
 	c.restore();
 }
 
@@ -246,8 +259,9 @@ function drawReadiness(c: CanvasRenderingContext2D, m: Marker, right: number, y:
 	if (fire) drawFireMark(c, x + 5 + (m.canMove ? 8 : 0), y + 5.5, m.noAmmo);
 }
 
-//The strength plate in the side's colour: square for the side shown's units, pointed ends for the enemy's
-function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: number, y: number, w: number) {
+//The strength plate in the side's colour: square for the side shown's units, pointed ends for the enemy's, in red with
+//the old map's Mark enemy strength in red (#464)
+function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: number, y: number, w: number, enemyRed: boolean) {
 	c.beginPath();
 	if (m.own) c.rect(x, y, w, 11);
 	else {
@@ -255,7 +269,7 @@ function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: numb
 		c.lineTo(x + w + 2, y + 5.5); c.lineTo(x + w - 2, y + 11); c.lineTo(x + 2, y + 11);
 		c.closePath();
 	}
-	c.fillStyle = sideColour(side);
+	c.fillStyle = enemyRed && !m.own ? MAP["map-critical"] : sideColour(side);
 	c.fill();
 	c.globalAlpha *= 0.75;
 	c.strokeStyle = MAP.shade;
@@ -317,13 +331,13 @@ function drawSandbags(c: CanvasRenderingContext2D, levels: number, cx: number, y
 }
 
 //The marker under a unit at screen size (MapOverlays), the plate's top centre at p
-function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, p: Point) {
+function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, enemyRed: boolean, p: Point) {
 	const text = String(m.strength), w = text.length * 5 + 6;
 	const x = Math.round(p.x - w / 2), y = Math.round(p.y);
 	c.save();
 	if (m.done) c.globalAlpha = 0.45;
 	drawReadiness(c, m, x - (m.own ? 0 : 2), y);
-	drawPlate(c, m, u.side, x, y, w);
+	drawPlate(c, m, u.side, x, y, w, enemyRed);
 	drawRight(c, m, x + w + (m.own ? 2 : 4), y);
 	if (m.entrenchment > 0) drawSandbags(c, m.entrenchment, x + w / 2, y + 12);
 	c.restore();
@@ -372,6 +386,8 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	}
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
+	const marks = marksOf(scene);
+	drawOwnTint(c, vp, scene.units, marks.own);
 	drawAirRings(c, vp, scene.units);
 	if (scene.deploy !== null) drawDeployZone(c, vp, scene.deploy);
 	if (scene.ghost !== null) drawPlaceOutline(c, vp, scene.ghost);
@@ -384,7 +400,7 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.ghost !== null) drawGhost(c, vp, scene.ghost, images);
 	atScreen(c, vp);
 	for (const u of scene.units)
-		if (u.marker !== null) drawMarker(c, u, u.marker, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
+		if (u.marker !== null) drawMarker(c, u, u.marker, marks.enemy, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
 	drawChips(c, vp, scene.units);
 	c.restore();
 }

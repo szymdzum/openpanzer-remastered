@@ -41,6 +41,7 @@ export interface MapUnit {
 	dim: boolean; //in the other layer's slot of a shared hex (MapLayers): drawn underneath at 75%, with a chip instead of its marker
 	chip: number | null; //the strength chip of a unit drawn underneath: the one thing its marker would have told
 	lifted: boolean; //an aircraft on top in the air layer (AirLayer): lifted with a shadow inside a dashed air ring
+	current: boolean; //the unit of the player whose turn it is (the old map's Mark own units, #464)
 }
 
 //A hex's edge: adjacent()'s side k of the hex
@@ -120,7 +121,7 @@ function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode:
 	const bridge = u.id !== selected && isGround(w, u) && isBridgeForSide(w, hexIndex(w, u.row, u.col), side);
 	return { id: u.id, row: u.row, col: u.col, icon: unitData(w, u).icon, facing: u.facing, side, bridge,
 		marker: !shared && u.strength > 0 ? markerOf(w, u) : null, dim: shared, chip: shared && u.strength > 0 ? u.strength : null,
-		lifted: top && airMode };
+		lifted: top && airMode, current: u.owner === w.state.turn.currentPlayer };
 }
 
 //The units the side shown sees, hex by hex, row by row (MapLayers): every hex has a ground slot and an air slot.
