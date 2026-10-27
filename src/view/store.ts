@@ -164,7 +164,11 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
-	const plaques = computed(() => world.value === null || !labels.value ? [] : mapPlaques(world.value, uiSettings.showDetailInfoToolTips));
+	//(and again when a setting changed: the towns' setting changes no world, #467)
+	const plaques = computed(() => {
+		void settings.settingsChanged.value;
+		return world.value === null || !labels.value ? [] : mapPlaques(world.value, uiSettings.showDetailInfoToolTips);
+	});
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
 	//the strategic map's chips and objectives, while it is open

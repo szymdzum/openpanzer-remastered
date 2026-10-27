@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
+import { hexIndex } from "../src/core/world";
 import { sliderText, toggleSetting, TOGGLES } from "../src/view/settings";
 import { App } from "../src/view/app";
 import { createStore } from "../src/view/store";
@@ -139,4 +140,19 @@ test("Every setting the window changes is one the game's saved settings keep, th
 	expect(keys.map((k) => uiSettings[k])).toEqual(keys.map((k) => changed[k]));
 	expect(keys.filter((k) => changed[k] === before[k])).toEqual([]);
 	localStorage.clear();
+});
+
+test("Show optional objectives tooltips shows or hides the towns' plaques at once, not after the next step (#467)", () => {
+	uiSettings.showDetailInfoToolTips = false;
+	const w = handWorld({ rows: 8, cols: 8, units: [] });
+	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
+	Object.assign(w.state.map.hexes[hexIndex(w, 5, 5)], { owner: 0, flag: 7 });
+	//(the host gives the same world back while nothing changed in the game, as the mirror keeps it)
+	const store = createStore({ world: () => w, command: vi.fn(), won: vi.fn() });
+	store.refresh();
+	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2]]);
+	store.toggleSetting("showDetailInfoToolTips");
+	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2], [5, 5]]);
+	store.toggleSetting("showDetailInfoToolTips");
+	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2]]);
 });
