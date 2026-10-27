@@ -123,15 +123,18 @@ async function clickHex(at: Position) {
 	await page.mouse.click(point.x, point.y);
 }
 
-//A click on a hex until it has done what it should (done): the map takes no click while it still shows the last step,
-//and the screen doesn't say when it has (it has no showingStep, #459), so a person clicks again
-async function clickHexUntil(at: Position, done: () => Promise<boolean>, what: string) {
-	for (const end = Date.now() + SHOWN_MS; ; ) {
-		await clickHex(at);
-		for (const wait = Date.now() + 1000; Date.now() < wait; await page.waitForTimeout(100))
-			if (await done()) return;
+//The screen has shown the last step: the map takes no click while its beats still play (the screen's showingStep, #459)
+async function stepShown() {
+	await page.waitForFunction(() => !(window as unknown as Probed).e2e.game.host.showingStep(), null, { timeout: SHOWN_MS, polling: 100 });
+}
+
+//One click on a hex once the last step is shown, which must then do what it should (done): a click the map drops fails
+//here, it isn't clicked again
+async function clickHexOnce(at: Position, done: () => Promise<boolean>, what: string) {
+	await stepShown();
+	await clickHex(at);
+	for (const end = Date.now() + SHOWN_MS; !(await done()); await page.waitForTimeout(100))
 		check(Date.now() < end, what);
-	}
 }
 
 //A unit of the person's that the click picks and where to: the first by id whose hexes, its own and where, sit away from
@@ -160,7 +163,7 @@ const unitAt = (at: Position) => world(([w], h) => {
 async function select(o: Order) {
 	if (await ui("#air").getAttribute("aria-pressed") !== String(o.air)) await page.keyboard.press("KeyA");
 	const card = ui("#unit-info #uName", { hasText: o.name });
-	await clickHexUntil(o.from, () => card.isVisible(), `the unit card doesn't show ${o.name}`);
+	await clickHexOnce(o.from, () => card.isVisible(), `the unit card doesn't show ${o.name}`);
 }
 
 //A move of the first unit that can make one, played out
@@ -168,7 +171,7 @@ async function move() {
 	const o = await orderOf("area");
 	check(o !== null, "no unit of the person's can move");
 	await select(o!);
-	await clickHexUntil(o!.to, async () => await unitAt(o!.to) === o!.unit, `${o!.name} didn't move to ${o!.to.row},${o!.to.col}`);
+	await clickHexOnce(o!.to, async () => await unitAt(o!.to) === o!.unit, `${o!.name} didn't move to ${o!.to.row},${o!.to.col}`);
 }
 
 //The turn number and the person's turn on the status bar
@@ -177,7 +180,15 @@ const turnOf = () => world(([w]) => w.state.turn.turn);
 //Ends the person's turn as a person does: End turn, and End turn again when it asks about the units that can still act;
 //then waits for the AI's turn to be played out, or for the message that ends the scenario
 async function endTurn() {
+	await stepShown();
+	const before = await world(([w]) => w.state.turn.turn * 4 + w.state.turn.currentPlayer);
 	await ui("#endturn button:enabled").click();
+	//(the question about the units that can still act, or the turn gone on without it, or the scenario's end)
+	await page.waitForFunction((at) => {
+		const w = (window as unknown as Probed).e2e.game.host.world();
+		return document.querySelector(".pm-screen #endturn-question") !== null || document.querySelector(".pm-screen #ui-message") !== null
+			|| w === null || w.state.turn.turn * 4 + w.state.turn.currentPlayer !== at;
+	}, before, { timeout: AI_TURN_MS, polling: 100 });
 	const question = ui("#endturn-question");
 	if (await question.isVisible()) await question.locator("button", { hasText: "End turn" }).click();
 	await page.waitForFunction(() => document.querySelector(".pm-screen #endturn button:enabled") !== null
@@ -242,7 +253,7 @@ async function play() {
 			const r = p.reserveOf(w)[0], d = p.deploymentOf(w, r.index)!;
 			return d.free.find((h) => h.row >= 3 && h.row < w.state.map.rows - 3 && h.col >= 3 && h.col < w.state.map.cols - 3) ?? d.free[0];
 		});
-		await clickHexUntil(at, async () => await unitAt(at) !== null, `no unit came onto ${at.row},${at.col}`);
+		await clickHexOnce(at, async () => await unitAt(at) !== null, `no unit came onto ${at.row},${at.col}`);
 		check(await reserve() === 0, "the reserve isn't empty");
 		await gone(ui("section.pm-deploy"));
 	});
@@ -291,7 +302,7 @@ async function play() {
 		check(o !== null, "no unit of the person's has a target");
 		const before = await world(([w], ids) => ids.map((id) => w.state.units[w.index.get(id)!].strength), [o!.unit]);
 		await select(o!);
-		await clickHexUntil(o!.to, () => world(([w], id) => w.state.units[w.index.get(id)!].hasFired, o!.unit), `${o!.name} didn't fire`);
+		await clickHexOnce(o!.to, () => world(([w], id) => w.state.units[w.index.get(id)!].hasFired, o!.unit), `${o!.name} didn't fire`);
 		//(the combat's news on the status line, under the attacker's name, until the next command)
 		await shown(ui("#statusbar .msg b", { hasText: o!.name }));
 		const after = await world(([w], id) => { const i = w.index.get(id); return i === undefined ? 0 : w.state.units[i].strength; }, o!.unit);
