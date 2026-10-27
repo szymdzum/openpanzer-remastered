@@ -14,7 +14,8 @@ import type { Ghost } from "./deploy";
 import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
-import { drawMap, type Images, type Scene } from "./mapdraw";
+import type { Images, Scene } from "./mapdraw";
+import { type Frame, MapLayers } from "./layers";
 import { drawPreview } from "./attackdraw";
 import { SHEETS } from "./beats";
 import { drawMotion } from "./motiondraw";
@@ -68,6 +69,7 @@ class Painter {
 	declare onView: (view: View) => void;
 	declare view: View;
 	declare looked: { data: World["data"] | null; look: Position | null };
+	declare layers: MapLayers;
 
 	constructor(store: Store, onView: (view: View) => void) {
 		this.store = store;
@@ -77,6 +79,7 @@ class Painter {
 		this.onView = onView;
 		this.view = { x: 0, y: 0, width: 0, height: 0 };
 		this.looked = { data: null, look: null };
+		this.layers = new MapLayers(() => document.createElement("canvas"));
 		this.cache = new ImageCache(() => this.request());
 	}
 
@@ -111,6 +114,7 @@ class Painter {
 			scroller.removeEventListener("mousemove", move);
 			scroller.removeEventListener("mouseleave", leave);
 			scroller.removeEventListener("click", click);
+			this.layers.release();
 			this.canvas = this.scroller = null;
 		};
 	}
@@ -174,17 +178,17 @@ class Painter {
 		}
 		const c = canvas.getContext("2d");
 		if (c === null || w === null) return;
-		drawMap(c, this.scene(w, this.size(1)), vp, (f) => this.image(f));
-		this.preview(c, vp);
+		this.layers.draw(c, this.frame(w, vp));
 	}
 
-	//The attack cursor and a retreat's trail over the rest, then the beat playing (a moving unit, a shot, an explosion),
-	//none on the strategic map
-	preview(c: CanvasRenderingContext2D, vp: Viewport) {
-		const s = this.store, results = s.results.peek(), motion = s.motion.peek();
-		if (s.strategic.peek()) return;
-		drawPreview(c, vp, { glance: s.glance.peek(), trail: results === null ? null : results.trail });
-		if (motion !== null) drawMotion(c, vp, motion, (f) => this.image(f));
+	//The scene, the attack cursor and a retreat's trail over it, then the beat playing (a moving unit, a shot, an
+	//explosion); neither of the last on the strategic map
+	frame(w: World, vp: Viewport): Frame {
+		const s = this.store, images = (f: string) => this.image(f), scene = this.scene(w, this.size(1));
+		const results = s.results.peek(), motion = s.motion.peek();
+		if (s.strategic.peek()) return { scene, vp, images, over: null, motion: null };
+		const preview = { glance: s.glance.peek(), trail: results === null ? null : results.trail };
+		return { scene, vp, images, over: (c) => drawPreview(c, vp, preview), motion: motion === null ? null : (c) => drawMotion(c, vp, motion, images) };
 	}
 
 	//A sprite or the terrain, once it has loaded

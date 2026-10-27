@@ -113,7 +113,7 @@ export default defineConfig({
 				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
 				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
-				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts"],
+				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/layers.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -188,6 +188,7 @@ export default defineConfig({
 				"src/view/store.ts": { statements: 97, branches: 99, functions: 99, lines: 96 },
 				"src/view/hexgrid.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
 				"src/view/map.tsx": { statements: 97, branches: 90, functions: 97, lines: 100 },
+				"src/view/layers.ts": { statements: 96, branches: 93, functions: 90, lines: 97 }, //(the one uncovered: the harness setter)
 				//(functions: its shared helpers went to canvas.ts and overlays.ts, the dev server's __harnessSet stays a
 				//larger share of what is left)
 				"src/view/mapdraw.ts": { statements: 98, branches: 95, functions: 94, lines: 99 },
