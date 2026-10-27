@@ -25,8 +25,6 @@ export async function load(name: string) {
 	const prototypes = await import("../src/prototypes");
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
-	//What the session asks of the screen
-	(game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {}, showAlert() {}, mainMenuButton() {} };
 	const engine = await coreEngine();
 	const m = scenario.map;
 	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),

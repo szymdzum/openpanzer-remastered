@@ -53,7 +53,6 @@ export async function playAI(r: Restored, seed: number, after: (step: string) =>
 	const { Commands } = await import("../src/commands");
 	const command = await commandOf();
 	const m = r.scenario.map;
-	(r.game as unknown as { ui: unknown }).ui = { handleReinforcementDeployment() {}, showAlert() {}, mainMenuButton() {} };
 	const engine = await coreEngine();
 	const realRandom = Math.random;
 	Math.random = mulberry32(seed);

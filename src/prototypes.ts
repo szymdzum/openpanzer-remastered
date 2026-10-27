@@ -65,10 +65,7 @@ export let terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99,
 
 export let groundCondition = { dry:0, frozen: 1, mud: 2 };
 export let groundConditionNames = [ "Dry", "Frozen", "Mud" ];
-export let groundFontEncoding = ["6", "8", "7"]; //openpanzer icon font mapping
-export let weatherCondition = { fair:0, overcast: 1, rain: 2, snow: 3 };
 export let weatherConditionNames = ["Fair", "Overcast", "Raining", "Snowing"];
-export let weatherFontEncoding = ["4", "5", "1", "2"]; //openpanzer icon font mapping
 
 //The country names by equipment set, a country's index in its set (Equipment.getCountryName reads them)
 export let countryNames: { [eqpName: string]: string[] } = {
@@ -287,34 +284,20 @@ export interface CloudSave {
 }
 
 export interface UISettings {
-	airMode: boolean;
-	strategicZoom: boolean;
-	strategicZoomLevel: number;
-	mapZoom: boolean;
 	zoomLevel: number;
 	uiScale: number;
 	uiSize: number;
 	uiSmallSize: number;
-	hexGrid: boolean;
 	showGridTerrain: boolean;
 	muteUnitSounds: boolean;
-	deployMode: boolean;
-	markCombatUnits: boolean;
 	markOwnUnits: boolean;
 	markEnemyUnits: boolean;
-	markFOW: boolean;
 	noFOW: boolean;
 	quickAnimation: boolean;
-	hasTouch: boolean;
-	use3D: boolean;
 	useRetina: boolean;
 	hdGraphics: boolean;
-	allowZoom: boolean;
 	isAI: number[];
-	shownEndTurnTip: boolean;
-	unitInfoVisibility: boolean;
 	lastCloudSave: CloudSave[];
-	showInfoToolTips: boolean;
 	showDetailInfoToolTips: boolean;
 	showHiddenVictoryHexes: boolean;
 	classicRules: boolean;
@@ -322,34 +305,20 @@ export interface UISettings {
 
 //Holds the settings for the game ui and renderer
 export let uiSettings: UISettings = {
-	airMode: false,			//flag used to select between overlapping ground/air units
-	strategicZoom: false,	//flag used to draw map in strategic zoom mode or not
-	strategicZoomLevel: 1,	//The strategic map zoom level
-	mapZoom: false,			//flag used to draw map in zoomed mode or not
-	zoomLevel: 1,			//The mapZoom level
+	zoomLevel: 1,			//The map's scale
 	uiScale: 1.0,			//The scale at which is UI elements are zoomed
 	uiSize: 840,			//The size of UI windows width
 	uiSmallSize: 470,		//The size of the small UI windows width
-	hexGrid: false,			//flag to notify render if it should draw or not hex grid
 	showGridTerrain: false,	//if terrain icons should be shown when hex grid in on
 	muteUnitSounds: false,	//if unit combat sound should be muted
-	deployMode: false,		//used for unit deployment
-	markCombatUnits: true,	//To visually mark units that can still attack
 	markOwnUnits: false,	//To visually mark own units on map
 	markEnemyUnits: false,	//To visually mark enemy units on map
-	markFOW: false,			//Make Fog Of War visible
 	noFOW: false,			//Play without Fog Of War
 	quickAnimation: false,	//Faster unit animations
-	hasTouch: false,		//Set in UI if device has touch
-	use3D: false,			//use transform3d/translate3d functions for animations
 	useRetina: false,		//don't scale on retina displays devicePixelRatio > 1
 	hdGraphics: true,		//@2x map and unit images on high density screens (from public/hd/, needs a reload)
-	allowZoom: false,		//If user should be able to zoom in/out manually
 	isAI: [0, 0, 0, 0],		//which player is played by AI
-	shownEndTurnTip: false,	//if the end turn tip was already shown
-	unitInfoVisibility: false,
 	lastCloudSave: [],
-	showInfoToolTips: true,
 	showDetailInfoToolTips: false,
 	showHiddenVictoryHexes: true,
 	classicRules: false		//new games play the classic rules of Panzer Marshal 3.2.14, not the remaster's (#53)
@@ -638,28 +607,6 @@ export class Supply {
 	}
 }
 
-export class mouseInfo {
-	declare x: number;
-	declare y: number;
-	declare rclick: boolean;
-
-	constructor(x: number, y: number, rclick: boolean) {
-		this.x = x;
-		this.y = y;
-		this.rclick = rclick;
-	}
-}
-
-export class screenPos {
-	declare x: number;
-	declare y: number;
-
-	constructor(x: number, y: number) {
-		this.x = x;
-		this.y = y;
-	}
-}
-
 //"3.2.14" -> "3.2"
 export function major_version(version: string): string {
 	return version.split(".").slice(0, 2).join(".");
@@ -674,7 +621,6 @@ export let UPGRADE_PENALTY = 1.2; //Upgrade costs is multiplied with this value
 export let OVERSTRENGTH_PENALTY = 1.2; //Overstrength reinforcement costs is multiplied with this value
 export let SCENARIO_START_PRESTIGE = 2000; //Start prestige for scenarios played outside of a campaign
 export let PROTOTYPE_MIN_COST = 200; //Don't give players prototypes that are cheaper than this (with CURRENCY_MULTIPLIER)
-export let DEBUG_CAMPAIGN = false; //If victory choices buttons should be shown for easy campaign progress
 export let DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js)
 export let VERSION = "3.2.14";
 export let MAJOR_VERSION = major_version(VERSION);

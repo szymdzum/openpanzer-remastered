@@ -62,7 +62,6 @@ export function createSettings({ host, menu, scale, refresh, reload }: SettingsI
 				setScale(v);
 			} else {
 				uiSettings.zoomLevel = v;
-				uiSettings.mapZoom = v !== 1;
 				scale.value = v;
 			}
 			changed.value++;

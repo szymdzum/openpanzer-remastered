@@ -46,7 +46,6 @@ export class Game {
 	declare newScenario: (scenFile: string, scenIntro?: string) => void;
 	declare onScenarioLoadFinished: (scenIntro: string | null, isRestore: boolean) => void;
 	declare newCampaign: (campIndex: number, difficulty: number) => void;
-	declare onCampaignLoadFinished: () => void;
 	declare continueCampaign: (outcomeType: ScenarioOutcome, endType?: string) => void; //endType: an endGameType value
 	declare getCampaignPlayer: () => Player | null;
 	declare getCampaignProgress: () => CampaignProgress;
@@ -102,7 +101,6 @@ export class Game {
 			this.host.scenarioLoaded(scenIntro, isRestore);
 		}
 		this.newCampaign = function(campIndex: number, difficulty: number) { this.host.newCampaign(campIndex, difficulty); }
-		this.onCampaignLoadFinished = function() { this.host.campaignLoaded(); }
 		this.continueCampaign = function(outcomeType: ScenarioOutcome, endType?: string) { this.host.continueCampaign(outcomeType, endType); }
 		this.getCampaignPlayer = function() { return this.host.getCampaignPlayer(); }
 		this.getCampaignProgress = function() { return this.host.getCampaignProgress(); }
