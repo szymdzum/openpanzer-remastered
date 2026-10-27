@@ -2,13 +2,15 @@
 //into the next as the old slideshow did (still with reduced motion). Its buttons, in the old order: New Game, which
 //opens the panel of Campaigns, Scenarios and Tutorial above them, Settings, Save / Load and Continue Game; the old
 //logo's version and links, and its credits. What each button does is the store's (src/view/menus.ts); Esc closes the
-//start menu, as the old Options did. It opens with the first scenario and from the game menu's Options.
+//start menu, as the old Options did. It opens with the first scenario and from the game menu's Options. The campaign's
+//and the scenario's windows take the main window's place over the photographs.
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { VERSION } from "../prototypes";
 import { Button } from "./button";
 import { Icon } from "./icon";
 import { MAIN_BUTTONS, MENU_LINKS, type MenuEntry, NEW_GAME_BUTTONS, NOT_YET } from "./menus";
 import { useEscape } from "./panel";
+import { CampaignWindow, ScenarioWindow } from "./newgamewindows";
 import type { Store } from "./store";
 
 const PHOTOS = [1, 2, 3, 4, 5, 6];
@@ -56,6 +58,8 @@ export function StartMenu({ store }: { store: Store }) {
 			{PHOTOS.map((n) => <div key={n} class="pm-photo" style={photoOf(n)} />)}
 			<div class="pm-photo-tint" />
 			{m.window === "main" && <MainWindow store={store} newGame={m.newGame} />}
+			{m.window === "campaign" && <CampaignWindow store={store} />}
+			{m.window === "scenario" && <ScenarioWindow store={store} />}
 		</div>
 	);
 }

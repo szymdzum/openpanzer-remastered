@@ -114,7 +114,7 @@ export default defineConfig({
 				"src/view/strategicdraw.ts", "src/view/deploy.ts", "src/view/shortcuts.ts", "src/view/unitinfo.ts", "src/view/context.ts", "src/view/hextip.ts", "src/view/turn.ts",
 				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
-				"src/view/menus.ts"],
+				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -245,8 +245,11 @@ export default defineConfig({
 				"src/view/dossierwindow.tsx": { statements: 100, branches: 95, functions: 100, lines: 100 },
 				"src/view/tray.tsx": { statements: 100, branches: 87, functions: 100, lines: 100 },
 				"src/view/shopwindow.tsx": { statements: 100, branches: 98, functions: 100, lines: 100 },
-				"src/view/menus.ts": { statements: 92, branches: 100, functions: 66, lines: 92 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/menus.ts": { statements: 93, branches: 100, functions: 75, lines: 93 }, //(the one uncovered: the harness setter every module gets)
 				"src/view/startmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/newgame.ts": { statements: 97, branches: 100, functions: 92, lines: 96 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/newgamestate.ts": { statements: 98, branches: 100, functions: 92, lines: 97 }, //(the harness setter)
+				"src/view/newgamewindows.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 			},
 		},
 	},
