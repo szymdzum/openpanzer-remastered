@@ -3,6 +3,7 @@
 //button, its scenarios and starting prestige; Play, Back and the campaign's flow. A scenario: the list under its group
 //headers, its description, each side's countries with whether the AI plays them; Play and Back. Esc closes the start
 //menu, as the old Options did.
+import { safeHtml } from "./html";
 import { Fragment } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "./button";
@@ -55,7 +56,7 @@ export function CampaignWindow({ store }: { store: Store }) {
 					<SegmentedControl label="Difficulty" options={DIFFICULTY_OPTIONS} value={String(c.difficulty)} onChange={(d) => store.pickDifficulty(Number(d))} />
 					<Button id="smCampDifHelp" variant="ghost" icon="help" label="Difficulty help" onClick={() => store.difficultyHelp()} />
 				</div>
-				<div id="smCampDesc" class="desc pm-typed" dangerouslySetInnerHTML={{ __html: c.description }} />
+				<div id="smCampDesc" class="desc pm-typed" dangerouslySetInnerHTML={{ __html: safeHtml(c.description) }} />
 			</div>
 		</Window>
 	);
@@ -101,7 +102,7 @@ export function ScenarioWindow({ store }: { store: Store }) {
 							</Fragment>
 						))}
 					</div>
-					<div id="smScenDesc" class="desc pm-typed" dangerouslySetInnerHTML={{ __html: v.description }} />
+					<div id="smScenDesc" class="desc pm-typed" dangerouslySetInnerHTML={{ __html: safeHtml(v.description) }} />
 				</div>
 			)}
 		</Window>

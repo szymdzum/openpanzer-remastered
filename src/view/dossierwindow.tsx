@@ -1,6 +1,7 @@
 //The dossier (Dossier, CampaignEnd, #348): the campaign's record in a window, opened from either turn report's Dossier
 //button, and at the campaign's end the same window under the outcome's stamp and the campaign's closing words, with
 //Main menu. What it says is the view model's (src/view/dossier.ts): only what the game keeps.
+import { safeHtml } from "./html";
 import { Button } from "./button";
 import { Facts, StatTable } from "./facts";
 import { Scrim, Stamp, useEscape } from "./panel";
@@ -52,7 +53,7 @@ export function DossierWindow({ store }: { store: Store }) {
 					<Button id="dossierCloseBut" icon="close" label="Close" onClick={close} />
 				</div>
 				<div class="bd">
-					{end !== null && <div class="outcome"><Stamp large ok={end.won}>{end.stamp}</Stamp><div id="dossierInfo" class="pm-typed" dangerouslySetInnerHTML={{ __html: end.html }} /></div>}
+					{end !== null && <div class="outcome"><Stamp large ok={end.won}>{end.stamp}</Stamp><div id="dossierInfo" class="pm-typed" dangerouslySetInnerHTML={{ __html: safeHtml(end.html) }} /></div>}
 					<Facts facts={[{ label: "Scenarios", value: d.played }, { label: "Enemy destroyed", value: d.destroyed },
 						{ label: "Units lost", value: d.lost, tone: d.lost > 0 ? "critical" : undefined },
 						{ label: end === null ? "Prestige" : "Final prestige", value: d.prestige, tone: "prestige" }]} />

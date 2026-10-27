@@ -2,6 +2,7 @@
 //every other message (the game's notices, the tutorial's orders, an error) the same window at its short width without
 //the stamp. Its one button acknowledges it; the game waits for it, so it has no
 //close and Esc doesn't take it away. Messages come one at a time (the store's notes).
+import { safeHtml } from "./html";
 import { Button } from "./button";
 import { Scrim, Stamp } from "./panel";
 import type { Store } from "./store";
@@ -21,7 +22,7 @@ export function MessageDialog({ store }: { store: Store }) {
 					<span class="grow" />
 					{brief !== null && <Stamp large>Secret</Stamp>}
 				</div>
-				<div id="message" class="bd pm-typed" dangerouslySetInnerHTML={{ __html: note.html }} />
+				<div id="message" class="bd pm-typed" dangerouslySetInnerHTML={{ __html: safeHtml(note.html) }} />
 				<div class="ft">
 						<span class="grow" />
 					<Button id="uiokbut" variant="primary" large={brief !== null} onClick={() => store.close()}>{brief !== null ? "Understood" : "Continue"}</Button>
