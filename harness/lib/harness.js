@@ -146,9 +146,11 @@ async function runClock(cond, maxSteps) {
 	for (let n = 0; n < maxSteps; n++) {
 		if (cond()) return true;
 		game.uiMessageClicked = true;
-		// The scripted tutorial waits for its tooltips' OK button
+		// The scripted tutorial waits for its orders' OK button: the old UI's tooltip, the UI's Orders message
 		const tip = document.getElementById("gameToolTip"), ok = document.getElementById("gameToolTipOk");
 		if (tip && ok && ok.onclick && tip.getAttribute("type") === "game" && isVisible("gameToolTip")) ok.onclick();
+		const orders = document.querySelector(".pm-screen #ui-message");
+		if (orders && orders.querySelector("#title").textContent === "Orders") orders.querySelector("#uiokbut").click();
 		if (clock.flushAsync()) continue;
 		if (clock.loading()) { for (let k = 0; k < 1000 && clock.stepDue(); k++); await sleep(5); continue; }
 		if (!clock.step()) await sleep(5);

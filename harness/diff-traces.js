@@ -6,7 +6,7 @@ const [baseFile, varFile, coverageFile, modules] = process.argv.slice(2);
 const base = JSON.parse(fs.readFileSync(baseFile, "utf8"));
 const variant = JSON.parse(fs.readFileSync(varFile, "utf8"));
 
-const { firstDiff, domDiff, short } = require("./difflib");
+const { firstDiff, short } = require("./difflib");
 
 // coverageFile: one dump or a comma separated list (one per item)
 const coverageFiles = coverageFile ? coverageFile.split(",").filter((f) => fs.existsSync(f)) : [];
@@ -39,14 +39,12 @@ for (let i = 0; i < base.length; i++) {
 	const n = Math.max(b.actions.length, (v.actions || []).length);
 	for (let a = 0; a < n; a++) {
 		const ba = b.actions[a], va = (v.actions || [])[a];
-		if (!ba || !va || ba.hash !== va.hash || ba.domHash !== va.domHash || JSON.stringify(ba.action) !== JSON.stringify(va.action)) {
-			const what = ba && va && ba.hash === va.hash && JSON.stringify(ba.action) === JSON.stringify(va.action) ? "DOM" : "state/action";
-			problems.push(`first different action #${a} (turn ${ba ? ba.turn : va.turn}, ${what}): ` +
+		if (!ba || !va || ba.hash !== va.hash || JSON.stringify(ba.action) !== JSON.stringify(va.action)) {
+			problems.push(`first different action #${a} (turn ${ba ? ba.turn : va.turn}, state/action): ` +
 				`baseline ${short(ba && ba.action)} hash ${ba && ba.hash}, variant ${short(va && va.action)} hash ${va && va.hash}`);
 			if (ba && va && ba.state && va.state) {
 				const d = firstDiff(JSON.parse(ba.state), JSON.parse(va.state), "state");
 				if (d) problems.push(`  state before it differs at ${d.path}: baseline ${short(d.baseline)}, variant ${short(d.variant)}`);
-				if (ba.dom !== va.dom) problems.push("  DOM before it: " + domDiff(ba.dom, va.dom));
 			} else {
 				problems.push(`  rerun with FULL_FROM=${Math.max(0, a - 1)} to see the state that differs`);
 			}
@@ -59,12 +57,6 @@ for (let i = 0; i < base.length; i++) {
 		if (bt.state !== vt.state) {
 			const d = firstDiff(JSON.parse(bt.state), JSON.parse(vt.state), "state");
 			problems.push(`turn ${bt.turn} state differs at ${d.path}: baseline ${short(d.baseline)}, variant ${short(d.variant)}`);
-			break;
-		}
-		if (bt.dom !== vt.dom) { problems.push(`turn ${bt.turn} DOM differs: ` + domDiff(bt.dom, vt.dom)); break; }
-		if (JSON.stringify(bt.canvas) !== JSON.stringify(vt.canvas)) {
-			const i = (bt.canvas || []).findIndex((c, k) => c !== (vt.canvas || [])[k]);
-			problems.push(`turn ${bt.turn} canvas differs: baseline ${bt.canvas && bt.canvas[i]}, variant ${vt.canvas && vt.canvas[i]}`);
 			break;
 		}
 	}

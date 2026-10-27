@@ -1,8 +1,8 @@
-# npm run verify on pull requests: the whole game in headless Chrome (16 AI vs AI replays, 24 UI
-# scripts, state, DOM and canvas after every step) compared with the base branch
-# (BASELINE_REF, harness/lib/reference.sh), not with the original game: main differs from the
-# original on purpose (the unit markers). A refactor must come out identical; a deliberate change
-# shows what it changed in the run's summary and artifacts.
+# npm run verify on pull requests: the game in headless Chrome (16 AI vs AI replays, the state before
+# every AI action and at every turn's end, a save and its load) compared with the base branch
+# (BASELINE_REF, harness/lib/reference.sh), not with the original game. A refactor must come out
+# identical; a deliberate change shows what it changed in the run's summary and artifacts. The UI has
+# its own end-to-end test (ci.yml e2e) since it replaced the old one (#351).
 #
 # verify is a required check on main. It runs on every pull request so a docs-only change isn't
 # left waiting for it: without changes to the game or the harness it passes at once. A
@@ -16,10 +16,10 @@
 # fingerprint (a rebase that changed nothing the label accepted); with other differences verify
 # takes the label off and fails, and they are read again.
 #
-# The jobs: play the game only on a push (four shards side by side: the AI games, and the UI scripts
-# in thirds), then judge (the required check verify, verify-judge.sh). Adding or taking off the label
-# plays nothing: the judge reads the play of the same commit. After every push to main, warm plays
-# main's own traces into the cache, so a pull request on it plays only its side.
+# The jobs: play the game only on a push (the shard replay: the AI games), then judge (the required
+# check verify, verify-judge.sh). Adding or taking off the label plays nothing: the judge reads the play
+# of the same commit. After every push to main, warm plays main's own traces into the cache, so a pull
+# request on it plays only its side.
 name: Verify
 
 on:
@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [replay, ui-0-of-3, ui-1-of-3, ui-2-of-3]
+        shard: [replay]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -108,16 +108,14 @@ jobs:
         id: differs
         if: always()
         run: |
-          if grep -qE "^DIFF |^== UI replay [^:]+: (DIFF|didn.t finish)" "$RUNNER_TEMP/verify-${{ matrix.shard }}.log"; then
+          if grep -qE "^DIFF " "$RUNNER_TEMP/verify-${{ matrix.shard }}.log"; then
             echo "yes=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/upload-artifact@v7
         if: always() && steps.differs.outputs.yes == 'true'
         with:
           name: verify-traces-${{ matrix.shard }}
-          path: |
-            harness/out/replay-*/
-            harness/out/ui-*/
+          path: harness/out/replay-*/
           retention-days: 7
 
   # The required check: the differences of the play of this commit, accepted or not. On a label added
@@ -167,7 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [replay, ui-0-of-3, ui-1-of-3, ui-2-of-3]
+        shard: [replay]
     steps:
       - uses: actions/checkout@v7
         with:

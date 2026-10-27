@@ -14,7 +14,7 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:mutation": "TZ=Europe/Warsaw OPENPANZER_GAME_DIR=$PWD/game nice -n 10 stryker run",
-		"verify": "harness/replay.sh; r=$?; harness/ui-replay.sh && exit $r",
+		"verify": "harness/replay.sh",
 		"record": "test/contracts/record.sh",
 		"e2e": "TZ=Europe/Warsaw node --import ./cli/register.mjs test/e2e/game.ts",
 		"play": "TZ=Europe/Warsaw node --import ./cli/register.mjs cli/play.ts",
