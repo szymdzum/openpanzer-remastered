@@ -4,12 +4,13 @@
 //changed. The person's commands go to the game host from here (dispatch), and a refused one leaves its
 //reason for the status bar.
 import { computed, signal } from "@preact/signals";
-import type { Command } from "../commands";
+import type { Command, CommandType, ResultOf } from "../commands";
 import type { GameEvent } from "../core/events";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
 import { unitById, unitData } from "../core/world";
 import type { GameHost } from "../host";
+import type { ScenarioOutcome } from "../scenario";
 import { fogOf, mapPlaques, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
@@ -19,7 +20,7 @@ import type { MenuKey, Shortcut } from "./shortcuts";
 import { type CardSize, type CardView, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
-import { campaignEndOf, dossierOf, type Outcome } from "./dossier";
+import { campaignEndOf, dossierOf } from "./dossier";
 import { outcomeNames, uiSettings } from "../prototypes";
 import { contextOf } from "./context";
 import { locationOf, pinsOf } from "./hextip";
@@ -84,7 +85,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const logOpen = signal(false);
 	//the dossier open (Dossier), or the campaign's end over it with what its close does (CampaignEnd)
 	const dossierOpen = signal(false);
-	const ending = signal<{ outcome: Outcome, html: string, closed: () => void } | null>(null);
+	const ending = signal<{ outcome: ScenarioOutcome, html: string, closed: () => void } | null>(null);
 	//What the last step told (CombatResults): its chips and stamp over the map until they fade, its line in the status bar
 	//until the next command
 	const results = signal<Results | null>(null);
@@ -323,7 +324,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 
 		//The campaign's end (the screen's campaignEnd): the dossier under its outcome and closing words; with no campaign
 		//player to show (no world), the outcome as a message, as before
-		endCampaign(outcome: Outcome, html: string, then: () => void) {
+		endCampaign(outcome: ScenarioOutcome, html: string, then: () => void) {
 			if (world.value !== null && dossierOf(world.value) !== null) ending.value = { outcome, html, closed: then };
 			else notes.value = [...notes.value, { title: outcomeNames[outcome], html, at: null, ok: then }];
 		},
@@ -491,7 +492,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 export type Store = ReturnType<typeof createStore>;
 
 //The events of a command's result: a move's and an attack's carry theirs, the others none
-function eventsOf(result: unknown): GameEvent[] {
-	return result !== null && typeof result === "object" && "events" in result ? (result as { events: GameEvent[] }).events : [];
+function eventsOf(result: ResultOf<CommandType>): GameEvent[] {
+	return result !== null && typeof result === "object" && "events" in result ? result.events : [];
 }
 

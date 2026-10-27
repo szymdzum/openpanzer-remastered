@@ -86,3 +86,6 @@ export type GameEvent =
 	| { type: "turnLimit"; side: number }
 	//A scenario's reinforcement arrived on the map
 	| { type: "arrived"; unit: UnitId; at: Position };
+
+//The event of one type: EventOf<"fight">
+export type EventOf<T extends GameEvent["type"]> = Extract<GameEvent, { type: T }>;

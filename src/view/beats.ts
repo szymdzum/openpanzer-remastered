@@ -4,7 +4,7 @@
 //sprite strips and sound files as they are; which variant plays is picked later, from the cosmetic stream
 //(src/view/player.ts). Plain functions of the worlds and the events,
 //tested without the DOM (test/view-beats.test.ts)
-import type { Fighter, GameEvent, PathStep } from "../core/events";
+import type { EventOf, Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";
 import type { Position, UnitId, World } from "../core/types";
 import { isTrain } from "../core/units";
@@ -78,7 +78,7 @@ function moveBeat(before: World, after: World, id: UnitId, path: PathStep[]): Be
 	if (u === null) return null;
 	const e = after.equipment[u.isMounted && u.transport !== null ? u.transport.eqid : u.eqid];
 	const sounds = isTrain(after, u) ? TRACKS : MOVE_SOUNDS[e.movmethod];
-	return { kind: "move", unit: id, icon: e.icon as unknown as string, path, sounds };
+	return { kind: "move", unit: id, icon: e.icon, path, sounds };
 }
 
 //A fighter firing at the other, when it fires at all (its class has a shot) and the side shown sees it
@@ -93,7 +93,7 @@ function explosion(before: World, after: World, p: Position): Beat | null {
 }
 
 //A fight's shots: a support gun's alone; the attacker's, then the defender's when it fires back and is still there
-function fightBeats(before: World, after: World, e: Extract<GameEvent, { type: "fight" }>): (Beat | null)[] {
+function fightBeats(before: World, after: World, e: EventOf<"fight">): (Beat | null)[] {
 	const first = fireBeat(before, after, e.attacker, e.defender);
 	if (e.support || !e.result.defcanfire || e.defender.after.strength <= 0) return [first];
 	return [first, fireBeat(before, after, e.defender, e.attacker)];
