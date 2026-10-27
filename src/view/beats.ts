@@ -10,7 +10,7 @@ import type { Position, UnitId, World } from "../core/types";
 import { isTrain } from "../core/units";
 import { unitById } from "../core/world";
 import { unitClass } from "../prototypes";
-import { seen } from "./results";
+import { at, seen } from "./results";
 
 //A sprite strip: its frames side by side, each width pixels wide
 export interface Sheet {
@@ -68,8 +68,6 @@ const MOVE_SOUNDS = [TRACKS, HALF_TRACKS, HALF_TRACKS, LEGS, LEGS, WINGS, WAKE, 
 
 //Every strip a beat can draw, to load before the first one plays
 export const SHEETS: Sheet[] = [...EXPLOSIONS, ...GUN, ...SMALL_GUN];
-
-const at = (p: { row: number; col: number }): Position => ({ row: p.row, col: p.col });
 
 //A unit as it is after the step, or as it was before it when the step took it off the map
 const unitIn = (before: World, after: World, id: UnitId) => unitById(after, id) || unitById(before, id);

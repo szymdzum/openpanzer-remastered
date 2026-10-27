@@ -6,7 +6,7 @@ import type { World } from "../core/types";
 import type { CloudField } from "../gamestate";
 import type { GameHost } from "../host";
 import { uiSettings } from "../prototypes";
-import { menuBack, type MenuState } from "./menus";
+import { MENU_CLOSED, menuBack, type MenuState } from "./menus";
 import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "./saveload";
 
 //What the window asks of the host (none in the tests of the map and the HUD)
@@ -46,7 +46,7 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 	//A game loaded: the start menu closed, the game shown under it
 	const loaded = () => {
 		loadError.value = "";
-		menu.value = { window: null, newGame: false };
+		menu.value = MENU_CLOSED;
 	};
 
 	return {

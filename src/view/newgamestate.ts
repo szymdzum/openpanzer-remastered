@@ -6,7 +6,7 @@ import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
 import type { GameHost } from "../host";
 import { uiSettings } from "../prototypes";
-import type { MenuState } from "./menus";
+import { MENU_CLOSED, type MenuState } from "./menus";
 import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, FIRST_DIFFICULTY, scenarioAtOpen, scenarioGroups, scenarioView,
 	settleAI } from "./newgame";
 
@@ -88,7 +88,7 @@ export function createNewGame({ host, world, menu, lists }: NewGameInputs) {
 
 		//Play: the campaign or the scenario picked started on the host, the start menu closed
 		playCampaign() {
-			menu.value = { window: null, newGame: false };
+			menu.value = MENU_CLOSED;
 			if (host.startCampaign) host.startCampaign(campaignPick.value, difficulty.value);
 		},
 
@@ -96,7 +96,7 @@ export function createNewGame({ host, world, menu, lists }: NewGameInputs) {
 			const at = scenarioPick.value;
 			if (at === null) return;
 			const e = lists().scenarios[at] as Exclude<ScenarioListEntry, [string]>;
-			menu.value = { window: null, newGame: false };
+			menu.value = MENU_CLOSED;
 			if (host.startScenario) host.startScenario(e[0], e[2]);
 		},
 	};

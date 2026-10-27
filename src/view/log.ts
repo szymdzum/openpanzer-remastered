@@ -8,7 +8,8 @@ import { sideOf, unitById } from "../core/world";
 import type { Position, UnitId, World } from "../core/types";
 import { leaderDescriptions, terrainNames, terrainType, unitClass } from "../prototypes";
 import type { IconName } from "./icon";
-import { dateOf, statusOf, yourPlayer } from "./model";
+import { dateOf, plural, statusOf, yourPlayer } from "./model";
+import { at } from "./results";
 import { type EnemyTurn, turnReportOf } from "./turn";
 import { ordinal } from "./unitcard";
 import { NAVAL_ICON } from "./unitlist";
@@ -51,7 +52,6 @@ export const emptyLog = (): TurnLog => ({ combat: [], resupply: [], reinforce: [
 type Of<T extends GameEvent["type"]> = Extract<GameEvent, { type: T }>;
 type Fighter = Of<"fight">["attacker"];
 
-const at = (p: { row: number, col: number }): Position => ({ row: p.row, col: p.col });
 //(the dice can kill more than a unit has: it loses what it had, #428)
 const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
 
@@ -154,7 +154,6 @@ export interface CombatLogView {
 const spriteOf = (w: World, eqid: number) => w.equipment[eqid].uclass > unitClass.airTransport ? NAVAL_ICON : w.equipment[eqid].icon as unknown as string;
 const unitWords = (w: World, u: { id: UnitId, eqid: number, isCore: boolean }): Words =>
 	[u.isCore ? "Core " : "Auxiliary ", { b: ordinal(u.id) + " " + w.equipment[u.eqid].name }];
-const plural = (n: number, one: string, many: string) => n === 1 ? one : many;
 
 //Where a unit fought from: the hex's name and its terrain when it isn't clear, and the hex
 function placeOf(w: World, p: Position): string {
