@@ -1,0 +1,4 @@
+/* The CSS of the components only the gallery shows (review proposal 10): the cards and live.html load it after
+   src/view/library.css (scripts/ui-design.mjs, index.html), the game doesn't. */
+@import url("./strength.css");
+@import url("./sheet.css");

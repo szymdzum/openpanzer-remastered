@@ -1,6 +1,6 @@
 //The segmented strength bar of the odds preview (CombatOdds, AttackPreview): ten segments, the
 //kept ones in the side's colour, the losses dashed in critical, the losses to support fire hatched.
-//Styled by src/view/strength.css.
+//Styled by strength.css beside it.
 
 type StrengthBarProps = {
 	side: "axis" | "allied",

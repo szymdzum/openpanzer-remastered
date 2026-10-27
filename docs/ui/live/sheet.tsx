@@ -1,9 +1,9 @@
 //The bottom sheet of the tablet layouts (docs/ui/components/TabletUnitInfo): a window that rises
 //over the map from the bottom edge, over a scrim. Drag its grip down or tap the scrim to close it;
-//the keyboard has the close button and Esc. Styled by src/view/sheet.css.
+//the keyboard has the close button and Esc. Styled by sheet.css beside it.
 import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
-import { Scrim, Window } from "./panel";
+import { Scrim, Window } from "../../../src/view/panel";
 
 //How far the grip is dragged down before letting go closes the sheet
 const CLOSE_AT = 96;

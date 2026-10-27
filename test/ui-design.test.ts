@@ -39,6 +39,9 @@ test("The check finds a colour and a font size written in, and a map colour draw
 	fs.writeFileSync(path.join(root, "docs", "ui", "components", "bundle.css"), ".a { color: #123456; box-shadow: 0 1px 0 rgba(0, 0, 0, .3); }\n.b { font: 700 12px/16px var(--font-ui); }\n.c { font-size: var(--type-note-size); }\n");
 	fs.mkdirSync(path.join(root, "src", "view"), { recursive: true });
 	fs.writeFileSync(path.join(root, "src", "view", "x.css"), ".d { font-size: 9px; }\n");
+	//(the gallery's own components' CSS, docs/ui/live)
+	fs.mkdirSync(path.join(root, "docs", "ui", "live"), { recursive: true });
+	fs.writeFileSync(path.join(root, "docs", "ui", "live", "y.css"), ".e { color: #abcdef; }\n");
 	const script = path.join(root, "scripts", "ui-design.mjs");
 	expect(spawnSync(process.execPath, [script], { encoding: "utf8" }).status).toBe(0);
 	const run = spawnSync(process.execPath, [script, "--check"], { encoding: "utf8" });
@@ -47,6 +50,7 @@ test("The check finds a colour and a font size written in, and a map colour draw
 		"docs/ui/components/bundle.css:1: colour #123456 written in, not a var(--…) of tokens.css",
 		"docs/ui/components/bundle.css:2: font size 12px written in, not a var(--type-…-size) of tokens.css",
 		"src/view/x.css:1: font size 9px written in, not a var(--type-…-size) of tokens.css",
+		"docs/ui/live/y.css:1: colour #abcdef written in, not a var(--…) of tokens.css",
 		"docs/ui/components/Card/preview.html:2: stroke #F0B44A written in, not var(--hex-select)",
 	]);
 	fs.writeFileSync(path.join(root, "docs", "ui", "tokens.css"), "");

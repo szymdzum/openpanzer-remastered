@@ -1,22 +1,24 @@
 //The live gallery (docs/ui/index.html, docs/ui/live.html): each card's components, the real ones,
 //in Paper and Blackout side by side, with the card's own examples. Not part of the game: only the
-//design viewer under `npm run dev` and its test load it.
+//design viewer under `npm run dev` and its test load it, so it lives with the designs, beside the two
+//components only it shows (the bottom sheet, the strength bar; review proposal 10).
 import type { ComponentChildren } from "preact";
 import { render } from "preact";
 import { useId, useState } from "preact/hooks";
-import { Anchored } from "./anchored";
-import { Button } from "./button";
-import { Input, Slider, Toggle } from "./controls";
-import { Facts, StatTable, Stats } from "./facts";
-import { Icon, IconSprite, Mark, type IconName, type Nation } from "./icon";
-import { List } from "./list";
-import { Badge, Meter, Stars, Tag } from "./meter";
-import { Panel, Window } from "./panel";
+import { Anchored } from "../../../src/view/anchored";
+import { Button } from "../../../src/view/button";
+import { Input, Slider, Toggle } from "../../../src/view/controls";
+import { Facts, StatTable, Stats } from "../../../src/view/facts";
+import { Icon, IconSprite, Mark, type IconName, type Nation } from "../../../src/view/icon";
+import { List } from "../../../src/view/list";
+import { Badge, Meter, Stars } from "../../../src/view/meter";
+import { Panel, Window } from "../../../src/view/panel";
 import { BottomSheet } from "./sheet";
-import { ICONS, NATION_MARKS } from "./sprite";
+import { ICONS, NATION_MARKS } from "../../../src/view/sprite";
 import { StrengthBar } from "./strength";
-import { SegmentedControl, Tabs } from "./tabs";
-import { Tooltip } from "./tooltip";
+import { Tag } from "./tag";
+import { SegmentedControl, Tabs } from "../../../src/view/tabs";
+import { Tooltip } from "../../../src/view/tooltip";
 
 const row = { display: "flex", gap: "var(--space-3)", alignItems: "center", flexWrap: "wrap" };
 const column = { display: "grid", gap: "var(--space-4)" };

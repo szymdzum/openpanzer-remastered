@@ -202,13 +202,10 @@ export default defineConfig({
 				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/controls.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/facts.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/gallery.tsx": { statements: 96, branches: 100, functions: 88, lines: 96 },
 				"src/view/icon.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/list.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/meter.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/panel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/sheet.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/strength.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/tabs.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/tooltip.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				//the HUD (#346)

@@ -1,11 +1,11 @@
 //The new UI's patterns in jsdom: the facts row, the stat sheet and table (src/view/facts.tsx), the
-//strength bar (strength.tsx), the panel anchored to a hex (anchored.tsx) and the bottom sheet (sheet.tsx)
+//strength bar (docs/ui/live/strength.tsx), the panel anchored to a hex (anchored.tsx) and the bottom sheet (docs/ui/live/sheet.tsx)
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { Facts, StatTable, Stats } from "../src/view/facts";
-import { StrengthBar } from "../src/view/strength";
+import { StrengthBar } from "../docs/ui/live/strength";
 import { Anchored, clampToScreen, placeBy } from "../src/view/anchored";
-import { BottomSheet } from "../src/view/sheet";
+import { BottomSheet } from "../docs/ui/live/sheet";
 
 afterEach(cleanup);
 
