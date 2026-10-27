@@ -1,8 +1,8 @@
 // Replay test: plays scenarios AI vs AI with a seeded Math.random (and Rng.seed) and a virtual clock,
-// recording hashes of the game state and the DOM before every AI action, the full state,
-// DOM and canvas pixels at every turn end, and a save/restore round trip. Two runs (pure
-// bundle vs bundle + src modules) must produce identical traces; harness/diff-traces.js
-// compares them. Runs inside index.html?harness as the body of an async function, after
+// recording a hash of the game state before every AI action, the full state at every turn end, and a
+// save/restore round trip. Two runs (the base and this change) must produce identical traces;
+// harness/diff-traces.js compares them. The page's DOM and canvases aren't compared since the UI that
+// draws them changed (#351): the UI has its own end-to-end test (test/e2e/game.ts). Runs inside index.html?harness as the body of an async function, after
 // harness/lib/harness.js (harness/replay.sh wraps both).
 // Input window.__replay = { items: ["drpzop01.xml", "campaign:3", "scripted:tutorial.xml"], turns, seed,
 //   saveRestore, fullFrom }  (fullFrom: also keep full states from that action index on)
@@ -29,10 +29,9 @@ function makeAllAI(trace) {
 		const getAction = p.handler.getAction.bind(p.handler);
 		p.handler.getAction = function() {
 			const action = getAction();
-			const state = snapshot(), dom = domSnapshot();
-			const entry = { i: trace.actions.length, turn: m.turn, player: p.id, action: describeAction(action),
-				hash: cyrb53(state), domHash: cyrb53(dom) };
-			if (args.fullFrom !== undefined && entry.i >= args.fullFrom) { entry.state = state; entry.dom = dom; }
+			const state = snapshot();
+			const entry = { i: trace.actions.length, turn: m.turn, player: p.id, action: describeAction(action), hash: cyrb53(state) };
+			if (args.fullFrom !== undefined && entry.i >= args.fullFrom) entry.state = state;
 			trace.actions.push(entry);
 			return action;
 		};
@@ -72,7 +71,7 @@ async function play(item) {
 	makeAllAI(trace);
 	const turnEnd = async () => {
 		await waitImages();
-		trace.turns.push({ turn: m.turn, state: snapshot(), dom: domSnapshot(), canvas: canvasHashes() });
+		trace.turns.push({ turn: m.turn, state: snapshot() });
 	};
 	await turnEnd();
 
@@ -107,8 +106,10 @@ async function play(item) {
 	return trace;
 }
 
-// With no save the game loads the tutorial at start, let that finish before the first item
-await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
+// With no save the game loads the tutorial at start, let that finish before the first item: its screen
+// shown, the old UI built (game.ui) or the start menu open over its briefing
+await waitFor(() => (game.ui || document.querySelector(".pm-screen #startmenu")) && game.scenario && game.scenario.isLoaded
+	&& game.gameStarted, 30000);
 
 const results = [];
 for (const item of args.items) results.push(await play(item));
