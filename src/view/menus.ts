@@ -37,6 +37,11 @@ export function menuToggled(m: MenuState): MenuState {
 	return { window: m.window === null ? "main" : null, newGame: m.newGame };
 }
 
+//A window's Back: the main window, its New Game panel closed
+export function menuBack(): MenuState {
+	return { window: "main", newGame: false };
+}
+
 //The main window's buttons and the New Game panel's, in the old menu's order, with its titles; the New Game panel's
 //descriptions are the old buttons' hints, as the old menu had them (src/uibuilder.ts buildStartMenu)
 export interface MenuEntry {
@@ -61,8 +66,7 @@ export const NEW_GAME_BUTTONS: MenuEntry[] = [
 
 //The windows the new UI doesn't have yet (#349): their buttons are off with why
 export const NOT_YET: Partial<Record<MenuButton, string>> = {
-	newcampaign: "Not in the new UI yet", newscenario: "Not in the new UI yet", settings: "Not in the new UI yet",
-	saveload: "Not in the new UI yet",
+	settings: "Not in the new UI yet", saveload: "Not in the new UI yet",
 };
 
 //The old start menu's links beside its logo: the manual, the game's page, its Facebook page and its issues

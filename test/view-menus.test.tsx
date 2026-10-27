@@ -71,10 +71,9 @@ test("New Game opens the panel of Campaigns, Scenarios and Tutorial, each with t
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "New Game" })); });
 	const panel = screen.getByRole("navigation", { name: "New Game" });
 	expect(names(panel)).toEqual(["Campaigns", "Scenarios", "Tutorial"]);
-	//(the first one on: Campaigns and Scenarios come with their windows)
-	expect(document.activeElement!.id).toBe("tutorial");
+	expect(document.activeElement!.id).toBe("newcampaign");
 	expect((document.getElementById("tutorial") as HTMLButtonElement).title).toBe("Learn the basic mechanics of the game. First turns are automatically played by the computer but later the control is given to the player.");
-	expect(document.getElementById("newcampaign")!.title).toBe("Not in the new UI yet");
+	expect(document.getElementById("newcampaign")!.title).toMatch(/^Lead your troops to victory over multiple scenarios\./);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Tutorial" })); });
 	expect([startTutorial.mock.calls.length, document.getElementById("startmenu")]).toEqual([1, null]);
 });

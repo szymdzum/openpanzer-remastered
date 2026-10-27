@@ -29,11 +29,12 @@ import { type News, type Results, resultsOf } from "./results";
 import { beatsFor } from "./beats";
 import { createPlayer, type Motion, type Stage } from "./player";
 import { hexCentre } from "./hexgrid";
-import { MENU_CLOSED, type MenuButton, menuAfter, menuToggled } from "./menus";
+import { MENU_CLOSED, type MenuButton, menuAfter, menuBack, menuToggled } from "./menus";
+import { createNewGame, type NewGameHost } from "./newgamestate";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won; the new games
 //the start menu starts (none in the tests of the map and the HUD)
-export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic" | "startTutorial">>;
+export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic" | "startTutorial">> & NewGameHost;
 
 //What the page gives the step's beats (src/view/player.ts): its sounds, and whether the person asked for reduced motion.
 //Without a page (the tests): silence and motion
@@ -252,6 +253,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		});
 	};
 
+	//The new campaign's and the new scenario's windows, on the game's lists
+	const newGame = createNewGame({ host, world, menu, lists: () => ({ campaigns: campaignlist, scenarios: scenariolist }) });
+
 	//The unit list and the equipment window (UnitList, Equipment)
 	const shops = createShopState({ world, deploying: deployment, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
 
@@ -280,12 +284,19 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, overview, deploying, reserve, deployment, ghost, refresh, glance,
-		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu,
+		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu, ...newGame,
 
 		//A button of the start menu: its window, or the game; the tutorial starts on the host
 		startMenu(button: MenuButton) {
 			menu.value = menuAfter(menu.value, button);
 			if (button === "tutorial" && host.startTutorial) host.startTutorial();
+			if (button === "newcampaign") newGame.openNewGame("campaign");
+			if (button === "newscenario") newGame.openNewGame("scenario");
+		},
+
+		//A window's Back: the start menu's main window
+		menuBack() {
+			menu.value = menuBack();
 		},
 
 		//Either report's Dossier: the campaign's record over them
