@@ -349,7 +349,6 @@ export class GameState {
 			uiSettings.markEnemyUnits = s.markEnemyUnits;
 			uiSettings.useRetina = s.useRetina;
 			uiSettings.hdGraphics = s.hdGraphics !== false; //on unless turned off, also for settings saved before it existed
-			uiSettings.showGridTerrain = s.showGridTerrain;
 			uiSettings.muteUnitSounds = s.muteUnitSounds;
 			uiSettings.noFOW = s.noFOW;
 			uiSettings.quickAnimation = s.quickAnimation;
@@ -357,7 +356,6 @@ export class GameState {
 			uiSettings.uiSize = s.uiSize;
 			uiSettings.zoomLevel = s.zoomLevel;
 			uiSettings.showDetailInfoToolTips = s.showDetailInfoToolTips || false;
-			uiSettings.showHiddenVictoryHexes = s.showHiddenVictoryHexes || false;
 			uiSettings.classicRules = s.classicRules || false;
 
 			uiSettings.lastCloudSave = [];
