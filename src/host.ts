@@ -44,6 +44,7 @@ import { Rng } from "./rng";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
+import type { CloudField } from "./gamestate";
 import type { Unit } from "./unit";
 import type { Screen } from "./screen";
 
@@ -328,6 +329,30 @@ export class GameHost {
 	//changed on one UI holds on the other
 	saveSettings() {
 		this.game.state.saveSettings();
+	}
+
+	//---- Save and load (the new UI's save and load window, #349), as the old one's buttons do them (src/uibuilder.ts
+	//gameStateButton): through the game's state, the cloud's on GitHub gists as they work today (#33)
+
+	//The game as the JSON a file keeps (GameState.exportGameState)
+	exportGame(): string {
+		return this.game.state.exportGameState();
+	}
+
+	//A game loaded from a file: done once it is read (the game then loads and is shown), fail when it isn't a save
+	loadGame(file: Blob, done: () => void, fail: () => void) {
+		this.game.state.restoreFromFile(file, done, fail);
+	}
+
+	//Saved to the cloud under the field's id, a new save when it is empty: the field tells how it goes, then saved (null)
+	//or the error, and the save's id
+	saveToCloud(field: CloudField, saved: (error: string | null, id?: string) => void) {
+		this.game.state.saveToCloud(field, saved);
+	}
+
+	//Loaded from the cloud save of the field's id: done once it is read
+	loadFromCloud(field: CloudField, done: () => void) {
+		this.game.state.restoreFromCloud(field, done);
 	}
 
 	//The scenario flow of a campaign of the list, its index there: its data loaded, then the text the old campaign menu's

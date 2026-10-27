@@ -216,6 +216,22 @@ test("The game host saves the settings, as the old settings window's OK did (#34
 	expect((g.state as unknown as { settingsSaves: () => number }).settingsSaves()).toBe(1);
 });
 
+//The save and load window's (#349): through the game's state, as the old window's buttons
+test("The game host saves and loads through the game's state, as the old save and load window did (#349)", () => {
+	const g = headlessGame(nullScreen);
+	const calls: unknown[][] = [];
+	const field = { value: "", setAttribute() {} };
+	const done = () => {}, fail = () => {}, saved = () => {};
+	g.state = { exportGameState: () => "the game", restoreFromFile: (...a: unknown[]) => calls.push(["file", ...a]),
+		saveToCloud: (...a: unknown[]) => calls.push(["save", ...a]), restoreFromCloud: (...a: unknown[]) => calls.push(["load", ...a]) } as never;
+	const file = new Blob(["{}"]);
+	expect(g.host.exportGame()).toBe("the game");
+	g.host.loadGame(file, done, fail);
+	g.host.saveToCloud(field, saved);
+	g.host.loadFromCloud(field, done);
+	expect(calls).toEqual([["file", file, done, fail], ["save", field, saved], ["load", field, done]]);
+});
+
 //The campaign menu's flow (#349): the campaign's scenarios, each with where its outcomes lead, as the old menu showed it
 test("The game host gives a campaign's scenario flow, as the old campaign menu's flow button showed it (#349)", async () => {
 	const g = headlessGame(nullScreen);

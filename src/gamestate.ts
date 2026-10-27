@@ -29,15 +29,19 @@ export interface GistReply {
 	files: { [fileName: string]: { content: string } };
 }
 
+//The cloud save's id field: the old UI's #cloudid input, or what stands for it (the new UI's, #349). The cloud saves
+//write their progress and errors into its value and placeholder
+export type CloudField = Pick<HTMLInputElement, "value" | "setAttribute">;
+
 //GameState keeps its save names and restored items in the closure, its methods are
 //assigned in the constructor: a class with its closure body as the constructor, as the original
 export class GameState {
 	declare save: () => void;
-	declare saveToCloud: (inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void) => void;
+	declare saveToCloud: (inputElement: CloudField, callback: (error: string | null, gistId?: string) => void) => void;
 	declare restore: (onDone: () => void, onFail: () => void) => void;
 	declare restoreFromString: (saveData: string) => boolean;
 	declare restoreFromFile: (file: Blob, onDone?: () => void, onFail?: () => void) => boolean;
-	declare restoreFromCloud: (inputElement: HTMLInputElement, onDone?: () => void) => boolean;
+	declare restoreFromCloud: (inputElement: CloudField, onDone?: () => void) => boolean;
 	declare clear: () => void;
 	declare saveSettings: () => void;
 	declare restoreSettings: () => void;
@@ -66,7 +70,7 @@ export class GameState {
 		//Saves the game as a public gist on GitHub. inputElement holds the gist id to overwrite,
 		//or is empty to create a new one, and receives the new id or status messages.
 		//callback(error, gistId) is called when the request completes
-		this.saveToCloud = function(inputElement: HTMLInputElement, callback: (error: string | null, gistId?: string) => void) {
+		this.saveToCloud = function(inputElement: CloudField, callback: (error: string | null, gistId?: string) => void) {
 			const saveData = this.exportGameState();
 			//The bundle embeds the author's GitHub token here ("ghp_" + pieces with whitespace
 			//stripped out), used to create and update the gists. Not copied into the source
@@ -147,7 +151,7 @@ export class GameState {
 		}
 
 		//Restores a game from a GitHub gist whose id is in inputElement
-		this.restoreFromCloud = function(inputElement: HTMLInputElement, onDone?: () => void) {
+		this.restoreFromCloud = function(inputElement: CloudField, onDone?: () => void) {
 			const gistId = inputElement.value;
 			if (gistId == "" || typeof gistId === "undefined") {
 				inputElement.setAttribute("placeholder", "No ID specified");
