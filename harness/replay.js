@@ -1,8 +1,14 @@
 // Replay test: plays scenarios AI vs AI with a seeded Math.random (and Rng.seed) and a virtual clock,
-// recording a hash of the game state before every AI action, the full state at every turn end, and a
+// recording a hash of the game state at every AI action, the full state at every turn's start, and a
 // save/restore round trip. Two runs (the base and this change) must produce identical traces;
 // harness/diff-traces.js compares them. The page's DOM and canvases aren't compared since the UI that
-// draws them changed (#351): the UI has its own end-to-end test (test/e2e/game.ts). Runs inside index.html?harness as the body of an async function, after
+// draws them changed (#351): the UI has its own end-to-end test (test/e2e/game.ts).
+//
+// Everything is recorded where the game asks the AI for its next action (getAction), never between the
+// clock's steps: how many steps a turn takes depends on the screen (how long it shows a unit picked, the
+// next player's turn, when its images load), so a turn's state read between steps could be one action
+// later on another screen. The turns' snapshots are taken at their first action, the replay ends at the
+// first action of the last turn, and the save of the save/restore round trip is made there too. Runs inside index.html?harness as the body of an async function, after
 // harness/lib/harness.js (harness/replay.sh wraps both).
 // Input window.__replay = { items: ["drpzop01.xml", "campaign:3", "scripted:tutorial.xml"], turns, seed,
 //   saveRestore, fullFrom }  (fullFrom: also keep full states from that action index on)
@@ -18,7 +24,12 @@ function describeAction(a) {
 	}) };
 }
 
-function makeAllAI(trace) {
+// The game's saved games in localStorage, to put back what a save made
+const saves = () => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith("openpanzer-game"))
+	.map((k) => [k, localStorage.getItem(k)]));
+
+// at: the turn recorded last, the turn the replay ends at, done once it has, the save made then
+function makeAllAI(trace, at) {
 	const m = game.scenario.map;
 	for (const p of m.getPlayers()) {
 		if (p.type !== playerType.aiLocal && p.type !== playerType.aiScripted) {
@@ -29,6 +40,19 @@ function makeAllAI(trace) {
 		const getAction = p.handler.getAction.bind(p.handler);
 		p.handler.getAction = function() {
 			const action = getAction();
+			if (at.done || game.scenario.map !== m) return action;
+			if (m.turn !== at.turn) {
+				at.turn = m.turn;
+				trace.turns.push({ turn: m.turn, state: snapshot() });
+				if (m.turn >= at.endTurn) {
+					at.done = true;
+					if (args.saveRestore !== false) {
+						game.state.save();
+						at.saved = { state: snapshot(), storage: saves() };
+					}
+					return action;
+				}
+			}
 			const state = snapshot();
 			const entry = { i: trace.actions.length, turn: m.turn, player: p.id, action: describeAction(action), hash: cyrb53(state) };
 			if (args.fullFrom !== undefined && entry.i >= args.fullFrom) entry.state = state;
@@ -66,33 +90,28 @@ async function play(item) {
 	if (!trace.loaded) { trace.errors = window.__replayErrors.slice(errorsBefore); return trace; }
 
 	const m = game.scenario.map;
-	const startTurn = m.turn, endTurn = startTurn + (args.turns || 3);
-	let lastTurn = m.turn;
-	makeAllAI(trace);
-	const turnEnd = async () => {
-		await waitImages();
-		trace.turns.push({ turn: m.turn, state: snapshot() });
-	};
-	await turnEnd();
+	const at = { turn: m.turn, endTurn: m.turn + (args.turns || 3), done: false, saved: null };
+	makeAllAI(trace, at);
+	await waitImages();
+	trace.turns.push({ turn: m.turn, state: snapshot() });
 
-	// Runs until the turn changes, records the turn end (canvases need a real wait for images)
-	let steps = args.maxSteps || 200000, finished = false;
-	trace.timedOut = false;
-	while (!finished) {
-		const ok = await runClock(() => {
-			makeAllAI(trace);
-			finished = m.turn >= endTurn || game.gameEnded || game.scenario.map !== m;
-			return finished || m.turn !== lastTurn;
-		}, steps);
-		if (!ok) { trace.timedOut = true; break; }
-		if (m.turn !== lastTurn && game.scenario.map === m) { lastTurn = m.turn; await turnEnd(); }
-	}
+	// Runs until the last turn's first action, the game's end or the campaign's next scenario
+	trace.timedOut = !await runClock(() => {
+		makeAllAI(trace, at);
+		return at.done || game.gameEnded || game.scenario.map !== m;
+	}, args.maxSteps || 200000);
 	trace.ended = { turn: m.turn, gameEnded: game.gameEnded };
 
 	if (args.saveRestore !== false && game.scenario.map === m) {
-		await runClock(allShown, 20000);
-		game.state.save();
-		const before = snapshot();
+		// The save made at the last turn's first action, put back (the game may have saved since), or one made
+		// now, the game ended before
+		if (at.saved === null) {
+			await runClock(allShown, 20000);
+			game.state.save();
+			at.saved = { state: snapshot(), storage: saves() };
+		}
+		for (const [k, v] of Object.entries(at.saved.storage)) localStorage.setItem(k, v);
+		const before = at.saved.state;
 		const scen = game.scenario;
 		let failed = false;
 		// A fresh GameState, like reopening the game: restore() is meant to run once per instance
