@@ -163,12 +163,12 @@ function stand(game: Game, Commands: typeof import("../src/commands").Commands, 
 		mainMenu() { screen.push("menu options"); },
 		reportScore: nothing,
 		reportAchievement: nothing,
-		move(unit: Unit, to: Cell, cells: Cell[]) {
+		move(unit, to, cells) {
 			map().getSelection().showMoveCells(cells as import("../src/prototypes").extendedCell[]);
-			Commands.execute(game.scenario, { type: "move", unit: unit.id, to: { row: to.row, col: to.col } });
+			Commands.execute(game.scenario, { type: "move", unit, to: { row: to.row, col: to.col } });
 		},
-		attack(a: Unit, d: Unit) {
-			Commands.execute(game.scenario, { type: "attack", unit: a.id, target: d.id });
+		attack(attacker, target) {
+			Commands.execute(game.scenario, { type: "attack", unit: attacker, target });
 		},
 		view(event, shown) {
 			if (event.type === "message") {

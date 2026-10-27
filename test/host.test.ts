@@ -363,13 +363,13 @@ test("The screen that shows nothing tells the host the victories a move and an a
 	const screen = () => nullScreen(game);
 	const m = () => game.scenario.map;
 	m().setMoveRange(m().getUnitById(0));
-	screen().move(m().getUnitById(0), { row: 10, col: 10 } as never, m().getCurrentMoveRange(), () => { shown++; });
+	screen().move(0, { row: 10, col: 10 }, m().getCurrentMoveRange(), () => { shown++; });
 	expect([ended.splice(0), shown]).toEqual([["capture 0"], 1]);
 	//A German tank against the last Soviet unit, left with one strength point
 	game = fake(smallGame([[142, 0, 5, 5], [504, 1, 5, 6]]).scenario);
 	m().getUnitById(1).strength = 1;
 	touched();
-	screen().attack(m().getUnitById(0), m().getUnitById(1), () => { shown++; });
+	screen().attack(0, 1, () => { shown++; });
 	expect([ended.splice(0), shown]).toEqual([["elimination 0"], 2]);
 	const s = screen();
 	s.message("title", "text");

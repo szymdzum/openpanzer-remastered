@@ -12,12 +12,21 @@
  */
 
 import type { GameMap, Player } from "./map";
+import type { actionType, Cell } from "./prototypes";
+import type { Unit } from "./unit";
 
-//One action, param depends on type (actionType): [unit] for resupply, reinforce, mount and select,
-//[unit, cell] for move, [unit, target] for attack, and for the tutorial's messages [text, cell it
-//points at]. type is a plain number, so it can't narrow a union: the elements stay any for Game,
-//which reads them as the type says
-export interface AIAction { type: number; param: any[]; }
+type A = typeof actionType;
+
+//One action, its param by its type (actionType): the units as the game's objects, as the old AI's actions held
+//them (harness/replay.js and the engine contract read them so). A unit gone from the map is null. The upgrade,
+//the purchase, the deployment and the end of turn were the old AI's and play nothing
+export type AIAction =
+	| { type: A["move"]; param: [unit: Unit | null, to: Cell] }
+	| { type: A["attack"]; param: [attacker: Unit | null, target: Unit | null] }
+	| { type: A["resupply"] | A["reinforce"] | A["mount"] | A["umount"] | A["select"]; param: [unit: Unit | null] }
+	| { type: A["message"]; param: [text: string, at: Cell] }
+	| { type: A["viewport"]; param: [at: Cell] }
+	| { type: A["upgrade"] | A["buy"] | A["deploy"] | A["endturn"]; param: unknown[] };
 
 //Who plays the programs: the game's session (src/coresession.ts, set by game.ts). getAction: the
 //current player's next order as an action, null when it has none; join: a handler made while the

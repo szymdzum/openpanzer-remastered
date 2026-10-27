@@ -57,9 +57,9 @@ async function animate(cmd: Animated) {
 	let shown = false;
 	const done = () => { shown = true; };
 	if (cmd.type === "move") {
-		screen.move(unit, cmd.to, GameRules.getMoveRange(map, unit), done);
+		screen.move(cmd.unit, cmd.to, GameRules.getMoveRange(map, unit), done);
 	} else {
-		screen.attack(unit, map.getUnitById(cmd.target), done);
+		screen.attack(cmd.unit, cmd.target, done);
 	}
 	await until(() => shown && settled(), 30_000);
 }

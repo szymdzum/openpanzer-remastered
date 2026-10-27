@@ -8,12 +8,11 @@ import { render } from "preact";
 import { effect } from "@preact/signals";
 import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
-import type { Position } from "../core/types";
+import type { Position, UnitId } from "../core/types";
 import type { GameHost } from "../host";
-import { type Cell, uiSettings } from "../prototypes";
+import { uiSettings } from "../prototypes";
 import type { ScenarioOutcome } from "../scenario";
 import type { Screen } from "../screen";
-import type { Unit } from "../unit";
 import { App } from "./app";
 import { pageSounds } from "./player";
 import { createStore } from "./store";
@@ -115,12 +114,12 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		reportScore: nothing,
 		reportAchievement: nothing,
 
-		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
-			const r = host.play({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
+		move(unit: UnitId, to: Position, cells: Position[], shown: () => void) {
+			const r = host.play({ type: "move", unit, to: { row: to.row, col: to.col }, cells });
 			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
 		},
-		attack(attacker: Unit, target: Unit, shown: () => void) {
-			const r = host.play({ type: "attack", unit: attacker.id, target: target.id });
+		attack(attacker: UnitId, target: UnitId, shown: () => void) {
+			const r = host.play({ type: "attack", unit: attacker, target });
 			played(r, r.ok && r.result !== null ? r.result.events : [], shown);
 		},
 		view(event: ViewEvent, shown?: () => void) {

@@ -125,7 +125,7 @@ test("The screen says it is still showing a step while its beats play, and no lo
 	expect(s!.showingStep!()).toBe(false);
 	//(a program's attack, played whole, then its shots shown: the harness and the command-line player wait on it)
 	const shown = vi.fn();
-	await act(() => { s.attack({ id: 0 } as never, { id: 1 } as never, shown); });
+	await act(() => { s.attack(0, 1, shown); });
 	await act(() => { vi.advanceTimersByTime(1); });
 	expect([s!.showingStep!(), shown.mock.calls.length]).toEqual([true, 0]);
 	await act(() => { vi.advanceTimersByTime(10000); });

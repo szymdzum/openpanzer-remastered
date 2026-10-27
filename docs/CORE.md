@@ -412,7 +412,7 @@ shows nothing does too (src/nullscreen.ts: the headless tests). The old UI did, 
 | `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | a message that holds the game (`holdForMessage`) until its OK (`then`, else `messageClosed`) |
 | `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | the dossier under the campaign's end, the start menu |
 | `reportScore`, `reportAchievement` | the host | nothing (no platform score board on the web) |
-| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | the command played whole (`play`), then its beats animated (src/view/beats.ts, src/view/player.ts); the victories told (`won`) and shown called at the end of the last beat |
+| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)`: the units by id, the hexes as positions (no object of the old engine reaches a screen) | the host's `processAction` | the command played whole (`play`), then its beats animated (src/view/beats.ts, src/view/player.ts); the victories told (`won`) and shown called at the end of the last beat |
 | `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: the unit selected, a message pointing at a hex (the tutorial's orders, shown: its OK), the map looking at a hex, the rail folded or opened; shown at once |
 | `aiTurnEnded()`, `turnChanged(next)` | the host, a program's turn ended | the person's turn start (the short turn report, the first unit selected, the reserve); next at once |
 | `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | the world read again |

@@ -12,10 +12,9 @@
  * player's turn after a program's is left to whoever plays the game (processTurn).
  */
 
-import type { Cell } from "./prototypes";
-import type { Unit } from "./unit";
 import type { Game } from "./game";
 import type { Screen } from "./screen";
+import type { Position, UnitId } from "./state";
 
 export function nullScreen(g: Game): Screen {
 	const nothing = () => {};
@@ -33,13 +32,13 @@ export function nullScreen(g: Game): Screen {
 		reportAchievement: nothing,
 
 		//The move's capture victory first, then its surprise attack's (the host's won)
-		move(unit: Unit, to: Cell, cells: Cell[], shown: () => void) {
-			const r = g.host.play({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells });
+		move(unit: UnitId, to: Position, cells: Position[], shown: () => void) {
+			const r = g.host.play({ type: "move", unit, to: { row: to.row, col: to.col }, cells });
 			if (r.ok) g.host.won(r.result);
 			shown();
 		},
-		attack(attacker: Unit, target: Unit, shown: () => void) {
-			const r = g.host.play({ type: "attack", unit: attacker.id, target: target.id });
+		attack(attacker: UnitId, target: UnitId, shown: () => void) {
+			const r = g.host.play({ type: "attack", unit: attacker, target });
 			if (r.ok) g.host.won(r.result);
 			shown();
 		},
