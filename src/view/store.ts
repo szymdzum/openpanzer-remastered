@@ -45,13 +45,13 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		answered: () => { step.news.value = null; },
 		played: (before, result) => showStep(before, eventsOf(result), () => host.won(result)),
 	});
-	const { world, selected, airMode, lookAt, refresh, dispatch, select } = core;
+	const { world, selected, airMode, refresh, dispatch, select, pickUnit, look } = core;
 	const step = createStep(core, host, page);
 	const notes = createNotes();
 	const map = createMap(core, step, () => { turn.banner.value = false; });
 	const card = createCard(core, map, step);
 	const turn = createTurn(core, map, step, notes, host);
-	const { strategic, hexGrid, labels } = map;
+	const { strategic, hexGrid } = map;
 	//The HUD's (GameMenu): the rail's middle group open
 	const railOpen = signal(true);
 	//The start menu's window shown, none while the game shows (StartMenu)
@@ -63,14 +63,14 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		if (w === null || selected.value === null) return;
 		const next = neighbourUnit(w, selected.value, direction), u = unitById(w, next)!;
 		select(next);
-		lookAt.value = { row: u.row, col: u.col };
+		look({ row: u.row, col: u.col });
 	};
 
 	//The air layer on or off (AirLayer, the A key and the rail's button). Leaving it deselects an aircraft, which
 	//would be underneath, as the old UI did
 	const toggleAir = () => {
 		const w = world.value, u = w === null || selected.value === null ? null : unitById(w, selected.value);
-		if (airMode.value && u !== null && isAir(w!, u)) selected.value = null;
+		if (airMode.value && u !== null && isAir(w!, u)) pickUnit(null);
 		airMode.value = !airMode.value;
 	};
 
@@ -95,7 +95,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const saveLoad = createSaveLoad({ host, world, menu, download: page.download });
 
 	//The unit list and the equipment window (UnitList, Equipment)
-	const shops = createShopState({ world, deploying: map.deployment, selected, select, look: (at) => { lookAt.value = at; }, dispatch });
+	const shops = createShopState({ world, deploying: map.deployment, selected, select, look, dispatch });
 
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
 	const menuKeys: Record<MenuKey, () => void> = {
@@ -105,7 +105,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		air: () => toggleAir(),
 		zoom: () => { strategic.value = !strategic.value; },
 		options: () => { menu.value = menuToggled(menu.value); },
-		labels: () => { labels.value = false; },
+		labels: () => map.showLabels(false),
 		next: () => cycle(1),
 		previous: () => cycle(-1),
 		//Escape deselects the unit; with none, Options

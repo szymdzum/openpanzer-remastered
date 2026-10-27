@@ -71,7 +71,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	const deployment = () => {
 		store.pick(null);
 		store.startDeployment();
-		store.labels.value = true;
+		store.showLabels(true);
 	};
 	//A scenario's start, its prototype then its briefing: what the screen still showed of the scenario before goes,
 	//its OKs not run, so a stale briefing's OK can't let a program play under the new one (#405). The prototype
@@ -88,7 +88,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		showScenario() {
 			startScenario();
 			starting = false;
-			store.selected.value = null;
+			store.pickUnit(null);
 			refresh();
 			deployment();
 			const w = store.world.value;
@@ -124,8 +124,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 				show("Orders", event.text, shown || nothing, event.at);
 				return;
 			}
-			if (event.type === "select") store.selected.value = event.unit;
-			else if (event.type === "viewport") store.lookAt.value = event.at;
+			if (event.type === "select") store.pickUnit(event.unit);
+			else if (event.type === "viewport") store.look(event.at);
 			//(the old UI's main menu button folds or opens the rail; stuck shows nothing, as in the old game)
 			else if (event.type === "mainMenu") store.toggleRail();
 			refresh();

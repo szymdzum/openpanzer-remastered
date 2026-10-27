@@ -183,7 +183,7 @@ test("The unit list opens from the status bar's button; a card pressed selects i
 
 test("B opens the window on the selected unit; a model picked, Upgrade and Buy new play on the core; Sell disbands; Esc closes (#348)", async () => {
 	const store = shopStore(world((x) => { x.state.players[0].prestige = 600; }));
-	await act(() => { store.selected.value = 0; store.shortcut({ menu: "buy" }); });
+	await act(() => { store.pickUnit(0); store.shortcut({ menu: "buy" }); });
 	const win = document.getElementById("equipment")!;
 	expect(["eqSelClass", "eqUnitList", "eqActionsContainer", "eqSelCountryButton", "currentPrestige", "eqCloseBut", "eqSellBut", "eqUpgradeBut",
 		"eqNewBut", "eqSortOrderBut"].filter((id) => win.querySelector("#" + id) === null)).toEqual([]);
@@ -216,7 +216,7 @@ test("B opens the window on the selected unit; a model picked, Upgrade and Buy n
 
 test("An Infanterie's transport is picked in the window; pressed again, none; the side's other country by its button (#348)", async () => {
 	const store = shopStore(world((x) => { x.state.players[0].supportCountries = [15 + 1]; }));
-	await act(() => { store.selected.value = 1; store.shortcut({ menu: "buy" }); });
+	await act(() => { store.pickUnit(1); store.shortcut({ menu: "buy" }); });
 	const win = document.getElementById("equipment")!, transport = within(win).getByRole("group", { name: "Transport" });
 	await act(() => { fireEvent.click(within(transport).getByRole("button", { name: store.world.value!.equipment[SDKFZ251].name })); });
 	expect(store.shop.value!.transports.find((t) => t.on)!.eqid).toBe(SDKFZ251);
@@ -226,7 +226,7 @@ test("An Infanterie's transport is picked in the window; pressed again, none; th
 	expect([store.shop.value!.country.name, store.shop.value!.target]).toEqual(["Poland", null]);
 	await act(() => { store.closeShop(); });
 	//B again with no unit of the player's selected: new units only; a second B closes it
-	await act(() => { store.selected.value = 3; store.shortcut({ menu: "buy" }); });
+	await act(() => { store.pickUnit(3); store.shortcut({ menu: "buy" }); });
 	expect(store.shop.value!.target).toBeNull();
 	await act(() => store.shortcut({ menu: "buy" }));
 	expect(store.shop.value).toBeNull();

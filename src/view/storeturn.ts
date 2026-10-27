@@ -22,7 +22,7 @@ import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnRepo
 type Step = Pick<ReturnType<typeof createStep>, "showing">;
 
 export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: Step, notes: Pick<Notes, "show">, host: Pick<GameHost, "world">) {
-	const { world, select, lookAt, dispatch } = core;
+	const { world, select, look, dispatch } = core;
 	//the units End turn warns of while it asks (#8)
 	const asking = signal<string[] | null>(null);
 	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
@@ -154,7 +154,7 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			if (first === null) return;
 			select(first);
 			const u = unitById(w, first)!;
-			lookAt.value = { row: u.row, col: u.col };
+			look({ row: u.row, col: u.col });
 		},
 
 		//The report's close (×), or the status bar's turn report button: closed, or open again

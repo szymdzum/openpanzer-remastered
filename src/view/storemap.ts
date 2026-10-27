@@ -1,6 +1,6 @@
 //The store's map (src/view/store.ts, review proposal 3): what the canvas draws (the units, the selection, the path to the
 //hovered hex, the fog, the plaques, the strategic map, the deployment zone), the pointer, and a click on a hex
-import { computed, signal } from "@preact/signals";
+import { computed, type ReadonlySignal, signal } from "@preact/signals";
 import type { Position } from "../core/types";
 import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
 import { locationOf, pinsOf } from "./hextip";
@@ -17,7 +17,7 @@ type Step = Pick<ReturnType<typeof createStep>, "moving" | "showing">;
 
 //closeReport: the first click on the map closes the turn report
 export function createMap(core: Core, step: Step, closeReport: () => void) {
-	const { world, selected, airMode, lookAt, dispatch, select } = core;
+	const { world, selected, airMode, dispatch, select, pickUnit, look } = core;
 	const { moving, showing } = step;
 	const setting = settingSignals();
 	//the hex under the pointer (the map's scale is the settings')
@@ -63,11 +63,16 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 	//A reserve unit picked to deploy (its core list index), or none: deploying ends. Nothing stays selected
 	const pick = (index: number | null) => {
 		deploying.value = index;
-		if (index !== null) selected.value = null;
+		if (index !== null) pickUnit(null);
 	};
 
 	return {
-		hover, strategic, deploying, hexGrid, labels, units, reserve, deployment, tray, selection, ghost, located, path, fog, support, plaques,
+		//The labels over the map shown, or cleared until the next turn (L)
+		showLabels(on: boolean) {
+			labels.value = on;
+		},
+
+		hover, strategic, deploying, hexGrid, labels: labels as ReadonlySignal<boolean>, units, reserve, deployment, tray, selection, ghost, located, path, fog, support, plaques,
 		marks, glance, overview, pins, pick,
 
 		//A click on a hex of the map: on the strategic map, the map back at its scale centred there; while deploying,
@@ -80,7 +85,7 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 			closeReport();
 			if (strategic.value) {
 				strategic.value = false;
-				lookAt.value = { row: at.row, col: at.col };
+				look({ row: at.row, col: at.col });
 				return;
 			}
 			const place = placeOn(w, deployment.value, at);
@@ -105,7 +110,7 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 			pick(first.index);
 			//(a side with no deployment hex has an empty zone: the map stays where it is)
 			const zone = deployment.value!.zone;
-			if (zone.length > 0) lookAt.value = zone[0];
+			if (zone.length > 0) look(zone[0]);
 		},
 
 		//The hex under the pointer, null off the map: kept when it is the same hex, so the path isn't computed again

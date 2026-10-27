@@ -1,7 +1,7 @@
 //The store's core (src/view/store.ts, review proposal 3): the world the host plays, the unit selected and the layer shown,
 //the hex the map is asked to look at, and the person's commands sent to the host. The other parts of the store read it;
 //what a command does to them beside the world (the step shown, the turn's report reset) they give as hooks.
-import { signal } from "@preact/signals";
+import { type ReadonlySignal, signal } from "@preact/signals";
 import type { Command, CommandType, ResultOf } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
@@ -61,7 +61,20 @@ export function createCore(host: CoreHost, hooks: CoreHooks) {
 		refused.value = null;
 	};
 
-	return { world, selected, refused, lookAt, airMode, refresh, dispatch, select };
+	//A unit picked without what a person's selection does beside it (the air layer, the refusal cleared): what deploying,
+	//leaving the air layer and a program's pick do (the tutorial's, as the old UI's did: unchecked, review A15)
+	const pickUnit = (id: UnitId | null) => { selected.value = id; };
+
+	//The map asked to look at a hex
+	const look = (at: Position | null) => { lookAt.value = at; };
+
+	return {
+		world, refused, airMode, refresh, dispatch, select,
+		//(written only through the store's methods, review A15)
+		selected: selected as ReadonlySignal<UnitId | null>, lookAt: lookAt as ReadonlySignal<Position | null>,
+
+		pickUnit, look,
+	};
 }
 
 export type Core = ReturnType<typeof createCore>;

@@ -65,7 +65,7 @@ test("The unit list button opens the unit list on the person's turn (#348); the 
 test("The status line tells the hex under the pointer, as the old #locmsg: the unit there and the place, not the selected unit (#441)", async () => {
 	const store = await shown(smallWorld(0));
 	const w = store.world.value!;
-	await act(() => { store.selected.value = 1; });
+	await act(() => { store.pickUnit(1); });
 	expect(document.querySelector("#statusbar .msg")!.textContent).toBe("");
 	await act(() => store.hoverHex({ row: 4, col: 4 }));
 	const said = document.querySelector("#statusbar .msg")!.textContent!;

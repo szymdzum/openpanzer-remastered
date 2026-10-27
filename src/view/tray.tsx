@@ -9,7 +9,7 @@ import { Panel } from "./panel";
 import type { Store } from "./store";
 import { frameStyle } from "./unitstrip";
 
-export function ReserveTray({ store }: { store: Store }) {
+export function ReserveTray({ store }: { store: Pick<Store, "openShop" | "pick" | "reserve" | "side" | "tray"> }) {
 	const tray = store.tray.value, reserve = store.reserve.value;
 	if (tray === null) {
 		if (reserve.length === 0) return null;

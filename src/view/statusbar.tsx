@@ -10,7 +10,11 @@ import type { Store } from "./store";
 //The unit list button opens the strip of the person's units (UnitList); the turn report button opens the short report
 //again (TurnStart)
 
-export function StatusBar({ store }: { store: Store }) {
+//What StatusBar reads of the store
+type StatusBarReads = Pick<Store, "airMode" | "banner" | "country" | "date" | "deployment" | "ground" | "located" |
+	"nation" | "news" | "prestigeShown" | "refused" | "reportRefusal" | "rules" | "shopRefusal" | "showReport" |
+	"side" | "sideName" | "strategic" | "toggleList" | "turn" | "weather">;
+export function StatusBar({ store }: { store: StatusBarReads }) {
 	const prestige = store.prestigeShown.value, nation = store.nation.value, weather = store.weather.value, ground = store.ground.value;
 	return (
 		<Panel id="statusbar" class="pm-status">
@@ -39,7 +43,7 @@ export function StatusBar({ store }: { store: Store }) {
 //The status line: on the strategic map how to leave it (StrategicMap); while deploying what a click does (Deployment);
 //else the layer shown first (AirLayer), then a refusal, the last combat's news (CombatResults) or the hex under the
 //pointer, as the old UI's #locmsg told it
-function MapLine({ store }: { store: Store }) {
+function MapLine({ store }: { store: Pick<Store, "airMode" | "deployment" | "located" | "news" | "refused" | "strategic"> }) {
 	const air = store.airMode.value, deploy = store.deployment.value;
 	if (store.strategic.value)
 		return <output class="msg"><b>Strategic map</b><span>{air ? "air layer" : "ground layer"} · click a place to zoom in there</span></output>;
@@ -49,7 +53,7 @@ function MapLine({ store }: { store: Store }) {
 }
 
 //A refusal, else the last combat's news, else the hex under the pointer: the unit on it, then the place
-function Said({ store }: { store: Store }) {
+function Said({ store }: { store: Pick<Store, "located" | "news" | "refused"> }) {
 	const at = store.located.value, news = store.news.value;
 	if (store.refused.value !== null) return <span>{store.refused.value}</span>;
 	if (news !== null) return <span><b>{news.name}</b> {news.text}</span>;

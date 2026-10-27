@@ -48,7 +48,7 @@ function Name({ card }: { card: UnitCard }) {
 	return <div id="uName" class="name">{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}{card.name}</div>;
 }
 
-function Identity({ card, store }: { card: UnitCard, store: Store }) {
+function Identity({ card, store }: { card: UnitCard, store: Pick<Store, "viewCard"> }) {
 	return (
 		<div id="statsRowTop" class="ui-id">
 			<div class="ui-spr" aria-hidden="true" style={frameStyle(card.sprite)} />
@@ -106,7 +106,7 @@ function Details({ card }: { card: UnitCard }) {
 }
 
 //A button that sizes the card; its chevron points the way the card goes
-function Size({ store, to, up, children }: { store: Store, to: CardSize, up: boolean, children: string }) {
+function Size({ store, to, up, children }: { store: Pick<Store, "sizeCard">, to: CardSize, up: boolean, children: string }) {
 	return (
 		<button type="button" class={up ? "pm-btn ghost ui-size up" : "pm-btn ghost ui-size"} aria-controls="unit-info"
 			onClick={() => store.sizeCard(to)}><Icon name="chevron-down" size="sm" />{children}</button>
@@ -114,7 +114,7 @@ function Size({ store, to, up, children }: { store: Store, to: CardSize, up: boo
 }
 
 //The strip: the name and strength, fuel and ammo in one line
-function Strip({ card, store }: { card: UnitCard, store: Store }) {
+function Strip({ card, store }: { card: UnitCard, store: Pick<Store, "sizeCard"> }) {
 	return (
 		<section id="unit-info" class="pm-panel pm-uinfo strip" aria-label="Selected unit">
 			<Name card={card} />
@@ -129,7 +129,7 @@ function Strip({ card, store }: { card: UnitCard, store: Store }) {
 }
 
 //Below 1280px wide the row keeps its identity and condition; the sheet waits in the unfolded band (HudLaptop)
-export function UnitInfoPanel({ store }: { store: Store }) {
+export function UnitInfoPanel({ store }: { store: Pick<Store, "card" | "cardSize" | "infoShown" | "shortcut" | "sizeCard" | "viewCard"> }) {
 	const card = store.card.value;
 	const shown = card !== null && store.infoShown.value, size = store.cardSize.value;
 	useEscape(shown && size === "full" ? () => store.sizeCard("row") : undefined);

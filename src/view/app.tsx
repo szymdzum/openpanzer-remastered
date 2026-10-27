@@ -21,7 +21,7 @@ import type { Store } from "./store";
 import { useEffect, useRef } from "preact/hooks";
 
 //The room the dock takes at the screen's bottom, kept in the store: the map scrolls past it (#453)
-function useDockHeight(store: Store) {
+function useDockHeight(store: Pick<Store, "dockHeight">) {
 	const dock = useRef<HTMLDivElement>(null), height = store.dockHeight;
 	useEffect(() => {
 		const el = dock.current!;

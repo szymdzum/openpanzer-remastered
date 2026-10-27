@@ -30,7 +30,10 @@ function useFocusPicked() {
 
 const DIFFICULTY_OPTIONS = DIFFICULTIES.map((d) => ({ value: String(d.value), label: d.name }));
 
-export function CampaignWindow({ store }: { store: Store }) {
+//What CampaignWindow reads of the store
+type CampaignWindowReads = Pick<Store, "campaign" | "campaignFlow" | "difficultyHelp" | "menuBack" | "pickCampaign" |
+	"pickDifficulty" | "playCampaign">;
+export function CampaignWindow({ store }: { store: CampaignWindowReads }) {
 	const c = store.campaign.value!;
 	const pick = useFocusPicked();
 	const v = c.view;
@@ -62,7 +65,7 @@ export function CampaignWindow({ store }: { store: Store }) {
 	);
 }
 
-function Player({ store, p }: { store: Store, p: ScenarioPlayer }) {
+function Player({ store, p }: { store: Pick<Store, "toggleAI">, p: ScenarioPlayer }) {
 	return (
 		<div class="player">
 			{p.nation && <Mark nation={p.nation} />}
@@ -73,7 +76,7 @@ function Player({ store, p }: { store: Store, p: ScenarioPlayer }) {
 	);
 }
 
-export function ScenarioWindow({ store }: { store: Store }) {
+export function ScenarioWindow({ store }: { store: Pick<Store, "menuBack" | "pickScenario" | "playScenario" | "scenario" | "toggleAI"> }) {
 	const s = store.scenario.value!;
 	const pick = useFocusPicked();
 	const v = s.view;

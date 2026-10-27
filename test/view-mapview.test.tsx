@@ -115,7 +115,7 @@ test("The map looks at the side's first unit when the scenario starts, and at a 
 	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
 	//(jsdom lays nothing out: the scroll is what the map asked for, the screen 0 wide)
 	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(20, 20).x, hexCentre(20, 20).y]);
-	await act(() => { store.lookAt.value = { row: 2, col: 2 }; });
+	await act(() => { store.look({ row: 2, col: 2 }); });
 	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(2, 2).x, hexCentre(2, 2).y]);
 	const area = document.querySelector<HTMLElement>(".pm-mapview-area")!;
 	expect([area.style.inlineSize, area.style.blockSize]).toEqual([29 * 45 + 15 + "px", 30 * 50 + "px"]);
@@ -177,7 +177,7 @@ test("The strategic map: Z opens it, the pointer shows no path there, a click zo
 	const s = document.querySelector<HTMLElement>(".pm-mapview-scroll")!;
 	Object.defineProperty(s, "clientWidth", { value: 1000 });
 	Object.defineProperty(s, "clientHeight", { value: 600 });
-	await act(() => { store.selected.value = 0; });
+	await act(() => { store.pickUnit(0); });
 	await press(store, "zoom");
 	expect(store.strategic.value).toBe(true);
 	expect(document.querySelector(".pm-mapview")!.classList.contains("strategic")).toBe(true);

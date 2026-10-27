@@ -24,7 +24,7 @@ function TurnsToWin({ report }: { report: TurnReport }) {
 	);
 }
 
-export function TurnBanner({ store }: { store: Store }) {
+export function TurnBanner({ store }: { store: Pick<Store, "briefing" | "openDossier" | "openLog" | "report" | "showReport"> }) {
 	const report = store.report.value;
 	if (report === null) return null;
 	return (
@@ -54,7 +54,7 @@ export function TurnBanner({ store }: { store: Store }) {
 
 //"Poland is moving · 14 of 38 units", with a blinking dot in the side's colour (it stops under prefers-reduced-motion): the
 //Allies' rust, the Axis's field grey
-export function AiIndicator({ store }: { store: Store }) {
+export function AiIndicator({ store }: { store: Pick<Store, "ai"> }) {
 	const ai = store.ai.value;
 	if (ai === null) return null;
 	return (

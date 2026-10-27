@@ -23,7 +23,7 @@ function Entry({ e, onPick }: { e: LogEntry, onPick: () => void }) {
 	);
 }
 
-export function LogWindow({ store }: { store: Store }) {
+export function LogWindow({ store }: { store: Pick<Store, "briefing" | "closeLog" | "combatLog" | "look" | "openDossier"> }) {
 	const log = store.combatLog.value;
 	if (log === null) return null;
 	const close = () => store.closeLog();
@@ -50,7 +50,7 @@ export function LogWindow({ store }: { store: Store }) {
 					<section key={s.title} aria-label={s.title}>
 						<h2 class="sec"><Icon name={s.icon} size="sm" />{s.title}</h2>
 						{s.entries.length === 0 ? <p class="pm-muted quiet">All quiet on this front</p>
-							: s.entries.map((e, i) => <Entry key={i} e={e} onPick={() => { store.lookAt.value = e.at; }} />)}
+							: s.entries.map((e, i) => <Entry key={i} e={e} onPick={() => store.look(e.at)} />)}
 					</section>
 				))}
 			</Window>
