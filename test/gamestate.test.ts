@@ -534,32 +534,41 @@ test("GameState saves to the cloud and loads the save back", async () => {
 		return { status: 200, body: { id } };
 	});
 	try {
-		const input = document.createElement("input");
+		//(what the old #cloudid field showed: the report's text and its error's hint, review A10)
+		const field = { value: "", placeholder: "" }, shown: string[] = [];
+		const report = (text: string, hint?: string) => {
+			field.value = text;
+			if (hint !== undefined) field.placeholder = hint;
+			shown.push(text);
+		};
 		const replies: [string | null, string?][] = [];
-		game.state.saveToCloud(input, (error, id) => replies.push([error, id]));
-		game.state.saveToCloud(input, (error, id) => replies.push([error, id])); //overwrites it
-		input.value = "fail";
-		game.state.saveToCloud(input, (error, id) => replies.push([error, id]));
+		game.state.saveToCloud(field.value, report, (error, id) => replies.push([error, id]));
+		game.state.saveToCloud(field.value, report, (error, id) => replies.push([error, id])); //overwrites it
+		field.value = "fail";
+		game.state.saveToCloud(field.value, report, (error, id) => replies.push([error, id]));
 		expect(replies).toEqual([[null, "g1"], [null, "g1"], ["Cannot create save", undefined]]);
+		expect(shown).toEqual(["Creating new cloud save ...", "g1", "Overwriting cloud save g1 ...", "g1", "Overwriting cloud save fail ...", ""]);
+		expect(field.placeholder).toBe("Cannot create save !");
 		expect(JSON.parse(gists.g1)).toEqual(JSON.parse(await exportGame()));
 
-		input.value = "";
-		expect(game.state.restoreFromCloud(input)).toBe(false);
+		field.value = "";
+		expect(game.state.restoreFromCloud(field.value, report)).toBe(false);
+		expect(field.placeholder).toBe("No ID specified");
 		for (const id of ["missing", "nofile"]) {
-			input.value = id;
-			expect(game.state.restoreFromCloud(input)).toBe(true);
-			expect(input.value).toBe("");
+			field.value = id;
+			expect(game.state.restoreFromCloud(field.value, report)).toBe(true);
+			expect(field.value).toBe("");
 		}
 		gists.broken = "{}";
-		input.value = "broken";
-		game.state.restoreFromCloud(input);
-		expect(input.getAttribute("placeholder")).toBe("Cannot find game data in the save file");
+		field.value = "broken";
+		game.state.restoreFromCloud(field.value, report);
+		expect(field.placeholder).toBe("Cannot find game data in the save file");
 		const old = game.scenario;
 		let done = false;
-		input.value = "g1";
-		expect(game.state.restoreFromCloud(input, () => { done = true; })).toBe(true);
+		field.value = "g1";
+		expect(game.state.restoreFromCloud(field.value, report, () => { done = true; })).toBe(true);
 		expect(await loadedAfter(old)).toEqual(JSON.parse(gists.g1));
-		expect([done, input.value]).toEqual([true, "g1"]);
+		expect([done, field.value]).toEqual([true, "g1"]);
 	} finally {
 		unfake();
 	}

@@ -412,7 +412,7 @@ shows nothing does too (src/nullscreen.ts: the headless tests). The old UI did, 
 | `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | a message that holds the game (`holdForMessage`) until its OK (`then`, else `messageClosed`) |
 | `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | the dossier under the campaign's end, the start menu |
 | `reportScore`, `reportAchievement` | the host | nothing (no platform score board on the web) |
-| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)`: the units by id, the hexes as positions (no object of the old engine reaches a screen) | the host's `processAction` | the command played whole (`play`), then its beats animated (src/view/beats.ts, src/view/player.ts); the victories told (`won`) and shown called at the end of the last beat |
+| `step(cmd, done, shown)`: a program's move or attack the host played whole (`playShown`), with its result: the units by id, the hexes as positions (no object of the old engine reaches a screen) | the host's `processAction`, the command-line player's live mode | its beats animated from the result's events (src/view/beats.ts, src/view/player.ts), then shown called at the end of the last beat; the host tells the victories then (`won`) |
 | `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: the unit selected, a message pointing at a hex (the tutorial's orders, shown: its OK), the map looking at a hex, the rail folded or opened; shown at once |
 | `aiTurnEnded()`, `turnChanged(next)` | the host, a program's turn ended | the person's turn start (the short turn report, the first unit selected, the reserve); next at once |
 | `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | the world read again |
@@ -423,8 +423,8 @@ and an attack are played whole before anything is shown (#375): `Commands.execut
 result (`MoveResult`, `AttackResult`: the events, and what the old animation read in between, the
 strengths, the units' classes and facings at the shots, where the move stopped and which way the unit faced
 there), and the UI animates it after from the events: the move, the surprise, the shots, the explosions, the
-retreat; then it tells the host the victories and calls shown. The screen that shows nothing calls it at once
-and tells the host the victories then. The old UI's selection (src/selection.ts) showed what the old engine's
+retreat; then it calls shown, and the host tells the victories (the host plays a program's step and hands the
+screen its result, `playShown`, review A12). The screen that shows nothing calls it at once. The old UI's selection (src/selection.ts) showed what the old engine's
 command left selected (`MapSelection.after`: the attacker selected again after an attack, a moved unit's
 hexes...), for the program's other commands too (the screen's optional `played`). The UI and the null screen
 have none; the pinned game turns' stand-in for the old screen (test/gameturn.test.ts) and the engine contract
@@ -432,8 +432,8 @@ still ask it. A screen that animates says while it shows a step, a program's or 
 optional: the UI's says while its beats play, #459), and the host passes it on (`GameHost.showingStep`):
 the harness and the command-line player wait on it, where they waited on `game.waitUIAnimation` until #378
 (the original game's flag, which the harness still reads there). The command-line player's live mode
-(cli/page.ts) plays on the host and the screen the page runs: a move or an attack through the screen's
-`move` and `attack`, as a program's, the selection as a `view` event, the other commands and the end of turn
+(cli/page.ts) plays on the host and the screen the page runs: a move or an attack through the host's
+`playShown`, as a program's, the selection as a `view` event, the other commands and the end of turn
 through the host's `command`.
 
 The UI reads the game only through the host (`world()`, the world the screen's rules read) and sends the
