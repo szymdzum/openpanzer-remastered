@@ -1,5 +1,7 @@
 //Tabs and the segmented control (docs/ui/components/Tabs, SegmentedControl): a choice of view
 //inside a window, and a row of options that apply at once. Styled by src/view/tabs.css.
+import type { ComponentChildren } from "preact";
+import { useId } from "preact/hooks";
 import { Icon, type IconName } from "./icon";
 
 //The arrow keys of the ARIA tabs pattern: the next or previous enabled tab, wrapping round, Home
@@ -39,8 +41,14 @@ type TabsProps<T extends string> = {
 	id?: string,
 };
 
-//role="tablist" with the arrow keys of the ARIA tabs pattern: the focus and the selection move together
+//A tab's id and its panel's, from the tab list's id (#497: the tabs pattern's names)
+const tabId = (list: string, tab: string) => list + "-" + tab;
+const panelId = (list: string) => list + "-panel";
+
+//role="tablist" with the arrow keys of the ARIA tabs pattern: the focus and the selection move together. Each tab
+//controls the panel of the list's id (TabPanel)
 export function Tabs<T extends string>({ tabs, selected, onSelect, text, label, id }: TabsProps<T>) {
+	const own = useId(), list = id ?? own;
 	const enabled = tabs.map((t) => !t.disabled);
 	const onKeyDown = (e: KeyboardEvent, from: number) => {
 		const to = roveTo(e.key, from, enabled);
@@ -54,7 +62,7 @@ export function Tabs<T extends string>({ tabs, selected, onSelect, text, label, 
 			{tabs.map((t, i) => {
 				const on = t.id === selected;
 				return (
-					<button key={t.id} type="button" class="pm-tab" role="tab" aria-selected={on}
+					<button key={t.id} id={tabId(list, t.id)} type="button" class="pm-tab" role="tab" aria-selected={on} aria-controls={panelId(list)}
 						tabIndex={on ? 0 : -1} disabled={t.disabled} onClick={() => onSelect(t.id)} onKeyDown={(e) => onKeyDown(e, i)}>
 						{t.icon && <Icon name={t.icon} size={text ? "sm" : undefined} />}
 						{t.label}
@@ -65,6 +73,11 @@ export function Tabs<T extends string>({ tabs, selected, onSelect, text, label, 
 			})}
 		</div>
 	);
+}
+
+//What the tabs show, named by the tab shown: of, the tab list's id
+export function TabPanel({ of, selected, class: cls, children }: { of: string, selected: string, class?: string, children: ComponentChildren }) {
+	return <div id={panelId(of)} class={cls} role="tabpanel" aria-labelledby={tabId(of, selected)}>{children}</div>;
 }
 
 type Segment<T extends string> = { value: T, label: string, icon?: IconName, disabled?: boolean };

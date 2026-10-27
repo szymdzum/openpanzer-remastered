@@ -29,7 +29,7 @@ function Entries({ store, entries }: { store: Pick<Store, "startMenu">, entries:
 //The main window: the focus on its first button whenever it opens or its New Game panel does, the menu being keyboard-first
 function MainWindow({ store, newGame }: { store: Pick<Store, "startMenu">, newGame: boolean }) {
 	const ref = useRef<HTMLDialogElement>(null);
-	useLayoutEffect(() => { ref.current!.querySelector<HTMLButtonElement>("button:enabled")!.focus(); }, [newGame]);
+	useLayoutEffect(() => { ref.current!.querySelector<HTMLButtonElement>("button:enabled:not([aria-disabled=\"true\"])")!.focus(); }, [newGame]);
 	return (
 		<dialog ref={ref} open id="smMain" class="pm-window pm-startmain" aria-modal="true" aria-labelledby="smLogo">
 			<div class="logo">

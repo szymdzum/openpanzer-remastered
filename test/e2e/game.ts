@@ -182,7 +182,7 @@ const turnOf = () => world(([w]) => w.state.turn.turn);
 async function endTurn() {
 	await stepShown();
 	const before = await world(([w]) => w.state.turn.turn * 4 + w.state.turn.currentPlayer);
-	await ui("#endturn button:enabled").click();
+	await ui("#endturn button:not([aria-disabled=true])").click();
 	//(the question about the units that can still act, or the turn gone on without it, or the scenario's end)
 	await page.waitForFunction((at) => {
 		const w = (window as unknown as Probed).e2e.game.host.world();
@@ -191,7 +191,7 @@ async function endTurn() {
 	}, before, { timeout: AI_TURN_MS, polling: 100 });
 	const question = ui("#endturn-question");
 	if (await question.isVisible()) await question.locator("button", { hasText: "End turn" }).click();
-	await page.waitForFunction(() => document.querySelector(".pm-screen #endturn button:enabled") !== null
+	await page.waitForFunction(() => document.querySelector(".pm-screen #endturn button:not([aria-disabled=true])") !== null
 		|| document.querySelector(".pm-screen #ui-message") !== null, null, { timeout: AI_TURN_MS, polling: 100 });
 }
 
@@ -235,7 +235,7 @@ async function play() {
 		await page.keyboard.press("KeyB");
 		await shown(ui("#equipment"));
 		await ui("#eqUnitList button").first().click();
-		await ui("#eqNewBut:enabled").click();
+		await ui("#eqNewBut:not([aria-disabled=true])").click();
 		check(await reserve() === before.reserve + 1, "no unit came into the reserve");
 		const left = await prestige();
 		check(left < before.prestige, "the prestige didn't go down");
@@ -360,7 +360,7 @@ async function play() {
 		check(await turnOf() === 1, "the next scenario doesn't start on its first turn");
 		await ui("#uiokbut").click();
 		await gone(ui("#ui-message"));
-		await shown(ui("#endturn button:enabled"));
+		await shown(ui("#endturn button:not([aria-disabled=true])"));
 		//(the same every time: the streams are seeded)
 		console.log("   the game's fingerprint: " + createHash("sha256").update(await saved()).digest("hex").slice(0, 16));
 	});

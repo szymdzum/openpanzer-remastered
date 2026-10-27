@@ -59,13 +59,13 @@
 			box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--glint) 25%, transparent), inset 0 -3px 0 color-mix(in srgb, var(--shade) 25%, transparent);
 		}
 
-		/* a press moves the button down a pixel */
-		&:is(:active, .is-down) {
+		/* a press moves the button down a pixel (not a disabled one, which stays focusable: #497) */
+		&:is(:active, .is-down):where(:not([aria-disabled="true"])) {
 			transform: translateY(0.0625rem);
 			box-shadow: inset 0 2px 0 color-mix(in srgb, var(--shade) 15%, transparent);
 		}
 
-		&:is(:disabled, .is-disabled) {
+		&:is(:disabled, [aria-disabled="true"], .is-disabled) {
 			opacity: 0.5;
 			cursor: default;
 			transform: none;
