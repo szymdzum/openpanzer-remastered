@@ -83,8 +83,8 @@ test("A switch and a slider change the settings at once; OK saves them and goes 
 	await act(() => { fireEvent.input(map, { target: { value: "1.5" } }); });
 	await act(() => { fireEvent.input(scale, { target: { value: "1.2" } }); });
 	await act(() => { fireEvent.input(width, { target: { value: "1000" } }); });
-	expect([uiSettings.zoomLevel, uiSettings.mapZoom, store.scale.value, uiSettings.uiScale, store.uiScale.value, uiSettings.uiSize, store.uiWidth.value])
-		.toEqual([1.5, true, 1.5, 1.2, 1.2, 1000, 1000]);
+	expect([uiSettings.zoomLevel, store.scale.value, uiSettings.uiScale, store.uiScale.value, uiSettings.uiSize, store.uiWidth.value])
+		.toEqual([1.5, 1.5, 1.2, 1.2, 1000, 1000]);
 	expect(screen.getByText("1.5")).not.toBeNull();
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "OK" })); });
 	expect([saveSettings.mock.calls.length, reload.mock.calls.length, store.menu.value]).toEqual([1, 0, { window: "main", newGame: false }]);

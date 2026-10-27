@@ -2,8 +2,7 @@
 # Names the game and the harness use as they are: changing them changes the saved game or the data.
 [default.extend-words]
 briliant = "briliant" # outcomeNames.briliant, a key of the saved campaign dossier
-nd = "nd"             # local names (row/col deltas) in ui.ts and uibuilder.ts
-iy = "iy"             # render.ts coordinates
+nd = "nd"             # local names (row/col deltas) in src/view/unitcard.ts and art/
 ba = "ba"             # harness/diff-traces.js: baseline arrays
 PN = "PN"
 ligh = "ligh"         # it22ligh.xml, a scenario file the tests load

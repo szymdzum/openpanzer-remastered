@@ -347,7 +347,6 @@ export class GameState {
 			//Not all settings need to be restored since some are temp only
 			uiSettings.markOwnUnits = s.markOwnUnits;
 			uiSettings.markEnemyUnits = s.markEnemyUnits;
-			uiSettings.use3D = s.use3D;
 			uiSettings.useRetina = s.useRetina;
 			uiSettings.hdGraphics = s.hdGraphics !== false; //on unless turned off, also for settings saved before it existed
 			uiSettings.showGridTerrain = s.showGridTerrain;
@@ -357,7 +356,6 @@ export class GameState {
 			uiSettings.uiScale = s.uiScale;
 			uiSettings.uiSize = s.uiSize;
 			uiSettings.zoomLevel = s.zoomLevel;
-			uiSettings.shownEndTurnTip = s.shownEndTurnTip;
 			uiSettings.showDetailInfoToolTips = s.showDetailInfoToolTips || false;
 			uiSettings.showHiddenVictoryHexes = s.showHiddenVictoryHexes || false;
 			uiSettings.classicRules = s.classicRules || false;

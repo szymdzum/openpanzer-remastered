@@ -103,14 +103,6 @@
 	.pm-critical {
 		color: var(--critical);
 	}
-
-	.pm-axis {
-		color: var(--axis-ink);
-	}
-
-	.pm-allied {
-		color: var(--allied-ink);
-	}
 }
 
 /* The icons (icon.tsx; the Icons card): 20px by default, 16px inline in text, 24px on tablet rails;
