@@ -5,7 +5,7 @@
 //with the issue that describes the loss, a fix flips them
 import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
-import { failRequests, fakeMapImages, freshGame, messagesShown, startState, until } from "./lifecycle";
+import { failedLoads, failRequests, fakeMapImages, freshGame, startState, until } from "./lifecycle";
 import { oldExport, oldLocalItems, withoutLosses, withoutUnknown } from "./saves";
 import type { SaveFile } from "../src/savegame";
 import type { UnitState } from "../src/state";
@@ -460,13 +460,13 @@ test.each(["equipment-country-0.json", "equipment-country-31.json"])(
 		const game = await freshGame();
 		await startState(game, "pc1indi.xml");
 		const saved = await exportGame();
-		const shown = await messagesShown();
+		const shown = failedLoads(game);
 		const restore = failRequests(file, "error");
 		try {
 			expect(game.state.restoreFromString(saved)).toBe(true);
 			await until(() => shown.length > 0, "the load to fail", 5000);
 			await new Promise((r) => setTimeout(r, 50)); //the other files come in
-			expect(shown).toEqual(["Error Loading scenario pc1indi.xml"]);
+			expect(shown).toEqual(["pc1indi.xml"]);
 			expect([game.scenario.isLoaded, game.gameEnded]).toEqual([false, true]);
 		} finally {
 			restore();
@@ -603,8 +603,6 @@ test("On the screen the remaster's turn limit ends the game once both sides have
 		await loadedAfter(old);
 		const outcomes: string[] = [];
 		game.host.continueCampaign = (o) => { outcomes.push(o); };
-		const { UIBuilder } = await import("../src/uibuilder"); //(this load's modules)
-		Object.assign(UIBuilder, { message() {} });
 		const attacker = save.data.startObjectives[0] > save.data.startObjectives[1] ? 0 : 1;
 		game.endTurn();
 		expect([game.gameEnded, game.session.ended], name + ", the first side's last turn").toEqual([false, null]);
@@ -623,8 +621,6 @@ test("The turn limit's end is told once and the combat log stays closed over it,
 	for (const name of ["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"]) {
 		const game = await playing(name);
 		const { Game } = await import("../src/game");
-		const { UIBuilder } = await import("../src/uibuilder"); //(this load's modules)
-		Object.assign(UIBuilder, { showAIStatus() {} });
 		game.setupGameState = new Game().setupGameState;
 		const save = JSON.parse(await exportGame()) as SaveFile;
 		const turn = save.state.turn.turn, old = game.scenario;
@@ -636,8 +632,9 @@ test("The turn limit's end is told once and the combat log stays closed over it,
 		await loadedAfter(old);
 		const screen: string[] = [];
 		game.host.continueCampaign = () => { screen.push("outcome"); }; //(the next scenario waits: not ended)
-		Object.assign(UIBuilder, { message() { screen.push("turn limit"); } });
-		Object.assign(game.ui, { uiEndTurnInfo() { screen.push("turn info"); } });
+		//(the next turn's info, which the old UI's screen showed when the game hadn't ended by then)
+		game.host.screen = { ...game.host.screen, message() { screen.push("turn limit"); },
+			turnChanged() { if (!game.gameEnded) screen.push("turn info"); } };
 		game.endTurn();
 		const last = game.scenario.map.currentPlayer;
 		last.handler = { getAction: (): null => null } as unknown as typeof last.handler; //(the AI's last turn: it ends it at once)

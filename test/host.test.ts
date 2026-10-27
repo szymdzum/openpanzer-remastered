@@ -119,6 +119,40 @@ test("The turn limit's outcome is told by the sides a person plays now: neutral 
 	expect(byPerson, "the tutorial's person, the Axis").toEqual([["DEFEAT", "You didn't capture all the objectives in time"]]);
 });
 
+//The scenario won by a side, each told by the sides a person plays now: a defeat to the person who played the other
+//side, a win to the one who played it, with the winner's country, side and why; nobody told they won or lost in a game
+//of AIs; past the tutorial's hand-over the person plays the Axis. The old game asked whose turn it was, so the person
+//whose last unit fell attacking was told they won by capturing all the victory hexes (#76), and the tutorial's Allied
+//victory was told as the person's win (#366). (These were the old UI's tests until #351)
+test("A victory is told by the sides a person plays now, with the winner and why: a defeat, a win, nobody's in a game of AIs (#76, #366)", async () => {
+	const country = (g: Game, side: number) => g.scenario.map.getPlayers().find((p) => p.side === side)!.getCountryName();
+	const won = (g: Game, side: number, how: "elimination" | "capture", told: string[][]) => {
+		g.host.ended({ kind: "victory", side, how });
+		g.gameEnded = false;
+		return told.splice(0)[0];
+	};
+	const told: string[][] = [];
+	const person = await remasterScenario("drpzop01.xml", [0, 1, 1, 1], told);
+	expect(won(person, 1, "elimination", told)).toEqual(["DEFEAT", "You have lost ! Your enemy " + country(person, 1)
+		+ " on Allies side wins by destroying all the enemy units with a final score of " + person.scenario.map.getPlayers()[1].score + ". "]);
+	const [title, text] = won(person, 0, "capture", told);
+	expect(title).not.toBe("DEFEAT");
+	expect(text).toContain("You have won this scenario ! " + country(person, 0) + " on Axis side wins by capturing all victory hexes");
+
+	const ais = await remasterScenario("drpzop01.xml", [1, 1, 1, 1], told);
+	for (const side of [1, 0]) {
+		const [t, said] = won(ais, side, "elimination", told);
+		expect([t === "DEFEAT", said.includes("You have")], "a game of AIs").toEqual([false, false]);
+		expect(said).toContain(country(ais, side) + " on " + sideNames[side] + " side wins by destroying all the enemy units");
+	}
+
+	const tutorial = await remasterScenario("tutorial.xml", [2, 2, 2, 2], told);
+	//The hand-over (src/core/tutorial.ts handOver): the Axis to the person, the Allies to the AI
+	for (const p of tutorial.scenario.map.getPlayers()) p.type = p.side === 0 ? playerType.humanLocal : playerType.aiLocal;
+	touched();
+	expect(won(tutorial, 1, "elimination", told)[0]).toBe("DEFEAT");
+});
+
 //The game's turns on the host with a screen that shows nothing (#374): the turn loop's ticks play the AI's
 //actions, each move and attack played and shown at once, and end its turns, as the old UI's game plays
 //them, with no window and no document

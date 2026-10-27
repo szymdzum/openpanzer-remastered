@@ -4,7 +4,7 @@
 // only shrink). The first override keeps the engine modules, the game host (src/host.ts), the screen
 // interface (src/screen.ts) and the screen that shows nothing (src/nullscreen.ts) from importing UI
 // modules or game.ts (the engine reads the game through src/context.ts, and shows it through the
-// screen interface, which the old UI implements in src/oldscreen.ts), the second
+// screen interface, which the UI implements in src/view/screen.tsx), the second
 // and third the new core (src/core/ and its commands) from importing the old engine, the fourth the new UI
 // (src/view/) from importing anything but the core, the host and the screen interface. The react and jsx-a11y
 // plugins check the JSX of the new UI's components (src/view/*.tsx, Preact).

@@ -11,14 +11,14 @@
 		"scripts/ui-design.mjs",
 		// stylelint's two rules of our own, which .stylelintrc.json loads
 		"scripts/stylelint-rules.mjs",
-		// the new UI's components' CSS and its faces, which docs/ui's pages load (the game loads them
-		// through src/view/game.css under ?ui=new)
+		// the UI's components' CSS and its faces, which docs/ui's pages load (the game loads them
+		// through src/view/game.css)
 		"src/view/library.css", "src/view/fonts.css"],
 	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
 	// the contract scripts (read as text by test/contracts.ts and record.js)
 	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
-	//index.html loads the game's stylesheet and data lists from game/ as classic files
-	"ignoreUnresolvedImports": ["/game/css/ui.css", "/game/resources/campaigns/campaignlist.js", "/game/resources/scenarios/scenariolist.js"],
+	//index.html loads the game's data lists from game/ as classic files
+	"ignoreUnresolvedImports": ["/game/resources/campaigns/campaignlist.js", "/game/resources/scenarios/scenariolist.js"],
 	"ignoreExportsUsedInFile": true,
 	"duplicates": { "minOccurrences": 2 }
 }

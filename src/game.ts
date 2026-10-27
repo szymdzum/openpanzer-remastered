@@ -18,7 +18,7 @@ import type { Scenario, ScenarioOutcome } from "./scenario";
 import type { Campaign } from "./campaign";
 import type { Player } from "./map";
 import type { UI } from "./ui";
-import { oldScreen } from "./oldscreen";
+import { nullScreen } from "./nullscreen";
 import { GameHost, runGame } from "./host";
 import type { Session } from "./core/session";
 import type { RulesetName } from "./core/types";
@@ -27,8 +27,9 @@ import type { CampaignProgress } from "./state";
 
 //Game is what the page, the harness and the tests hold of the running game: its fields, and the members that
 //hand the game's course and a program's turn to its host (src/host.ts), which keeps the campaign's progress and
-//shows the game on the old UI (src/oldscreen.ts). The constructor's body sets up the methods, typed as
-//declare fields (docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
+//shows the game on its screen: the page's UI (src/view/screen.tsx, given by src/main.ts), a screen that shows
+//nothing until then (src/nullscreen.ts). The constructor's body sets up the methods, typed as declare fields
+//(docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
 export class Game {
 	declare ui: UI;
 	declare state: GameState;
@@ -83,7 +84,7 @@ export class Game {
 		this.endTurn = function() { return this.host.endTurn(); }
 
 		this.session = null;
-		this.host = new GameHost(this, oldScreen(this)); //the old UI shows it (src/oldscreen.ts)
+		this.host = new GameHost(this, nullScreen(this)); //(the page gives it the UI's screen, src/main.ts)
 
 		//The game's course is the host's: what the page, GameState, the harness and the tests call hands it on.
 		//setupGameState: called by GameState after a game was restored from a save (local, file or cloud)

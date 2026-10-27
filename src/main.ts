@@ -49,15 +49,14 @@ import * as coresession from "./coresession";
 import * as coreload from "./coreload";
 import * as host from "./host";
 import * as screen from "./screen";
-import * as oldscreen from "./oldscreen";
 import * as nullscreen from "./nullscreen";
-//(the new UI's entry, not one of the modules above: the harness reaches into the old UI's)
+//(the UI's entry, not one of the modules above, which the harness reaches into)
 import { startNewUI } from "./view/screen";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
 	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
 	rng, context, board, visibility, selection, undo, util, session, commands, state,
-	savegame, mirror, coresession, coreload, host, screen, oldscreen, nullscreen];
+	savegame, mirror, coresession, coreload, host, screen, nullscreen];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import
@@ -65,18 +64,12 @@ const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripte
 new gamestate.GameState(null).restoreSettings(); //To restore only settings
 dom.changeViewPort();
 
-//The combat log's HTML has inline onclick handlers, they run in the global scope
-Object.assign(window, { makeHidden: dom.makeHidden, UIBuilder: uibuilder.UIBuilder,
-	UICombatLog: uicombatlog.UICombatLog, game: game.game });
-
 //The random streams seeded once, here and not while rng.ts loads: until then the game stream reads
 //Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
 rng.Rng.seed(rng.randomSeed());
 
-//?ui=new: the new UI shows the game (src/view/, #380), the old one isn't built; without it nothing changes.
-//Its screen goes to the host before the game starts
-if (new URLSearchParams(location.search).get("ui") === "new")
-	startNewUI(game.game.host);
+//The UI shows the game (src/view/, #351): its screen goes to the host before the game starts
+startNewUI(game.game.host);
 
 //The start on window load. game.ts did it while loading; here, so that importing it starts nothing. No turn
 //loop ticks: a program's turn goes on when the screen has shown its last action (src/host.ts, #375)

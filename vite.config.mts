@@ -107,7 +107,7 @@ export default defineConfig({
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
 				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts", "src/rng.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/oldscreen.ts", "src/nullscreen.ts",
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/hexgrid.ts", "src/view/mapview.ts",
 				"src/view/mapdraw.ts", "src/view/mapinfo.ts", "src/view/canvas.ts", "src/view/overlays.ts", "src/view/strategic.ts",
@@ -142,7 +142,9 @@ export default defineConfig({
 				"src/scenarioloader.ts": { statements: 86, branches: 61, functions: 84, lines: 85 },
 				"src/selection.ts": { statements: 97, branches: 100, functions: 88, lines: 97 },
 				"src/undo.ts": { statements: 92, branches: 100, functions: 75, lines: 92 },
-				"src/unit.ts": { statements: 82, branches: 51, functions: 76, lines: 82 },
+				//(the reads only the old UI made, getAmmo, getFuel, getMovesLeft, went uncovered with its tests in #351: they go
+				//with it)
+				"src/unit.ts": { statements: 81, branches: 48, functions: 75, lines: 81 },
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 83, lines: 94 },
 				"src/state.ts": { statements: 98, branches: 95, functions: 98, lines: 99 },
@@ -181,7 +183,6 @@ export default defineConfig({
 				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
 				"src/host.ts": { statements: 96, branches: 90, functions: 97, lines: 96 },
-				"src/oldscreen.ts": { statements: 87, branches: 63, functions: 92, lines: 89 },
 				"src/nullscreen.ts": { statements: 94, branches: 87, functions: 88, lines: 92 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },

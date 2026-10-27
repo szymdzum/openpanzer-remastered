@@ -6,7 +6,7 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 - **Headless** (the default): the core (docs/CORE.md) plays without a browser from a save file. A
   turn of the AI takes well under a second: for the arena, tests, a program playing many games.
 - **Live** (`--live`): the game plays on its page, as a person sees it. The program plays on the
-  game host and the screen the page runs (the old UI, or the new one under `?ui=new`, #378): its
+  game host and the screen the page runs (the UI's, src/view/screen.tsx, #378): its
   moves and attacks shown by the screen as the AI's are, with their animations where the screen has
   them, its end of turn the host's, and the AI then plays its turn on the screen. A person watches
   the program play.
@@ -23,7 +23,7 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 ## Live, on the game's page
 
     npm run play:live                                  # the dev server with the bridge, port 8644
-    # open http://127.0.0.1:8644/ in a browser (the page is the game's screen; ?ui=new for the new UI)
+    # open http://127.0.0.1:8644/ in a browser (the page is the game's screen)
     npm run -s play -- new drpzop01.xml --live         # or OPENPANZER_LIVE=http://127.0.0.1:8644 for every call
     npm run -s play -- move 1 0,15 --live              # the move is animated on the page, then the answer
 

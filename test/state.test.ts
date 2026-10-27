@@ -142,8 +142,6 @@ test("toData of a game whose campaign is still loading has no campaign scenario 
 test("A campaign's next scenario starts with no zone of control or spotting of the units it took off (#72)", async () => {
 	const game = await freshGame();
 	await startState(game, "campaign:0:1");
-	const { UIBuilder } = await import("../src/uibuilder");
-	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
 	const before = game.scenario;
 	game.continueCampaign("victory");
 	const next = game.campaign.getCurrentScenario(); //(the campaign's screen asks for it)

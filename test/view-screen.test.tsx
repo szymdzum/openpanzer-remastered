@@ -209,14 +209,11 @@ test("A signal renders again only the components that read what changed: a new p
 	expect(refusing.notes.value).toEqual([]);
 });
 
-test("?ui=new: the page's old stylesheet and markup set aside, the new UI's root and theme set, the screen given to the host", async () => {
-	document.head.innerHTML = '<link rel="stylesheet" href="/game/css/ui.css">';
-	document.body.innerHTML = '<div id="ui-message">old</div>';
+test("The page's UI: its root and theme set, the screen given to the host (#351)", async () => {
+	document.body.innerHTML = "";
 	const host = { world: (): World | null => null } as unknown as GameHost;
 	vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
 	await act(() => { startNewUI(host); });
-	expect(document.querySelector<HTMLLinkElement>("link")!.disabled).toBe(true);
-	expect(document.getElementById("ui-message")!.hidden).toBe(true);
 	expect(document.querySelector(".pm-screen")).not.toBeNull();
 	expect(document.documentElement.dataset.theme).toBe("blackout"); //(the system's: dark here)
 	vi.unstubAllGlobals();

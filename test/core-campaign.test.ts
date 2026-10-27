@@ -21,20 +21,19 @@ type Game = Awaited<ReturnType<typeof freshGame>>;
 
 const OUTCOMES: ScenarioOutcome[] = ["briliant", "victory", "tactical", "lose"];
 
-//The prototypes the game's message showed, by eqid
+//The prototypes the game's screen showed, by eqid
 const shownPrototypes: number[] = [];
 
 //What the tests write into the game's objects by hand, said as the screen says it (src/context.ts)
 let touched: () => void;
 
-//The game, its UI's messages silent, its streams seeded, the campaign started
+//The game, the prototypes its screen shows recorded, its streams seeded, the campaign started
 async function oldCampaign(index: number, difficulty: number): Promise<{ game: Game; data: () => SavedGame }> {
 	const game = await freshGame();
 	({ touched } = await import("../src/context"));
-	const { UIBuilder } = await import("../src/uibuilder");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
-	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage(eqid: number) { shownPrototypes.push(eqid); } });
+	game.host.screen = { ...game.host.screen, showPrototype(eqid: number) { shownPrototypes.push(eqid); } };
 	Rng.game.state = 135 + index;
 	Rng.ai.state = 7;
 	await startState(game, `campaign:${index}:${difficulty}`);
@@ -182,8 +181,6 @@ test("Every campaign starts, ends its scenarios and carries its player on as the
 //(the first brings in none)
 test("A campaign player whose core units all fell starts the next scenario with none (#183)", async () => {
 	const { game } = await oldCampaign(0, 1);
-	const { UIBuilder } = await import("../src/uibuilder");
-	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
 	const next = async () => {
 		game.continueCampaign("victory");
 		const before = game.scenario, scenario = game.campaign.getCurrentScenario();
@@ -206,9 +203,7 @@ test("A campaign player whose core units all fell starts the next scenario with 
 //so the unit plays there and goes to HQ at its end, refilled
 test("A campaign's core unit of a country the next scenario doesn't load plays there and goes to HQ (#182)", async () => {
 	const { game } = await oldCampaign(campaignlist.findIndex((c) => c.file === "campus.json"), 1);
-	const { UIBuilder } = await import("../src/uibuilder");
 	const { Equipment } = await import("../src/equipment");
-	Object.assign(UIBuilder, { message() {}, showCampaignEnd() {}, showPrototypeAwardMessage() {} });
 	const british = () => game.getCampaignPlayer().getCoreUnitList().find((u) => u.eqid === 373);
 	expect(british(), "wdkass makes the British unit a core unit").toBeDefined();
 	game.continueCampaign("lose");
