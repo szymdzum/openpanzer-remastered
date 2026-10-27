@@ -163,3 +163,15 @@ test("The AI indicator shows while a program plays: its flag, a dot in its side'
 	storeOf(world(4, 0, smallGameUnits, (s) => { s.state.players[0].type = playerType.aiLocal; s.state.players[0].country = 2; }));
 	expect([document.getElementById("aiStatus")!.className, document.querySelector("#aiStatus use")]).toEqual(["pm-ai axis", null]);
 });
+
+test("A new scenario or a loaded game starts with a quiet enemy turn: the last game's attacks aren't reported (#466)", () => {
+	const w = world();
+	const store = createStore({ world: () => w, command: () => ({ ok: true, result: null }), won: () => {} });
+	store.refresh();
+	store.noteEnemy([fight([4, 1, 10, 9], [0, 0, 10, 7])]);
+	expect(turnReportOf(w, store.enemy.value)!.enemy.map((l) => l.text)).toEqual(["1 of your units attacked", "−3 strength lost"]);
+	//(the screen clears the store when a scenario starts, a loaded game's too: the old UI's setNewScenario reset the log)
+	store.clear();
+	expect(store.enemy.value).toEqual(quietTurn());
+	expect(turnReportOf(w, store.enemy.value)!.enemy.map((l) => l.text)).toEqual(["All quiet on this front"]);
+});

@@ -468,10 +468,12 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			notes.value = [...notes.value, n];
 		},
 
-		//A new scenario's start: every open message dropped, its OK not run (#405), and the last step's beats stopped
+		//A new scenario's start: every open message dropped, its OK not run (#405), and the last step's beats stopped; the last
+		//game's enemy turn not reported (#466: the old UI reset its combat log at a new scenario and a load)
 		clear() {
 			notes.value = [];
 			log.value = emptyLog();
+			enemy.value = quietTurn();
 			logOpen.value = false;
 			dossierOpen.value = false;
 			player.stop();
