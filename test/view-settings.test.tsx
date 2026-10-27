@@ -50,16 +50,16 @@ const open = async (store: ReturnType<typeof settingsOf>["store"]) => {
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Settings" })); });
 };
 
-test("The settings window has the old list in its order, each switch on its uiSettings key; it opens over the game (#349)", async () => {
-	Object.assign(uiSettings, { uiSize: 840, uiScale: 1, zoomLevel: 1, classicRules: false, showHiddenVictoryHexes: true });
+test("The settings window has the old list in its order but the two switches the map can't follow (#464), each switch on its uiSettings key; it opens over the game (#349)", async () => {
+	Object.assign(uiSettings, { uiSize: 840, uiScale: 1, zoomLevel: 1, classicRules: false });
 	const { store } = settingsOf();
 	await open(store);
 	expect(document.getElementById("startmenu")).toBeNull();
 	const win = screen.getByRole("dialog", { name: "Settings" });
 	expect([...win.querySelectorAll(".pm-setting .t")].map((t) => t.textContent)).toEqual(["Interface width (px)", "Interface scale",
-		"Game Map scale", "Show terrain with Hex Grid", "Quick combat and move animations", "Mute unit combat sounds", "Disable Fog of War",
+		"Game Map scale", "Quick combat and move animations", "Mute unit combat sounds", "Disable Fog of War",
 		"Zoom to full device resolution", "High resolution map and units", "Mark own units on map", "Mark enemy strength in red",
-		"Show optional objectives tooltips", "Show hidden victory hexes", "New games play the classic rules"]);
+		"Show optional objectives tooltips", "New games play the classic rules"]);
 	expect(within(win).getAllByRole("slider").map((r) => [r.getAttribute("min"), r.getAttribute("max"), r.getAttribute("step"), (r as HTMLInputElement).value]))
 		.toEqual([["470", "1920", "10", "840"], ["0.5", "3", "0.1", "1"], ["1", "3", "0.1", "1"]]);
 	expect(document.activeElement).toBe(within(win).getAllByRole("slider")[0]);

@@ -288,7 +288,6 @@ export interface UISettings {
 	uiScale: number;
 	uiSize: number;
 	uiSmallSize: number;
-	showGridTerrain: boolean;
 	muteUnitSounds: boolean;
 	markOwnUnits: boolean;
 	markEnemyUnits: boolean;
@@ -299,7 +298,6 @@ export interface UISettings {
 	isAI: number[];
 	lastCloudSave: CloudSave[];
 	showDetailInfoToolTips: boolean;
-	showHiddenVictoryHexes: boolean;
 	classicRules: boolean;
 }
 
@@ -309,7 +307,6 @@ export let uiSettings: UISettings = {
 	uiScale: 1.0,			//The scale at which is UI elements are zoomed
 	uiSize: 840,			//The size of UI windows width
 	uiSmallSize: 470,		//The size of the small UI windows width
-	showGridTerrain: false,	//if terrain icons should be shown when hex grid in on
 	muteUnitSounds: false,	//if unit combat sound should be muted
 	markOwnUnits: false,	//To visually mark own units on map
 	markEnemyUnits: false,	//To visually mark enemy units on map
@@ -320,7 +317,6 @@ export let uiSettings: UISettings = {
 	isAI: [0, 0, 0, 0],		//which player is played by AI
 	lastCloudSave: [],
 	showDetailInfoToolTips: false,
-	showHiddenVictoryHexes: true,
 	classicRules: false		//new games play the classic rules of Panzer Marshal 3.2.14, not the remaster's (#53)
 };
 
