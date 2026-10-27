@@ -44,7 +44,7 @@ const key = (code: string, more: KeyboardEventInit = {}, on: EventTarget = windo
 	act(() => { on.dispatchEvent(new KeyboardEvent("keydown", { code, key: code.replace("Key", "").toLowerCase(), bubbles: true, ...more })); });
 const button = (id: string) => document.getElementById(id) as HTMLButtonElement;
 
-test("The rail has the game's buttons in the card's groups, each named with its shortcut; Options is off until its window", () => {
+test("The rail has the game's buttons in the card's groups, each named with its shortcut; Options toggles the start menu (#349)", async () => {
 	railOf();
 	const groups = [...document.querySelectorAll("#menu .group")].map((g) => [...g.querySelectorAll("button")].map((b) => b.id));
 	expect(groups).toEqual([["inspectunit"], ["buy", "hex", "air", "zoom", "options"], ["mainmenu"]]);
@@ -52,8 +52,14 @@ test("The rail has the game's buttons in the card's groups, each named with its 
 	//(the key in the rail's tooltip, test/view-tooltips.test.tsx, and for screen readers)
 	expect(["inspectunit", "hex", "air", "zoom"].map((id) => [button(id).getAttribute("aria-label"), button(id).getAttribute("aria-keyshortcuts")]))
 		.toEqual([["Inspect unit", "I"], ["Hex grid", "H"], ["Air layer", "A"], ["Strategic map", "Z"]]);
-	expect([button("buy").disabled, button("buy").hasAttribute("title"), button("options").title, button("options").getAttribute("aria-keyshortcuts")])
-		.toEqual([false, false, "Options: Not in the new UI yet", "Escape"]);
+	expect([button("buy").disabled, button("buy").hasAttribute("title"), button("options").disabled, button("options").getAttribute("aria-keyshortcuts")])
+		.toEqual([false, false, false, "Escape"]);
+	//Options opens the start menu on its main window and closes it, pressed while it is open
+	expect(button("options").getAttribute("aria-pressed")).toBe("false");
+	await act(() => { fireEvent.click(button("options")); });
+	expect(button("options").getAttribute("aria-pressed")).toBe("true");
+	await act(() => { fireEvent.click(button("options")); });
+	expect(button("options").getAttribute("aria-pressed")).toBe("false");
 	//the toggles say whether they are on; Inspect unit and the fold don't
 	expect(["hex", "air", "zoom"].map((id) => button(id).getAttribute("aria-pressed"))).toEqual(["false", "false", "false"]);
 	expect(button("inspectunit").hasAttribute("aria-pressed")).toBe(false);
@@ -113,7 +119,7 @@ test("Escape deselects the unit; with none selected it is Options; a window that
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })); });
 	expect([store.selected.value, store.refused.value]).toEqual([null, null]);
 	await act(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "Esc" })); });
-	expect(store.refused.value).toBe("Not in the new UI yet");
+	expect(store.menu.value).toEqual({ window: "main", newGame: false });
 	const taken = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
 	taken.preventDefault();
 	expect(shortcutOf(taken)).toBeNull();

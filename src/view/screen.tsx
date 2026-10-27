@@ -3,8 +3,8 @@
 //sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
 //animated from its events (#347, src/view/beats.ts), its results and victories told when the last beat
 //ends, and its shown called then: the program's turn plays at a pace the person can follow. Every other
-//shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The main
-//menu is D6's.
+//shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The start menu opens over
+//the first scenario's briefing and at a game's end, as the old UI's did (#349).
 import { render } from "preact";
 import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
@@ -22,7 +22,7 @@ import { applyTheme, type Theme } from "./theme";
 const nothing = () => {};
 
 //What the screen asks of the host: the store's, and the course of the game it shows
-type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic">;
+type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial">;
 
 //prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
 const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -65,6 +65,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	//its OKs not run, so a stale briefing's OK can't let a program play under the new one (#405). The prototype
 	//shown first is the new scenario's own
 	let starting = false;
+	//the first scenario's start opens the start menu over its briefing, as the old UI's first did when it built itself
+	let first = true;
 	const startScenario = () => {
 		if (!starting) store.clear();
 		starting = true;
@@ -79,6 +81,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			deployment();
 			const w = store.world.value;
 			holding(w === null ? "" : w.data.name, w === null ? "" : w.data.description, undefined, true);
+			if (first) store.shortcut({ menu: "options" });
+			first = false;
 		},
 		loadFailed(file: string) { show("Error", "Error loading scenario " + file, nothing); },
 		showPrototype(eqid: number) {
@@ -89,8 +93,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		},
 		message(title: string, text: string, then?: () => void) { holding(title, text, then); },
 		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { store.endCampaign(outcome, text, then); },
-		//(the main menu is D6's)
-		mainMenu: nothing,
+		//(Options, as the old UI's: the start menu opens, or closes when it is open)
+		mainMenu() { store.shortcut({ menu: "options" }); },
 		//(no platform score board on the web: the old UI's OSGlue does nothing there either)
 		reportScore: nothing,
 		reportAchievement: nothing,
@@ -110,7 +114,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			}
 			if (event.type === "select") store.selected.value = event.unit;
 			else if (event.type === "viewport") store.lookAt.value = event.at;
-			//(the main menu is D6's; stuck shows nothing, as in the old game)
+			//(the old UI's main menu button folds or opens the rail; stuck shows nothing, as in the old game)
+			else if (event.type === "mainMenu") store.toggleRail();
 			refresh();
 			if (shown) shown();
 		},

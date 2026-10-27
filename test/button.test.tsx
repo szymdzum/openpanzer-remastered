@@ -48,6 +48,14 @@ describe("Button", () => {
 		expect(onClick).not.toHaveBeenCalled();
 	});
 
+	test("its hint is its title while it is on; off, the reason takes its place", () => {
+		const { rerender } = render(<Button title="Play a single scenario">Scenarios</Button>);
+		const button = screen.getByRole("button", { name: "Scenarios" });
+		expect(button.title).toBe("Play a single scenario");
+		rerender(<Button title="Play a single scenario" disabled="Not yet">Scenarios</Button>);
+		expect(button.title).toBe("Not yet");
+	});
+
 	test("a signal read in the parent renders the button again when it changes, and a lifted refusal leaves no title", async () => {
 		//how the view model will reach the components (docs/ui/PLAN.md): a Refusal lifted, the button comes on
 		const refusal = signal<string | undefined>("Not your turn");

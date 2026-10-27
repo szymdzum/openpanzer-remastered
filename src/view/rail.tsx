@@ -1,15 +1,12 @@
 //The game menu (GameMenu, #346): the rail on the right with the game's own buttons, End turn in the corner with its
 //question when units can still act (#8), and every keyboard shortcut the old UI reads (src/view/shortcuts.ts). What
-//each does is the store's; a window a button opens that the new UI doesn't have yet keeps the button, off with why.
+//each does is the store's.
 import { useEffect, useState } from "preact/hooks";
 import { Button } from "./button";
 import { Icon, type IconName } from "./icon";
 import { Scrim, Window } from "./panel";
 import { shortcutOf } from "./shortcuts";
 import type { Store } from "./store";
-
-//(Buy opens the unit list and the equipment window, Options the start menu: D5 and D6)
-const NOT_YET = "Not in the new UI yet";
 
 type RailButtonProps = {
 	id: string,
@@ -87,7 +84,8 @@ export function Rail({ store }: { store: Store }) {
 					<RailButton onHint={setHint} id="hex" icon="grid" label="Hex grid" keyName="H" pressed={store.hexGrid.value} onClick={key({ menu: "hex" })} />
 					<RailButton onHint={setHint} id="air" icon="air" label="Air layer" keyName="A" pressed={store.airMode.value} onClick={key({ menu: "air" })} />
 					<RailButton onHint={setHint} id="zoom" icon="map" label="Strategic map" keyName="Z" pressed={store.strategic.value} onClick={key({ menu: "zoom" })} />
-					<RailButton onHint={setHint} id="options" icon="menu" label="Options" keyName="Esc" disabled={NOT_YET} />
+					<RailButton onHint={setHint} id="options" icon="menu" label="Options" keyName="Esc" pressed={store.menu.value.window !== null}
+						onClick={key({ menu: "options" })} />
 				</div>
 			)}
 			<div class="group">

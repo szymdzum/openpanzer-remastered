@@ -3,8 +3,9 @@
 //Plain TypeScript: the store (src/view/store.ts) does what each one says.
 import type { ActionKey } from "./model";
 
-//The rail's buttons and the map's keys: I, B, H, A, Z, L, the next and previous unit, Escape
-export type MenuKey = "inspect" | "buy" | "hex" | "air" | "zoom" | "labels" | "next" | "previous" | "escape";
+//The rail's buttons and the map's keys: I, B, H, A, Z, L, the next and previous unit, Escape; Options, the start menu, is
+//the rail's button and Escape's with no unit selected
+export type MenuKey = "inspect" | "buy" | "hex" | "air" | "zoom" | "options" | "labels" | "next" | "previous" | "escape";
 
 export type Shortcut = { menu: MenuKey } | { unit: ActionKey };
 
