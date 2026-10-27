@@ -1,5 +1,5 @@
-//The start menu of the new UI (src/view/menus.ts, src/view/startmenu.tsx, #349): its windows switched as the old start
-//menu's buttons switch them (src/ui.ts startMenuButton, mainMenuButton "options"), its main window with the old
+//The start menu (src/view/menus.ts, src/view/startmenu.tsx, #349): its windows switched as the old start
+//menu's buttons switch them (src/ui.ts startMenuButton, mainMenuButton "options", before #351), its main window with the old
 //entries, and the screen opening it over the first scenario's briefing and at a game's end
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";

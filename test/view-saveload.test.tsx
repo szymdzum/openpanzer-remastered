@@ -1,5 +1,5 @@
-//The save and load window of the new UI (src/view/saveload.ts, saveloadstate.ts, saveloadwindow.tsx, #349): the old
-//#smState's file and cloud saves and loads (src/uibuilder.ts buildGameStateMenu, gameStateButton, onCloudSaved), on the
+//The save and load window (src/view/saveload.ts, saveloadstate.ts, saveloadwindow.tsx, #349): the old
+//#smState's file and cloud saves and loads (src/uibuilder.ts buildGameStateMenu, gameStateButton, onCloudSaved, before #351), on the
 //host, and a game saved to a file and loaded back on a real game state
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
@@ -147,7 +147,7 @@ test("Without a host or a page, the window's buttons do nothing (the map's and t
 	expect(store.saveLoad.value!.lastFile).toBe("none");
 });
 
-test("A game saved to a file on the new UI loads back on the game's state, shown again on the new screen (#349)", async () => {
+test("A game saved to a file loads back on the game's state, shown again on the screen (#349)", async () => {
 	uiSettings.isAI = [0, 1, 0, 0];
 	const g = headlessGame(nullScreen);
 	Object.assign(g, { cleanup: (keep?: boolean) => g.host.cleanup(keep), setupGameState: () => g.host.gameLoaded(),

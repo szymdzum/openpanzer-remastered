@@ -1,5 +1,5 @@
-//The new campaign's and the new scenario's windows of the new UI (src/view/newgame.ts, newgamestate.ts, newgamewindows.tsx,
-//#349): the old start menu's campaign and scenario windows (src/uibuilder.ts buildStartMenu, src/ui.ts startMenuButton),
+//The new campaign's and the new scenario's windows (src/view/newgame.ts, newgamestate.ts, newgamewindows.tsx,
+//#349): the old start menu's campaign and scenario windows (src/uibuilder.ts buildStartMenu, src/ui.ts startMenuButton, before #351),
 //on hand-made lists and on the game's
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";

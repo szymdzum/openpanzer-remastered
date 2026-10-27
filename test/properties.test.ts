@@ -42,7 +42,7 @@ interface Pick { kind: Kind; unit: number; pick: number }
 type Step = Pick | Command;
 interface Sequence { fixture: string; seed: number; steps: Step[] }
 
-//The attack preview (render.ts, without the hidden units, and the AI's, with them): no command, a
+//The attack preview (the old render.ts, without the hidden units, and the AI's, with them): no command, a
 //step the estimate property plays beside them
 interface Estimate { type: "estimate"; unit: number; target: number; hidden: boolean }
 type Played = Command | Estimate;
