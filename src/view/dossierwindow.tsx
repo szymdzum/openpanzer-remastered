@@ -4,7 +4,7 @@
 import { safeHtml } from "./html";
 import { Button } from "./button";
 import { Facts, StatTable } from "./facts";
-import { Scrim, Stamp, useEscape } from "./panel";
+import { Dialog, Scrim, Stamp, useEscape } from "./panel";
 import type { DossierView, Medal } from "./dossier";
 import type { Store } from "./store";
 
@@ -46,7 +46,7 @@ export function DossierWindow({ store }: { store: Pick<Store, "campaignEnd" | "c
 	return (
 		<>
 			<Scrim />
-			<dialog open id="dossier" class={end === null ? "pm-window pm-dossier" : "pm-window pm-dossier end"} aria-modal="true" aria-labelledby="dossierTitle">
+			<Dialog id="dossier" class={end === null ? "pm-window pm-dossier" : "pm-window pm-dossier end"} labelledBy="dossierTitle">
 				<div class="hd">
 					<div><div id="dossierCampaign" class="pm-label">{d.title}</div><h1 id="dossierTitle" class="pm-display">{end === null ? "Dossier" : end.title}</h1></div>
 					<span class="grow" />
@@ -63,7 +63,7 @@ export function DossierWindow({ store }: { store: Pick<Store, "campaignEnd" | "c
 					<Medals d={d} />
 				</div>
 				{end !== null && <div class="ft"><span class="grow" /><Button variant="primary" large onClick={close}>Main menu</Button></div>}
-			</dialog>
+			</Dialog>
 		</>
 	);
 }

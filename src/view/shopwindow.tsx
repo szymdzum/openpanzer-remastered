@@ -8,7 +8,7 @@ import type { Shop } from "./shop";
 import { SORTS, type SortKey } from "./shop";
 import type { ShopAct } from "./shopstate";
 import type { Store } from "./store";
-import { SegmentedControl, Tabs } from "./tabs";
+import { SegmentedControl, TabPanel, Tabs } from "./tabs";
 import { frameStyle } from "./unitstrip";
 
 //The card's four sorts as its segmented control, the old window's others in a list beside it
@@ -122,10 +122,10 @@ export function ShopWindow({ store }: { store: ShopWindowReads }) {
 				footer={<div id="eqActionsContainer" class="actions"><Actions shop={shop} store={store} /></div>}>
 				<Tabs id="eqSelClass" label="Unit class" selected={String(shop.uclass)} onSelect={(c) => store.shopClass(+c)}
 					tabs={shop.tabs.map((t) => ({ id: String(t.uclass), label: t.label, icon: t.icon }))} />
-				<div class="body">
+				<TabPanel of="eqSelClass" selected={String(shop.uclass)} class="body">
 					<div class="list"><Tools shop={shop} store={store} /><Models shop={shop} store={store} /></div>
 					<Detail shop={shop} store={store} />
-				</div>
+				</TabPanel>
 			</Window>
 		</>
 	);

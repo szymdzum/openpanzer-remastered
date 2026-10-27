@@ -42,7 +42,8 @@ describe("Button", () => {
 		const onClick = vi.fn();
 		render(<Button variant="danger" disabled="The unit has moved" onClick={onClick}>Disband</Button>);
 		const button = screen.getByRole("button", { name: "Disband" });
-		expect(button.hasAttribute("disabled")).toBe(true);
+		//(aria-disabled, so the keyboard still reaches it and its reason, #497)
+		expect(button.getAttribute("aria-disabled")).toBe("true");
 		expect(button.title).toBe("The unit has moved");
 		fireEvent.click(button);
 		expect(onClick).not.toHaveBeenCalled();
@@ -64,10 +65,10 @@ describe("Button", () => {
 		}
 		render(<EndTurn />);
 		const button = screen.getByRole("button", { name: "End turn" });
-		expect(button.hasAttribute("disabled")).toBe(true);
+		expect(button.getAttribute("aria-disabled")).toBe("true");
 		expect(button.title).toBe("Not your turn");
 		await act(() => { refusal.value = undefined; });
-		expect(button.hasAttribute("disabled")).toBe(false);
+		expect(button.hasAttribute("aria-disabled")).toBe(false);
 		expect(button.hasAttribute("title")).toBe(false);
 	});
 });

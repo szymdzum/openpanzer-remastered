@@ -41,7 +41,7 @@ function RailButton({ id, icon, label, keyName, pressed, expanded, controls, cap
 	return (
 		<button id={id} type="button" class={on ? "pm-btn icon is-on" : "pm-btn icon"} aria-label={label} aria-pressed={pressed}
 			aria-expanded={expanded} aria-controls={controls} aria-keyshortcuts={keyName === "Esc" ? "Escape" : keyName || undefined}
-			title={disabled === undefined ? undefined : `${label}: ${disabled}`} disabled={disabled !== undefined}
+			title={disabled === undefined ? undefined : `${label}: ${disabled}`} aria-disabled={disabled === undefined ? undefined : "true"}
 			onClick={disabled === undefined ? onClick : undefined} onMouseEnter={hint} onFocus={hint} onMouseLeave={off} onBlur={off}>
 			<Icon name={icon} /><span class="lab">{caption || label}</span>
 		</button>

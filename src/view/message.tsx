@@ -4,7 +4,7 @@
 //close and Esc doesn't take it away. Messages come one at a time (the store's notes).
 import { safeHtml } from "./html";
 import { Button } from "./button";
-import { Scrim, Stamp } from "./panel";
+import { Dialog, Scrim, Stamp } from "./panel";
 import type { Store } from "./store";
 import { briefingLabelOf } from "./turn";
 
@@ -16,7 +16,7 @@ export function MessageDialog({ store }: { store: Pick<Store, "close" | "menu" |
 	return (
 		<>
 			<Scrim />
-			<dialog open id="ui-message" class={brief !== null ? "pm-window pm-message" : "pm-window pm-message notice"} aria-modal="true" aria-labelledby="title">
+			<Dialog id="ui-message" class={brief !== null ? "pm-window pm-message" : "pm-window pm-message notice"} labelledBy="title">
 				<div class="hd">
 					<div>{brief !== null && <div class="pm-label">{brief}</div>}<h1 id="title" class="pm-display">{note.title}</h1></div>
 					<span class="grow" />
@@ -27,7 +27,7 @@ export function MessageDialog({ store }: { store: Pick<Store, "close" | "menu" |
 						<span class="grow" />
 					<Button id="uiokbut" variant="primary" large={brief !== null} onClick={() => store.close()}>{brief !== null ? "Understood" : "Continue"}</Button>
 				</div>
-			</dialog>
+			</Dialog>
 		</>
 	);
 }

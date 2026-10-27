@@ -1,8 +1,8 @@
 //The containers everything sits in (docs/ui/components/Panel): the HUD panel over the map, the
 //modal window with its header, body and footer, the flat scrim under it and the rubber stamp.
 //Styled by src/view/panel.css.
-import type { AriaRole, ComponentChildren, CSSProperties } from "preact";
-import { useId, useLayoutEffect } from "preact/hooks";
+import type { AriaRole, ComponentChildren, CSSProperties, RefObject } from "preact";
+import { useId, useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "./button";
 
 type Place = {
@@ -87,6 +87,58 @@ export function useEscape(onClose: (() => void) | undefined) {
 	useLayoutEffect(() => () => setCloser(id, undefined), [id]);
 }
 
+//What the keyboard can reach in a window: its controls, the disabled ones too (they say why, #497)
+const FOCUSABLE = "button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex=\"-1\"])";
+
+const focusables = (dialog: HTMLElement) => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((e) => !e.closest("[hidden]"));
+
+//The control a window gives the focus to when it opens: its primary action that can be taken, else its first control
+function firstControl(dialog: HTMLElement): HTMLElement | undefined {
+	return dialog.querySelector<HTMLElement>(".pm-btn.primary:not([aria-disabled=\"true\"])") ?? focusables(dialog)[0];
+}
+
+//Tab past a window's last control comes back to its first, Shift+Tab from the first goes to the last: the focus stays
+//in the window while it is open, as aria-modal says
+function keepTab(e: KeyboardEvent, dialog: HTMLElement) {
+	if (e.key !== "Tab") return;
+	const all = focusables(dialog);
+	if (all.length === 0) return;
+	const edge = e.shiftKey ? all[0] : all[all.length - 1];
+	if (document.activeElement !== edge && dialog.contains(document.activeElement)) return;
+	e.preventDefault();
+	(e.shiftKey ? all[all.length - 1] : all[0]).focus();
+}
+
+//A modal window's focus (#497, handoff.md's checklist): it takes the focus when it opens (unless one of its own controls
+//already took it, as the start menu's windows do), keeps it while open, and gives it back to where it was when it
+//closes. Returns the window's ref
+function useModalFocus<T extends HTMLElement>(): RefObject<T> {
+	const ref = useRef<T>(null);
+	useLayoutEffect(() => {
+		const dialog = ref.current!, before = document.activeElement as HTMLElement | null;
+		if (!dialog.contains(document.activeElement)) firstControl(dialog)?.focus();
+		return () => {
+			//(back where it was, unless the focus moved on outside the window, or that place left the page)
+			const now = document.activeElement;
+			if (before !== null && before.isConnected && (now === null || now === document.body || dialog.contains(now))) before.focus();
+		};
+	}, []);
+	return ref;
+}
+
+//A modal <dialog> shown open in place (not showModal's top layer: the z-index tokens stack it with the HUD), with its
+//focus (useModalFocus): the windows below, the message and the dossier
+export function Dialog({ id, class: cls, labelledBy, style, children }: { id?: string, class: string, labelledBy: string,
+	style?: CSSProperties, children: ComponentChildren }) {
+	const ref = useModalFocus<HTMLDialogElement>();
+	return (
+		<dialog ref={ref} open id={id} class={cls} style={style} aria-modal="true" aria-labelledby={labelledBy}
+			onKeyDown={(e) => keepTab(e, e.currentTarget)}>
+			{children}
+		</dialog>
+	);
+}
+
 //A modal window: equipment, combat log, dossier, messages, the start menu's windows. A <dialog>
 //shown open in place (not showModal's top layer): the z-index tokens stack it with the HUD
 export function Window({ title, heading = "display", lead, sub, stamp, tools, children, footer, onClose, grip, id, ...place }: WindowProps) {
@@ -94,7 +146,7 @@ export function Window({ title, heading = "display", lead, sub, stamp, tools, ch
 	useEscape(onClose);
 	const name = <h1 id={titleId} class={heading === "display" ? "pm-display" : "pm-title"}>{title}</h1>;
 	return (
-		<dialog open id={id} class={classes("pm-window", place)} style={place.style} aria-modal="true" aria-labelledby={titleId}>
+		<Dialog id={id} class={classes("pm-window", place)} style={place.style} labelledBy={titleId}>
 			{grip}
 			<div class="hd">
 				{lead}
@@ -106,6 +158,6 @@ export function Window({ title, heading = "display", lead, sub, stamp, tools, ch
 			</div>
 			<div class="bd">{children}</div>
 			{footer !== undefined && <div class="ft">{footer}</div>}
-		</dialog>
+		</Dialog>
 	);
 }

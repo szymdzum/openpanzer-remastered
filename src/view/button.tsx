@@ -16,7 +16,9 @@ type ButtonProps = {
 	label?: string,
 	//prestige, typed in Courier Prime after the caption
 	cost?: number,
-	//why the action can't be taken now (a Refusal): set, the button is disabled and shows it as its title
+	//why the action can't be taken now (a Refusal): set, the button is disabled and shows it as its title. It stays
+	//focusable (aria-disabled, not disabled), so a keyboard reaches it and a screen reader reads the title as its
+	//description (#497)
 	disabled?: string,
 	//else a hint the pointer shows as its title (the old start menu's new game buttons said what they start there)
 	title?: string,
@@ -47,9 +49,10 @@ export function Button({ children, variant, large, icon, label, cost, disabled, 
 	const off = disabled !== undefined;
 	const ref = useTitle(off ? disabled : title);
 	const small = !large && !iconOnly;
-	//no handler when disabled: jsdom (and a synthetic click in some browsers) still fires one on a disabled button
+	//no handler when disabled: the button stays focusable, and a click or Enter does nothing
 	return (
-		<button ref={ref} id={id} type="button" class={classes} aria-label={label} disabled={off} onClick={off ? undefined : onClick}>
+		<button ref={ref} id={id} type="button" class={classes} aria-label={label} aria-disabled={off ? "true" : undefined}
+			onClick={off ? undefined : onClick}>
 			{icon && <Icon name={icon} size={small ? "sm" : undefined} />}
 			{children}
 			{cost !== undefined && <> <span class="cost">{cost}</span></>}

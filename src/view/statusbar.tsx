@@ -52,10 +52,11 @@ function MapLine({ store }: { store: Pick<Store, "airMode" | "deployment" | "loc
 	return <output class="msg">{air && <b>Air layer</b>}<Said store={store} /></output>;
 }
 
-//A refusal, else the last combat's news, else the hex under the pointer: the unit on it, then the place
+//A refusal, else the last combat's news, else the hex under the pointer: the unit on it, then the place. The line is a
+//live region; the hex changes at every hex the pointer crosses, so it isn't announced (#497)
 function Said({ store }: { store: Pick<Store, "located" | "news" | "refused"> }) {
 	const at = store.located.value, news = store.news.value;
 	if (store.refused.value !== null) return <span>{store.refused.value}</span>;
 	if (news !== null) return <span><b>{news.name}</b> {news.text}</span>;
-	return at === null ? null : <span>{at.unit !== null && <><b>{at.unit}</b> · </>}{at.text}</span>;
+	return at === null ? null : <span aria-live="off">{at.unit !== null && <><b>{at.unit}</b> · </>}{at.text}</span>;
 }
