@@ -74,6 +74,13 @@ test("The report's Dossier opens the window with the old dossier's ids; the clos
 	expect(store.dossier.value).toBeNull();
 });
 
+//(#486: test/view-html.test.tsx has the others)
+test("The campaign's end shows its closing words without a script they carry (#486)", async () => {
+	const store = dossierStore(world());
+	await act(() => store.endCampaign("victory", "Poland has <b onclick=\"alert(1)\">capitulated</b>.<img src=x onerror=\"alert(2)\"><script>alert(3)</script>", () => {}));
+	expect(document.querySelector("#dossierInfo")!.innerHTML).toBe("Poland has <b>capitulated</b>.");
+});
+
 test("The campaign's end is the dossier under the outcome's stamp and the closing words; Main menu does what the game asked (#348)", async () => {
 	const store = dossierStore(world()), then = vi.fn();
 	await act(() => store.endCampaign("victory", "Poland has <b>capitulated</b>.", then));
