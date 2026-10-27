@@ -57,7 +57,7 @@ describe("Button", () => {
 	});
 
 	test("a signal read in the parent renders the button again when it changes, and a lifted refusal leaves no title", async () => {
-		//how the view model will reach the components (docs/ui/PLAN.md): a Refusal lifted, the button comes on
+		//how the view model reaches the components (docs/ui/PLAN.md): a Refusal lifted, the button comes on
 		const refusal = signal<string | undefined>("Not your turn");
 		function EndTurn() {
 			return <Button variant="primary" large disabled={refusal.value}>End turn</Button>;

@@ -1,5 +1,5 @@
-//The settings window of the new UI (src/view/settings.ts, settingsstate.ts, settingswindow.tsx, #349): the old settings list
-//(src/uibuilder.ts buildStartMenu), the same keys in uiSettings, saved on the host
+//The settings window (src/view/settings.ts, settingsstate.ts, settingswindow.tsx, #349): the old settings list
+//(src/uibuilder.ts buildStartMenu, before #351), the same keys in uiSettings, saved on the host
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
@@ -120,7 +120,7 @@ test("Without a host to save to nor a page to reload, OK only goes back; the scr
 	expect([page.getPropertyValue("--ui-scale"), page.getPropertyValue("--ui-width")]).toEqual(["1.4", "60rem"]);
 });
 
-test("Every setting the window changes is one the game's saved settings keep: a change on the new UI holds on the old (#349)", async () => {
+test("Every setting the window changes is one the game's saved settings keep, the old UI's keys (#349)", async () => {
 	localStorage.clear();
 	const { store } = settingsOf();
 	await open(store);

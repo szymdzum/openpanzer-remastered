@@ -5,8 +5,9 @@ import path from "node:path";
 import { expect, test } from "vitest";
 
 const root = path.join(__dirname, "..");
-const files = ["src", "test", "test/contracts"].flatMap((d) => fs.readdirSync(path.join(root, d))
-	.filter((f) => /\.(ts|js)$/.test(f)).map((f) => path.join(d, f)));
+//(every folder under src/ and test/: the UI's src/view, the core, the contracts, the end-to-end test)
+const files = ["src", "test"].flatMap((d) => fs.readdirSync(path.join(root, d), { recursive: true, encoding: "utf8" })
+	.filter((f) => /\.(tsx?|js)$/.test(f)).map((f) => path.join(d, f)));
 
 test("No opening brace on a line of its own", () => {
 	const found: string[] = [];

@@ -30,7 +30,7 @@ export async function load(name: string) {
 	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),
 		...prototypes };
 }
-//A command as the old UI plays it (src/ui.ts played): then the selection shows what the old engine's
+//A command as the old UI played it (src/ui.ts played, before #351): then the selection shows what the old engine's
 //command left selected (a disband the command allows deselects first)
 export function uiCommand<C extends Command>(w: Pick<Restored, "m" | "scenario" | "Commands">, cmd: C): Executed<C["type"]> {
 	const selection = w.m.getSelection();
