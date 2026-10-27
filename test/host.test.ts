@@ -179,6 +179,36 @@ test("The tutorial's script plays through the game host on a screen that shows n
 	expect([g.gameEnded, g.uiMessageClicked]).toEqual([true, true]);
 }, 60_000);
 
+//The start menu's new games (#349), as the old UI's start menu starts them: the tutorial on the classic rules with both
+//sides scripted and the fog on, a scenario and a campaign on the settings' rules, the settings saved but for the tutorial
+test("The start menu's tutorial, scenario and campaign start through the game host as the old menu starts them (#349)", async () => {
+	const settingsSaves = (g: Game) => (g.state as unknown as { settingsSaves: () => number }).settingsSaves();
+	uiSettings.classicRules = false;
+	uiSettings.noFOW = true;
+	uiSettings.isAI = [0, 1, 0, 0];
+	const g = headlessGame(nullScreen);
+	g.host.startTutorial();
+	await until(() => loaded(g, null), "the tutorial");
+	expect([g.scenario.file, g.rules, g.campaign, uiSettings.noFOW, uiSettings.isAI, settingsSaves(g)])
+		.toEqual(["tutorial.xml", "classic", null, false, [2, 2, 0, 0], 0]);
+	expect(g.scenario.map.getPlayers().map((p) => p.type)).toEqual([playerType.aiScripted, playerType.aiScripted]);
+
+	uiSettings.isAI = [0, 1, 0, 0];
+	let before = g.scenario;
+	const entry = scenariolist.find((s) => s[0] === "tutorial.xml")!;
+	g.host.startScenario(entry[0], entry[2]!);
+	await until(() => loaded(g, before), "a scenario");
+	expect([g.scenario.file, g.rules, g.campaign, g.scenario.getDescription(), settingsSaves(g)]).toEqual(["tutorial.xml", "remaster", null, entry[2], 1]);
+	expect(g.scenario.map.getPlayers().map((p) => p.type)).toEqual([playerType.humanLocal, playerType.aiLocal]);
+
+	uiSettings.classicRules = true;
+	before = g.scenario;
+	g.host.startCampaign(1, 2);
+	await until(() => loaded(g, before), "a campaign");
+	expect([g.campaign.id, g.campaign.difficulty, g.rules, settingsSaves(g)]).toEqual([1, 2, "classic", 2]);
+	expect(g.scenario.file).toBe(g.campaign.getCampaignData()[0].scenario);
+}, 60_000);
+
 //A program's turn waits for the screen's shown, not for a tick (#375): a move or an attack held by the
 //screen holds the turn, the game told to go on meanwhile does nothing, the shown goes on to the next one.
 //A shown left from before a scenario started goes on with nothing. A screen that goes on with the next

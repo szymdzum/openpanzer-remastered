@@ -7,8 +7,9 @@ import type { Screen } from "../src/screen";
 //The game the host plays: Game's fields, and the members the engine and the core's glue call on it
 //(src/coresession.ts, src/coreload.ts, src/mirror.ts), handed on to the host as Game hands them
 export function headlessGame(screen: (g: Game) => Screen): Game {
-	let saves = 0;
-	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves }, campaign: null, scenario: null,
+	let saves = 0, settings = 0;
+	const g = { ui: null, state: { save() { saves++; }, clear() {}, saves: () => saves, saveSettings() { settings++; },
+		settingsSaves: () => settings }, campaign: null, scenario: null,
 		gameStarted: false, gameEnded: false, spotSide: -1, rules: "classic", uiMessageClicked: false,
 		session: null } as unknown as Game;
 	const host = new GameHost(g, screen(g));
