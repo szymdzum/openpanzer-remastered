@@ -19,7 +19,7 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
+import { actionType, type Cell, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
 	uiSettings } from "./prototypes";
 import { AI, type AIAction } from "./ai";
 import { GameMap, Player } from "./map";
@@ -322,6 +322,12 @@ export class GameHost {
 	startCampaign(index: number, difficulty: number) {
 		this.newCampaign(index, difficulty);
 		this.game.state.saveSettings();
+	}
+
+	//The scenario flow of a campaign of the list, its index there: its data loaded, then the text the old campaign menu's
+	//flow button showed (Campaign.getCampaignFlow), for done
+	campaignFlow(index: number, done: (html: string) => void) {
+		const c: Campaign = new Campaign(index, difficultyType.historical, () => done(c.getCampaignFlow()));
 	}
 
 	//The campaign's player, null outside a campaign

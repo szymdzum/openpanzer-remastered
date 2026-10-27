@@ -209,6 +209,19 @@ test("The start menu's tutorial, scenario and campaign start through the game ho
 	expect(g.scenario.file).toBe(g.campaign.getCampaignData()[0].scenario);
 }, 60_000);
 
+//The campaign menu's flow (#349): the campaign's scenarios, each with where its outcomes lead, as the old menu showed it
+test("The game host gives a campaign's scenario flow, as the old campaign menu's flow button showed it (#349)", async () => {
+	const g = headlessGame(nullScreen);
+	let flow: string | null = null;
+	g.host.campaignFlow(1, (html) => { flow = html; });
+	await until(() => flow !== null, "the campaign's data");
+	const data = JSON.parse(fs.readFileSync(path.join(GAME_DIR, "resources/campaigns/data", campaignlist[1].file), "utf8")) as CampaignScenario[];
+	const first = scenariolist.find((s) => s[0] === data[0].scenario)![1]!;
+	expect(flow!.startsWith("- <b>" + first + "</b><br/>&nbsp;&nbsp;&nbsp;&nbsp;Lose: ")).toBe(true);
+	expect(flow!.split("- <b>").length - 1).toBe(data.length);
+	expect(g.campaign).toBeNull();
+});
+
 //A program's turn waits for the screen's shown, not for a tick (#375): a move or an attack held by the
 //screen holds the turn, the game told to go on meanwhile does nothing, the shown goes on to the next one.
 //A shown left from before a scenario started goes on with nothing. A screen that goes on with the next
