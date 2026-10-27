@@ -118,7 +118,7 @@ function markerOf(w: World, u: UnitState): Marker {
 function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
 	const side = sideOf(w, u);
 	const bridge = u.id !== selected && isGround(w, u) && isBridgeForSide(w, hexIndex(w, u.row, u.col), side);
-	return { id: u.id, row: u.row, col: u.col, icon: unitData(w, u).icon as unknown as string, facing: u.facing, side, bridge,
+	return { id: u.id, row: u.row, col: u.col, icon: unitData(w, u).icon, facing: u.facing, side, bridge,
 		marker: !shared && u.strength > 0 ? markerOf(w, u) : null, dim: shared, chip: shared && u.strength > 0 ? u.strength : null,
 		lifted: top && airMode };
 }

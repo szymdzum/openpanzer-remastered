@@ -46,7 +46,7 @@ function byList(w: World) {
 
 //The sprite a list shows of an entry: its own, a generic one for the larger ships
 export function listSprite(e: EquipmentEntry): string {
-	return e.uclass > unitClass.submarine ? NAVAL_ICON : e.icon as unknown as string;
+	return e.uclass > unitClass.submarine ? NAVAL_ICON : e.icon;
 }
 
 const warning = (low: boolean, value: number, max: number): SupplyState | null => low ? supplyState(value, max) : null;

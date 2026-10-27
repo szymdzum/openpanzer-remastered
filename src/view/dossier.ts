@@ -6,11 +6,10 @@
 import { campaignPlayer } from "../core/campaign";
 import { newDossier } from "../core/draft";
 import type { World } from "../core/types";
+import type { ScenarioOutcome } from "../scenario";
 import { unitClass } from "../prototypes";
 import type { IconName } from "./icon";
 import { classIcon, countryName, prestigeText } from "./model";
-
-export type Outcome = "briliant" | "victory" | "tactical" | "lose";
 
 //A count of the class table: a zero muted, a loss above zero critical
 export interface Count {
@@ -26,7 +25,7 @@ export interface ClassTable {
 
 //A medal of the record: its outcome, how many scenarios won so and their names (none yet: drawn faded)
 export interface Medal {
-	outcome: Exclude<Outcome, "lose">;
+	outcome: Exclude<ScenarioOutcome, "lose">;
 	label: string;
 	count: number;
 	names: string[];
@@ -89,7 +88,7 @@ export interface CampaignEndView {
 	html: string;
 }
 
-export function campaignEndOf(outcome: Outcome, html: string): CampaignEndView {
+export function campaignEndOf(outcome: ScenarioOutcome, html: string): CampaignEndView {
 	const won = outcome !== "lose";
 	return { title: won ? "Campaign victory" : "Campaign defeat", stamp: won ? "Mission accomplished" : "Relieved of command", won, html };
 }

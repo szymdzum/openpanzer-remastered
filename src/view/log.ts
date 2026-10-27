@@ -3,7 +3,7 @@
 //side shown's units did in each fight (their totals, as CombatLog.addCombatEnd added them up), the leaders they won,
 //the objectives taken or lost, the automatic resupplies and the reinforcements of a turn's start; then it writes them
 //as the window's five reports, under the turn's summary. Plain functions, tested on hand-built worlds
-import type { GameEvent } from "../core/events";
+import type { EventOf, GameEvent } from "../core/events";
 import { sideOf, unitById } from "../core/world";
 import type { Position, UnitId, World } from "../core/types";
 import { leaderDescriptions, terrainNames, terrainType, unitClass } from "../prototypes";
@@ -49,8 +49,7 @@ export interface TurnLog {
 
 export const emptyLog = (): TurnLog => ({ combat: [], resupply: [], reinforce: [], leaders: [], objectives: [] });
 
-type Of<T extends GameEvent["type"]> = Extract<GameEvent, { type: T }>;
-type Fighter = Of<"fight">["attacker"];
+type Fighter = EventOf<"fight">["attacker"];
 
 //(the dice can kill more than a unit has: it loses what it had, #428)
 const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
@@ -73,7 +72,7 @@ function addFighter(log: Fought[], f: Fighter, other: Fighter, role: "assaults" 
 	return old === undefined ? [...log, next] : log.map((u) => u === old ? next : u);
 }
 
-function fought(log: TurnLog, before: World, e: Of<"fight">): TurnLog {
+function fought(log: TurnLog, before: World, e: EventOf<"fight">): TurnLog {
 	let combat = log.combat;
 	const core = (id: UnitId) => { const u = unitById(before, id); return u !== null && u.isCore; };
 	if (e.attacker.side === before.spotSide) combat = addFighter(combat, e.attacker, e.defender, e.support ? "supports" : "assaults", core(e.attacker.unit));
@@ -82,7 +81,7 @@ function fought(log: TurnLog, before: World, e: Of<"fight">): TurnLog {
 }
 
 //A leader won (its class's comes with it, Leaders.getUnitClassLeader)
-function led(log: TurnLog, after: World, e: Of<"leader">): TurnLog {
+function led(log: TurnLog, after: World, e: EventOf<"leader">): TurnLog {
 	const u = loggedOf(after, e.unit);
 	if (u === null) return log;
 	const uclass = after.equipment[u.eqid].uclass;
@@ -90,7 +89,7 @@ function led(log: TurnLog, after: World, e: Of<"leader">): TurnLog {
 }
 
 //An objective taken: by the side shown, or from it (Map.captureHex logs every objective)
-function captured(log: TurnLog, after: World, e: Of<"captured">): TurnLog {
+function captured(log: TurnLog, after: World, e: EventOf<"captured">): TurnLog {
 	if (!e.objective) return log;
 	const u = unitById(after, e.unit);
 	const ours = u !== null && sideOf(after, u) === after.spotSide;
@@ -151,7 +150,7 @@ export interface CombatLogView {
 }
 
 //The sprite a log line shows: a ship's generic one past the air transports (the old log's line)
-const spriteOf = (w: World, eqid: number) => w.equipment[eqid].uclass > unitClass.airTransport ? NAVAL_ICON : w.equipment[eqid].icon as unknown as string;
+const spriteOf = (w: World, eqid: number) => w.equipment[eqid].uclass > unitClass.airTransport ? NAVAL_ICON : w.equipment[eqid].icon;
 const unitWords = (w: World, u: { id: UnitId, eqid: number, isCore: boolean }): Words =>
 	[u.isCore ? "Core " : "Auxiliary ", { b: ordinal(u.id) + " " + w.equipment[u.eqid].name }];
 
@@ -205,7 +204,7 @@ function reinforceEntry(w: World, r: Logged): LogEntry {
 function leaderEntry(w: World, l: TurnLog["leaders"][number]): LogEntry {
 	const named = (i: number): Words => [{ b: leaderDescriptions[i][0] }, ", " + leaderDescriptions[i][1].replace(/\.$/, "").toLowerCase()];
 	const leaders = l.classLeader === -1 || l.classLeader === l.leader ? named(l.leader) : [...named(l.classLeader), "; ", ...named(l.leader)];
-	return { sprite: w.equipment[l.eqid].icon as unknown as string, icon: null, words: [...unitWords(w, l), " won a leader: ", ...leaders, "."],
+	return { sprite: w.equipment[l.eqid].icon, icon: null, words: [...unitWords(w, l), " won a leader: ", ...leaders, "."],
 		destroyed: false, at: l.at };
 }
 

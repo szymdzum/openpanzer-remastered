@@ -182,7 +182,7 @@ export function unitCardOf(w: World, id: UnitId, view: CardView | null): UnitCar
 	const stats = statsOf(e), figures = figuresOf(e, leaderMoves(w, u), range, spot, unitCost(w, u.eqid, u.transport === null ? undefined : u.transport.eqid));
 	return {
 		unit: id, name: own.name, nation: nationOf(country), sub: subOf(order + unitClassNames[own.uclass], country),
-		sprite: e.icon as unknown as string, tags: tagsOf(e, u.isCore), ...xpOf(u.experience),
+		sprite: e.icon, tags: tagsOf(e, u.isCore), ...xpOf(u.experience),
 		condition: conditionOf(e, { strength: u.strength, fuel: t === null ? u.fuel : t.fuel, ammo: t === null ? u.ammo : t.ammo,
 			entrenchment: u.entrenchment, dug }),
 		...stats, figures, sheet: sheetOf(stats, figures),
@@ -195,7 +195,7 @@ export function entryCardOf(w: World, eqid: number, country: number): UnitCard {
 	const e = w.equipment[eqid], name = countryName(w, country);
 	const stats = statsOf(e), figures = figuresOf(e, 0, e.gunrange || 1, e.spotrange, unitCost(w, eqid));
 	return {
-		unit: null, name: e.name, nation: nationOf(name), sub: subOf(unitClassNames[e.uclass], name), sprite: e.icon as unknown as string,
+		unit: null, name: e.name, nation: nationOf(name), sub: subOf(unitClassNames[e.uclass], name), sprite: e.icon,
 		tags: tagsOf(e, null), ...xpOf(0),
 		condition: conditionOf(e, { strength: 10, fuel: e.fuel, ammo: e.ammo, entrenchment: 0, dug: 0 }),
 		...stats, figures, sheet: sheetOf(stats, figures), leaders: [], views: [], view: "unit", next: false,

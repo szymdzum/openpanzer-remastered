@@ -92,6 +92,6 @@ export function ghostOf(w: World, d: Deployment | null, at: Position | null): Gh
 	if (placeOn(w, d, at) === null) return null;
 	const unit = reserveAt(w, d!.unit.index)!, placed = deployedAs(w, unit, hexIndex(w, at!.row, at!.col));
 	const how = isAir(w, asUnit(unit)) ? "air" : placed !== unit ? "embarked" : null;
-	return { row: at!.row, col: at!.col, icon: unitData(w, asUnit(placed)).icon as unknown as string, facing: unit.facing,
+	return { row: at!.row, col: at!.col, icon: unitData(w, asUnit(placed)).icon, facing: unit.facing,
 		title: "Place " + d!.unit.name, note: (how === null ? "" : how + " · ") + "can't go back to the reserve" };
 }

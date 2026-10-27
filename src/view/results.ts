@@ -2,7 +2,7 @@
 //strength each fighter lost over its hex, one stamp for what happened, and the same news as a line for the status bar.
 //It replaces the old UI's bouncing labels (uiShowAlert). Only what the side shown sees is told. Plain functions, tested
 //on hand-built worlds (test/view-results.test.ts)
-import type { Fighter, GameEvent } from "../core/events";
+import type { EventOf, Fighter, GameEvent } from "../core/events";
 import { distance } from "../core/geometry";
 import type { Position, UnitId, World } from "../core/types";
 import { hexIndex, isSpotted, unitById } from "../core/world";
@@ -38,11 +38,10 @@ export interface Results {
 	news: News;
 }
 
-type Of<T extends GameEvent["type"]> = Extract<GameEvent, { type: T }>;
-type Fight = Of<"fight">;
+type Fight = EventOf<"fight">;
 
-const find = <T extends GameEvent["type"]>(events: GameEvent[], type: T): Of<T> | undefined =>
-	events.find((e): e is Of<T> => e.type === type);
+const find = <T extends GameEvent["type"]>(events: GameEvent[], type: T): EventOf<T> | undefined =>
+	events.find((e): e is EventOf<T> => e.type === type);
 //A hex's position copied off a unit or a fighter (the beats and the turn report take it too)
 export const at = (f: { row: number; col: number }): Position => ({ row: f.row, col: f.col });
 //A loss as the chips write it: −6, and 0 for none
@@ -57,9 +56,9 @@ interface Combat {
 	support: Fight[];
 	attacker: UnitId | null;
 	stopped: boolean;
-	destroyed: Of<"destroyed">[];
-	retreat: Of<"retreated"> | undefined;
-	surrender: Of<"surrendered"> | undefined;
+	destroyed: EventOf<"destroyed">[];
+	retreat: EventOf<"retreated"> | undefined;
+	surrender: EventOf<"surrendered"> | undefined;
 }
 
 function combatOf(events: GameEvent[]): Combat {
@@ -67,7 +66,7 @@ function combatOf(events: GameEvent[]): Combat {
 	const support = events.filter((e): e is Fight => e.type === "fight" && e.support);
 	const stopped = find(events, "attackStopped");
 	const attacker = main !== null ? main.attacker.unit : stopped !== undefined ? stopped.unit : support.length > 0 ? support[0].defender.unit : null;
-	return { main, support, attacker, stopped: stopped !== undefined, destroyed: events.filter((e): e is Of<"destroyed"> => e.type === "destroyed"),
+	return { main, support, attacker, stopped: stopped !== undefined, destroyed: events.filter((e): e is EventOf<"destroyed"> => e.type === "destroyed"),
 		retreat: find(events, "retreated"), surrender: find(events, "surrendered") };
 }
 

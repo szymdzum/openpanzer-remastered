@@ -44,7 +44,7 @@ function mountAction(w: World, u: UnitState): ContextAction {
 }
 
 //The kind of transport a unit is aboard or would embark on: "air" or "naval"
-function carrierKind(w: World, u: UnitState): string {
+function carrierKind(w: World, u: UnitState): "air" | "naval" {
 	const uclass = u.carrier !== 0 ? w.equipment[Math.abs(u.carrier)].uclass : embarkTypeOf(w, u);
 	return uclass === unitClass.airTransport ? "air" : "naval";
 }

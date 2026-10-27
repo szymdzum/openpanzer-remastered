@@ -235,14 +235,14 @@ const TABS: ClassTab[] = CLASSES.map((c) => ({ uclass: c, label: CLASS_NAMES[c] 
 function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model {
 	const e = w.equipment[eqid], label = SORTS.find((s) => s.key === sort)!.label;
 	const stat = sort === "cost" ? null : label + " " + e[sort];
-	return { eqid, name: e.name, year: e.yearavailable, cost: unitCost(w, eqid), stat, sprite: e.icon as unknown as string, current: eqid === current };
+	return { eqid, name: e.name, year: e.yearavailable, cost: unitCost(w, eqid), stat, sprite: e.icon, current: eqid === current };
 }
 
 //The model picked, with its stats
 function pickedOf(e: EquipmentEntry | null, eqid: number): Shop["picked"] {
 	if (e === null) return null;
 	return { eqid, name: e.name, line: tagsOf(e, null).map((t) => t.text).join(" · ") + " · in service from " + e.yearavailable,
-		sprite: e.icon as unknown as string, compare: compareOf(e) };
+		sprite: e.icon, compare: compareOf(e) };
 }
 
 function transportList(w: World, list: number[], transport: number): Transport[] {
