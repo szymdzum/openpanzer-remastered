@@ -4,6 +4,7 @@
 //they play, a moving unit glides off its hex
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/preact";
+import { render as renderInto } from "preact";
 import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
@@ -12,6 +13,8 @@ import { terrainType } from "../src/prototypes";
 import { hexCentre } from "../src/view/hexgrid";
 import { MapView } from "../src/view/map";
 import { createStore, type StoreHost } from "../src/view/store";
+import { newScreen } from "../src/view/screen";
+import type { GameHost } from "../src/host";
 
 beforeEach(() => {
 	vi.useFakeTimers();
@@ -102,4 +105,32 @@ test("A move glides its unit along the path: the unit off its hex and its contex
 	expect([store.context.value, store.units.value.some((u) => u.id === 0), store.motion.value!.sprite !== null]).toEqual([null, false, true]);
 	await act(() => { vi.advanceTimersByTime(5000); });
 	expect([store.context.value !== null, store.units.value.some((u) => u.id === 0), store.motion.value]).toEqual([true, true, null]);
+});
+
+test("The screen says it is still showing a step while its beats play, and no longer once they end (#459)", async () => {
+	let w: World = handWorld({ rows: 10, cols: 10, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 },
+		{ eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 9 }] }, undefined, { spotSide: 0 });
+	const play = (cmd: Command) => {
+		const r = step(w, cmd);
+		if ("refusal" in r) return { ok: false, refusal: r.refusal };
+		w = r.world;
+		return { ok: true, result: { events: r.events } };
+	};
+	const host = { world: () => w, command: play, play, won: vi.fn(), holdForMessage: vi.fn(), messageClosed: vi.fn() };
+	const root = document.createElement("div");
+	document.body.append(root);
+	let s: ReturnType<typeof newScreen>;
+	//(the world read: units placed on the map, as at a turn's start)
+	await act(() => { s = newScreen(host as unknown as GameHost, root); s.unitsPlaced(); });
+	expect(s!.showingStep!()).toBe(false);
+	//(a program's attack, played whole, then its shots shown: the harness and the command-line player wait on it)
+	const shown = vi.fn();
+	await act(() => { s.attack({ id: 0 } as never, { id: 1 } as never, shown); });
+	await act(() => { vi.advanceTimersByTime(1); });
+	expect([s!.showingStep!(), shown.mock.calls.length]).toEqual([true, 0]);
+	await act(() => { vi.advanceTimersByTime(10000); });
+	expect([s!.showingStep!(), shown.mock.calls.length]).toEqual([false, 1]);
+	//(the screen's root rendered outside the testing library's: unmounted here)
+	renderInto(null, root);
+	root.remove();
 });

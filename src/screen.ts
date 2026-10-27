@@ -63,7 +63,7 @@ export interface Screen {
 	//stand-in of the old screen, test/gameturn.test.ts). A screen that reads the game's world has none
 	played?(cmd: Command, done: Executed<CommandType>): void;
 	//A step the screen is still showing, the program's or the person's: a move or an attack it animates (the
-	//old UI had it; the UI doesn't yet, #459). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
+	//UI's beats, #459). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
 	//screen that shows each step at once has none
 	showingStep?(): boolean;
 	//The program's turn ended (the AI's status shown finished)

@@ -3,7 +3,7 @@
 //components read is a computed signal of it, so a component renders again only when what it reads
 //changed. The person's commands go to the game host from here (dispatch), and a refused one leaves its
 //reason for the status bar.
-import { computed, signal } from "@preact/signals";
+import { computed, type ReadonlySignal, signal } from "@preact/signals";
 import type { Command, CommandType, ResultOf } from "../commands";
 import type { GameEvent } from "../core/events";
 import type { Position, UnitId, World } from "../core/types";
@@ -103,7 +103,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const dockHeight = signal(0);
 	//The start menu's window shown, none while the game shows (StartMenu)
 	const menu = signal(MENU_CLOSED);
-	let busy = false;
+	//A step's beats playing (src/view/player.ts): the map takes no click meanwhile, and the screen tells the host it is still
+	//showing a step (#459)
+	const showing = signal(false);
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
 	const player = createPlayer({ pick: cosmetic === undefined ? () => 0 : () => cosmetic.call(host), show: (m) => { motion.value = m; },
@@ -258,9 +260,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			return;
 		}
 		log.value = logStep(log.value, before, world.value!, events);
-		busy = true;
+		showing.value = true;
 		player.play(beatsFor(before, world.value!, events), () => {
-			busy = false;
+			showing.value = false;
 			tell(before, events);
 			then();
 		});
@@ -303,7 +305,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, marks, overview, deploying, reserve, deployment, ghost, refresh, glance,
-		results, news, motion, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu, ...newGame, ...settings, ...saveLoad,
+		results, news, motion, showing: showing as ReadonlySignal<boolean>, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu, ...newGame, ...settings, ...saveLoad,
 
 		//A button of the start menu: its window, or the game; the tutorial starts on the host
 		startMenu(button: MenuButton) {
@@ -374,7 +376,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		//person's command, or the unit there selected (none on an empty hex)
 		clickHex(at: Position) {
 			const w = world.value;
-			if (w === null || busy) return;
+			if (w === null || showing.value) return;
 			//(the first click on the map closes the turn report, and does what it does)
 			banner.value = false;
 			if (strategic.value) {
@@ -487,7 +489,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 			logOpen.value = false;
 			dossierOpen.value = false;
 			player.stop();
-			busy = false;
+			showing.value = false;
 		},
 
 		//The open message's OK: closed, then what it does
