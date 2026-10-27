@@ -135,6 +135,9 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			refresh();
 			if (shown) shown();
 		},
+		//A step whose beats still play, the program's or the person's: the host's turn loop, the harness and the command-line
+		//player wait on it (#459)
+		showingStep: () => store.showing.value,
 		aiTurnEnded: refresh,
 		//The next player's turn: the program's plays after the browser has drawn this one
 		turnChanged(next: () => void) {
