@@ -2,7 +2,8 @@
 # unused code, import cycles, duplicates, complexity), typos and the tests with the per-file coverage floors
 # (vite.config.mts), on every pull request and on main. The tests need the game's data
 # (equipment, scenarios), not its images and sounds: the checkout leaves Git LFS out.
-# npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step.
+# npm run verify needs the reference (openpanzer-src) and Chrome: it stays a local step. The job e2e plays one
+# short game through the new UI in headless Chrome (test/e2e/game.ts), with the images and sounds from Git LFS.
 name: CI
 
 on:
@@ -38,3 +39,19 @@ jobs:
         run: npx fallow health --format markdown >> "$GITHUB_STEP_SUMMARY" || true
       - uses: crate-ci/typos@v1
       - run: npm run test:coverage
+
+  # The new UI's end-to-end test: a campaign game from the start menu to its second scenario, through the page's
+  # element ids and keys, in the runner's Google Chrome (test/e2e/game.ts)
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/verify-setup
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-failure
+          path: harness/out/e2e-failure.png
+          retention-days: 7

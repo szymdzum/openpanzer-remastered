@@ -143,6 +143,15 @@ means a stuck request.
 
 A refactor must leave both identical. A deliberate change shows exactly what it changed.
 
+The new UI has its own end-to-end test: one short campaign game played in headless Chrome on the dev
+server through the page's element ids and keys, as a person plays it. The start menu, a new campaign,
+a unit bought and deployed, a move, the unit list and the unit card, the AI's turns, an attack, the
+dossier, a save to a file and its load back (the same game after it), the scenario's end and the
+campaign's next scenario. Any error in the page fails it; the random streams are seeded, so it plays
+the same game every time (`test/e2e/game.ts`, about a minute; CI runs it on every pull request).
+
+    npm run e2e                  # CHROME=<path> for another Chrome than the installed one
+
 The contract tests check the engine in seconds, without a browser: Vitest restores 13 game
 states recorded on the reference and replays the reference's calls on them.
 

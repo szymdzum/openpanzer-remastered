@@ -5,6 +5,8 @@
 	// fallow:report` shows everything, inherited included.
 	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
 	"entry": ["src/main.ts", "test/**/*.test.ts", "test/**/*.test.tsx", "cli/play.ts", "cli/register.mjs", "cli/page.ts",
+		// the new UI's end-to-end test, run with node (npm run e2e)
+		"test/e2e/game.ts",
 		// run by hand with node: docs/ui's tokens, card list, gallery and renders
 		"scripts/ui-design.mjs",
 		// stylelint's two rules of our own, which .stylelintrc.json loads
