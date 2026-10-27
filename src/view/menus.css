@@ -156,6 +156,60 @@
 		}
 	}
 
+	/* the save and load window in the middle over the photographs: the file's section, then the cloud's */
+	.pm-save {
+		inset-block-start: 50%;
+		inset-inline-start: 50%;
+		translate: -50% -50%;
+		inline-size: min(56.25rem, 100% - 2 * var(--space-3));
+		max-block-size: calc(100dvh - 2 * var(--space-3));
+		z-index: var(--z-message);
+
+		& > .bd {
+			overflow-y: auto;
+		}
+
+		.sec {
+			display: grid;
+			gap: var(--space-3);
+			padding-block: var(--space-4);
+			border-block-end: 1px solid var(--line);
+
+			&:last-child {
+				border-block-end: 0;
+			}
+		}
+
+		.acts {
+			display: flex;
+			flex-wrap: wrap;
+			gap: var(--space-2);
+		}
+
+		.last {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: var(--space-2);
+			font: 400 var(--type-small-size) / var(--type-small-line) var(--font-mono);
+		}
+
+		/* the recent cloud saves: rows of the list, an empty one as tall as the others */
+		.pm-row {
+			min-block-size: var(--hit-target);
+			color: inherit;
+			font: inherit;
+		}
+
+		.msg {
+			display: flex;
+			align-items: center;
+			gap: var(--space-2);
+			font: 700 var(--type-small-size) / var(--type-small-line) var(--font-mono);
+			color: var(--critical);
+		}
+	}
+
 	@container pick (width < 50rem) {
 		.pm-pick > .bd {
 			grid-template-columns: 1fr;

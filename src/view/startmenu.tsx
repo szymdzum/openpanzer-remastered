@@ -8,9 +8,10 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { VERSION } from "../prototypes";
 import { Button } from "./button";
 import { Icon } from "./icon";
-import { MAIN_BUTTONS, MENU_LINKS, type MenuEntry, NEW_GAME_BUTTONS, NOT_YET } from "./menus";
+import { MAIN_BUTTONS, MENU_LINKS, type MenuEntry, NEW_GAME_BUTTONS } from "./menus";
 import { useEscape } from "./panel";
 import { CampaignWindow, ScenarioWindow } from "./newgamewindows";
+import { SaveLoadWindow } from "./saveloadwindow";
 import type { Store } from "./store";
 
 const PHOTOS = [1, 2, 3, 4, 5, 6];
@@ -21,11 +22,11 @@ function photoOf(n: number) {
 
 function Entries({ store, entries }: { store: Store, entries: MenuEntry[] }) {
 	return entries.map((b) => (
-		<Button key={b.id} id={b.id} large icon={b.icon} title={b.hint} disabled={NOT_YET[b.id]} onClick={() => store.startMenu(b.id)}>{b.title}</Button>
+		<Button key={b.id} id={b.id} large icon={b.icon} title={b.hint} onClick={() => store.startMenu(b.id)}>{b.title}</Button>
 	));
 }
 
-//The main window: the focus on its first button on whenever it opens or its New Game panel does, the menu being keyboard-first
+//The main window: the focus on its first button whenever it opens or its New Game panel does, the menu being keyboard-first
 function MainWindow({ store, newGame }: { store: Store, newGame: boolean }) {
 	const ref = useRef<HTMLDialogElement>(null);
 	useLayoutEffect(() => { ref.current!.querySelector<HTMLButtonElement>("button:enabled")!.focus(); }, [newGame]);
@@ -60,6 +61,7 @@ export function StartMenu({ store }: { store: Store }) {
 			{m.window === "main" && <MainWindow store={store} newGame={m.newGame} />}
 			{m.window === "campaign" && <CampaignWindow store={store} />}
 			{m.window === "scenario" && <ScenarioWindow store={store} />}
+			{m.window === "saveload" && <SaveLoadWindow store={store} />}
 		</div>
 	);
 }

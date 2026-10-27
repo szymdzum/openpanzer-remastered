@@ -59,9 +59,8 @@ test("The main window has the old start menu's entries in its order, its version
 	expect(document.getElementById("smCredits")!.textContent).toBe("Copyright Nicu Pavel");
 	//(the six photographs of the old slideshow behind it)
 	expect(document.querySelectorAll("#startmenu > .pm-photo").length).toBe(6);
-	//The windows to come are off with why
-	expect(["saveload"].map((id) => [(document.getElementById(id) as HTMLButtonElement).disabled, document.getElementById(id)!.title]))
-		.toEqual([[true, "Not in the new UI yet"]]);
+	//Every entry is on
+	expect(within(main).getAllByRole("button").filter((b) => (b as HTMLButtonElement).disabled)).toEqual([]);
 });
 
 test("New Game opens the panel of Campaigns, Scenarios and Tutorial, each with the old hint; the tutorial starts on the host (#349)", async () => {
