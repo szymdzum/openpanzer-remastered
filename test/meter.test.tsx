@@ -1,7 +1,8 @@
 //The new UI's unit state components (src/view/meter.tsx) and tooltip (tooltip.tsx) in jsdom
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render, screen } from "@testing-library/preact";
-import { Badge, Meter, Stars, Tag } from "../src/view/meter";
+import { Badge, Meter, Stars } from "../src/view/meter";
+import { Tag } from "../docs/ui/live/tag";
 import { Tooltip } from "../src/view/tooltip";
 
 afterEach(cleanup);

@@ -47,7 +47,3 @@ export function Badge({ side, children }: { side: "axis" | "allied" | "neutral",
 	return <span class={side === "axis" ? "pm-badge" : "pm-badge " + side}>{children}</span>;
 }
 
-//A state in words for lists and tooltips: "Low fuel", "No ammo"
-export function Tag({ tone, icon, children }: { tone?: SupplyState, icon?: IconName, children: ComponentChildren }) {
-	return <span class={tone ? "pm-tag pm-" + tone : "pm-tag"}>{icon && <Icon name={icon} size="sm" />}{children}</span>;
-}

@@ -23,10 +23,13 @@ const chrome = process.env.CHROME || "/Applications/Google Chrome.app/Contents/M
 const read = (file) => fs.readFileSync(path.join(dir, file), "utf8");
 const view = path.join(dir, "..", "..", "src", "view");
 
-//The components' CSS: src/view/library.css with its @imports written in, in their order
+//A stylesheet of a folder with its @imports written in, in their order
+const inlined = (folder, file) => fs.readFileSync(path.join(folder, file), "utf8")
+	.replace(/@import url\("\.\/([\w-]+\.css)"\);/g, (_, f) => fs.readFileSync(path.join(folder, f), "utf8"));
+
+//The components' CSS: the game's (src/view/library.css), then those only the gallery shows (docs/ui/live/gallery.css)
 function libraryCss() {
-	return fs.readFileSync(path.join(view, "library.css"), "utf8")
-		.replace(/@import url\("\.\/([\w-]+\.css)"\);/g, (_, file) => fs.readFileSync(path.join(view, file), "utf8"));
+	return inlined(view, "library.css") + inlined(path.join(dir, "live"), "gallery.css");
 }
 
 //A token's value in a theme; a token with one value has it in every theme
@@ -136,6 +139,8 @@ function check() {
 	checkCss("docs/ui/components/bundle.css", read("components/bundle.css"), problems);
 	for (const file of fs.readdirSync(view).filter((f) => f.endsWith(".css")).sort())
 		checkCss(`src/view/${file}`, fs.readFileSync(path.join(view, file), "utf8"), problems);
+	for (const file of fs.readdirSync(path.join(dir, "live")).filter((f) => f.endsWith(".css")).sort())
+		checkCss(`docs/ui/live/${file}`, read(`live/${file}`), problems);
 	const t = JSON.parse(read("tokens.json"));
 	const mapColours = new Map(t.color.tokens.filter((k) => typeof k.value === "string").map((k) => [normal(k.value), k.name]));
 	for (const c of manifest()) checkPreview(`docs/ui/components/${c.name}/preview.html`, read(`components/${c.name}/preview.html`), mapColours, problems);

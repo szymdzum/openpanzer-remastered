@@ -1,9 +1,9 @@
-//The live gallery (src/view/gallery.tsx, docs/ui/live.html) in jsdom: every card with components
+//The live gallery (docs/ui/live/gallery.tsx, docs/ui/live.html) in jsdom: every card with components
 //renders in both themes, with no id twice and a name on every control
 import { afterEach, describe, expect, test } from "vitest";
 import { act, cleanup, screen } from "@testing-library/preact";
 import { render } from "preact";
-import { LIVE, mountGallery } from "../src/view/gallery";
+import { LIVE, mountGallery } from "../docs/ui/live/gallery";
 
 afterEach(cleanup);
 

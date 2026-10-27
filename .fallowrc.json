@@ -13,10 +13,10 @@
 		"scripts/stylelint-rules.mjs",
 		// the UI's components' CSS and its faces, which docs/ui's pages load (the game loads them
 		// through src/view/game.css)
-		"src/view/library.css", "src/view/fonts.css"],
+		"src/view/library.css", "src/view/fonts.css", "docs/ui/live/gallery.css"],
 	// The original bundle, the harness (scripts pasted into the page, with top-level await) and
 	// the contract scripts (read as text by test/contracts.ts and record.js)
-	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/**"],
+	"ignorePatterns": ["game/**", "reference/**", "public/**", "harness/**", "test/contracts/**", "docs/ui/components/**"],
 	//index.html loads the game's data lists from game/ as classic files
 	"ignoreUnresolvedImports": ["/game/resources/campaigns/campaignlist.js", "/game/resources/scenarios/scenariolist.js"],
 	"ignoreExportsUsedInFile": true,
