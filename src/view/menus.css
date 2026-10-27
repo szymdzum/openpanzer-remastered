@@ -133,6 +133,29 @@
 		}
 	}
 
+	/* the settings in the middle over the game, their rows down two columns in the old list's order */
+	.pm-settings {
+		inset-block-start: 50%;
+		inset-inline-start: 50%;
+		translate: -50% -50%;
+		inline-size: min(65rem, 100% - 2 * var(--space-3));
+		max-block-size: calc(100dvh - 2 * var(--space-3));
+		z-index: var(--z-message);
+
+		& > .bd {
+			overflow-y: auto;
+		}
+
+		.list {
+			columns: 2 22rem;
+			column-gap: var(--space-8);
+		}
+
+		.pm-setting {
+			break-inside: avoid;
+		}
+	}
+
 	@container pick (width < 50rem) {
 		.pm-pick > .bd {
 			grid-template-columns: 1fr;
