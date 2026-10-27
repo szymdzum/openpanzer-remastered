@@ -134,3 +134,21 @@ test("The screen says it is still showing a step while its beats play, and no lo
 	renderInto(null, root);
 	root.remove();
 });
+
+test("End turn, a unit key or a context menu button sent while the person's step is shown does nothing, as the old UI's End turn (#465)", async () => {
+	const { store, sent } = mapOf();
+	await act(() => pointer("pointerdown", 4, 4, { pointerType: "mouse" }));
+	await act(() => pointer("click", 4, 4));
+	await act(() => { vi.advanceTimersByTime(1); });
+	expect(store.motion.value).not.toBeNull();
+	//(the attacker's own keys and End turn, while its shots play: none reaches the host)
+	await act(() => { store.dispatch({ type: "endTurn" }); });
+	await act(() => { store.askEndTurn(); });
+	await act(() => { store.shortcut({ unit: "resupply" }); });
+	expect([sent.map((c) => c.type), store.asking.value]).toEqual([["attack"], null]);
+	await act(() => { vi.advanceTimersByTime(10000); });
+	expect(store.motion.value).toBeNull();
+	//(once shown, the person plays on)
+	await act(() => { store.dispatch({ type: "endTurn" }); });
+	expect(sent.map((c) => c.type)).toEqual(["attack", "endTurn"]);
+});
