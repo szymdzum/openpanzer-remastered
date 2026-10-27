@@ -68,7 +68,7 @@ const GROUND: Condition[] = (["dry", "frozen", "mud"] as const).map((icon, i) =>
 
 //The months as a date written in full says them ("1 September 1939")
 export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = MONTH_NAMES.map((m) => m.slice(0, 3));
 
 //A date as the HUD writes it, "06 Sep 1939": the scenario's date is the local midnight the game started from
 export function dateOf(iso: string): string {
@@ -119,6 +119,9 @@ export function prestigeText(n: number): string {
 	return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+//One word or the other by a count: "1 unit", "3 units"
+export const plural = (n: number, one: string, many: string) => n === 1 ? one : many;
+
 //A refusal in plain words, as a control shows it: the core's reasons are lower case phrases
 export function reasonOf(r: Refusal): string {
 	if (r.reason === "no such unit") return "The unit is gone";
@@ -154,7 +157,7 @@ export function endTurnRefusal(w: World): string | null {
 //End turn's question (#8): how many of the person's units can still move or fire, and the first of them by name
 export function stillToAct(names: string[]): string {
 	const n = names.length, shown = names.slice(0, 6).join(", ");
-	return (n === 1 ? "1 unit" : n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
+	return plural(n, "1 unit", n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
 }
 
 //The unit when it is on the map and the side shown sees it: its own, or an enemy on a hex it spots (no side shown:

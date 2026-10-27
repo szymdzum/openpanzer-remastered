@@ -13,13 +13,11 @@ import { useEscape } from "./panel";
 import type { Store } from "./store";
 import { SegmentedControl } from "./tabs";
 import { Tooltip } from "./tooltip";
+import { frameStyle } from "./unitstrip";
 import type { CardSize, CardStat, CardView, UnitCard } from "./unitcard";
 import type { LeaderLine } from "./unitinfo";
 
 const VIEW_NAMES: Record<CardView, string> = { unit: "Unit", transport: "Transport", carrier: "Carrier" };
-
-//The sprite strip's third frame (the strip has nine frames side by side)
-const FRAME = 2;
 
 //The leader's name in brass, and its tooltip: both leaders as the game words them
 function Leader({ leaders }: { leaders: LeaderLine[] }) {
@@ -53,8 +51,7 @@ function Name({ card }: { card: UnitCard }) {
 function Identity({ card, store }: { card: UnitCard, store: Store }) {
 	return (
 		<div id="statsRowTop" class="ui-id">
-			<div class="ui-spr" aria-hidden="true"
-				style={{ backgroundImage: `url(${card.sprite})`, backgroundSize: "900% 100%", backgroundPositionX: `${FRAME / 8 * 100}%` }} />
+			<div class="ui-spr" aria-hidden="true" style={frameStyle(card.sprite)} />
 			<div>
 				<Name card={card} />
 				<div class="cls">{card.sub}</div>

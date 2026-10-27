@@ -89,6 +89,9 @@ export function fillHexes(c: CanvasRenderingContext2D, vp: Viewport, hexes: Posi
 	c.globalAlpha = 1;
 }
 
+//A side's colour on the map: its plates, chips and plaques
+export const sideColour = (side: number) => side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+
 //A token's colour (#rrggbb) at an alpha, for what takes the alpha in its colour (a canvas shadow)
 export function withAlpha(colour: string, alpha: number): string {
 	const n = parseInt(colour.slice(1), 16);

@@ -2,7 +2,7 @@
 //crosshair with the two losses, as the old attack cursor showed them; and a retreat's trail (CombatResults). It draws
 //what the view model (src/view/odds.ts, src/view/results.ts) computed, at screen size; colours are the tokens'.
 import type { Position } from "../core/types";
-import { atMap, atScreen, strokeLine, toScreen, type Viewport } from "./canvas";
+import { atMap, atScreen, sideColour, strokeLine, toScreen, type Viewport } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { LossChip, Glance } from "./odds";
 import { TOKENS } from "./tokens";
@@ -55,7 +55,7 @@ function chip(c: CanvasRenderingContext2D, ch: LossChip, x: number, y: number): 
 	const text = ch.loss === 0 ? "0" : "−" + ch.loss;
 	c.font = "bold 12px " + TOKENS.fonts.mono;
 	const w = Math.ceil(c.measureText(text).width) + 8;
-	c.fillStyle = ch.side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+	c.fillStyle = sideColour(ch.side);
 	c.fillRect(x, y, w, 17);
 	c.lineWidth = 1;
 	c.strokeStyle = MAP["hex-shadow"];

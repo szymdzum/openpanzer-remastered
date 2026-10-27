@@ -7,7 +7,7 @@
 //the map in view. The terrain and the sprites scale with the map (ZoomLevels); everything drawn on top
 //keeps its screen size: a line's path is laid out at the map's scale, then stroked at the screen's, so its
 //width is the token's in screen pixels, and the markers and the path's ring are drawn at screen points.
-import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, sideColour, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
@@ -255,7 +255,7 @@ function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: numb
 		c.lineTo(x + w + 2, y + 5.5); c.lineTo(x + w - 2, y + 11); c.lineTo(x + 2, y + 11);
 		c.closePath();
 	}
-	c.fillStyle = side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+	c.fillStyle = sideColour(side);
 	c.fill();
 	c.globalAlpha *= 0.75;
 	c.strokeStyle = MAP.shade;
@@ -333,7 +333,7 @@ function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, p: Point
 //right of the hex's centre, at screen size, where the top unit's sprite and marker leave room
 function drawChip(c: CanvasRenderingContext2D, side: number, strength: number, p: Point) {
 	const text = String(strength), w = text.length * 5 + 5, x = Math.round(p.x + 12), y = Math.round(p.y - 22);
-	c.fillStyle = side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+	c.fillStyle = sideColour(side);
 	c.fillRect(x, y, w, 10);
 	c.strokeStyle = MAP.shade;
 	c.lineWidth = 1;

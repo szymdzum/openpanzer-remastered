@@ -14,7 +14,7 @@ import { fogOf, mapPlaques, supportOf } from "./mapinfo";
 import { clickOn, mapUnits, pathOf, selectionOf, unitsToAct } from "./mapview";
 import { strategicOf } from "./strategic";
 import { deploymentOf, ghostOf, placeOn, reserveOf, trayOf } from "./deploy";
-import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct } from "./model";
+import { type ActionKey, endTurnRefusal, isYourTurn, neighbourUnit, prestigeText, reasonOf, statusOf, stillToAct, yourPlayer } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { type CardSize, type CardView, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
@@ -138,8 +138,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const campaignEnd = computed(() => ending.value === null ? null : campaignEndOf(ending.value.outcome, ending.value.html));
 	const ai = computed(() => world.value === null ? null : aiStatusOf(world.value));
 	//(the status bar's turn report button: the person's report, none while a program plays)
-	const reportRefusal = computed(() => world.value === null || turnReportOf(world.value, enemy.value) === null ? "No report to show"
-		: undefined);
+	//(the report is there whenever the person has a side, turn.ts turnReportOf)
+	const reportRefusal = computed(() => world.value === null || yourPlayer(world.value) === null ? "No report to show" : undefined);
 	//the selected unit's context menu (UnitContext), none while deploying, on the strategic map or while a unit moves on it
 	const context = computed(() => world.value === null || selected.value === null || deployment.value !== null || strategic.value
 		|| moving.value !== null ? null : contextOf(world.value, selected.value));

@@ -3,7 +3,7 @@
 //of the objectives and the towns (#62), and the deployment zone. They draw what the view model computed
 //(src/view/mapview.ts, mapinfo.ts, deploy.ts), at screen size at every map scale; colours and widths are the tokens'.
 import type { Position } from "../core/types";
-import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, strokeLine, toScreen, type Viewport } from "./canvas";
+import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, sideColour, strokeLine, toScreen, type Viewport } from "./canvas";
 import type { Deployment } from "./deploy";
 import { CORNERS, EDGES, hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
@@ -212,7 +212,7 @@ export function drawPlaques(c: CanvasRenderingContext2D, vp: Viewport, plaques: 
 		const box = label(c, plaqueText(p), at.x, y, look);
 		if (p.objective) star(c, box.left + 8, y + look.height / 2 - 0.5, 4);
 		if (p.side < 0) continue;
-		c.fillStyle = p.side === 1 ? MAP["map-allied"] : MAP["map-axis"];
+		c.fillStyle = sideColour(p.side);
 		c.fillRect(box.left + 1, y + look.height - 3, box.width - 2, 2);
 	}
 	c.restore();

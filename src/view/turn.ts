@@ -8,7 +8,7 @@ import { sideOf, unitById, unitData } from "../core/world";
 import { outcomeNames, unitClass } from "../prototypes";
 import type { Nation } from "./icon";
 import { lost } from "./results";
-import { type Condition, countryName, dateOf, isYourTurn, nationOf, prestigeText, statusOf, yourPlayer } from "./model";
+import { type Condition, countryName, dateOf, isYourTurn, nationOf, plural, prestigeText, statusOf, yourPlayer } from "./model";
 
 //What the enemy's turn did to the side shown, gathered from its steps' events
 export interface EnemyTurn {
@@ -78,9 +78,9 @@ const forOutcome = (name: string) => name === "Victory" ? "Victory" : name + " v
 function enemyLines(enemy: EnemyTurn): EnemyLine[] {
 	const lines: EnemyLine[] = [];
 	const n = enemy.attacked.length;
-	if (n > 0) lines.push({ tone: "critical", text: (n === 1 ? "1 of your units" : n + " of your units") + " attacked" });
+	if (n > 0) lines.push({ tone: "critical", text: plural(n, "1 of your units", n + " of your units") + " attacked" });
 	if (enemy.lost > 0) lines.push({ tone: "critical", text: "−" + enemy.lost + " strength lost" });
-	if (enemy.objectives > 0) lines.push({ tone: "critical", text: (enemy.objectives === 1 ? "1 objective" : enemy.objectives + " objectives") + " lost" });
+	if (enemy.objectives > 0) lines.push({ tone: "critical", text: plural(enemy.objectives, "1 objective", enemy.objectives + " objectives") + " lost" });
 	return lines.length > 0 ? lines : [{ tone: "muted", text: "All quiet on this front" }];
 }
 
