@@ -12,6 +12,7 @@ import type { Command } from "../src/commands";
 import { MapView } from "../src/view/map";
 import { hexCentre } from "../src/view/hexgrid";
 import { createStore, type Store, type StoreHost } from "../src/view/store";
+import { uiSettings } from "../src/prototypes";
 
 //A context that counts what is drawn
 let drawn = 0;
@@ -118,8 +119,10 @@ test("The map looks at the side's first unit when the scenario starts, and at a 
 	expect([s.scrollLeft, s.scrollTop]).toEqual([hexCentre(2, 2).x, hexCentre(2, 2).y]);
 	const area = document.querySelector<HTMLElement>(".pm-mapview-area")!;
 	expect([area.style.inlineSize, area.style.blockSize]).toEqual([29 * 45 + 15 + "px", 30 * 50 + "px"]);
-	await act(() => { store.scale.value = 2; });
+	//(the map's scale is the setting's)
+	await act(() => { uiSettings.zoomLevel = 2; });
 	expect(area.style.inlineSize).toBe((29 * 45 + 15) * 2 + "px");
+	await act(() => { uiSettings.zoomLevel = 1; });
 	await act(() => { s.dispatchEvent(new Event("scroll")); });
 	await frame();
 });

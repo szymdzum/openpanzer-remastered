@@ -303,10 +303,11 @@ export class GameHost {
 		this.newScenario(DEFAULT_SCENARIO);
 	}
 
-	//A single scenario, its file and the briefing to show (the scenario list's): no campaign, the rules of the
-	//settings, and the settings saved (the sides the AI plays)
-	startScenario(file: string, intro: string) {
+	//A single scenario, its file and the briefing to show (the scenario list's), and the sides the AI plays (isAI, by
+	//player): no campaign, the rules of the settings, and the settings saved with those sides
+	startScenario(file: string, intro: string, isAI: number[]) {
 		const g = this.game;
+		uiSettings.isAI = isAI;
 		g.campaign = null;
 		g.rules = newGameRules();
 		this.newScenario(file, intro);

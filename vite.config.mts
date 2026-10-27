@@ -113,7 +113,7 @@ export default defineConfig({
 				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
 				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
-				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts"],
+				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts"],
 			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -248,7 +248,8 @@ export default defineConfig({
 				"src/view/newgamewindows.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/settings.ts": { statements: 94, branches: 100, functions: 83, lines: 93 }, //(the harness setter)
 				//(the harness setter; and a page without devicePixelRatio)
-				"src/view/settingsstate.ts": { statements: 97, branches: 95, functions: 90, lines: 97 },
+				"src/view/settingsstate.ts": { statements: 96, branches: 95, functions: 88, lines: 95 }, //(smaller since its counters went: the one uncovered is the harness setter every module gets)
+				"src/view/uisettings.ts": { statements: 93, branches: 100, functions: 80, lines: 92 }, //(the one uncovered: the harness setter)
 				"src/view/settingswindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/saveload.ts": { statements: 90, branches: 100, functions: 87, lines: 85 }, //(the harness setter)
 				//(the harness setter; the field's other attributes, which the game's state doesn't set, and no save of the settings)

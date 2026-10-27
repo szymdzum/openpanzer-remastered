@@ -123,7 +123,7 @@ test("The scenario window: the scenario played picked, its sides with who the AI
 	await act(() => { fireEvent.click(ai[1]); });
 	expect([uiSettings.isAI.slice(0, 2), ai.map((t) => t.getAttribute("aria-checked"))]).toEqual([[1, 0], ["true", "false"]]);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Play" })); });
-	expect(host.startScenario.mock.calls).toEqual([["tutorial.xml", entry[2]]]);
+	expect(host.startScenario.mock.calls).toEqual([["tutorial.xml", entry[2], [1, 0, 0, 0]]]);
 	expect(store.menu.value.window).toBeNull();
 });
 

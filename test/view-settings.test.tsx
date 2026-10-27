@@ -8,7 +8,7 @@ import { sliderText, toggleSetting, TOGGLES } from "../src/view/settings";
 import { App } from "../src/view/app";
 import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
-import { type UISettings, uiSettings } from "../src/prototypes";
+import { MAJOR_VERSION, type UISettings, uiSettings } from "../src/prototypes";
 import type { GameHost } from "../src/host";
 import { GameState } from "../src/gamestate";
 
@@ -168,3 +168,34 @@ test("Mark own units on map and Mark enemy strength in red reach the map as soon
 	store.toggleSetting("markEnemyUnits");
 	expect(store.marks.value).toEqual({ own: true, enemy: true });
 });
+
+//The settings as signals behind uiSettings's keys (src/view/uisettings.ts, review A5): a settings save from before (the old
+//UI's, with keys nothing reads any more) loads into them, the window shows what the game wrote into uiSettings without
+//being told, and the settings save back as the same JSON, the keys in their order
+test("A settings save from before loads into the settings' signals, and saves back as the same JSON", async () => {
+	localStorage.clear();
+	const key = "openpanzer-settings-" + MAJOR_VERSION;
+	const before = { zoomLevel: 1.5, uiScale: 1.2, uiSize: 960, uiSmallSize: 470, muteUnitSounds: true, markOwnUnits: true, markEnemyUnits: false,
+		noFOW: false, quickAnimation: true, useRetina: false, isAI: [0, 1, 0, 0], lastCloudSave: [{ id: "123", name: "Kiev", date: "1/2/2026" }],
+		airMode: false, hexGrid: true, use3D: false };
+	localStorage.setItem(key, JSON.stringify(before));
+	const { store } = settingsOf();
+	new GameState(null).restoreSettings();
+	expect([store.scale.value, store.uiScale.value, store.uiWidth.value, store.marks.value]).toEqual([1.5, 1.2, 960, { own: true, enemy: false }]);
+	//(a write by the game, as the tutorial's start turns the fog of war on, shows in the window at once)
+	uiSettings.noFOW = true;
+	await open(store);
+	const fog = screen.getByRole("switch", { name: "Disable Fog of War" });
+	expect(fog.getAttribute("aria-checked")).toBe("true");
+	new GameState(null).saveSettings();
+	const json = localStorage.getItem(key)!;
+	expect(json).toBe(JSON.stringify({ ...structuredClone(saved), ...pick(before, ["zoomLevel", "uiScale", "uiSize", "muteUnitSounds",
+		"markOwnUnits", "markEnemyUnits", "quickAnimation", "useRetina", "isAI", "lastCloudSave"]), noFOW: true, hdGraphics: true,
+		showDetailInfoToolTips: false, classicRules: false }));
+	expect(Object.keys(JSON.parse(json) as object)).toEqual(Object.keys(saved));
+	localStorage.clear();
+});
+
+function pick<T extends object>(o: T, keys: string[]): Partial<T> {
+	return Object.fromEntries(Object.entries(o).filter(([k]) => keys.includes(k))) as Partial<T>;
+}
