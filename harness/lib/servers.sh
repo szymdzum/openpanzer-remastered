@@ -1,4 +1,4 @@
-# Sourced by replay.sh and ui-replay.sh: the two servers, left running for the next runs.
+# Sourced by replay.sh and test/contracts/record.sh: the servers, left running for the next runs.
 # serve_static <dir> <port>: the reference, a static server
 serve_static() {
 	if ! curl -s -o /dev/null "http://127.0.0.1:$2/index.html"; then

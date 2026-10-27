@@ -20,7 +20,7 @@ import type { Position, UnitId, World } from "./types";
 //playing the game ignores them
 export type ViewEvent =
 	| { type: "select"; unit: UnitId | null }
-	//The text is HTML; {prestige} stands for the prestige icon, which is the view's (UIBuilder.currencyIcon)
+	//The text is HTML; {prestige} stands for the prestige icon, which is the view's
 	| { type: "message"; text: string; at: Position }
 	| { type: "viewport"; at: Position }
 	| { type: "mainMenu" }

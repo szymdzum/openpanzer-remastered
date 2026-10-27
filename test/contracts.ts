@@ -119,7 +119,6 @@ export async function restoreState(state: string) {
 		game.setupGameState = () => {
 			if (game.campaign) {
 				game.state = new GameState(game);
-				game.ui = { setNewScenario() {} } as unknown as typeof game.ui;
 				setupGameState.call(game);
 			}
 			resolve();

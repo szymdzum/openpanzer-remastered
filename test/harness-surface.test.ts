@@ -10,10 +10,8 @@ const root = path.resolve(__dirname, "..");
 const read = (file: string) => fs.readFileSync(path.join(root, file), "utf8");
 const list = (dir: string) => fs.readdirSync(path.join(root, dir)).filter((f) => f.endsWith(".js")).map((f) => dir + "/" + f);
 
-//The scripts that run in the game's page. Not the Node side (coverage.js, diff-traces.js, difflib.js,
-//ui-diff.js), nor harness/lib/side-by-side.js, which no script runs
-const pageScripts = ["harness/lib/harness.js", "harness/lib/hooks.js", "harness/replay.js", "harness/ui-replay.js",
-	...list("harness/ui"), ...list("test/contracts")];
+//The scripts that run in the game's page. Not the Node side (coverage.js, diff-traces.js, difflib.js)
+const pageScripts = ["harness/lib/harness.js", "harness/lib/hooks.js", "harness/replay.js", ...list("test/contracts")];
 
 //A script without its comments (a // after a colon is a URL's)
 const code = (file: string) => read(file).replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
@@ -35,10 +33,9 @@ async function exposed(): Promise<Map<string, unknown>> {
 //The exports the page scripts use, by name: bare (not after a dot) or as a string (constructor.name
 //lookups: harness.js ENTITIES, common.js). Kept as a list, so a renamed export shows here
 const harnessExports = [
-	"$", "AI", "AIScripted", "Campaign", "Cell", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
-	"Hex", "NATIVE_PLATFORM", "Player", "Render", "Rng", "Scenario", "SpriteAnimation", "Transport", "UIBuilder",
-	"UNIT_MAX_EXPERIENCE", "Unit", "actionType", "bounceText", "curDown", "game", "hasBrokenClearRect", "isVisible", "leaderType",
-	"makeHidden", "makeVisible", "playerType", "terrainType", "toData", "uiSettings", "unitClass", "unitClassNames",
+	"AI", "AIScripted", "Campaign", "CombatLog", "Commands", "Equipment", "Game", "GameMap", "GameRules", "GameState",
+	"Hex", "Player", "Rng", "Scenario", "Transport", "Unit", "actionType", "game", "leaderType", "playerType", "terrainType", "toData",
+	"uiSettings", "unitClass",
 ];
 
 function usedNames(candidates: Set<string>): Set<string> {
@@ -81,10 +78,11 @@ test("The list of exports the harness uses is complete", async () => {
 });
 
 //What the page scripts reach for only on the original game (reference/), whose Game has it: the end of turn's
-//reinforcements the engine contract calls (record.sh), which arrive in the game's session here; and its turn
+//reinforcements the engine contract calls (record.sh), which arrive in the game's session here; its turn
 //loop and the flag it held on while the UI showed a step, which the harness reads where the game has no host
-//(harness/lib/harness.js: the host's processTurn and showingStep here, #378)
-const referenceOnly = ["deployReinforcements", "loop", "processTurn", "waitUIAnimation"];
+//(harness/lib/harness.js: the host's processTurn and showingStep here, #378); its old UI (game.ui), which the
+//harness waits for there and the engine contract stands in for (gone here with the old UI, #351)
+const referenceOnly = ["deployReinforcements", "loop", "processTurn", "waitUIAnimation", "ui"];
 
 test("The game.* members the harness uses exist", async () => {
 	const { game } = await import("../src/game");
@@ -96,18 +94,4 @@ test("The game.host.* members the harness uses exist", async () => {
 	const { game } = await import("../src/game");
 	const missing = members(/(?<![\w$])game\.host\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game.host));
 	expect(missing, "game.host members used by harness/ or test/contracts").toEqual([]);
-});
-
-//The UI is built when a scenario loads, not here: its members are what the UI constructor assigns
-test("The game.ui.* members the harness uses exist", () => {
-	const ui = read("src/ui.ts");
-	const defined = new Set([...ui.matchAll(/^\tthis\.(\w+)\s*=/gm), ...ui.matchAll(/^UI\.prototype\.(\w+)\s*=/gm)].map((m) => m[1]));
-	const missing = members(/(?<![\w$])game\.ui\.([A-Za-z_$][\w$]*)/g).filter((n) => !defined.has(n));
-	expect(missing, "game.ui members used by harness/ or test/contracts").toEqual([]);
-});
-
-//harness/lib/hooks.js finds the UI's renderer through a setter on Render.prototype.getCursorCanvas,
-//which only the constructor's assignment of the method triggers
-test("Render's constructor assigns getCursorCanvas (harness/lib/hooks.js)", () => {
-	expect(read("src/render.ts")).toMatch(/^\s+this\.getCursorCanvas\s*=/m);
 });

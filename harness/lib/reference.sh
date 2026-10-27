@@ -1,4 +1,4 @@
-# Sourced by replay.sh and ui-replay.sh after servers.sh and page.sh: what the remaster is compared
+# Sourced by replay.sh after servers.sh and page.sh: what the remaster is compared
 # with, served on REFERENCE_PORT.
 # - By default the original game: reference/ (the 3.2.14 source reconstructed from its bundle, on
 #   the game's own assets), or REFERENCE_DIR. Any difference is a change against the original.

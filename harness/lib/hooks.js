@@ -1,17 +1,6 @@
 // Harness hooks, loaded by index.html?harness after the game's modules ran and before the game
-// starts (on window load). harness/lib/harness.js relies on them. The game's names are the
-// globals src/main.ts defines with ?harness.
+// starts (on window load). harness/lib/harness.js relies on them.
 (function() {
-	// The UI keeps its renderer private: keep a reference for hex <-> screen mapping. The UI's
-	// import of Render can't be replaced, so the hook is on Render.prototype: the constructor's
-	// this.getCursorCanvas = ... goes through this setter, which records the instance and then
-	// makes the property the assignment would have made
-	Object.defineProperty(Render.prototype, "getCursorCanvas", { configurable: true,
-		set: function(f) {
-			window.__harnessRender = this;
-			Object.defineProperty(this, "getCursorCanvas", { value: f, writable: true, enumerable: true, configurable: true });
-		} });
-
 	// Async completions (image loads, async XHRs) are held back and delivered by harness.js
 	// strictly in creation order: the network completes them in a random order, and the game
 	// is sensitive to it (partial redraws per unit image, overlapping scenario loads).

@@ -12,10 +12,10 @@ dir=$(dirname "$0")
 {
 	echo "### verify against the base"
 	echo '```'
-	grep -E 'items differ|identical|scripts identical|DIFF|TIMED OUT|merge commit is built' "$log" | head -80 || true
+	grep -E 'items differ|identical|DIFF|TIMED OUT|merge commit is built' "$log" | head -80 || true
 	echo '```'
 } >> "$GITHUB_STEP_SUMMARY"
-if ! grep -qE "^DIFF |^== UI replay [^:]+: (DIFF|didn.t finish)" "$log"; then
+if ! grep -qE "^DIFF " "$log"; then
 	echo "No difference with the base." >> "$GITHUB_STEP_SUMMARY"
 	exit 0
 fi

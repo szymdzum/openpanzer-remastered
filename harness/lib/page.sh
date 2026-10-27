@@ -1,4 +1,4 @@
-# Sourced by replay.sh and ui-replay.sh: one harness run in its own headless Chrome.
+# Sourced by replay.sh and test/contracts/record.sh: one harness run in its own headless Chrome.
 
 # Jobs at once: one Chrome each. 3/4 of the cores by default: on 8 cores the UI replay took
 # 280s with 2, 148s with 4, 126s with 6 and 140s with 8 (Chrome and the dev server need some)

@@ -1,11 +1,12 @@
 /**
  * Mirror - the old engine's objects (Scenario, GameMap, Hex, Unit, Player) as a copy of the core's world
- * for the old UI and the harness to read (#137), one way only (#376)
+ * for the harness, the old game objects' code and its tests to read (#137), one way only (#376). The old UI
+ * that drew them went in #351
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The core's world is the game; the objects hold what the old UI draws and the harness reads. After
+ * The core's world is the game; the objects hold what the old UI drew and the harness reads. After
  * each step or checkpoint applyData updates them in place to the world's state, by unit id, keeping
  * each object (the UI compares units with === and keeps them in closures), and keeps that world: the
  * next step and the screen's rules start from it, not from the objects. What the screen writes into

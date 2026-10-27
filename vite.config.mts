@@ -40,8 +40,7 @@ function copyGameAssets(): Plugin {
 		name: "copy-game-assets",
 		apply: "build",
 		writeBundle(options) {
-			for (const dir of ["css", "resources"])
-				fs.cpSync("game/" + dir, options.dir + "/game/" + dir, { recursive: true });
+			fs.cpSync("game/resources", options.dir + "/game/resources", { recursive: true });
 		},
 	};
 }
@@ -99,9 +98,8 @@ export default defineConfig({
 		include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
-		//but the UI (ui, uibuilder, uicombatlog, render, animation, dom), the platform glue (osglue)
-		//and the entry (main), of the new core (src/core/ and its commands) and of the new UI's
-		//components, view model and screen (src/view/)
+		//but the page's (dom) and the entry (main), of the new core (src/core/ and its commands) and of
+		//the UI's components, view model and screen (src/view/)
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
@@ -131,7 +129,7 @@ export default defineConfig({
 				"src/context.ts": { statements: 91, branches: 100, functions: 90, lines: 91 },
 				"src/equipment.ts": { statements: 95, branches: 62, functions: 73, lines: 94 },
 				//(its turn loop, covered, went to the host in #374: the functions left are fewer, not less covered)
-				"src/game.ts": { statements: 86, branches: 80, functions: 78, lines: 87 },
+				"src/game.ts": { statements: 93, branches: 100, functions: 81, lines: 94 },
 				"src/gamerules.ts": { statements: 96, branches: 97, functions: 96, lines: 97 },
 				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
 				"src/leaders.ts": { statements: 76, branches: 50, functions: 50, lines: 78 },
@@ -142,9 +140,7 @@ export default defineConfig({
 				"src/scenarioloader.ts": { statements: 86, branches: 61, functions: 84, lines: 85 },
 				"src/selection.ts": { statements: 97, branches: 100, functions: 88, lines: 97 },
 				"src/undo.ts": { statements: 92, branches: 100, functions: 75, lines: 92 },
-				//(the reads only the old UI made, getAmmo, getFuel, getMovesLeft, went uncovered with its tests in #351: they go
-				//with it)
-				"src/unit.ts": { statements: 81, branches: 48, functions: 75, lines: 81 },
+				"src/unit.ts": { statements: 95, branches: 89, functions: 92, lines: 96 },
 				"src/util.ts": { statements: 50, branches: 100, functions: 50, lines: 50 },
 				"src/visibility.ts": { statements: 95, branches: 90, functions: 83, lines: 94 },
 				"src/state.ts": { statements: 98, branches: 95, functions: 98, lines: 99 },
@@ -182,7 +178,7 @@ export default defineConfig({
 				"src/savegame.ts": { statements: 95, branches: 79, functions: 95, lines: 95 },
 				"src/coresession.ts": { statements: 89, branches: 78, functions: 94, lines: 94 },
 				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
-				"src/host.ts": { statements: 96, branches: 90, functions: 97, lines: 96 },
+				"src/host.ts": { statements: 96, branches: 90, functions: 98, lines: 97 },
 				"src/nullscreen.ts": { statements: 94, branches: 87, functions: 88, lines: 92 },
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },

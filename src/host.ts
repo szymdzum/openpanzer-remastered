@@ -8,13 +8,13 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * The host decides; the screen only shows. It tells the screen what to show through the screen
- * interface (src/screen.ts), which the old UI implements (src/oldscreen.ts) and a program that shows
+ * interface (src/screen.ts), which the UI implements (src/view/screen.tsx) and a program that shows
  * nothing too (src/nullscreen.ts). It also plays a program's turn: its actions one after the other, each
  * one the screen shows waited for until the screen calls its shown (#375: there is no turn loop ticking
  * any more), then the end of its turn. What goes on is told: the screen's shown, the message the player
  * clicked away (goOn: then the campaign's next scenario loads), the person's end of turn, the screen once
  * it has shown the next player's turn. A victory is told when the screen says the step that won it has
- * been shown (the old UI's animation end), the end at the turn limit when the turn ends (endTurn), and the
+ * been shown (the UI's animation end), the end at the turn limit when the turn ends (endTurn), and the
  * saves come where they came. Imports no UI module, so a whole campaign and a game's turns play on it
  * without the DOM (test/host.test.ts).
  */
@@ -287,11 +287,6 @@ export class GameHost {
 			return;
 		this.nextLoading = true;
 		this.newScenario(this.next.scenario, this.next.intro);
-	}
-
-	//The campaign menu's debug buttons: the scenario ended with the outcome they name
-	skipScenario(outcome: ScenarioOutcome) {
-		this.continueCampaign(outcome);
 	}
 
 	//---- A new game from the start menu (the new UI's menus, #349): as the old UI's start menu starts them (src/ui.ts

@@ -2,7 +2,7 @@
 # (about 300 MB, cached so the LFS bandwidth quota is spent once per change of the assets), Node and
 # the packages, and bdg to drive headless Chrome. Runs after the checkout
 name: Verify setup
-description: LFS assets, Node, packages and bdg for harness/replay.sh and harness/ui-replay.sh
+description: LFS assets, Node, packages and bdg for harness/replay.sh
 runs:
   using: composite
   steps:

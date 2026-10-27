@@ -17,7 +17,6 @@ import { GameState } from "./gamestate";
 import type { Scenario, ScenarioOutcome } from "./scenario";
 import type { Campaign } from "./campaign";
 import type { Player } from "./map";
-import type { UI } from "./ui";
 import { nullScreen } from "./nullscreen";
 import { GameHost, runGame } from "./host";
 import type { Session } from "./core/session";
@@ -31,7 +30,6 @@ import type { CampaignProgress } from "./state";
 //nothing until then (src/nullscreen.ts). The constructor's body sets up the methods, typed as declare fields
 //(docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
 export class Game {
-	declare ui: UI;
 	declare state: GameState;
 	declare campaign: Campaign;
 	declare scenario: Scenario;
@@ -60,7 +58,6 @@ export class Game {
 	declare static defaultScenarioAI: number[];
 
 	constructor() {
-		this.ui = null;
 		this.state = null;
 		this.campaign = null;
 		this.scenario = null;

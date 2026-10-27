@@ -280,7 +280,7 @@ export let scoreGains = {
 	resupply: -10 //per action
 };
 
-//A cloud save remembered in the settings (see UIBuilder), id is the cloud save id
+//A cloud save remembered in the settings (see src/view/saveload.ts), id is the cloud save id
 export interface CloudSave {
 	name: string;
 	id: string;
@@ -680,5 +680,3 @@ export let VERSION = "3.2.14";
 export let MAJOR_VERSION = major_version(VERSION);
 //The scenario a first start (and the UI's "new game" fallback) plays: Game.defaultScenario
 export const DEFAULT_SCENARIO = "tutorial.xml";
-
-export let NATIVE_PLATFORM = "generic";

@@ -1,13 +1,10 @@
-// Page-side harness core shared by replay.js and ui-replay.js (the shell scripts prepend it).
-// Needs index.html?harness: it hooks Render (to reach the hex/screen mapping of the game's
-// private renderer) and Image (to know when every image has loaded).
+// Page-side harness core shared by replay.js and the contracts' record.js (the shell scripts prepend it).
+// Needs index.html?harness: lib/hooks.js holds back the async completions (Image, XMLHttpRequest).
 //
 // - virtual clock: the game's timers run from a queue the harness advances (runClock)
 // - snapshot(): game state, toData's (src/state.ts) or built from plain properties, sorted keys
-// - domSnapshot(): the page DOM, attributes, classes and inline styles sorted
-// - canvasHashes(): pixel hash of every canvas on the page, after images have loaded
-// - human-like input helpers for UI scripts: click(), clickHex(), key(), settle()
-// - allShown(): the game has shown every step, holdForStep() before a script plays one on the AI's turn
+// - waitImages(): every async completion delivered
+// - allShown(), settle(): the game has shown every step; the clock run until it has
 
 // Virtual clock: the game's timers (its 1s turn loop, animations, the attack sequence) run
 // from a queue in (time, creation order), advanced by the harness. Real timers would race.
@@ -54,10 +51,10 @@ if (!window.__clock) {
 		return true;
 	};
 	// Pending timers other than the turn loop (clock.loop): one-shot timers and the intervals of
-	// running animations (Render.moveAnimation, Animation frames)
+	// running animations (the old UI's on the reference, the UI's beats)
 	clock.pendingTimeouts = () => Object.values(clock.timers).filter((t) => t.id !== clock.loop).length;
-	// CSS animation ends are real time events (the floating combat numbers of bounceText
-	// remove themselves on animationend, the end turn button re-arms on it): fire them from
+	// CSS animation ends are real time events (on the reference, the old UI's floating combat
+	// numbers remove themselves on animationend, its end turn button re-arms on it): fire them from
 	// the virtual clock instead, a fixed 1s after the listener is added. Chrome only fires
 	// the unprefixed event when it has a listener, so the webkit one is dropped.
 	const ANIMATION_END_MS = 1000;
@@ -129,27 +126,15 @@ const clock = window.__clock;
 // Lets real async work (XHR, images) happen; virtual time doesn't move meanwhile
 const sleep = (ms) => new Promise((r) => clock.realSetTimeout(r, ms));
 
-// A long synchronous loop of a step script (frame by frame hashing) calls this now and then:
-// the shell polls the run with bdg eval, which waits behind a busy page and after 20s terminates
-// its scripts, the run with them (#139). Yielding moves no virtual time and delivers nothing;
-// it is skipped while an async operation is in flight, so an image the loop started can't
-// complete during it, as it couldn't without the yield.
-let lastYield = Date.now();
-async function yieldToPage() {
-	if (Date.now() - lastYield < 200 || clock.loading()) return;
-	await sleep(0);
-	lastYield = Date.now();
-}
-
 // Advances virtual time until cond() or the step budget runs out
 async function runClock(cond, maxSteps) {
 	for (let n = 0; n < maxSteps; n++) {
 		if (cond()) return true;
 		game.uiMessageClicked = true;
-		// The scripted tutorial waits for its orders' OK button: the old UI's tooltip. The UI shows them as messages
+		// The scripted tutorial waits for its orders' OK button: the reference's tooltip (its old UI). The UI shows them as messages
 		// one after the other, behind the briefing: each message clicked away, as uiMessageClicked says
 		const tip = document.getElementById("gameToolTip"), ok = document.getElementById("gameToolTipOk");
-		if (tip && ok && ok.onclick && tip.getAttribute("type") === "game" && isVisible("gameToolTip")) ok.onclick();
+		if (tip && ok && ok.onclick && tip.getAttribute("type") === "game" && tip.style.display !== "" && tip.style.display !== "none") ok.onclick();
 		const message = document.querySelector(".pm-screen #ui-message #uiokbut");
 		if (message) message.click();
 		if (clock.flushAsync()) continue;
@@ -200,7 +185,7 @@ function cyrb53(str) {
 
 // snapshot() is the game state as src/state.ts's toData reads it (#127), or the walk of the game
 // objects' plain properties: window.__stateSnapshot ("toData", "toData-norng" or "walk", the
-// default), which replay.sh and ui-replay.sh set on both pages from what the baseline has
+// default), which replay.sh sets on both pages from what the baseline has
 // (harness/lib/reference.sh). The original game (reference/) and a baseline before #127 have no
 // toData: both sides walk the objects then, so the two traces compare like with like. A baseline
 // before #126 has toData with no random streams (rng null): toData-norng leaves them out on both.
@@ -231,7 +216,7 @@ function stateSnapshot() {
 // necessary. Keys are sorted: a different property assignment order isn't a difference.
 const ENTITIES = ["Unit", "Player", "Hex", "Map", "GameMap", "Scenario", "AI", "AIScripted", "Game", "Campaign", "Transport"];
 // Classes the remaster renamed, under their original names so traces compare with the reference
-const RENAMED = { GameMap: "Map", SpriteAnimation: "Animation" };
+const RENAMED = { GameMap: "Map" };
 // (the selection is the UI's, #377: the original and a baseline before it keep it on the map and the hexes)
 const SKIP_KEYS = { handler: 1, map: 1, currentUnit: 1, isMoveSel: 1, isAttackSel: 1 };
 
@@ -279,137 +264,13 @@ function walkSnapshot() {
 	});
 }
 
-// ---- DOM and canvas
-
-function normStyle(st) {
-	const parts = [];
-	for (let i = 0; i < st.length; i++) parts.push(st[i] + ":" + st.getPropertyValue(st[i]));
-	return parts.sort().join(";");
-}
-
-// One line per element and text node, attributes sorted, so the order in which code sets
-// attributes, classes or style properties doesn't count as a difference
-// Deliberate additions of the remaster, left out of the DOM snapshot so that the rest of the
-// page still compares with the reference: selectors of elements the reference doesn't have
-const REMASTER_ONLY = [
-	".settingContainer:has(> #hdGraphics)", // the "High resolution map and units" setting
-];
-
-function domSnapshot(root) {
-	const out = [];
-	const skip = new Set(document.querySelectorAll(REMASTER_ONLY.join(",")));
-	(function walk(n, depth) {
-		if (n.nodeType === 3) {
-			const t = n.nodeValue.replace(/\s+/g, " ").trim();
-			if (t) out.push(depth + ' "' + t);
-			return;
-		}
-		if (n.nodeType !== 1 || skip.has(n)) return;
-		const tag = n.tagName.toLowerCase();
-		if (tag === "script") return;
-		const attrs = [];
-		for (const a of Array.from(n.attributes)) {
-			if (a.name === "style") attrs.push("style=" + normStyle(n.style));
-			else if (a.name === "class") attrs.push("class=" + a.value.split(/\s+/).filter(Boolean).sort().join(" "));
-			else attrs.push(a.name + "=" + a.value);
-		}
-		attrs.sort();
-		if (tag === "input" || tag === "select" || tag === "textarea") attrs.push(".value=" + n.value);
-		if (tag === "input" && (n.type === "checkbox" || n.type === "radio")) attrs.push(".checked=" + n.checked);
-		if (tag === "canvas") attrs.push(".size=" + n.width + "x" + n.height);
-		if (n.scrollTop || n.scrollLeft) attrs.push(".scroll=" + n.scrollLeft + "," + n.scrollTop);
-		out.push(depth + " <" + tag + (attrs.length ? " " + attrs.join(" ") : ""));
-		for (const c of Array.from(n.childNodes)) walk(c, depth + 1);
-	})(root || document.body, 0);
-	// The reference and the remaster are served from different ports: compare URLs without origin
-	return out.join("\n").replace(/https?:\/\/127\.0\.0\.1:\d+/g, "");
-}
-
-// Real image loads are async: canvases are only comparable once every image is in.
-// Returns null, or on a timeout what was still pending
+// Real image loads are async: every completion held back delivered, in order, before a turn's end is
+// recorded. Returns null, or on a timeout what was still pending
 async function waitImages(ms) {
 	const pending = () => [].concat(clock.loading() ? ["clock loading"] : [],
 		(window.__harnessAsync || []).filter((op) => op.done && !op.delivered).map((op) => "undelivered " + op.kind),
 		Array.from(document.images).filter((i) => !i.complete && i.src).map((i) => "image " + i.src.replace(/^https?:\/\/[^/]+/, "")));
 	return await waitFor(() => pending().length === 0, ms || 15000) ? null : pending();
-}
-
-function hashPixels(canvas) {
-	if (!canvas.width || !canvas.height) return "empty";
-	const data = new Uint32Array(canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data.buffer);
-	let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-	for (let i = 0; i < data.length; i++) {
-		h1 = Math.imul(h1 ^ data[i], 2654435761);
-		h2 = Math.imul(h2 ^ data[i], 1597334677);
-	}
-	return ((h1 ^ (h1 >>> 16)) >>> 0).toString(36) + ((h2 ^ (h2 >>> 13)) >>> 0).toString(36);
-}
-
-// Pixel hash of each canvas on the page, by id (or position) and size. unitbackbuffer is
-// Render's scratch canvas for composing one unit image, what it holds between draws isn't output.
-function canvasHashes() {
-	return Array.from(document.querySelectorAll("canvas")).filter((c) => c.id !== "unitbackbuffer").map((c, i) =>
-		(c.id || "canvas" + i) + " " + c.width + "x" + c.height + " " + hashPixels(c));
-}
-
-// ---- Human-like input for UI scripts
-
-function eventCoords(target, pageX, pageY) {
-	return { bubbles: true, cancelable: true, view: window, button: 0, which: 1,
-		clientX: pageX - window.scrollX, clientY: pageY - window.scrollY };
-}
-
-// Clicks an element like a user would: mousedown, mouseup, click
-function click(selectorOrElement) {
-	const el = typeof selectorOrElement === "string" ? document.querySelector(selectorOrElement) : selectorOrElement;
-	if (!el) throw new Error("click: no element " + selectorOrElement);
-	const r = el.getBoundingClientRect();
-	const x = r.left + r.width / 2 + window.scrollX, y = r.top + r.height / 2 + window.scrollY;
-	for (const type of ["mousedown", "mouseup", "click"]) el.dispatchEvent(new MouseEvent(type, eventCoords(el, x, y)));
-	return el;
-}
-
-// Page coordinates of a point inside hex (row, col), from the game's own renderer
-function hexPageCoords(row, col) {
-	const render = window.__harnessRender;
-	if (!render) throw new Error("hexPageCoords: no renderer, load index.html?harness");
-	const cursor = render.getCursorCanvas(), g = document.getElementById("game");
-	const p = render.cellToScreen(row, col, false);
-	for (let dy = 0; dy < 80; dy += 2)
-		for (let dx = 0; dx < 80; dx += 2) {
-			const c = render.screenToCell(p.x + dx, p.y + dy);
-			if (c.row === row && c.col === col) {
-				// inverse of the UI's event to canvas mapping (ui.js mouseInfo)
-				return { x: p.x + dx + cursor.offsetLeft + g.clientLeft + g.offsetLeft - g.scrollLeft,
-					y: p.y + dy + cursor.offsetTop + g.clientTop + g.offsetTop - g.scrollTop };
-			}
-		}
-	throw new Error("hexPageCoords: no point maps to hex " + row + "," + col);
-}
-
-// Clicks a map hex on the cursor canvas (button 0 select/move/attack, 2 for right click)
-function clickHex(row, col, button) {
-	const cursor = window.__harnessRender.getCursorCanvas();
-	const p = hexPageCoords(row, col);
-	const init = eventCoords(cursor, p.x, p.y);
-	if (button === 2) { init.button = 2; init.which = 3; }
-	cursor.dispatchEvent(new MouseEvent("mousedown", init));
-	window.dispatchEvent(new MouseEvent("mouseup", init));
-	cursor.dispatchEvent(new MouseEvent("click", init));
-}
-
-// Moves the mouse over a hex (tooltips, cursors)
-function hoverHex(row, col) {
-	const cursor = window.__harnessRender.getCursorCanvas();
-	const p = hexPageCoords(row, col);
-	cursor.dispatchEvent(new MouseEvent("mousemove", eventCoords(cursor, p.x, p.y)));
-}
-
-// Releases a key: key("a"), key("Escape"). The UI matches shortcuts on event.code (KeyA)
-function key(k, keyCode) {
-	const code = k.length === 1 ? (/[a-z]/i.test(k) ? "Key" + k.toUpperCase() : /[0-9]/.test(k) ? "Digit" + k : k) : k;
-	keyCode = keyCode || (k.length === 1 ? k.toUpperCase().charCodeAt(0) : { Escape: 27, Enter: 13, Space: 32 }[k] || 0);
-	window.dispatchEvent(new KeyboardEvent("keyup", { key: k, code, keyCode, which: keyCode, bubbles: true }));
 }
 
 // The game has shown every step: the screen animates no move or attack, as the game host says (src/host.ts
@@ -419,13 +280,6 @@ function key(k, keyCode) {
 const hostShows = () => !!(game.host && game.host.showingStep);
 function allShown() {
 	return hostShows() ? !game.host.showingStep() : !game.waitUIAnimation;
-}
-
-// A script plays a step through the old UI on the AI's turn: the turn loop must hold until it has been shown.
-// The game host holds while the screen shows it; the original game held on game.waitUIAnimation, which its
-// game set before asking the UI to show an AI's step (the UI only clears it at the end)
-function holdForStep() {
-	if (!hostShows()) game.waitUIAnimation = true;
 }
 
 // Runs the virtual clock until animations and one-shot timers are done and, when a human

@@ -67,7 +67,7 @@ export var Rng: RngModule = {
 		return nextRandom(Rng.cosmetic);
 	},
 	//Every stream from the seed the harness seeds Math.random with (harness/replay.js per scenario,
-	//harness/ui-replay.js at the start, the contracts' check per call), so a replay plays the same
+	//the contracts' check per call), so a replay plays the same
 	//dice, AI, sprites and sounds on both sides. The game stream takes the seed as it is: it draws
 	//what the harness's Math.random draws, the numbers the original game rolls with that seed
 	seed: function(seed: number) {

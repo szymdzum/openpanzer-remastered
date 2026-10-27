@@ -5,12 +5,12 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The game decides, the screen shows. The old UI implements it (src/oldscreen.ts), the new UI will be a
- * second implementation (src/view/, #380), and a program that shows nothing a third (src/nullscreen.ts:
- * the headless tests, later the CLI and the arena). What the game waits on takes a callback, shown, which
- * the screen calls once the player has seen it: a program's move or attack, played whole before it is
- * shown (#375), a unit it picked, a message pointing at a hex. A program's next action waits for it: the
- * old UI calls it at the end of the step's last animation, the null screen at once. The messages the
+ * The game decides, the screen shows. The UI implements it (src/view/screen.tsx, #380; the old UI did until
+ * #351), and a program that shows nothing too (src/nullscreen.ts: the headless tests, later the CLI and the
+ * arena). What the game waits on takes a callback, shown, which the screen calls once the player has seen
+ * it: a program's move or attack, played whole before it is shown (#375), a unit it picked, a message
+ * pointing at a hex. A program's next action waits for it: the UI calls it at the end of the step's last
+ * animation, the null screen at once. The messages the
  * player clicks away set game.uiMessageClicked and tell the host to go on (goOn).
  */
 
@@ -41,7 +41,7 @@ export interface Screen {
 	campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void): void;
 	//The main menu, once a game has ended
 	mainMenu(): void;
-	//The platform's score board and achievements (OSGlue)
+	//The platform's score board and achievements (none on the web)
 	reportScore(score: number): void;
 	reportAchievement(campaignFile: string): void;
 
@@ -56,14 +56,14 @@ export interface Screen {
 	//What a controller asks of the screen (src/core/controller.ts): a unit selected, a message pointing at a
 	//hex (shown: its OK), a look at a hex, the main menu (only once the screen is built), stuck (nothing to
 	//show). shown is called once the player has seen it: a program's next action waits for its unit picked
-	//and its look at a hex (the old UI shows them a moment, #8) and for its message
+	//and its look at a hex (the old UI showed them a moment, #8) and for its message
 	view(event: ViewEvent, shown?: () => void): void;
 	//A program's command other than a move or an attack, played (done: its result or its refusal): what the
-	//screen shows beside the state after it (the old UI's selection, src/selection.ts). A screen that reads
-	//the game's world has none
+	//screen shows beside the state after it (the old UI's selection, src/selection.ts: the pinned game turns'
+	//stand-in of the old screen, test/gameturn.test.ts). A screen that reads the game's world has none
 	played?(cmd: Command, done: Executed<CommandType>): void;
 	//A step the screen is still showing, the program's or the person's: a move or an attack it animates (the
-	//old UI). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
+	//old UI had it; the UI doesn't yet, #459). The host's turn loop holds on it, the harness and the command-line player wait on it (#378); a
 	//screen that shows each step at once has none
 	showingStep?(): boolean;
 	//The program's turn ended (the AI's status shown finished)
