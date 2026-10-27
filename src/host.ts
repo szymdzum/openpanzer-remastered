@@ -324,6 +324,12 @@ export class GameHost {
 		this.game.state.saveSettings();
 	}
 
+	//The settings saved (uiSettings), as the old settings window's OK and the start menu's starts save them: a setting
+	//changed on one UI holds on the other
+	saveSettings() {
+		this.game.state.saveSettings();
+	}
+
 	//The scenario flow of a campaign of the list, its index there: its data loaded, then the text the old campaign menu's
 	//flow button showed (Campaign.getCampaignFlow), for done
 	campaignFlow(index: number, done: (html: string) => void) {

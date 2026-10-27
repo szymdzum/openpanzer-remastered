@@ -209,6 +209,13 @@ test("The start menu's tutorial, scenario and campaign start through the game ho
 	expect(g.scenario.file).toBe(g.campaign.getCampaignData()[0].scenario);
 }, 60_000);
 
+//The settings window's OK (#349): the settings saved through the game's state
+test("The game host saves the settings, as the old settings window's OK did (#349)", () => {
+	const g = headlessGame(nullScreen);
+	g.host.saveSettings();
+	expect((g.state as unknown as { settingsSaves: () => number }).settingsSaves()).toBe(1);
+});
+
 //The campaign menu's flow (#349): the campaign's scenarios, each with where its outcomes lead, as the old menu showed it
 test("The game host gives a campaign's scenario flow, as the old campaign menu's flow button showed it (#349)", async () => {
 	const g = headlessGame(nullScreen);
