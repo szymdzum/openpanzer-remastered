@@ -8,7 +8,7 @@ import { Scrim, Stamp } from "./panel";
 import type { Store } from "./store";
 import { briefingLabelOf } from "./turn";
 
-export function MessageDialog({ store }: { store: Store }) {
+export function MessageDialog({ store }: { store: Pick<Store, "close" | "menu" | "note" | "world"> }) {
 	const note = store.note.value, w = store.world.value;
 	//(set aside while the settings are open, as the old settings window hid the message under it)
 	if (note === null || store.menu.value.window === "settings") return null;

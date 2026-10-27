@@ -36,7 +36,7 @@ function Card({ u, side, onPick }: { u: ListUnit, side: "axis" | "allied", onPic
 	);
 }
 
-export function UnitStrip({ store }: { store: Store }) {
+export function UnitStrip({ store }: { store: Pick<Store, "listPick" | "side" | "toggleList" | "unitList"> }) {
 	const list = store.unitList.value;
 	useEscape(list === null ? undefined : store.toggleList);
 	if (list === null) return null;

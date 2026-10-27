@@ -56,7 +56,7 @@ test("A step that doesn't touch the selected unit renders neither its card nor i
 		{ eqid: 140, owner: 0, row: 7, col: 7 }, { eqid: 140, owner: 1, row: 1, col: 9 }] }, undefined, { spotSide: 0 });
 	const store = createStore({ world: () => w, command: () => ({ ok: true, result: null }), won: () => {} });
 	store.refresh();
-	store.selected.value = 0;
+	store.pickUnit(0);
 	store.showReport(true);
 	render(<App store={store} />);
 	expect(document.getElementById("unit-info")).not.toBeNull();

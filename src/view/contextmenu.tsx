@@ -9,7 +9,7 @@ import type { Store } from "./store";
 //The key that plays each action (src/view/shortcuts.ts), for screen readers
 const KEYS: Record<ActionKey, string> = { mount: "M", embark: "E", resupply: "S", reinforce: "R", overstrength: "O", undo: "U" };
 
-export function UnitContextMenu({ store }: { store: Store }) {
+export function UnitContextMenu({ store }: { store: Pick<Store, "context" | "dispatch"> }) {
 	const menu = store.context.value;
 	if (menu === null || menu.actions.length === 0) return null;
 	return (

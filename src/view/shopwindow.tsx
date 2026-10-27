@@ -14,7 +14,7 @@ import { frameStyle } from "./unitstrip";
 //The card's four sorts as its segmented control, the old window's others in a list beside it
 const SHOWN = SORTS.slice(0, 4), OTHERS = SORTS.slice(4);
 
-function Tools({ shop, store }: { shop: Shop, store: Store }) {
+function Tools({ shop, store }: { shop: Shop, store: Pick<Store, "shopReverse" | "shopSort"> }) {
 	const other = OTHERS.some((s) => s.key === shop.sort);
 	return (
 		<div class="tools">
@@ -31,7 +31,7 @@ function Tools({ shop, store }: { shop: Shop, store: Store }) {
 	);
 }
 
-function Models({ shop, store }: { shop: Shop, store: Store }) {
+function Models({ shop, store }: { shop: Shop, store: Pick<Store, "shopModel"> }) {
 	const picked = shop.picked === null ? -1 : shop.picked.eqid;
 	return (
 		<div id="eqUnitList" class="pm-grid">
@@ -49,7 +49,7 @@ function Models({ shop, store }: { shop: Shop, store: Store }) {
 	);
 }
 
-function Detail({ shop, store }: { shop: Shop, store: Store }) {
+function Detail({ shop, store }: { shop: Shop, store: Pick<Store, "shopTransport"> }) {
 	const p = shop.picked;
 	if (p === null) return <aside class="detail"><p class="pm-muted">Pick a model to see what it brings.</p></aside>;
 	return (
@@ -82,7 +82,7 @@ function Detail({ shop, store }: { shop: Shop, store: Store }) {
 //A price worth showing: none for a button that has nothing to price
 const priced = (a: { cost: number }) => a.cost > 0 ? a.cost : undefined;
 
-function Actions({ shop, store }: { shop: Shop, store: Store }) {
+function Actions({ shop, store }: { shop: Shop, store: Pick<Store, "shopAct"> }) {
 	const act = (a: ShopAct) => () => store.shopAct(a);
 	return (
 		<>
@@ -97,7 +97,10 @@ function Actions({ shop, store }: { shop: Shop, store: Store }) {
 	);
 }
 
-export function ShopWindow({ store }: { store: Store }) {
+//What ShopWindow reads of the store
+type ShopWindowReads = Pick<Store, "closeShop" | "shop" | "shopAct" | "shopClass" | "shopCountry" | "shopModel" |
+	"shopReverse" | "shopSort" | "shopTransport">;
+export function ShopWindow({ store }: { store: ShopWindowReads }) {
 	const shop = store.shop.value;
 	useEscape(shop === null ? undefined : store.closeShop);
 	if (shop === null) return null;

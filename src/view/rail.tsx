@@ -57,7 +57,7 @@ function RailTip({ hint }: { hint: Hint }) {
 	);
 }
 
-export function Rail({ store }: { store: Store }) {
+export function Rail({ store }: { store: Pick<Store, "airMode" | "hexGrid" | "menu" | "railOpen" | "shop" | "shopRefusal" | "shortcut" | "strategic" | "toggleRail"> }) {
 	const open = store.railOpen.value;
 	const [hint, setHint] = useState<Hint | null>(null);
 	const key = (name: Parameters<Store["shortcut"]>[0]) => () => store.shortcut(name);
@@ -98,7 +98,7 @@ export function Rail({ store }: { store: Store }) {
 }
 
 //The brass button in the corner, the HUD's one primary action: off with its reason when it isn't the person's turn
-export function EndTurn({ store }: { store: Store }) {
+export function EndTurn({ store }: { store: Pick<Store, "askEndTurn" | "endTurn"> }) {
 	const refusal = store.endTurn.value;
 	return (
 		<div id="endturn" class="pm-endturn">
@@ -109,7 +109,7 @@ export function EndTurn({ store }: { store: Store }) {
 }
 
 //End turn's question while units can still act (#8): which ones, then end the turn or play on (Esc plays on)
-export function EndTurnQuestion({ store }: { store: Store }) {
+export function EndTurnQuestion({ store }: { store: Pick<Store, "answerEndTurn" | "askingText"> }) {
 	const text = store.askingText.value;
 	if (text === null) return null;
 	const back = () => store.answerEndTurn(false);

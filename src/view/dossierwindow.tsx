@@ -38,7 +38,7 @@ function Medals({ d }: { d: DossierView }) {
 	);
 }
 
-export function DossierWindow({ store }: { store: Store }) {
+export function DossierWindow({ store }: { store: Pick<Store, "campaignEnd" | "closeDossier" | "dossier"> }) {
 	const d = store.dossier.value, end = store.campaignEnd.value;
 	const close = d === null ? undefined : () => store.closeDossier();
 	useEscape(close);

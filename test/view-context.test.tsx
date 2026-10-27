@@ -124,7 +124,7 @@ function screenOf(w: World) {
 		won: () => {},
 	});
 	store.refresh();
-	store.selected.value = 0;
+	store.pickUnit(0);
 	render(<App store={store} />);
 	return { store, sent };
 }
@@ -156,7 +156,7 @@ test("A unit key plays its action when the menu shows it, and does nothing when 
 	await act(() => store.shortcut({ menu: "zoom" }));
 	expect(document.getElementById("unit-context")).toBeNull();
 	await act(() => store.shortcut({ menu: "zoom" }));
-	await act(() => { store.selected.value = null; });
+	await act(() => { store.pickUnit(null); });
 	expect(document.getElementById("unit-context")).toBeNull();
 });
 

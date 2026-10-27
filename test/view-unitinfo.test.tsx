@@ -67,7 +67,7 @@ function panelOf(w: World) {
 test("The card opens as one row: identity in stars, condition, the short sheet of twelve, nothing beyond the old window; Inspect unit hides it", async () => {
 	const store = panelOf(world());
 	expect(document.getElementById("unit-info")).toBeNull();
-	await act(() => { store.selected.value = 0; });
+	await act(() => { store.pickUnit(0); });
 	const panel = screen.getByRole("region", { name: "Selected unit" });
 	expect(panel.id).toBe("unit-info");
 	expect(["statsRowTop", "uName", "uSmallFlag", "statsRowContainer", "statsRow"].map((id) => document.getElementById(id) !== null))
@@ -88,7 +88,7 @@ test("The card opens as one row: identity in stars, condition, the short sheet o
 
 test("More unfolds the card: the band of every stat, the figures and the leaders in place of the short sheet; Less and Esc fold it", async () => {
 	const store = panelOf(world());
-	await act(() => { store.selected.value = 0; });
+	await act(() => { store.pickUnit(0); });
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
 	const band = document.getElementById("unit-card")!;
 	expect([...band.querySelectorAll(".ui-stat .k")].map((k) => k.textContent)).toEqual(["Soft", "Hard", "Air", "Naval", "Ground", "Air", "Close",
@@ -99,7 +99,7 @@ test("More unfolds the card: the band of every stat, the figures and the leaders
 	expect(document.getElementById("statsRowContainer")).toBeNull();
 	expect(document.getElementById("unit-info")!.className).toBe("pm-panel pm-uinfo open");
 	//it stays unfolded on another unit; Less folds it, and Esc
-	await act(() => { store.selected.value = 2; });
+	await act(() => { store.pickUnit(2); });
 	expect(document.getElementById("unit-card")).not.toBeNull();
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Less" })); });
 	expect([document.getElementById("unit-card"), store.cardSize.value]).toEqual([null, "row"]);
@@ -110,7 +110,7 @@ test("More unfolds the card: the band of every stat, the figures and the leaders
 
 test("Hide leaves a strip of the name, strength, fuel and ammo, clear of the map's last rows; Show brings the row back", async () => {
 	const store = panelOf(world());
-	await act(() => { store.selected.value = 0; });
+	await act(() => { store.pickUnit(0); });
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Hide" })); });
 	const strip = document.getElementById("unit-info")!;
 	const e = store.world.value!.equipment[PZ_IIA];
@@ -120,7 +120,7 @@ test("Hide leaves a strip of the name, strength, fuel and ammo, clear of the map
 		["ui-mini low", `Fuel 18/${e.fuel}`], ["ui-mini critical", `Ammo 1/${e.ammo}`]]);
 	expect([document.getElementById("statsRowContainer"), strip.querySelector(".pm-meter")]).toEqual([null, null]);
 	//it stays a strip on another unit, and from the unfolded card too
-	await act(() => { store.selected.value = 2; });
+	await act(() => { store.pickUnit(2); });
 	expect(document.getElementById("unit-info")!.className).toBe("pm-panel pm-uinfo strip");
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Show" })); });
 	expect(store.cardSize.value).toBe("row");
@@ -131,7 +131,7 @@ test("Hide leaves a strip of the name, strength, fuel and ammo, clear of the map
 
 test("The views of a gun on its tractor, Next unit on the side's own units only", async () => {
 	const store = panelOf(world());
-	await act(() => { store.selected.value = 1; });
+	await act(() => { store.pickUnit(1); });
 	//the transport view pressed, as the old window opened it; the unit's own on a click
 	expect(screen.getByRole("button", { name: "Transport" }).getAttribute("aria-pressed")).toBe("true");
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Unit" })); });
@@ -140,15 +140,15 @@ test("The views of a gun on its tractor, Next unit on the side's own units only"
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Next unit" })); });
 	expect([store.selected.value, store.card.value!.unit, store.card.value!.view]).toEqual([2, 2, "unit"]);
 	//an enemy: no Next unit, no views; nothing selected: no card
-	await act(() => { store.selected.value = 3; });
+	await act(() => { store.pickUnit(3); });
 	expect([screen.queryByRole("button", { name: "Next unit" }), screen.queryByRole("group", { name: "Show" })]).toEqual([null, null]);
-	await act(() => { store.selected.value = null; });
+	await act(() => { store.pickUnit(null); });
 	expect(document.getElementById("unit-info")).toBeNull();
 });
 
 test("The leader's tooltip shows both leaders on hover, focus or a tap; a unit without one says so", async () => {
 	const store = panelOf(world());
-	await act(() => { store.selected.value = 0; });
+	await act(() => { store.pickUnit(0); });
 	const leader = document.querySelector<HTMLButtonElement>("#unit-info .leader")!;
 	const tip = () => document.getElementById("uLeaderTip")!;
 	expect([leader.textContent, tip().hidden]).toEqual(["Battlefield Intelligence", true]);
@@ -161,7 +161,7 @@ test("The leader's tooltip shows both leaders on hover, focus or a tap; a unit w
 	await act(() => { fireEvent.blur(leader); });
 	await act(() => { fireEvent.click(leader); });
 	expect([tip().hidden, leader.getAttribute("aria-expanded")]).toEqual([false, "true"]);
-	await act(() => { store.selected.value = 2; });
+	await act(() => { store.pickUnit(2); });
 	expect(document.querySelector("#unit-info .leader")!.textContent).toBe("No leader yet");
 	expect(document.getElementById("uSmallFlag")).toBeNull(); //(a unit with no flag of its own: none)
 });

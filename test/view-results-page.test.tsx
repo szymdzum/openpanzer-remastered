@@ -46,7 +46,7 @@ function pageOf() {
 	};
 	const store = createStore(host);
 	store.refresh();
-	store.selected.value = 0;
+	store.pickUnit(0);
 	render(<><MapView store={store} /><StatusBar store={store} /></>);
 	return store;
 }

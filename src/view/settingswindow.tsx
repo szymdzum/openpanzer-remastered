@@ -7,7 +7,7 @@ import { Slider, Toggle } from "./controls";
 import { Scrim, useEscape, Window } from "./panel";
 import type { Store } from "./store";
 
-export function SettingsWindow({ store }: { store: Store }) {
+export function SettingsWindow({ store }: { store: Pick<Store, "closeSettings" | "settings" | "slide" | "toggleSetting"> }) {
 	const s = store.settings.value!;
 	useEscape(() => store.closeSettings());
 	//(the focus on the first setting when it opens: the menus are keyboard-first)

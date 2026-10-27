@@ -20,14 +20,14 @@ function photoOf(n: number) {
 	return { backgroundImage: `url(resources/ui/dialogs/startmenu/images/startmenu-${n}.jpg)`, "--i": n - 1 };
 }
 
-function Entries({ store, entries }: { store: Store, entries: MenuEntry[] }) {
+function Entries({ store, entries }: { store: Pick<Store, "startMenu">, entries: MenuEntry[] }) {
 	return entries.map((b) => (
 		<Button key={b.id} id={b.id} large icon={b.icon} title={b.hint} onClick={() => store.startMenu(b.id)}>{b.title}</Button>
 	));
 }
 
 //The main window: the focus on its first button whenever it opens or its New Game panel does, the menu being keyboard-first
-function MainWindow({ store, newGame }: { store: Store, newGame: boolean }) {
+function MainWindow({ store, newGame }: { store: Pick<Store, "startMenu">, newGame: boolean }) {
 	const ref = useRef<HTMLDialogElement>(null);
 	useLayoutEffect(() => { ref.current!.querySelector<HTMLButtonElement>("button:enabled")!.focus(); }, [newGame]);
 	return (
@@ -49,7 +49,12 @@ function MainWindow({ store, newGame }: { store: Store, newGame: boolean }) {
 	);
 }
 
-export function StartMenu({ store }: { store: Store }) {
+//What StartMenu reads of the store
+type StartMenuReads = Pick<Store, "campaign" | "campaignFlow" | "closeSaveLoad" | "difficultyHelp" | "loadFile" |
+	"loadFromCloud" | "menu" | "menuBack" | "pickCampaign" | "pickDifficulty" | "pickScenario" | "playCampaign" |
+	"playScenario" | "saveLoad" | "saveToCloud" | "saveToFile" | "scenario" | "setCloudId" | "shortcut" | "startMenu" |
+	"toggleAI">;
+export function StartMenu({ store }: { store: StartMenuReads }) {
 	const m = store.menu.value;
 	const shown = m.window !== null && m.window !== "settings";
 	useEscape(shown ? () => store.shortcut({ menu: "options" }) : undefined);

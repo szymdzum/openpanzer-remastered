@@ -9,7 +9,10 @@ import { Icon } from "./icon";
 import { Window } from "./panel";
 import type { Store } from "./store";
 
-export function SaveLoadWindow({ store }: { store: Store }) {
+//What SaveLoadWindow reads of the store
+type SaveLoadWindowReads = Pick<Store, "closeSaveLoad" | "loadFile" | "loadFromCloud" | "saveLoad" | "saveToCloud" |
+	"saveToFile" | "setCloudId">;
+export function SaveLoadWindow({ store }: { store: SaveLoadWindowReads }) {
 	const v = store.saveLoad.value!;
 	const file = useRef<HTMLInputElement>(null), body = useRef<HTMLDivElement>(null);
 	//(the focus on its first button when it opens: the menus are keyboard-first)

@@ -58,10 +58,14 @@ function underStatusBar(scroller: HTMLElement): number {
 	return Math.max(0, bar.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top) + TOKENS.px["space-1"];
 }
 
+//What Painter reads of the store
+type PainterReads = Pick<Store, "clickHex" | "deployment" | "fog" | "ghost" | "glance" | "hexGrid" | "hoverHex" |
+	"marks" | "motion" | "overview" | "path" | "plaques" | "results" | "scale" | "selection" | "strategic" | "support" |
+	"units" | "world">;
 //Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it:
 //the hovered hex, a click on a hex. Attached while the map is on the page
 class Painter {
-	declare store: Store;
+	declare store: PainterReads;
 	declare cache: ImageCache;
 	declare canvas: HTMLCanvasElement | null;
 	declare scroller: HTMLElement | null;
@@ -71,7 +75,7 @@ class Painter {
 	declare looked: { data: World["data"] | null; look: Position | null };
 	declare layers: MapLayers;
 
-	constructor(store: Store, onView: (view: View) => void) {
+	constructor(store: PainterReads, onView: (view: View) => void) {
 		this.store = store;
 		this.canvas = null;
 		this.scroller = null;
@@ -239,7 +243,7 @@ function mapSize(w: World | null, terrain: Picture | null, scale: number): { wid
 
 //What sits over the map at its hexes, placed from where the map is on the screen: the pins, the placing tag and the
 //combat's results
-function Overlays({ store, view, scale }: { store: Store, view: View, scale: number }) {
+function Overlays({ store, view, scale }: { store: Pick<Store, "faded" | "ghost" | "pins" | "results">, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
 	const ghost = store.ghost.value, results = store.results.value;
@@ -253,7 +257,11 @@ function Overlays({ store, view, scale }: { store: Store, view: View, scale: num
 	);
 }
 
-export function MapView({ store }: { store: Store }) {
+//What MapView reads of the store
+type MapViewReads = Pick<Store, "clickHex" | "deployment" | "dockHeight" | "faded" | "fog" | "ghost" | "glance" |
+	"hexGrid" | "hoverHex" | "lookAt" | "marks" | "motion" | "overview" | "path" | "pins" | "plaques" | "results" |
+	"scale" | "selection" | "strategic" | "support" | "units" | "world">;
+export function MapView({ store }: { store: MapViewReads }) {
 	const canvas = useRef<HTMLCanvasElement>(null);
 	const scroller = useRef<HTMLDivElement>(null);
 	//(where the map is on the screen, after each draw that moved it: the tag follows, a terrain that loaded sizes the map)
