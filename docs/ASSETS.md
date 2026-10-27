@@ -8,9 +8,10 @@ in the repository's LICENSE before using it.
 ## What we have
 
 - Units: 3476 sprite sheets in `game/resources/units/images/`, 720×50 px each: 9 facings of 80 px
-  in one strip. The other 7 facings are the same frames mirrored (`src/render.ts`,
-  `drawUnitSprite`). The renderer already draws `@2x` images at half their pixel size
-  (`imgScale`), so sharper sprites drop in without engine changes. Many sheets are variants of
+  in one strip. The other 7 facings are the same frames mirrored (`src/view/mapdraw.ts`; the old
+  renderer's `drawUnitSprite` until #351). The old renderer drew `@2x` images at half their pixel
+  size (`imgScale`), so sharper sprites dropped in without engine changes; the UI doesn't load them
+  yet (#462). Many sheets are variants of
   the same vehicle (countries, paint).
 - Maps: 239 hand-painted images of 1920×1920 in `game/resources/maps/images/`, 247 MB. Each one
   has to line up exactly with its scenario's hex grid.
@@ -238,9 +239,10 @@ Two measurable reasons:
 
 ### Seen in the game
 
-The game already loads a sharper file for each unit on high density screens (`src/render.ts`,
-`hdPath`): `resources/units/images/pa131.png` is drawn from `/hd/units/images/pa131.webp` when it
-exists. So the new strip goes in without touching the game:
+The old renderer loaded a sharper file for each unit on high density screens (`hdPath`, src/render.ts
+until #351): `resources/units/images/pa131.png` was drawn from `/hd/units/images/pa131.webp` when it
+existed. The UI doesn't load these files yet (#462); once it does, the new strip goes in without touching
+the game:
 
     cwebp -lossless out@2x.png -o public/hd/units/images/pa131.webp
 

@@ -100,4 +100,5 @@ Outline the target hex with `hex-target` on the canvas. A second tap on the same
 4. Restyle the start menu, campaign, scenario and settings windows, and add the Theme control.
 5. Add the combat odds preview.
 6. Replace the `@media (max-device-width: 480px)` rules with the tablet layouts. Add `.labels` to the rail under `(pointer: coarse)`, and switch to the bottom command bar under `(orientation: portrait) and (max-width: 900px)`.
-7. Delete the icon fonts, the `m04` fonts and the raster UI images (`ui/dialogs/**`, `ui/dossier/*.png`).
+7. Delete the icon fonts, the `m04` fonts and the raster UI images (`ui/dialogs/**`, `ui/dossier/*.png`). Done in D8
+   (#351), but for the start menu's photographs and the prestige icon (`currency.png`), which the UI still shows.

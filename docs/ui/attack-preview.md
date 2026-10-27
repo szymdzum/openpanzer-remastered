@@ -26,7 +26,7 @@ Jobs 1 and 2 happen dozens of times a turn and must cost nothing. Job 5 matters 
 
 ## 3. Today's cursor
 
-`generateAttackCursor` (`src/render.ts`) draws a 54×54 image and sets it as the mouse cursor over an attackable hex: a crosshair, the attacker's flag top left, the target's flag top right, and two 8px yellow numbers: the attacker's estimated losses under its flag, the target's under its. On touch screens the same image is drawn on every attackable hex.
+`generateAttackCursor` (`src/render.ts`, deleted with the old UI in #351) draws a 54×54 image and sets it as the mouse cursor over an attackable hex: a crosshair, the attacker's flag top left, the target's flag top right, and two 8px yellow numbers: the attacker's estimated losses under its flag, the target's under its. On touch screens the same image is drawn on every attackable hex.
 
 What it does well: it is instant, it sits where the eye already is, and it has the PG2 feel players remember.
 

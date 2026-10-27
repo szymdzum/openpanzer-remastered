@@ -13,7 +13,7 @@ done. The designs it builds are in this folder (README.md). The order was decide
   a whole game plays without the DOM, for the tests, the arena (#46), an LLM general (#45) and
   the CLI.
 - **The old UI is frozen.** No fixes, no features: only the adapter D0 gives it. Its own bugs
-  close when it goes (#112, #113).
+  close when it goes (#112, #113). It went in D8 (#351).
 - **The design system before the screens (D1).** Tokens, then a component library, seen in a live
   gallery (`docs/ui/index.html`); the screens are composed of its primitives and patterns, with no
   CSS of their own beyond layout.
@@ -30,8 +30,9 @@ done. The designs it builds are in this folder (README.md). The order was decide
   as the reason a control is disabled, and plays animations and sounds from the step's
   `GameEvent`s after the step (cosmetic random stream). It never reads the old `GameMap` objects
   or `game.ts`.
-- **An early switch.** `?ui=new` starts the game on the new UI only until a whole game plays on
-  it. Then it becomes the default and the old UI is deleted (D8). Tablets (D7) and the attack
+- **An early switch.** `?ui=new` started the game on the new UI until a whole game played on it.
+  Then it became the default and the old UI was deleted (D8, #351, done 2026-10-27: the new UI's
+  end-to-end test, `npm run e2e`, plays a campaign game on it in CI). Tablets (D7) and the attack
   preview's breakdown come after, on the new UI only.
 - **A 1:1 port of the old UI (decided 2026-10-26).** The new UI shows and does what the old UI
   shows and does: the same information, the same actions, the same behaviour, built the new way
@@ -72,7 +73,7 @@ done. The designs it builds are in this folder (README.md). The order was decide
 | D4 Combat | #347 | attack preview stages 0-2, odds card, combat results, the animations and sounds from the events (cards: AttackPreview, CombatOdds, CombatResults) | D2, D3 |
 | D5 Windows | #348 | turn report, unit list, equipment, the unit card unfolded (in UnitInfo since #441), deployment, messages, dossier, campaign end (cards: CombatLog, UnitList, Equipment, Deployment, MessageDialog, Dossier, CampaignEnd) | D3 |
 | D6 Menus | #349 | start menu, new game, campaign and scenario selection, settings with the rules choice, save and load (cards: StartMenu, NewGame, CampaignSelect, ScenarioSelect, Settings, SaveLoad) | D1c |
-| D8 Switch | #351 | the new UI by default, the old one deleted, verify's UI part replaced by the new UI's tests | D0, D2-D6 |
+| D8 Switch (done) | #351 | the new UI by default, the old one deleted, verify's UI part replaced by the new UI's tests | D0, D2-D6 |
 | D7 Tablet | #350 | touch layouts and the two-tap rules (cards: TabletHudLandscape, TabletHudPortrait, TabletUnitInfo, TabletEquipmentLandscape, TabletEquipmentPortrait) | D8 |
 
 Order: D0 and D1a-D1b side by side from the start, with the card fixes; D1c once both are far
@@ -89,11 +90,13 @@ One issue per phase, split further when a phase is more than a pull request can 
 issue lists its cards, the element ids and events it uses, and these checks:
 
 - **Shows and does what the old UI does:** the same content and actions, checked against the old
-  code (`src/ui.ts`, `src/uibuilder.ts`...), with the left-out extras of the card listed.
+  code (`src/ui.ts`, `src/uibuilder.ts`..., in the history before #351 deleted them), with the
+  left-out extras of the card listed.
 - **Looks like the card** in Paper and Blackout at 1366×768 and 1920×1080 (and the tablet sizes
   in D7): a screenshot of the game next to the render in the pull request.
 - **Accessible:** the checklist in handoff.md (contrast, labels, focus, reduced motion).
-- **Tested:** view-model logic in unit tests on a hand-built world (`smallGame()`).
+- **Tested:** view-model logic in unit tests on a hand-built world (`smallGame()`); what a person
+  does on the page in the end-to-end test (`test/e2e/game.ts`).
 - **The contracts and verify unchanged,** except where a D0 step says it changes them (D0.3's
   in-between states, D0.5's hashes) and at the switch (D8).
 

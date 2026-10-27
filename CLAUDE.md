@@ -62,12 +62,15 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 - Opening braces on the same line (`function f() {`, `} else {`). Tabs. Comments say why, in
   plain English, like the surrounding ones.
 - Engine modules (the core in `src/core/`, `commands`, `mirror`, `gamerules`, `map` and its parts,
-  `unit`, `ai`, `scenario`...) don't import UI modules (`ui`, `uibuilder`, `render`, `animation`,
-  `dom`) or `game`: they read the game through `src/context.ts`. The game plays on the core
-  (docs/CORE.md); the objects (GameMap, Unit, Player) mirror its state for the UI and the harness
-  (src/mirror.ts). The linter and `test/headless.test.ts` check it.
+  `unit`, `ai`, `scenario`...) don't import the UI (`src/view/`), the page's modules (`dom`, `main`)
+  or `game`: they read the game through `src/context.ts`. The game plays on the core (docs/CORE.md)
+  and shows itself through the screen interface (`src/screen.ts`), which the UI implements
+  (`src/view/screen.tsx`); the objects (GameMap, Unit, Player) mirror its state for the harness, the
+  contracts and their own code (src/mirror.ts). The UI reads only the core, the host and the screen
+  interface. The linter and `test/headless.test.ts` check it.
 - `src/` has no unused code and no import cycles; CI runs `fallow dead-code` on the whole tree.
-  Keep it that way: the UI reads the running game through `src/session.ts`, not `game.ts`.
+  Keep it that way: the modules that read the running game do it through `src/session.ts`, not
+  `game.ts`.
 - `npm run fallow` (fallow audit against main) fails on what a change adds: an unused file, a new
   import cycle (they decide the load order), duplicated code, an overly complex function. Inherited
   findings don't count; `npm run fallow:report` shows them all.

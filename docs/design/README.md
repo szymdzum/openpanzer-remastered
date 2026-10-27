@@ -1,8 +1,9 @@
-# Current UI (Panzer Marshal 3.2.14), reference for the redesign
+# The old UI (Panzer Marshal 3.2.14), reference for the redesign
 
-The new design is in [docs/ui/](../ui/README.md); these screenshots show what it replaces.
+The new design is in [docs/ui/](../ui/README.md); these screenshots show what it replaced. The old UI was
+deleted when the new one became the game's UI (D8, #351).
 
-Screenshots of the game as it is now, taken on the Vite dev server in headless Chrome:
+Screenshots of the game as it was before the switch, taken on the Vite dev server in headless Chrome:
 1920x1080, except 22-23 at iPad size (1024x768). 05 is from the tutorial, 07-21 from
 Panzer-Verbaende Ostpreussen, played as Germany against the AI.
 

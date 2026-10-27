@@ -2,7 +2,9 @@
 
 Every piece of the new UI's game screen (`?ui=new`, src/view/) beside the old UI's piece that does the same, with a
 verdict under the 1:1 port rule (PLAN.md, "A 1:1 port of the old UI" and "The map stays quiet; a window may be
-rich"). Written on 2026-10-26, after the owner's playtest of D3-D5 (#441, #437, #438).
+rich"). Written on 2026-10-26, after the owner's playtest of D3-D5 (#441, #437, #438). The old UI's code it points
+at (src/ui.ts, src/uibuilder.ts, src/render.ts, game/css/ui.css...) was deleted at the switch (D8, #351): its
+file:line references are to the history before it.
 
 - **port**: the old UI has it. The new UI keeps the same content and behaviour in the new look; where the two differ
   today, the row says how.
