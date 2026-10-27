@@ -3,7 +3,7 @@
 //last cloud saves kept in the settings. The saves and loads are the host's; a game loaded closes the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
-import type { CloudField } from "../gamestate";
+import type { CloudReport } from "../gamestate";
 import type { GameHost } from "../host";
 import { uiSettings } from "../prototypes";
 import { MENU_CLOSED, menuBack, type MenuState } from "./menus";
@@ -30,10 +30,10 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 	const lastFile = signal("none");
 	const loadError = signal("");
 	const lastCloudSave = settingSignals().lastCloudSave;
-	const field: CloudField = {
-		get value() { return cloudId.value; },
-		set value(v: string) { cloudId.value = v; },
-		setAttribute(name: string, v: string) { if (name === "placeholder") placeholder.value = v; },
+	//How a cloud save or load goes: the field shows it, an error's hint as its placeholder
+	const report: CloudReport = (text, hint) => {
+		cloudId.value = text;
+		if (hint !== undefined) placeholder.value = hint;
 	};
 
 	const saveLoad = computed(() => {
@@ -68,7 +68,7 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 			const w = world.value;
 			if (w === null || !host.saveToCloud) return;
 			const name = saveName(w);
-			host.saveToCloud(field, (error, id) => {
+			host.saveToCloud(cloudId.value, report, (error, id) => {
 				if (error) return;
 				uiSettings.lastCloudSave = rememberCloudSave(uiSettings.lastCloudSave, name, id!);
 				if (host.saveSettings) host.saveSettings();
@@ -77,7 +77,7 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 		},
 
 		loadFromCloud() {
-			if (host.loadFromCloud) host.loadFromCloud(field, loaded);
+			if (host.loadFromCloud) host.loadFromCloud(cloudId.value, report, loaded);
 		},
 
 		//The field typed in, or a recent save's row picked (an empty row clears it)

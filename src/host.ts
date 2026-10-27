@@ -44,7 +44,7 @@ import { Rng } from "./rng";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
-import type { CloudField } from "./gamestate";
+import type { CloudReport, CloudSaved } from "./gamestate";
 import type { Screen, ShownCommand } from "./screen";
 
 //How a victory was won, as the loss texts and the campaign name it (endGameType)
@@ -338,15 +338,15 @@ export class GameHost {
 		this.game.state.restoreFromFile(file, done, fail);
 	}
 
-	//Saved to the cloud under the field's id, a new save when it is empty: the field tells how it goes, then saved (null)
-	//or the error, and the save's id
-	saveToCloud(field: CloudField, saved: (error: string | null, id?: string) => void) {
-		this.game.state.saveToCloud(field, saved);
+	//Saved to the cloud under its id, a new save when it is empty: report told how it goes (review A10), then saved
+	//(null) or the error, and the save's id
+	saveToCloud(id: string, report: CloudReport, saved: CloudSaved) {
+		this.game.state.saveToCloud(id, report, saved);
 	}
 
-	//Loaded from the cloud save of the field's id: done once it is read
-	loadFromCloud(field: CloudField, done: () => void) {
-		this.game.state.restoreFromCloud(field, done);
+	//Loaded from the cloud save of an id, report told how it goes: done once it is read
+	loadFromCloud(id: string, report: CloudReport, done: () => void) {
+		this.game.state.restoreFromCloud(id, report, done);
 	}
 
 	//The scenario flow of a campaign of the list, its index there: its data loaded, then the text the old campaign menu's

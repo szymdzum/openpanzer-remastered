@@ -11,7 +11,7 @@ import { StartMenu } from "../src/view/startmenu";
 import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
 import { nullScreen } from "../src/nullscreen";
-import { GameState, type CloudField } from "../src/gamestate";
+import { type CloudReport, type CloudSaved, GameState } from "../src/gamestate";
 import { uiSettings } from "../src/prototypes";
 import type { World } from "../src/core/types";
 
@@ -51,8 +51,8 @@ function windowOf(world: World | null = worldAt(false)) {
 	const host = {
 		exportGame: vi.fn(() => "{\"the\":\"game\"}"),
 		loadGame: vi.fn<(file: Blob, done: () => void, fail: () => void) => void>(),
-		saveToCloud: vi.fn<(field: CloudField, saved: (error: string | null, id?: string) => void) => void>(),
-		loadFromCloud: vi.fn<(field: CloudField, done: () => void) => void>(),
+		saveToCloud: vi.fn<(id: string, report: CloudReport, saved: CloudSaved) => void>(),
+		loadFromCloud: vi.fn<(id: string, report: CloudReport, done: () => void) => void>(),
 		saveSettings: vi.fn(),
 	};
 	const download = vi.fn();
@@ -118,21 +118,21 @@ test("Cloud Save writes its progress in the field and remembers the save once sa
 	const { store, host } = windowOf(worldAt(true));
 	await open(store);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Cloud Save" })); });
-	const [f, saved] = host.saveToCloud.mock.calls[0];
-	//(the game's state reads the id from the field: the last save's)
-	expect(f.value).toBe("3");
-	//(the game's state writes into the field as it did into the old input)
-	await act(() => { f.value = "Overwriting cloud save 3 ..."; });
+	const [id, report, saved] = host.saveToCloud.mock.calls[0];
+	//(the field's id: the last save's)
+	expect(id).toBe("3");
+	//(the game's state reports how it goes, the field shows it as the old input did)
+	await act(() => { report("Overwriting cloud save 3 ..."); });
 	expect(field().value).toBe("Overwriting cloud save 3 ...");
-	await act(() => { f.value = ""; f.setAttribute("placeholder", "Cannot create save !"); saved("Cannot create save"); });
+	await act(() => { report("", "Cannot create save !"); saved("Cannot create save"); });
 	expect([field().placeholder, uiSettings.lastCloudSave.length, host.saveSettings.mock.calls.length]).toEqual(["Cannot create save !", 3, 0]);
 	await act(() => { saved(null, "4"); });
 	expect(uiSettings.lastCloudSave).toEqual([{ name: "b", id: "2" }, { name: "c", id: "3" }, { name: "(Campaign) Ciechanow Turn 4", id: "4" }]);
 	expect([host.saveSettings.mock.calls.length, field().value]).toEqual([1, "4"]);
 	expect(screen.getByRole("button", { name: "(Campaign) Ciechanow Turn 4" })).not.toBeNull();
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Cloud Load" })); });
-	const [g, done] = host.loadFromCloud.mock.calls[0];
-	expect(g).toBe(f);
+	const [loadId, loadReport, done] = host.loadFromCloud.mock.calls[0];
+	expect([loadId, loadReport]).toEqual(["4", report]);
 	await act(() => { done(); });
 	expect(store.menu.value.window).toBeNull();
 });

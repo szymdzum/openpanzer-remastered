@@ -31,17 +31,21 @@ export interface GistReply {
 
 //The cloud save's id field: the old UI's #cloudid input, or what stands for it (the new UI's, #349). The cloud saves
 //write their progress and errors into its value and placeholder
-export type CloudField = Pick<HTMLInputElement, "value" | "setAttribute">;
+//How a cloud save or load goes, told as the old #cloudid field showed it: its text (the progress, the id at the end, or
+//nothing after an error) and, with an error, the hint it put in the field's placeholder (review A10)
+export type CloudReport = (text: string, placeholder?: string) => void;
+//A cloud save done: its error, or null and the save's id
+export type CloudSaved = (error: string | null, id?: string) => void;
 
 //GameState keeps its save names and restored items in the closure, its methods are
 //assigned in the constructor: a class with its closure body as the constructor, as the original
 export class GameState {
 	declare save: () => void;
-	declare saveToCloud: (inputElement: CloudField, callback: (error: string | null, gistId?: string) => void) => void;
+	declare saveToCloud: (gistId: string, report: CloudReport, callback: CloudSaved) => void;
 	declare restore: (onDone: () => void, onFail: () => void) => void;
 	declare restoreFromString: (saveData: string) => boolean;
 	declare restoreFromFile: (file: Blob, onDone?: () => void, onFail?: () => void) => boolean;
-	declare restoreFromCloud: (inputElement: CloudField, onDone?: () => void) => boolean;
+	declare restoreFromCloud: (gistId: string, report: CloudReport, onDone?: () => void) => boolean;
 	declare clear: () => void;
 	declare saveSettings: () => void;
 	declare restoreSettings: () => void;
@@ -67,10 +71,9 @@ export class GameState {
 			saveItem(saveName.game, writeSave(Game.scenario, Game, Game.rules));
 		}
 
-		//Saves the game as a public gist on GitHub. inputElement holds the gist id to overwrite,
-		//or is empty to create a new one, and receives the new id or status messages.
-		//callback(error, gistId) is called when the request completes
-		this.saveToCloud = function(inputElement: CloudField, callback: (error: string | null, gistId?: string) => void) {
+		//Saves the game as a public gist on GitHub: the gist id to overwrite, or empty to create a new one; report is told
+		//the progress and the new id or the error, callback(error, gistId) is called when the request completes
+		this.saveToCloud = function(gistId: string, report: CloudReport, callback: CloudSaved) {
 			const saveData = this.exportGameState();
 			//The bundle embeds the author's GitHub token here ("ghp_" + pieces with whitespace
 			//stripped out), used to create and update the gists. Not copied into the source
@@ -82,7 +85,6 @@ export class GameState {
 				files: {},
 			};
 			let overwrite = true;
-			const gistId = inputElement.value;
 
 			if (gistId == "" || typeof gistId === "undefined")
 				overwrite = false;
@@ -92,10 +94,10 @@ export class GameState {
 
 			const xhr = new XMLHttpRequest();
 			if (overwrite) {
-				inputElement.value = "Overwriting cloud save " + gistId + " ...";
+				report("Overwriting cloud save " + gistId + " ...");
 				xhr.open("PATCH", "https://api.github.com/gists/" + gistId, true);
 			} else {
-				inputElement.value = "Creating new cloud save ...";
+				report("Creating new cloud save ...");
 				xhr.open("POST", "https://api.github.com/gists", true);
 			}
 			xhr.setRequestHeader("Accept", "application/vnd.github.raw");
@@ -107,11 +109,10 @@ export class GameState {
 						const reply: GistReply = JSON.parse(this.responseText);
 						if (!reply)
 							return callback("Bad response from server");
-						inputElement.value = reply.id;
+						report(reply.id);
 						return callback(null, reply.id);
 					}
-					inputElement.value = "";
-					inputElement.setAttribute("placeholder", "Cannot create save !");
+					report("", "Cannot create save !");
 					return callback("Cannot create save");
 				}
 			};
@@ -150,44 +151,44 @@ export class GameState {
 			return true;
 		}
 
-		//Restores a game from a GitHub gist whose id is in inputElement
-		this.restoreFromCloud = function(inputElement: CloudField, onDone?: () => void) {
-			const gistId = inputElement.value;
+		//Restores a game from a GitHub gist by its id, report told the progress or the error
+		this.restoreFromCloud = function(gistId: string, report: CloudReport, onDone?: () => void) {
 			if (gistId == "" || typeof gistId === "undefined") {
-				inputElement.setAttribute("placeholder", "No ID specified");
+				report("", "No ID specified");
 				return false;
 			}
 
 			const xhr = new XMLHttpRequest();
-			inputElement.value = "Loading ...";
+			report("Loading ...");
 			xhr.open("GET", "https://api.github.com/gists/" + gistId, true);
 			xhr.onreadystatechange = function() {
-				if (this.readyState == 4) {
-					if ((this.status >= 200 && this.status < 300) || this.status == 304) {
-						const reply: GistReply = JSON.parse(this.responseText);
-						if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json")) {
-							inputElement.value = "";
-							inputElement.setAttribute("placeholder", "Cannot parse reply !");
-							return;
-						}
-						if (!restoreFromJSON(reply.files["openpanzer-save.json"].content)) {
-							inputElement.value = "";
-							inputElement.setAttribute("placeholder", "Cannot find game data in the save file");
-							return;
-						}
-						//The bundle has "delete reply;" here: no effect on a var, and a syntax error in a module
-						inputElement.value = gistId;
-						if (typeof onDone === "function")
-							onDone();
-					} else {
-						inputElement.value = "";
-						inputElement.setAttribute("placeholder", "Cannot load game !");
-						return;
-					}
+				if (this.readyState != 4)
+					return;
+				if (!((this.status >= 200 && this.status < 300) || this.status == 304)) {
+					report("", "Cannot load game !");
+					return;
 				}
+				const failed = restoreFromGist(JSON.parse(this.responseText) as GistReply);
+				if (failed !== null) {
+					report("", failed);
+					return;
+				}
+				//The bundle has "delete reply;" here: no effect on a var, and a syntax error in a module
+				report(gistId);
+				if (typeof onDone === "function")
+					onDone();
 			};
 			xhr.send();
 			return true;
+		}
+
+		//The game in a gist's reply restored: null, or why not
+		function restoreFromGist(reply: GistReply): string | null {
+			if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json"))
+				return "Cannot parse reply !";
+			if (!restoreFromJSON(reply.files["openpanzer-save.json"].content))
+				return "Cannot find game data in the save file";
+			return null;
 		}
 
 		this.clear = function() {

@@ -263,7 +263,7 @@ export default defineConfig({
 				"src/view/settingswindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/saveload.ts": { statements: 90, branches: 100, functions: 87, lines: 85 }, //(the harness setter)
 				//(the harness setter; the field's other attributes, which the game's state doesn't set, and no save of the settings)
-				"src/view/saveloadstate.ts": { statements: 95, branches: 91, functions: 93, lines: 94 },
+				"src/view/saveloadstate.ts": { statements: 95, branches: 91, functions: 92, lines: 94 }, //(functions: the field's stand-in went, a report came: the uncovered one is still the harness setter)
 				"src/view/saveloadwindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/core/deployment.ts": { statements: 96, branches: 100, functions: 91, lines: 95 },
 				"src/view/theme.ts": { statements: 90, branches: 100, functions: 80, lines: 88 }, //(the harness setter)
