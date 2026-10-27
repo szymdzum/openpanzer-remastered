@@ -8,11 +8,12 @@
 		background: var(--panel-sunken);
 		container: screen / inline-size;
 
-		/* the status bar at least as wide as the card's, wider when its cells need it (the rules, a long country name),
-		   never wider than the screen */
+		/* the status bar at least as wide as the Interface width setting (--ui-width, as the old interface width sized the
+		   status bar, the unit list, the equipment, the combat log and the dossier; the card's widths without it), wider
+		   when its cells need it (the rules, a long country name), never wider than the screen */
 		& > .pm-status {
 			inline-size: max-content;
-			min-inline-size: min(45rem, 100% - 2 * var(--space-3));
+			min-inline-size: min(var(--ui-width, 45rem), 100% - 2 * var(--space-3));
 			max-inline-size: calc(100% - 2 * var(--space-3));
 		}
 
@@ -75,7 +76,7 @@
 			inset-block-start: 5.5rem;
 			inset-inline-start: 50%;
 			translate: -50% 0;
-			inline-size: min(56.25rem, 100% - 2 * var(--space-3));
+			inline-size: min(var(--ui-width, 56.25rem), 100% - 2 * var(--space-3));
 
 			/* (the card's own transform would move it a second time) */
 			&:where(.pm-deploy) {
@@ -109,7 +110,7 @@
 			inset-block-start: 50%;
 			inset-inline-start: 50%;
 			translate: -50% -50%;
-			inline-size: min(65rem, 100% - 2 * var(--space-3));
+			inline-size: min(var(--ui-width, 65rem), 100% - 2 * var(--space-3));
 			block-size: min(43rem, 100dvh - 2 * var(--space-3));
 			container: eq / inline-size;
 
@@ -187,7 +188,7 @@
 			inset-block-start: 50%;
 			inset-inline-start: 50%;
 			translate: -50% -50%;
-			inline-size: min(62.5rem, 100% - 2 * var(--space-3));
+			inline-size: min(var(--ui-width, 65.79rem) * 0.95, 100% - 2 * var(--space-3));
 			max-block-size: calc(100dvh - 2 * var(--space-3));
 
 			& > .bd {
@@ -226,7 +227,7 @@
 			inset-block-start: 50%;
 			inset-inline-start: 50%;
 			translate: -50% -50%;
-			inline-size: min(62.5rem, 100% - 2 * var(--space-3));
+			inline-size: min(var(--ui-width, 65.79rem) * 0.95, 100% - 2 * var(--space-3));
 			max-block-size: calc(100dvh - 2 * var(--space-3));
 
 			& > .bd {
