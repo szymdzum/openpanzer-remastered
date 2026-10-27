@@ -112,7 +112,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { store.endCampaign(outcome, text, then); },
 		//(Options, as the old UI's: the start menu opens, or closes when it is open)
 		mainMenu() { store.shortcut({ menu: "options" }); },
-		//(no platform score board on the web: the old UI's OSGlue does nothing there either)
+		//(no platform score board on the web: the old UI's OSGlue did nothing there either)
 		reportScore: nothing,
 		reportAchievement: nothing,
 

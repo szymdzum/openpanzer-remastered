@@ -47,7 +47,8 @@ function reachedFrom(modules: string[]): Set<string> {
 	return reached;
 }
 
-const uiModules = ["dom", "game", "gamestate", "ui", "uibuilder", "uicombatlog", "render", "animation", "osglue", "main", "style", "sound"];
+//The page's modules (the old UI's went in #351; the UI's own, src/view/, are checked below)
+const uiModules = ["dom", "game", "gamestate", "main"];
 
 test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
 	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame",
@@ -64,13 +65,10 @@ test("The game host's imports reach no UI module, no game.ts and no dom.ts", () 
 });
 
 //The game shows itself through the screen interface (src/screen.ts, #374): the host, the session's glue and
-//the screen that shows nothing reach no UI module, and game.ts none of the old UI's; the page gives the host
-//the UI's screen (src/main.ts, #351)
-test("The screen interface and the screen that shows nothing reach no UI module, game.ts none of the old UI's (#374, #351)", () => {
+//the screen that shows nothing reach no UI module; the page gives the host the UI's screen (src/main.ts, #351)
+test("The screen interface and the screen that shows nothing reach no UI module (#374)", () => {
 	const reached = reachedFrom(["screen", "nullscreen", "coresession", "commands"]);
 	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
-	const oldUI = ["ui", "uibuilder", "uicombatlog", "render", "animation", "style", "sound"];
-	expect([...reachedFrom(["game"])].filter((m) => oldUI.includes(m))).toEqual([]);
 });
 
 //The new UI (src/view/, #380) reads the game through the core, the game host and the screen interface: what

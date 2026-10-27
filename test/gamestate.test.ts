@@ -368,7 +368,6 @@ test("GameState refuses what isn't a save", async () => {
 async function startup() {
 	vi.resetModules(); //a new page, the local save stays
 	const { game: fresh } = await import("../src/game");
-	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {} } as unknown as typeof fresh.ui;
 	fresh.init();
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the startup restore");
 	return JSON.parse(await exportGame()) as SaveFile;
@@ -382,7 +381,6 @@ test("A start without a save plays the default scenario, the AI on the Allies, t
 	fakeMapImages();
 	const { game: fresh } = await import("../src/game");
 	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/prototypes");
-	fresh.ui = { setNewScenario() {}, handleReinforcementDeployment() {}, mainMenuButton() {}, showingStep: () => false } as unknown as typeof fresh.ui;
 	fresh.init();
 	fresh.host.processTurn(); //(no scenario yet: a tick that went on would throw)
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the default scenario");
@@ -428,7 +426,6 @@ async function playing(name: string) {
 	const { game, Game } = await import("../src/game");
 	game.cleanup = new Game().cleanup; //Game's own: the methods are its constructor's closures
 	game.state = new GameState(game);
-	game.ui = { setNewScenario() {}, handleReinforcementDeployment() {} } as unknown as typeof game.ui;
 	return game;
 }
 
@@ -478,7 +475,6 @@ test.each(["equipment-country-0.json", "equipment-country-31.json"])(
 test("The turn-start save has the reinforcements that arrived that turn (#93)", async () => {
 	const game = await playing("ruscam09-t2.json.gz");
 	const { Game } = await import("../src/game");
-	Object.assign(game.ui, { showAlert() {} });
 	game.setupGameState = new Game().setupGameState; //Game's own: it starts the session the turns end on
 	const old = game.scenario;
 	game.state.restoreFromString(readFixture("engine", "ruscam09-t2.json.gz").state);

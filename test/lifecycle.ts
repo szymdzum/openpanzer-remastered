@@ -57,8 +57,8 @@ export async function until(cond: () => boolean, what: string, ms = 20_000) {
 }
 
 //Fresh modules and an empty localStorage, then the game as index.html has it after start, minus
-//the UI: a GameState, no turn loop (record.js runs the loop only to let the AI play), and a UI
-//stub with the two calls the lifecycle makes on it
+//the UI: a GameState, no turn loop (record.js runs the loop only to let the AI play), and the screen
+//that shows nothing
 export async function freshGame(): Promise<Game> {
 	vi.resetModules();
 	localStorage.clear();
@@ -66,8 +66,6 @@ export async function freshGame(): Promise<Game> {
 	const { game } = await import("../src/game");
 	const { GameState } = await import("../src/gamestate");
 	game.state = new GameState(game);
-	game.ui = { setNewScenario() {}, mainMenuButton() {}, handleReinforcementDeployment() {},
-		showAlert() {}, showingStep: () => false } as unknown as Game["ui"];
 	return game;
 }
 

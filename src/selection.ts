@@ -1,12 +1,13 @@
 /**
- * MapSelection - the selected unit and the hexes it can move to and attack: the old UI's view, not the game's
+ * MapSelection - the selected unit and the hexes it can move to and attack: the old UI's view, not the game's.
+ * The old UI went in #351; the contracts (test/contracts/engine.contract.js) and the harness still read it
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
  * The selection is what the old UI shows (docs/STATE.md D6): the game's state, the save, the contracts and
  * the harness don't have it (#377). It lives here, not on the hexes and the map: GameMap carries it for the
- * old UI and the harness's scripts (GameMap.currentUnit, selectUnit...), until the old UI goes (D8). The
+ * old UI and the harness's scripts (GameMap.currentUnit, selectUnit...). The
  * move cells are also what a move finds its path in when the caller passes them (the move command's
  * cells). The hexes are asked of the game's rules, the core's queries (src/gamerules.ts).
  *

@@ -84,16 +84,8 @@
 									"./dom",
 									"./game",
 									"./gamestate",
-									"./ui",
-									"./uibuilder",
-									"./uicombatlog",
-									"./render",
-									"./animation",
 									"./aiscripted",
-									"./osglue",
-									"./main",
-									"./style",
-									"./sound"
+									"./main"
 								],
 								"allowTypeImports": true,
 								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md)"
@@ -183,23 +175,16 @@
 				"src/campaign.ts",
 				"src/dom.ts",
 				"src/equipment.ts",
-				"src/game.ts",
 				"src/gamerules.ts",
 				"src/gamestate.ts",
 				"src/leaders.ts",
 				"src/map.ts",
-				"src/osglue.ts",
-				"src/render.ts",
 				"src/scenario.ts",
 				"src/scenarioloader.ts",
 				"src/selection.ts",
-				"src/ui.ts",
-				"src/uibuilder.ts",
-				"src/uicombatlog.ts",
 				"src/undo.ts",
 				"src/unit.ts",
 				"test/contracts/engine.contract.js",
-				"test/headless.test.ts",
 				"test/invariants.test.ts",
 				"test/outcome.test.ts"
 			],
@@ -218,17 +203,10 @@
 		{
 			"files": [
 				"src/ai.ts",
-				"src/animation.ts",
 				"src/combatlog.ts",
 				"src/equipment.ts",
-				"src/game.ts",
 				"src/gamerules.ts",
-				"src/leaders.ts",
-				"src/osglue.ts",
-				"src/render.ts",
-				"src/ui.ts",
-				"src/uibuilder.ts",
-				"src/uicombatlog.ts"
+				"src/leaders.ts"
 			],
 			"rules": {
 				"no-shadow": "off"
@@ -238,27 +216,17 @@
 			"files": [
 				"src/ai.ts",
 				"src/aiscripted.ts",
-				"src/animation.ts",
 				"src/campaign.ts",
 				"src/combatlog.ts",
 				"src/context.ts",
 				"src/dom.ts",
 				"src/equipment.ts",
-				"src/game.ts",
 				"src/gamerules.ts",
 				"src/gamestate.ts",
 				"src/leaders.ts",
 				"src/map.ts",
-				"src/osglue.ts",
-				"src/render.ts",
 				"src/rng.ts",
 				"src/scenarioloader.ts",
-				"src/selection.ts",
-				"src/sound.ts",
-				"src/style.ts",
-				"src/ui.ts",
-				"src/uibuilder.ts",
-				"src/uicombatlog.ts",
 				"src/unit.ts"
 			],
 			"rules": {
@@ -279,21 +247,10 @@
 				"src/ai.ts",
 				"src/dom.ts",
 				"src/equipment.ts",
-				"src/gamestate.ts",
-				"src/uibuilder.ts",
-				"test/gamestate.test.ts"
+				"src/gamestate.ts"
 			],
 			"rules": {
 				"typescript/no-explicit-any": "off"
-			}
-		},
-		{
-			"files": [
-				"src/animation.ts",
-				"src/ui.ts"
-			],
-			"rules": {
-				"typescript/no-floating-promises": "off"
 			}
 		},
 		{
@@ -323,7 +280,6 @@
 		},
 		{
 			"files": [
-				"src/animation.ts",
 				"src/game.ts"
 			],
 			"rules": {
@@ -333,7 +289,6 @@
 		{
 			"files": [
 				"src/ai.ts",
-				"src/dom.ts",
 				"test/invariants.test.ts"
 			],
 			"rules": {

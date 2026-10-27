@@ -116,8 +116,8 @@ export class Unit {
 		this.transport = null; //transport class pointer
 		this.carrier = 0; //air/naval carrier which is not a unit assigned transport, negative when temporarily disembarked
 		this.moveLeft = Equipment.equipment[this.eqid].movpoints; //for phased/recon movement
-		this.ammo = Equipment.equipment[this.eqid].ammo; //holds the ammo of the unit but it's getter is getAmmo()
-		this.fuel = Equipment.equipment[this.eqid].fuel; //holds the fuel of the unit but it's getter is getFuel()
+		this.ammo = Equipment.equipment[this.eqid].ammo; //the unit's own ammo; mounted, the transport's counts
+		this.fuel = Equipment.equipment[this.eqid].fuel; //the unit's own fuel; mounted, the transport's counts
 		this.hasAnimation = false; //flag if the unit has a move animation
 		this.hits = 0; //the number of hits unit received this turn
 		this.experience = 0; //combat experience
@@ -150,9 +150,6 @@ export interface Unit {
 	nodossier: boolean; //set by map.js: disbanded or removed, not a loss for the dossier
 	getEqid(forceUnit?: boolean): number;
 	unitData(forceUnit?: boolean): EquipmentEntry;
-	getMovesLeft(): number;
-	getAmmo(): number;
-	getFuel(): number;
 	getIcon(): string;
 	cleanup(): void;
 }
@@ -169,33 +166,6 @@ Unit.prototype.getEqid = function(forceUnit?: boolean): number {
 Unit.prototype.unitData = function(forceUnit?: boolean): EquipmentEntry {
 	if (!defined(forceUnit)) forceUnit = false;
 	return Equipment.equipment[this.getEqid(forceUnit)];
-}
-
-Unit.prototype.getMovesLeft = function(): number {
-	//On carrier always has movement of the carrier
-	if (this.carrier > 0)
-		return Equipment.equipment[this.carrier].movpoints;
-
-	//There is no point saving moveLeft in transport object since they consume all points when moving
-	if (this.isMounted && this.transport !== null)
-		return Equipment.equipment[this.transport.eqid].movpoints;
-	if (this.hasMoved)
-		return 0;
-	return this.moveLeft;
-}
-
-Unit.prototype.getAmmo = function(): number {
-	if (this.isMounted && this.transport !== null)
-		return this.transport.ammo;
-	else
-		return this.ammo;
-}
-
-Unit.prototype.getFuel = function(): number {
-	if (this.isMounted && this.transport !== null)
-		return this.transport.fuel;
-	else
-		return this.fuel;
 }
 
 Unit.prototype.getIcon = function(): string { return this.unitData().icon; }

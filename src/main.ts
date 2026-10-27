@@ -8,8 +8,7 @@
 //The modules in the order of the bundle's script tags. A module runs after the modules it
 //imports (in a cycle, after those not already running), so the import graph decides the real
 //order. What modules need of each other while loading: prototypes (everything reads it, it
-//imports nothing so it runs first), sound's soundData (animation's animationsData) and
-//ScenarioLoader (scenario). The game starts on window load.
+//imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
 import * as prototypes from "./prototypes";
 import * as gamestate from "./gamestate";
 import * as combatlog from "./combatlog";
@@ -17,21 +16,13 @@ import * as equipment from "./equipment";
 import * as dom from "./dom";
 import * as ai from "./ai";
 import * as aiscripted from "./aiscripted";
-import * as style from "./style";
-import * as sound from "./sound";
-import * as animation from "./animation";
 import * as gamerules from "./gamerules";
 import * as unit from "./unit";
 import * as map from "./map";
 import * as scenarioloader from "./scenarioloader";
-import * as render from "./render";
 import * as scenario from "./scenario";
 import * as campaign from "./campaign";
-import * as uibuilder from "./uibuilder";
-import * as ui from "./ui";
-import * as uicombatlog from "./uicombatlog";
 import * as game from "./game";
-import * as osglue from "./osglue";
 import * as leaders from "./leaders";
 import * as rng from "./rng";
 import * as context from "./context";
@@ -53,8 +44,8 @@ import * as nullscreen from "./nullscreen";
 //(the UI's entry, not one of the modules above, which the harness reaches into)
 import { startNewUI } from "./view/screen";
 
-const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, style, sound, animation, gamerules, unit,
-	map, scenarioloader, render, scenario, campaign, uibuilder, ui, uicombatlog, game, osglue, leaders,
+const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, gamerules, unit,
+	map, scenarioloader, scenario, campaign, game, leaders,
 	rng, context, board, visibility, selection, undo, util, session, commands, state,
 	savegame, mirror, coresession, coreload, host, screen, nullscreen];
 

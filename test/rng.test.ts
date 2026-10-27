@@ -3,9 +3,6 @@
 //AI's choices, an animation or a sound no longer move the dice
 import { afterEach, expect, test } from "vitest";
 import { nextRandom, Rng } from "../src/rng";
-import { animationSprite } from "../src/animation";
-import { soundData } from "../src/sound";
-import { uiSettings } from "../src/prototypes";
 import { mulberry32 } from "./lifecycle";
 
 const realRandom = Math.random, startState = { game: Rng.game.state, ai: Rng.ai.state, cosmetic: Rng.cosmetic.state };
@@ -81,26 +78,4 @@ test("The AI stream is seeded at load and by Rng.seed, apart from the cosmetic o
 	Rng.seed(1);
 	expect(draws(Rng.cosmeticRandom, 10)).not.toEqual(ai);
 	expect(draws(mulberry32(1), 10)).not.toEqual(ai);
-});
-
-//The animations' sprite picks and the sound variants ran between the support fire shots on the
-//dice's Math.random, so animating moved the dice. Now a pick is a cosmetic draw
-test("The UI's sprite and sound picks draw from the cosmetic stream, not the dice's", () => {
-	const pick = animationSprite([{ path: "a.png", width: 1, frames: 1 }, { path: "b.png", width: 1, frames: 1 }], "explosion");
-	const muted = uiSettings.muteUnitSounds;
-	uiSettings.muteUnitSounds = true;
-	Math.random = () => { throw new Error("Math.random drawn"); };
-	try {
-		Rng.seed(3);
-		const before = Rng.cosmetic.state;
-		pick();
-		void soundData["explosion"].play();
-		expect(Rng.cosmetic.state).not.toBe(before);
-		Rng.seed(3);
-		const sprites = draws(() => pick() === pick() ? 1 : 0, 20);
-		Rng.seed(3);
-		expect(draws(() => pick() === pick() ? 1 : 0, 20)).toEqual(sprites);
-	} finally {
-		uiSettings.muteUnitSounds = muted;
-	}
 });

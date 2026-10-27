@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # The fingerprint of verify's differences (verify.yml): where the game differs from the base branch,
-# not by how much. Each difference line of the log (harness/replay.sh, harness/ui-replay.sh), with
+# not by how much. Each difference line of the log (harness/replay.sh), with
 # what depends on the base's own play cut off: the values after ": baseline", the state hashes, the
 # action and turn counts of an item; each line under its item, in a fixed order (the items finish in
 # parallel). A pull request rebased on a newer main gives the same
 # fingerprint when it changes the same games at the same steps in the same way.
 # Usage: verify-fingerprint.sh verify.log  (prints the normalized lines with --lines)
 set -euo pipefail
-lines=$(grep -E '^DIFF |first different action|state differs|DOM differs|differs at|== UI replay .*DIFF|items differ|scripts identical' "$1" \
+lines=$(grep -E '^DIFF |first different action|state differs|differs at|items differ' "$1" \
 	| grep -vE '^\s*[0-9]+: ' \
 	| sed -E 's/: baseline .*$//; s/ hash [0-9a-z]+//g; s/^(DIFF [^ ]+) \([0-9]+ actions, [0-9]+ turns(, TIMED OUT)?\)/\1/' \
 	| sed -E 's/[[:space:]]+$//' \
