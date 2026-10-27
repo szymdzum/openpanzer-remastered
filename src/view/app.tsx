@@ -11,6 +11,7 @@ import { ReserveTray } from "./tray";
 import { LogWindow } from "./logwindow";
 import { MessageDialog } from "./message";
 import { StartMenu } from "./startmenu";
+import { SettingsWindow } from "./settingswindow";
 import { DossierWindow } from "./dossierwindow";
 import { ShopWindow } from "./shopwindow";
 import { MapView } from "./map";
@@ -57,6 +58,7 @@ export function App({ store }: { store: Store }) {
 			<DossierWindow store={store} />
 			<MessageDialog store={store} />
 			<StartMenu store={store} />
+			{store.menu.value.window === "settings" && <SettingsWindow store={store} />}
 		</div>
 	);
 }

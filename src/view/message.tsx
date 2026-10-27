@@ -9,7 +9,8 @@ import { briefingLabelOf } from "./turn";
 
 export function MessageDialog({ store }: { store: Store }) {
 	const note = store.note.value, w = store.world.value;
-	if (note === null) return null;
+	//(set aside while the settings are open, as the old settings window hid the message under it)
+	if (note === null || store.menu.value.window === "settings") return null;
 	const brief = note.briefing === true && w !== null ? briefingLabelOf(w) : null;
 	return (
 		<>

@@ -66,7 +66,7 @@ export const NEW_GAME_BUTTONS: MenuEntry[] = [
 
 //The windows the new UI doesn't have yet (#349): their buttons are off with why
 export const NOT_YET: Partial<Record<MenuButton, string>> = {
-	settings: "Not in the new UI yet", saveload: "Not in the new UI yet",
+	saveload: "Not in the new UI yet",
 };
 
 //The old start menu's links beside its logo: the manual, the game's page, its Facebook page and its issues

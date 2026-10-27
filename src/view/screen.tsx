@@ -6,6 +6,7 @@
 //shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The start menu opens over
 //the first scenario's briefing and at a game's end, as the old UI's did (#349).
 import { render } from "preact";
+import { effect } from "@preact/signals";
 import type { ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
 import type { Position } from "../core/types";
@@ -22,18 +23,25 @@ import { applyTheme, type Theme } from "./theme";
 const nothing = () => {};
 
 //What the screen asks of the host: the store's, and the course of the game it shows
-type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial">;
+type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "play" | "holdForMessage" | "messageClosed" | "cosmetic" | "startTutorial"
+	| "startScenario" | "startCampaign" | "campaignFlow" | "saveSettings">;
 
 //prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
 const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
-	const store = createStore(host, { sound: pageSounds(), still });
+	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location) });
 	const { refresh } = store;
-	//(the map's scale and the hex grid as the settings saved them, as the old UI applies them at its start, until the
-	//Settings window has them, D6)
+	//(the map's scale and the hex grid as the settings saved them, as the old UI applies them at its start)
 	store.scale.value = uiSettings.zoomLevel;
 	store.hexGrid.value = uiSettings.hexGrid;
+	//The interface's scale and width as the settings say, on the page's root: every rem scales from its font size, and the
+	//windows the old interface width sized take it (base.css, screen.css)
+	effect(() => {
+		const page = root.ownerDocument.documentElement.style;
+		page.setProperty("--ui-scale", String(store.uiScale.value));
+		page.setProperty("--ui-width", store.uiWidth.value / 16 + "rem");
+	});
 	render(<App store={store} />, root);
 	const show = (title: string, html: string, ok: () => void, at: Position | null = null, briefing = false) =>
 		store.show({ title, html, at, ok, briefing });
@@ -135,7 +143,8 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	};
 }
 
-//The Theme setting until the Settings window has it (D6): ?theme=paper or blackout, else the system's
+//The Theme (?theme=paper or blackout, else the system's): the card's Settings has it, the old list doesn't, so it waits
+//for after the switch (#349)
 function themeOf(search: string): Theme {
 	const t = new URLSearchParams(search).get("theme");
 	return t === "paper" || t === "blackout" ? t : "system";
