@@ -17,7 +17,8 @@ transition lose data.
 |---|---|---|
 | `npm run check` | seconds | types |
 | `npm test` | ~2 min | the contracts: 2 × 15 game states recorded on the reference; the invariant, loader, save and harness-surface tests |
-| `npm run verify` | 3-4 min | the whole game in Chrome against the original (`reference/`, or main with `BASELINE_REF`): 16 AI vs AI replays, 24 UI scripts, state, DOM and pixels |
+| `npm run verify` | 3-4 min | the game in Chrome against the original (`reference/`, or main with `BASELINE_REF`): 16 AI vs AI replays, the state at every AI action (until #351 also 24 scripts of the old UI, its DOM and pixels) |
+| `npm run e2e` | ~1 min | the UI: one campaign game played through the page in Chrome (#351) |
 | CI (`ci.yml`) | ~30 s | check and test on every push |
 | Mutation testing (`mutation.yml`) | hours, on GitHub | whether the tests notice small changes, per module |
 
@@ -297,7 +298,7 @@ loses data, and verification tied to all of it.
 | C3 | The turn and the scenario and campaign lifecycle | #135 | C2 | done |
 | C4 | The AI and the scripted opponent as controllers (#121) | #136 | C3 | done |
 | C5 | The switch; the old engine removed | #137 | C4 | done |
-| D | The new UI (docs/ui/) on the core's events; the old UI removed (D0 first, docs/ui/PLAN.md) | #130 | C5 | next |
+| D | The new UI (docs/ui/) on the core's events; the old UI removed (D0 first, docs/ui/PLAN.md) | #130 | C5 | the switch done (D8, #351); tablets next |
 
 - **A, refactors on the current engine** (contracts and verify unchanged). Only what stage C
   needs: the commands are the API through which the tests drive the old engine as the oracle,
@@ -331,7 +332,10 @@ loses data, and verification tied to all of it.
   - The old UI is frozen: no fixes, no features.
   - The design system (tokens, the component library) before the screens; the new UI draws a
     read-only view, plays its animations from the events after the step, and sends commands.
-  - The switch as soon as a whole game plays on the new UI; tablets after it.
+  - The switch as soon as a whole game plays on the new UI; tablets after it. Done in D8 (#351,
+    2026-10-27): the new UI is the game's only UI, the old UI's code, markup, stylesheet, fonts and
+    raster images are deleted, and verify plays the AI games on the game's state, the UI having its
+    own end-to-end test.
 
 **The gameplay is frozen during stage C.** No rule fixes and no new mechanics go into the old
 engine: each would be done twice, and the oracle would keep moving. The exceptions:

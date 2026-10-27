@@ -383,7 +383,7 @@ The running game's course is `GameHost` (src/host.ts), outside the UI: a scenari
 or loaded from a save (the players' types and handlers, the sides played here, the session, the save), the
 campaign's chain (each scenario's end with `endCampaignScenario`, the outcome told, the next scenario once
 the player has clicked its message away, the prototype, the core units carried, the dossier at the end),
-and the end of a game from its `SessionEnd`: a victory, which the old UI reports when the step that won it
+and the end of a game from its `SessionEnd`: a victory, which the screen reports when the step that won it
 has been shown (its animation's end), and the turn limit, from the session when the turn ends. It decides
 who is told what and what follows; the screen only shows. Game's members (newScenario, newCampaign,
 continueCampaign, onScenarioLoadFinished, setupGameState...) hand on to it. It also plays a program's turn
@@ -401,47 +401,45 @@ UI module (test/headless.test.ts), and a whole campaign and a game's turns play 
 ## The screen (#374)
 
 The host and the session's glue (src/coresession.ts) show the game through one interface, `Screen`
-(src/screen.ts), and nothing else. Its members, who calls them and what the old UI does for each
-(src/oldscreen.ts, a thin adapter over the old UI's functions):
+(src/screen.ts), and nothing else. The UI implements it (src/view/screen.tsx, #380), and a program that
+shows nothing does too (src/nullscreen.ts: the headless tests). The old UI did, through a thin adapter
+(src/oldscreen.ts), until it went in #351. Its members, who calls them and what the UI does for each:
 
-| Member | Called by | The old UI |
+| Member | Called by | The UI |
 |---|---|---|
-| `showScenario()` | the host, a scenario started or loaded | `ui.setNewScenario` (the briefing), or the first UI built with the main menu |
-| `loadFailed(file)`, `showPrototype(eqid)` | the host | `UIBuilder.messageDynamic`, `showPrototypeAwardMessage` |
-| `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | `UIBuilder.message` |
-| `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | `UIBuilder.showCampaignEnd`, `ui.mainMenuButton("options")` |
-| `reportScore`, `reportAchievement` | the host | `OSGlue` |
-| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | `ui.uiUnitMove`, `ui.uiUnitAttack` (the command played whole, then animated), the unit centered; shown at the end of the step's last animation |
-| `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: `uiSetUnitOnViewPort` and `uiUnitSelect`, `showGameToolTip` (shown: its OK), `uiSetCellOnViewPort`, `ui.mainMenuButton("mainmenu")`; shown 250 ms later (#8) |
-| `aiTurnEnded()`, `turnChanged(next)` | the host, a program's turn ended | `UIBuilder.showAIStatus(false)`; 2.5 s later `ui.uiEndTurnInfo` unless the game ended; next 250 ms later |
-| `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | `ui.handleReinforcementDeployment`, `ui.showAlert(..., "Reinforced!")` |
+| `showScenario()` | the host, a scenario started or loaded | the briefing, which holds the game until its OK; the first scenario's opens the start menu over it; the person's reserve to deploy |
+| `loadFailed(file)`, `showPrototype(eqid)` | the host | a message |
+| `message(title, text, then?)` | the host: a campaign's outcome, a victory, the turn limit | a message that holds the game (`holdForMessage`) until its OK (`then`, else `messageClosed`) |
+| `campaignEnd(outcome, text, then)`, `mainMenu()` | the host: the campaign's end, after a victory | the dossier under the campaign's end, the start menu |
+| `reportScore`, `reportAchievement` | the host | nothing (no platform score board on the web) |
+| `move(unit, to, cells, shown)`, `attack(attacker, target, shown)` | the host's `processAction` | the command played whole (`play`), then its beats animated (src/view/beats.ts, src/view/player.ts); the victories told (`won`) and shown called at the end of the last beat |
+| `view(event, shown?)` | the host's `processAction`, the session's turn start and join | the controllers' `ViewEvent`: the unit selected, a message pointing at a hex (the tutorial's orders, shown: its OK), the map looking at a hex, the rail folded or opened; shown at once |
+| `aiTurnEnded()`, `turnChanged(next)` | the host, a program's turn ended | the person's turn start (the short turn report, the first unit selected, the reserve); next at once |
+| `unitsPlaced()`, `reinforced(at, own)` | the session's end of turn | the world read again |
+| `turnEvents(events)` | the session's turn start | the turn report's resupplies and reinforcements |
 
 What the game waits on takes a callback, `shown`, which the screen calls once the player has seen it. A move
 and an attack are played whole before anything is shown (#375): `Commands.execute` returns the step's
 result (`MoveResult`, `AttackResult`: the events, and what the old animation read in between, the
 strengths, the units' classes and facings at the shots, where the move stopped and which way the unit faced
-there), and the old UI animates it after: the move, the surprise, the hits, the losses, the explosions, the
-retreat's move or the surrender, then tells the host the victories where its animations end, and calls
-shown at the end of the last one (`animating(false)` in src/ui.ts). The screen that shows nothing
-(src/nullscreen.ts) calls it at once and tells the host the victories then. The old UI's selection
-(src/selection.ts) then shows what the old engine's command left selected (`MapSelection.after`: the
-attacker selected again after an attack, a moved unit's hexes...), for the program's other commands too
-(the screen's optional `played`); the null screen has none. A screen that animates says while it shows a step, a
-program's or the person's (`showingStep`, optional: the old UI's animation; a screen that shows each step at
-once has none), and the host passes it on (`GameHost.showingStep`): the harness and the command-line player
-wait on it, where they waited on `game.waitUIAnimation` until #378 (the original game's flag, which the
-harness still reads there). The command-line player's live mode (cli/page.ts) plays on the host and the
-screen the page runs: a move or an attack through the screen's `move` and `attack`, as a program's, the
-selection as a `view` event, the other commands and the end of turn through the host's `command`.
+there), and the UI animates it after from the events: the move, the surprise, the shots, the explosions, the
+retreat; then it tells the host the victories and calls shown. The screen that shows nothing calls it at once
+and tells the host the victories then. The old UI's selection (src/selection.ts) showed what the old engine's
+command left selected (`MapSelection.after`: the attacker selected again after an attack, a moved unit's
+hexes...), for the program's other commands too (the screen's optional `played`). The UI and the null screen
+have none; the pinned game turns' stand-in for the old screen (test/gameturn.test.ts) and the engine contract
+still ask it. A screen that animates says while it shows a step, a program's or the person's (`showingStep`,
+optional: the old UI had it, the UI doesn't yet, #459), and the host passes it on (`GameHost.showingStep`):
+the harness and the command-line player wait on it, where they waited on `game.waitUIAnimation` until #378
+(the original game's flag, which the harness still reads there). The command-line player's live mode
+(cli/page.ts) plays on the host and the screen the page runs: a move or an attack through the screen's
+`move` and `attack`, as a program's, the selection as a `view` event, the other commands and the end of turn
+through the host's `command`.
 
-The new UI (`src/view/`, #380) is a second implementation, under `?ui=new`: `src/view/screen.tsx` reads the
-game only through the host (`world()`, the world the screen's rules read) and sends the person's commands
-to it (`command`: refused with a `Refusal` while a program plays or a message is open, the end of turn
-ending the person's turn as the old UI's button does). Its view model (`src/view/model.ts`) computes what
-the screens show from the world, the signals (`src/view/store.ts`) carry it to the Preact components. It
-animates nothing yet: a program's move or attack is played whole (`play`), shown at once and its
-victories told then (`won`, which the null screen uses too); a message holds the game until its OK
-(`holdForMessage`, `messageClosed`), the tutorial's orders included.
+The UI reads the game only through the host (`world()`, the world the screen's rules read) and sends the
+person's commands to it (`command`: refused with a `Refusal` while a program plays or a message is open, the
+end of turn ending the person's turn). Its view model (`src/view/model.ts` and the modules beside it) computes
+what the screens show from the world; the signals (`src/view/store.ts`) carry it to the Preact components.
 
 ## The proof
 

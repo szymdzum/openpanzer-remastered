@@ -9,8 +9,8 @@ proves it: the replays stay identical to the original (`reference/`).
   the unused-name, implicit-return and switch-fallthrough checks and `strictFunctionTypes`;
   `strict` stays off until `strictNullChecks` gets its own pass.
 - `harness/replay.sh`: all 16 items identical.
-- `harness/ui-replay.sh [scripts...]`: the UI scripts that exercise the module (see `harness/ui/`;
-  all of them for UI modules), all steps identical.
+- `npm run e2e`: the UI's end-to-end test (the old UI's 24 scripts of user steps, `harness/ui-replay.sh`,
+  went with it in #351).
 
 The harness runs the Vite dev server of the checkout it's started in. Parallel work on several
 modules: a git worktree each, with its own `PORT` and `BDG_SESSION`.

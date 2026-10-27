@@ -104,13 +104,15 @@ sharp HiDPI canvases, the attack preview, the move path. The whole plan is in
     npm run -s play -- help  # a scenario played from the terminal against the AI (docs/CLI.md)
     npm run play:live    # the dev server with the terminal's bridge: the game's page plays the calls, animated
 
-- `src/` the game as TypeScript ES modules, `src/main.ts` is the entry
-- `game/` the 3.2.14 build with all the assets (the page has `<base href="/game/">`), images,
-  sounds and manuals in Git LFS (`git lfs install` before cloning)
+- `src/` the game as TypeScript ES modules, `src/main.ts` is the entry; `src/view/` the UI
+  (Preact), `src/core/` the rules
+- `game/` the 3.2.14 build's assets (the page has `<base href="/game/">`), images, sounds and
+  manuals in Git LFS (`git lfs install` before cloning); the old UI's stylesheet, fonts and
+  images went with it (#351)
 - `harness/` the comparison with the reference, `docs/TYPES.md` the typing rules,
   `docs/MECHANICS.md` how the game plays (rules, combat, AI), `docs/RESEARCH.md` what PG2 and
   other WW2 strategy games teach about design, `docs/ASSETS.md` research on new unit and map
-  graphics, `docs/design/` the current UI
+  graphics, `docs/design/` the old UI that the new one replaced, `docs/ui/` the UI's design
 
 Vite blanks the types out with ts-blank-space instead of compiling: the browser runs src/ line
 for line and column for column (only the import paths change), so coverage and stack traces
