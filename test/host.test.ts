@@ -227,10 +227,12 @@ test("The start menu's tutorial, scenario and campaign start through the game ho
 		.toEqual(["tutorial.xml", "classic", null, false, [2, 2, 0, 0], 0]);
 	expect(g.scenario.map.getPlayers().map((p) => p.type)).toEqual([playerType.aiScripted, playerType.aiScripted]);
 
-	uiSettings.isAI = [0, 1, 0, 0];
+	//(the sides the AI plays are the window's, given to the host, which keeps them in the settings it saves)
+	uiSettings.isAI = [0, 0, 0, 0];
 	let before = g.scenario;
 	const entry = scenariolist.find((s) => s[0] === "tutorial.xml")!;
-	g.host.startScenario(entry[0], entry[2]!);
+	g.host.startScenario(entry[0], entry[2]!, [0, 1, 0, 0]);
+	expect(uiSettings.isAI).toEqual([0, 1, 0, 0]);
 	await until(() => loaded(g, before), "a scenario");
 	expect([g.scenario.file, g.rules, g.campaign, g.scenario.getDescription(), settingsSaves(g)]).toEqual(["tutorial.xml", "remaster", null, entry[2], 1]);
 	expect(g.scenario.map.getPlayers().map((p) => p.type)).toEqual([playerType.humanLocal, playerType.aiLocal]);

@@ -8,6 +8,7 @@ import type { GameHost } from "../host";
 import { uiSettings } from "../prototypes";
 import { MENU_CLOSED, menuBack, type MenuState } from "./menus";
 import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "./saveload";
+import { settingSignals } from "./uisettings";
 
 //What the window asks of the host (none in the tests of the map and the HUD)
 export type SaveLoadHost = Partial<Pick<GameHost, "exportGame" | "loadGame" | "saveToCloud" | "loadFromCloud" | "saveSettings">>;
@@ -28,8 +29,7 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 	const placeholder = signal("Enter numeric ID to Load from Cloud");
 	const lastFile = signal("none");
 	const loadError = signal("");
-	//(the settings' cloud saves changed: counted, so the window shows them again)
-	const saved = signal(0);
+	const lastCloudSave = settingSignals().lastCloudSave;
 	const field: CloudField = {
 		get value() { return cloudId.value; },
 		set value(v: string) { cloudId.value = v; },
@@ -38,9 +38,8 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 
 	const saveLoad = computed(() => {
 		if (menu.value.window !== "saveload") return null;
-		void saved.value;
 		return { cloudId: cloudId.value, placeholder: placeholder.value, lastFile: lastFile.value, error: loadError.value,
-			recent: cloudRows(uiSettings.lastCloudSave) };
+			recent: cloudRows(lastCloudSave.value) };
 	});
 
 	//A game loaded: the start menu closed, the game shown under it
@@ -74,7 +73,6 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 				uiSettings.lastCloudSave = rememberCloudSave(uiSettings.lastCloudSave, name, id!);
 				if (host.saveSettings) host.saveSettings();
 				cloudId.value = lastCloudId();
-				saved.value++;
 			});
 		},
 

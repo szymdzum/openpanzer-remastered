@@ -21,7 +21,7 @@ import { type CardSize, type CardView, unitCardOf } from "./unitcard";
 import { createShopState } from "./shopstate";
 import { combatLogOf, emptyLog, logStep, logTurnStart } from "./log";
 import { campaignEndOf, dossierOf } from "./dossier";
-import { outcomeNames, uiSettings } from "../prototypes";
+import { outcomeNames } from "../prototypes";
 import { contextOf } from "./context";
 import { locationOf, pinsOf } from "./hextip";
 import { aiStatusOf, type EnemyTurn, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "./turn";
@@ -33,6 +33,7 @@ import { hexCentre } from "./hexgrid";
 import { MENU_CLOSED, type MenuButton, menuAfter, menuBack, menuToggled } from "./menus";
 import { createNewGame, type NewGameHost } from "./newgamestate";
 import { createSettings, type SettingsHost } from "./settingsstate";
+import { settingSignals } from "./uisettings";
 import { createSaveLoad, type SaveLoadHost } from "./saveloadstate";
 
 //What the store asks of the game host: the world it plays, the person's commands, the victories they won; the new games
@@ -62,10 +63,10 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const notes = signal<Note[]>([]);
 	const refused = signal<string | null>(null);
 	const lookAt = signal<Position | null>(null);
-	//The map's (D2): the layer shown (the air layer when true), the hex under the pointer, the map's scale
+	//The map's (D2): the layer shown (the air layer when true), the hex under the pointer (its scale is the settings')
 	const airMode = signal(false);
 	const hover = signal<Position | null>(null);
-	const scale = signal(1);
+	const setting = settingSignals();
 	//the strategic map: the whole map fit to the window (StrategicMap)
 	const strategic = signal(false);
 	//the reserve unit picked to deploy, by its place in the core list (Deployment), null: none
@@ -166,16 +167,10 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	//the fog of war, the support fire on the hovered target, the objectives' and towns' plaques
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
-	//(and again when a setting changed: the towns' setting changes no world, #467)
-	const plaques = computed(() => {
-		void settings.settingsChanged.value;
-		return world.value === null || !labels.value ? [] : mapPlaques(world.value, uiSettings.showDetailInfoToolTips);
-	});
-	//The old map's marks the settings ask for (#464), read again when a setting changed
-	const marks = computed(() => {
-		void settings.settingsChanged.value;
-		return { own: uiSettings.markOwnUnits, enemy: uiSettings.markEnemyUnits };
-	});
+	//(and again when the towns' setting changes, which changes no world, #467)
+	const plaques = computed(() => world.value === null || !labels.value ? [] : mapPlaques(world.value, setting.showDetailInfoToolTips.value));
+	//The old map's marks the settings ask for (#464)
+	const marks = computed(() => ({ own: setting.markOwnUnits.value, enemy: setting.markEnemyUnits.value }));
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
 	//the strategic map's chips and objectives, while it is open
@@ -274,7 +269,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const newGame = createNewGame({ host, world, menu, lists: () => ({ campaigns: campaignlist, scenarios: scenariolist }) });
 
 	//The settings window
-	const settings = createSettings({ host, menu, scale, refresh, reload: page.reload });
+	const settings = createSettings({ host, menu, refresh, reload: page.reload });
 
 	//The save and load window
 	const saveLoad = createSaveLoad({ host, world, menu, download: page.download });
@@ -304,7 +299,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 
 	return {
 		dispatch,
-		world, selected, notes, refused, lookAt, airMode, hover, scale, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
+		world, selected, notes, refused, lookAt, airMode, hover, strategic, side, sideName, turn, prestige, prestigeShown, country, nation,
 		date, weather, ground, rules, endTurn, note, hexGrid, infoShown, railOpen, labels, asking, askingText, context, located, pins, banner, report, ai, enemy, reportRefusal, toggleAir,
 		units, selection, path, fog, support, plaques, marks, overview, deploying, reserve, deployment, ghost, refresh, glance,
 		results, news, motion, showing: showing as ReadonlySignal<boolean>, showStep, card, cardSize, dockHeight, ...shops, tray, combatLog, dossier, campaignEnd, menu, ...newGame, ...settings, ...saveLoad,
