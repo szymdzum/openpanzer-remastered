@@ -365,27 +365,28 @@ function drawChips(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) 
 		if (u.chip !== null) drawChip(c, u.side, u.chip, toScreen(hexCentre(u.row, u.col), vp));
 }
 
-//The whole map in view, cleared first
-export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
+//The canvas cleared (a copy of the ground put back when given), then the map's own pixels clipped: the grid's half hexes
+//at the edges reach past the map image, the fog and the overlays stop at its edge
+function begin(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, ground: CanvasImageSource | null = null) {
 	c.setTransform(1, 0, 0, 1, 0, 0);
 	c.clearRect(0, 0, vp.width * vp.dpr, vp.height * vp.dpr);
 	c.imageSmoothingEnabled = false;
+	if (ground !== null) c.drawImage(ground, 0, 0);
 	c.save();
 	atMap(c, vp);
-	//(the grid's half hexes at the edges reach past the map image: fog and overlays stop at its edge)
 	c.beginPath();
 	c.rect(0, 0, scene.size.width, scene.size.height);
 	c.clip();
-	//(the strategic map shrinks the terrain: smoothed, not pixelated; then only its chips and objectives)
-	c.imageSmoothingEnabled = scene.strategic !== null;
-	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
-	if (scene.strategic !== null) {
-		drawStrategic(c, vp, scene.strategic, images(scene.strategic.flags));
-		c.restore();
-		return;
-	}
+}
+
+//The grid and the fog over the terrain
+function drawGroundMarks(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport) {
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
+}
+
+//Everything over the ground, in the card's order
+function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
 	//(only the units and the plaques that can show on the screen, in their order)
 	const near = nearView(vp), units = scene.units.filter(near), plaques = scene.plaques.filter(near);
 	const marks = marksOf(scene);
@@ -404,5 +405,36 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	for (const u of units)
 		if (u.marker !== null) drawMarker(c, u, u.marker, marks.enemy, toScreen({ x: hexCentre(u.row, u.col).x, y: hexCentre(u.row, u.col).y + 12 }, vp));
 	drawChips(c, vp, units);
+}
+
+//The whole map in view, cleared first
+export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
+	begin(c, scene, vp);
+	//(the strategic map shrinks the terrain: smoothed, not pixelated; then only its chips and objectives)
+	c.imageSmoothingEnabled = scene.strategic !== null;
+	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
+	if (scene.strategic !== null) {
+		drawStrategic(c, vp, scene.strategic, images(scene.strategic.flags));
+		c.restore();
+		return;
+	}
+	drawGroundMarks(c, scene, vp);
+	drawOverGround(c, scene, vp, images);
+	c.restore();
+}
+
+//The map in two parts, for the layers the map keeps (src/view/layers.ts): the ground (the terrain, the grid and the fog),
+//then the rest over a copy of it. Together they draw what drawMap draws, pixel for pixel: the rest sets every state it
+//draws with, so it doesn't matter that the ground was drawn on another canvas. Not for the strategic map
+export function drawGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport) {
+	begin(c, scene, vp);
+	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
+	drawGroundMarks(c, scene, vp);
+	c.restore();
+}
+
+export function drawOnGround(c: CanvasRenderingContext2D, ground: CanvasImageSource, scene: Scene, vp: Viewport, images: Images) {
+	begin(c, scene, vp, ground);
+	drawOverGround(c, scene, vp, images);
 	c.restore();
 }
