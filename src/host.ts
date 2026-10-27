@@ -45,7 +45,7 @@ import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
 import type { CloudField } from "./gamestate";
-import type { Screen } from "./screen";
+import type { Screen, ShownCommand } from "./screen";
 
 //How a victory was won, as the loss texts and the campaign name it (endGameType)
 const endTypes = { capture: endGameType.moveCapture, elimination: endGameType.noEnemyLeft };
@@ -501,6 +501,16 @@ export class GameHost {
 		return Commands.execute(this.game.scenario, cmd);
 	}
 
+	//A program's move or attack played whole, then shown by the screen; its victories told once it has been shown,
+	//then shown (a program's next action). The command-line player's live mode shows its moves and attacks so too
+	playShown(cmd: ShownCommand, shown: () => void) {
+		const done = this.play(cmd);
+		this.screen.step(cmd, done, () => {
+			if (done.ok) this.won(done.result);
+			shown();
+		});
+	}
+
 	//The victories a step won, told once the screen has shown the step (the old UI at its animation's end):
 	//a move's capture, then its surprise attack's; an attack's retreat that took its side's last objective,
 	//then the sides whose enemy has no unit left
@@ -669,13 +679,13 @@ function showAction(host: GameHost, a: AIAction, request: () => () => void): boo
 		case actionType.move: {
 			const shown = request(), [unit, to] = a.param;
 			const cells = GameRules.getMoveRange(host.game.scenario.map, unit);
-			host.screen.move(unit.id, to, cells, shown);
+			host.playShown({ type: "move", unit: unit.id, to: { row: to.row, col: to.col }, cells }, shown);
 			return true;
 		}
 		//(the range asked after the wait: a missing unit throws there and the turn waits for good, #80)
 		case actionType.attack: {
 			const shown = request(), [attacker, target] = a.param;
-			if (GameRules.isInAttackRange(attacker, target)) host.screen.attack(attacker.id, target.id, shown);
+			if (GameRules.isInAttackRange(attacker, target)) host.playShown({ type: "attack", unit: attacker.id, target: target.id }, shown);
 			else shown();
 			return true;
 		}

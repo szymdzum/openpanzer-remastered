@@ -14,7 +14,6 @@
 
 import type { Game } from "./game";
 import type { Screen } from "./screen";
-import type { Position, UnitId } from "./state";
 
 export function nullScreen(g: Game): Screen {
 	const nothing = () => {};
@@ -31,17 +30,8 @@ export function nullScreen(g: Game): Screen {
 		reportScore: nothing,
 		reportAchievement: nothing,
 
-		//The move's capture victory first, then its surprise attack's (the host's won)
-		move(unit: UnitId, to: Position, cells: Position[], shown: () => void) {
-			const r = g.host.play({ type: "move", unit, to: { row: to.row, col: to.col }, cells });
-			if (r.ok) g.host.won(r.result);
-			shown();
-		},
-		attack(attacker: UnitId, target: UnitId, shown: () => void) {
-			const r = g.host.play({ type: "attack", unit: attacker, target });
-			if (r.ok) g.host.won(r.result);
-			shown();
-		},
+		//(shown at once: the host tells its victories then)
+		step(_cmd, _done, shown: () => void) { shown(); },
 		view(_event, shown?: () => void) {
 			if (shown) shown();
 		},

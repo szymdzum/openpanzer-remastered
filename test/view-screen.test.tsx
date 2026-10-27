@@ -14,7 +14,7 @@ import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
 import { playerType, uiSettings } from "../src/prototypes";
 import type { World } from "../src/core/types";
-import type { Command } from "../src/commands";
+import type { Command, Executed } from "../src/commands";
 import { step } from "../src/core/step";
 import { handWorld } from "./coreworld";
 import type { Game } from "../src/game";
@@ -160,8 +160,8 @@ test("The screen shows the host's messages, the campaign's end and the view even
 	//A program's move and attack played by the host and shown at once; the other events shown at once
 	const next = vi.fn();
 	await act(() => {
-		s.move(1, { row: 2, col: 3 }, [], next);
-		s.attack(1, 2, next);
+		s.step({ type: "move", unit: 1, to: { row: 2, col: 3 }, cells: [] }, { ok: true, result: null }, next);
+		s.step({ type: "attack", unit: 1, target: 2 }, { ok: false, refusal: { reason: "no such unit" } }, next);
 		s.view({ type: "viewport", at: { row: 0, col: 0 } }, next);
 		s.view({ type: "mainMenu" });
 		s.mainMenu();
@@ -171,8 +171,8 @@ test("The screen shows the host's messages, the campaign's end and the view even
 		s.reportScore(1);
 		s.reportAchievement("c");
 	});
-	expect([host.play.mock.calls.map((c) => (c as unknown[])[0]), host.won.mock.calls.length, next.mock.calls.length]).toEqual([
-		[{ type: "move", unit: 1, to: { row: 2, col: 3 }, cells: [] }, { type: "attack", unit: 1, target: 2 }], 2, 3]);
+	//(the host plays a program's step and tells its victories: the screen only shows it)
+	expect([host.play.mock.calls.length, host.won.mock.calls.length, next.mock.calls.length]).toEqual([0, 0, 3]);
 	vi.useFakeTimers();
 	s.turnChanged(next);
 	expect(next).toHaveBeenCalledTimes(3);
@@ -291,11 +291,13 @@ test("A program's attack is animated before its shown: the AI's next action wait
 	const shown = vi.fn();
 	//(the screen shows the world before the attack, as it has after any step)
 	await act(() => { s.unitsPlaced(); });
-	await act(() => { s.attack(0, 1, shown); });
-	expect([shown.mock.calls.length, host.won.mock.calls.length]).toEqual([0, 0]);
+	//(played by the host, then shown; the host tells its victories when shown is called: GameHost.playShown)
+	const attack = { type: "attack", unit: 0, target: 1 } as const;
+	await act(() => { s.step(attack, host.play(attack) as Executed<"attack">, shown); });
+	expect(shown.mock.calls.length).toBe(0);
 	await act(() => { vi.advanceTimersByTime(10000); });
 	expect([shown.mock.calls.length, host.won.mock.calls.length, reduce.mock.calls.length > 0, host.cosmetic.mock.calls.length > 0])
-		.toEqual([1, 1, true, true]);
+		.toEqual([1, 0, true, true]);
 	vi.useRealTimers();
 	vi.unstubAllGlobals();
 });

@@ -40,7 +40,6 @@ function describe(a: AIAction | null) {
 async function play(item: string): Promise<string[]> {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
-	const { Commands } = await import("../src/commands");
 	const { unitObject } = await import("../src/mirror");
 	const { Rng } = await import("../src/rng");
 	const { toData } = await import("../src/state");
@@ -52,7 +51,7 @@ async function play(item: string): Promise<string[]> {
 	Rng.seed(seed);
 	Math.random = mulberry32(seed);
 	const screen: string[] = [];
-	game.host.screen = stand(game, Commands, unitObject, screen);
+	game.host.screen = stand(game, unitObject, screen);
 	const tick = ticking(game);
 	await startState(game, item.startsWith("campaign:") ? item + ":0" : item, [1, 1, 1, 1]);
 	const trace: string[] = [];
@@ -150,7 +149,7 @@ function ticking(game: Game) {
 //call as the old screen made it of the stand-in. The move and the attack played whole, the unit the AI picked
 //selected on the map, what the screen was asked to show recorded, its messages and windows nothing (the old
 //UIBuilder's were stubbed); the game's wait for a step shown ends at the next tick (ticking)
-function stand(game: Game, Commands: typeof import("../src/commands").Commands, unitObject: typeof import("../src/mirror").unitObject,
+function stand(game: Game, unitObject: typeof import("../src/mirror").unitObject,
 	screen: string[]): Screen {
 	const map = () => game.scenario.map;
 	const nothing = () => {};
@@ -163,12 +162,9 @@ function stand(game: Game, Commands: typeof import("../src/commands").Commands, 
 		mainMenu() { screen.push("menu options"); },
 		reportScore: nothing,
 		reportAchievement: nothing,
-		move(unit, to, cells) {
-			map().getSelection().showMoveCells(cells as import("../src/prototypes").extendedCell[]);
-			Commands.execute(game.scenario, { type: "move", unit, to: { row: to.row, col: to.col } });
-		},
-		attack(attacker, target) {
-			Commands.execute(game.scenario, { type: "attack", unit: attacker, target });
+		//(the host played the step; the old screen showed the move's hexes, and the step's end waits for the next tick)
+		step(cmd) {
+			if (cmd.type === "move") map().getSelection().showMoveCells(cmd.cells as import("../src/prototypes").extendedCell[]);
 		},
 		view(event, shown) {
 			if (event.type === "message") {
@@ -243,10 +239,9 @@ test("The handlers plan nothing themselves: they hand out the session's orders",
 //waits only for what the player watches (#8, an AI turn took a minute at an action a second)
 test("The AI plays its resupplies, reinforcements and mounts without waiting for the screen (#8)", async () => {
 	const game = await freshGame();
-	const { Commands } = await import("../src/commands");
 	const { unitObject } = await import("../src/mirror");
 	const { actionType } = await import("../src/prototypes");
-	game.host.screen = stand(game, Commands, unitObject, []);
+	game.host.screen = stand(game, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 1, 1, 1]);
 	const map = game.scenario.map, unit = map.getUnits().find((u) => u.player === map.currentPlayer) as Unit;
@@ -268,10 +263,9 @@ test("The AI plays its resupplies, reinforcements and mounts without waiting for
 //turn at once, a turn of the scenario lost)
 test("A new game's first player, the AI, plays its first turn on the screen (#292)", async () => {
 	const game = await freshGame();
-	const { Commands } = await import("../src/commands");
 	const { unitObject } = await import("../src/mirror");
 	const { actionType } = await import("../src/prototypes");
-	game.host.screen = stand(game, Commands, unitObject, []);
+	game.host.screen = stand(game, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 0, 0, 0]);
 	const map = game.scenario.map, first = map.currentPlayer;

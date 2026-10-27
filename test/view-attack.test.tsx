@@ -8,7 +8,7 @@ import { render as renderInto } from "preact";
 import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import type { Command } from "../src/commands";
+import type { Command, Executed } from "../src/commands";
 import { terrainType } from "../src/prototypes";
 import { hexCentre } from "../src/view/hexgrid";
 import { MapView } from "../src/view/map";
@@ -125,7 +125,8 @@ test("The screen says it is still showing a step while its beats play, and no lo
 	expect(s!.showingStep!()).toBe(false);
 	//(a program's attack, played whole, then its shots shown: the harness and the command-line player wait on it)
 	const shown = vi.fn();
-	await act(() => { s.attack(0, 1, shown); });
+	const attack = { type: "attack", unit: 0, target: 1 } as const;
+	await act(() => { s.step(attack, play(attack) as Executed<"attack">, shown); });
 	await act(() => { vi.advanceTimersByTime(1); });
 	expect([s!.showingStep!(), shown.mock.calls.length]).toEqual([true, 0]);
 	await act(() => { vi.advanceTimersByTime(10000); });
