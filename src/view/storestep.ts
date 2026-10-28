@@ -32,8 +32,11 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 	const showing = signal(false);
 	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
+	//A unit an explosion destroyed, let go by the step playing: off the map once the blast covers it (#503)
+	let letGo = (_id: UnitId) => {};
 	const player = createPlayer({ pick: cosmetic === undefined ? () => 0 : () => cosmetic.call(host), show: (m) => { motion.value = m; },
-		hide: (id) => { moving.value = id; }, centre: (p) => hexCentre(p.row, p.col), ...page });
+		hide: (id) => { moving.value = id; }, centre: (p) => hexCentre(p.row, p.col),
+		gone: (id) => letGo(id), ...page });
 
 	//What a step told over the map and in the status bar (nothing to tell: the last results stay until they fade)
 	const tell = (before: World, events: GameEvent[]) => {
@@ -46,15 +49,20 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 	//A step's beats played, then what it told, then what follows (a person's victories, a program's next action)
 	const play = (before: World, events: GameEvent[], then: () => void) => {
 		const after = world.value!, beats = beatsFor(before, after, events), until = heldUntil(beats, events);
+		//(the units the map still draws as they were before the step)
+		let held: UnitId[] = [];
+		const hold = (ids: UnitId[]) => {
+			held = ids;
+			shown.value = shownWorld(before, after, ids);
+		};
+		letGo = (id) => hold(held.filter((x) => x !== id));
 		showing.value = true;
 		player.play(beats, () => {
 			shown.value = null;
 			showing.value = false;
 			tell(before, events);
 			then();
-		}, (i) => {
-			shown.value = shownWorld(before, after, [...until].filter(([, last]) => last >= i).map(([id]) => id));
-		});
+		}, (i) => hold([...until].filter(([, last]) => last >= i).map(([id]) => id)));
 	};
 
 	return {

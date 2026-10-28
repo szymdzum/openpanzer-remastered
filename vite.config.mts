@@ -189,7 +189,7 @@ export default defineConfig({
 				//(the store split into its parts, proposal 3: in each the one uncovered is the harness setter every module gets)
 				"src/view/store.ts": { statements: 98, branches: 99, functions: 96, lines: 98 },
 				"src/view/storecore.ts": { statements: 96, branches: 100, functions: 80, lines: 96 },
-				"src/view/storestep.ts": { statements: 96, branches: 100, functions: 92, lines: 96 },
+				"src/view/storestep.ts": { statements: 96, branches: 100, functions: 90, lines: 96 }, //(letGo's first value runs only if a blast came with no step playing)
 				"src/view/storemap.ts": { statements: 98, branches: 100, functions: 95, lines: 98 },
 				"src/view/storecard.ts": { statements: 95, branches: 95, functions: 87, lines: 93 },
 				"src/view/storeturn.ts": { statements: 99, branches: 98, functions: 97, lines: 98 },

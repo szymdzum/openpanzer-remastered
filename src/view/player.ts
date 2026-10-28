@@ -23,6 +23,7 @@ export interface Stage {
 	sound: (file: string) => void;
 	centre: (p: Position) => { x: number; y: number }; //a hex's centre in the map's pixels
 	still: () => boolean; //prefers-reduced-motion
+	gone?: (unit: UnitId) => void; //a unit an explosion destroys, off the map once the blast covers it
 }
 
 const STEPS = 5, GAP = 500;
@@ -62,6 +63,8 @@ export function createPlayer(stage: Stage) {
 		const frame = frameMs();
 		for (let f = 0; f < sheet.frames; f++)
 			later(f * frame, () => stage.show(still ? null : { sprite: null, effect: { sheet, frame: f, at: b.at, facing: b.facing } }));
+		//(the destroyed unit goes once the blast covers it, a third of the way in, so the one turns into the other)
+		if (b.kind === "explosion" && stage.gone !== undefined) later(Math.floor(sheet.frames / 3) * frame, () => stage.gone!(b.unit));
 		//(the last frame shown its time, then gone)
 		later(sheet.frames * frame, () => stage.show(null));
 		return (sheet.frames - 1) * frame + GAP;

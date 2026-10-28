@@ -12,6 +12,7 @@ import { directionToRadians, playerType, terrainType, uiSettings } from "../src/
 import { type Beat, beatsFor, SHEETS } from "../src/view/beats";
 import type { Viewport } from "../src/view/canvas";
 import { hexCentre } from "../src/view/hexgrid";
+import { SPRITE_RAISE } from "../src/view/mapdraw";
 import { drawMotion } from "../src/view/motiondraw";
 import { createPlayer, type Motion } from "../src/view/player";
 import type { GameEvent } from "../src/core/events";
@@ -152,6 +153,9 @@ test("A beat on the canvas: the moving unit's sprite mirrored past south to nort
 	expect([unit[1], unit[3]]).toEqual([80 * 4, 80]);
 	expect([shot[1], shot[3]]).toEqual([300, 150]);
 	expect(ops).toContainEqual(["rotate", [directionToRadians[4]]]);
+	//(the effect on the unit's sprite, which stands above its hex's centre, not below it at the centre)
+	const o = hexCentre(4, 4);
+	expect(ops).toContainEqual(["translate", [o.x, o.y - SPRITE_RAISE]]);
 	//(an image not loaded yet: nothing)
 	ops.length = 0;
 	drawMotion(ctx, vp, { sprite: { icon: "pz.png", x: 0, y: 0, facing: 2 }, effect: { sheet: SHEETS[3], frame: 0, at: { row: 1, col: 1 }, facing: 0 } }, () => null);
@@ -217,13 +221,19 @@ test("A defender that retreats is drawn at its hex, at its strength before the f
 	expect([ran.row, ran.col]).not.toEqual([4, 4]);
 });
 
-test("A destroyed defender is drawn until its explosion beat ends, then gone (#503)", () => {
+test("A destroyed defender is drawn into its explosion, then goes under the blast while it still burns (#503)", () => {
 	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 1 }]);
 	const seed = seedWhere(w, (e) => e.some((x) => x.type === "destroyed"));
 	const { store, seen, after } = frames(w, seed);
-	const exploded = seen.map((f) => f.effect !== null && f.effect.includes("explosions")).lastIndexOf(true);
-	expect(exploded).toBeGreaterThan(0);
-	expect(seen.slice(0, exploded + 1).every((f) => f.at === "4,4 1")).toBe(true);
+	const blast = seen.map((f) => f.effect !== null && f.effect.includes("explosions"));
+	const first = blast.indexOf(true), end = blast.lastIndexOf(true);
+	expect(first).toBeGreaterThan(0);
+	//(there until the blast begins, gone before it ends: the one turns into the other)
+	expect(seen.slice(0, first + 1).every((f) => f.at === "4,4 1")).toBe(true);
+	const goes = seen.findIndex((f) => f.at === null);
+	expect(goes).toBeGreaterThan(first);
+	expect(goes).toBeLessThan(end);
+	expect(seen.slice(goes).every((f) => f.at === null)).toBe(true);
 	expect(unitById(after, 1)).toBeNull();
 	expect(store.units.value.find((u) => u.id === 1)).toBeUndefined();
 	expect(store.units.value).toEqual(mapUnits(after, false, null));
@@ -233,9 +243,13 @@ test("Under reduced motion the units still wait for their beats; a new scenario'
 	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 1 }]);
 	const seed = seedWhere(w, (e) => e.some((x) => x.type === "destroyed"));
 	const { seen } = frames(w, seed, true);
-	//(nothing moves: no effect drawn, the defender there until the last beat ends)
+	//(nothing moves: no effect drawn; the defender there through the shots, then gone for good, at its explosion's time)
 	expect(seen.length).toBeGreaterThan(50);
-	expect(seen.every((f) => f.effect === null && f.at === "4,4 1")).toBe(true);
+	expect(seen.every((f) => f.effect === null)).toBe(true);
+	const goes = seen.findIndex((f) => f.at === null);
+	expect(goes).toBeGreaterThan(20);
+	expect(seen.slice(0, goes).every((f) => f.at === "4,4 1")).toBe(true);
+	expect(seen.slice(goes).every((f) => f.at === null)).toBe(true);
 	const store = storeOf(w, seed);
 	store.dispatch(attack);
 	vi.advanceTimersByTime(100);
