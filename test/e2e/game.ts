@@ -159,11 +159,16 @@ const unitAt = (at: Position) => world(([w], h) => {
 	return u === undefined ? null : u.id;
 }, at);
 
-//A unit selected by a click on its hex, on its layer (A switches the air layer on and off): the unit card shows its name
+//A unit selected by a click on its hex, on its layer (A switches the air layer on and off): the unit card shows its name,
+//and the map keeps its width as the dock grows under it (#500)
 async function select(o: Order) {
 	if (await ui("#air").getAttribute("aria-pressed") !== String(o.air)) await page.keyboard.press("KeyA");
 	const card = ui("#unit-info #uName", { hasText: o.name });
+	const mapWidth = () => ui(".pm-mapview-scroll").evaluate((s) => s.clientWidth);
+	const before = await mapWidth();
 	await clickHexOnce(o.from, () => card.isVisible(), `the unit card doesn't show ${o.name}`);
+	const after = await mapWidth();
+	check(after === before, `selecting ${o.name} narrowed the map from ${before} to ${after} px`);
 }
 
 //A move of the first unit that can make one, played out
