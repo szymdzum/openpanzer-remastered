@@ -7,7 +7,7 @@
 //The leader's tooltip opens on hover, focus or a tap, above the card, never over the unit's name.
 import { useState } from "preact/hooks";
 import { Stats } from "./facts";
-import { Icon, Mark } from "./icon";
+import { Icon, type IconName, Mark } from "./icon";
 import { Meter, Stars } from "./meter";
 import { useEscape } from "./panel";
 import type { Store } from "./store";
@@ -105,12 +105,18 @@ function Details({ card }: { card: UnitCard }) {
 	);
 }
 
-//A button that sizes the card; its chevron points the way the card goes
-function Size({ store, to, up, children }: { store: Pick<Store, "sizeCard">, to: CardSize, up: boolean, children: string }) {
+//A small icon button at the card's edge: the card's room goes to the unit, not to its controls. The name is its label
+//and its tooltip
+function Act({ icon, up = false, label, onClick }: { icon: IconName, up?: boolean, label: string, onClick: () => void }) {
 	return (
-		<button type="button" class={up ? "pm-btn ghost ui-size up" : "pm-btn ghost ui-size"} aria-controls="unit-info"
-			onClick={() => store.sizeCard(to)}><Icon name="chevron-down" size="sm" />{children}</button>
+		<button type="button" class={up ? "pm-btn ghost icon ui-act up" : "pm-btn ghost icon ui-act"} aria-label={label} title={label}
+			onClick={onClick}><Icon name={icon} size="sm" /></button>
 	);
+}
+
+//A button that sizes the card: a chevron points the way the card goes, a bar folds it to the strip
+function Size({ store, to, label }: { store: Pick<Store, "sizeCard">, to: CardSize, label: string }) {
+	return <Act icon={to === "strip" ? "minus" : "chevron-down"} up={to === "full" || label === "Show"} label={label} onClick={() => store.sizeCard(to)} />;
 }
 
 //The strip: the name and strength, fuel and ammo in one line
@@ -123,7 +129,7 @@ function Strip({ card, store }: { card: UnitCard, store: Pick<Store, "sizeCard">
 					<Icon name={m.icon} size="sm" /><span class="pm-sr">{m.label} </span>{m.value}
 				</span>
 			))}
-			<Size store={store} to="row" up>Show</Size>
+			<Size store={store} to="row" label="Show" />
 		</section>
 	);
 }
@@ -145,9 +151,9 @@ export function UnitInfoPanel({ store }: { store: Pick<Store, "card" | "cardSize
 			</div>
 			{!full && <div id="statsRowContainer" class="sheet"><div id="statsRow"><Stats stats={card.sheet} /></div></div>}
 			<div class="ui-acts">
-				{full ? <Size store={store} to="row" up={false}>Less</Size> : <Size store={store} to="full" up>More</Size>}
-				<Size store={store} to="strip" up={false}>Hide</Size>
-				{card.next && <button type="button" class="pm-btn ghost" onClick={() => store.shortcut({ menu: "next" })}>Next unit</button>}
+				{full ? <Size store={store} to="row" label="Less" /> : <Size store={store} to="full" label="More" />}
+				<Size store={store} to="strip" label="Hide" />
+				{card.next && <Act icon="arrow-right" label="Next unit" onClick={() => store.shortcut({ menu: "next" })} />}
 			</div>
 		</section>
 	);
