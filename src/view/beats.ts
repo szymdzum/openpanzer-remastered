@@ -6,7 +6,7 @@
 //tested without the DOM (test/view-beats.test.ts)
 import type { EventOf, Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";
-import type { Position, UnitId, World } from "../core/types";
+import type { Position, UnitId, UnitState, World } from "../core/types";
 import { isTrain } from "../core/units";
 import { unitById } from "../core/world";
 import { unitClass } from "../prototypes";
@@ -22,8 +22,10 @@ export interface Sheet {
 export type Beat =
 	//a unit along its path (seen: the side shown sees it on that hex), its sprite strip
 	| { kind: "move"; unit: UnitId; icon: string; path: PathStep[]; sounds: string[] }
-	//a unit firing, facing its target, or an explosion where a unit was destroyed or surrendered
-	| { kind: "fire" | "explosion"; at: Position; facing: number; sheets: Sheet[]; sounds: string[] };
+	//a unit firing, facing its target
+	| { kind: "fire"; at: Position; facing: number; sheets: Sheet[]; sounds: string[] }
+	//an explosion where a unit was destroyed or surrendered
+	| { kind: "explosion"; unit: UnitId; at: Position; facing: number; sheets: Sheet[]; sounds: string[] };
 
 const ANIMATIONS = "resources/animations/", SOUNDS = "resources/sounds/";
 
@@ -88,8 +90,8 @@ function fireBeat(before: World, after: World, w: Fighter, target: Fighter): Bea
 	return { kind: "fire", at: at(w), facing: directionTo(w.row, w.col, target.row, target.col), sheets: shot[0], sounds: shot[1] };
 }
 
-function explosion(before: World, after: World, p: Position): Beat | null {
-	return seen(before, after, p) ? { kind: "explosion", at: at(p), facing: 0, sheets: EXPLOSIONS, sounds: EXPLOSION_SOUNDS } : null;
+function explosion(before: World, after: World, unit: UnitId, p: Position): Beat | null {
+	return seen(before, after, p) ? { kind: "explosion", unit, at: at(p), facing: 0, sheets: EXPLOSIONS, sounds: EXPLOSION_SOUNDS } : null;
 }
 
 //A fight's shots: a support gun's alone; the attacker's, then the defender's when it fires back and is still there
@@ -108,7 +110,7 @@ function beatsOf(before: World, after: World, e: GameEvent): (Beat | null)[] {
 			return fightBeats(before, after, e);
 		case "destroyed":
 		case "surrendered":
-			return [explosion(before, after, e.at)];
+			return [explosion(before, after, e.unit, e.at)];
 		default:
 			return [];
 	}
@@ -121,4 +123,56 @@ export function beatsFor(before: World, after: World, events: GameEvent[]): Beat
 		for (const b of beatsOf(before, after, e))
 			if (b !== null) beats.push(b);
 	return beats;
+}
+
+//The units a step's events move, fight or take off the map
+function touched(events: GameEvent[]): UnitId[] {
+	const ids: UnitId[] = [];
+	for (const e of events)
+		if (e.type === "fight") ids.push(e.attacker.unit, e.defender.unit);
+		else if (e.type === "moved" || e.type === "retreated" || e.type === "destroyed" || e.type === "surrendered") ids.push(e.unit);
+	return ids;
+}
+
+//How long the map keeps each unit the step touched as it was before the step (#503), as the old UI showed a step: a
+//unit until the end of its beat (its move, its explosion), one without a beat (it only fought, or moved unseen) until
+//the last beat ends. A beat's index, beats.length for the last's end
+export function heldUntil(beats: Beat[], events: GameEvent[]): Map<UnitId, number> {
+	const until = new Map<UnitId, number>();
+	for (const id of touched(events)) until.set(id, beats.length);
+	beats.forEach((b, i) => {
+		if (b.kind !== "fire") until.set(b.unit, i);
+	});
+	return until;
+}
+
+//The hex slot that holds the unit in a world, null when none does
+function slotOf(w: World, id: UnitId, u: UnitState | null): { hex: number; key: "unit" | "air" } | null {
+	if (u === null || u.row < 0) return null;
+	const hex = u.row * w.state.map.cols + u.col, h = w.state.map.hexes[hex];
+	return h.unit === id ? { hex, key: "unit" } : h.air === id ? { hex, key: "air" } : null;
+}
+
+//The world the map draws while a step's beats play (#503): the world after it, with the units held as they were before
+//it, on their hexes (a destroyed one back on the map), each still seen when the step spotted it
+export function shownWorld(before: World, after: World, held: UnitId[]): World {
+	if (held.length === 0) return after;
+	const units = after.state.units.slice(), hexes = after.state.map.hexes.slice(), index = new Map(after.index);
+	//(each taken off its hex first, then put back where it was: a hex one left may be another's before)
+	for (const id of held) {
+		const slot = slotOf(after, id, unitById(after, id));
+		if (slot !== null) hexes[slot.hex] = { ...hexes[slot.hex], [slot.key]: null };
+	}
+	for (const id of held) {
+		const was = unitById(before, id), now = unitById(after, id), slot = slotOf(before, id, was);
+		if (was === null) continue;
+		const i = index.get(id);
+		const u = { ...was, tempSpotted: was.tempSpotted || (now !== null && now.tempSpotted) };
+		if (i === undefined) {
+			index.set(id, units.length);
+			units.push(u);
+		} else units[i] = u;
+		if (slot !== null) hexes[slot.hex] = { ...hexes[slot.hex], [slot.key]: id };
+	}
+	return { ...after, state: { ...after.state, units, map: { ...after.state.map, hexes } }, index, scratch: null };
 }
