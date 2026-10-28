@@ -301,10 +301,10 @@ async function play() {
 	});
 
 	await step("the unit card unfolded and folded", async () => {
-		await ui("#unit-info button", { hasText: "More" }).click();
+		await ui("#unit-info").getByRole("button", { name: "More", exact: true }).click();
 		await shown(ui("#unit-card section[aria-label=Attack]"));
 		await shown(ui("#unit-card section[aria-label=Defence]"));
-		await ui("#unit-info button", { hasText: "Less" }).click();
+		await ui("#unit-info").getByRole("button", { name: "Less", exact: true }).click();
 		await gone(ui("#unit-card"));
 	});
 
