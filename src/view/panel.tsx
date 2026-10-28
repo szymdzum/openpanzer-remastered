@@ -88,9 +88,18 @@ export function useEscape(onClose: (() => void) | undefined) {
 }
 
 //What the keyboard can reach in a window: its controls, the disabled ones too (they say why, #497)
-const FOCUSABLE = "button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex=\"-1\"])";
+const FOCUSABLE = "a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]";
 
-const focusables = (dialog: HTMLElement) => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((e) => !e.closest("[hidden]"));
+//A radio the browser's Tab skips: one of a group that has another checked
+function skippedRadio(e: HTMLElement, dialog: HTMLElement): boolean {
+	if (!(e instanceof HTMLInputElement) || e.type !== "radio" || e.checked) return false;
+	return [...dialog.querySelectorAll<HTMLInputElement>("input[type=radio]")].some((r) => r.name === e.name && r.checked);
+}
+
+//The window's Tab stops, in their order, as the browser's Tab finds them: not an icon's <use href> or a negative tabindex,
+//nothing hidden, one radio a group (the lead's playtest of #498)
+const focusables = (dialog: HTMLElement) => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((e) => e.tabIndex >= 0
+	&& !e.closest("[hidden]") && (typeof e.checkVisibility !== "function" || e.checkVisibility()) && !skippedRadio(e, dialog));
 
 //The control a window gives the focus to when it opens: its primary action that can be taken, else its first control
 function firstControl(dialog: HTMLElement): HTMLElement | undefined {
@@ -111,26 +120,31 @@ function keepTab(e: KeyboardEvent, dialog: HTMLElement) {
 
 //A modal window's focus (#497, handoff.md's checklist): it takes the focus when it opens (unless one of its own controls
 //already took it, as the start menu's windows do), keeps it while open, and gives it back to where it was when it
-//closes. Returns the window's ref
-function useModalFocus<T extends HTMLElement>(): RefObject<T> {
+//closes. shown: what the window shows, when it shows something new without closing (the message window's next message):
+//it takes the focus again if the focus went elsewhere meanwhile. Returns the window's ref
+function useModalFocus<T extends HTMLElement>(shown: unknown): RefObject<T> {
 	const ref = useRef<T>(null);
 	useLayoutEffect(() => {
 		const dialog = ref.current!, before = document.activeElement as HTMLElement | null;
-		if (!dialog.contains(document.activeElement)) firstControl(dialog)?.focus();
 		return () => {
 			//(back where it was, unless the focus moved on outside the window, or that place left the page)
 			const now = document.activeElement;
 			if (before !== null && before.isConnected && (now === null || now === document.body || dialog.contains(now))) before.focus();
 		};
 	}, []);
+	useLayoutEffect(() => {
+		const dialog = ref.current!;
+		if (!dialog.contains(document.activeElement)) firstControl(dialog)?.focus();
+	}, [shown]);
 	return ref;
 }
 
 //A modal <dialog> shown open in place (not showModal's top layer: the z-index tokens stack it with the HUD), with its
-//focus (useModalFocus): the windows below, the message and the dossier
-export function Dialog({ id, class: cls, labelledBy, style, children }: { id?: string, class: string, labelledBy: string,
-	style?: CSSProperties, children: ComponentChildren }) {
-	const ref = useModalFocus<HTMLDialogElement>();
+//focus (useModalFocus): the windows below, the message and the dossier. shown: what it shows, when that can change while
+//it stays open (the message window's message)
+export function Dialog({ id, class: cls, labelledBy, style, shown, children }: { id?: string, class: string, labelledBy: string,
+	style?: CSSProperties, shown?: unknown, children: ComponentChildren }) {
+	const ref = useModalFocus<HTMLDialogElement>(shown);
 	return (
 		<dialog ref={ref} open id={id} class={cls} style={style} aria-modal="true" aria-labelledby={labelledBy}
 			onKeyDown={(e) => keepTab(e, e.currentTarget)}>
