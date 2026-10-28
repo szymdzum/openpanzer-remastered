@@ -194,22 +194,38 @@ function plaqueText(p: Plaque): string {
 
 //An objective on paper, room for its star; a town smaller and greyer
 const plaqueLook = (objective: boolean): Look => objective
-	? { size: TOKENS.fontPx["map-label"], height: 13, lead: 10, paper: MAP["map-paper"], ink: MAP["map-ink"], edge: MAP["map-edge"] }
+	? { size: TOKENS.fontPx["map-label"], height: 13, paper: MAP["map-paper"], ink: MAP["map-ink"], edge: MAP["map-edge"] }
 	: { size: TOKENS.fontPx["map-small"], height: 12, paper: MAP["map-paper-sunken"], ink: MAP["map-ink"], edge: MAP["map-edge"] };
 
 //How much of a plaque shows: the terrain through its paper, its ink softer, so the units over it read first (#438)
 const PLAQUE_ALPHA = 0.7;
 
-//The plaques at the foot of their hexes, beneath the units (#62, #438), where the old map put a hex's flag: an objective
-//with a star, its name and +150, a town with its name and +50; the bar at the foot in the owner's side colour
-export function drawPlaques(c: CanvasRenderingContext2D, vp: Viewport, plaques: Plaque[]) {
+//The flag strip once it has loaded, a flag 21 by 14 pixels a country (src/view/mapinfo.ts flagStrip)
+type Strip = CanvasImageSource | null;
+const FLAG = { width: 21, height: 14 };
+
+//A country's flag from the strip, at the screen's pixels
+function drawFlag(c: CanvasRenderingContext2D, strip: Strip, flag: number, x: number, y: number, width: number, height: number) {
+	if (strip === null || flag < 0) return;
+	c.drawImage(strip, flag * FLAG.width, 0, FLAG.width, FLAG.height, x, y, width, height);
+}
+
+//The flags and plaques of the map's towns and objectives, beneath the units (#62, #438, #504). The flag where the old map
+//drew it: its 21 by 14 pixels at the foot of the hex, at the map's scale. While its name shows, the plaque just under
+//the hex: an objective with a star and its name, a town its name, the bar at the foot in the owner's side colour
+export function drawPlaques(c: CanvasRenderingContext2D, vp: Viewport, plaques: Plaque[], strip: Strip) {
 	atScreen(c, vp);
 	c.save();
-	c.globalAlpha = PLAQUE_ALPHA;
+	const fw = Math.round(FLAG.width * vp.scale), fh = Math.round(FLAG.height * vp.scale), foot = PX["hex-h"] / 2 * vp.scale;
 	for (const p of plaques) {
-		const at = toScreen(hexCentre(p.row, p.col), vp), look = plaqueLook(p.objective);
-		const y = Math.round(at.y + PX["hex-h"] / 2 * vp.scale - look.height - 1);
-		const box = label(c, plaqueText(p), at.x, y, look);
+		const at = toScreen(hexCentre(p.row, p.col), vp);
+		//(the flag whole, as the old map drew it; the plaque see-through, so the units over it read first)
+		c.globalAlpha = 1;
+		drawFlag(c, strip, p.flag, Math.round(at.x - fw / 2), Math.round(at.y + foot - fh - 2 * vp.scale), fw, fh);
+		if (!p.named) continue;
+		c.globalAlpha = PLAQUE_ALPHA;
+		const look = plaqueLook(p.objective), y = Math.round(at.y + foot + 1);
+		const box = label(c, plaqueText(p), at.x, y, { ...look, lead: p.objective ? 10 : 0 });
 		if (p.objective) star(c, box.left + 8, y + look.height / 2 - 0.5, 4);
 		if (p.side < 0) continue;
 		c.fillStyle = sideColour(p.side);

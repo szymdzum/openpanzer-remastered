@@ -322,3 +322,22 @@ test("Only the units and plaques that can show on the screen are drawn: one far 
 	expect(ops.filter((o) => o.op === "fillText" && o.args[0] === "Town").length).toBe(1);
 	expect(ops.filter((o) => o.op === "fillText" && o.args[0] === "10").length).toBe(2);
 });
+
+//The old map's flags (#504): every flag hex shows its country's flag from the strip at its foot, inside the plaque
+//while the name shows, alone when only the flag does; without the strip, no flag
+test("Every flag hex draws its country's flag from the strip, in its plaque or alone at the hex's foot (#504)", () => {
+	const strip = { width: 651, height: 14 } as unknown as ReturnType<Images>;
+	const files = (file: string) => file === "flags.png" ? strip : images(file);
+	const plaques = [{ row: 2, col: 2, name: "Mława", objective: true, side: 1, flag: 15, named: true },
+		{ row: 5, col: 5, name: "Grudusk", objective: false, side: 0, flag: 7, named: false }];
+	const { ctx, ops } = recorder();
+	drawMap(ctx, { ...scene(), units: [], selection: null, path: null, plaques, flags: "flags.png" }, vp(1), files);
+	const flags = ops.filter((o) => o.op === "drawImage" && o.args[0] === strip);
+	//(the strip's 21 by 14 pixels of the flag's country)
+	expect(flags.map((o) => o.args.slice(1, 5))).toEqual([[15 * 21, 0, 21, 14], [7 * 21, 0, 21, 14]]);
+	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Mława")).toBe(true);
+	expect(ops.some((o) => o.op === "fillText" && o.args[0] === "Grudusk")).toBe(false);
+	const none = recorder();
+	drawMap(none.ctx, { ...scene(), units: [], selection: null, path: null, plaques }, vp(1), files);
+	expect(none.ops.some((o) => o.op === "drawImage" && o.args[0] === strip)).toBe(false);
+});

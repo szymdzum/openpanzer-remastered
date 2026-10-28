@@ -4,7 +4,7 @@
 import type { World } from "../core/types";
 import { sideOf } from "../core/world";
 import { eachSlot, isShown } from "./mapview";
-import { type Plaque, plaquesOf } from "./mapinfo";
+import { flagStrip, type Plaque, plaquesOf } from "./mapinfo";
 
 //A unit as a chip: its hex, its side's colour, its shape (a square for the side shown's, pointed ends for the
 //enemy's, as the strength plates), its nation's flag (its player's country in the flag strip), dimmed when it moved
@@ -23,10 +23,6 @@ export interface Strategic {
 	flags: string; //the flag strip of the scenario's equipment set
 }
 
-//The flag strip the old map drew its flags from, 21 by 14 pixels a country (a save from before the equipment set
-//was kept has none: the default set's)
-const flagsOf = (w: World) => "resources/ui/flags/" + (w.data.equipment || "eqp-adlerkorps") + "/flags_med.png";
-
 //The layer's units the side shown sees, row by row: the aircraft with the air layer on, else the ground units (each
 //slot as the layer has it, as the old strategic map took hex.airunit or hex.unit)
 export function strategicOf(w: World, airMode: boolean): Strategic {
@@ -36,5 +32,5 @@ export function strategicOf(w: World, airMode: boolean): Strategic {
 		const side = sideOf(w, u);
 		chips.push({ row: u.row, col: u.col, side, own: side === w.spotSide, flag: w.state.players[u.owner].country, moved: u.hasMoved });
 	});
-	return { chips, plaques: plaquesOf(w).filter((p) => p.objective), flags: flagsOf(w) };
+	return { chips, plaques: plaquesOf(w).filter((p) => p.objective), flags: flagStrip(w) };
 }

@@ -150,11 +150,11 @@ test("Show optional objectives tooltips shows or hides the towns' plaques at onc
 	//(the host gives the same world back while nothing changed in the game, as the mirror keeps it)
 	const store = createStore({ world: () => w, command: vi.fn(), won: vi.fn() });
 	store.refresh();
-	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2]]);
+	expect(store.plaques.value.filter((p) => p.named).map((p) => [p.row, p.col])).toEqual([[2, 2]]);
 	store.toggleSetting("showDetailInfoToolTips");
-	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2], [5, 5]]);
+	expect(store.plaques.value.filter((p) => p.named).map((p) => [p.row, p.col])).toEqual([[2, 2], [5, 5]]);
 	store.toggleSetting("showDetailInfoToolTips");
-	expect(store.plaques.value.map((p) => [p.row, p.col])).toEqual([[2, 2]]);
+	expect(store.plaques.value.filter((p) => p.named).map((p) => [p.row, p.col])).toEqual([[2, 2]]);
 });
 
 test("Mark own units on map and Mark enemy strength in red reach the map as soon as they're switched (#464)", () => {
