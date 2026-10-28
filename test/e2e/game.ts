@@ -195,6 +195,27 @@ async function endTurn() {
 		|| document.querySelector(".pm-screen #ui-message") !== null, null, { timeout: AI_TURN_MS, polling: 100 });
 }
 
+//The focused element's id, or its tag when it has none
+const focused = () => page.evaluate(() => document.activeElement === null ? "none" : document.activeElement.id || document.activeElement.tagName);
+
+//Tab, then Shift+Tab, round a window's controls with the browser's own keys (#497: jsdom's fake Tab passed a trap the
+//real one walked out of): the focus stays in the window and comes back to where it started
+async function tabsRound(dialog: string) {
+	for (const key of ["Tab", "Shift+Tab"]) {
+		const start = await page.evaluateHandle(() => document.activeElement!);
+		check(await start.evaluate((e, w) => document.querySelector(".pm-screen " + w)!.contains(e), dialog), `${dialog} hasn't the focus`);
+		for (let n = 0; ; n++) {
+			check(n < 200, `${key} doesn't come back round ${dialog}`);
+			await page.keyboard.press(key);
+			const at = await start.evaluate((e, w) => ({ inside: document.querySelector(".pm-screen " + w)!.contains(document.activeElement),
+				back: document.activeElement === e }), dialog);
+			check(at.inside, `${key} left ${dialog} for ${await focused()}`);
+			if (at.back) break;
+		}
+		await start.dispose();
+	}
+}
+
 async function play() {
 	await step("the start menu", async () => {
 		await page.goto("/index.html" + (QUERY === "" ? "" : "?" + QUERY));
@@ -217,10 +238,13 @@ async function play() {
 		await ui("#smCampSel label", { hasText: CAMPAIGN }).click();
 		await shown(ui("#smCamp h2", { hasText: CAMPAIGN }));
 		//(every stream seeded: the dice, the AI's, the sprites' and the sounds')
+		await tabsRound("#smCamp");
 		await page.evaluate((seed) => { (window as unknown as Probed).e2e.Rng.seed(seed); }, SEED);
 		await ui("#smCPlayBut").click();
 		await shown(ui("#ui-message #title", { hasText: new RegExp(FIRST, "i") }));
 		await gone(ui("#startmenu"));
+		//(the briefing takes the focus, though its window stayed open under the start menu: #497)
+		check(await focused() === "uiokbut", `the briefing hasn't the focus, ${await focused()} has`);
 		await ui("#uiokbut").click();
 		await gone(ui("#ui-message"));
 		check(await world(([w]) => w.data.name) === FIRST, "another scenario started");
@@ -234,6 +258,7 @@ async function play() {
 		const before = { reserve: await reserve(), prestige: await prestige() };
 		await page.keyboard.press("KeyB");
 		await shown(ui("#equipment"));
+		await tabsRound("#equipment");
 		await ui("#eqUnitList button").first().click();
 		await ui("#eqNewBut:not([aria-disabled=true])").click();
 		check(await reserve() === before.reserve + 1, "no unit came into the reserve");
