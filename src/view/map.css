@@ -20,8 +20,11 @@
 		overflow: auto;
 		cursor: default;
 
-		/* thin scrollbars in the theme's colours over the map, not the system's grey ones */
+		/* thin scrollbars in the theme's colours over the map, not the system's grey ones; their room kept when there is
+		   nothing to scroll, so a scrollbar showing up (the dock growing under a selected unit) doesn't narrow and shift
+		   the map, issue 500 */
 		scrollbar-width: thin;
+		scrollbar-gutter: stable;
 		scrollbar-color: var(--line-strong) var(--panel-sunken);
 	}
 
