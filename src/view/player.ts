@@ -67,8 +67,8 @@ export function createPlayer(stage: Stage) {
 		return (sheet.frames - 1) * frame + GAP;
 	}
 
-	//The beats from the i-th on, then done
-	function from(beats: Beat[], i: number, done: () => void) {
+	//The beats from the i-th on, each told as it starts (started), then done
+	function from(beats: Beat[], i: number, done: () => void, started: (i: number) => void) {
 		if (i >= beats.length) {
 			stage.show(null);
 			stage.hide(null);
@@ -76,17 +76,18 @@ export function createPlayer(stage: Stage) {
 			done();
 			return;
 		}
+		started(i);
 		const b = beats[i], still = stage.still();
 		const length = b.kind === "move" ? move(b, still) : burst(b, still);
 		later(length, () => {
 			stage.hide(null);
-			from(beats, i + 1, done);
+			from(beats, i + 1, done, started);
 		});
 	}
 
 	return {
-		play(beats: Beat[], done: () => void) {
-			from(beats, 0, done);
+		play(beats: Beat[], done: () => void, started: (i: number) => void = () => {}) {
+			from(beats, 0, done, started);
 		},
 		//The beats left go unplayed and their done isn't called: a new scenario's start
 		stop() {

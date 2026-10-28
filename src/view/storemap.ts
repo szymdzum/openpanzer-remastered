@@ -13,12 +13,12 @@ import type { createStep } from "./storestep";
 import { strategicOf } from "./strategic";
 import { settingSignals } from "./uisettings";
 
-type Step = Pick<ReturnType<typeof createStep>, "moving" | "showing">;
+type Step = Pick<ReturnType<typeof createStep>, "moving" | "shown" | "showing">;
 
 //closeReport: the first click on the map closes the turn report
 export function createMap(core: Core, step: Step, closeReport: () => void) {
 	const { world, selected, airMode, dispatch, select, pickUnit, look } = core;
-	const { moving, showing } = step;
+	const { moving, shown, showing } = step;
 	const setting = settingSignals();
 	//the hex under the pointer (the map's scale is the settings')
 	const hover = signal<Position | null>(null);
@@ -30,9 +30,11 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 	const hexGrid = signal(false);
 	const labels = signal(true);
 
+	//The world whose units the map draws: while a step's beats play, its units as each beat has them (#503)
+	const drawn = computed(() => shown.value === null ? world.value : shown.value);
 	//What the map draws: the units the side sees, the selection with its move area and targets, the path to
 	//the hovered hex (computed again only when the hovered hex changes, MovePath)
-	const units = computed(() => world.value === null ? [] : mapUnits(world.value, airMode.value, selected.value).filter((u) => u.id !== moving.value));
+	const units = computed(() => drawn.value === null ? [] : mapUnits(drawn.value, airMode.value, selected.value).filter((u) => u.id !== moving.value));
 	//the person's reserve, and the deployment zone while one of its units is picked
 	const reserve = computed(() => world.value === null ? [] : reserveOf(world.value));
 	const deployment = computed(() => world.value === null ? null : deploymentOf(world.value, deploying.value));
@@ -56,9 +58,9 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them
 	const glance = computed(() => pointed.value === null ? null : glanceOf(world.value!, selection.value, pointed.value, airMode.value));
 	//the strategic map's chips and objectives, while it is open
-	const overview = computed(() => world.value === null || !strategic.value ? null : strategicOf(world.value, airMode.value));
+	const overview = computed(() => drawn.value === null || !strategic.value ? null : strategicOf(drawn.value, airMode.value));
 	//the pins over the side playing's units, cleared with the labels (L)
-	const pins = stableComputed(() => world.value === null || !labels.value || strategic.value ? [] : pinsOf(world.value));
+	const pins = stableComputed(() => drawn.value === null || !labels.value || strategic.value ? [] : pinsOf(drawn.value));
 
 	//A reserve unit picked to deploy (its core list index), or none: deploying ends. Nothing stays selected
 	const pick = (index: number | null) => {

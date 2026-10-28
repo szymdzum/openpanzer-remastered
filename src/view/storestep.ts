@@ -5,7 +5,7 @@ import type { CommandType, ResultOf } from "../commands";
 import type { GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import type { GameHost } from "../host";
-import { beatsFor } from "./beats";
+import { beatsFor, heldUntil, shownWorld } from "./beats";
 import { hexCentre } from "./hexgrid";
 import { createPlayer, type Motion, type Stage } from "./player";
 import { type News, type Results, resultsOf } from "./results";
@@ -24,6 +24,9 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 	//while it moves; the map takes no click meanwhile
 	const motion = signal<Motion | null>(null);
 	const moving = signal<UnitId | null>(null);
+	//The world the map draws while the beats play (#503): the units a beat still has to move or blow up as they were
+	//before the step, until their beat; null between steps, when the map draws the world
+	const shown = signal<World | null>(null);
 	//A step's beats playing (src/view/player.ts): the map takes no click meanwhile, the screen tells the host it is still
 	//showing a step (#459), and the person's commands wait for it, as the old UI's End turn waited (#465, #58, #289)
 	const showing = signal(false);
@@ -42,16 +45,20 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 
 	//A step's beats played, then what it told, then what follows (a person's victories, a program's next action)
 	const play = (before: World, events: GameEvent[], then: () => void) => {
+		const after = world.value!, beats = beatsFor(before, after, events), until = heldUntil(beats, events);
 		showing.value = true;
-		player.play(beatsFor(before, world.value!, events), () => {
+		player.play(beats, () => {
+			shown.value = null;
 			showing.value = false;
 			tell(before, events);
 			then();
+		}, (i) => {
+			shown.value = shownWorld(before, after, [...until].filter(([, last]) => last >= i).map(([id]) => id));
 		});
 	};
 
 	return {
-		results, news, motion, moving, showing: showing as ReadonlySignal<boolean>, play,
+		results, news, motion, moving, shown: shown as ReadonlySignal<World | null>, showing: showing as ReadonlySignal<boolean>, play,
 
 		//The chips and the stamp faded (the status bar's line stays)
 		faded: () => {
@@ -61,6 +68,7 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 		//The beats stopped (a new scenario's start)
 		stop() {
 			player.stop();
+			shown.value = null;
 			showing.value = false;
 		},
 	};

@@ -14,6 +14,10 @@ import type { Viewport } from "../src/view/canvas";
 import { hexCentre } from "../src/view/hexgrid";
 import { drawMotion } from "../src/view/motiondraw";
 import { createPlayer, type Motion } from "../src/view/player";
+import type { GameEvent } from "../src/core/events";
+import { unitById } from "../src/core/world";
+import { mapUnits } from "../src/view/mapview";
+import { createStore, type StoreHost } from "../src/view/store";
 
 afterEach(() => {
 	vi.useRealTimers();
@@ -87,7 +91,7 @@ function stageOf(still = false) {
 }
 
 const fire: Beat = { kind: "fire", at: { row: 4, col: 3 }, facing: 4, sheets: SHEETS.slice(3, 4), sounds: ["a", "b"] };
-const boom: Beat = { kind: "explosion", at: { row: 4, col: 4 }, facing: 0, sheets: SHEETS.slice(0, 3), sounds: ["x", "y", "z"] };
+const boom: Beat = { kind: "explosion", unit: 1, at: { row: 4, col: 4 }, facing: 0, sheets: SHEETS.slice(0, 3), sounds: ["x", "y", "z"] };
 const walk: Beat = { kind: "move", unit: 7, icon: "pz.png", path: [{ row: 4, col: 3, visible: true }, { row: 3, col: 3, visible: false },
 	{ row: 2, col: 3, visible: true }], sounds: ["m"] };
 
@@ -152,4 +156,90 @@ test("A beat on the canvas: the moving unit's sprite mirrored past south to nort
 	ops.length = 0;
 	drawMotion(ctx, vp, { sprite: { icon: "pz.png", x: 0, y: 0, facing: 2 }, effect: { sheet: SHEETS[3], frame: 0, at: { row: 1, col: 1 }, facing: 0 } }, () => null);
 	expect(ops.filter(([op]) => op === "drawImage")).toEqual([]);
+});
+
+//A store over a hand-built world whose host plays the person's commands on the core with the dice of a seed
+function storeOf(w: World, seed: number, still = false) {
+	let now: World = { ...w, state: { ...w.state, rng: { game: seed, ai: 7 } } };
+	const host: StoreHost = {
+		world: () => now,
+		command: (cmd) => {
+			const r = step(now, cmd);
+			if ("refusal" in r) return { ok: false, refusal: r.refusal };
+			now = r.world;
+			return { ok: true, result: { events: r.events } } as ReturnType<StoreHost["command"]>;
+		},
+		won: () => {},
+	};
+	const store = createStore(host, { sound: () => {}, still: () => still });
+	store.refresh();
+	return store;
+}
+
+//The attack played on a store, then each 10 ms of its beats: the beat playing (the moving unit, the effect drawn) and
+//where the map draws the defender (1) and at what strength, null when it doesn't
+function frames(w: World, seed: number, still = false) {
+	vi.useFakeTimers();
+	const store = storeOf(w, seed, still), seen: { moving: number | null; effect: string | null; at: string | null }[] = [];
+	store.dispatch(attack);
+	for (let i = 0; i < 2000 && store.showing.value; i++) {
+		const m = store.motion.value, u = store.units.value.find((x) => x.id === 1);
+		seen.push({ moving: store.moving.value, effect: m === null || m.effect === null ? null : m.effect.sheet.file,
+			at: u === undefined ? null : u.row + "," + u.col + " " + (u.marker === null ? "-" : u.marker.strength) });
+		vi.advanceTimersByTime(10);
+	}
+	return { store, seen, after: store.world.value! };
+}
+
+//The first seed whose attack's events have what is asked
+function seedWhere(w: World, has: (e: GameEvent[]) => boolean): number {
+	for (let seed = 1; seed < 200; seed++) {
+		const r = step({ ...w, state: { ...w.state, rng: { game: seed, ai: 7 } } }, attack);
+		if (!("refusal" in r) && has(r.events)) return seed;
+	}
+	throw new Error("no seed");
+}
+
+test("A defender that retreats is drawn at its hex, at its strength before the fight, until its retreat's beat; then where it ran (#503)", () => {
+	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 6, entrenchment: 2 },
+		{ eqid: WZ97, owner: 1, row: 5, col: 5 }], { "4,4": terrainType.Forest });
+	const seed = seedWhere(w, (e) => e.some((x) => x.type === "fight" && x.support) && e.some((x) => x.type === "retreated"));
+	const { store, seen, after } = frames(w, seed);
+	const run = seen.findIndex((f) => f.moving === 1);
+	//the support gun's shot and the attack's before the retreat, the defender at its hex all along
+	expect(seen.slice(0, run).some((f) => f.effect !== null)).toBe(true);
+	expect(seen.slice(0, run).every((f) => f.at === "4,4 6")).toBe(true);
+	//(hidden while it runs)
+	expect(seen.filter((f) => f.moving === 1).every((f) => f.at === null)).toBe(true);
+	//the last beat ended: the world after the step
+	const ran = unitById(after, 1)!;
+	expect(store.units.value).toEqual(mapUnits(after, false, null));
+	expect([ran.row, ran.col]).not.toEqual([4, 4]);
+});
+
+test("A destroyed defender is drawn until its explosion beat ends, then gone (#503)", () => {
+	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 1 }]);
+	const seed = seedWhere(w, (e) => e.some((x) => x.type === "destroyed"));
+	const { store, seen, after } = frames(w, seed);
+	const exploded = seen.map((f) => f.effect !== null && f.effect.includes("explosions")).lastIndexOf(true);
+	expect(exploded).toBeGreaterThan(0);
+	expect(seen.slice(0, exploded + 1).every((f) => f.at === "4,4 1")).toBe(true);
+	expect(unitById(after, 1)).toBeNull();
+	expect(store.units.value.find((u) => u.id === 1)).toBeUndefined();
+	expect(store.units.value).toEqual(mapUnits(after, false, null));
+});
+
+test("Under reduced motion the units still wait for their beats; a new scenario's start leaves the map on the world (#503)", () => {
+	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 1 }]);
+	const seed = seedWhere(w, (e) => e.some((x) => x.type === "destroyed"));
+	const { seen } = frames(w, seed, true);
+	//(nothing moves: no effect drawn, the defender there until the last beat ends)
+	expect(seen.length).toBeGreaterThan(50);
+	expect(seen.every((f) => f.effect === null && f.at === "4,4 1")).toBe(true);
+	const store = storeOf(w, seed);
+	store.dispatch(attack);
+	vi.advanceTimersByTime(100);
+	expect(store.units.value.some((u) => u.id === 1)).toBe(true);
+	store.clear();
+	expect(store.units.value).toEqual(mapUnits(store.world.value!, false, null));
 });
