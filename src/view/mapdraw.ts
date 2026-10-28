@@ -187,6 +187,8 @@ function drawAirRings(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[
 
 //How far an aircraft on top in the air layer is lifted, and its shadow on the ground, in the map's pixels (AirLayer)
 const LIFT = 4, SHADOW = { y: 9, blur: 2, alpha: 0.45 };
+//How far a unit's sprite stands above its hex's centre: a moving sprite and an explosion on it are drawn there too
+export const SPRITE_RAISE = 8;
 
 //A unit's sprite: the strip has nine facings from south to north, the other seven are mirrored. Drawn at the
 //map's scale, its centre a little above the hex's to leave room for the marker. The other layer's unit is
@@ -197,7 +199,7 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 	if (img === null) return;
 	const w = img.width / 9, h = img.height, o = hexCentre(u.row, u.col);
 	const mirror = u.facing > 8, frame = mirror ? 16 - u.facing : u.facing;
-	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - 8 - (u.lifted ? LIFT : 0));
+	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - SPRITE_RAISE - (u.lifted ? LIFT : 0));
 	c.save();
 	if (u.dim) c.globalAlpha = PX["unit-under-alpha"];
 	if (u.lifted) {
