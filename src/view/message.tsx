@@ -16,7 +16,7 @@ export function MessageDialog({ store }: { store: Pick<Store, "close" | "menu" |
 	return (
 		<>
 			<Scrim />
-			<Dialog id="ui-message" class={brief !== null ? "pm-window pm-message" : "pm-window pm-message notice"} labelledBy="title">
+			<Dialog id="ui-message" class={brief !== null ? "pm-window pm-message" : "pm-window pm-message notice"} labelledBy="title" shown={note}>
 				<div class="hd">
 					<div>{brief !== null && <div class="pm-label">{brief}</div>}<h1 id="title" class="pm-display">{note.title}</h1></div>
 					<span class="grow" />

@@ -83,6 +83,28 @@ test("A message takes the focus on its button when it shows (#497)", async () =>
 	render(<MessageDialog store={store} />);
 	await act(() => { store.show({ title: "Orders", html: "Hold the bridge", at: null, ok: () => {} }); });
 	expect(document.activeElement).toBe(screen.getByRole("button", { name: "Continue" }));
+	//A new message in the window already open, after the focus went elsewhere (a scenario's briefing after the start
+	//menu's windows closed, the lead's playtest of #498): it takes the focus again
+	(document.activeElement as HTMLElement).blur();
+	await act(() => { store.clear(); store.show({ title: "Briefing", html: "Spain, 1936", at: null, ok: () => {} }); });
+	expect(document.activeElement).toBe(screen.getByRole("button", { name: "Continue" }));
+});
+
+//What the browser's Tab stops at (the lead's playtest of #498): not a button's icon (an SVG <use href>), not a radio of a
+//group but its checked one; Tab past the last stop and Shift+Tab past the first stay in the window
+test("Tab wraps at the window's real first and last stops: past a button with an icon, and back from a group's checked radio (#497)", () => {
+	render(
+		<Dialog class="pm-window" labelledBy="t">
+			<h1 id="t">Scenarios</h1>
+			<fieldset><input type="radio" name="s" aria-label="A" /><input type="radio" name="s" aria-label="B" checked /></fieldset>
+			<Button variant="primary" icon="play">Play</Button>
+		</Dialog>);
+	const play = screen.getByRole("button", { name: "Play" }), picked = screen.getByRole("radio", { name: "B" });
+	play.focus();
+	expect(fireEvent.keyDown(play, { key: "Tab" })).toBe(false);
+	expect(document.activeElement).toBe(picked);
+	expect(fireEvent.keyDown(picked, { key: "Tab", shiftKey: true })).toBe(false);
+	expect(document.activeElement).toBe(play);
 });
 
 test("A disabled button can be reached by the keyboard, says it is disabled and why (its title, its description), and does nothing (#497)", () => {
@@ -120,4 +142,20 @@ test("The tabs name the panel they control, and the panel the tab it shows (#497
 	expect(tabs.map((t) => [t.id, t.getAttribute("aria-controls")])).toEqual([["classes-inf", "classes-panel"], ["classes-tank", "classes-panel"]]);
 	expect([panel.id, panel.getAttribute("aria-labelledby"), panel.textContent]).toEqual(["classes-panel", "classes-tank", "The tanks"]);
 	expect(screen.getByRole("tabpanel", { name: "Tank" })).toBe(panel);
+});
+
+//A control the page doesn't show (display: none by its CSS) is no Tab stop: the browser says so (checkVisibility, which jsdom
+//lacks: stubbed here)
+test("Tab wraps at the last control the page shows, not at one its CSS hides (#497)", () => {
+	const shows = vi.fn(function(this: HTMLElement) { return this.id !== "hidden"; });
+	Object.defineProperty(HTMLElement.prototype, "checkVisibility", { value: shows, configurable: true });
+	try {
+		render(<Dialog class="pm-window" labelledBy="t"><h1 id="t">Save</h1><Button>Load</Button><Button>Save</Button><Button id="hidden">Later</Button></Dialog>);
+		const save = screen.getByRole("button", { name: "Save" });
+		save.focus();
+		expect(fireEvent.keyDown(save, { key: "Tab" })).toBe(false);
+		expect(document.activeElement).toBe(screen.getByRole("button", { name: "Load" }));
+	} finally {
+		delete (HTMLElement.prototype as { checkVisibility?: unknown }).checkVisibility;
+	}
 });
