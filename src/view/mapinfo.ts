@@ -35,9 +35,9 @@ export function supportOf(w: World, sel: Selection | null, hover: Position | nul
 	return guns.length === 0 ? null : { attacker: sel.at, target: { row: hover.row, col: hover.col }, guns };
 }
 
-//A plaque over a flag or an objective (#62): its name, its owner's side (-1: none) and the
-//flag on it (a country in the flag strip, -1: none; the strategic map shows it). Every objective has one, also
-//without a flag (the old map marked those only with showHiddenVictoryHexes)
+//A plaque over a flag or an objective (#62): its name, its owner's side (-1: none) and the flag on it (a country in
+//the flag strip, -1: none), whether its name shows or only its flag (named). Every objective has one; one without a
+//flag of its own shows its owner's, as the old map did with showHiddenVictoryHexes on (its default, #504)
 export interface Plaque {
 	row: number;
 	col: number;
@@ -45,6 +45,17 @@ export interface Plaque {
 	objective: boolean;
 	side: number;
 	flag: number;
+	named: boolean;
+}
+
+//The flag strip the old map drew its flags from, 21 by 14 pixels a country (a save from before the equipment set
+//was kept has none: the default set's)
+export const flagStrip = (w: World) => "resources/ui/flags/" + (w.data.equipment || "eqp-adlerkorps") + "/flags_med.png";
+
+//A hex's flag: its own, else an objective's holder's country (the old map's showHiddenVictoryHexes), else none
+function flagOf(flag: number, objective: boolean, owner: { country: number } | null): number {
+	if (flag !== -1) return flag;
+	return objective && owner !== null ? owner.country : -1;
 }
 
 export function plaquesOf(w: World): Plaque[] {
@@ -54,15 +65,16 @@ export function plaquesOf(w: World): Plaque[] {
 		for (let col = 0; col < cols; col++) {
 			const hex = hexIndex(w, row, col), h = hexes[hex];
 			if (h.flag === -1 && h.victorySide === -1) continue;
-			const objective = h.victorySide !== -1;
-			plaques.push({ row, col, name: w.data.hexes[hex].name, objective,
-				side: h.owner === -1 ? -1 : w.state.players[h.owner].side, flag: h.flag });
+			const objective = h.victorySide !== -1, owner = h.owner === -1 ? null : w.state.players[h.owner];
+			plaques.push({ row, col, name: w.data.hexes[hex].name, objective, side: owner === null ? -1 : owner.side,
+				flag: flagOf(h.flag, objective, owner), named: true });
 		}
 	return plaques;
 }
 
-//The plaques the map shows: the objectives always, the other towns only with the setting the old map's tooltips
-//read for them (showDetailInfoToolTips, src/ui.ts addSmallToolTips)
-export function mapPlaques(w: World, towns: boolean): Plaque[] {
-	return plaquesOf(w).filter((p) => p.objective || towns);
+//The map's plaques: every flag on the map, as the old map drew them (#504); the names over them only while the labels
+//show (L clears them), the objectives' always, the other towns' with the setting the old map's tooltips read for
+//them (showDetailInfoToolTips, src/ui.ts addSmallToolTips)
+export function mapPlaques(w: World, towns: boolean, labels: boolean): Plaque[] {
+	return plaquesOf(w).map((p) => ({ ...p, named: labels && (p.objective || towns) }));
 }

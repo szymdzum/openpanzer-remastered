@@ -203,7 +203,7 @@ export default defineConfig({
 				"src/view/canvas.ts": { statements: 98, branches: 100, functions: 90, lines: 97 },
 				"src/view/mapinfo.ts": { statements: 97, branches: 100, functions: 85, lines: 95 },
 				"src/view/overlays.ts": { statements: 97, branches: 90, functions: 95, lines: 99 },
-				"src/view/strategic.ts": { statements: 90, branches: 100, functions: 80, lines: 87 },
+				"src/view/strategic.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(its flag strip went to mapinfo.ts, #504: the uncovered harness setter is a larger share)
 				"src/view/deploy.ts": { statements: 96, branches: 96, functions: 90, lines: 95 },
 				"src/view/strategicdraw.ts": { statements: 98, branches: 88, functions: 80, lines: 97 },
 				"src/view/mapview.ts": { statements: 96, branches: 96, functions: 93, lines: 98 },

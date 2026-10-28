@@ -50,7 +50,7 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 	const fog = computed(() => world.value === null ? null : fogOf(world.value));
 	const support = computed(() => pointed.value === null ? null : supportOf(world.value!, selection.value, pointed.value, airMode.value));
 	//(and again when the towns' setting changes, which changes no world, #467)
-	const plaques = computed(() => world.value === null || !labels.value ? [] : mapPlaques(world.value, setting.showDetailInfoToolTips.value));
+	const plaques = computed(() => world.value === null ? [] : mapPlaques(world.value, setting.showDetailInfoToolTips.value, labels.value));
 	//The old map's marks the settings ask for (#464)
 	const marks = computed(() => ({ own: setting.markOwnUnits.value, enemy: setting.markEnemyUnits.value }));
 	//The attack cursor (AttackPreview, stage 1): the losses over the pointed target, as the old cursor showed them

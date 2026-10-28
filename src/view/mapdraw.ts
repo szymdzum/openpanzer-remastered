@@ -32,6 +32,7 @@ export interface Scene {
 	fog: Uint8Array | null; //1 on each hex the side shown doesn't see (src/view/mapinfo.ts)
 	support: Support | null; //the guns that fire if the hovered target is attacked
 	plaques: Plaque[];
+	flags?: string; //the flag strip the plaques' flags come from (src/view/mapinfo.ts flagStrip); none drawn without it
 	strategic: Strategic | null; //the strategic map instead of the rest, the map fit to the window (src/view/strategic.ts)
 	deploy: Deployment | null; //the deployment zone while a reserve unit is picked (src/view/deploy.ts)
 	ghost: Ghost | null; //the picked reserve unit on the hovered hex where a click places it
@@ -385,6 +386,9 @@ function drawGroundMarks(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
 }
 
+//The flag strip the scene's plaques draw from, once it has loaded; none without one
+const flagsImage = (scene: Scene, images: Images) => scene.flags === undefined ? null : images(scene.flags);
+
 //Everything over the ground, in the card's order
 function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
 	//(only the units and the plaques that can show on the screen, in their order)
@@ -397,7 +401,7 @@ function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
 	//(the plaques beneath the units: a name never covers one, #438)
-	drawPlaques(c, vp, plaques);
+	drawPlaques(c, vp, plaques, flagsImage(scene, images));
 	atMap(c, vp);
 	for (const u of units) drawSprite(c, vp, u, images);
 	if (scene.ghost !== null) drawGhost(c, vp, scene.ghost, images);

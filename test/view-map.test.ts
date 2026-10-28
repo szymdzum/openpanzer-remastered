@@ -304,7 +304,7 @@ test("The strategic map: a chip per unit of the layer the side sees, dimmed when
 	]);
 	expect(strategicOf(w, true).chips.map((c) => [c.row, c.col, c.own])).toEqual([[4, 1, true], [5, 1, false]]);
 	//the town is left out; the objective keeps its name as written and its flag
-	expect(ground.plaques).toEqual([{ row: 2, col: 2, name: "Mława", objective: true, side: 1, flag: 15 }]);
+	expect(ground.plaques).toEqual([{ row: 2, col: 2, name: "Mława", objective: true, side: 1, flag: 15, named: true }]);
 	expect(ground.flags).toBe("resources/ui/flags/eqp-adlerkorps/flags_med.png");
 	expect(strategicOf({ ...w, data: { ...w.data, equipment: "eqp-pacific" } }, false).flags).toBe("resources/ui/flags/eqp-pacific/flags_med.png");
 	expect(strategicOf({ ...w, data: { ...w.data, equipment: "" } }, false).flags).toBe(ground.flags);
@@ -348,18 +348,23 @@ test("Every flag and objective has its plaque (#62): an objective and a town wit
 	w.data.hexes[hexIndex(w, 2, 2)].name = "Mława";
 	w.data.hexes[hexIndex(w, 5, 5)].name = "Grudusk";
 	expect(plaquesOf(w)).toEqual([
-		{ row: 2, col: 2, name: "Mława", objective: true, side: 1, flag: 15 },
-		{ row: 5, col: 5, name: "Grudusk", objective: false, side: 0, flag: 7 },
-		{ row: 7, col: 1, name: "", objective: true, side: -1, flag: -1 },
+		{ row: 2, col: 2, name: "Mława", objective: true, side: 1, flag: 15, named: true },
+		{ row: 5, col: 5, name: "Grudusk", objective: false, side: 0, flag: 7, named: true },
+		{ row: 7, col: 1, name: "", objective: true, side: -1, flag: -1, named: true },
 	]);
+	//an objective without a flag of its own shows its holder's, as the old map did (#504)
+	Object.assign(w.state.map.hexes[hexIndex(w, 7, 1)], { owner: 0 });
+	expect(plaquesOf(w)[2]).toMatchObject({ side: 0, flag: w.state.players[0].country });
 });
 
-test("The map shows the objectives' plaques, and the other towns' only with the old detail tooltips setting", () => {
+test("The map shows every flag (#504), the objectives' names, and the other towns' only with the old detail tooltips setting; L clears the names", () => {
 	const w = handWorld({ rows: 8, cols: 8, units: [] });
 	Object.assign(w.state.map.hexes[hexIndex(w, 2, 2)], { owner: 1, flag: 15, victorySide: 0 });
 	Object.assign(w.state.map.hexes[hexIndex(w, 5, 5)], { owner: 0, flag: 7 });
-	expect(mapPlaques(w, false).map((p) => [p.row, p.col])).toEqual([[2, 2]]);
-	expect(mapPlaques(w, true).map((p) => [p.row, p.col])).toEqual([[2, 2], [5, 5]]);
+	const shown = (towns: boolean, labels: boolean) => mapPlaques(w, towns, labels).map((p) => [p.row, p.col, p.named]);
+	expect(shown(false, true)).toEqual([[2, 2, true], [5, 5, false]]);
+	expect(shown(true, true)).toEqual([[2, 2, true], [5, 5, true]]);
+	expect(shown(true, false)).toEqual([[2, 2, false], [5, 5, false]]);
 });
 
 test("End turn warns only of the units that can still move or fire at a target in range, not of a shot with nothing to hit (#436)", () => {

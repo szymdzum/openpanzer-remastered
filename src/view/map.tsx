@@ -15,6 +15,7 @@ import { Icon } from "./icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
 import type { Images, Scene } from "./mapdraw";
+import { flagStrip } from "./mapinfo";
 import { type Frame, MapLayers } from "./layers";
 import { drawPreview } from "./attackdraw";
 import { SHEETS } from "./beats";
@@ -205,7 +206,7 @@ class Painter {
 		const s = this.store;
 		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: s.hexGrid.peek(), units: s.units.peek(),
 			selection: s.selection.peek(), path: s.path.peek(), fog: s.fog.peek(), support: s.support.peek(), plaques: s.plaques.peek(),
-			strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek(), marks: s.marks.peek() };
+			flags: flagStrip(w), strategic: s.overview.peek(), deploy: s.deployment.peek(), ghost: s.ghost.peek(), marks: s.marks.peek() };
 	}
 
 	//Where the map looks, when the scenario or the look asked changes (not when the side's first unit moves): the
