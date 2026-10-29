@@ -1,9 +1,9 @@
 //The UI's end-to-end test (#351): one short campaign game played in headless Chrome on the dev server, through the
 //UI's element ids and keys, as a person plays it. The start menu, a new campaign (Arctic Storms: its first scenario
-//goes on to the second whatever its outcome), a unit bought in the equipment window and deployed, a move, the unit list
-//and the unit card, End turn with the AI's turn played out, the turn report and the dossier, an attack and its result, a
-//save to a file and its load back (the same game after it, by toData: src/state.ts), then the turns ended until the
-//scenario's end, its message, and the campaign's next scenario starting.
+//goes on to the second whatever its outcome), a unit bought in the equipment window and deployed, one upgraded through
+//its unit list, a move, the unit list and the unit card, End turn with the AI's turn played out, the turn report and the
+//dossier, an attack and its result, a save to a file and its load back (the same game after it, by toData:
+//src/state.ts), then the turns ended until the scenario's end, its message, and the campaign's next scenario starting.
 //
 //It fails on a console error, an uncaught error or an unhandled rejection in the page, or a step that doesn't show what
 //it should. Every random stream is seeded (src/rng.ts), so it plays the same game every time. The page knows nothing of
@@ -270,6 +270,21 @@ async function play() {
 		const left = await prestige();
 		check(left < before.prestige, "the prestige didn't go down");
 		await shown(ui("#currentPrestige", { hasText: String(left) }));
+		await ui("#eqCloseBut").click();
+		await gone(ui("#equipment"));
+	});
+
+	await step("a unit upgraded through the equipment window's unit list", async () => {
+		await page.keyboard.press("KeyB");
+		await shown(ui("#equipment"));
+		await ui("#equipment section[aria-label='Your units'] button").first().click();
+		await shown(ui("#eqActionsContainer", { hasText: "Upgrading" }));
+		//(the first model it can be upgraded to)
+		const upgrade = ui("#eqUpgradeBut:not([aria-disabled=true])"), models = ui("#eqUnitList button");
+		for (let i = 0, n = await models.count(); i < n && !await upgrade.isVisible(); i++) await models.nth(i).click();
+		const before = await prestige();
+		await upgrade.click();
+		check(await prestige() < before, "the prestige didn't go down");
 		await ui("#eqCloseBut").click();
 		await gone(ui("#equipment"));
 	});

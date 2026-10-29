@@ -52,9 +52,23 @@ test("Deploying docks the tray with the card's ids; a card picks its unit; Upgra
 	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Upgrade" })); });
 	expect(store.shop.value!.target).toBe("Me-109E-3");
 	expect(store.shop.value!.sell!.command).toEqual({ type: "sell", index: 2 });
-	await act(() => store.closeShop());
+	//(closing the window closes the unit list with it, #512: opened again)
+	await act(() => { store.closeShop(); store.toggleList(); });
 	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Done" })); });
 	expect([store.deploying.value, screen.queryByRole("region", { name: "Reserve" })]).toEqual([null, null]);
 	expect(screen.getByRole("region", { name: "Your units" })).toBeTruthy();
 	expect(screen.getByRole("button", { name: "Deploy · 2 in reserve" })).toBeTruthy();
+});
+
+test("While deploying the window lists the reserve; a unit picked there is the one to upgrade and to deploy (#512)", async () => {
+	const store = trayStore(deployWorld());
+	await act(() => store.startDeployment());
+	await act(() => { fireEvent.click(within(screen.getByRole("region", { name: "Reserve" })).getByRole("button", { name: "Upgrade" })); });
+	const win = document.getElementById("equipment")!, list = within(win).getByRole("region", { name: "Your reserve" });
+	expect(store.shop.value!.target).toBe("Infanterie");
+	expect(within(list).getByRole("button", { name: "Infanterie, strength 10" }).getAttribute("aria-pressed")).toBe("true");
+	await act(() => { fireEvent.click(within(list).getByRole("button", { name: "Me-109E-3, strength 10" })); });
+	expect([store.shop.value!.target, store.shop.value!.upgrade!.refusal, store.deploying.value]).toEqual(["Me-109E-3", "Nothing to upgrade", 2]);
+	expect(win.querySelector("#eqActionsContainer")!.textContent).toContain("Upgrading Me-109E-3");
+	expect(within(win).getByRole("tab", { name: "Fighter" }).getAttribute("aria-selected")).toBe("true");
 });

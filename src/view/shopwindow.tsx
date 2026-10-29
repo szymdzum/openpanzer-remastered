@@ -1,17 +1,30 @@
 //The equipment window (Equipment, #348): buy new units and upgrade or sell the one chosen, opened with B or the rail's
-//Buy and upgrade. From the top: the title, the country button and the prestige; the class tabs; the sort and the
+//Buy and upgrade. From the top: the title, the country button and the prestige; the person's units, a card pressed the
+//one to upgrade (the old unit list above the window, #512); the class tabs; the sort and the
 //models in service; the picked model's stats on foot and mounted, and its transports with what each gives; the action
 //bar with the prices. What it says and why a button is off is the view model's (src/view/shop.ts).
 import { Fragment } from "preact";
 import { Button } from "./button";
 import { Icon, Mark } from "./icon";
 import { Scrim, useEscape, Window } from "./panel";
-import type { Shop, Transport } from "./shop";
+import type { Shop, ShopUnits, Transport } from "./shop";
 import { SORTS, type SortKey } from "./shop";
 import type { ShopAct } from "./shopstate";
 import type { Store } from "./store";
 import { SegmentedControl, TabPanel, Tabs } from "./tabs";
-import { frameStyle } from "./unitstrip";
+import { Card, frameStyle } from "./unitstrip";
+
+//The units on the map, or the reserve while deploying, as the old list over the window showed them
+function Units({ list, store }: { list: ShopUnits, store: Pick<Store, "shopUnit" | "side"> }) {
+	const side = store.side.value === 1 ? "allied" : "axis";
+	return (
+		<section class="units pm-strip" aria-label={list.reserve ? "Your reserve" : "Your units"}>
+			<div class="cards">
+				{list.units.map((u) => <Card key={u.id} u={u} side={side} onPick={() => store.shopUnit(u.id)} />)}
+			</div>
+		</section>
+	);
+}
 
 //The card's four sorts as its segmented control, the old window's others in a list beside it
 const SHOWN = SORTS.slice(0, 4), OTHERS = SORTS.slice(4);
@@ -148,11 +161,11 @@ function Actions({ shop, store }: { shop: Shop, store: Pick<Store, "shopAct"> })
 
 //What ShopWindow reads of the store
 type ShopWindowReads = Pick<Store, "closeShop" | "shop" | "shopAct" | "shopClass" | "shopCountry" | "shopModel" |
-	"shopReverse" | "shopSort" | "shopTransport">;
+	"shopReverse" | "shopSort" | "shopTransport" | "shopUnit" | "shopUnits" | "side">;
 export function ShopWindow({ store }: { store: ShopWindowReads }) {
-	const shop = store.shop.value;
+	const shop = store.shop.value, units = store.shopUnits.value;
 	useEscape(shop === null ? undefined : store.closeShop);
-	if (shop === null) return null;
+	if (shop === null || units === null) return null;
 	const tools = (
 		<>
 			<button id="eqSelCountryButton" type="button" class="pm-btn" disabled={!shop.country.many}
@@ -169,6 +182,7 @@ export function ShopWindow({ store }: { store: ShopWindowReads }) {
 			<Scrim />
 			<Window id="equipment" class="pm-eq" title="Equipment" sub={shop.title} stamp="Requisition" tools={tools} 
 				footer={<div id="eqActionsContainer" class="actions"><Actions shop={shop} store={store} /></div>}>
+				<Units list={units} store={store} />
 				<Tabs id="eqSelClass" label="Unit class" selected={String(shop.uclass)} onSelect={(c) => store.shopClass(+c)}
 					tabs={shop.tabs.map((t) => ({ id: String(t.uclass), label: t.label, icon: t.icon }))} />
 				<TabPanel of="eqSelClass" selected={String(shop.uclass)} class="body">

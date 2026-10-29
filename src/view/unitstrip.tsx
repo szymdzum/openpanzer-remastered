@@ -18,7 +18,7 @@ function nameOf(u: ListUnit): string {
 	return [u.name + (u.sub === "" ? "" : " " + u.sub), "strength " + u.strength, ...low].join(", ");
 }
 
-function Card({ u, side, onPick }: { u: ListUnit, side: "axis" | "allied", onPick: () => void }) {
+export function Card({ u, side, onPick }: { u: ListUnit, side: "axis" | "allied", onPick: () => void }) {
 	return (
 		<button type="button" class={u.selected ? "pm-ucard is-on" : u.moved ? "pm-ucard is-done" : "pm-ucard"} aria-pressed={u.selected}
 			aria-label={nameOf(u)} onClick={onPick}>

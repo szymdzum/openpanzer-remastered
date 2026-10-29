@@ -95,7 +95,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const saveLoad = createSaveLoad({ host, world, menu, download: page.download });
 
 	//The unit list and the equipment window (UnitList, Equipment)
-	const shops = createShopState({ world, deploying: map.deployment, selected, select, look, dispatch });
+	const shops = createShopState({ world, deploying: map.deployment, selected, select, pickReserve: map.pick, look, dispatch });
 
 	//What each menu key does (GameMenu): the rail's buttons, L, N and P, Escape
 	const menuKeys: Record<MenuKey, () => void> = {
