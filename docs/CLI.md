@@ -91,7 +91,7 @@ The program learns what the screen shows a person, no more:
 | `report` | the enemy's last turn as the side saw it |
 | `check ACTION` | whether an action is allowed, or the core's reason, without playing it; beside "allowed", that a unit moving on its transport can't attack or unmount after the move |
 
-The actions are the core's commands (src/commands.ts): `move`, `attack`, `mount`, `unmount`,
+The actions are the core's commands (src/legacy/commands.ts): `move`, `attack`, `mount`, `unmount`,
 `resupply`, `reinforce [--over]`, `embark`, `disembark`, `undo`, `buy`, `deploy`, `upgrade`,
 `disband`, and `end`, which ends the turn and plays the AI's.
 

@@ -166,12 +166,12 @@ test today).
   methods to the class body can be a mechanical first commit. Keep the data-field key order
   and the class names (`harness.js` maps `GameMap` to `Map`).
 
-  **Done**, one commit each, nothing re-recorded: `MapVisibility` (src/visibility.ts: the
+  **Done**, one commit each, nothing re-recorded: `MapVisibility` (src/legacy/visibility.ts: the
   hexes' counters, made by `allocMap` and handed to each Hex, the arithmetic, `setUnit` and
-  `setSpotting` for the 16 sites), `MapBoard` (src/board.ts: the unit list, ids and icons;
-  `add`, `place`, `relocate`, `remove`), `MapSelection` (src/selection.ts: the move and attack
+  `setSpotting` for the 16 sites), `MapBoard` (src/legacy/board.ts: the unit list, ids and icons;
+  `add`, `place`, `relocate`, `remove`), `MapSelection` (src/legacy/selection.ts: the move and attack
   cells, `select`, `clear`; `currentUnit` stays a GameMap field, `isMoveSel`/`isAttackSel` stay
-  on Hex) and `UndoSlot` (src/undo.ts). GameMap's methods keep their names and delegate. The
+  on Hex) and `UndoSlot` (src/legacy/undo.ts). GameMap's methods keep their names and delegate. The
   parts are closure variables of GameMap, not fields: a field would be saved and snapshot by
   the harness (test/mapparts.test.ts pins the data fields). For the same reason the methods
   stayed `this.m = function` closures: in the class body they couldn't reach that state. The
@@ -193,13 +193,13 @@ nothing re-recorded, verify as before step 2):
   `GameRules.rollDice`, both leader rolls, `getRandomPrototype` and the AI draw through it, one
   call per former `Math.random()`. The UI's sprite, sound and menu picks kept `Math.random` (#126
   moved them to the cosmetic stream).
-- **`defined()`** is in `src/util.ts`; dom.ts imports and re-exports it for the UI. `isChromeApp`
+- **`defined()`** is in `src/legacy/util.ts`; dom.ts imports and re-exports it for the UI. `isChromeApp`
   stays in dom.ts (only gamestate.ts uses it).
 - **game.ts loads without side effects**: `main.ts` starts `game.loop` and adds the load listener;
   the constructor sets `loop = 0`, so the harness's `clearInterval(game.loop)` still works. (Since
   #378 Game has no loop: the harness keeps its tick on `clock.loop`, and clears `game.loop` only on
   the original.)
-- **`src/context.ts`**: `engineContext` has `scenario()`, `campaign()`, `campaignPlayer()` and
+- **`src/legacy/context.ts`**: `engineContext` has `scenario()`, `campaign()`, `campaignPlayer()` and
   `spotSide()`; game.ts sets one that reads `game.*` at the call. Map, Player, Unit, the AI and the
   scenario loader use it; none imports game.ts. Without a game: nothing loaded, side -1. Unit.copy
   still takes the player from the scenario's map (#68), unitEndTurn still the old side.
@@ -397,7 +397,7 @@ In stage A the commands sit on the current engine, so two things still hold ther
 After B, the attack splits into a pure `resolve` and an `apply`, and the state is free to take
 its final shape. Keep the session thin: the core is state, rules and commands.
 
-**How #119 was done (stage A).** `src/commands.ts`, `Commands.execute(scenario, command, hooks)`;
+**How #119 was done (stage A).** `src/legacy/commands.ts`, `Commands.execute(scenario, command, hooks)`;
 contracts and verify unchanged.
 - The types are what the game does: move (with the cells the player was shown, when given),
   attack, resupply, reinforce (overstrength), mount, unmount, embark, disembark, undo, deploy,
@@ -419,7 +419,7 @@ contracts and verify unchanged.
 - The engine contract and the invariants test play through the commands (`env.Commands`, the
   copy stays for the reference); with a handler broken, 14 of the 15 engine contracts fail.
 
-**How #127 was done (stage B).** `src/state.ts`: the types of docs/STATE.md, `toData(scenario,
+**How #127 was done (stage B).** `src/legacy/state.ts`: the types of docs/STATE.md, `toData(scenario,
 game)` and `fromData({ data, state }, game)` on the old engine.
 - toData only reads; GameMap gives its board and undo slot (`getBoard`, `getUndoSlot`), Game its
   campaign progress (`getCampaignProgress`, `setCampaignProgress`). fromData places the units through
@@ -475,7 +475,7 @@ whole turn at its start as the old one did, its draws from its own stream in the
 its queue out; `startSession` and `advance` play a game in Game's order. The old game played headless
 (test/aigames.ts) and the core's session play the engine fixtures and the replay's items in lockstep,
 compared after every order and turn; the engine contract's AI turns run on the core's AI beside the
-old one. The AI's settings moved to src/prototypes.ts, which the core read then (now src/core/tables.ts). The scripted tutorial
+old one. The AI's settings moved to src/legacy/prototypes.ts, which the core read then (now src/core/tables.ts). The scripted tutorial
 is a controller too (src/core/tutorial.ts): AIScripted's script as data, its UI calls as view events
 (a message, a selection, the main menu), #80 and #81 kept, played in lockstep with the old one from
 its start, from its later turns and in the engine contract.
@@ -488,7 +488,7 @@ them, and the game runs on the session.
   air mode (#77) is an input (so was the finish that skipped the retreat, an attack with nothing to
   animate, until #111 fixed it).
   The session's `nextOrder`, `play`, `playOn` and `endTurn` with its save point are a screen's entries.
-- The mirror (src/mirror.ts): `applyData` updates the objects in place to the world's state, by unit id
+- The mirror (src/legacy/mirror.ts): `applyData` updates the objects in place to the world's state, by unit id
   (a deployed core unit keeps its object); `worldOf` makes the world again from toData of the objects,
   so what the harness and the UI write into them keeps its effect; `mirrorDifference` compares the two.
   test/mirror.test.ts plays every engine fixture's round as the AI and random commands a person sends,
@@ -553,9 +553,9 @@ them, and the game runs on the session.
   Expected verify differences: the counters' drift where the old engine forgot to switch them (#73: an
   embark, a disembark, an upgrade, a leader that sees farther) and what followed from it (a unit marked
   seen, a move range).
-- The old engine removed: src/actions.ts; the old command handlers (src/commands.ts is the game's
+- The old engine removed: src/actions.ts; the old command handlers (src/legacy/commands.ts is the game's
   entry on the core, coreplay.ts merged into it); the old AI and AIScripted (now handlers that hand
-  out the session's orders, src/app/driver.ts drives them); GameRules' own rules (src/gamerules.ts is
+  out the session's orders, src/app/driver.ts drives them); GameRules' own rules (src/legacy/gamerules.ts is
   corerules.ts's mapping over a world, `rulesOn`; setZOCRange and setSpotRange still switch the
   counters the harness moves units with); the counters' arithmetic (MapVisibility only holds them);
   and what of GameMap, Unit, Scenario, Leaders, ScenarioLoader, MapBoard and UndoSlot only the old
@@ -573,9 +573,9 @@ them, and the game runs on the session.
   screen asked and every step, and the objects compared with the world after every update, which made
   `npm test` take twice as long and a click's rules hundreds of µs. The mirror keeps the world of the
   objects now. The screen's rules read it until something says it wrote into the objects (`touched()`,
-  src/context.ts: the selection's carrier flips through `Unit.toggleEmbark`, a unit put on a hex, the
+  src/legacy/context.ts: the selection's carrier flips through `Unit.toggleEmbark`, a unit put on a hex, the
   retreat's ranges, a load, the players set up; the UI's sorts of the unit and equipment lists did
-  until they sorted copies, #186, and the move animation's facing until it drew its own, #187); a step starts from it while toData of the objects is its state (`savedAs`, src/state.ts,
+  until they sorted copies, #186, and the move animation's facing until it drew its own, #187); a step starts from it while toData of the objects is its state (`savedAs`, src/legacy/state.ts,
   the parts toData reads compared where they are, about 50 µs against 150-250 to make the world again),
   so a write nobody announced is never lost under a step. Under ?harness, whose scripts write anywhere,
   the rules read it the same way, compared with the objects. The checks (`mirrorOptions.checks`: the tests
@@ -615,7 +615,7 @@ them, and the game runs on the session.
   write the old UI makes into the objects while it plays; test/oneway.test.ts writes into them and steps.
   Verify: identical.
 - The selection out of the game (#377, stage D0.5): the selected unit and the move and attack marks are
-  the old UI's view (STATE.md D6), held by `MapSelection` (src/selection.ts) and no longer on the hexes
+  the old UI's view (STATE.md D6), held by `MapSelection` (src/legacy/selection.ts) and no longer on the hexes
   (`isMoveSel`, `isAttackSel`) and the map (`currentUnit` is an accessor of GameMap's selection, which
   GameMap carries for the old UI and the harness's scripts until D8). toData and the save never had them;
   the contracts and the harness snapshot no longer hash them (re-recorded once, on main's engine: only

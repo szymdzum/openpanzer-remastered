@@ -1,11 +1,11 @@
 The end-of-scenario dossier in a campaign: the outcome stamp and medal, the campaign's text for the outcome, the key numbers, the units destroyed and lost by class, and the medal record across the campaign. It shows only what the game keeps.
 
-**What the game keeps.** The campaign player's dossier (`PlayerDossier`, `src/map.ts`; `Dossier` in `src/state.ts`) counts units by class: enemy units destroyed, core units lost and auxiliary units lost. It carries over from scenario to scenario, so the counts are the whole campaign's. It also lists the scenario names by outcome. The rest of the card comes from the scenario and the campaign file:
+**What the game keeps.** The campaign player's dossier (`PlayerDossier`, `src/legacy/map.ts`; `Dossier` in `src/legacy/state.ts`) counts units by class: enemy units destroyed, core units lost and auxiliary units lost. It carries over from scenario to scenario, so the counts are the whole campaign's. It also lists the scenario names by outcome. The rest of the card comes from the scenario and the campaign file:
 
 | On the card | From |
 | --- | --- |
 | Outcome stamp and medal | the outcome (`lose`, `tactical`, `victory`, `briliant`) |
-| The typed paragraph (`#dossierInfo`) | the campaign's text for the outcome, verbatim (`Campaign.getOutcomeText`, `src/campaign.ts`), typos included |
+| The typed paragraph (`#dossierInfo`) | the campaign's text for the outcome, verbatim (`Campaign.getOutcomeText`, `src/legacy/campaign.ts`), typos included |
 | Turns used | the turn the scenario ended on and its last turn; the turns that give each outcome are the scenario's `turns` |
 | Prestige awarded | the outcome's prestige in the campaign file, added at the scenario's end (`playerAtHQ`, `src/core/campaign.ts`) |
 | Enemy destroyed, units lost | the sums of the dossier's counts |
