@@ -37,11 +37,11 @@ const lineOf = (w: World, id: number): CardLine => unitCardOf(w, id)!.line;
 const read = (g: LineGauge) => [g.label, g.say, g.value + (g.of ?? ""), g.state];
 const chips = (line: CardLine) => line.chips.map((c) => [c.icon, c.count, c.words, c.tone]);
 
-test("A tank ready to act: full strength, the full moves its fuel is enough for, one shot left, dug in on a hill; it can move and fire (#37)", () => {
+test("A tank ready to act: full strength, the full moves its fuel is enough for, one round left, dug in on a hill; it can move and fire (#37)", () => {
 	const w = world(), line = lineOf(w, 0);
 	expect([line.sprite, line.rides, line.formation]).toEqual([w.equipment[PZ_IIA].icon, null, "101st Tank"]);
-	expect(line.gauges.map(read)).toEqual([["Strength", "full", "10", "ok"], ["Fuel", "3 full moves", "18/50", "low"],
-		["Ammo", "1 shot left", "1/8", "critical"], ["Entrenched", null, "+4", "dug"]]);
+	expect(line.gauges.map(read)).toEqual([["Strength", null, "10", "ok"], ["Fuel", "3 full moves", "18/50", "low"],
+		["Ammo", null, "1/8", "critical"], ["Entrenched", null, "+4", "dug"]]);
 	//a segment a point and a round; a level the hill allows (its 1 and 5 more), its own lighter
 	const [strength, fuel, ammo, dug] = line.gauges;
 	expect(strength.segs).toEqual(Array(10).fill("on"));
@@ -61,23 +61,23 @@ test("Mounted infantry after its move: the truck's fuel and moves, its own round
 	expect([line.sprite, line.rides, line.formation]).toEqual([w.equipment[INFANTERIE].icon,
 		{ sprite: w.equipment[OPEL_BLITZ].icon, name: w.equipment[OPEL_BLITZ].name }, "1st Infantry"]);
 	//(wheels pay 2 a clear hex: 26 - 4 = 22 of the truck's 55, two moves of its 10 points)
-	expect(line.gauges.map(read)).toEqual([["Strength", "lost 3", "7", "ok"], ["Fuel", "2 full moves", "22/55", "low"],
-		["Ammo", "5 shots left", "5/6", "ok"], ["Entrenched", null, "0", "dug"]]);
+	expect(line.gauges.map(read)).toEqual([["Strength", null, "7", "ok"], ["Fuel", "2 full moves", "22/55", "low"],
+		["Ammo", null, "5/6", "ok"], ["Entrenched", null, "0", "dug"]]);
 	expect(line.gauges[3].segs).toEqual(Array(5).fill("off"));
 	expect(chips(line)).toEqual([["mount", null, "Riding", null], ["arrow-right", 0, "Moved", "off"], ["target", null, "Can't fire", "off"]]);
 });
 
-test("Over strength: the points past ten in brass and the word for them; strength 3 is critical (#37)", () => {
+test("Over strength: the points past ten in brass, the number with no words beside it; strength 3 is critical (#37)", () => {
 	const w = world(), [strength] = lineOf(w, 2).gauges;
-	expect(read(strength)).toEqual(["Strength", "+2 over", "12", "ok"]);
+	expect(read(strength)).toEqual(["Strength", null, "12", "ok"]);
 	expect(strength.segs).toEqual([...Array(10).fill("on"), "over", "over"]);
-	expect(read(lineOf(w, 4).gauges[0])).toEqual(["Strength", "lost 7", "3", "critical"]);
+	expect(read(lineOf(w, 4).gauges[0])).toEqual(["Strength", null, "3", "critical"]);
 });
 
 test("An aircraft shows its fuel alone, with no moves; it can't dig in (#37)", () => {
 	const line = lineOf(world(), 3);
-	expect(line.gauges.map(read)).toEqual([["Strength", "full", "10", "ok"], ["Fuel", null, "18/115", "critical"],
-		["Ammo", "11 shots left", "11/11", "ok"], ["Entrenched", null, "–", null]]);
+	expect(line.gauges.map(read)).toEqual([["Strength", null, "10", "ok"], ["Fuel", null, "18/115", "critical"],
+		["Ammo", null, "11/11", "ok"], ["Entrenched", null, "–", null]]);
 	expect(chips(line)[1]).toEqual(["target", null, "Can fire", "ok"]);
 });
 
@@ -109,7 +109,7 @@ function panelOf(w: World) {
 	return store;
 }
 
-test("The line: sprite, flag, name, stars and formation, the gauges with their meaning, the chips by name, More and Next unit (#37)", async () => {
+test("The line: sprite, flag, name, stars and formation, the gauges (the fuel with its meaning), the chips by name, More and Next unit (#37)", async () => {
 	const store = panelOf(world());
 	await act(() => { store.pickUnit(0); });
 	const panel = screen.getByRole("region", { name: "Selected unit" });
@@ -117,8 +117,8 @@ test("The line: sprite, flag, name, stars and formation, the gauges with their m
 	expect(document.getElementById("uName")!.textContent).toBe(store.world.value!.equipment[PZ_IIA].name);
 	expect(document.getElementById("uSmallFlag")).not.toBeNull();
 	expect(panel.querySelector(".ui-sub")!.textContent).toBe("Experience 1 of 5101st Tank");
-	expect([...panel.querySelectorAll(".ui-g")].map((g) => [g.className, g.textContent])).toEqual([["ui-g ok", "Strengthfull10"],
-		["ui-g low", "Fuel3 full moves18/50"], ["ui-g critical", "Ammo1 shot left1/8"], ["ui-g dug", "Entrenched+4"]]);
+	expect([...panel.querySelectorAll(".ui-g")].map((g) => [g.className, g.textContent])).toEqual([["ui-g ok", "Strength10"],
+		["ui-g low", "Fuel3 full moves18/50"], ["ui-g critical", "Ammo1/8"], ["ui-g dug", "Entrenched+4"]]);
 	expect([...panel.querySelectorAll(".ui-g.dug .ui-segs i")].map((i) => i.className)).toEqual(["base-on", "on", "on", "on", "off", "off"]);
 	//each chip: its icon and number, the words in its tooltip and its name for screen readers
 	const chipsShown = [...panel.querySelectorAll(".ui-chip")];

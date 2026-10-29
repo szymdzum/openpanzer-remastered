@@ -48,8 +48,8 @@ test("A tank ready to act on a hill with a leader: who it is, its condition and 
 	expect(card.leaders.map((l) => [l.name, l.description, l.classLeader])).toEqual([
 		["Battlefield Intelligence", leaderDescriptions[leaderType.battlefieldIntelligence][1], false],
 		["Aggressive Tank Maneuver", leaderDescriptions[leaderType.aggressiveTankManeuver][1], true]]);
-	expect([0, 1, 2, 3].map((i) => gauge(card, i))).toEqual([["Strength", "10/10", "full", "ok"], ["Fuel", "18/50", "3 full moves", "low"],
-		["Ammo", "1/8", "1 shot left", "critical"], ["Entrenched", "+4", "+4 defence", "dug"]]);
+	expect([0, 1, 2, 3].map((i) => gauge(card, i))).toEqual([["Strength", "10/10", null, "ok"], ["Fuel", "18/50", "3 full moves", "low"],
+		["Ammo", "1/8", null, "critical"], ["Entrenched", "+4", "+4 defence", "dug"]]);
 	//the hill's limit and its own level, what entrenchment does as entrenchmentFacts has it
 	expect(card.condition[3].tip).toBe("Entrenchment: up to 6 here, the hill's own 1 at once");
 	expect(card.condition[3].sayTip).toBe("Each level adds a point to its defence; not against units that ignore entrenchment, nor Infiltration "
@@ -101,7 +101,7 @@ test("A unit on a transport ship: the same band, the ship's moves and what it de
 
 test("Over strength: the points past ten, out of ten, and the veteran's bonus (#37)", () => {
 	const card = cardOf(world(), 2);
-	expect([gauge(card, 0), card.condition[0].segs]).toEqual([["Strength", "12/10", "+2 over", "ok"], [...Array(10).fill("on"), "over", "over"]]);
+	expect([gauge(card, 0), card.condition[0].segs]).toEqual([["Strength", "12/10", null, "ok"], [...Array(10).fill("on"), "over", "over"]]);
 	expect([card.stars, card.toNextStar, card.bonuses.map((b) => b.text)]).toEqual([2, 0.2, ["+2 veteran"]]);
 	expect(card.resupply).toBe(false); //full
 });
@@ -168,7 +168,7 @@ test("The edges the old window had: a train on rails, a fort with no ordinal tha
 		{ eqid: 9002, owner: 0, row: 3, col: 3 }] }, odd, { spotSide: 0 });
 	const train = cardOf(w, 0);
 	expect([train.tags[1].text, train.stars, train.toNextStar, train.xp, gauge(train, 2)]).toEqual(["Rail road", 5, 1, "520 XP",
-		["Ammo", `0/${pz.ammo}`, "no shots left", "critical"]]);
+		["Ammo", `0/${pz.ammo}`, null, "critical"]]);
 	const fort = cardOf(w, 1);
 	expect([fort.sub, fort.fires, fort.holds[2].tip]).toEqual(["Fortification", 1, "Its defence when infantry attacks it, anywhere: it is a fortification"]);
 });

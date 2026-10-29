@@ -1,5 +1,5 @@
 //The unit card's line (UnitInfo, #37, docs/ui/components/UnitInfo): the card hidden, its default size, one line docked
-//at the bottom. Who the unit is, its four gauges each with what it means ("3 full moves", "1 shot left"), and what it
+//at the bottom. Who the unit is, its four gauges (the fuel's with what it means: "3 full moves"), and what it
 //can still do this turn as chips. Every phrase reads a core query (the README's table); only the gauges' low and
 //critical thresholds are the view's
 import { canFireThisTurn } from "../core/attack";
@@ -54,12 +54,12 @@ const segs = (n: number, of: (i: number) => Seg): Seg[] => Array.from({ length: 
 const plural = (n: number, one: string, many: string) => n + " " + (n === 1 ? one : many);
 const none = (label: string): LineGauge => ({ label, say: null, value: "–", of: null, state: null, segs: null, fill: 0 });
 
-//Strength: ten segments, those past ten (over strength) in brass; low at 6, critical at 3
+//Strength: ten segments, those past ten (over strength) in brass; low at 6, critical at 3. No words beside it: the
+//segments and the number already say what it lost
 function strengthOf(u: UnitState): LineGauge {
 	const n = u.strength;
-	const say = n > 10 ? `+${n - 10} over` : n === 10 ? "full" : `lost ${10 - n}`;
 	const state = n <= 3 ? "critical" : n <= 6 ? "low" : "ok";
-	return { label: "Strength", say, value: String(n), of: null, state, fill: Math.min(1, n / 10),
+	return { label: "Strength", say: null, value: String(n), of: null, state, fill: Math.min(1, n / 10),
 		segs: segs(Math.max(10, n), (i) => i >= n ? "off" : i >= 10 ? "over" : "on") };
 }
 
@@ -72,12 +72,12 @@ function fuelGauge(w: World, u: UnitState): LineGauge {
 }
 
 //Ammo: a segment a round, every shot uses one (return and support fire too). What it is now has (ammoOf), but riding
-//infantry's own: attacked, it gets off and fights with its own rounds
+//infantry's own: attacked, it gets off and fights with its own rounds. No words beside it: the number is the shots left
 function ammoGauge(w: World, u: UnitState): LineGauge {
 	const self = dismountsWhenAttacked(w, u), max = unitData(w, u, self).ammo;
 	if (max === 0) return none("Ammo");
 	const ammo = self ? u.ammo : ammoOf(u);
-	return { label: "Ammo", say: ammo === 0 ? "no shots left" : plural(ammo, "shot left", "shots left"), value: String(ammo), of: "/" + max,
+	return { label: "Ammo", say: null, value: String(ammo), of: "/" + max,
 		state: supplyState(ammo, max), fill: Math.min(1, ammo / max), segs: max > MAX_SEGS ? null : segs(max, (i) => i < ammo ? "on" : "off") };
 }
 
