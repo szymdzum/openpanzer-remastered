@@ -399,8 +399,8 @@
 		"name": "UnitInfo",
 		"group": "Screens · In game",
 		"width": 1390,
-		"height": 900,
-		"subtitle": "The unit card (#unit-info) in two sizes over the map: hidden, a strip of who it is, its four gauges and what it can still do this turn; open, its identity and role, its condition with what each gauge means, and what it hits and holds against each kind of enemy",
+		"height": 820,
+		"subtitle": "The unit card (#unit-info) in two sizes over the map: hidden by default, a strip of who it is, its four gauges and what it can still do this turn; open on More, its identity, its condition with what each gauge means, and what it hits and holds against each kind of enemy",
 		"status": "Proposal: not built",
 		"readme": true
 	},
