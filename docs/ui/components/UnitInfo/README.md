@@ -6,18 +6,15 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 
 | Phrase | Means | Function | Exists |
 |---|---|---|---|
-| "6 moves left" | the hexes it can still move, fuel and leaders counted | `unitMoveRange`, src/core/movement.ts (movesLeft + leaderMoves, cut to the fuel; 1 for a towed gun with no transport) | yes |
-| "3 full moves" | fuel ÷ the full range of that same function: a move burns the fuel of the points it uses (`burn`, src/core/moves.ts); riding, the transport's fuel and range | a new `fullMoves(w, u)` beside `unitMoveRange` | no |
+| "6 moves left" | the hexes it can still move this turn, fuel and leaders counted; none once it has moved | `movesLeftThisTurn`, src/core/movement.ts (on `unitMoveRange`) | yes |
+| "3 full moves" | its fuel (the transport's when riding) over a whole turn's points and the leaders' hexes, rounded down; `null`, no count, for legs, towed guns, horse-drawn transports, aircraft (fuel alone) and a unit on a carrier | `fullMoves`, src/core/movement.ts | yes |
 | "1 shot left" | the rounds left: every shot uses one, return and support fire too | `fire`, src/core/fight.ts; `ammoOf`, src/core/world.ts | yes |
-| "Can fire", "Can't fire" | it has its shot: not fired, uses ammo and has some. The map's marker says the same (#436); whether a target is in range is another question, not the card's | `readiness` in src/view/mapview.ts, moved to the core as a new `canFireNow(w, u)` that both read | no |
-| "+4 defence" | the entrenchment level, added 1:1 to the defence; the exceptions in its tooltip | the "entrenchment" step, src/core/combat.ts: none against a unit that ignores entrenchment (`ignoresEntrenchment`), nor against Infiltration Tactics or Street Fighter in a city, rough ground or a port unless the defender has Ferocious Defense; twice for infantry in a city, forest or mountain attacked by a tank, recon or anti-tank | as a combat step: a new `entrenchmentDefence(w, u)` for the card |
-| entrenchment segments | the hex's limit, the terrain's base + 5; the base drawn lighter | `entrench`, src/core/turn.ts; its limit as a new `entrenchLimit(w, u)` | no |
-| "+1 veteran" | one per 100 XP, added to attack and defence in every fight | the "experience" step, src/core/combat.ts (`expBars`) | yes, to export |
+| "Can fire", "Can't fire" | it has its shot: not fired (a move riding uses it too), uses ammo and has some; the map's marker says the same (#436). Whether a target is in range is another question, not the card's | `canFireThisTurn`, src/core/attack.ts | yes |
+| "+4 defence" and its tooltip | the level, whether it holds, whether street fighters cancel it here, whether it counts twice | `entrenchmentFacts`, src/core/combat.ts (`entrenchmentAgainst` for one attacker) | yes |
+| entrenchment segments | the hex's limit, the terrain's base + 5; the base drawn lighter | `entrench`, src/core/turn.ts: its limit as a new `entrenchLimit(w, u)` | no |
+| "+1 veteran" | one per 100 XP, added to attack and defence in every fight | `experienceBonus`, src/core/combat.ts | yes |
 | Resupply stamp | ammo or fuel critical, and it can resupply here now | `canResupply`, src/core/supply.ts | yes |
-| riding: "moves 10, on the truck's fuel" | the transport's range and fuel | `unitMoveRange` and `fuelOf` on the mounted unit | yes |
-| riding: "can't fire the turn it rides" | a move riding sets `hasFired` | `burn`, src/core/moves.ts; as a rule, a new `ridingStopsFire(w, u)` | no |
-| riding: "attacked, it gets off and fights on foot" | mounted infantry, not surprised, defends with its own data | the "infantry dismounts" step, src/core/combat.ts; a new `dismountsWhenAttacked(w, u)` | no |
-| riding: "ambushed, it defends 2" | surprised, or not infantry: the transport's ground defence | the same step | no |
+| riding band | the transport, its fuel; "can't fire the turn it rides" (`isRiding`, used by `burn`); "attacked, it gets off and fights on foot" (`dismounts`); "ambushed, it defends 2" (`surprisedDefendsWith`: that equipment's ground defence) | `riding`, src/core/combat.ts; `isRiding`, src/core/world.ts | yes |
 | the weak defence in `critical` | the lowest of ground, air and close defence, when it is at most half the highest of the three | a pure rule on the equipment, with its test | no |
 
 **Hidden, the default: one line.** The sprite (with its transport's when riding), nation mark, name, stars and ordinal; the four gauges, each with its label and, in the label, what it means; what the unit can still do this turn, as compact chips (an icon and a number, the words in their tooltip and for screen readers: the gauges already say the rest); More and Next unit. Every icon has its tooltip and a name for screen readers ("6 moves left", "Can fire", "More", "Next unit"). It replaces the strip that had only the name and three numbers.
