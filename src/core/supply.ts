@@ -118,12 +118,12 @@ export function reinforceDivisors(w: World, u: UnitState): [number, number] {
 	return isAir(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u));
 }
 
-// At least 1 when anything is missing, 0 when nothing is: else a full unit goes over its maximum (#95).
+//At least 1 when anything is missing, 0 when nothing is: else a full unit goes over its maximum (#95).
 function atLeastOne(share: number): number {
 	return share > 0 ? Math.max(1, share) : 0;
 }
 
-// Applied one after the other: outside a city, then by the enemies around.
+//Applied one after the other: outside a city, then by the enemies around.
 function supplyDivisor(inCity: boolean, enemies: number): [number, number] {
 	return [inCity ? 1 : 1.3, enemies > 2 ? 3 : enemies > 0 ? 1.5 : 1];
 }

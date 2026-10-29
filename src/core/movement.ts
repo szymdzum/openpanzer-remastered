@@ -15,9 +15,9 @@ import {
 	airUnitAt, fuelOf, groundUnitAt, hexIndex, isSpotted, isZOC, movesLeft, onMap, playerOf, sideOf, unitData
 } from "./world";
 
-// The road column of the movement tables, after the terrains.
+//The road column of the movement tables, after the terrains.
 const ROAD = 17;
-// Costs from STOP up stop the move, from NO_ENTRY can't be entered.
+//Costs from STOP up stop the move, from NO_ENTRY can't be entered.
 const STOP = 254;
 const NO_ENTRY = 255;
 
@@ -94,7 +94,7 @@ export function isBridgeForSide(w: World, hex: number, side: number): boolean {
 	return isBridge(w.equipment, bridge.eqid);
 }
 
-// Whether the side doesn't see what's on the hex: it isn't spotted, and the unit didn't fire from hiding.
+//Whether the side sees what's on the hex: the hex is spotted, or the unit fired from hiding.
 function seen(w: World, hex: number, side: number, unit: UnitState | null): boolean {
 	return isSpotted(w, hex, side) || (unit !== null && unit.tempSpotted);
 }
@@ -150,8 +150,8 @@ export function moveRange(w: World, u: UnitState): MoveCell[] {
 	return c.filter((cell) => cell.canPass || cell.canMove);
 }
 
-// The cells a path through them reaches from u's hex in range steps or less, in their order: an air unit
-// flies around the aircraft it can't pass, which can cost more points than the hex's distance.
+//The cells a path through them reaches from u's hex in range steps or less, in their order: an air unit
+//flies around the aircraft it can't pass, which can cost more points than the hex's distance.
 function withinSteps(w: World, u: UnitState, cells: MoveCell[], range: number): MoveCell[] {
 	const cols = w.state.map.cols;
 	const slot = scratch(w);
@@ -182,7 +182,7 @@ function moveCell(row: number, col: number, range: number): MoveCell {
 	return { row, col, range, cin: 0, cout: 0, cost: 0, canMove: false, canPass: false };
 }
 
-// For each cell of ring r in list order, its neighbours of ring r and beyond in list order.
+//For each cell of ring r in list order, its neighbours of ring r and beyond in list order.
 function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: number) {
 	const cols = w.state.map.cols;
 	const slot = scratch(w);
@@ -201,8 +201,8 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	}
 }
 
-// Steps to the neighbours as far or farther (not always right: a path can turn back), only from the unit's
-// hex or a cell it can go through: not on from an enemy it sees, or the hexes behind would show costs no path has.
+//Steps to the neighbours as far or farther (not always right: a path can turn back), only from the unit's
+//hex or a cell it can go through: not on from an enemy it sees, or the hexes behind would show costs no path has.
 function expandFrom(w: World, c: MoveCell[], from: MoveCell, slot: Int32Array, near: number[], s: StepRules) {
 	if (from.range > 0 && !from.canPass && !from.canMove) return;
 	neighbours(w, from, slot, near);
@@ -229,15 +229,15 @@ function step(w: World, from: MoveCell, to: MoveCell, s: StepRules) {
 	if (affordable(to.cin, terrain, s.range)) reach(w, to, other, visible, s);
 }
 
-// Whether the points left after cin pay for a hex of that terrain cost: all of it, or at least one for a
-// hex that uses them all, so a move never ends below 0 points and fuel.
+//Whether the points left after cin pay for a hex of that terrain cost: all of it, or at least one for a
+//hex that uses them all, so a move never ends below 0 points and fuel.
 function affordable(cin: number, terrain: number, range: number): boolean {
 	if (terrain === STOP) return cin < range;
 	return terrain < STOP && cin + terrain <= range;
 }
 
-// As canPassInto and canMoveInto for a unit that isn't air: it passes through a hex empty or held by its side,
-// stops on it empty or unless it sees it taken.
+//As canPassInto and canMoveInto for a unit that isn't air: it passes through a hex empty or held by its side,
+//stops on it empty or unless it sees it taken.
 function reach(w: World, to: MoveCell, other: UnitState | null, visible: boolean, s: StepRules) {
 	if (s.groundOrSea && (other === null || sideOf(w, other) === s.side)) to.canPass = true;
 	if (!visible || (s.groundOrSea && other === null)) to.canMove = true;
@@ -249,14 +249,14 @@ export function terrainCost(w: World, u: UnitState, cell: Position): number {
 		side: sideOf(w, u) });
 }
 
-// Trains can't use roads, bridges are roads for their side.
+//Trains can't use roads, bridges are roads for their side.
 function enterCost(w: World, hex: number, s: Pick<StepRules, "costs" | "train" | "side">): number {
 	const road = (!s.train && w.data.hexes[hex].road > roadType.none) || isBridgeForSide(w, hex, s.side);
 	return s.costs[road ? ROAD : w.data.hexes[hex].terrain];
 }
 
-// Sets the entry and exit costs of to the first time, lowers them when from is cheaper. Not set is an entry
-// cost below 0, not 0: a neighbour of the unit's hex is entered at 0 and no other neighbour may overwrite it.
+//Sets the entry and exit costs of to the first time, lowers them when from is cheaper. Not set is an entry
+//cost below 0, not 0: a neighbour of the unit's hex is entered at 0 and no other neighbour may overwrite it.
 function relax(from: MoveCell, to: MoveCell) {
 	if (to.cin < 0 || (to.cin > from.cout && to.cost <= STOP)) {
 		to.cin = from.cout;
@@ -264,14 +264,14 @@ function relax(from: MoveCell, to: MoveCell) {
 	}
 }
 
-// Hex -> cell index + 1, all 0 between calls, kept on the world.
+//Hex -> cell index + 1, all 0 between calls, kept on the world.
 function scratch(w: World): Int32Array {
 	const size = w.state.map.rows * w.state.map.cols;
 	if (w.scratch === null || w.scratch.length !== size) w.scratch = new Int32Array(size);
 	return w.scratch;
 }
 
-// The cell indexes of from's neighbours in the range, ascending: the order the original visits them.
+//The cell indexes of from's neighbours in the range, ascending: the order the original visits them.
 function neighbours(w: World, from: Position, slot: Int32Array, out: number[]) {
 	out.length = 0;
 	const { rows, cols } = w.state.map;
@@ -292,7 +292,7 @@ function insertSorted(list: number[], n: number) {
 	list[k] = n;
 }
 
-// open until the search has taken it.
+//open until the search has taken it.
 interface PathNode {
 	index: number;
 	row: number;
@@ -344,13 +344,13 @@ function reachFrom(near: PathNode, nodes: PathNode[] | undefined, heap: NodeHeap
 		}
 }
 
-// Any cell a command gives: off the map too.
+//Any cell a command gives: off the map too.
 function hexKey(row: number, col: number): number {
 	return row * 65536 + col;
 }
 
-// The open nodes reached, nearest first and of equally near ones the later in the list. A node is pushed
-// again when it gets nearer: the entries it left behind are skipped (taken, or another distance).
+//The open nodes reached, nearest first and of equally near ones the later in the list. A node is pushed
+//again when it gets nearer: the entries it left behind are skipped (taken, or another distance).
 class NodeHeap {
 	declare nodes: PathNode[];
 	declare dists: number[];

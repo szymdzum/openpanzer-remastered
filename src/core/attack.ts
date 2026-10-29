@@ -80,11 +80,11 @@ export function attackCells(w: World, u: UnitState): Position[] {
 	return allowed;
 }
 
-// An aircraft of range 1 hits a ground unit only below it, but on the next hex too in the remaster's rules, as in PG2.
+//An aircraft of range 1 hits a ground unit only below it, but on the next hex too in the remaster's rules, as in PG2.
 const hitsGroundAnywhere = (w: World, air: boolean, range: number) => !air || range > 1 || w.rules.airAttacksNextHex;
 
-// Once for a ground target (on any hex in range if groundAnywhere, else only below), once for an air target
-// (an air unit only an air one).
+//Once for a ground target (on any hex in range if groundAnywhere, else only below), once for an air target
+//(an air unit only an air one).
 function timesListed(w: World, u: UnitState, hex: number, below: boolean, air: boolean, groundAnywhere: boolean): number {
 	let n = 0;
 	if (attackableUnit(w, u, hex, false) !== null) {

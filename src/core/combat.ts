@@ -68,7 +68,7 @@ export function entrenchmentAttacking(level: number, intact: boolean, closeComba
 	return intact && !closeCombat ? level : 0;
 }
 
-// None against infiltration tactics, unless with ferocious defense.
+//None against infiltration tactics, unless with ferocious defense.
 function entrenchments(f: Fight): [number, number] {
 	const w = f.world;
 	let a = entrenchmentAttacking(f.atk.entrenchment, f.aEntrenchIntact, f.isCloseCombat);
@@ -332,7 +332,7 @@ function resolve(f: Fight, rng: RngStream | null) {
 	experience(f);
 }
 
-// More against a stronger enemy, up to the cap.
+//More against a stronger enemy, up to the cap.
 function experience(f: Fight) {
 	const { atk, def, values: v, result: cr } = f;
 	const bonus = (a: number, b: number) => Math.max(1, a + 6 - b);
@@ -347,7 +347,7 @@ function experience(f: Fight) {
 	if (def.experience + cr.defExpGained > UNIT_MAX_EXPERIENCE) cr.defExpGained = UNIT_MAX_EXPERIENCE - def.experience;
 }
 
-// Beyond 4 the attack over the defense counts at 2/5.
+//Beyond 4 the attack over the defense counts at 2/5.
 function killFraction(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState): number {
 	let kF = atkval - defval;
 	if (kF > 4) kF = 4 + (2 * kF - 8) / 5; //PG2 formula
@@ -356,15 +356,15 @@ function killFraction(w: World, atkval: number, defval: number, atk: UnitState, 
 	return kF;
 }
 
-// Higher for artillery, level bombers, fortifications and ships firing on land.
+//Higher for artillery, level bombers, fortifications and ships firing on land.
 function hitThreshold(w: World, atk: UnitState, def: UnitState): number {
 	const atkclass = unitData(w, atk).uclass;
 	return atkclass === unitClass.artillery || atkclass === unitClass.levelBomber || atkclass === unitClass.fortification
 		|| (isSea(w, atk) && !isSea(w, def)) ? 19 : 15;
 }
 
-// A die per strength point, or the expected number with rng null, rounded once as PG2's integer division
-// rounds it (Deliberate #90: rounding again came out half a point high). Overwhelming attack kills one more.
+//A die per strength point, or the expected number with rng null, rounded once as PG2's integer division
+//rounds it (Deliberate #90: rounding again came out half a point high). Overwhelming attack kills one more.
 function combatKills(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, rng: RngStream | null): number {
 	const kF = killFraction(w, atkval, defval, atk, def);
 	const threshold = hitThreshold(w, atk, def);
