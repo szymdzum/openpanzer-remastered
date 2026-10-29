@@ -33,6 +33,18 @@
 		font-size: var(--type-body-size);
 		line-height: var(--type-body-line);
 		-webkit-font-smoothing: antialiased;
+
+		/* thin scrollbars in the theme's colours, not the system's light ones: an ink thumb over the panel itself,
+		   brass while the pointer is over what scrolls (the colour inherits, the width doesn't) */
+		scrollbar-color: var(--line-strong) transparent;
+
+		& * {
+			scrollbar-width: thin;
+		}
+
+		& :hover {
+			scrollbar-color: var(--accent) transparent;
+		}
 	}
 
 	.pm-muted {
