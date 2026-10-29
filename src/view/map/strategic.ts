@@ -3,7 +3,8 @@
 //functions of the core's World, tested without the DOM (test/view-map.test.ts); src/view/map/strategicdraw.ts draws them.
 import type { World } from "../../core/types";
 import { sideOf } from "../../core/world";
-import { eachSlot, isShown } from "./mapview";
+import { eachSlot } from "./mapview";
+import { isShown } from "../store/model";
 import { flagStrip, type Plaque, plaquesOf } from "./mapinfo";
 
 //A unit as a chip: its hex, its side's colour, its shape (a square for the side shown's, pointed ends for the
