@@ -114,6 +114,34 @@
 .pm-cmp .bar b { display: block; height: 100%; background: var(--ink-muted); }
 .pm-cmp .d { font-family: var(--font-mono); font-weight: 700; font-size: var(--type-note-size); text-align: right; color: var(--ink-muted); }
 .pm-cmp .d.up { color: var(--ok); } .pm-cmp .d.dn { color: var(--critical); }
+/* the transport: the model on foot and mounted side by side, and every transport with what it gives, so the
+   choice reads without opening anything. A wider detail column; the model grid takes three cards a row */
+.pm-eq .body:has(.pm-mount) { grid-template-columns: 1fr 468px; }
+.pm-eq .detail:has(.pm-mount) { gap: var(--space-2); padding-top: var(--space-2); overflow: hidden; }
+.pm-eq .detail .top:has(.duo) { grid-template-columns: auto 1fr; }
+.pm-eq .fr { background-size: 900% 100%; background-position-x: 25%; background-repeat: no-repeat; }
+.pm-eq .duo { display: flex; align-items: center; gap: 2px; }
+.pm-eq .duo .spr { width: 72px; height: 45px; }
+.pm-eq .duo .plus { font: 700 var(--type-data-lg-size)/1 var(--font-mono); color: var(--ink-muted); }
+.pm-mount { display: grid; grid-template-columns: 1fr 44px 74px 1fr 44px 74px; gap: 1px 8px; font-size: var(--type-small-size); line-height: 16px; }
+.pm-mount .hdr, .pm-eq .trh { font-size: var(--type-micro-size); letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--ink-muted); text-align: right; }
+.pm-mount .hdr:nth-child(3n+1) { text-align: left; }
+.pm-mount .n { font-family: var(--font-mono); font-weight: 700; text-align: right; }
+.pm-mount .m.up { color: var(--ok); } .pm-mount .m.dn { color: var(--critical); } .pm-mount .m.off { color: var(--ink-muted); font-weight: 400; }
+.pm-eq .trh, .pm-eq .tr { display: grid; grid-template-columns: 48px 1fr 38px 40px 32px 44px; gap: 6px; align-items: center; }
+.pm-eq .trh { padding: 0 8px 3px; align-items: end; }
+.pm-eq .trh .pm-label { grid-column: span 2; text-align: left; }
+.pm-eq .trl { display: grid; border: 1px solid var(--line); background: var(--panel-sunken); }
+.pm-eq .tr { padding: 1px 8px; border-top: 1px solid var(--line); background: var(--panel-raised); cursor: pointer; }
+.pm-eq .tr:first-child { border-top: 0; }
+.pm-eq .tr.is-on { outline: 2px solid var(--ink); outline-offset: -2px; }
+.pm-eq .tr .ts { width: 48px; height: 30px; }
+.pm-eq .tr .nm { display: grid; min-width: 0; }
+.pm-eq .tr .nm b { font: 700 var(--type-small-size)/15px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm-eq .tr .nm span { font-size: var(--type-micro-size); line-height: 13px; color: var(--ink-muted); }
+.pm-eq .tr .v { font: 700 var(--type-small-size)/16px var(--font-mono); text-align: right; }
+.pm-eq .tr .v.c { color: var(--accent-ink); }
+.pm-eq .rule { margin: 0; font-size: var(--type-note-size); line-height: 16px; color: var(--ink-muted); }
 .pm-eq .after { font-size: var(--type-small-size); color: var(--ink-muted); }
 .pm-eq .after b { font-family: var(--font-mono); color: var(--ink); }
 
