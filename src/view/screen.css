@@ -37,11 +37,45 @@
 			}
 		}
 
-		& > .pm-endturn {
+		/* the corner: End turn, and over it while units wait in the reserve a quieter Deploy as wide, clear of the dock in
+		   the middle; it takes no click itself, its buttons do */
+		& > .pm-corner {
 			position: absolute;
 			inset-block-end: var(--space-4);
 			inset-inline-end: var(--space-4);
 			z-index: var(--z-hud);
+			display: flex;
+			flex-direction: column;
+			gap: var(--space-2);
+			pointer-events: none;
+
+			/* (in the corner's flow: the card places it alone in the corner) */
+			& > .pm-endturn {
+				position: relative;
+				inset: auto;
+			}
+
+			& .pm-btn {
+				inline-size: 100%;
+				pointer-events: auto;
+			}
+		}
+
+		/* Deploy: the panel with a brass edge, not brass (End turn is the one primary); the count on a brass plate */
+		.pm-deploynow {
+			background: var(--panel);
+			border-color: var(--accent);
+
+			& .n {
+				min-inline-size: 1.25rem;
+				padding: 0 var(--space-1);
+				border-radius: var(--radius-paper);
+				background: var(--accent);
+				color: var(--on-accent);
+				font-family: var(--font-mono);
+				font-weight: 700;
+				letter-spacing: 0;
+			}
 		}
 
 		/* the bottom in the middle, as the old UI stacked it: the unit context menu (UnitContext) over the unit info
@@ -310,19 +344,6 @@
 			.defeats {
 				font-size: var(--type-note-size);
 			}
-		}
-
-		/* the reserve to deploy from, at the bottom in the middle until the reserve tray (D5) docks there */
-		& > .pm-reserve {
-			inset-block-end: var(--space-4);
-			inset-inline-start: 50%;
-			translate: -50% 0;
-			display: flex;
-			align-items: flex-end;
-			gap: var(--space-2);
-			padding: var(--space-3);
-			max-block-size: 40dvh;
-			overflow-y: auto;
 		}
 
 		/* a message in the middle of the screen, its text scrolled when it is long: a briefing the full window, a notice

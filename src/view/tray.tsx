@@ -1,20 +1,15 @@
 //The reserve tray (Deployment, #348): while the person deploys, their reserve docked at the bottom, the unit picked
 //to place on a brass hex, Upgrade for the picked unit (the equipment window, on it) and Done to leave the rest for
-//later. With the reserve not empty and nothing picked, a button picks
-//its first unit again. What it says is the view model's (src/view/deploy.ts trayOf).
+//later. What it says is the view model's (src/view/deploy.ts trayOf).
 import { Button } from "./button";
 import { Icon } from "./icon";
 import { Badge } from "./meter";
-import { Panel } from "./panel";
 import type { Store } from "./store";
 import { frameStyle } from "./unitstrip";
 
-export function ReserveTray({ store }: { store: Pick<Store, "openShop" | "pick" | "reserve" | "side" | "tray"> }) {
-	const tray = store.tray.value, reserve = store.reserve.value;
-	if (tray === null) {
-		if (reserve.length === 0) return null;
-		return <Panel class="pm-reserve"><Button icon="deploy" onClick={() => store.pick(reserve[0].index)}>Deploy · {reserve.length} in reserve</Button></Panel>;
-	}
+export function ReserveTray({ store }: { store: Pick<Store, "openShop" | "pick" | "side" | "tray"> }) {
+	const tray = store.tray.value;
+	if (tray === null) return null;
 	const side = store.side.value === 1 ? "allied" : "axis", picked = tray.units.find((u) => u.picked)!;
 	return (
 		<section id="container-unitlist" class="pm-panel pm-unitlist pm-deploy" aria-label="Reserve">
@@ -38,5 +33,18 @@ export function ReserveTray({ store }: { store: Pick<Store, "openShop" | "pick" 
 				</div>
 			</div>
 		</section>
+	);
+}
+
+//With units still in reserve and the tray closed: over End turn, the reminder before the turn ends, its count on a
+//brass plate; a click picks the first of them again
+export function DeployButton({ store }: { store: Pick<Store, "pick" | "reserve" | "tray"> }) {
+	const reserve = store.reserve.value, n = reserve.length;
+	if (store.tray.value !== null || n === 0) return null;
+	return (
+		<button type="button" class="pm-btn pm-deploynow" aria-label={`Deploy · ${n} in reserve`}
+			title={n === 1 ? "1 unit in reserve" : `${n} units in reserve`} onClick={() => store.pick(reserve[0].index)}>
+			<Icon name="deploy" size="sm" />Deploy<span class="n" aria-hidden="true">{n}</span>
+		</button>
 	);
 }

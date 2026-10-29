@@ -15,6 +15,8 @@ Deploy mode: what the player sees when a campaign scenario starts with core unit
 
 **The reserve tray.** In deploy mode `#container-unitlist` docks at the bottom, where unit info sits when a unit is selected (nothing is selected while deploying). The header counts "5 of 9 placed", says that units left in reserve can be placed next turn, and has Upgrade, which opens `#equipment` on the selected reserve unit. The tray closes by itself when the last unit is placed, as today.
 
+With units left in reserve and the tray closed (Done), a Deploy button waits over End turn, as wide: the panel with a brass edge, not brass, and the count on a brass plate ("Deploy 2", its tooltip "2 units in reserve"). A click picks the first of them again. It stays clear of the unit line in the middle, and goes when the reserve is empty.
+
 The status line says what a click will do: "Deploy · Pz IIIE, 7th Panzer · click a brass hex to place it · 4 in reserve". It replaces "Deploy (on map grey hexes) or upgrade your core units".
 
 Keep `#container-unitlist`, `#hscroll-unitlist`, `#unitlist`, `#eqUserSel` and `deployunit`. The zone, the ghost and the outline are drawn on the canvas (`hexstyle.deploy`); the tag is a DOM element placed like `#gameToolTip`.

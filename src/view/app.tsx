@@ -6,7 +6,7 @@ import { IconSprite } from "./icon";
 import { UnitContextMenu } from "./contextmenu";
 import { UnitInfoPanel } from "./infopanel";
 import { UnitStrip } from "./unitstrip";
-import { ReserveTray } from "./tray";
+import { DeployButton, ReserveTray } from "./tray";
 import { LogWindow } from "./logwindow";
 import { MessageDialog } from "./message";
 import { StartMenu } from "./startmenu";
@@ -50,7 +50,10 @@ export function App({ store }: { store: Store }) {
 			<ReserveTray store={store} />
 			<TurnBanner store={store} />
 			<AiIndicator store={store} />
-			<EndTurn store={store} />
+			<div class="pm-corner">
+				<DeployButton store={store} />
+				<EndTurn store={store} />
+			</div>
 			<EndTurnQuestion store={store} />
 			<ShopWindow store={store} />
 			<LogWindow store={store} />

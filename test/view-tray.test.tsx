@@ -8,7 +8,7 @@ import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { trayOf } from "../src/view/deploy";
 import { createStore } from "../src/view/store";
-import { ReserveTray } from "../src/view/tray";
+import { DeployButton, ReserveTray } from "../src/view/tray";
 import { ShopWindow } from "../src/view/shopwindow";
 import { UnitStrip } from "../src/view/unitstrip";
 
@@ -34,7 +34,7 @@ function trayStore(w: World) {
 		won: () => {},
 	});
 	store.refresh();
-	render(<><UnitStrip store={store} /><ReserveTray store={store} /><ShopWindow store={store} /></>);
+	render(<><UnitStrip store={store} /><ReserveTray store={store} /><DeployButton store={store} /><ShopWindow store={store} /></>);
 	return store;
 }
 
@@ -57,7 +57,11 @@ test("Deploying docks the tray with the card's ids; a card picks its unit; Upgra
 	await act(() => { fireEvent.click(within(tray).getByRole("button", { name: "Done" })); });
 	expect([store.deploying.value, screen.queryByRole("region", { name: "Reserve" })]).toEqual([null, null]);
 	expect(screen.getByRole("region", { name: "Your units" })).toBeTruthy();
-	expect(screen.getByRole("button", { name: "Deploy · 2 in reserve" })).toBeTruthy();
+	//Deploy waits over End turn with the count on its plate; a click picks the first unit again
+	const deploy = screen.getByRole("button", { name: "Deploy · 2 in reserve" });
+	expect([deploy.textContent, deploy.title]).toEqual(["Deploy2", "2 units in reserve"]);
+	await act(() => { fireEvent.click(deploy); });
+	expect([store.deploying.value, screen.queryByRole("button", { name: "Deploy · 2 in reserve" })]).toEqual([1, null]);
 });
 
 test("While deploying the window lists the reserve; a unit picked there is the one to upgrade and to deploy (#512)", async () => {
