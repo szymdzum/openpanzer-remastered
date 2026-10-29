@@ -1,5 +1,5 @@
 /**
- * Settings - the game's settings and constants the running game reads
+ * Settings - the settings and constants the running game reads
  *
  * http://www.linuxconsulting.ro
  * http://openpanzer.net
@@ -12,7 +12,6 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-//A cloud save remembered in the settings (see src/view/saveload.ts), id is the cloud save id
 export interface CloudSave {
 	name: string;
 	id: string;
@@ -36,26 +35,24 @@ export interface UISettings {
 	classicRules: boolean;
 }
 
-//Holds the settings for the game ui and renderer
 export let uiSettings: UISettings = {
 	zoomLevel: 1,			//The map's scale
-	uiScale: 1.0,			//The scale at which is UI elements are zoomed
-	uiSize: 840,			//The size of UI windows width
-	uiSmallSize: 470,		//The size of the small UI windows width
-	muteUnitSounds: false,	//if unit combat sound should be muted
-	markOwnUnits: false,	//To visually mark own units on map
-	markEnemyUnits: false,	//To visually mark enemy units on map
-	noFOW: false,			//Play without Fog Of War
+	uiScale: 1.0,			//The scale at which UI elements are zoomed
+	uiSize: 840,			//The width of UI windows
+	uiSmallSize: 470,		//The width of the small UI windows
+	muteUnitSounds: false,	//Mute the units' combat sounds
+	markOwnUnits: false,	//Mark own units on the map
+	markEnemyUnits: false,	//Mark enemy units on the map
+	noFOW: false,			//Play without the fog of war
 	quickAnimation: false,	//Faster unit animations
 	useRetina: false,		//don't scale on retina displays devicePixelRatio > 1
 	hdGraphics: true,		//@2x map and unit images on high density screens (from public/hd/, needs a reload)
-	isAI: [0, 0, 0, 0],		//which player is played by AI
+	isAI: [0, 0, 0, 0],		//which players the AI plays
 	lastCloudSave: [],
 	showDetailInfoToolTips: false,
 	classicRules: false		//new games play the classic rules of Panzer Marshal 3.2.14, not the remaster's (#53)
 };
 
-//The rules a new game plays by, as the settings choose them (#53)
 export const newGameRules = (): "classic" | "remaster" => uiSettings.classicRules ? "classic" : "remaster";
 
 //"3.2.14" -> "3.2"
@@ -65,8 +62,8 @@ export function major_version(version: string): string {
 
 //The prestige icon in the game's texts: the windows' costs, the tutorial's messages ({prestige})
 export const CURRENCY_ICON = "<img src='resources/ui/dialogs/equipment/images/currency.png'/>";
-export let DEBUG_AI_MOVES = false; //If we should show AI moves (used in game.js)
+export let DEBUG_AI_MOVES = false; //show the AI's moves: the host then treats every side as local
 export let VERSION = "3.2.14";
 export let MAJOR_VERSION = major_version(VERSION);
-//The scenario a first start (and the UI's "new game" fallback) plays: Game.defaultScenario
+//The scenario a first start plays: Game.defaultScenario
 export const DEFAULT_SCENARIO = "tutorial.xml";

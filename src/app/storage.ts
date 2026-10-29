@@ -1,5 +1,5 @@
 /**
- * GameState - Provides localStorage state and network state
+ * GameState - the game's saves in localStorage (or a Chrome app's storage) and in GitHub gists
  *
  * http://www.linuxconsulting.ro
  * http://openpanzer.net
@@ -23,22 +23,20 @@ import type { Game } from "./game";
 import { game } from "./running";
 import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./save";
 
-//What saveToCloud and restoreFromCloud read from the GitHub gists API
 export interface GistReply {
 	id: string;
 	files: { [fileName: string]: { content: string } };
 }
 
-//The cloud save's id field: the old UI's #cloudid input, or what stands for it (the new UI's, #349). The cloud saves
-//write their progress and errors into its value and placeholder
-//How a cloud save or load goes, told as the old #cloudid field showed it: its text (the progress, the id at the end, or
-//nothing after an error) and, with an error, the hint it put in the field's placeholder (review A10)
+/**
+ * How a cloud save or load goes, for the cloud id field: its text (the progress, the id at the end, or nothing
+ * after an error) and, with an error, a hint for its placeholder.
+ */
 export type CloudReport = (text: string, placeholder?: string) => void;
-//A cloud save done: its error, or null and the save's id
+/** A cloud save done: its error, or null and the save's id. */
 export type CloudSaved = (error: string | null, id?: string) => void;
 
-//GameState keeps its save names and restored items in the closure, its methods are
-//assigned in the constructor: a class with its closure body as the constructor, as the original
+//A class with its closure body as the constructor, as the original: the methods are own properties
 export class GameState {
 	declare save: () => void;
 	declare saveToCloud: (gistId: string, report: CloudReport, callback: CloudSaved) => void;
@@ -52,8 +50,8 @@ export class GameState {
 	declare exportGameState: () => string;
 
 	constructor(Game: Game | null) {
-		//The game is one item (src/app/save.ts); a local save of the format before is three, the
-		//scenario, its players and the campaign's progress, read when there's no game item
+		//The game is one item (src/app/save.ts); a local save of the format before is three, read when there's
+		//no game item
 		var saveName = {
 			game: 'openpanzer-game-'+MAJOR_VERSION,
 			scenario:'openpanzer-scenario-'+MAJOR_VERSION,
@@ -62,17 +60,15 @@ export class GameState {
 			campaign:'openpanzer-campaign-'+MAJOR_VERSION,
 		};
 
-		//Items read back so far by restoreItem, keyed by save name. Never emptied, so it
-		//keeps the items for the lifetime of this GameState: restore() works once per instance
+		//Never emptied: restore() works once per instance
 		var restoredItems: { [key: string]: any } = {};
 
-		//The game with its campaign's progress
 		this.save = function() {
 			saveItem(saveName.game, writeSave(Game.scenario, Game, Game.rules));
 		}
 
-		//Saves the game as a public gist on GitHub: the gist id to overwrite, or empty to create a new one; report is told
-		//the progress and the new id or the error, callback(error, gistId) is called when the request completes
+		//A public gist: gistId is the one to overwrite, empty to create a new one. callback(error, gistId) is
+		//called when the request completes.
 		this.saveToCloud = function(gistId: string, report: CloudReport, callback: CloudSaved) {
 			const saveData = this.exportGameState();
 			//The bundle embeds the author's GitHub token here ("ghp_" + pieces with whitespace
@@ -119,9 +115,8 @@ export class GameState {
 			xhr.send(JSON.stringify(gist));
 		}
 
-		//Restores the settings and the game, or a game of the format before. The items are read one by
-		//one (asynchronously in a Chrome app) and the game is rebuilt when all 5 are in.
-		//onDone is called when the scenario has been restored, onFail when there is no saved game
+		//The items are read one by one (asynchronously in a Chrome app) and the game is rebuilt when all 5 are
+		//in. onDone is called when the scenario has been restored, onFail when there is no saved game.
 		this.restore = function(onDone: () => void, onFail: () => void) {
 			restoreItem(saveName.settings, onDone, onFail, 5);
 			restoreItem(saveName.game, onDone, onFail, 5);
@@ -130,12 +125,11 @@ export class GameState {
 			restoreItem(saveName.campaign, onDone, onFail, 5);
 		}
 
-		//Restores a game from an exportGameState() string, returns false if it can't be parsed
+		//False if it can't be parsed
 		this.restoreFromString = function(saveData: string) {
 			return restoreFromJSON(saveData);
 		}
 
-		//Restores a game from a file exported with exportGameState()
 		this.restoreFromFile = function(file: Blob, onDone?: () => void, onFail?: () => void) {
 			const reader = new FileReader();
 			reader.onloadend = function() {
@@ -151,7 +145,6 @@ export class GameState {
 			return true;
 		}
 
-		//Restores a game from a GitHub gist by its id, report told the progress or the error
 		this.restoreFromCloud = function(gistId: string, report: CloudReport, onDone?: () => void) {
 			if (gistId == "" || typeof gistId === "undefined") {
 				report("", "No ID specified");
@@ -182,7 +175,7 @@ export class GameState {
 			return true;
 		}
 
-		//The game in a gist's reply restored: null, or why not
+		//Null, or why not
 		function restoreFromGist(reply: GistReply): string | null {
 			if (!reply || !reply.files.hasOwnProperty("openpanzer-save.json"))
 				return "Cannot parse reply !";
@@ -198,7 +191,6 @@ export class GameState {
 			deleteItem(saveName.campaign);
 		}
 
-		//Saves only the user settings
 		this.saveSettings = function() {
 			saveItem(saveName.settings, uiSettings);
 		}
@@ -207,12 +199,10 @@ export class GameState {
 			restoreItem(saveName.settings, null, function() {}, 1);
 		}
 
-		//Returns the game (src/app/save.ts) as a JSON string
 		this.exportGameState = function() {
 			return JSON.stringify(writeSave(Game.scenario, Game, Game.rules));
 		}
 
-		//Private functions
 		function saveItem(key: string, object: unknown) {
 			if (isChromeApp()) {
 				if (object) {
@@ -228,7 +218,6 @@ export class GameState {
 			}
 		}
 
-		//Reads one item and hands it to onItemRestored, which acts once itemCount items are in
 		function restoreItem(key: string, onDone: (() => void) | null, onFail: () => void, itemCount: number) {
 			let object: string = null;
 
@@ -254,7 +243,7 @@ export class GameState {
 				localStorage.removeItem(key);
 		}
 
-		//Restores a game from a JSON string, returns false if it isn't a save
+		//False if it isn't a save
 		function restoreFromJSON(saveData: string) {
 			const read = readSave(saveData);
 			if (read === null)
@@ -265,8 +254,8 @@ export class GameState {
 			return true;
 		}
 
-		//Creates the scenario and loads the equipment of all players and supporting countries, and of
-		//their core units' countries (#182: by the units' flags, no equipment is loaded to ask)
+		//Loads the equipment of all players and supporting countries, and of their core units' countries (#182:
+		//by the units' flags, no equipment is loaded to ask)
 		function loadGameState(read: ReadSave, onDone: () => void) {
 			const { data, state } = read.save;
 			Game.rules = read.save.rules;
@@ -281,16 +270,16 @@ export class GameState {
 			Equipment.addPlayersEquipment(players, onEquipmentLoaded.bind(null, read, onDone), loadFailed);
 		}
 
-		//Called once for each equipment file, the game is rebuilt after the last one, and after the files
-		//of the units' equipment the countries don't have (#286)
+		//Called once for each equipment file; the game is rebuilt after the last one and after the files of the
+		//units' equipment the countries don't have (#286)
 		function onEquipmentLoaded(read: ReadSave, onDone: () => void) {
 			if (--Equipment.equipmentToLoad)
 				return;
 			Equipment.addUnitsEquipment(stateEquipment(read.save.state), () => rebuild(read, onDone), loadFailed);
 		}
 
-		//An equipment file that doesn't load fails the load as a scenario's does: the game's scenario
-		//stays the save's, not loaded, and the game says so and ends (#367: the load waited for good)
+		//Fails the load as a scenario's file does: the scenario stays the save's, not loaded, and the game says
+		//so and ends (#367)
 		function loadFailed() {
 			Game.onScenarioLoadFinished(null, true);
 		}
@@ -298,7 +287,7 @@ export class GameState {
 		function rebuild(read: ReadSave, onDone: () => void) {
 			Game.scenario = scenarioFromSave(read);
 
-			//Restore campaign state: campaigns are found by file, the id is the fallback
+			//Campaigns are found by file, the id is the fallback
 			const c = read.save.state.campaign;
 			if (c !== null) {
 				let campaignId = Campaign.findCampaignByFile(c.file);
@@ -314,7 +303,7 @@ export class GameState {
 			}
 		}
 
-		//Stores a restored item, when all itemCount items are in restores the settings then the game
+		//When all itemCount items are in, restores the settings then the game
 		function onItemRestored(onDone: (() => void) | null, onFail: () => void, key: string, object: any, itemCount: number) {
 			if (isChromeApp())
 				restoredItems[key] = object[key];
@@ -324,14 +313,14 @@ export class GameState {
 			if (Object.keys(restoredItems).length == itemCount) {
 				const settings: UISettings = restoredItems[saveName.settings];
 
-				//Need to restore the settings since some players might be assigned to AI
+				//(the settings first: some players might be assigned to AI)
 				if (settings !== undefined && settings) {
 					if (itemCount == 1)
 						return applySettings(settings);
 					applySettings(settings);
 				}
 
-				//The game, or the items of the format before
+				//(the game, or the items of the format before)
 				const read = readSaveObject(restoredItems[saveName.game]) || readSaveObject({
 					scenario: restoredItems[saveName.scenario],
 					players: restoredItems[saveName.players],
@@ -345,7 +334,7 @@ export class GameState {
 		}
 
 		function applySettings(s: UISettings) {
-			//Not all settings need to be restored since some are temp only
+			//(not all settings are restored: some are temporary)
 			uiSettings.markOwnUnits = s.markOwnUnits;
 			uiSettings.markEnemyUnits = s.markEnemyUnits;
 			uiSettings.useRetina = s.useRetina;
@@ -364,7 +353,6 @@ export class GameState {
 				for (var i = 0; i < s.lastCloudSave.length; i++)
 					uiSettings.lastCloudSave[i] = s.lastCloudSave[i];
 
-			//Restore player AI settings
 			for (var i = 0; i < s.isAI.length; i++)
 				uiSettings.isAI[i] = s.isAI[i];
 		}

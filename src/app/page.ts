@@ -1,6 +1,5 @@
 /**
- * DOM generic functions: what the page still needs of them (the viewport, the Chrome app), the old UI's
- * went with it (#351)
+ * DOM generic functions: the page's viewport and the Chrome app check
  *
  * http://www.linuxconsulting.ro
  * http://openpanzer.net
@@ -15,15 +14,13 @@
 
 import { uiSettings } from "./settings";
 
-// Get the element with ID id
 //The element type is the caller's: $<HTMLInputElement>("x").value, or inferred from the variable
-//it is assigned to. Elements with custom properties take an interface extending HTMLElement
+//it is assigned to
 function $<T extends HTMLElement = HTMLElement>(id: string): T {
 	return document.getElementById(id) as T;
 }
 
-//can be called with a id string or a element object directly
-//return pointer to the newly created tag
+//The parent is an id or an element
 function addTag<K extends keyof HTMLElementTagNameMap>(parent: string | Node | null, tag: K): HTMLElementTagNameMap[K];
 function addTag(parent: string | Node | null, tag: string): HTMLElement;
 function addTag(parent: string | Node | null, tag: string): HTMLElement {
@@ -39,7 +36,6 @@ function addTag(parent: string | Node | null, tag: string): HTMLElement {
 	return t;
 }
 
-//Running as a Chrome packaged app
 export function isChromeApp(): any {
 	return window.chrome && chrome.app && chrome.app.runtime;
 }
