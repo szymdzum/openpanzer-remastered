@@ -14,13 +14,13 @@ import { isSpotted, sideOf, unitById } from "./world";
 
 type Kind = "ground" | "air" | "sea";
 
-// As Map.getDeployHexes.
+//As Map.getDeployHexes.
 const ownDeployment = (w: World, side: number, hex: number) => {
 	const deployment = w.data.hexes[hex].deployment;
 	return deployment >= 0 && playerAt(w, deployment).side === side;
 };
 
-// For a side without deployment hexes: a ground unit on a city, an aircraft on an airfield, a ship on a port.
+//For a side without deployment hexes: a ground unit on a city, an aircraft on an airfield, a ship on a port.
 function kindOn(terrain: number): Kind | null {
 	if (terrain === terrainType.City) return "ground";
 	if (terrain === terrainType.Airfield) return "air";

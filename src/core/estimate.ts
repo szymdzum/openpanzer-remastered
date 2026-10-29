@@ -34,14 +34,14 @@ export interface AttackEstimate {
 	fate: DefenderFate;
 }
 
-// Only the guns its side sees count (combat.ts combatResult); none when the attacker is surprised.
+//Only the guns its side sees count (combat.ts combatResult); none when the attacker is surprised.
 function seenSupport(w: World, atk: UnitState, def: UnitState): UnitState[] {
 	if (atk.isSurprised) return [];
 	const side = sideOf(w, atk);
 	return supportFireUnits(w, atk, def).filter((s) => isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted);
 }
 
-// As fight.ts leaves it: facing the attacker unless on a bridge of its side, off its transport when infantry.
+//As fight.ts leaves it: facing the attacker unless on a bridge of its side, off its transport when infantry.
 function defenderAfter(w: World, atk: UnitState, def: UnitState, kills: number): UnitState {
 	const facing = isBridgeForSide(w, hexIndex(w, def.row, def.col), sideOf(w, def)) ? def.facing
 		: directionTo(def.row, def.col, atk.row, atk.col);

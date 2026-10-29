@@ -5,7 +5,7 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The draws on the game stream keep the original's order: the support fire shots one by one, then the
+ * The order of the draws on the game stream is behavior: the support fire shots one by one, then the
  * attack; in each, the attacker's dice, the defender's, then the attacker's leader roll and the defender's
  * (Leaders.generateLeaderWithChance draws even when the unit gains no level). The estimate before the
  * attack, which decides an overrun, draws nothing.
@@ -24,7 +24,7 @@ import type { AttackStart, CombatResult, Contribution, Draft, Position, UnitId, 
 import { isAir, sideHasUnits } from "./units";
 import { currentEqid, hexIndex, sideOf, unitById } from "./world";
 
-// A unit that gained an experience level gets a leader when its roll (its level to 10) is above this.
+//A unit that gained an experience level gets a leader when its roll (its level to 10) is above this.
 const LEADER_CHANCE_THRESHOLD = 8;
 
 /**
@@ -66,8 +66,8 @@ export function resolveFight(w: World, atk: UnitState, def: UnitState, rng: RngS
 	return { attacker: atk.id, defender: def.id, support, overrun, result, record, dismount, atkLeader, defLeader };
 }
 
-// Leaders.generateLeaderWithChance: a unit with no leader always draws; at the experience cap it gets one,
-// otherwise only when it went up a level and the roll is high.
+//Leaders.generateLeaderWithChance: a unit with no leader always draws; at the experience cap it gets one,
+//otherwise only when it went up a level and the roll is high.
 function leaderRoll(w: World, u: UnitState, eqid: number, expGained: number, rng: RngStream): number {
 	if (u.leader !== -1) return -1;
 	const exp = Math.round(u.experience + +expGained);
@@ -100,15 +100,15 @@ function fighter(w: World, u: UnitState): Fighter {
 		isSurprised: u.isSurprised, before: fighterState(u), after: null };
 }
 
-// Unit.hit: strength, a hit this turn, a point of entrenchment.
+//Unit.hit: strength, a hit this turn, a point of entrenchment.
 function hit(u: UnitState, losses: number) {
 	u.strength -= losses;
 	u.hits++;
 	if (u.entrenchment > 0) u.entrenchment--;
 }
 
-// Unit.fire: it shows on the map from now on even in fog. Only its own attack (not a support or return shot,
-// not an overrun) ends its firing for the turn.
+//Unit.fire: it shows on the map from now on even in fog. Only its own attack (not a support or return shot,
+//not an overrun) ends its firing for the turn.
 function fire(u: UnitState, attacking: boolean) {
 	u.tempSpotted = true;
 	u.ammo--;
@@ -151,7 +151,7 @@ export function applyFight(d: Draft, f: FightResolution) {
 	gainLeader(d, f.defender, f.defLeader);
 }
 
-// Not on a bridge of its side.
+//Not on a bridge of its side.
 function face(d: Draft, u: UnitState, other: UnitState) {
 	if (!isBridgeForSide(d, hexIndex(d, u.row, u.col), sideOf(d, u))) u.facing = directionTo(u.row, u.col, other.row, other.col);
 }
@@ -164,7 +164,7 @@ function score(d: Draft, atk: UnitState, def: UnitState, cr: CombatResult) {
 	addScore(d, b, def.isCore ? scoreGains.casualtyCore : scoreGains.casualty, cr.kills);
 }
 
-// A new leader can widen the unit's spotting: the counters follow (#73).
+//A new leader can widen the unit's spotting: the counters follow (#73).
 function gainLeader(d: Draft, id: UnitId, leader: number) {
 	if (leader === -1) return;
 	changeUnit(d, id, (u) => { u.leader = leader; });
@@ -250,8 +250,8 @@ function destroy(d: Draft, u: UnitState) {
 	emit(d, { type: "destroyed", unit: u.id, at: { row: u.row, col: u.col } });
 }
 
-// Map.retreatUnit: a move to the hex without the cost of a move (its moves and overstrength stay), the rest
-// of a move as it is: the fuel, a capture. It leaves nothing to undo (#171).
+//Map.retreatUnit: a move to the hex without the cost of a move (its moves and overstrength stay), the rest
+//of a move as it is: the fuel, a capture. It leaves nothing to undo (#171).
 function retreatTo(d: Draft, id: UnitId, to: Position) {
 	const { moveLeft, hasMoved, hasOverstrength } = unitById(d, id);
 	//the hex is a plain cell with no cost: the move's cost comes to NaN, which counts as 0

@@ -51,11 +51,11 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | 
 	return { surprise: walked.surprise, win };
 }
 
-// A path cost from this one up stops the move: a hex that uses all the points, or a zone of control.
+//A path cost from this one up stops the move: a hex that uses all the points, or a zone of control.
 const STOP = 254;
 
-// Stops at a hex it can't pass (an enemy it didn't see). A step shows where the enemy sees it; a human's
-// and the scripted opponent's always.
+//Stops at a hex it can't pass (an enemy it didn't see). A step shows where the enemy sees it; a human's
+//and the scripted opponent's always.
 function walk(d: Draft, u: UnitState, path: PathCell[]): { passed: PathStep[]; cost: number; stopped: boolean; surprise: Position | null } {
 	const player = playerAt(d, u.owner);
 	const seen = player.type === playerType.humanLocal || player.type === playerType.aiScripted;
@@ -82,8 +82,8 @@ function pathCost(d: Draft, u: UnitState, path: PathCell[]): { cost: number; sto
 	return { cost: !cost || cost < 0 ? 0 : cost, stopped };
 }
 
-// What a hex that stops the move costs after the path's cost before it: a hex that uses all the points (an A of
-// the tables: a mountain, a river) all those left, a hex in a zone of control its terrain. Deliberate (#214).
+//What a hex that stops the move costs after the path's cost before it: a hex that uses all the points (an A of
+//the tables: a mountain, a river) all those left, a hex in a zone of control its terrain. Deliberate (#214).
 function stopCost(d: Draft, u: UnitState, c: PathCell, before: number): number {
 	const terrain = terrainCost(d, u, c);
 	return terrain >= STOP ? Math.max(unitMoveRange(d, u) - before, 1) : terrain;
@@ -96,14 +96,14 @@ function surprised(d: Draft, u: UnitState, at: Position): Position | null {
 	return { row: at.row, col: at.col };
 }
 
-// UndoSlot.save: the unit as it is, but tempSpotted, which the saved copy doesn't take (Unit.copy).
+//UndoSlot.save: the unit as it is, but tempSpotted, which the saved copy doesn't take (Unit.copy).
 function newUndo(u: UnitState): UndoState {
 	return { unit: u.id, before: { ...u, transport: u.transport === null ? null : { ...u.transport }, tempSpotted: false },
 		oldOwner: null, oldFlag: null, oldVictorySide: null, prestigeGain: 0, scoreGain: 0 };
 }
 
-// Unit.move: a transport uses all its points and can't fire after; so does a hex that stops the move (#214).
-// A recon unit with points left can move again; a unit leaving its carrier is off it for good.
+//Unit.move: a transport uses all its points and can't fire after; so does a hex that stops the move (#214).
+//A recon unit with points left can move again; a unit leaving its carrier is off it for good.
 function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 	u.entrenchment = 0;
 	burn(d, u, cost);
@@ -115,7 +115,7 @@ function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 	if (u.carrier < 0) u.carrier = 0;
 }
 
-// A transport's fuel and all its points (it can't fire after), or the unit's own (no fuel on a carrier).
+//A transport's fuel and all its points (it can't fire after), or the unit's own (no fuel on a carrier).
 function burn(d: Draft, u: UnitState, used: number) {
 	if (isRiding(u)) {
 		u.hasFired = true;
@@ -127,10 +127,10 @@ function burn(d: Draft, u: UnitState, used: number) {
 	}
 }
 
-// Map.captureHex: a hex with an owner or a flag not of the unit's side becomes its player's, a flag (not an
-// objective) and an objective give prestige (twice with a liberator) and score, an objective leaves the side's
-// list. What changed goes in undo. Whether the side won: no objective left (and in the remaster rules some
-// to take at the start, #91).
+//Map.captureHex: a hex with an owner or a flag not of the unit's side becomes its player's, a flag (not an
+//objective) and an objective give prestige (twice with a liberator) and score, an objective leaves the side's
+//list. What changed goes in undo. Whether the side won: no objective left (and in the remaster rules some
+//to take at the start, #91).
 function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): boolean {
 	const hex = hexIndex(d, at.row, at.col), h = d.state.map.hexes[hex], u = unitById(d, id);
 	const player = playerAt(d, u.owner);
@@ -151,7 +151,7 @@ function capture(d: Draft, id: UnitId, at: Position, undo: UndoState | null): bo
 	return win;
 }
 
-// What a capture changed, for the undo: the hex, the gains, and where an objective was in its side's list.
+//What a capture changed, for the undo: the hex, the gains, and where an objective was in its side's list.
 function recordCapture(undo: UndoState, old: ReturnType<typeof undoFields>, taken: ReturnType<typeof gains>, objective: boolean,
 	index: number) {
 	Object.assign(undo, old, { prestigeGain: taken.prestige, scoreGain: taken.score });
