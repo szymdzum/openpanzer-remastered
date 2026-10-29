@@ -443,8 +443,8 @@ through the host's `command`.
 
 The UI reads the game only through the host (`world()`, the world the screen's rules read) and sends the
 person's commands to it (`command`: refused with a `Refusal` while a program plays or a message is open, the
-end of turn ending the person's turn). Its view model (`src/view/model.ts` and the modules beside it) computes
-what the screens show from the world; the signals (`src/view/store.ts`) carry it to the Preact components.
+end of turn ending the person's turn). Its view model (`src/view/store/model.ts` and the modules beside it) computes
+what the screens show from the world; the signals (`src/view/store/store.ts`) carry it to the Preact components.
 
 ## The proof
 

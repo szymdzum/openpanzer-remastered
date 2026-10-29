@@ -8,7 +8,7 @@ in the repository's LICENSE before using it.
 ## What we have
 
 - Units: 3476 sprite sheets in `game/resources/units/images/`, 720×50 px each: 9 facings of 80 px
-  in one strip. The other 7 facings are the same frames mirrored (`src/view/mapdraw.ts`; the old
+  in one strip. The other 7 facings are the same frames mirrored (`src/view/map/mapdraw.ts`; the old
   renderer's `drawUnitSprite` until #351). The old renderer drew `@2x` images at half their pixel
   size (`imgScale`), so sharper sprites dropped in without engine changes; the UI doesn't load them
   yet (#462). Many sheets are variants of
