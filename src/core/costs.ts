@@ -1,5 +1,5 @@
 /**
- * Costs - what units, upgrades and their sale are worth in prestige
+ * Costs: what units, upgrades and their sale are worth in prestige.
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -9,7 +9,7 @@ import { CURRENCY_MULTIPLIER, UPGRADE_PENALTY } from "./tables";
 import type { UnitState, World } from "./types";
 import { unitData } from "./world";
 
-//A unit and its transport (an eqid of 0 or less, or none, for nothing)
+/** The price of a unit and its transport (an eqid of 0 or less, or none, for nothing). */
 export function unitCost(w: World, eqid?: number, transportId?: number): number {
 	let cost = 0;
 	if (eqid > 0) cost += w.equipment[eqid].cost * CURRENCY_MULTIPLIER;
@@ -17,12 +17,14 @@ export function unitCost(w: World, eqid?: number, transportId?: number): number 
 	return cost;
 }
 
-//An upgrade of u to upgradeId (none: itself) with transportId (-1 removes the transport), less what
-//u is worth: a different unit or transport costs UPGRADE_PENALTY times its price
+/**
+ * The price of upgrading `u` to `upgradeId` (none: itself) with `transportId` (-1 removes the transport), less
+ * what `u` is worth: a different unit or transport costs UPGRADE_PENALTY times its price.
+ */
 export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transportId?: number): number {
 	let ncost: number;
 	if (upgradeId > 0)
-		//(as numbers: a scenario's units can hold their eqid as the file's text, which the old engine's == took)
+		//Compared as numbers: a scenario's units can hold their eqid as the file's text, which the original's == took
 		ncost = +u.eqid === +upgradeId ? unitCost(w, u.eqid, -1) : unitCost(w, upgradeId, -1) * UPGRADE_PENALTY;
 	else
 		ncost = unitCost(w, u.eqid, -1);
@@ -36,12 +38,12 @@ export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transpor
 	return (ncost + tcost - ocost) >> 0;
 }
 
-//A strength point of what the unit currently is
+/** The price of a strength point of what the unit currently is. */
 export function costPerStrength(w: World, u: UnitState): number {
 	return ((unitData(w, u).cost * CURRENCY_MULTIPLIER) / 10) >> 0;
 }
 
-//What selling the unit gives back: its and its transport's price, less the penalty, by strength
+/** What selling the unit gives back: its and its transport's price, less the penalty, by strength. */
 export function sellCost(w: World, u: UnitState): number {
 	const transportId = u.transport !== null ? u.transport.eqid : -1;
 	return ((unitCost(w, u.eqid, transportId) / UPGRADE_PENALTY / 10) * u.strength) >> 0;
