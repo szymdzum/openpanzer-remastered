@@ -1,22 +1,13 @@
 /**
- * GameHost - the game's course outside the screen (#373): a scenario started or loaded, the campaign's
- * chain of scenarios (the outcome's prestige and dossier, the next scenario, the prototype, the core
- * units carried), and the end of the game with what follows it, decided from how the game ended (the
- * core's SessionEnd, src/core/session.ts)
+ * GameHost - the game's course outside the screen: a scenario started or loaded, the campaign's chain of
+ * scenarios, a program's turn and the end of the game
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The host decides; the screen only shows. It tells the screen what to show through the screen
- * interface (src/app/screen.ts), which the UI implements (src/view/screen.tsx) and a program that shows
- * nothing too (src/app/nullscreen.ts). It also plays a program's turn: its actions one after the other, each
- * one the screen shows waited for until the screen calls its shown (#375: there is no turn loop ticking
- * any more), then the end of its turn. What goes on is told: the screen's shown, the message the player
- * clicked away (goOn: then the campaign's next scenario loads), the person's end of turn, the screen once
- * it has shown the next player's turn. A victory is told when the screen says the step that won it has
- * been shown (the UI's animation end), the end at the turn limit when the turn ends (endTurn), and the
- * saves come where they came. Imports no UI module, so a whole campaign and a game's turns play on it
- * without the DOM (test/host.test.ts).
+ * The host decides; the screen (src/app/screen.ts) only shows. A program's actions play one after the
+ * other, each one the screen shows waited for until the screen calls its shown. The host imports no UI
+ * module, so a whole campaign and a game's turns play on it without the DOM (test/host.test.ts).
  */
 
 import { actionType, difficultyType, endGameLossText, endGameType } from "../legacy/prototypes";
@@ -49,15 +40,13 @@ import type { CampaignProgress } from "../core/state";
 import type { CloudReport, CloudSaved } from "./storage";
 import type { Screen, ShownCommand } from "./screen";
 
-//How a victory was won, as the loss texts and the campaign name it (endGameType)
 const endTypes = { capture: endGameType.moveCapture, elimination: endGameType.noEnemyLeft };
 
-//The game's course: Game's members hand it what the player and the files do (src/app/game.ts), the screen
-//shows what it says. What a campaign keeps between its scenarios is here, as Game's closure kept it
+/** Game's members hand it what the player and the files do. It keeps what a campaign carries between scenarios. */
 export class GameHost {
 	declare game: Game;
-	declare screen: Screen;		//what shows the game (src/app/screen.ts)
-	declare localSide: number;		//which sides play on this screen when the game started (localSideOf)
+	declare screen: Screen;
+	declare localSide: number;		//the sides played on this screen when the game started (localSideOf)
 	declare campaignPlayer: Player | null;	//the player that plays the campaign on this screen
 	declare savedPlayer: Player | null;	//its copy kept between the campaign's scenarios
 	declare next: CampaignScenario | null;	//the campaign's next scenario, loaded once the player clicks on
@@ -67,9 +56,9 @@ export class GameHost {
 	declare awardPrototype: boolean;	//a brilliant victory awards a prototype unit in the next scenario
 	declare isCampaignStart: boolean;	//the campaign's first scenario: prestige, dossier and core units set
 	declare showing: boolean;		//the screen shows a program's action: its next one waits for the shown
-	declare requests: number;		//the screen's requests made: only the last one's shown goes on
-	declare going: boolean;		//the game going on now (goOn)
-	declare again: boolean;		//asked to go on while it went on
+	declare requests: number;		//the shown callbacks handed out: only the last one's goes on
+	declare going: boolean;		//goOn is running
+	declare again: boolean;		//goOn was asked while it ran
 
 	constructor(g: Game, screen: Screen) {
 		this.game = g;
@@ -91,8 +80,8 @@ export class GameHost {
 
 	//---- A scenario started or loaded
 
-	//A scenario file started (a campaign's next scenario keeps the save of the one before until its own
-	//replaces it: closing the game while it loads, or a load that fails, doesn't lose the campaign #64)
+	//A campaign's next scenario keeps the save of the one before until its own replaces it, so closing the
+	//game while it loads, or a load that fails, doesn't lose the campaign (#64)
 	newScenario(file: string, intro?: string) {
 		const g = this.game;
 		this.cleanup(this.nextLoading);
@@ -100,9 +89,8 @@ export class GameHost {
 		g.scenario.load(this.scenarioLoaded.bind(this, intro, false));
 	}
 
-	//The scenario loaded, from its file or a save (isRestore): the players set up, the session started,
-	//the save, the screen. The scenario's start gave the players their prestige and a campaign's start its
-	//player (the core's newGame, src/app/start.ts)
+	//The scenario loaded, from its file or a save (isRestore): the players set up, the session started, the
+	//save, the screen. The core's newGame (src/app/start.ts) already gave the players their prestige.
 	scenarioLoaded(intro: string | null | undefined, isRestore: boolean) {
 		const g = this.game;
 		if (!g.scenario.isLoaded) {
@@ -124,7 +112,7 @@ export class GameHost {
 		this.screen.showScenario();
 	}
 
-	//A game restored from a save (local, file or cloud: GameState)
+	//A game restored from a save, whatever its source
 	gameLoaded() {
 		const g = this.game;
 		this.savedPlayer = null;
@@ -137,7 +125,6 @@ export class GameHost {
 		this.screen.showScenario();
 	}
 
-	//The players set up, the sides played here, the side shown, the session started
 	startPlaying(isRestore: boolean) {
 		const g = this.game;
 		this.setupPlayers(isRestore);
@@ -152,12 +139,11 @@ export class GameHost {
 		g.spotSide = this.localSide === 2 ? g.scenario.map.currentPlayer.side : this.localSide;
 	}
 
-	//The scenario before gone, and its save unless keepSave
 	cleanup(keepSave = false) {
 		const g = this.game;
 		if (!keepSave)
 			g.state.clear();
-		//(deleted, then set: the properties end up where the old game's cleanup left them)
+		//(deleted, then set: the properties end up where the original's cleanup left them)
 		if (g.scenario && g.scenario.map !== null) {
 			g.scenario.map.cleanup();
 			delete g.scenario.map;
@@ -168,7 +154,7 @@ export class GameHost {
 		g.session = null;
 	}
 
-	//The AI, the scripted tutorial or the campaign for the players; a person's player is the default
+	//A person's player is the default; the others get a handler
 	setupPlayers(isRestore: boolean) {
 		const g = this.game, players = g.scenario.map.getPlayers();
 		if (players === null)
@@ -179,10 +165,10 @@ export class GameHost {
 			else
 				setupScenarioPlayer(p, g.scenario.map);
 		}
-		touched(); //(the players' types, a campaign player carried)
+		touched();
 	}
 
-	//In a campaign the other countries are the AI; the campaign's country is its player (should be only 1)
+	//In a campaign the other countries are the AI; the campaign's country is its player (there should be one)
 	setupCampaignPlayer(p: Player, isRestore: boolean) {
 		const g = this.game;
 		if (p.country !== g.campaign.country) {
@@ -194,12 +180,11 @@ export class GameHost {
 		this.carryCampaignPlayer(p, isRestore);
 	}
 
-	//The campaign player: the scenario's start carried it already (src/app/start.ts). Saved when the
-	//campaign starts, as the file had it before the campaign's start; a load during the campaign copies
-	//the saved one over it (kept #196)
+	//The campaign's start saves the player as the file had it before the start; a load during the campaign
+	//copies the saved one over it (kept bug #196)
 	carryCampaignPlayer(p: Player, isRestore: boolean) {
 		const started = !isRestore;
-		if (this.savedPlayer === null) { //Campaign just started save player from scenario settings
+		if (this.savedPlayer === null) {
 			this.savedPlayer = new Player();
 			this.savedPlayer.copy(p);
 			if (started) {
@@ -207,14 +192,14 @@ export class GameHost {
 				this.savedPlayer.dossier = {};
 				this.savedPlayer.getCoreUnitList().length = 0;
 			}
-		} else if (!started) { //Campaign in progress restore saved instance (also on a load, kept #196)
+		} else if (!started) {
 			p.copy(this.savedPlayer, true);
 		}
 	}
 
 	//---- The campaign
 
-	//A campaign started: the rules of the settings, its data loaded, then its first scenario
+	//The rules are the settings'; the first scenario starts once the campaign's data has loaded
 	newCampaign(index: number, difficulty: number) {
 		const g = this.game;
 		g.rules = newGameRules();
@@ -224,21 +209,20 @@ export class GameHost {
 	campaignLoaded() {
 		this.savedPlayer = null;
 		carryPlayer(null);
-		this.removeNonCampaignUnits = false; //For first scenario is not needed
+		this.removeNonCampaignUnits = false;
 		this.isCampaignStart = true;
 		const first = this.game.campaign.getCurrentScenario();
 		this.newScenario(first.scenario, first.intro);
 	}
 
-	//The campaign's scenario ended with an outcome: the scenario's end, then the next scenario or the
-	//campaign's end. endType (endGameType) is only given on a loss, it picks the loss reason text
+	//endType (endGameType) is only given on a loss, it picks the loss reason text
 	continueCampaign(outcome: ScenarioOutcome, endType?: string) {
 		this.endScenario(outcome);
 		this.nextScenario(outcome, endType);
 	}
 
-	//The scenario's end (src/core/campaign.ts): the player carried into the next scenario, and the
-	//scenario as the old game left it until the next one loads (its player sent to HQ in place)
+	//The player carried into the next scenario, and the ended scenario kept as the original left it until the
+	//next one loads (its player sent to HQ in place)
 	endScenario(outcome: ScenarioOutcome) {
 		const g = this.game;
 		const w = worldOf(g.scenario, g, gameInputs(g));
@@ -247,14 +231,14 @@ export class GameHost {
 		this.screen.reportScore(ended.player.score);
 		g.session.world = { ...w, state: scenarioEnded(w, outcome, g.campaign.getCampaignData(), ended.campaign) };
 		applyData(g.scenario, g.session.world, g);
-		//(the saved player, which a game loaded during the campaign copies, kept #196)
+		//(the saved player, which a game loaded during the campaign copies: kept bug #196)
 		this.savedPlayer.supportCountries = [];
 		this.savedPlayer.prestigePerTurn = [];
 		this.savedPlayer.copy(this.campaignPlayer);
 	}
 
-	//The campaign's next scenario, or its end: the outcome told, the next one loaded once the player has
-	//clicked its message away (loadNextScenario); at the end the dossier, then the main menu
+	//The next scenario loads once the player has clicked the outcome's message away (loadNextScenario); at the
+	//campaign's end the dossier shows, then the main menu
 	nextScenario(outcome: ScenarioOutcome, endType?: string) {
 		const g = this.game;
 		let text = g.campaign.getOutcomeText(outcome);
@@ -276,13 +260,12 @@ export class GameHost {
 		}
 	}
 
-	//The campaign's next scenario waits for the player's click on the outcome's message
 	nextScenarioWaiting(): boolean {
 		return this.next !== null && this.needLoad;
 	}
 
-	//The player clicked on: the next scenario loads. Asked once: the turn loop's ticks while it loads
-	//would start it over through the loader's shared scenario, each load adding the players again (#64)
+	//Asked once: a second call while it loads would start it over through the loader's shared scenario,
+	//each load adding the players again (#64)
 	loadNextScenario() {
 		if (this.nextLoading)
 			return;
@@ -290,11 +273,10 @@ export class GameHost {
 		this.newScenario(this.next.scenario, this.next.intro);
 	}
 
-	//---- A new game from the start menu (the new UI's menus, #349): as the old UI's start menu starts them (src/ui.ts
-	//startMenuButton, src/uibuilder.ts buildStartMenu)
+	//---- A new game from the start menu
 
-	//The tutorial: no campaign, the fog of war on, both sides played by its script, on the classic rules its script
-	//was planned and checked on (#188). The settings aren't saved, as the old menu didn't
+	//Both sides are played by the tutorial's script, on the classic rules it was planned and checked on (#188).
+	//The settings aren't saved.
 	startTutorial() {
 		const g = this.game;
 		g.campaign = null;
@@ -305,8 +287,7 @@ export class GameHost {
 		this.newScenario(DEFAULT_SCENARIO);
 	}
 
-	//A single scenario, its file and the briefing to show (the scenario list's), and the sides the AI plays (isAI, by
-	//player): no campaign, the rules of the settings, and the settings saved with those sides
+	//isAI: the sides the AI plays, by player. The settings are saved with them.
 	startScenario(file: string, intro: string, isAI: number[]) {
 		const g = this.game;
 		uiSettings.isAI = isAI;
@@ -316,60 +297,52 @@ export class GameHost {
 		g.state.saveSettings();
 	}
 
-	//A campaign, its index in the campaign list and its difficulty (difficultyType), and the settings saved
+	//difficulty: a difficultyType value. The settings are saved.
 	startCampaign(index: number, difficulty: number) {
 		this.newCampaign(index, difficulty);
 		this.game.state.saveSettings();
 	}
 
-	//The settings saved (uiSettings), as the old settings window's OK and the start menu's starts saved them
 	saveSettings() {
 		this.game.state.saveSettings();
 	}
 
-	//---- Save and load (the new UI's save and load window, #349), as the old one's buttons do them (src/uibuilder.ts
-	//gameStateButton): through the game's state, the cloud's on GitHub gists as they work today (#33)
+	//---- Save and load, through the game's state; the cloud's saves are GitHub gists (#33)
 
-	//The game as the JSON a file keeps (GameState.exportGameState)
 	exportGame(): string {
 		return this.game.state.exportGameState();
 	}
 
-	//A game loaded from a file: done once it is read (the game then loads and is shown), fail when it isn't a save
+	//done is called once the file is read (the game then loads), fail when it isn't a save
 	loadGame(file: Blob, done: () => void, fail: () => void) {
 		this.game.state.restoreFromFile(file, done, fail);
 	}
 
-	//Saved to the cloud under its id, a new save when it is empty: report told how it goes (review A10), then saved
-	//(null) or the error, and the save's id
+	//An empty id makes a new save. report is told how it goes; saved gets null or the error, and the save's id.
 	saveToCloud(id: string, report: CloudReport, saved: CloudSaved) {
 		this.game.state.saveToCloud(id, report, saved);
 	}
 
-	//Loaded from the cloud save of an id, report told how it goes: done once it is read
 	loadFromCloud(id: string, report: CloudReport, done: () => void) {
 		this.game.state.restoreFromCloud(id, report, done);
 	}
 
-	//The scenario flow of a campaign of the list, its index there: its data loaded, then the text the old campaign menu's
-	//flow button showed (Campaign.getCampaignFlow), for done
+	//done gets Campaign.getCampaignFlow's text once the campaign's data has loaded
 	campaignFlow(index: number, done: (html: string) => void) {
 		const c: Campaign = new Campaign(index, difficultyType.historical, () => done(c.getCampaignFlow()));
 	}
 
-	//The campaign's player, null outside a campaign
 	getCampaignPlayer(): Player | null {
 		return this.game.campaign !== null ? this.campaignPlayer : null;
 	}
 
-	//The campaign's progress between scenarios, for the state (src/legacy/state.ts)
 	getCampaignProgress(): CampaignProgress {
 		return { isStart: this.isCampaignStart, removeNonCampaignUnits: this.removeNonCampaignUnits,
 			awardPrototype: this.awardPrototype };
 	}
 
-	//And back, for a scenario restored from the state: its campaign player is the last player of the
-	//campaign's country, as setupPlayers links it
+	//For a scenario restored from the state: its campaign player is the last player of the campaign's
+	//country, as setupPlayers links it
 	setCampaignProgress(progress: CampaignProgress, scenario: Scenario) {
 		const g = this.game;
 		this.isCampaignStart = progress.isStart;
@@ -382,10 +355,9 @@ export class GameHost {
 
 	//---- A program's turn
 
-	//The game goes on: the campaign's next scenario once the player has clicked its outcome away, else a
-	//program's actions, until one the screen shows (its shown goes on) or the end of its turn (the screen goes
-	//on with the next player's, turnChanged). Nothing while the screen shows a program's action or a message
-	//is open. Called again while it goes on (a screen that shows at once), it goes on in the same call
+	//The campaign's next scenario once the player has clicked its outcome away, else a program's actions, until
+	//one the screen shows or the end of its turn. Called again while it runs (a screen that shows at once), it
+	//goes on in the same call.
 	goOn() {
 		if (this.going) {
 			this.again = true;
@@ -402,35 +374,32 @@ export class GameHost {
 		}
 	}
 
-	//One round of goOn: nothing before the game has started, after its end, or while a message is open
+	//Nothing before the game has started, after its end, or while a message is open
 	goOnce() {
 		const g = this.game;
 		if (!g.gameStarted || g.gameEnded || !g.uiMessageClicked)
 			return;
-		if (this.nextScenarioWaiting()) //Load next scenario in campaign chain
+		if (this.nextScenarioWaiting())
 			this.loadNextScenario();
 		else if (!this.showing && programPlays(g.scenario.map.currentPlayer))
 			this.processAIActions();
 	}
 
-	//The harness's turn loop (harness/lib/harness.js ticks it, as the game's own did until #375) and the tests':
-	//the game goes on unless the screen is still showing a step (the old UI's animation of a move or an
-	//attack, a program's or one a harness script plays)
+	//The harness's turn loop (harness/lib/harness.js ticks it) and the tests': the game goes on unless the screen
+	//is still showing a step
 	processTurn() {
 		if (!this.showingStep())
 			this.goOn();
 	}
 
-	//The screen still shows a step, a program's or the person's (the old UI animating a move or an attack):
-	//what the turn loop holds on, and what the harness and the command-line player wait on before they look
-	//or play on (#378). A screen that shows each step at once has no showingStep
+	//The turn loop holds on it; the harness and the command-line player wait on it before they look or play
+	//on (#378)
 	showingStep(): boolean {
 		return this.screen.showingStep !== undefined && this.screen.showingStep();
 	}
 
-	//The program's actions: those the screen shows wait for its shown, the others play on at once (#8: an AI
-	//turn took a minute at an action a tick). No action left ends its turn, and the screen goes on with the
-	//next player's once it has shown it
+	//The actions the screen shows wait for its shown, the others play on at once (an action a tick made an AI
+	//turn take a minute, #8). No action left ends the turn; the screen then goes on with the next player's.
 	processAIActions() {
 		const g = this.game;
 		while (!this.showing && !g.gameEnded && !this.nextScenarioWaiting()) {
@@ -444,15 +413,14 @@ export class GameHost {
 		}
 	}
 
-	//Plays a program's action: the move and the attack played and shown by the screen, the view events
-	//shown, the others as the player's commands. False when the program's turn should end
+	//False when the program's turn should end
 	processAction(action: AIAction | null): boolean {
 		if (!action || !action.param) return false;
 		return showAction(this, action, () => this.request()) || playCommand(this.game, action);
 	}
 
-	//What the program's next action waits for, until the screen calls the shown returned (once, and only the
-	//last request's: a scenario started since makes the one before stale)
+	//The next action waits until the screen calls the shown returned. Only the last request's counts: a
+	//scenario started since makes the one before stale.
 	request(): () => void {
 		const made = ++this.requests;
 		this.showing = true;
@@ -465,16 +433,13 @@ export class GameHost {
 		};
 	}
 
-	//Nothing is shown of a scenario that starts: what the screen still shows of the one before is stale
 	stopShowing() {
 		this.requests++;
 		this.showing = false;
 	}
 
-	//The turn ends on the session (src/app/driver.ts): the next player's turn start, the save, the side
-	//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit), true
-	//then: the host tells the end (whichever side's last turn ended it, the person's end turn button or the
-	//program's turn, #365), and the next turn's info isn't shown over it
+	//True when the turn limit ended the game (src/core/turn.ts endsAtTurnLimit): the host tells the end,
+	//whichever side's last turn ended it (#365), and the next turn's info isn't shown over it
 	endTurn(): boolean {
 		const g = this.game;
 		if (!endGameTurn(g))
@@ -483,7 +448,7 @@ export class GameHost {
 		return true;
 	}
 
-	//---- A screen that reads the core and sends the person's commands (the new UI, src/view/, #380)
+	//---- What a screen that reads the core and sends the person's commands uses (src/view/)
 
 	//The running game's world, as the screen's rules read it: null while no scenario plays
 	world(): World | null {
@@ -497,14 +462,13 @@ export class GameHost {
 		return Rng.cosmeticRandom();
 	}
 
-	//A command played whole on the core (Commands.execute): a program's move or attack the screen shows, a
-	//person's command. The victories it won are told once the screen has shown it (won)
+	//The victories it won are told once the screen has shown it (won)
 	play<C extends Command>(cmd: C): Executed<C["type"]> {
 		return Commands.execute(this.game.scenario, cmd);
 	}
 
-	//A program's move or attack played whole, then shown by the screen; its victories told once it has been shown,
-	//then shown (a program's next action). The command-line player's live mode shows its moves and attacks so too
+	//The command is played whole, then shown by the screen; its victories are told once it has been shown.
+	//The command-line player's live mode shows its moves and attacks so too.
 	playShown(cmd: ShownCommand, shown: () => void) {
 		const done = this.play(cmd);
 		this.screen.step(cmd, done, () => {
@@ -513,16 +477,14 @@ export class GameHost {
 		});
 	}
 
-	//The victories a step won, told once the screen has shown the step (the old UI at its animation's end):
-	//a move's capture, then its surprise attack's; an attack's retreat that took its side's last objective,
-	//then the sides whose enemy has no unit left
+	//Told in the order victoriesOf gives, once the screen has shown the step
 	won(result: ResultOf<CommandType>) {
 		for (const end of victoriesOf(result))
 			this.ended(end);
 	}
 
-	//A person's command from the screen, refused while a person can't play (personRefusal). The end of turn
-	//ends their turn (personEndTurn), the others are played whole (play)
+	//Refused while a person can't play (personRefusal). The end of turn ends their turn (personEndTurn), the
+	//others are played whole (play).
 	command(cmd: Command): Executed<CommandType> {
 		const refusal = this.personRefusal();
 		if (refusal !== null) return { ok: false, refusal };
@@ -540,9 +502,8 @@ export class GameHost {
 		return g.uiMessageClicked ? null : { reason: "Read the message first" };
 	}
 
-	//The person's end of turn (as the old UI's End turn did, src/ui.ts before #351): the combat log starts again
-	//before the next turn's start logs its resupplies and reinforcements (#86), then a program's turn plays,
-	//unless the turn limit ended the game (#365)
+	//The combat log starts again before the next turn's start logs its resupplies and reinforcements (#86),
+	//then a program's turn plays, unless the turn limit ended the game (#365)
 	personEndTurn() {
 		CombatLog.reset();
 		if (!this.endTurn())
@@ -550,7 +511,7 @@ export class GameHost {
 	}
 
 	//A message the player clicks away holds the game (a program's turn, the campaign's next scenario) until
-	//they do (the old UI's UIBuilder.message sets the same flag); then it goes on
+	//messageClosed
 	holdForMessage() {
 		this.game.uiMessageClicked = false;
 	}
@@ -562,8 +523,7 @@ export class GameHost {
 
 	//---- The end of the game
 
-	//The game ended as the session says (a victory when the step that won it has been shown, the turn
-	//limit when the turn ended): told, and what follows, the campaign's next scenario or the main menu
+	//What follows is the campaign's next scenario or the main menu
 	ended(end: SessionEnd) {
 		if (end.kind === "victory")
 			this.victory(end.side, endTypes[end.how]);
@@ -571,12 +531,10 @@ export class GameHost {
 			this.turnLimit(end.side);
 	}
 
-	//The scenario won by side, how (an endGameType value). In a campaign the campaign player's outcome
-	//goes on to the next scenario. A single scenario's is told as a defeat to a person who played the
-	//other side only, as a win to a person who played it, with the winner's country and score (#76: the
-	//old game asked whose turn it was, so a person whose last unit fell attacking was told they won, and
-	//it always said the hexes were captured). With no person playing, only who won (#366). Its OK opens
-	//the main menu
+	//how: an endGameType value. In a campaign the campaign player's outcome goes on to the next scenario. A
+	//single scenario's is told as a defeat to a person who played the other side only, as a win to a person
+	//who played it (Deliberate #76: the original asked whose turn it was). With no person playing, only who
+	//won (#366). Its OK opens the main menu.
 	victory(side: number, how: string) {
 		const g = this.game, map = g.scenario.map;
 		const rating = g.scenario.checkVictory();
@@ -599,10 +557,9 @@ export class GameHost {
 		g.gameEnded = true;
 	}
 
-	//The game ended at the turn limit, whichever side's last turn ended it (the person's end turn button or
-	//the AI's turn, #365): in a campaign the scenario's outcome for the campaign player and the next
-	//scenario (in the classic rules a loss; in the remaster's a defender that held out wins, #256); a
-	//single scenario ends, the screen telling who won
+	//In a campaign the scenario's outcome is the campaign player's, then the next scenario (in the classic
+	//rules a loss; in the remaster's a defender that held out wins, #256); a single scenario ends, the screen
+	//telling who won.
 	turnLimit(endedSide: number) {
 		const g = this.game;
 		if (g.campaign === null) {
@@ -613,12 +570,10 @@ export class GameHost {
 		this.continueCampaign(turnLimitResult(g.session.world, endedSide, this.getCampaignPlayer().side), endGameType.noTurnsLeft);
 	}
 
-	//The turn limit's outcome (src/core/turn.ts turnLimitOutcome), told by the sides a person plays now as a
-	//victory is (#385: it was told by the session's start, DEFEAT to a game of AIs, and the tutorial's person
-	//after the hand-over wasn't told their own): with no person or both sides played, only who won. In the
-	//classic rules the side that ended its last turn lost, as the original said. In the remaster's the
-	//defender that held out wins and the attacker that didn't take all its objectives loses (#256); with
-	//no attacker the side holding more objectives wins (#231)
+	//Told by the sides a person plays now, as a victory is (#385): with no person or both sides played, only
+	//who won. In the classic rules the side that ended its last turn lost, as the original said. In the
+	//remaster's the defender that held out wins and the attacker that didn't take all its objectives loses
+	//(#256); with no attacker the side holding more objectives wins (#231).
 	turnLimitMessage(endedSide: number) {
 		const w = this.game.session.world, person = this.personSides();
 		const o = turnLimitOutcome(w, endedSide);
@@ -635,8 +590,8 @@ export class GameHost {
 			: "The enemy held more objectives to the end"));
 	}
 
-	//The sides a person plays now, by the players' types: -1 none, a side, or 2 both (hotseat). Not the
-	//session's start: the tutorial hands the Axis to the person and the Allies to the AI past its 5th turn (#366)
+	//-1 none, a side, or 2 both (hotseat), by the players' types now, not at the session's start: the tutorial
+	//hands the Axis to the person and the Allies to the AI past its 5th turn (#366)
 	personSides(): number {
 		let sides = -1;
 		for (const p of this.game.scenario.map.getPlayers())
@@ -646,8 +601,8 @@ export class GameHost {
 	}
 }
 
-//The victories a step won (the host's won), in the old UI's order: a move's capture, then its surprise
-//attack's; an attack's retreat that took its side's last objective, then the sides whose enemy has no unit left
+//A move's capture, then its surprise attack's; an attack's retreat that took its side's last objective, then the
+//sides whose enemy has no unit left
 function victoriesOf(result: ResultOf<CommandType>): SessionEnd[] {
 	if (result === null || typeof result !== "object") return [];
 	if ("move" in result) return moveVictories(result);
@@ -667,17 +622,16 @@ function attackVictories(r: AttackResult | null): SessionEnd[] {
 	return [...capture, ...r.victorySides.map((side): SessionEnd => ({ kind: "victory", side, how: "elimination" }))];
 }
 
-//No current player also goes on to process a program's actions
+//(no current player also goes on to process a program's actions)
 function programPlays(player: Player | null) {
 	return !player || player.type === playerType.aiLocal || player.type === playerType.aiScripted;
 }
 
-//The actions a program's turn shows on the screen, played and shown there: the program's next action waits for its
-//shown, asked for (request) before anything else is. A unit picked and a look at a hex too: the screen shows them a
-//moment before the next action (#8). False for an action the screen doesn't show
+//The actions the screen shows: the next action waits for the shown, asked for (request) before anything else
+//is. A unit picked and a look at a hex too (#8). False for an action the screen doesn't show.
 function showAction(host: GameHost, a: AIAction, request: () => () => void): boolean {
 	switch (a.type) {
-		//(the move takes its path in the unit's move range, which the old UI shows)
+		//(the move takes its path in the unit's move range)
 		case actionType.move: {
 			const shown = request(), [unit, to] = a.param;
 			const cells = GameRules.getMoveRange(host.game.scenario.map, unit);
@@ -702,15 +656,13 @@ function showAction(host: GameHost, a: AIAction, request: () => () => void): boo
 	}
 }
 
-//The commands a program's actions send as the player's (the AI's purchases and deployment are its turn
-//start's, its upgrades none: they pass)
+//The AI's purchases and deployment are its turn start's, its upgrades none: they pass
 const commandOf = { [actionType.resupply]: "resupply", [actionType.reinforce]: "reinforce", [actionType.mount]: "mount",
 	[actionType.umount]: "unmount" } as const;
 const passing: number[] = [actionType.upgrade, actionType.buy, actionType.deploy];
 
-//A program's action other than a move, an attack and a view event: its command, on the core. The scripted
-//tutorial can queue no unit (#80), which the command refuses where the engine threw. False for the end of
-//its turn and an action unknown
+//The scripted tutorial can queue no unit (#80), which the command refuses instead of throwing. False for
+//the end of the turn and an unknown action.
 function playCommand(g: Game, a: AIAction): boolean {
 	if (a.type === actionType.resupply || a.type === actionType.reinforce || a.type === actionType.mount || a.type === actionType.umount) {
 		const unit = a.param[0];
@@ -722,7 +674,7 @@ function playCommand(g: Game, a: AIAction): boolean {
 	return passing.includes(a.type);
 }
 
-//A single scenario's player: isAI 1 is the AI, 2 the scripted AI, or as the scenario or the save says
+//isAI 1 is the AI, 2 the scripted AI, else as the scenario or the save says
 function setupScenarioPlayer(p: Player, map: GameMap) {
 	if (uiSettings.isAI[p.id] === 1 || p.type === playerType.aiLocal) {
 		p.type = playerType.aiLocal;
@@ -733,8 +685,7 @@ function setupScenarioPlayer(p: Player, map: GameMap) {
 	}
 }
 
-//Which sides are played on this computer: -1 none, 0 or 1, 2 both (hotseat). Scripted AI sides count as
-//local
+//-1 none, 0 or 1, 2 both (hotseat). Scripted AI sides count as local.
 function localSideOf(players: Player[]): number {
 	let sides = 1, side = -1;
 	for (const p of players) {
@@ -747,10 +698,10 @@ function localSideOf(players: Player[]): number {
 	return sides > 1 || DEBUG_AI_MOVES ? 2 : side;
 }
 
-//The game the engine plays in, made the running one: the programs are the session's controllers
-//(src/app/driver.ts), the scenarios start on the core (src/app/start.ts), the selection puts a unit back
-//aboard by the game's embark, and the engine reads the game's fields at the moment it needs them
-//(src/legacy/context.ts), so what a harness or a test assigns to game.* is seen as before
+/**
+ * Makes g the running game and wires the engine to it. The engine reads the game's fields when it needs them
+ * (src/legacy/context.ts), so what a harness or a test assigns to game.* is seen.
+ */
 export function runGame(g: Game) {
 	setGame(g);
 	AI.driver = coreDriver;

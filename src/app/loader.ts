@@ -1,5 +1,5 @@
 /**
- * ScenarioLoader - Loads XML scenarios as exported from mapconvert.py script
+ * ScenarioLoader - loads the XML scenarios as exported from the mapconvert.py script
  *
  * http://www.linuxconsulting.ro
  * http://openpanzer.net
@@ -17,18 +17,19 @@ import { fileEquipment, type ScenarioFile } from "../core/newgame";
 import { readScenarioFile } from "../core/scenariofile";
 import type { Scenario } from "../legacy/scenario";
 
-//Where the scenario files are, relative to the page (Scenario.scenarioPath is the same string)
+/** Where the scenario files are, relative to the page. */
 export const scenarioPath = "resources/scenarios/data/";
 
-//Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
-//size), then the equipment of the players countries and of the units; then ScenarioLoader.build makes the game (the
-//core's newGame, src/app/start.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load (an
-//equipment file too, #367) calls it with scen.isLoaded false.
+/**
+ * Loads the scenario XML, then the map image (its size gives the real map size), then the equipment of the
+ * players' countries and of the units; then ScenarioLoader.build makes the game and calls
+ * scen.onLoadFinished(). A file that doesn't load (an equipment file too, #367) calls it with scen.isLoaded false.
+ */
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
-	//Who makes the game once its files are in (src/app/start.ts, set by the host's runGame)
+	//Set by the host's runGame to buildOnCore (src/app/start.ts)
 	declare static build: (scen: Scenario, file: ScenarioFile, imageSize: [number, number]) => void;
-	//The countries of the core units a campaign carries in, loaded beside the players' (src/app/start.ts)
+	//Set by the host's runGame to carriedCountries (src/app/start.ts)
 	declare static coreCountries: () => number[];
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;
@@ -36,7 +37,7 @@ export class ScenarioLoader {
 	constructor() {
 		var scen: Scenario = null;
 
-		this.noCache = true; //add a timestamp to the scenario url so the browser doesn't cache it
+		this.noCache = true; //adds a timestamp to the scenario url so the browser doesn't cache it
 
 		this.loadScenario = function(scenarioObject: Scenario) {
 			const xmlHttp = new XMLHttpRequest();
@@ -59,7 +60,6 @@ export class ScenarioLoader {
 			xmlHttp.send(null);
 		}
 
-		// Private functions
 		function parseScenario(xmlData: Document) {
 			if (xmlData == null || !parseMapHeader(xmlData))
 				loadFailed();
@@ -84,8 +84,7 @@ export class ScenarioLoader {
 			scen.onLoadFinished();
 		}
 
-		//The map image's size gives the map's (the scenario's rows and cols are only an upper limit),
-		//then the equipment of the players' countries and their supporting ones, and a campaign's core units'
+		//The scenario's rows and cols are only an upper limit: the map image's size gives the map's
 		function loadMapImage(xmlData: Document, src: string) {
 			const img = new Image();
 			img.src = src;
@@ -95,9 +94,9 @@ export class ScenarioLoader {
 				const imageSize: [number, number] = [img.width, img.height];
 				//(a file that doesn't load fails the load, #367)
 				Equipment.addPlayersEquipment(players, function() {
-					if (--Equipment.equipmentToLoad) //called after each file, the last one makes the game
+					if (--Equipment.equipmentToLoad) //called after each file
 						return;
-					//(then the files of the units' equipment its countries don't have, #286; the file read once,
+					//(then the files of the units' equipment its countries don't have, #286; the file is read once,
 					//for them and the game)
 					const file = readScenarioFile(xmlData);
 					Equipment.addUnitsEquipment(fileEquipment(file), () => ScenarioLoader.build(scen, file, imageSize), loadFailed);
@@ -106,7 +105,6 @@ export class ScenarioLoader {
 			img.onerror = loadFailed;
 		}
 
-		//The players' countries and supporting countries, for the equipment to load
 		function playerCountries(xmlData: Document) {
 			return Array.from(xmlData.getElementsByTagName("player")).map((p) => ({ country: +p.getAttribute("country"),
 				supportCountries: p.getAttribute("support").split(", ").map(Number).filter((c) => c > 0) }));

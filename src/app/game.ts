@@ -25,11 +25,13 @@ import type { RulesetName } from "../core/types";
 import { game } from "./running";
 import type { CampaignProgress } from "../core/state";
 
-//Game is what the page, the harness and the tests hold of the running game: its fields, and the members that
-//hand the game's course and a program's turn to its host (src/app/host.ts), which keeps the campaign's progress and
-//shows the game on its screen: the page's UI (src/view/screen.tsx, given by src/main.ts), a screen that shows
-//nothing until then (src/app/nullscreen.ts). The constructor's body sets up the methods, typed as declare fields
-//(docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
+/**
+ * What the page, the harness and the tests hold of the running game: its fields, and the members that hand the
+ * game's course and a program's turn to its host (src/app/host.ts). The screen is a null screen until
+ * src/main.ts gives the host the UI's.
+ */
+//The constructor's body sets up the methods, typed as declare fields (docs/TYPES.md rule 3). A class isn't
+//hoisted: the game is made after it
 export class Game {
 	declare state: GameState;
 	declare campaign: Campaign;
@@ -39,10 +41,10 @@ export class Game {
 	declare spotSide: number;
 	declare rules: RulesetName;
 	declare uiMessageClicked: boolean;
-	declare session: Session | null; //the core's session the game plays on (src/app/driver.ts), null before a scenario
-	declare host: GameHost; //the game's course: scenarios, the campaign, the end (src/app/host.ts)
+	declare session: Session | null; //null before a scenario
+	declare host: GameHost;
 	declare init: () => void;
-	declare endTurn: () => boolean; //true when the turn limit ended the game (the end announced)
+	declare endTurn: () => boolean; //true when the turn limit ended the game
 	declare setupGameState: () => void;
 	declare newScenario: (scenFile: string, scenIntro?: string) => void;
 	declare onScenarioLoadFinished: (scenIntro: string | null, isRestore: boolean) => void;
@@ -62,13 +64,13 @@ export class Game {
 		this.campaign = null;
 		this.scenario = null;
 
-		this.gameStarted = false; //Game not yet fully initialised
-		this.gameEnded = false; //Game ended in victory or defeat
-		this.spotSide = -1; //currently visible side on map
-		//The rules the game plays by (#53): the settings' at a new game, the save's at a load, kept through a
-		//campaign; classic until then, as the tests and the contracts play
+		this.gameStarted = false;
+		this.gameEnded = false; //in victory or defeat
+		this.spotSide = -1; //the side visible on the map
+		//The settings' at a new game, the save's at a load, kept through a campaign (#53); classic until then, as
+		//the tests and the contracts play
 		this.rules = "classic";
-		this.uiMessageClicked = false; //set to true when user clicks ok on uiMessage window, which then tells the host to go on
+		this.uiMessageClicked = false; //set when the player clicks OK on a message, which then tells the host to go on
 
 		//Restores the last saved game, or starts the default scenario if there is none
 		this.init = function() {
@@ -77,17 +79,15 @@ export class Game {
 				this.newScenario.bind(this, "failRestore"));
 		}
 
-		//A program's turn is the host's (src/app/host.ts), and so is the harness's turn loop (processTurn)
 		this.endTurn = function() { return this.host.endTurn(); }
 
 		this.session = null;
-		this.host = new GameHost(this, nullScreen(this)); //(the page gives it the UI's screen, src/main.ts)
+		this.host = new GameHost(this, nullScreen(this));
 
-		//The game's course is the host's: what the page, GameState, the harness and the tests call hands it on.
-		//setupGameState: called by GameState after a game was restored from a save (local, file or cloud)
+		//GameState calls setupGameState after a game was restored from a save
 		this.setupGameState = function() { this.host.gameLoaded(); }
 
-		//scenFile "failRestore" is passed when restoring the last save failed at startup
+		//"failRestore" is passed when restoring the last save failed at startup
 		this.newScenario = function(scenFile: string, scenIntro?: string) {
 			if (scenFile === "failRestore") {
 				for (let i = 0; i < uiSettings.isAI.length; i++)
@@ -97,7 +97,6 @@ export class Game {
 			this.host.newScenario(scenFile, scenIntro);
 		}
 
-		//isRestore is true when the scenario came from a saved game
 		this.onScenarioLoadFinished = function(scenIntro: string | null, isRestore: boolean) {
 			this.host.scenarioLoaded(scenIntro, isRestore);
 		}
@@ -114,8 +113,7 @@ export class Game {
 Game.defaultScenario = DEFAULT_SCENARIO;
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
-//The running game lives in running.ts, where the UI reads it; game.ts makes it, the host sets and wires it
-//(src/app/host.ts runGame), and it is re-exported for main.ts, the harness and the tests
+//The running game lives in running.ts; it is re-exported for main.ts, the harness and the tests
 runGame(new Game());
 export { game };
 

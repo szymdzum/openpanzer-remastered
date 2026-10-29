@@ -1,19 +1,16 @@
 /**
- * SaveGame - the saved game: the state as data with its scenario data, versioned, and the saves of
- * the format before imported
+ * SaveGame - the saved game: versioned JSON of the state and its scenario data, and the import of saves of the
+ * format before
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * A save is { version, rules, data, state } (docs/STATE.md D3, D11): the rules the game plays by (#53),
- * toData's scenario data and state (src/legacy/state.ts), plain JSON and self-contained, the scenario file
- * isn't read again. readSave reads one back, a save of version 2 (before the objectives each side had
- * to take at the start were kept, #256: unknown) or 1 (before the rules were chosen too: the classic
- * ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
- * objects): what that save had is kept, what it never stored is listed as unknown, and the load
- * keeps the game's own there (the equipment lists as loaded, the random streams where they are,
- * the campaign's progress), as loading it always did. GameState (src/app/storage.ts) reads and
- * writes the saves, loads the equipment and the campaign; this builds the scenario.
+ * A save is { version, rules, data, state } (docs/STATE.md D3, D11), self-contained: the scenario file isn't
+ * read again. readSave also reads version 2 (no objectives kept at the start, #256) and 1 (no rules chosen:
+ * the classic ones), and imports a save of the format before (GameStateExport, the JSON of the game's
+ * objects). What that one never stored is listed as unknown, and the load keeps the game's own there.
+ * GameState (src/app/storage.ts) reads and writes the saves, loads the equipment and the campaign; this
+ * builds the scenario.
  */
 
 import { Equipment } from "../legacy/equipment";
@@ -35,12 +32,13 @@ export interface SaveFile {
 	state: GameState;
 }
 
-//What a save of the format before never stored. The import fills these with placeholders and the
-//load keeps the game's own instead: the scenario list's description, the equipment lists as
-//loaded, the random streams where they are, Game's campaign progress, the campaign's starting
-//prestige (from the campaign loaded). The rest a load starts without, as it always did: the undo
-//of the last move, the core units of the players who don't play the campaign (#149). The next id
-//is the one after the highest
+/**
+ * What a save of the format before never stored. The import fills these with placeholders and the load keeps
+ * the game's own: the scenario list's description, the equipment lists as loaded, the random streams where
+ * they are, Game's campaign progress, the campaign's starting prestige (from the campaign loaded). A load
+ * starts without the undo of the last move and the core units of the players who don't play the campaign
+ * (#149). The next id is the one after the highest.
+ */
 export type UnknownPart = "description" | "equipment" | "rng" | "campaignProgress" | "startPrestige" | "undo"
 	| "reserves" | "nextUnitId";
 
@@ -49,14 +47,12 @@ export interface ReadSave {
 	unknown: UnknownPart[];
 }
 
-//The game as a save, with the rules it plays by
 export function writeSave(scenario: Scenario, host: CampaignHost | null, rules: RulesetName): SaveFile {
 	const { data, state } = toData(scenario, host);
 	return { version: SAVE_VERSION, rules, data, state };
 }
 
-//A save from its JSON, this format's or the one before it; null when it's neither (or a later
-//version)
+/** Null when the JSON is neither this format nor the one before (a later version too). */
 export function readSave(json: string): ReadSave | null {
 	let o: unknown;
 	try {
@@ -73,8 +69,7 @@ export function readSaveObject(o: unknown): ReadSave | null {
 	const s = o as Partial<SaveFile> & Partial<GameStateExport>;
 	if (s.version === SAVE_VERSION && s.data && s.state)
 		return { save: { ...s, rules: rulesOf(s) } as SaveFile, unknown: [] };
-	//(version 2 didn't keep the objectives at the start, #256; version 1 had no rules either: its games played
-	//the classic ones)
+	//(version 2 has no objectives at the start, #256; version 1 no rules either: its games play the classic ones)
 	const version = s.version as number;
 	if ((version === 1 || version === 2) && s.data && s.state)
 		return { save: { version: SAVE_VERSION, rules: version === 1 ? "classic" : rulesOf(s), data: withoutStartObjectives(s.data),
@@ -86,17 +81,17 @@ export function readSaveObject(o: unknown): ReadSave | null {
 
 const rulesOf = (s: Partial<SaveFile>): RulesetName => s.rules === "remaster" ? "remaster" : "classic";
 
-//The scenario data of a save from before the objectives at the scenario's start were kept: unknown, in
-//their place before the hexes. The turn limit and the captures play by the rules for a game whose
-//attacker isn't known then (src/core/turn.ts attackerSide, #256)
+//The objectives at the start are unknown, in their place before the hexes. The turn limit and the captures play
+//by the rules for a game whose attacker isn't known then (src/core/turn.ts attackerSide, #256)
 function withoutStartObjectives(data: ScenarioData): ScenarioData {
 	const { hexes, ...rest } = data;
 	return { ...rest, startObjectives: null, hexes };
 }
 
-//The scenario of a save, with its players, units and the rest of the state, without the units it holds
-//destroyed (#290): the equipment of the players' countries is loaded already. A campaign's part comes once the campaign is loaded,
-//campaignFromSave
+/**
+ * The scenario of a save without the units it holds destroyed (#290). The equipment of the players' countries
+ * is loaded already; a campaign's part comes later, campaignFromSave.
+ */
 export function scenarioFromSave(read: ReadSave): Scenario {
 	const data = { ...read.save.data };
 	const state = { ...read.save.state };
@@ -112,7 +107,7 @@ export function scenarioFromSave(read: ReadSave): Scenario {
 	return fromData({ data, state: w.state });
 }
 
-//The campaign's part of a save, once host's campaign is loaded: its scenario and Game's progress
+/** Call once host's campaign is loaded. */
 export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: Scenario) {
 	const c = { ...read.save.state.campaign, id: host.campaign.id };
 	if (read.unknown.includes("campaignProgress"))
@@ -120,27 +115,24 @@ export function campaignFromSave(read: ReadSave, host: CampaignHost, scenario: S
 	campaignFromData(host, c, scenario);
 }
 
-//The format before: GameState.exportGameState wrote the JSON of the game's objects, the scenario
-//(with its map, hexes and units), the players and the campaign's progress; a local save wrote the
-//scenario and the players as items of their own, and the campaign's as a third
+//The format before: the JSON of the game's objects, as the original's exportGameState wrote it. A local save
+//wrote the scenario, the players and the campaign's progress as items of their own.
 export interface GameStateExport {
 	scenario: SavedScenario;
 	players: SavedPlayer[];
 	campaign: CampaignSave | null;
 }
 
-//The campaign progress kept in a save of the format before (getCampaignSave): the campaign
-//player's core unit list as it was, a unit deployed (isDeployed), destroyed or not
+//The campaign progress of a save of the format before: the campaign player's core unit list as it was
 export interface CampaignSave {
 	id: number;
-	file?: string;			//since 3.x: finds the campaign again if the list changed
+	file?: string;			//finds the campaign again if the list changed
 	scenario: number;
 	country: number;
 	difficulty?: number;
 	coreUnits: SavedUnit[];
 }
 
-//The fields of the objects the format before has and the import reads
 interface SavedUnit extends OffMapUnit {
 	id: number;
 	isDeployed: boolean;
@@ -203,7 +195,6 @@ interface SavedPlayer {
 	prestigePerTurn?: number[];
 }
 
-//A save of the format before as this one: what it had kept, what it never stored listed as unknown
 export function importSave(old: GameStateExport): ReadSave {
 	const s = old.scenario, m = s.map, c = old.campaign;
 	const unknown: UnknownPart[] = ["description", "equipment", "rng", "campaignProgress", "undo", "reserves", "nextUnitId"];
@@ -232,7 +223,7 @@ export function importSave(old: GameStateExport): ReadSave {
 	return { save: { version: SAVE_VERSION, rules: "classic", data, state }, unknown };
 }
 
-//The scenario's part: a save older than the field has the scenario's start there
+//(a save older than a field has the scenario's start there)
 function importScenario(s: SavedScenario): ScenarioState {
 	return {
 		file: s.file, date: s.date, turnsPerDay: s.turnsPerDay, dayTurn: s.dayTurn || 0, atmospheric: s.atmosferic,
@@ -242,20 +233,17 @@ function importScenario(s: SavedScenario): ScenarioState {
 	};
 }
 
-//The campaign's part: its progress and starting prestige weren't saved (unknown)
 function importCampaign(c: CampaignSave): CampaignState {
 	return { id: c.id, file: c.file || "", scenario: c.scenario, country: c.country, difficulty: c.difficulty || 0,
 		startPrestige: 0, progress: { isStart: false, removeNonCampaignUnits: false, awardPrototype: false } };
 }
 
-//A hex's field, or its default when the save wrote the hex as {}
 function or<T>(value: T | undefined, otherwise: T): T {
 	return value === undefined ? otherwise : value;
 }
 
-//The hexes into data's and the state's, and the units on them in the order of their ids, the order
-//they were placed in. A save whose ids aren't unique (stale ids, #64) has them numbered again in
-//hex order, as loading it always did
+//The units on the hexes come in the order of their ids, the order they were placed in. A save whose ids
+//aren't unique (stale ids, #64) has them numbered again in hex order.
 function importMap(old: GameStateExport, data: ScenarioData): { hexes: HexState[]; units: UnitState[]; renumbered: boolean } {
 	const hexes: HexState[] = [];
 	const onMap: { unit: SavedUnit; row: number; col: number; hex: HexState; air: boolean }[] = [];
@@ -283,7 +271,7 @@ function importMap(old: GameStateExport, data: ScenarioData): { hexes: HexState[
 	return { hexes, units, renumbered: !keepIds };
 }
 
-//Scenario.reinforcements by turn key: integer keys enumerate in ascending order
+//(integer keys enumerate in ascending order)
 function importReinforcements(reinforcements: SavedScenario["reinforcements"]): ReinforcementState[] {
 	const list: ReinforcementState[] = [];
 	for (const t of Object.keys(reinforcements))
@@ -306,9 +294,8 @@ function playerOf(p: SavedPlayer): PlayerState {
 	};
 }
 
-//The campaign player's core list of a save of the format before: a deployed unit is the map's unit
-//with its id (gone when the ids were numbered again), a destroyed one lost, the others waiting to
-//be deployed
+//A deployed unit is the map's unit with its id (gone when the ids were numbered again), a destroyed one lost,
+//the others wait to be deployed
 function campaignCore(coreUnits: SavedUnit[], units: UnitState[]): CoreUnit[] {
 	const core: CoreUnit[] = [];
 	for (const u of coreUnits) {
