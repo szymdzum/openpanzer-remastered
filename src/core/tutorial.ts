@@ -1,23 +1,9 @@
 /**
- * Tutorial - the scripted opponent and guide of the tutorial (tutorial.xml) as a controller
- * (controller.ts): the original's AIScripted script without the UI
+ * Tutorial - the scripted opponent and guide of the tutorial (tutorial.xml) as a controller: the
+ * original's AIScripted script without the UI
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
- *
- * Both sides play a script for turns 1 to 5: messages pointing at hexes, selections, mounts, moves,
- * attacks, a reinforcement and a resupply. A turn's actions are built when the turn starts, the units
- * they name looked up then, by the hex they stand on (or picked by their starting hex when the script
- * joins the game), and played one by one later, as the old game played them (Game.processAction); a
- * selection, a message, the main menu are view events (the main menu opens when the last turn is built,
- * not when it is played).
- * The script is planned on the terrain's costs: each move is in its unit's range from where the turn
- * before left it (#188: it was planned one point a hex, so most moves were refused and the game got
- * stuck on turn 2, #80). The dice decide the rest, so an order the dice made pointless is skipped (an
- * order of a unit that isn't there, an attack on a unit gone or out of reach, a move into a hex an enemy
- * is seen on), never refused.
- * From turn 6 on, side 0 goes to a person and the other side to the AI, which plans nothing that turn
- * (#81).
  */
 
 import type { Command } from "./command";
@@ -27,21 +13,21 @@ import type { Position, UnitId, UnitState, World } from "./types";
 import { isInAttackRange } from "./attack";
 import { hexIndex, isSpotted, unitAt, unitById } from "./world";
 
-//The units the tutorial picks by their starting hexes when it joins the game
+//The units the tutorial picks by their starting hexes when it joins the game.
 const NAMED = { recon: [8, 12], legioninf: [4, 2], pz2a: [9, 6], ssinf1: [8, 6], ssinf2: [9, 5], ssinf3: [9, 4], arty: [8, 4],
 	inf1: [8, 15] } as const;
 type Name = keyof typeof NAMED;
 type Named = Record<Name, UnitId | null>;
 
-//A unit an action names: one of the picked ones, or the one on a hex when the turn is built
+//A unit an action names: one of the picked ones, or the one on a hex when the turn is built.
 type Who = Name | readonly [number, number];
 
 //A message said only when the city (8,15) is as it says (#269): the dice can leave its defender standing
-//after turn 3's four attacks, which skips the tank's capture
+//after turn 3's four attacks, which skips the tank's capture.
 type City = "free" | "held" | "taken";
 
 //One action of the script; noFuel empties the unit's fuel when the turn is built, so the resupply
-//after it has something to do. {prestige} in a message is the prestige icon
+//after it has something to do. {prestige} in a message is the prestige icon.
 type Step =
 	| readonly ["message", string, number, number, City?]
 	| readonly ["select" | "mount" | "reinforce" | "resupply" | "noFuel", Who]
@@ -49,8 +35,9 @@ type Step =
 	| readonly ["attack", Who, Who]
 	| readonly ["mainMenu"];
 
-//Where the script moves its units, turn by turn: each within the unit's move range from where the
-//turn before left it (on its transport where it mounts), as the terrain costs it
+//Where the script moves its units, turn by turn: each within the unit's move range from where the turn
+//before left it (on its transport where it mounts), planned on the terrain's costs (#188: one point a
+//hex got most moves refused and the game stuck on turn 2, #80).
 const AT = {
 	//turn 1, towards the city (8,15); turn 2 puts the infantry next to it, on 7,15, 8,14 and 9,14
 	legion1: [8, 7], pz1: [8, 11], ssinf1: [7, 11], ssinf2: [9, 11], ssinf3: [10, 10], arty1: [8, 10],
@@ -62,7 +49,7 @@ const AT = {
 	ssinf3T5: [14, 9], arty5: [12, 11], pz5: [14, 8],
 } as const;
 
-//Turn 1: the objectives, the units, the moves towards the city
+//Turn 1: the objectives, the units, the moves towards the city.
 const AXIS_TURN_1: Step[] = [
 	["message", "The objective of the game is to conquer all enemy positions marked by a golden frame and enemy flag. This is one of the positions. Moving one of your units into this position will capture this city and raise your flag over it.", 8, 15],
 	["message", "This is the second primary objective since it has your enemy flag (Republican Spain) and a golden frame around. Capturing primary objectives gives you a good amount of points called prestige which can be used to upgrade or buy new troops.", 16, 8],
@@ -90,7 +77,7 @@ const AXIS_TURN_1: Step[] = [
 	["message", "Moving cost depends on terrain: the city is still too far to reach in one turn. We should end turn <span class='smallButtonSubMenu'>t</span>which will start enemy turn. If we don't capture all primary objectives in the maximum number of turns (shown left of the top bar) the scenario will end in defeat.", ...AT.arty1],
 ];
 
-//Turn 2: the moves into fire range
+//Turn 2: the moves into fire range.
 const AXIS_TURN_2: Step[] = [
 	["message", "All units are dismounted at the start of your turn. Let's mount the infantry again and move it next to the city with our tank, into fire range. Our artillery is already close enough to fire on the city.", 8, 15],
 	["mount", AT.ssinf1],
@@ -106,10 +93,10 @@ const AXIS_TURN_2: Step[] = [
 	["message", "As we moved all our units and now the targets are in fire range, we should end turn <span class='smallButtonSubMenu'>t</span> which will start enemy turn.", 8, 14],
 ];
 
-//Turn 2 of the allies: the infantry in the city fires on the mounted SS infantry
+//Turn 2 of the allies: the infantry in the city fires on the mounted SS infantry.
 const ALLIES_TURN_2: Step[] = [["attack", "inf1", "ssinf1"]];
 
-//Turn 3: artillery first, the city taken, the gamble on the last objective
+//Turn 3: artillery first, the city taken, the gamble on the last objective.
 const AXIS_TURN_3: Step[] = [
 	["message", "Notice how this infantry unit jumped out of transport when attacked, instead of staying in the vulnerable transport. Only infantry units will do this others will not dismount when attached. All units are dismounted at the start of your turn.", 7, 15],
 	["message", "This is an artillery unit, depending on it's fire range <span class='statsGlyph'>&gt;</span> it can fire on enemy positions from afar without suffering losses. Also each attack will soften enemy positions reducing their <span class='statsGlyph'>&quot;</span> entrenchment.", ...AT.arty1],
@@ -133,7 +120,7 @@ const AXIS_TURN_3: Step[] = [
 	["select", AT.recon2],
 ];
 
-//Turn 4: a reinforcement, the units moved towards the last objective
+//Turn 4: a reinforcement, the units moved towards the last objective.
 const AXIS_TURN_4: Step[] = [
 	["select", AT.surprised],
 	["message", "You can reinforce this unit casualties by clicking on the <span class='smallButtonSubMenu'>#</span> button at the bottom of the screen. Reinforcements costs prestige and the amount is reduced by enemy units adjacent to your unit. After reinforce unit can no longer attack or move.", ...AT.surprised],
@@ -158,7 +145,7 @@ const AXIS_TURN_4: Step[] = [
 	["move", [8, 15], ...AT.pz4],
 ];
 
-//Turn 5: the attacks on the front line, the resupply, the end of the tutorial
+//Turn 5: the attacks on the front line, the resupply, the end of the tutorial.
 const AXIS_TURN_5: Step[] = [
 	["select", AT.ssinf3T4],
 	["message", "Let's attack the weakest enemy unit on the front line. The attack cursor gives an estimate of your casualties on the left and enemy casualties on the right below the flags of the units involved in combat.", 15, 9],
@@ -181,7 +168,6 @@ const AXIS_TURN_5: Step[] = [
 	["message", "Remember to tap or click the <span class='smallButtonSubMenu'>t</span> end turn button twice to end your turns. Depending on scenario you or the enemy might also receive reinforcements. On this tutorial you will receive reinforcements next turn.", 16, 8],
 ];
 
-//An action with its units looked up: ids, null where there was none
 interface Queued {
 	step: Step[0];
 	unit: UnitId | null;
@@ -191,12 +177,17 @@ interface Queued {
 	city: City | null;	//a message's condition
 }
 
-//The scripted player
+/**
+ * Both sides play the script for turns 1 to 5. A turn's actions are built when it starts, the units
+ * they name looked up then by the hex they stand on (the picked ones by their starting hex when the
+ * script joins the game), and played one by one later. A selection, a message and the main menu are
+ * view events; the main menu opens when the last turn is built, not when it is played. From turn 6 on,
+ * side 0 goes to a person and the other side to the AI, which plans nothing that turn (#81).
+ */
 export function tutorialController(player: number): Controller {
 	let named: Named = null;
 	const queue: Queued[] = [];
-	//AIScripted.buildActions: the turn's actions queued after any left, the world changed where the
-	//script changes it
+	//The turn's actions queue after any left; the world changes where the script changes it
 	const build = (w: World): Played => {
 		const built = buildTurn(w, player, named);
 		queue.push(...built.queue);
@@ -220,8 +211,8 @@ export function tutorialController(player: number): Controller {
 
 //Whether an order still makes sense when its turn comes: the dice decide whether the city's defender
 //falls, retreats or holds, and whether a unit survives. An order of a unit that isn't there, an attack
-//on a unit gone or out of reach, a move into a hex an enemy is seen on are skipped (the old game got
-//stuck on an attack without its unit for good, #80)
+//on a unit gone or out of reach and a move into a hex an enemy is seen on are skipped, never refused
+//(the original got stuck for good on an attack without its unit, #80).
 function playable(w: World, q: Queued, player: number): boolean {
 	if (q.step === "message") return q.city === null || cityIs(w, q.city, player);
 	if (q.step === "select") return true;
@@ -231,7 +222,7 @@ function playable(w: World, q: Queued, player: number): boolean {
 	return q.step !== "move" || !enemySeenOn(w, q.at, player);
 }
 
-//The city taken by the player, held by an enemy unit, or free of one (not taken yet)
+//The city taken by the player, held by an enemy unit, or free of one (not taken yet).
 function cityIs(w: World, city: City, player: number): boolean {
 	const hex = hexIndex(w, 8, 15), there = unitAt(w, hex, false);
 	if (city === "taken") return w.state.map.hexes[hex].owner === player;
@@ -265,7 +256,7 @@ function pick(w: World): Named {
 }
 
 //The script of the turn for the side: its actions queued, the world with the fuel it empties, the main
-//menu it opens. Past turn 5, the hand-over: side 0 to a person, the other to the AI
+//menu it opens. Past turn 5, the hand-over: side 0 to a person, the other to the AI.
 function buildTurn(w: World, player: number, named: Named): { world: World; queue: Queued[]; view: ViewEvent[]; handOver: boolean } {
 	const turn = w.state.turn.turn, side = w.state.players[player].side;
 	if (turn < 1 || turn > 5) return { world: handOver(w, player), queue: [], view: [], handOver: true };
@@ -289,7 +280,6 @@ function queued(s: Exclude<Step, readonly ["mainMenu"]>, who: (x: Who) => UnitId
 	return q;
 }
 
-//The unit's own fuel emptied (whoever it is)
 function noFuel(w: World, id: UnitId | null): World {
 	return { ...w, state: { ...w.state, units: w.state.units.map((u) => u.id === id ? { ...u, fuel: 0 } : u) } };
 }
@@ -299,7 +289,6 @@ function handOver(w: World, player: number): World {
 	return { ...w, state: { ...w.state, players: w.state.players.map((p) => p.id === player ? { ...p, type } : p) } };
 }
 
-//What the old game did with the action (Game.processAction)
 function orderOf(q: Queued): Order {
 	switch (q.step) {
 		case "message": return { view: { type: "message", text: q.text, at: q.at } };
@@ -309,7 +298,7 @@ function orderOf(q: Queued): Order {
 	}
 }
 
-//A command of a unit (one that is there: playable)
+//Only for a unit that is there (playable).
 function unitCommand(q: Queued): Command {
 	const unit = q.unit;
 	if (q.step === "move") return { type: "move", unit, to: q.at };

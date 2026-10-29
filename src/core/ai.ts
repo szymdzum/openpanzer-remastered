@@ -1,23 +1,8 @@
 /**
- * AI - the computer player as a controller (controller.ts) on the core: src/legacy/ai.ts's purchases,
- * deployment and plan, answering in commands
+ * AI - the computer player as a controller: its purchases, its deployment and a plan of its turn
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
- *
- * At its turn's start the AI buys units with the prestige over its reserve and deploys its core
- * units, then plans its whole turn at once on the state as it is (#94 kept: before its
- * reinforcements arrive), unit by unit, each scored hex and attack drawing from its own stream
- * (state.rng.ai, D8) in the old order. Its plan is a queue of the commands it then plays one by one,
- * whatever happened in between: the old AI's actions, as Game played them (processAction):
- * - a move to where the plan said, along its move range then, which the step refuses when the unit
- *   that was to leave the hex is still there (#74: its move failed);
- * - an attack, which the step refuses when the target is out of range by then (Game skipped it);
- * - a resupply or a reinforcement;
- * - a mount, right before a move only its transport makes (#82).
- * The reinforcement budget is the prestige left after the purchases (#21). Kept: the attack scores
- * count the hidden units' support fire (#17), and the objectives are scored in the order of the side's
- * list (D7).
  */
 
 import type { Command } from "./command";
@@ -41,12 +26,18 @@ export interface AIControllerOptions {
 	config?: AIConfig;	//the settings of the rules the game plays by (w.rules.ai) when not given
 }
 
-//The computer player of player id
+/**
+ * At its turn's start the AI buys and deploys, then plans the whole turn at once on the state as it is
+ * (#94 kept: before its reinforcements arrive) and plays the plan's commands one by one, whatever
+ * happened in between: `step` refuses a move onto a hex the unit that was to leave still holds (#74,
+ * the move failed) and an attack whose target is out of range by then (Game skipped it). A mount comes
+ * right before a move only its transport makes (#82).
+ */
 export function aiController(player: number, options: AIControllerOptions = {}): Controller {
 	const configOf = (w: World): AIConfig => options.config || w.rules.ai.config;
 	let queue: Command[] = [];
-	//The prestige left for reinforcements: the player's when the AI was made, then after each turn's
-	//purchases (#21: the old AI took it before them, and spent the same prestige twice)
+	//Reinforcements get the prestige left after the purchases (#21: the original took it before them and
+	//spent the same prestige twice)
 	let prestigeLeft = 0;
 	return {
 		player,
@@ -72,34 +63,32 @@ export function aiController(player: number, options: AIControllerOptions = {}):
 	};
 }
 
-//The side attacks while it has more objectives still to take than the enemy: it can't win at the turn
-//limit by holding what it has (the side holding more objectives wins there, #231), so it must move. The
-//roles follow the game: an attacker that has taken enough to lead defends what it holds, and the
-//defender that has lost the lead attacks to win it back
+//The side attacks while it has more objectives still to take than the enemy: the side holding more wins
+//at the turn limit, so holding what it has isn't enough (#231). An attacker that has taken enough to
+//lead defends what it holds; the defender that lost the lead attacks to win it back.
 function isAttacker(w: World, side: number): boolean {
 	return w.state.objectives[side].length > w.state.objectives[~side & 1].length;
 }
 
-//The share of the bonus for staying entrenched the side's units keep away from the enemy (#235)
+//The share of the entrenchment bonus its units keep away from the enemy: the rules' for a side that
+//attacks, all of it for one that defends (#235).
 const stayShareOf = (w: World, side: number): number => isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
 
-//The AI's stream where the state has it (null: the state's streams aren't seeded, Math.random)
+//The AI's stream (its state is null when the state's streams aren't seeded: Math.random). The purchases
+//and the scores draw from it, and the order of the draws is behavior.
 function aiStream(w: World): RngStream {
 	return { state: w.state.rng === null ? null : w.state.rng.ai };
 }
 
-//The world with the AI's stream where rng left it
 function withAIStream(w: World, rng: RngStream): World {
 	const s = w.state;
 	if (s.rng === null || s.rng.ai === rng.state) return w;
 	return { ...w, state: { ...s, rng: { game: s.rng.game, ai: rng.state } } };
 }
 
-//AI.startTurn: the purchases, bought from the last one of each list, air first; then each undeployed
-//core unit on the first deployment hex of its side it fits on, hex by hex. The commands are the ones
-//the old AI's calls amount to (Player.buyUnit, Map.deployPlayerUnit where it succeeded), a unit with
-//the transport it was bought with (#224); the redraw it asked for after (AI.onUnitsDeployed) is the
-//view's, from the events
+//Plays the purchases from the last of each list, air first, a unit with the transport it was bought
+//with (#224); then deploys each undeployed core unit on the first deployment hex of its side it fits
+//on, hex by hex. The redraw after is the view's, from the events.
 function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 	const rng = aiStream(w);
 	const bought = purchases(w, player, config, rng);
@@ -124,15 +113,15 @@ function buyAndDeploy(w: World, player: number, config: AIConfig): Played {
 	return { world, commands, events, view: [] };
 }
 
-//Map.getDeployHexes: the deployment hexes of the side's players, row by row (in the remaster's rules a
-//side with none deploys on its own towns, #302)
+//The deployment hexes of the side's players, row by row (in the remaster's rules a side with none
+//deploys on its own towns, #302).
 function deployHexes(w: World, side: number): Position[] {
 	const cols = w.state.map.cols;
 	return deploymentHexes(w, side).map((hex) => ({ row: Math.floor(hex / cols), col: hex % cols }));
 }
 
-//What the AI buys with the prestige over its reserve, part of it for air units (none under 300), in
-//the order it buys them
+//What it buys with the prestige over its reserve, a share of it for air units (none under 300), in
+//the order it buys.
 function purchases(w: World, player: number, config: AIConfig, rng: RngStream): Purchase[] {
 	let prestige = w.state.players[player].prestige;
 	if (prestige <= config.prestigeReserve) return [];
@@ -148,10 +137,9 @@ function purchases(w: World, player: number, config: AIConfig, rng: RngStream): 
 	return [...air.reverse(), ...ground.reverse()];
 }
 
-//The country's equipment lists by unit class, copied for one purchase: buyUnits drops from a copy
-//what it can't buy now, the state's lists stay whole (#22: the old AI cut them for the rest of the
-//session). A class the country has no list of gives an empty one each time (#101), as
-//Equipment.getCountryEquipmentByClass did
+//The country's equipment lists by unit class, copied for one purchase: buyUnits drops what it can't
+//buy from a copy, the state's lists stay whole (#22: the original cut them for the rest of the
+//session). A class the country has no list of gives an empty one each time (#101), as the original.
 function countryLists(w: World, country: number): (uclass: number) => number[] {
 	const indexes = w.state.equipment.indexes[country];
 	const classes = indexes !== undefined ? indexes.unitclass : undefined;
@@ -167,10 +155,9 @@ function countryLists(w: World, country: number): (uclass: number) => number[] {
 	};
 }
 
-//A unit the AI buys and its transport (-1: none)
 interface Purchase {
 	eqid: number;
-	transport: number;
+	transport: number;	//-1: none
 }
 
 interface Buying {
@@ -182,16 +169,16 @@ interface Buying {
 	year: number;
 }
 
-//The country's ground transports, as the state has them (the AI reads the list, it doesn't change it)
+//The state's own list, not a copy: the AI only reads it.
 function groundTransports(w: World, country: number): readonly number[] {
 	const indexes = w.state.equipment.indexes[country];
 	const list = indexes !== undefined ? indexes.unitclass[String(unitClass.groundTransport)] : undefined;
 	return list !== undefined ? list : [];
 }
 
-//AI buyUnits: random affordable units of the classes in classList, cycling through the list, until
-//the prestige runs out or a whole cycle ends on a class with nothing to buy. A unit a transport can
-//carry gets one, as a person buys it (#224)
+//Random affordable units of the classes in classList, cycling through the list, until the prestige
+//runs out or a whole cycle ends on a class with nothing to buy. A unit a transport can carry gets
+//one, as a person buys it (#224).
 function buyUnits(b: Buying, prestige: number, classList: number[]): Purchase[] {
 	const units: Purchase[] = [];
 	let classIndex = 0, noneFound = false;
@@ -216,8 +203,8 @@ function buyUnits(b: Buying, prestige: number, classList: number[]): Purchase[] 
 	return units;
 }
 
-//A random one of the country's ground transports that carries the unit, is built and not yet retired
-//(the equipment window's), and fits the prestige left; -1 for a unit no transport carries, or none fits
+//A random ground transport that carries the unit, is in production (yearavailable to yearexpired) and
+//fits the prestige left; -1 when no transport carries the unit or none fits.
 function pickTransport(b: Buying, eqid: number, prestige: number): number {
 	if (!isTransportable(b.w, eqid)) return -1;
 	const weight = b.w.equipment[eqid].groundweight;
@@ -229,15 +216,14 @@ function pickTransport(b: Buying, eqid: number, prestige: number): number {
 	return fitting.length === 0 ? -1 : fitting[Math.floor(nextRandom(b.rng) * fitting.length)];
 }
 
-//What the AI can buy now; the rest leaves this purchase's list: too dear for what is left, outside its
-//price range, deep naval, not yet built
+//Whether it buys it now; if not, buyUnits drops it from this purchase's list: too dear for what is
+//left, outside its price range, deep naval, not yet built.
 function canBuy(w: World, eqid: number, prestige: number, config: AIConfig, year: number): boolean {
 	const cost = unitCost(w, eqid), e = w.equipment[eqid];
 	return !(cost > prestige || cost > config.maxUnitCost || cost < config.minUnitCost || e.movmethod === movMethod.deepnaval
 		|| e.yearavailable > year);
 }
 
-//What the plan knows of one of the AI's units during the turn: what it did and what it can't do
 interface AIUnit {
 	u: UnitState;
 	noAttack: boolean;
@@ -255,14 +241,12 @@ interface Planning {
 	s: Scorer;
 	queue: Command[];
 	prestigeLeft: number;
-	//The share of the bonus for staying entrenched its units keep away from the enemy: the rules' for a side
-	//that attacks, all of it for one that defends (#235)
 	stayShare: number;
 }
 
-//AI.planTurn: the AI's units, artillery, fortifications, air and naval combat units first, each given
-//another pass until it can do nothing more. A pass reinforces, resupplies, moves and attacks; a unit
-//that did nothing in its first pass scores its moves again in the next (new draws: it may move then)
+//Artillery, fortifications, air and naval combat units go first, each given another pass (reinforce,
+//resupply, move, attack) until it can do nothing more. A unit that did nothing in its first pass
+//scores its moves again in the next (new draws: it may move then).
 function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number) {
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
@@ -292,7 +276,6 @@ function actsFirst(w: World, u: UnitState): boolean {
 		|| (isAir(w, u) && uclass !== unitClass.airTransport) || (isSea(w, u) && uclass !== unitClass.navalTransport);
 }
 
-//A weak unit, or one that can't move or attack anymore, reinforced while there is prestige left
 function reinforceUnit(t: Planning, a: AIUnit) {
 	if (!mayReinforce(t, a)) {
 		a.noReinforce = true;
@@ -309,7 +292,6 @@ function mayReinforce(t: Planning, a: AIUnit): boolean {
 		|| unitData(w, a.u).uclass === unitClass.fortification || t.prestigeLeft <= 0);
 }
 
-//As much strength as the prestige left pays for, up to what the hex gives
 function reinforce(t: Planning, a: AIUnit): boolean {
 	const w = t.s.w, u = a.u;
 	const perStrength = costPerStrength(w, u), value = reinforceValue(w, u);
@@ -321,7 +303,6 @@ function reinforce(t: Planning, a: AIUnit): boolean {
 	return (a.didResupplyReinforce = true);
 }
 
-//A unit low on ammo or fuel, or one that can't move or attack anymore, resupplied
 function resupplyUnit(t: Planning, a: AIUnit) {
 	const w = t.s.w, u = a.u;
 	if (!canResupply(w, u) || a.didResupplyReinforce || a.didAttack || a.didMove) {
@@ -332,14 +313,13 @@ function resupplyUnit(t: Planning, a: AIUnit) {
 	}
 }
 
-//The unit's own ammo and fuel (not its transport's) under the AI's thresholds
+//Its own ammo and fuel, not its transport's.
 function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 	return u.ammo < config.minAmmo || (unitUsesFuel(w, u) && u.fuel < config.minFuel);
 }
 
-//The unit to the best scored hex of its move range or, mounted, of its transport's, if it beats where it
-//stands: the hex taken, the one it leaves freed, for the units of its kind (#74, #225). A unit moved in
-//its transport can't fire that turn (#82)
+//The hex it takes and the one it leaves count for the units of its kind only, air or ground (#74,
+//#225). A unit moved in its transport can't fire that turn (#82).
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const moving = !(a.didMove || a.didResupplyReinforce);
@@ -362,19 +342,18 @@ function moveUnit(t: Planning, a: AIUnit) {
 	a.newPosition = to.cell;
 }
 
-//The hexes a ground unit reaches only in its transport (a towed gun's whole range): the PG2 AI drives
-//its guns and infantry up in their trucks (#82). None for a unit without one or already moved, and not
-//next to an enemy ground unit the side sees: it would stand there in its truck until the round ends
+//The hexes a ground unit reaches only in its transport (a towed gun's whole range): the AI drives its
+//guns and infantry up in their trucks (#82). None for a unit without one or already mounted, and none
+//next to an enemy ground unit the side sees: it would stand there in its truck until the round ends.
 function mountedCells(w: World, u: UnitState, cells: MoveCell[]): MoveCell[] {
 	if (u.isMounted || !canMount(w, u)) return [];
 	return moveRange(w, { ...u, isMounted: true }).filter((m) => !cells.some((c) => c.row === m.row && c.col === m.col)
 		&& !nextToSeenEnemy(w, u, m));
 }
 
-//How near a seen enemy unit an attacker's unit counts as in contact: what one move of the enemy reaches
+//Within this distance of a seen enemy a unit is in contact: what one move of the enemy reaches.
 const CONTACT = 3;
 
-//An enemy unit the side sees within range hexes of the unit
 function nearSeenEnemy(w: World, u: UnitState, range: number): boolean {
 	const side = sideOf(w, u);
 	return w.state.units.some((other) => sideOf(w, other) !== side && distance(u.row, u.col, other.row, other.col) <= range
@@ -390,11 +369,10 @@ function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 	});
 }
 
-//The best scored hex of the move range, then of the hexes only its transport reaches (mounted), null
-//when none beats staying: where it stands scores with its entrenchment and, for a ground unit, its
-//objective; a hex with the objective it nears (less for an air unit, none for a ship), the cell's own
-//score first: a taken hex isn't scored further. A hex is scored for the unit standing there, not its
-//transport: it gets off it at the round's end
+//The best scored hex of the move range, then of the hexes only its transport reaches (mounted); null
+//when none beats staying. The objective it nears counts less for an air unit (0.3) and not for a ship.
+//A hex under -2000 (taken) skips attackPotential, so its draws too. A hex is scored for the unit
+//standing there, not its transport: it gets off it at the round's end.
 function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number)
 	: { cell: Position; mounted: boolean } | null {
 	let best = stayScore(s, u, stayShare);
@@ -413,9 +391,9 @@ function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[
 	return bestCell === null ? null : { cell: { row: bestCell.row, col: bestCell.col }, mounted: mounted.includes(bestCell) };
 }
 
-//Staying where it stands: the hex, for a ground unit its objective, its entrenchment, its attacks. Away
-//from the enemy an attacker's unit keeps only a share of its entrenchment's worth: the holes it dug far
-//from the front don't hold it back (#235); in contact it keeps them all, to hold the line it reached
+//Away from the enemy an attacker's unit keeps only a share of its entrenchment's worth: the holes it
+//dug far from the front don't hold it back (#235); in contact it keeps them all, to hold the line it
+//reached.
 function stayScore(s: Scorer, u: UnitState, stayShare: number): number {
 	const pos = { row: u.row, col: u.col };
 	let score = cellScore(s, u, pos, true);
@@ -425,8 +403,6 @@ function stayScore(s: Scorer, u: UnitState, stayShare: number): number {
 	return score + attackPotential(s, u, pos);
 }
 
-//The best scored target from where the unit stands or was ordered to move to, if the attack beats its
-//class's losses (less eager from an objective). Its expected kills count for the next attackers
 function attackUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	if (!mayAttack(a)) {
@@ -443,12 +419,10 @@ function attackUnit(t: Planning, a: AIUnit) {
 	a.didAttack = true;
 }
 
-//Not fired, attacked, resupplied or reinforced yet, nor moved in its transport (it can't fire after)
 function mayAttack(a: AIUnit): boolean {
 	return !(a.u.hasFired || a.didAttack || a.didResupplyReinforce || a.didMount);
 }
 
-//The target attacked, with the kills expected so far: past its strength, it counts as killed
 function expectKills(plan: AIPlan, target: UnitState, kills: number) {
 	let enemy = plan.enemyUnits.get(target.id);
 	if (enemy === undefined) plan.enemyUnits.set(target.id, enemy = { isAttacked: false, losses: 0, isKilled: false });
@@ -457,6 +431,8 @@ function expectKills(plan: AIPlan, target: UnitState, kills: number) {
 	if (enemy.losses > target.strength) enemy.isKilled = true;
 }
 
+//The best scored target, if the attack beats the losses its class accepts; from an objective it accepts
+//50 more. Its expected kills count for the next attackers (expectKills).
 function bestTarget(s: Scorer, from: UnitState): { unit: UnitState; kills: number } | null {
 	const w = s.w;
 	let best = -(s.config.attackLossesThreshold * s.config.unitClassLossCost[unitData(w, from).uclass]);
