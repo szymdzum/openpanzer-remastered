@@ -1,7 +1,6 @@
 /**
- * Mirror - the old engine's objects (Scenario, GameMap, Hex, Unit, Player) as a copy of the core's world
- * for the harness, the old game objects' code and its tests to read (#137), one way only (#376). The old UI
- * that drew them went in #351
+ * Mirror - the legacy objects (Scenario, GameMap, Hex, Unit, Player) as a copy of the core's world
+ * for the harness, the objects' own code and the tests to read (#137), one way only (#376)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -10,7 +9,7 @@
  * own code read. After each step or checkpoint applyData updates them in place to the world's state, by
  * unit id, keeping each object (code that holds one sees it change), and keeps that world: the next step
  * and the screen's rules start from it, not from the objects. What is written into them outside a step
- * (the old selection's hexes, src/legacy/selection.ts) never reaches the game: what changes the game is a command
+ * (the selection's hexes, src/legacy/selection.ts) never reaches the game: what changes the game is a command
  * (a unit left while disembarking goes back aboard by the embark, src/legacy/selection.ts). The world is made
  * from the objects only where they were set up outside a step and said so (touched, src/legacy/context.ts: a
  * load, the players' setup, a test), the streams moved outside a step (a seed) or the campaign went on;

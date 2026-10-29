@@ -274,7 +274,7 @@ export interface Hex {
 	getAttackableUnit(atkunit: Unit, airMode: boolean | number): Unit;
 	cleanup(): void;
 }
-//Returns air or ground unit on a hex depending on UI airMode
+//The air or the ground unit on a hex, by airMode
 Hex.prototype.getUnit = function(airMode?: boolean | number) {
 	if (this.unit !== null && this.airunit !== null) {
 		if (airMode)
@@ -399,7 +399,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	//What takes the units marked destroyed off the map (the game's: src/app/driver.ts)
 	declare static removeDestroyed: (map: GameMap) => void;
 
-	//The selected unit: the old UI's selection's, not the game's (src/legacy/selection.ts, #377)
+	//The selected unit: the selection's, not the game's (src/legacy/selection.ts, #377)
 	get currentUnit(): Unit { return this.getSelection().unit; }
 	set currentUnit(unit: Unit) { this.getSelection().unit = unit; }
 
@@ -421,7 +421,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	const board = new MapBoard(this); //the units: the list, their ids, the image cache
 	const unitList = board.units; //internal list of units
 	const unitImagesList = board.images; //a "hash" of unique unit images used for caching
-	const selection = new MapSelection(this); //the old UI's: the selected unit (currentUnit), the hexes it can move to and attack
+	const selection = new MapSelection(this); //the selected unit (currentUnit), the hexes it can move to and attack
 
 	this.allocMap = function() {
 		this.map = new Array(this.rows);
@@ -450,7 +450,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	this.getBoard = function() { return board; }
 	this.getVisibility = function() { return visibility; }
 	this.getUndoSlot = function() { return lastMove; }
-	//The old UI's selection, which it shows after each command as the old commands left it (src/legacy/selection.ts)
+	//The selection, not the game's state (src/legacy/selection.ts)
 	this.getSelection = function() { return selection; }
 
 	this.hasAliveUnits = function(side) {
