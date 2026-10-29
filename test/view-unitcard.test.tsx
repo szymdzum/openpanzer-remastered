@@ -1,5 +1,5 @@
 //The unit card's view model on the new UI (src/view/unitcard.ts, UnitInfo, #348 with #37) on hand-built worlds: the
-//old unit info window's facts laid out as the card (identity and tags, experience, condition, the folded sheet, attack
+//old unit info window's facts laid out as the card (identity and tags, experience, condition, attack
 //and defence, move, range, spotting and value, leaders), its transport and carrier views, an entry shown full and new,
 //and the dock's height the screen keeps
 import { act, cleanup, render } from "@testing-library/preact";
@@ -71,16 +71,6 @@ test("Attack and defence are the old window's stats; move, range and spotting co
 	const gun = handWorld({ rows: 6, cols: 6, units: [{ eqid: LEFH18, owner: 0, row: 2, col: 2, leader: leaderType.marksman }] }, undefined, { spotSide: 0 });
 	const g = gun.equipment[LEFH18];
 	expect(unitCardOf(gun, 0, null)!.figures[1]).toEqual({ label: "Range", value: g.gunrange + 1, prestige: false });
-});
-
-test("The folded sheet is every attack and defence stat by its short name, then range, spotting and move as the rules count them", () => {
-	const w = world(), e = w.equipment[PZ_IIA];
-	expect(unitCardOf(w, 0, null)!.sheet).toEqual([
-		{ name: "Soft atk", value: e.softatk }, { name: "Hard atk", value: e.hardatk }, { name: "Air atk", value: e.airatk },
-		{ name: "Naval atk", value: e.navalatk }, { name: "Gnd def", value: e.grounddef }, { name: "Air def", value: e.airdef },
-		{ name: "Close def", value: e.closedef }, { name: "Ranged def", value: e.rangedefmod }, { name: "Initiative", value: e.initiative },
-		{ name: "Range", value: 1 }, { name: "Spotting", value: e.spotrange }, { name: "Move", value: e.movpoints + 1 },
-	]);
 });
 
 test("A gun on its tractor opens on the tractor, as the old window did, and shows the gun itself in its unit view (#348)", () => {

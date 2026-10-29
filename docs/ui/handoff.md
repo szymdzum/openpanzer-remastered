@@ -50,7 +50,7 @@ Every existing ID stays. Add the class to the element and replace its inner mark
 | `#menu` | `pm-rail` | Three `.group` blocks: `#inspectunit`; `#slidemenu` with `#buy`, `#hex`, `#air`, `#zoom`, `#options`; `#mainmenu` to fold it. `#endturn` is the corner button. Add `.labels` on touch. |
 | `#statusBarButton` | `pm-btn` | In the status bar row, before `#combatLogButton`: opens the unit list. |
 | `#unit-context` | `pm-panel pm-ctx` | `.pm-btn` holding an icon and a caption, with `.cost` where an action has one. |
-| `#unit-info` | `pm-panel pm-uinfo` | The unit card. A row: identity, `.pm-meter` ×4, `.pm-stats`, More, Hide and Next unit. Unfolded (`.open`): the band `#unit-card.ui-more` above them in place of `.pm-stats`. Hidden (`.strip`): the name and `.ui-mini` ×3, and Show. |
+| `#unit-info` | `pm-panel pm-uinfo` | The unit card (components/UnitInfo). Hidden, the default (`.line`): `.ui-port`, `.ui-who` (`#uName`, stars, formation), `.ui-g` ×4, `.ui-turn` chips, More and Next unit. Unfolded (`.open`): identity, `.pm-meter` ×4 and the band `#unit-card.ui-more` above them, Less and Next unit. |
 | `#container-unitlist` | `pm-panel pm-unitlist` | `.hd` with the filters, then `#hscroll-unitlist.pm-strip` of `.pm-ucard`. |
 | `#equipment` | `pm-window pm-eq` | `.hd`, `#eqSelClass.pm-tabs`, `.body` (`.list` with `#eqUnitList.pm-grid` of `.pm-card`, and `.detail` with `.pm-cmp` and `#eqTransportList`), and `#eqActionsContainer.ft`. |
 | `#combatLog` | `pm-window pm-log` | `.summary`, then a `.sec` and `.pm-entry` rows per report. |
