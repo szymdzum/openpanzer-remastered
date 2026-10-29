@@ -88,8 +88,9 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 ### Comments
 
 - **On an export** (function, type, class): a `/** */` TSDoc block, one sentence on what it does or
-  returns. Add a why paragraph only when the code can't show it. `@param` and `@returns` only when the
-  type and the name leave a parameter unclear.
+  returns, **only when the name and the type don't already say it** (`isSea` needs none; `canCapture`'s
+  "air units and mounted guns can't" does). Add a why paragraph only when the code can't show it.
+  `@param` and `@returns` only when the type and the name leave a parameter unclear.
 - **Inside a function**: `//` only for why: a rule of the game that isn't obvious, a kept bug, the
   order of random draws, a parity trap with the original.
 - **File header**: 1-3 lines saying what the module is (the folder says the layer), then the license.

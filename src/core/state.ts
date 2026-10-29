@@ -193,7 +193,7 @@ export interface UndoState {
 	oldVictorySide: number | null;
 	prestigeGain: number;
 	scoreGain: number;
-	objectiveIndex?: number;	//where the objective taken was in its side's list (#141); absent when none, or not saved
+	objectiveIndex?: number;	//where the objective taken was in its side's list (#141); absent when none, or in a save from before #141
 }
 
 /** A unit that arrives on the map at a turn. */
