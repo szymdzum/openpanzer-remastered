@@ -1,6 +1,5 @@
-//The strategic map's drawing (#345, the StrategicMap card): over the terrain fit to the window, a chip per unit
-//and a large plaque per objective, laid out in the map's pixels so they shrink with it, as the card's scene does.
-//No grid, fog, move area, path or cursor at this zoom. It draws what src/view/map/strategic.ts computed.
+//The strategic map's drawing: over the terrain fit to the window, a chip per unit and a large plaque per objective,
+//laid out in the map's pixels so they shrink with it. No grid, fog, move area, path or cursor at this zoom.
 import { atMap, sideColour, type Viewport } from "./canvas";
 import { hexCentre } from "./hexgrid";
 import type { Plaque } from "./mapinfo";

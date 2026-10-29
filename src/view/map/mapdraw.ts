@@ -1,12 +1,11 @@
-//The map's canvas (#345): the terrain, the hex grid, the fog, the air rings, the move area, the zones, the
-//targets, the support fire, the selection, the move path, the units and their markers, the plaques, in the
-//MapOverlays card's order. It draws what the map's view model (src/view/map/mapview.ts, mapinfo.ts) computed and decides nothing. Colours and line widths are the tokens'
-//(src/view/tokens.ts), the same in both themes.
+//The map's canvas. Bottom first: the terrain, the grid and the fog (the ground), then the own units' tint, the air
+//rings, the deployment, the selection (move area, zones, targets, support fire), the path, the plaques, the units, the
+//ghost, the markers and the chips. It draws what the view model (mapview.ts, mapinfo.ts) computed and decides nothing.
 //
-//The canvas is the size of the screen, at the device's pixels (sharp on HiDPI, #31), and draws the part of
-//the map in view. The terrain and the sprites scale with the map (ZoomLevels); everything drawn on top
-//keeps its screen size: a line's path is laid out at the map's scale, then stroked at the screen's, so its
-//width is the token's in screen pixels, and the markers and the path's ring are drawn at screen points.
+//The canvas is the size of the screen, at the device's pixels (sharp on HiDPI, #31), and draws the part of the map in
+//view. The terrain and the sprites scale with the map; everything drawn on top keeps its screen size: a line's path is
+//laid out at the map's scale, then stroked at the screen's, so its width is the token's in screen pixels, and the
+//markers and the path's ring are drawn at screen points.
 import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, nearView, sideColour, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
 import type { Plaque, Support } from "./mapinfo";
@@ -19,7 +18,6 @@ import { TOKENS } from "../tokens";
 
 const MAP = TOKENS.map, PX = TOKENS.px;
 
-//What the canvas draws
 export interface Scene {
 	terrain: CanvasImageSource | null;
 	size: { width: number; height: number }; //the map's, in its own pixels: nothing is drawn past it
@@ -36,8 +34,8 @@ export interface Scene {
 	strategic: Strategic | null; //the strategic map instead of the rest, the map fit to the window (src/view/map/strategic.ts)
 	deploy: Deployment | null; //the deployment zone while a reserve unit is picked (src/view/map/deploy.ts)
 	ghost: Ghost | null; //the picked reserve unit on the hovered hex where a click places it
-	//The old map's two settings (#464): the hexes of the units of the player whose turn it is tinted (Mark own units on
-	//map), the enemy's strength plates in red (Mark enemy strength in red); both off when not given
+	//The settings Mark own units on map (the hexes of the units of the player whose turn it is tinted) and Mark enemy
+	//strength in red; both off when not given
 	marks?: { own: boolean; enemy: boolean };
 }
 
@@ -57,7 +55,6 @@ function drawGrid(c: CanvasRenderingContext2D, vp: Viewport, rows: number, cols:
 	c.globalAlpha = 1;
 }
 
-//The move area's tint, the one outline round it, the targets and the selected hex
 function drawSelection(c: CanvasRenderingContext2D, vp: Viewport, sel: Selection, support: Support | null) {
 	const unseen = new Set(sel.unseen.map((h) => h.row * 65536 + h.col));
 	fillHexes(c, vp, sel.area.filter((h) => !unseen.has(h.row * 65536 + h.col)), MAP["hex-move"], 0.16);
@@ -141,7 +138,7 @@ function drawPathEnd(c: CanvasRenderingContext2D, end: Point, path: Path) {
 	c.fillText(String(path.left), end.x, end.y + 0.5);
 }
 
-//The move path (MovePath): the route from hex centre to hex centre, a dot on each hex passed, its end
+//The route from hex centre to hex centre, a dot on each hex passed, then its end
 function drawPath(c: CanvasRenderingContext2D, vp: Viewport, path: Path) {
 	c.lineCap = "round";
 	pathPart(c, vp, path, true);
@@ -159,17 +156,15 @@ function drawPath(c: CanvasRenderingContext2D, vp: Viewport, path: Path) {
 	drawPathEnd(c, toScreen(hexCentre(last.row, last.col), vp), path);
 }
 
-//The old map's marks (#464), none when the scene doesn't give them
 const NO_MARKS = { own: false, enemy: false };
 const marksOf = (scene: Scene) => scene.marks === undefined ? NO_MARKS : scene.marks;
 
-//Mark own units on map (#464): the hexes of the units of the player whose turn it is tinted, as the old map's ownunit
-//hexes were
+//Mark own units on map: tints the hexes of the current player's units, as the original's ownunit hex style
 function drawOwnTint(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[], on: boolean) {
 	if (on) fillHexes(c, vp, units.filter((u) => u.current), MAP["map-axis"], 0.3);
 }
 
-//The air ring round each aircraft on top in the air layer (AirLayer): a light fill and a dashed line at screen size
+//The air ring round each aircraft on top in the air layer: a light fill and a dashed line at screen size
 function drawAirRings(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) {
 	const lifted = units.filter((u) => u.lifted);
 	if (lifted.length === 0) return;
@@ -185,15 +180,15 @@ function drawAirRings(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[
 	c.setLineDash([]);
 }
 
-//How far an aircraft on top in the air layer is lifted, and its shadow on the ground, in the map's pixels (AirLayer)
+//How far an aircraft on top in the air layer is lifted, and its shadow on the ground, in the map's pixels
 const LIFT = 4, SHADOW = { y: 9, blur: 2, alpha: 0.45 };
 //How far a unit's sprite stands above its hex's centre: a moving sprite and an explosion on it are drawn there too
 export const SPRITE_RAISE = 8;
 
-//A unit's sprite: the strip has nine facings from south to north, the other seven are mirrored. Drawn at the
-//map's scale, its centre a little above the hex's to leave room for the marker. The other layer's unit is
-//dimmed to 75% (unit-under-alpha) when under another on a shared hex; an aircraft on top in the air layer is lifted, its shadow on the ground under it (a canvas
-//shadow is in the device's pixels, whatever the transform)
+//The strip has nine facings from south to north, the other seven are mirrored. Drawn at the map's scale, its centre a
+//little above the hex's to leave room for the marker. A unit under another on a shared hex is dimmed
+//(unit-under-alpha); an aircraft on top in the air layer is lifted, its shadow on the ground under it (a canvas shadow
+//is in the device's pixels, whatever the transform)
 function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, images: Images) {
 	const img = images(u.bridge ? BRIDGE : u.icon);
 	if (img === null) return;
@@ -217,7 +212,7 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 	c.restore();
 }
 
-//The picked reserve unit on the hex where a click places it, at 55% (Deployment)
+//At 55%, on the hex where a click places the picked reserve unit
 function drawGhost(c: CanvasRenderingContext2D, vp: Viewport, g: Ghost, images: Images) {
 	c.save();
 	c.globalAlpha = 0.55;
@@ -262,8 +257,8 @@ function drawReadiness(c: CanvasRenderingContext2D, m: Marker, right: number, y:
 	if (fire) drawFireMark(c, x + 5 + (m.canMove ? 8 : 0), y + 5.5, m.noAmmo);
 }
 
-//The strength plate in the side's colour: square for the side shown's units, pointed ends for the enemy's, in red with
-//the old map's Mark enemy strength in red (#464)
+//The strength plate in the side's colour: square for the side shown's units, pointed ends for the enemy's, red for
+//the enemy's with Mark enemy strength in red
 function drawPlate(c: CanvasRenderingContext2D, m: Marker, side: number, x: number, y: number, w: number, enemyRed: boolean) {
 	c.beginPath();
 	if (m.own) c.rect(x, y, w, 11);
@@ -319,7 +314,6 @@ function drawRight(c: CanvasRenderingContext2D, m: Marker, x: number, y: number)
 	c.fillText(text, x + 2, y + 6);
 }
 
-//A sandbag per entrenchment level, under the plate
 function drawSandbags(c: CanvasRenderingContext2D, levels: number, cx: number, y: number) {
 	const left = cx - (levels * 6 - 1) / 2;
 	c.lineWidth = 0.5;
@@ -333,7 +327,7 @@ function drawSandbags(c: CanvasRenderingContext2D, levels: number, cx: number, y
 	}
 }
 
-//The marker under a unit at screen size (MapOverlays), the plate's top centre at p
+//At screen size, the plate's top centre at p
 function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, enemyRed: boolean, p: Point) {
 	const text = String(m.strength), w = text.length * 5 + 6;
 	const x = Math.round(p.x - w / 2), y = Math.round(p.y);
@@ -346,8 +340,8 @@ function drawMarker(c: CanvasRenderingContext2D, u: MapUnit, m: Marker, enemyRed
 	c.restore();
 }
 
-//The strength chip of a unit drawn under another on a shared hex: a small plate in its side's colour, up and
-//right of the hex's centre, at screen size, where the top unit's sprite and marker leave room
+//The chip of a unit under another on a shared hex, at screen size up and right of the hex's centre, where the top
+//unit's sprite and marker leave room
 function drawChip(c: CanvasRenderingContext2D, side: number, strength: number, p: Point) {
 	const text = String(strength), w = text.length * 5 + 5, x = Math.round(p.x + 12), y = Math.round(p.y - 22);
 	c.fillStyle = sideColour(side);
@@ -362,14 +356,13 @@ function drawChip(c: CanvasRenderingContext2D, side: number, strength: number, p
 	c.fillText(text, x + w / 2, y + 5.5);
 }
 
-//The chips of the units drawn under another
 function drawChips(c: CanvasRenderingContext2D, vp: Viewport, units: MapUnit[]) {
 	for (const u of units)
 		if (u.chip !== null) drawChip(c, u.side, u.chip, toScreen(hexCentre(u.row, u.col), vp));
 }
 
-//The canvas cleared (a copy of the ground put back when given), then the map's own pixels clipped: the grid's half hexes
-//at the edges reach past the map image, the fog and the overlays stop at its edge
+//The canvas cleared (a copy of the ground put back when given), then the map's own pixels clipped: the grid's half
+//hexes at the edges reach past the map image, the fog and the overlays stop at its edge
 function begin(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, ground: CanvasImageSource | null = null) {
 	c.setTransform(1, 0, 0, 1, 0, 0);
 	c.clearRect(0, 0, vp.width * vp.dpr, vp.height * vp.dpr);
@@ -382,16 +375,13 @@ function begin(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, ground: 
 	c.clip();
 }
 
-//The grid and the fog over the terrain
 function drawGroundMarks(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport) {
 	if (scene.grid) drawGrid(c, vp, scene.rows, scene.cols);
 	if (scene.fog !== null) drawFog(c, vp, scene.fog, scene.rows, scene.cols);
 }
 
-//The flag strip the scene's plaques draw from, once it has loaded; none without one
 const flagsImage = (scene: Scene, images: Images) => scene.flags === undefined ? null : images(scene.flags);
 
-//Everything over the ground, in the card's order
 function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
 	//(only the units and the plaques that can show on the screen, in their order)
 	const near = nearView(vp), units = scene.units.filter(near), plaques = scene.plaques.filter(near);
@@ -402,7 +392,7 @@ function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	if (scene.ghost !== null) drawPlaceOutline(c, vp, scene.ghost);
 	if (scene.selection !== null) drawSelection(c, vp, scene.selection, scene.support);
 	if (scene.path !== null) drawPath(c, vp, scene.path);
-	//(the plaques beneath the units: a name never covers one, #438)
+	//(the plaques beneath the units, so a name never covers one, #438)
 	drawPlaques(c, vp, plaques, flagsImage(scene, images));
 	atMap(c, vp);
 	for (const u of units) drawSprite(c, vp, u, images);
@@ -413,7 +403,6 @@ function drawOverGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	drawChips(c, vp, units);
 }
 
-//The whole map in view, cleared first
 export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport, images: Images) {
 	begin(c, scene, vp);
 	//(the strategic map shrinks the terrain: smoothed, not pixelated; then only its chips and objectives)
@@ -429,9 +418,9 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	c.restore();
 }
 
-//The map in two parts, for the layers the map keeps (src/view/map/layers.ts): the ground (the terrain, the grid and the fog),
-//then the rest over a copy of it. Together they draw what drawMap draws, pixel for pixel: the rest sets every state it
-//draws with, so it doesn't matter that the ground was drawn on another canvas. Not for the strategic map
+//The map in two parts, for the layers the map keeps (layers.ts): the ground (the terrain, the grid and the fog), then
+//the rest over a copy of it. Together they draw what drawMap draws, pixel for pixel: the rest sets every state it draws
+//with, so it doesn't matter that the ground was drawn on another canvas. Not for the strategic map
 export function drawGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport) {
 	begin(c, scene, vp);
 	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);

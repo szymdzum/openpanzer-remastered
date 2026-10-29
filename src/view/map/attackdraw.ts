@@ -1,6 +1,5 @@
-//The attack cursor on the map's canvas (#441, the AttackPreview card's stage 1): over the pointed target a brass
-//crosshair with the two losses, as the old attack cursor showed them; and a retreat's trail (CombatResults). It draws
-//what the view model (src/view/hud/odds.ts, src/view/hud/results.ts) computed, at screen size; colours are the tokens'.
+//The attack cursor on the map's canvas: over the pointed target a brass crosshair with the two losses, and a
+//retreat's trail. It draws what the view model (src/view/hud/odds.ts, results.ts) computed, at screen size.
 import type { Position } from "../../core/types";
 import { atMap, atScreen, sideColour, strokeLine, toScreen, type Viewport } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
@@ -27,7 +26,6 @@ function crosshair(c: CanvasRenderingContext2D, p: Point, r: number, colour: str
 	c.stroke();
 }
 
-//What the cursor draws: the glance over the pointed target
 export interface Preview {
 	glance: Glance | null;
 	trail: { from: Position; to: Position } | null; //a retreat just shown (CombatResults): from where the defender stood
@@ -39,7 +37,6 @@ export function drawPreview(c: CanvasRenderingContext2D, vp: Viewport, p: Previe
 	if (p.glance !== null) drawGlance(c, vp, p.glance);
 }
 
-//A retreat's trail: a dashed line from where the defender stood to where it fell back, over the dark under-stroke
 function drawTrail(c: CanvasRenderingContext2D, vp: Viewport, from: Position, to: Position) {
 	atMap(c, vp);
 	const a = hexCentre(from.row, from.col), b = hexCentre(to.row, to.col);
@@ -50,7 +47,7 @@ function drawTrail(c: CanvasRenderingContext2D, vp: Viewport, from: Position, to
 	strokeLine(c, vp, MAP["map-paper-raised"], 2, 4, [3, 3]);
 }
 
-//A loss chip: the loss typed on its side's colour, 0 when none; returns its width
+//The loss typed on its side's colour (0 when none); returns the chip's width
 function chip(c: CanvasRenderingContext2D, ch: LossChip, x: number, y: number): number {
 	const text = ch.loss === 0 ? "0" : "−" + ch.loss;
 	c.font = "bold 12px " + TOKENS.fonts.mono;
@@ -67,8 +64,7 @@ function chip(c: CanvasRenderingContext2D, ch: LossChip, x: number, y: number): 
 	return w;
 }
 
-//Over the pointed target: the brass crosshair on its centre, the two chips (yours, then theirs) at a fixed offset to its
-//lower right
+//The crosshair on the target's centre, the chips (yours, then theirs) at a fixed offset to its lower right
 function drawGlance(c: CanvasRenderingContext2D, vp: Viewport, g: Glance) {
 	atScreen(c, vp);
 	const p = toScreen(hexCentre(g.at.row, g.at.col), vp);

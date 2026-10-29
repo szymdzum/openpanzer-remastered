@@ -1,13 +1,13 @@
-//The map's ground kept as a layer while the hex grid is on (review proposal 7). The grid is about 2,300 hex paths at
-//1920 by 1080, ten times the rest of a frame; the ground (the terrain, the grid and the fog) changes with the scroll, the
-//scale, the screen's size, the world's fog and the grid, not with the pointer or a beat. So while it stays, a frame puts
-//back a copy of it and draws the rest over it. Measured in headless Chrome (the pull request has the numbers), a copy of
-//the screen costs what drawing the terrain does: without the grid a layer saves nothing, and the scenery under a beat
-//(everything but the moving sprite) would save only the units and their markers, a tenth of a frame, for a second canvas.
-//Neither is kept.
+//The map's ground kept as a layer while the hex grid is on. The grid is about 2,300 hex paths at 1920 by 1080, ten
+//times the rest of a frame; the ground (the terrain, the grid and the fog) changes with the scroll, the scale, the
+//screen's size, the world's fog and the grid, not with the pointer or a beat. So while it stays, a frame puts back a
+//copy of it and draws the rest over it. Measured in headless Chrome (the pull request has the numbers), a copy of the
+//screen costs what drawing the terrain does: without the grid a layer saves nothing, and the scenery under a beat
+//(everything but the moving sprite) would save only the units and their markers, a tenth of a frame, for a second
+//canvas. Neither is kept.
 //The layer is drawn again when anything it is drawn from changed, and only once the view stands still: during a scroll
-//each frame is drawn as before, without the copy. The map's colours are the same in both themes (src/view/tokens.ts), so
-//a theme changes no layer.
+//each frame is drawn as before, without the copy. The map's colours are the same in both themes (src/view/tokens.ts),
+//so a theme changes no layer.
 //Memory: 4 bytes a device pixel, 8 MB for 1920 by 1080, 33 MB at a device pixel ratio of 2, held while the grid is on.
 //A screen larger than LAYER_BUDGET is drawn as before, without it.
 import type { Viewport } from "./canvas";
@@ -16,8 +16,7 @@ import { drawGround, drawMap, drawOnGround, type Images, type Scene } from "./ma
 //(a 4K screen at 1x, or 1920 by 1080 at 2x: 33 MB)
 export const LAYER_BUDGET = 3840 * 2160;
 
-//What a frame draws: the scene, what goes over it (the attack cursor and a retreat's trail) and the beat playing, the
-//last two none on the strategic map
+//over: the attack cursor and a retreat's trail; motion: the beat playing; both none on the strategic map
 export interface Frame {
 	scene: Scene;
 	vp: Viewport;

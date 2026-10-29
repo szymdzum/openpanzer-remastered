@@ -1,6 +1,5 @@
-//The strategic map (#345, the StrategicMap card): the whole map fit to the window under the status bar, each
-//unit a chip of its side and each objective a large plaque, as the old map's uiToggleMapZoom drew flags. Plain
-//functions of the core's World, tested without the DOM (test/view-map.test.ts); src/view/map/strategicdraw.ts draws them.
+//The strategic map: the whole map fit to the window under the status bar, each unit a chip of its side and each
+//objective a large plaque. Tested without the DOM (test/view-map.test.ts); strategicdraw.ts draws them.
 import type { World } from "../../core/types";
 import { sideOf } from "../../core/world";
 import { eachSlot } from "./mapview";
@@ -20,12 +19,11 @@ export interface Chip {
 
 export interface Strategic {
 	chips: Chip[];
-	plaques: Plaque[]; //the objectives only: the towns are left out at this size, as the old strategic map left them
+	plaques: Plaque[]; //the objectives only: the towns are left out at this size
 	flags: string; //the flag strip of the scenario's equipment set
 }
 
-//The layer's units the side shown sees, row by row: the aircraft with the air layer on, else the ground units (each
-//slot as the layer has it, as the old strategic map took hex.airunit or hex.unit)
+//The layer's units the side shown sees, row by row: the aircraft with the air layer on, else the ground units
 export function strategicOf(w: World, airMode: boolean): Strategic {
 	const chips: Chip[] = [];
 	eachSlot(w, airMode, (u) => {

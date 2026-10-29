@@ -1,7 +1,6 @@
-//The map's hex grid in the pixels of the map image (PG2's, as the old renderer lays it out): flat-topped
-//hexes 60 wide and 50 high, a column every 45px, an odd column half a hex lower. The map image starts
-//inside the first column and row, which PG2 maps define as half hexes, so hex 0,0's centre is at -15,0.
-//Plain functions, no DOM: the map's view model and its drawing both read them (test/view-map.test.ts).
+//The map's hex grid in the pixels of the map image (PG2's): flat-topped hexes 60 wide and 50 high, a column every
+//45px, an odd column half a hex lower. The map image starts inside the first column and row, which PG2 maps define
+//as half hexes, so hex 0,0's centre is at -15,0.
 import type { Position } from "../../core/types";
 import { TOKENS } from "../tokens";
 
@@ -27,8 +26,7 @@ export const CORNERS: readonly Point[] = [
 ];
 export const EDGES: readonly (readonly [number, number])[] = [[0, 1], [5, 0], [4, 5], [3, 4], [2, 3], [1, 2]];
 
-//Whether a point, from a hex's centre, is inside the hex: within its height, and inside the slanted
-//edges that run from the top and bottom corners to the side points
+//Within the hex's height, and inside the slanted edges that run from the top and bottom corners to the side points
 function inside(dx: number, dy: number): boolean {
 	return Math.abs(dy) <= R && Math.abs(dx) <= SIDE - (SIDE / 2) * (Math.abs(dy) / R);
 }

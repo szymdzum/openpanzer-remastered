@@ -1,6 +1,5 @@
-//The icon sprite of the new UI, ported from docs/ui/components/bundle.js (the Icons card): 24px
-//symbols stroked in currentColor, and the nation marks, filled in their own colours. test/icons.test.tsx
-//checks that both maps stay the card's.
+//The icon sprite, ported from docs/ui/components/bundle.js (the Icons card): 24px symbols stroked in currentColor,
+//and the nation marks filled in their own colours. test/icons.test.tsx checks that both maps stay the card's.
 export const ICONS = {
 	'end-turn': '<path d="M7 3h10M7 21h10M8 3v2c0 3 8 4 8 7s-8 4-8 7v2M16 3v2c0 3-8 4-8 7s8 4 8 7v2"/>',
 	depot: '<path d="M4 8h16v12H4zM4 12h16M10 12v3h4v-3M8 8l2-4h4l2 4"/>',

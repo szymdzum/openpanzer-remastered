@@ -1,8 +1,7 @@
-//The map's view model (#345): what each hex of the map shows and what a click on it does, from the core's
-//World and nothing else (the MapOverlays and MovePath cards). Plain functions, no DOM, tested on a
-//hand-built world (test/view-map.test.ts); the canvas (src/view/map/mapdraw.ts) only draws their answers.
-//Every rule comes from the core's queries, never from distance: the move area is the core's move range,
-//the path the one the move takes, the targets the attack cells.
+//The map's view model: what each hex of the map shows and what a click on it does, from the core's World and nothing
+//else. Tested on a hand-built world (test/view-map.test.ts); the canvas (mapdraw.ts) only draws their answers.
+//Every rule comes from the core's queries, never from distance: the move area is the core's move range, the path the
+//one the move takes, the targets the attack cells.
 import type { Command } from "../../core/command";
 import { attackableUnit, attackCells, canFireThisTurn } from "../../core/attack";
 import { adjacent, samePlace } from "../../core/geometry";
@@ -13,8 +12,6 @@ import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, un
 import { unitClass } from "../../core/tables";
 import { canOrder, isShown } from "../store/model";
 
-//A unit's marker under its sprite (MapOverlays): what it can still do this turn, its strength in its
-//side's colour, experience, entrenchment and the hits it took this turn
 export interface Marker {
 	strength: number;
 	own: boolean; //the side shown's: a square plate, readiness shown; the enemy's plate has pointed ends
@@ -28,7 +25,6 @@ export interface Marker {
 	revealed: boolean; //an enemy that fired from a hex the side doesn't see: known to be there, not what's around it
 }
 
-//A unit as the map draws it
 export interface MapUnit {
 	id: UnitId;
 	row: number;
@@ -41,7 +37,7 @@ export interface MapUnit {
 	dim: boolean; //in the other layer's slot of a shared hex (MapLayers): drawn underneath at 75%, with a chip instead of its marker
 	chip: number | null; //the strength chip of a unit drawn underneath: the one thing its marker would have told
 	lifted: boolean; //an aircraft on top in the air layer (AirLayer): lifted with a shadow inside a dashed air ring
-	current: boolean; //the unit of the player whose turn it is (the old map's Mark own units, #464)
+	current: boolean; //the unit of the player whose turn it is (Mark own units on map)
 }
 
 //A hex's edge: adjacent()'s side k of the hex
@@ -51,11 +47,11 @@ export interface Edge {
 	side: number;
 }
 
-//The selected unit on the map: its hex, and when the person can order it, where it can go and what it can
-//hit. The area is the core's move range: the hexes it can stop on (tinted, or hatched where its side doesn't
-//see: a hidden enemy there is an ambush; for an aircraft none: only an enemy aircraft stops it, MapOverlays), the hexes it only passes (friends: not tinted), the outline round
-//all of them with the unit's own hex, and a bar on each edge of the area that faces an enemy its side sees
-//and whose zone of control ends the move there
+//The selected unit on the map: its hex, and when the person can order it, where it can go and what it can hit. The
+//area is the core's move range: the hexes it can stop on (tinted, or hatched where its side doesn't see: a hidden
+//enemy there is an ambush; for an aircraft none: only an enemy aircraft stops it), not the hexes it only passes
+//(friends); the outline goes round them with the unit's own hex; a bar on each edge of the area faces an enemy its
+//side sees and whose zone of control ends the move there
 export interface Selection {
 	unit: UnitId;
 	at: Position;
@@ -67,9 +63,8 @@ export interface Selection {
 	targets: Position[]; //the hexes with a unit it can attack, each once
 }
 
-//The path to the hovered hex (MovePath): the hexes from the unit's (seen: the side sees them, else the line
-//turns dashed) and how it ends (a ring with the moves left, light when the unit can move again, or a stop
-//square in an enemy zone)
+//The path to the hovered hex: the hexes from the unit's (seen: the side sees them, else the line turns dashed) and
+//how it ends (a ring with the moves left, light when the unit can move again, or a stop square in an enemy zone)
 export interface Path {
 	cells: (Position & { seen: boolean })[];
 	stop: boolean;
@@ -91,7 +86,7 @@ function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove"
 }
 
 //The current player's units that can still do something this turn: move, or fire at a target in range (the core's
-//attack cells); what End turn warns of when a person plays it (#8). A unit with its shot but nothing to hit isn't one
+//attack cells); what End turn warns of when a person plays it. A unit with its shot but nothing to hit isn't one
 //(#436), though its marker still shows the shot
 export function unitsToAct(w: World): UnitState[] {
 	return w.state.units.filter((u) => {
@@ -107,8 +102,6 @@ function markerOf(w: World, u: UnitState): Marker {
 		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) };
 }
 
-//A unit as the map draws it: alone on its hex or on top of it, with its marker (lifted when it is the air
-//layer's), or in the other layer's slot of a shared hex, dimmed underneath with a strength chip
 function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
 	const side = sideOf(w, u);
 	const bridge = u.id !== selected && isGround(w, u) && isBridgeForSide(w, hexIndex(w, u.row, u.col), side);
@@ -117,12 +110,11 @@ function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode:
 		lifted: top && airMode, current: u.owner === w.state.turn.currentPlayer };
 }
 
-//The units the side shown sees, hex by hex, row by row (MapLayers): every hex has a ground slot and an air slot.
-//A unit alone on its hex is drawn whole, with its marker, whatever the layer. Where both slots are taken the
-//one of the layer shown (airMode: the air slot) is on top with its marker; the other is drawn first, dimmed,
-//with a strength chip, and the layer still tells which unit a click deals with. (A click on a unit under it
-//still selects it, as the old UI's Hex.getUnit did, and selecting an aircraft switches the air layer on:
-//src/view/store/store.ts)
+//The units the side shown sees, hex by hex, row by row: every hex has a ground slot and an air slot. A unit alone on
+//its hex is drawn whole, with its marker, whatever the layer. Where both slots are taken the one of the layer shown
+//(airMode: the air slot) is on top with its marker; the other is drawn first, dimmed, with a strength chip, and the
+//layer tells which unit a click deals with (as the original's Hex.getUnit); selecting an aircraft switches the air
+//layer on (src/view/store/storecore.ts)
 export function mapUnits(w: World, airMode: boolean, selected: UnitId | null): MapUnit[] {
 	const units: MapUnit[] = [];
 	eachSlot(w, airMode, (top, below) => {
@@ -164,8 +156,7 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] };
 	const range = moveRange(w, u), side = sideOf(w, u);
 	const area = range.filter((c) => c.canMove && !samePlace(c, at)).map((c) => ({ row: c.row, col: c.col }));
-	//(round the hexes it can stop on and its own, as the old map tinted only those: not a friend's or an enemy's hex it
-	//only passes)
+	//(round the hexes it can stop on and its own, not a friend's or an enemy's hex it only passes)
 	const outline = range.length === 0 ? [] : outlineOf(w, [at, ...area]);
 	const targets: Position[] = [];
 	for (const c of attackCells(w, u))

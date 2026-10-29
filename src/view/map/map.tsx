@@ -1,8 +1,6 @@
-//The map (#345): the canvas the map is drawn on (src/view/map/mapdraw.ts) under a scrolling layer that takes
-//the pointer, and over it the pins over units low on supply (Tooltips, #346), the placing tag and the combat's results. A click selects, moves or attacks through the
-//store (src/view/store/store.ts), which asks the view model (src/view/map/mapview.ts) what it does. The canvas is
-//drawn again, once a frame at most, when what it shows changes: the world, the selection, the hovered
-//hex, the scroll, the window's size, an image that loaded.
+//The map: the canvas it is drawn on (mapdraw.ts) under a scrolling layer that takes the pointer, and over it the pins
+//over units low on supply, the placing tag and the combat's results. A click goes through the store, which asks the
+//view model (mapview.ts) what it does. The canvas is drawn again, once a frame at most, when what it shows changes.
 import { effect } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { Position, World } from "../../core/types";
@@ -51,20 +49,19 @@ class ImageCache {
 }
 
 
-//The strategic map fits the map under the status bar, so no objective hides behind it (StrategicMap): the
-//bar's foot from the map's top, and a little air, 0 without a bar
+//The strategic map fits the map under the status bar, so no objective hides behind it: the bar's foot from the
+//map's top, and a little air, 0 without a bar
 function underStatusBar(scroller: HTMLElement): number {
 	const bar = scroller.closest(".pm-screen")?.querySelector(".pm-status");
 	if (bar === null || bar === undefined) return 0;
 	return Math.max(0, bar.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top) + TOKENS.px["space-1"];
 }
 
-//What Painter reads of the store
 type PainterReads = Pick<Store, "clickHex" | "deployment" | "fog" | "ghost" | "glance" | "hexGrid" | "hoverHex" |
 	"marks" | "motion" | "overview" | "path" | "plaques" | "results" | "scale" | "selection" | "strategic" | "support" |
 	"units" | "world">;
-//Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it:
-//the hovered hex, a click on a hex. Attached while the map is on the page
+//Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it. Attached
+//while the map is on the page
 class Painter {
 	declare store: PainterReads;
 	declare cache: ImageCache;
@@ -88,7 +85,6 @@ class Painter {
 		this.cache = new ImageCache(() => this.request());
 	}
 
-	//On the page: drawn when what it shows changes, the pointer taken. Returns the detach
 	attach(canvas: HTMLCanvasElement, scroller: HTMLElement): () => void {
 		this.canvas = canvas;
 		this.scroller = scroller;
@@ -124,7 +120,6 @@ class Painter {
 		};
 	}
 
-	//The hex under the pointer, null off the map
 	cellOf(e: MouseEvent): Position | null {
 		const w = this.store.world.peek(), s = this.scroller;
 		if (w === null || s === null) return null;
@@ -149,7 +144,7 @@ class Painter {
 	}
 
 	//The screen's top left corner in the map's screen pixels: the scroll, less half the room left round a map
-	//smaller than the screen, which is centred in it, as the old UI centres it
+	//smaller than the screen, which is centred in it as the original game's UI centres it
 	origin(s: HTMLElement): Point {
 		const size = this.size();
 		return { x: s.scrollLeft - Math.max(0, (s.clientWidth - size.width) / 2), y: s.scrollTop - Math.max(0, (s.clientHeight - size.height) / 2) };
@@ -196,12 +191,10 @@ class Painter {
 		return { scene, vp, images, over: (c) => drawPreview(c, vp, preview), motion: motion === null ? null : (c) => drawMotion(c, vp, motion, images) };
 	}
 
-	//A sprite or the terrain, once it has loaded
 	image(file: string): ReturnType<Images> {
 		return this.cache.get(file);
 	}
 
-	//What the canvas draws now, from the store
 	scene(w: World, size: { width: number; height: number }): Scene {
 		const s = this.store;
 		return { terrain: this.image(w.data.image), size, rows: w.state.map.rows, cols: w.state.map.cols, grid: s.hexGrid.peek(), units: s.units.peek(),
@@ -218,7 +211,6 @@ class Painter {
 		if (at !== null) this.lookAt(at);
 	}
 
-	//A hex in the middle of the screen
 	lookAt(at: Position) {
 		const s = this.scroller;
 		if (s === null) return;
@@ -242,8 +234,7 @@ function mapSize(w: World | null, terrain: Picture | null, scale: number): { wid
 	return { width: size.width * scale, height: size.height * scale };
 }
 
-//What sits over the map at its hexes, placed from where the map is on the screen: the pins, the placing tag and the
-//combat's results
+//What sits over the map at its hexes, placed from where the map is on the screen
 function Overlays({ store, view, scale }: { store: Pick<Store, "faded" | "ghost" | "pins" | "results">, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
@@ -258,7 +249,6 @@ function Overlays({ store, view, scale }: { store: Pick<Store, "faded" | "ghost"
 	);
 }
 
-//What MapView reads of the store
 type MapViewReads = Pick<Store, "clickHex" | "deployment" | "dockHeight" | "faded" | "fog" | "ghost" | "glance" |
 	"hexGrid" | "hoverHex" | "lookAt" | "marks" | "motion" | "overview" | "path" | "pins" | "plaques" | "results" |
 	"scale" | "selection" | "strategic" | "support" | "units" | "world">;
@@ -294,7 +284,7 @@ export function MapView({ store }: { store: MapViewReads }) {
 	);
 }
 
-//The placing tag beside the hovered hex (Deployment): what a click does, how the unit lands, that it stays there
+//Beside the hovered hex: what a click does, how the unit lands, that it stays there
 function PlaceTag({ ghost, at, gap }: { ghost: Ghost; at: Point; gap: number }) {
 	return (
 		<Anchored hex={at} place="beside" gap={gap} class="pm-placetag">
