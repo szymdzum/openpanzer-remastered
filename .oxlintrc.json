@@ -8,7 +8,7 @@
 // the save), and keep every file of src/app/ from importing the UI (src/view/). The two after them keep
 // the core (src/core/ and its commands) from importing anything outside itself, and the last of them the
 // UI (src/view/) from importing anything but the core and src/app/, and src/legacy/ for types only. The
-// react and jsx-a11y plugins check the JSX of the UI's components (src/view/*.tsx, Preact).
+// react and jsx-a11y plugins check the JSX of the UI's components (src/view/**/*.tsx, Preact).
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	"plugins": [
@@ -189,6 +189,40 @@
 									"../legacy",
 									"../legacy/*",
 									"!../legacy/prototypes"
+								],
+								"allowTypeImports": true,
+								"message": "The UI imports src/legacy/ for types only (the command results), never at run time; the one exception is prototypes.ts (its tables and texts), the same as before (CLAUDE.md)"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"src/view/*/*.ts",
+				"src/view/*/*.tsx"
+			],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"../../*",
+									"!../../core",
+									"!../../app",
+									"!../../legacy"
+								],
+								"allowTypeImports": true,
+								"message": "The new UI (src/view/) imports only the core, the game host, the screen interface, the settings (src/app/settings.ts), its own components and Preact: never the old UI or game.ts (docs/ui/PLAN.md)"
+							},
+							{
+								"group": [
+									"../../legacy",
+									"../../legacy/*",
+									"!../../legacy/prototypes"
 								],
 								"allowTypeImports": true,
 								"message": "The UI imports src/legacy/ for types only (the command results), never at run time; the one exception is prototypes.ts (its tables and texts), the same as before (CLAUDE.md)"
