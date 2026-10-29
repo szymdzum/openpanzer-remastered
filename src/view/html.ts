@@ -1,6 +1,6 @@
-//Sanitizes the game's HTML texts (descriptions, outcomes, tutorial orders, host messages), which a save from someone
-//else can carry: only br, b, span (class, plain style) and the prestige img of the game's own stay; any other tag gives
-//only its text, and a script, a style sheet or a frame gives nothing
+//Sanitizes the game's HTML texts (descriptions, outcomes, tutorial orders, host messages), which a save from
+//someone else can carry (#486): only br, b, span (class, plain style) and the prestige img of the game's own
+//stay; any other tag gives only its text, and a script, a style sheet or a frame gives nothing
 const KEPT: Record<string, string[]> = { BR: [], B: [], SPAN: ["class", "style"], IMG: ["src"] };
 const DROPPED = new Set(["SCRIPT", "STYLE", "TEMPLATE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TITLE", "TEXTAREA", "SELECT"]);
 
