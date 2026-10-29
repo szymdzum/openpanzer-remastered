@@ -1,18 +1,9 @@
 /**
  * AI scores - what the AI thinks of a hex for a unit, of an attack, of the attacks from a hex and
- * of the nearest objective (src/legacy/ai.ts createAIEvaluator, on the core's queries)
+ * of the nearest objective
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
- *
- * The scores read the plan of the turn so far (the hexes taken and freed, the enemy units already
- * attacked) and the state as the turn started: the AI plans its whole turn before it plays any of
- * it. A unit scored on another hex is a copy of it standing there, the state unchanged, as the old
- * AI put the unit on that hex and back (Unit.setHex): the hex's own unit stays where it was.
- *
- * Each cell and attack score draws once from the AI's stream (randomFactor[random(0, 7)]), except
- * where it returns early: the order of the draws is behavior. Kept: the attacks count the support
- * fire of the hidden units (#17).
  */
 
 import { type AIConfig, roadType, terrainEntrenchment, terrainInitiative, terrainType, unitClass } from "./tables";
@@ -25,29 +16,27 @@ import type { Position, UnitId, UnitState, World } from "./types";
 import { canEntrench, isAir, isCloseCombatTerrain, isEnemy, isGround } from "./units";
 import { hexIndex, isSpotted, playerOf, sideOf, unitAt, unitData } from "./world";
 
-//An enemy unit the AI attacks this turn: the strength it expects it to lose so far
+/** An enemy unit the AI attacks this turn; losses: the strength it expects it to lose so far. */
 export interface EnemyUnit {
 	isAttacked: boolean;
 	losses: number;
 	isKilled: boolean;
 }
 
-//What the AI has decided so far this turn (AIPlan)
 export interface AIPlan {
 	enemyUnits: Map<UnitId, EnemyUnit>;
 	takenPositions: PlannedPosition[];	//hexes its units were ordered to move to
 	freedPositions: PlannedPosition[];	//hexes its units were ordered to leave
-	objectives: Position[];		//the side's objectives to take, in their order (D7, #141)
+	objectives: Position[];		//the side's objectives to take, in the order of its list (D7, #141)
 }
 
-//A hex an AI unit was ordered to move to or to leave, and the slot it takes or frees: the air above it
-//or the ground (#74, #225)
+//A hex an AI unit was ordered to move to or to leave; air: the slot it takes or frees is the air above
+//it, not the ground (#74, #225).
 interface PlannedPosition extends Position {
 	air: boolean;
 }
 
-//What the scores need: the world as the turn started, the AI's player, its settings, its plan and
-//its random stream
+/** The world as the turn started and the plan so far: the AI plans its whole turn before playing any of it. */
 export interface Scorer {
 	readonly w: World;
 	readonly player: number;
@@ -61,24 +50,27 @@ export interface AttackScore {
 	kills: number;
 }
 
-//A score's random factor (randomInt(rng, 0, 7) of the old AI)
+//One draw of the AI's stream (an index 0 to 7 into the settings' factors). The order of the draws is
+//behavior: each cell and attack score draws once, except where it returns early.
 function randomFactor(s: Scorer): number {
 	return s.config.randomFactor[Math.floor(nextRandom(s.rng) * 8)];
 }
 
-//The unit standing on cell instead (Unit.setHex)
+/** A copy of the unit standing on cell: the state is unchanged, the hex's own unit stays where it was. */
 export function standingOn(u: UnitState, cell: Position): UnitState {
 	return u.row === cell.row && u.col === cell.col ? u : { ...u, row: cell.row, col: cell.col };
 }
 
-//Where the plan freed the hex, its air (air true) or its ground (false) or either (undefined); -1 when
-//it didn't
+/**
+ * The index of the hex among the freed ones, for its air (air true), its ground (false) or either
+ * (undefined); -1 when the plan didn't free it.
+ */
 export function findFreed(plan: AIPlan, cell: Position, air?: boolean): number {
 	return plan.freedPositions.findIndex((c) => c.row === cell.row && c.col === cell.col && (air === undefined || c.air === air));
 }
 
-//Whether the plan sent a unit to the hex's slot already: an aircraft ordered over a hex leaves its
-//ground free (#225)
+//Whether the plan sent a unit to the hex's slot already: an aircraft over a hex leaves its ground free
+//(#225).
 function isTaken(plan: AIPlan, cell: Position, air: boolean): boolean {
 	return plan.takenPositions.some((c) => c.row === cell.row && c.col === cell.col && c.air === air);
 }
@@ -88,10 +80,11 @@ function expectedKilled(plan: AIPlan, id: UnitId): boolean {
 	return e !== undefined && e.isKilled;
 }
 
-//The score and the expected kills of u attacking the unit it can attack on cell. isPotential: a hex
-//scored for a move, where an attack on a unit expected killed or with too many losses counts as its
-//score or 0, not as the bad attack score. Those return before the draw; a unit it can't start an attack
-//on scores 0, drawn all the same
+/**
+ * isPotential: a hex scored for a move, where an attack on a unit expected killed or with too many losses
+ * counts as its score or 0, not as the bad attack score. Those return before the draw; a unit it can't
+ * start an attack on scores 0, drawn all the same.
+ */
 export function attackScore(s: Scorer, u: UnitState, cell: Position, isPotential: boolean): AttackScore {
 	const target = attackableUnit(s.w, u, hexIndex(s.w, cell.row, cell.col), false);
 	if (!canInitiateAttack(s.w, u, target)) {
@@ -102,12 +95,13 @@ export function attackScore(s: Scorer, u: UnitState, cell: Position, isPotential
 	return r.drawn ? { score: r.score * randomFactor(s), kills: r.kills } : { score: r.score, kills: r.kills };
 }
 
-//An attack on target: what it would kill and lose, by class, more to finish a unit already attacked;
-//drawn: scored to the end, its random factor still to draw
+//What the attack would kill and lose, by class; 100 more to finish a unit already attacked. drawn: scored
+//to the end, its random factor still to draw.
 function targetScore(s: Scorer, u: UnitState, target: UnitState, isPotential: boolean): AttackScore & { drawn: boolean } {
 	const { w, config } = s, enemy = s.plan.enemyUnits.get(target.id);
 	if (enemy !== undefined && enemy.isKilled) return { score: isPotential ? 0 : config.badAttackScore, kills: 0, drawn: false };
 	let score = enemy !== undefined && enemy.isAttacked ? 100 : 0;
+	//Kept bug (#17): the support fire of the hidden units counts
 	const cr = combatResult(w, u, target, true, null);
 	score = score + (cr.kills * config.unitClassKillValue[unitData(w, target).uclass]
 		- cr.losses * config.unitClassLossCost[unitData(w, u).uclass]);
@@ -116,7 +110,6 @@ function targetScore(s: Scorer, u: UnitState, target: UnitState, isPotential: bo
 	return { score: targetHexScore(s, u, target, score), kills: cr.kills, drawn: true };
 }
 
-//More on an objective, less on a hex the side doesn't see
 function targetHexScore(s: Scorer, u: UnitState, target: UnitState, score: number): number {
 	const targetHex = hexIndex(s.w, target.row, target.col);
 	if (s.w.state.map.hexes[targetHex].victorySide !== -1) score += 350;
@@ -124,7 +117,6 @@ function targetHexScore(s: Scorer, u: UnitState, target: UnitState, score: numbe
 	return score;
 }
 
-//The sum of the attack scores u would have standing on cell
 export function attackPotential(s: Scorer, u: UnitState, cell: Position): number {
 	const there = standingOn(u, cell);
 	let score = 0;
@@ -132,10 +124,11 @@ export function attackPotential(s: Scorer, u: UnitState, cell: Position): number
 	return score;
 }
 
-//The score of u standing on cell: the terrain, the objectives and the neighbours. canMove: the move
-//range says it can stop there (a hex another AI unit of its kind leaves counts as free: an aircraft
-//leaving frees the air above a ground unit, not the ground, #74). A hex another AI unit of its kind
-//was ordered to is taken (#225)
+/**
+ * The score of u standing on cell. canMove: the move range says it can stop there (a hex another AI unit
+ * of its kind leaves counts as free: an aircraft leaving frees the air above a ground unit, not the
+ * ground, #74). A hex another AI unit of its kind was ordered to is taken (#225): -5000, before the draw.
+ */
 export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: boolean): number {
 	const air = isAir(s.w, u);
 	if (isTaken(s.plan, cell, air)) return -5000;
@@ -154,8 +147,6 @@ export function cellScore(s: Scorer, u: UnitState, cell: Position, canMove: bool
 	return score * randomFactor(s);
 }
 
-//What the hex's terrain and flag are worth to a ground unit: entrenchment, initiative, rivers, close
-//combat, an enemy flag
 function terrainScore(w: World, u: UnitState, hex: number): number {
 	const terrain = w.data.hexes[hex].terrain;
 	let score = 0;
@@ -166,13 +157,12 @@ function terrainScore(w: World, u: UnitState, hex: number): number {
 	return score + flagScore(w, u, hex);
 }
 
-//An enemy flag for a ground unit to take
 function flagScore(w: World, u: UnitState, hex: number): number {
 	const flag = w.state.map.hexes[hex].flag;
 	return flag !== -1 && flag !== playerOf(w, u).country && isGround(w, u) ? 50 : 0;
 }
 
-//Close combat terrain: good for infantry, a little for guns, bad for the rest
+//Close combat terrain: good for infantry, a little for guns, bad for the rest.
 function closeCombatScore(uclass: number): number {
 	if (uclass === unitClass.infantry) return 120;
 	return uclass === unitClass.artillery || uclass === unitClass.antiTank || uclass === unitClass.airDefence ? 10 : -50;
@@ -180,7 +170,7 @@ function closeCombatScore(uclass: number): number {
 
 //An objective the unit can stand on: free, freed by an AI unit, its own, or held by a unit expected to
 //be killed. Only the hex's ground unit counts (isFreed: the AI's ground unit leaves the hex, not an
-//aircraft above it, #207)
+//aircraft above it, #207).
 function occupyScore(s: Scorer, u: UnitState, hex: number, isFreed: boolean): number {
 	const h = s.w.state.map.hexes[hex];
 	if (h.victorySide === -1) return 0;
@@ -193,7 +183,7 @@ function occupyScore(s: Scorer, u: UnitState, hex: number, isFreed: boolean): nu
 
 //The neighbours: friends that stay (artillery more), enemies or friends leaving, objectives (more when
 //not the side's own). A friend leaves when the plan freed its own slot: a ground unit stays when the
-//aircraft above it was ordered away (#207). Kept from the bundle: the last row and column are left out
+//aircraft above it was ordered away (#207). Kept from the bundle: the last row and column are left out.
 function neighboursScore(s: Scorer, u: UnitState, cell: Position): number {
 	const { rows, cols } = s.w.state.map;
 	let score = 0;
@@ -216,15 +206,17 @@ function neighbourScore(s: Scorer, u: UnitState, c: Position): number {
 	return score;
 }
 
-//An objective next to the hex: more for infantry, less when the side holds it
+//An objective next to the hex: more for infantry, less when the side holds it.
 function objectiveNearScore(uclass: number, owned: boolean): number {
 	if (uclass === unitClass.artillery || uclass === unitClass.flak) return 50;
 	if (uclass === unitClass.infantry) return owned ? 70 : 100;
 	return owned ? 50 : 70;
 }
 
-//The nearest of the objectives to take (the first of equally near ones) and a score growing as it
-//gets closer; standing on one scores most
+/**
+ * The nearest of the objectives to take (the first of equally near ones) and a score growing as it
+ * gets closer; standing on one scores most.
+ */
 export function objectiveScore(s: Scorer, cell: Position): { cell: Position | null; score: number } {
 	let best: Position | null = null, score = 0;
 	for (const o of s.plan.objectives) {
