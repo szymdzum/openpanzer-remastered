@@ -57,7 +57,8 @@ export let terrainNames =
 	"Impassable river", "Rough"
 ];
 
-//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
+//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream,
+//Escarpment, impassableRiver, Rough, Roads
 /** The entrenchment each terrainType gives, by terrainType. */
 export let terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 0, 2 ];
 /** The cap terrain puts on initiative, by terrainType (99: no cap). */
@@ -98,7 +99,8 @@ export let embarkType = { none: 0, naval: 1, airmobile: 2, airborne: 3 };
 /** Movement costs on dry ground: a row per movMethod, a cost per terrainType, the road last. 254 stops, 255 bars. */
 export let movTableDry =
 [
-//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
+//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream,
+//Escarpment, impassableRiver, Rough, Roads
 [1, 1, 1, 2, 4, 2, 254, 1, 4, 255, 254, 1, 1, 2, 255, 255, 2, 1], //Tracked
 [1, 1, 1, 2, 254, 2, 254, 1, 4, 255, 254, 1, 1, 2, 255, 255, 2, 1], //Half Tracked
 [2, 1, 1, 4, 254, 3, 254, 3, 254, 255, 254, 2, 1, 4, 255, 255, 2, 1], //Wheeled
@@ -116,7 +118,8 @@ export let movTableDry =
 /** The movement costs on frozen ground; see movTableDry. */
 export let movTableFrozen =
 [
-//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
+//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream,
+//Escarpment, impassableRiver, Rough, Roads
 [1, 1, 1, 2, 4, 2, 254, 1, 2, 255, 2, 1, 1, 2, 255, 255, 2, 1], //Tracked
 [1, 1, 1, 2, 254, 3, 254, 1, 2, 255, 2, 1, 1, 2, 255, 255, 3, 1], //Half Tracked
 [2, 2, 2, 254, 254, 254, 254, 3, 3, 255, 3, 3, 2, 4, 255, 255, 4, 2], //Wheeled
@@ -134,7 +137,8 @@ export let movTableFrozen =
 /** The movement costs on mud; see movTableDry. */
 export let movTableMud =
 [
-//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
+//Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream,
+//Escarpment, impassableRiver, Rough, Roads
 [2, 1, 1, 2, 4, 3, 254, 1, 254, 255, 254, 2, 1, 2, 255, 255, 3, 2], //Tracked
 [3, 1, 1, 2, 254, 3, 254, 1, 254, 255, 254, 2, 1, 2, 255, 255, 3, 2], //Half Tracked
 [4, 2, 2, 254, 254, 254, 254, 3, 254, 255, 254, 4, 2, 4, 255, 255, 254, 2], //Wheeled
@@ -240,7 +244,9 @@ export let leaderType = {
 	alpineTraining:			12,	//When moving the unit treats forest and mountain hexes as clear terrain.
 	battlefieldIntelligence:13,	//The unit cannot be surprised.
 	bridging:				14,	//When moving the unit treats passable river hexes as rough terrain.
-	combatSupport:			15,	//The unit provides both Resilience and Skilled Ground Attack abilities to all adjoining units during combat phases. Will aid inflicting losses and save from loses by 2 to 3 points each battle.
+	//The unit provides both Resilience and Skilled Ground Attack abilities to all adjoining units during combat
+	//phases. Will aid inflicting losses and save from loses by 2 to 3 points each battle.
+	combatSupport:			15,
 	determinedDefense:		16,	//Each of the unit’s defense factors is increased by 2.
 	devastatingFire:		17,	//The unit may fire twice in a turn.
 	ferociousDefense:		18,	//The unit’s entrenchment cannot be ignored by enemy units.
@@ -250,11 +256,17 @@ export let leaderType = {
 	infiltrationTactics:	22,	//The unit ignores enemy unit entrenchment when calculating combat results.
 	influence:				23,	//Allows the unit to upgrade to better equipment at reduced prestige point cost.
 	liberator:				24,	//You receive double the normal number of prestige points for all objective and victory hexes captured by the unit.
-	overwatch:				25,	//The unit will fire at any enemy unit that moves within its range. The enemy unit is automatically surprised, allowing your unit to fire first and at the enemy’s close assault, rather than its ground defense, factor.
-	overwhelmingAttack:		26,	//When attacking the unit will have an indeterminate number of the suppression points it would otherwise inflict converted to kills.
+	//The unit will fire at any enemy unit that moves within its range. The enemy unit is automatically surprised,
+	//allowing your unit to fire first and at the enemy’s close assault, rather than its ground defense, factor.
+	overwatch:				25,
+	//When attacking the unit will have an indeterminate number of the suppression points it would otherwise
+	//inflict converted to kills.
+	overwhelmingAttack:		26,
 	reconMovement:			27,	//The unit is permitted phased movement, just like reconnaissance units.
 	resilience:				28,	//The unit will suffer 1 to 3 fewer step casualties than normal units when attacked.
-	shockTactics:			29,	//Any suppression which the unit inflicts on an enemy unit will last the entire player’s turn, not just the specific combat round.
+	//Any suppression which the unit inflicts on an enemy unit will last the entire player’s turn, not just the
+	//specific combat round.
+	shockTactics:			29,
 	skilledGroundAttack:	30,	//The unit will inflict 1 to 3 more step casualties than normal units when attacking.
 	skilledReconnaissance:	31,	//The unit’s spotting range is increased by one hex.
 	streetFighter:			32,	//The unit ignores an enemy unit’s city entrenchment when calculating combat results.
