@@ -7,7 +7,7 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * The loader reads the files as before, in the same order (the page's requests are part of what the
- * harness replays); only who makes the units and players changed. Set by game.ts as ScenarioLoader.build.
+ * harness replays); only who makes the units and players changed. Set by the host's runGame (src/app/host.ts) as ScenarioLoader.build.
  */
 
 import { uiSettings } from "./settings";

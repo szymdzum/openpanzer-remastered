@@ -26,7 +26,7 @@ export const scenarioPath = "resources/scenarios/data/";
 //equipment file too, #367) calls it with scen.isLoaded false.
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
-	//Who makes the game once its files are in (src/app/start.ts, set by game.ts)
+	//Who makes the game once its files are in (src/app/start.ts, set by the host's runGame)
 	declare static build: (scen: Scenario, file: ScenarioFile, imageSize: [number, number]) => void;
 	//The countries of the core units a campaign carries in, loaded beside the players' (src/app/start.ts)
 	declare static coreCountries: () => number[];

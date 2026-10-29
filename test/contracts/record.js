@@ -14,7 +14,7 @@ const args = window.__record;
 
 await waitFor(() => game.ui && game.scenario && game.scenario.isLoaded && game.gameStarted, 30000);
 Math.random = mulberry32(1);
-// The game's random streams (src/rng.ts) from the same seed where it has them: the reference doesn't
+// The game's random streams (src/core/random.ts) from the same seed where it has them: the reference doesn't
 if (typeof Rng !== "undefined" && Rng.seed) Rng.seed(1);
 const old = game.scenario;
 if (args.file.startsWith("campaign:")) {
@@ -51,7 +51,7 @@ new GameState(game).restoreFromString(state);
 if (!await waitFor(() => restored, 30000)) throw new Error(args.file + ": the export didn't restore");
 
 // Every contract gets the same environment, the test builds it from this repo's modules
-// Actions (src/actions.ts), Commands (src/commands.ts), toData (src/state.ts) and Rng (src/rng.ts)
+// Actions (src/actions.ts), Commands (src/legacy/commands.ts), toData (src/legacy/state.ts) and Rng (src/core/random.ts)
 // only where the game has them: the reference doesn't, the engine contract then runs its copy of
 // the combat and move sequence, walks the objects for its state hashes and its AI draws from
 // Math.random

@@ -27,12 +27,12 @@
 //
 // Here the game plays on its core (#137). The player's actions (the AI's and the random ones: move,
 // attack, resupply, reinforce, mount, unmount, embark, disembark, upgrade, undo, disband) go through
-// the game's command entry, src/commands.ts (env.Commands), as the old UI sends them: a move and an
+// the game's command entry, src/legacy/commands.ts (env.Commands), as the old UI sends them: a move and an
 // attack played whole (#375), then the UI's selection after them (src/selection.ts), then shown as the UI
 // shows them (the victories); the two units of an attack as they were at its shots, which the game
 // stopped at until then, played again on the core from the world before (env.Actions.shotUnits,
 // test/coreengine.ts). The end of turn is
-// the game's on its session (env.Actions.endTurn, test/coreengine.ts: src/coresession.ts's, the
+// the game's on its session (env.Actions.endTurn, test/coreengine.ts: src/app/driver.ts's, the
 // reinforcements arrive in it), the players are the session's controllers (env.AI: the AI, the
 // tutorial; a human player's stand-in plays outside it). The end of the game (`ended`) is then what
 // checkOutcome (the core's outcome) says after each attack's and move's finish and after a defeat at
@@ -92,7 +92,7 @@ function runEngineContract(env) {
 	// (record.sh runs this driver there), it runs the copy of the sequence below: the same calls in the
 	// same order
 	const X = env.Actions;
-	// The game's command entry (src/commands.ts), with the same feature check: the reference has
+	// The game's command entry (src/legacy/commands.ts), with the same feature check: the reference has
 	// none, the driver then calls the engine functions the commands call
 	const C = env.Commands;
 	const out = [];
@@ -152,7 +152,7 @@ function runEngineContract(env) {
 			}
 		return [game.spotSide, hexes];
 	}
-	// The game's state as src/state.ts's toData reads it (#127), and the view. On the reference,
+	// The game's state as src/legacy/state.ts's toData reads it (#127), and the view. On the reference,
 	// which has no toData, the walk of the objects the contract compared before: record.sh still
 	// records the states there, but a newly recorded fixture's hashes are of that walk, so it takes
 	// this repo's results with UPDATE_CONTRACTS=1 in the commit that records it

@@ -15,7 +15,7 @@ import type { RulesetName, World } from "../core/types";
 //scenario (Unit.copy takes the player from its map, #68), the campaign (difficulty, the
 //dossier, outside a campaign the new units' experience), the campaign player and the side the
 //screen shows (Unit.unitEndTurn hides units by it). Functions, read at the moment the engine
-//needs them: Game sets a context that reads its own fields (game.ts), so a harness or a test
+//needs them: the host's runGame sets a context that reads the game's fields (src/app/host.ts), so a harness or a test
 //that assigns game.spotSide or game.campaign is seen as before. Without a game: no scenario,
 //no campaign, no side shown. host: the game as the state's campaign host (src/legacy/state.ts), which the
 //commands on the core read the state of the game with (src/legacy/commands.ts); world: the game's world, which
