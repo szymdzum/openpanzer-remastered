@@ -59,8 +59,8 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 
 ## Style
 
-- Opening braces on the same line (`function f() {`, `} else {`). Tabs. Comments say why, in
-  plain English, like the surrounding ones.
+- Opening braces on the same line (`function f() {`, `} else {`). Tabs.
+
 - Engine modules (the core in `src/core/`, `commands`, `mirror`, `gamerules`, `map` and its parts,
   `unit`, `ai`, `scenario`...) don't import the UI (`src/view/`), the page's modules (`dom`, `main`)
   or `game`: they read the game through `src/context.ts`. The game plays on the core (docs/CORE.md)
@@ -78,6 +78,37 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 - The linter (`.oxlintrc.json`) runs every rule as an error; its `overrides` list the old files
   exempt from a rule. New files get every rule; don't add a file to an exemption list, and take a
   file off a list once it's clean.
+
+### Comments
+
+- **On an export** (function, type, class): a `/** */` TSDoc block, one sentence on what it does or
+  returns. Add a why paragraph only when the code can't show it. `@param` and `@returns` only when the
+  type and the name leave a parameter unclear.
+- **Inside a function**: `//` only for why: a rule of the game that isn't obvious, a kept bug, the
+  order of random draws, a parity trap with the original.
+- **File header**: 1-3 lines saying what the module is (the folder says the layer), then the license.
+  Nicu Pavel's copyright stays on the files reconstructed from the original.
+- **Issue numbers** only where they explain why the code is like this now: `Kept bug (#20)`,
+  `Deliberate (#68)`, `docs/STATE.md D5`.
+- **Not in comments**: history ("used to", "the old X went in #n", "since #n": that is `git log`),
+  anything that repeats the name or the type, anything no longer true.
+- **Prefer code over prose**: a named type, a named constant, a smaller function.
+
+```ts
+// Before: the shape in the signature, a paragraph for the body
+//Map.moveUnit: unit id to the hex along the cheapest path in cells (...), stops before a hidden enemy ...
+export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { row: number; col: number; cost: number }[] | null,
+	retreat = false): MoveOutcome {
+
+// After: a named type, two sentences
+type PathCells = readonly { row: number; col: number; cost: number }[];
+
+/**
+ * Moves a unit along the cheapest path through `cells` (its move range when null) and stops it before
+ * a hidden enemy. A human's move can be undone when it spotted nothing new; a retreat never can.
+ */
+export function moveUnit(d: Draft, id: UnitId, to: Position, cells: PathCells | null, retreat = false): MoveOutcome {
+```
 
 ## Git
 
