@@ -39,6 +39,9 @@ test("Off a target, on the enemy's turn or with no unit selected there is no cur
 	expect(glanceOf(w, selectionOf(w, 0), { row: 6, col: 6 }, false)).toBe(null);
 	expect(glanceOf(w, null, { row: 4, col: 4 }, false)).toBe(null);
 	expect(glanceOf(w, selectionOf(w, 0), null, false)).toBe(null);
+	//(a target the selection listed that is gone from the world)
+	const gone = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }]);
+	expect(glanceOf(gone, selectionOf(w, 0), { row: 4, col: 4 }, false)).toBe(null);
 	w.state.turn.currentPlayer = 1;
 	expect(glanceOf(w, selectionOf(w, 0), { row: 4, col: 4 }, false)).toBe(null);
 });
