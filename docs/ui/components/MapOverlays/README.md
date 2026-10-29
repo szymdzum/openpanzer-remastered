@@ -1,6 +1,6 @@
 The map layer: everything the renderer draws over the painted map and under the unit sprites, so a player can read the rules of the next move from the map itself.
 
-All of it is canvas (`src/view/mapdraw.ts`, `overlays.ts`), not HTML. Its colours are the `hex-*` tokens in `tokens.json`, the one set for the map: the same in Paper and Blackout, because they sit on the map's own olive and khaki, not on a panel. The canvas draws with these values, and the HTML cards that stage the map use the same custom properties. Every line has a dark under-stroke (`hex-shadow` at 55%) so it reads on grass, fields, snow and water alike.
+All of it is canvas (`src/view/map/mapdraw.ts`, `overlays.ts`), not HTML. Its colours are the `hex-*` tokens in `tokens.json`, the one set for the map: the same in Paper and Blackout, because they sit on the map's own olive and khaki, not on a panel. The canvas draws with these values, and the HTML cards that stage the map use the same custom properties. Every line has a dark under-stroke (`hex-shadow` at 55%) so it reads on grass, fields, snow and water alike.
 
 **Draw order**, bottom to top: fog, the move area tint, the area outline, the enemy zone bars, attack targets, support fire lines, the selection, the move path, the plaques (#438), then the sprites and their markers, then tags.
 

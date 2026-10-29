@@ -329,7 +329,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
 | Bad weather reduces spotting | Spot range only from equipment and leaders |
 | Recon ignores zone of control | ZOC stops every ground unit; recon only has split movement |
-| An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
+| An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
 | Units over 1000 experience always get a leader | Always at the cap (500) |
 | Retreat above 60% losses | 60% at strength 10, less for weaker units |

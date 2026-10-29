@@ -1,4 +1,4 @@
-**Proposal: not built.** It would replace the stage 1 glance of AttackPreview (today's ring and two chips, `src/view/attackdraw.ts`), which dropped the flags of the old cursor.
+**Proposal: not built.** It would replace the stage 1 glance of AttackPreview (today's ring and two chips, `src/view/map/attackdraw.ts`), which dropped the flags of the old cursor.
 
 The attack cursor: the old cursor's flags and losses, with each side's strength, kept off both units. On the target only a thin sight; the numbers in a header beside the target hex.
 

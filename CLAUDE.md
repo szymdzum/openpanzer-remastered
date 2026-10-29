@@ -71,9 +71,15 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
   | `src/core/` | the game: data in, data out | nothing outside `core/` | every new rule, command and AI score |
   | `src/legacy/` | the old engine's objects, a copy of the core's world, for verify, the contracts and the CLI | `core/`, itself, and `app/settings` and `app/loader` (the exceptions of #520) | nothing new; only what keeps the old objects working |
   | `src/app/` | one running game without the DOM: host, driver, start, load, save, settings | `core/`, `legacy/` | the game's glue to the page; no UI |
-  | `src/view/` | the UI | `core/`, `app/`, `legacy/` for types only (and `legacy/prototypes`) | components and what they draw |
+  | `src/view/` | the UI, in subfolders (below) | `core/`, `app/`, `legacy/` for types only (and `legacy/prototypes`) | components and what they draw |
 
   New rules go to `core/`, never to `legacy/`.
+
+  `src/view/` by what a file is: `components/` (button, panel, list, tabs, controls... and their CSS),
+  `map/` (the map, its drawing and its view model), `hud/` (status bar, rail, unit card and info,
+  results), `windows/` (shop, save/load, settings, new game, dossier, log, the start menu), `store/`
+  (the signals store and the view model). `screen.tsx`, `app.tsx`, the theme, beats, player, turn,
+  shortcuts and the shared CSS stay at its root. A subfolder file imports `../../core` and so on.
 - `src/` has no unused code and no import cycles; CI runs `fallow dead-code` on the whole tree.
   Keep it that way: the modules that read the running game do it through `src/app/running.ts`, not
   `app/game.ts`.

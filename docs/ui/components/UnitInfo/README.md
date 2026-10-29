@@ -51,4 +51,4 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 
 - Keep `#unit-info`, `#uName` and `#uSmallFlag`. The stars, the leader tooltip and the icons as before.
 
-The view model would be `src/view/unitcard.ts` (`unitCardOf`), the card `src/view/infopanel.tsx` with `src/view/unitinfo.css`; the card reads the unit by its id, never a copy (#404).
+The view model would be `src/view/hud/unitcard.ts` (`unitCardOf`), the card `src/view/hud/infopanel.tsx` with `src/view/hud/unitinfo.css`; the card reads the unit by its id, never a copy (#404).
