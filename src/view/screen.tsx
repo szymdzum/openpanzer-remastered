@@ -17,6 +17,7 @@ import type { CommandType } from "../core/command";
 import { App } from "./app";
 import { pageSounds } from "./player";
 import { createStore } from "./store/store";
+import { eventsOf } from "./store/storestep";
 import { applyTheme, type Theme } from "./theme";
 
 const nothing = () => {};
@@ -112,8 +113,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		reportAchievement: nothing,
 
 		step(_cmd: ShownCommand, done: Executed<CommandType>, shown: () => void) {
-			const r = done.ok ? done.result : null;
-			played(r !== null && typeof r === "object" && "events" in r ? r.events : [], shown);
+			played(eventsOf(done.ok ? done.result : null), shown);
 		},
 		view(event: ViewEvent, shown?: () => void) {
 			if (event.type === "message") {
