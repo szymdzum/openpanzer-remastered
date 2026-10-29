@@ -1,7 +1,7 @@
 //The new UI's unit card docked at the bottom (src/view/infopanel.tsx, UnitInfo, #346, #348 with #37) on hand-built
-//worlds, in jsdom: one row of identity, condition and the short sheet; unfolded, the band of every stat in place of the
-//short sheet; hidden to a strip of the name and supply; the leaders as the game words them, the views, Next unit, and
-//the unit always read by its id, never a copy (#404)
+//worlds, in jsdom: unfolded on More, its identity, condition and the band of every stat (its line is
+//test/view-unitline.test.tsx's); the leaders as the game words them, the views, Next unit, and the unit always read by
+//its id, never a copy (#404)
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { afterEach, expect, test } from "vitest";
 import { handWorld } from "./coreworld";
@@ -64,14 +64,19 @@ function panelOf(w: World) {
 	return store;
 }
 
-test("The card opens as one row: identity in stars, condition, the short sheet of twelve, nothing beyond the old window; Inspect unit hides it", async () => {
+//The card unfolded: More on its line
+async function unfold(store: ReturnType<typeof panelOf>, id: number) {
+	await act(() => { store.pickUnit(id); });
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
+}
+
+test("More unfolds the card: identity in stars, condition, the band of every stat, the figures and the leaders; Inspect unit hides it", async () => {
 	const store = panelOf(world());
 	expect(document.getElementById("unit-info")).toBeNull();
-	await act(() => { store.pickUnit(0); });
+	await unfold(store, 0);
 	const panel = screen.getByRole("region", { name: "Selected unit" });
-	expect(panel.id).toBe("unit-info");
-	expect(["statsRowTop", "uName", "uSmallFlag", "statsRowContainer", "statsRow"].map((id) => document.getElementById(id) !== null))
-		.toEqual([true, true, true, true, true]);
+	expect([panel.id, panel.className]).toEqual(["unit-info", "pm-panel pm-uinfo open"]);
+	expect(["statsRowTop", "uName", "uSmallFlag", "unit-card"].map((id) => document.getElementById(id) !== null)).toEqual([true, true, true, true]);
 	expect(document.getElementById("uName")!.textContent).toBe(store.world.value!.equipment[PZ_IIA].name);
 	expect(panel.querySelector(".cls")!.textContent).toBe("101st Tank · Germany");
 	expect([...panel.querySelectorAll(".ui-tags .pm-tag")].map((t) => t.textContent)).toEqual(["Hard target", "Tracked", "Core"]);
@@ -79,59 +84,22 @@ test("The card opens as one row: identity in stars, condition, the short sheet o
 	const fuel = store.world.value!.equipment[PZ_IIA].fuel;
 	expect([...panel.querySelectorAll(".pm-meter")].map((m) => m.className)).toEqual(["pm-meter ok", "pm-meter " + supplyState(18, fuel),
 		"pm-meter critical", "pm-meter"]);
-	expect(panel.querySelectorAll(".pm-stats > div").length).toBe(12);
-	//nothing of the unfolded band, nothing said twice
-	expect([document.getElementById("unit-card"), panel.querySelector(".ui-stat")]).toEqual([null, null]);
-	await act(() => store.shortcut({ menu: "inspect" }));
-	expect(document.getElementById("unit-info")).toBeNull();
-});
-
-test("More unfolds the card: the band of every stat, the figures and the leaders in place of the short sheet; Less and Esc fold it", async () => {
-	const store = panelOf(world());
-	await act(() => { store.pickUnit(0); });
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
 	const band = document.getElementById("unit-card")!;
 	expect([...band.querySelectorAll(".ui-stat .k")].map((k) => k.textContent)).toEqual(["Soft", "Hard", "Air", "Naval", "Ground", "Air", "Close",
 		"Ranged", "Initiative"]);
 	expect([...band.querySelectorAll(".ui-four .pm-label")].map((l) => l.textContent)).toEqual(["Move", "Range", "Spotting", "Value"]);
 	expect(band.querySelector(".ui-xp")!.textContent).toBe("120 XP");
 	expect(band.querySelectorAll(".ui-ab").length).toBe(2);
-	expect(document.getElementById("statsRowContainer")).toBeNull();
-	expect(document.getElementById("unit-info")!.className).toBe("pm-panel pm-uinfo open");
-	//it stays unfolded on another unit; Less folds it, and Esc
+	//it stays unfolded on another unit
 	await act(() => { store.pickUnit(2); });
 	expect(document.getElementById("unit-card")).not.toBeNull();
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Less" })); });
-	expect([document.getElementById("unit-card"), store.cardSize.value]).toEqual([null, "row"]);
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
-	await act(() => { fireEvent.keyDown(document, { key: "Escape" }); });
-	expect(store.cardSize.value).toBe("row");
-});
-
-test("Hide leaves a strip of the name, strength, fuel and ammo, clear of the map's last rows; Show brings the row back", async () => {
-	const store = panelOf(world());
-	await act(() => { store.pickUnit(0); });
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Hide" })); });
-	const strip = document.getElementById("unit-info")!;
-	const e = store.world.value!.equipment[PZ_IIA];
-	expect(strip.className).toBe("pm-panel pm-uinfo strip");
-	expect(document.getElementById("uName")!.textContent).toBe(e.name);
-	expect([...strip.querySelectorAll(".ui-mini")].map((m) => [m.className, m.textContent])).toEqual([["ui-mini ok", "Strength 10/10"],
-		["ui-mini low", `Fuel 18/${e.fuel}`], ["ui-mini critical", `Ammo 1/${e.ammo}`]]);
-	expect([document.getElementById("statsRowContainer"), strip.querySelector(".pm-meter")]).toEqual([null, null]);
-	//it stays a strip on another unit, and from the unfolded card too
-	await act(() => { store.pickUnit(2); });
-	expect(document.getElementById("unit-info")!.className).toBe("pm-panel pm-uinfo strip");
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Show" })); });
-	expect(store.cardSize.value).toBe("row");
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
-	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Hide" })); });
-	expect(store.cardSize.value).toBe("strip");
+	await act(() => store.shortcut({ menu: "inspect" }));
+	expect(document.getElementById("unit-info")).toBeNull();
 });
 
 test("The views of a gun on its tractor, Next unit on the side's own units only", async () => {
 	const store = panelOf(world());
-	await act(() => { store.pickUnit(1); });
+	await unfold(store, 1);
 	//the transport view pressed, as the old window opened it; the unit's own on a click
 	expect(screen.getByRole("button", { name: "Transport" }).getAttribute("aria-pressed")).toBe("true");
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Unit" })); });
@@ -148,7 +116,7 @@ test("The views of a gun on its tractor, Next unit on the side's own units only"
 
 test("The leader's tooltip shows both leaders on hover, focus or a tap; a unit without one says so", async () => {
 	const store = panelOf(world());
-	await act(() => { store.pickUnit(0); });
+	await unfold(store, 0);
 	const leader = document.querySelector<HTMLButtonElement>("#unit-info .leader")!;
 	const tip = () => document.getElementById("uLeaderTip")!;
 	expect([leader.textContent, tip().hidden]).toEqual(["Battlefield Intelligence", true]);

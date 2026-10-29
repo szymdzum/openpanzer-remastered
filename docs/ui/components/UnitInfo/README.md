@@ -1,4 +1,4 @@
-**Proposal (2026-10-29), not built.** The owner asked for the card in two sizes, hidden and open, saying what matters about the unit and what each number does. The game still has the port's card (#441): three sizes, the old window's content and nothing more. Where this card goes further than the old window, it says so below.
+**Proposal (2026-10-29); the hidden line is built (#37), the open card not yet.** The owner asked for the card in two sizes, hidden and open, saying what matters about the unit and what each number does. The game still has the port's card (#441): three sizes, the old window's content and nothing more. Where this card goes further than the old window, it says so below.
 
 Everything about the selected unit, docked at the bottom in the middle. Every number says what it does for the player: not "Ammo 1/8" alone but "1 shot left". The map stays quiet (#441): the card opens hidden, as one line, and the open card only on More.
 

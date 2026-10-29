@@ -315,12 +315,16 @@ async function play() {
 		await gone(list);
 	});
 
-	await step("the unit card unfolded and folded", async () => {
+	await step("the unit card's line, unfolded and folded", async () => {
+		//hidden, the default: one line of its four gauges
+		await shown(ui("#unit-info.line .ui-g", { hasText: "Strength" }));
+		check(await ui("#unit-info.line .ui-g").count() === 4, "the unit card's line doesn't show four gauges");
 		await ui("#unit-info").getByRole("button", { name: "More", exact: true }).click();
 		await shown(ui("#unit-card section[aria-label=Attack]"));
 		await shown(ui("#unit-card section[aria-label=Defence]"));
 		await ui("#unit-info").getByRole("button", { name: "Less", exact: true }).click();
 		await gone(ui("#unit-card"));
+		await shown(ui("#unit-info.line"));
 	});
 
 	await step("End turn, the AI's turn played out", async () => {

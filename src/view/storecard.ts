@@ -15,9 +15,9 @@ type Step = Pick<ReturnType<typeof createStep>, "moving">;
 export function createCard(core: Pick<Core, "world" | "selected" | "dispatch">, map: Pick<MapPart, "deployment" | "strategic">, step: Step) {
 	const { world, selected, dispatch } = core;
 	//The unit card at the bottom (UnitInfo): the view picked for a unit (none, or another unit's: the one it opens on), and
-	//its size: a strip, one row, or unfolded over the map
+	//its size: its line, or unfolded over the map
 	const cardView = signal<{ unit: UnitId, view: CardView } | null>(null);
-	const cardSize = signal<CardSize>("row");
+	const cardSize = signal<CardSize>("line");
 	//the unit info shown (Inspect unit)
 	const infoShown = signal(true);
 	//the dock's height over the bottom of the map in CSS pixels, which the map scrolls past so that its last row clears
@@ -35,7 +35,7 @@ export function createCard(core: Pick<Core, "world" | "selected" | "dispatch">, 
 	return {
 		card, cardSize, infoShown, dockHeight, context,
 
-		//The unit card as a strip, one row, or unfolded over the map
+		//The unit card as its line, or unfolded over the map
 		sizeCard(size: CardSize) {
 			cardSize.value = size;
 		},
