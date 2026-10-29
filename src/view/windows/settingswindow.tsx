@@ -1,6 +1,5 @@
-//The settings window (Settings, #349): the old settings list in its order, the three sliders with their values in type
-//beside them, then a switch for each of the old checkboxes, each with its setting's key as its id; OK. It sits over the
-//game, as the old #smSettings did, the message under it set aside; Esc is its OK.
+//The settings window: the three sliders with their values in type beside them, then a switch for each checkbox, each
+//with its setting's key as its id; OK. It sits over the game, the message under it set aside; Esc is its OK.
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "../components/button";
 import { Slider, Toggle } from "../components/controls";

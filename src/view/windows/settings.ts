@@ -1,9 +1,8 @@
-//The settings window (Settings, #349): the old settings list (src/uibuilder.ts buildStartMenu before #351), its three
-//sliders and its switches, the same keys in uiSettings, so the settings saved by the old UI still hold. Plain TypeScript
-//on the settings it is given.
+//The settings window: three sliders and the switches, under the same keys in uiSettings as in the settings already
+//saved, which still hold. Plain TypeScript on the settings it is given.
 import type { UISettings } from "../../app/settings";
 
-//A slider: its setting, its title, its step and range (the interface width's least is the small UI's width)
+//The interface width's least is uiSmallSize
 export interface SliderSetting {
 	key: "uiSize" | "uiScale" | "zoomLevel";
 	title: string;
@@ -21,9 +20,9 @@ export const SLIDERS: SliderSetting[] = [
 export type ToggleKey = "quickAnimation" | "muteUnitSounds" | "noFOW" | "useRetina" | "hdGraphics" | "markOwnUnits"
 	| "markEnemyUnits" | "showDetailInfoToolTips" | "classicRules";
 
-//The switches in the old order with their titles. The last is the rules of a new game (#53, #317): the classic rules will
-//be retired, and their switch goes with this one line. Two of the old list are cut (#464): Show terrain with Hex Grid drew
-//the deleted icon font's terrain glyphs, and Show hidden victory hexes is what the map always does (src/view/map/mapinfo.ts)
+//The last is the rules of a new game (#53, #317): the classic rules will be retired, and their switch goes with this
+//one line. There is no switch for Show terrain with Hex Grid (it drew the deleted icon font's terrain glyphs) nor
+//for Show hidden victory hexes (the map always does, src/view/map/mapinfo.ts) (#464)
 export const TOGGLES: { key: ToggleKey, title: string }[] = [
 	{ key: "quickAnimation", title: "Quick combat and move animations" },
 	{ key: "muteUnitSounds", title: "Mute unit combat sounds" }, { key: "noFOW", title: "Disable Fog of War" },
@@ -33,14 +32,13 @@ export const TOGGLES: { key: ToggleKey, title: string }[] = [
 	{ key: "classicRules", title: "New games play the classic rules" },
 ];
 
-//A slider's value as its field showed it: a whole number, else one decimal
+//A whole number, else one decimal
 export function sliderText(v: number): string {
 	return v % 1 === 0 ? String(v) : v.toFixed(1);
 }
 
-//What a switch changed beyond its setting: the page to reload when the window closes (the renderer picks its images and
-//the device's resolution once), and the interface scale the old window suggested for the device's resolution, applied
-//when the window closes
+//What a switch changes beyond its setting, both applied when the window closes: the page to reload (the renderer
+//picks its images and the device's resolution once), and the interface scale suggested for the device's resolution
 export interface Toggled {
 	reload: boolean;
 	scale: number | null;

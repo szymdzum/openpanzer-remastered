@@ -1,8 +1,7 @@
-//The new campaign's and the new scenario's windows over the start menu (CampaignSelect, ScenarioSelect, #349), with what
-//the old windows had. A campaign: the list of campaigns, its description, its country, its difficulty with the help
-//button, its scenarios and starting prestige; Play, Back and the campaign's flow. A scenario: the list under its group
-//headers, its description, each side's countries with whether the AI plays them; Play and Back. Esc closes the start
-//menu, as the old Options did.
+//The new campaign's and the new scenario's windows over the start menu. A campaign: the list, its description, country,
+//difficulty with the help button, scenarios and starting prestige; Play, Back and the campaign's flow. A scenario:
+//the list under its group headers, its description, each side's countries with whether the AI plays them; Play and
+//Back. Esc closes the start menu.
 import { safeHtml } from "../html";
 import { Fragment } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -17,8 +16,7 @@ import type { Store } from "../store/store";
 import { SegmentedControl } from "../components/tabs";
 import { Toggle } from "../components/controls";
 
-//The focus on the row picked when a window opens, the list scrolled to it: the menus are keyboard-first. (By a ref: the
-//old UI's markup, set aside on the page, has the same ids)
+//The focus on the row picked when a window opens, the list scrolled to it: the menus are keyboard-first
 function useFocusPicked() {
 	const ref = useRef<HTMLDivElement>(null);
 	useLayoutEffect(() => {

@@ -1,6 +1,5 @@
-//The dossier (Dossier, CampaignEnd, #348): the campaign's record in a window, opened from either turn report's Dossier
-//button, and at the campaign's end the same window under the outcome's stamp and the campaign's closing words, with
-//Main menu. What it says is the view model's (src/view/windows/dossier.ts): only what the game keeps.
+//The dossier window: the campaign's record, opened from either turn report's Dossier button; at the campaign's
+//end it opens under the outcome's stamp with Main menu. What it says is the view model's (dossier.ts).
 import { safeHtml } from "../html";
 import { Button } from "../components/button";
 import { Facts, StatTable } from "../components/facts";
@@ -8,7 +7,7 @@ import { Dialog, Scrim, Stamp, useEscape } from "../components/panel";
 import type { DossierView, Medal } from "./dossier";
 import type { Store } from "../store/store";
 
-//A medal on a generic ribbon with a star, gold, silver or bronze (principles.md, Iconography): never a period decoration.
+//Gold, silver or bronze on a generic ribbon with a star (principles.md, Iconography): never a period decoration.
 //Its colours are the screen's (screen.css .pm-medal)
 export function MedalMark({ outcome, size = 1 }: { outcome: Medal["outcome"], size?: number }) {
 	return (

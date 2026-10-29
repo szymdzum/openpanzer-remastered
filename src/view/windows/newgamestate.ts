@@ -1,7 +1,7 @@
-//The new campaign's and the new scenario's windows as signals (CampaignSelect, ScenarioSelect, #349): the campaign and
-//its difficulty picked, the description shown (the campaign's, the difficulty help's or its flow's), the scenario
-//picked and the sides the AI plays (the settings' isAI, which the old window changed and which are saved when the
-//scenario starts; the host is given them). What they show is src/view/windows/newgame.ts's; the starts are the host's.
+//The new campaign's and the new scenario's windows as signals: the campaign and its difficulty picked, the
+//description shown (the campaign's, the difficulty help's or its flow's), the scenario picked and the sides the AI
+//plays (the settings' isAI, saved when the scenario starts and given to the host). What they show is newgame.ts's;
+//the starts are the host's.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../../core/types";
 import type { GameHost } from "../../app/host";
@@ -58,7 +58,7 @@ export function createNewGame({ host, world, menu, lists }: NewGameInputs) {
 	return {
 		campaign, scenario, pickCampaign, pickScenario,
 
-		//A window opening: the campaign or the scenario played picked (a scenario the list hasn't leaves the one before)
+		//A window opening picks the campaign or the scenario played (a scenario the list hasn't leaves the one before)
 		openNewGame(window: "campaign" | "scenario") {
 			const { campaigns, scenarios } = lists();
 			if (window === "campaign") pickCampaign(campaignAtOpen(campaigns, world.value));
@@ -81,7 +81,6 @@ export function createNewGame({ host, world, menu, lists }: NewGameInputs) {
 			if (host.campaignFlow) host.campaignFlow(campaignPick.value, (html) => { campaignText.value = html; });
 		},
 
-		//A side of the scenario played by the AI, or by a person
 		toggleAI(id: number) {
 			uiSettings.isAI = uiSettings.isAI.map((ai, p) => p === id ? (ai ? 0 : 1) : ai);
 		},

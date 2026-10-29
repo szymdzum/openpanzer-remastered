@@ -1,6 +1,6 @@
-//The unit list's and the equipment window's signals (UnitList, Equipment, #348), apart from the rest of the store
-//(src/view/store/store.ts), which gives them the world, the selection and the person's commands. What they show is the view
-//model's (src/view/hud/unitlist.ts, src/view/windows/shop.ts); here is only what the person has open and picked
+//The unit list's and the equipment window's signals, apart from the rest of the store (store/store.ts), which gives
+//them the world, the selection and the person's commands. What they show is the view model's (hud/unitlist.ts,
+//shop.ts); here is only what the person has open and picked
 import { computed, type ReadonlySignal, signal } from "@preact/signals";
 import type { Command } from "../../core/command";
 import type { Position, UnitId, World } from "../../core/types";
@@ -11,7 +11,7 @@ import { isYourTurn } from "../store/model";
 
 interface Needs {
 	world: ReadonlySignal<World | null>;
-	//while deploying the reserve tray takes the unit list's place, as the old list showed the reserve then
+	//while deploying the reserve tray takes the unit list's place
 	deploying: ReadonlySignal<unknown>;
 	selected: ReadonlySignal<UnitId | null>;
 	select: (id: UnitId | null) => void;
@@ -28,13 +28,13 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 	const listOpen = signal(false);
 	const choice = signal<ShopChoice | null>(null);
 
-	//(while the window is open its own list takes this one's place, as the old window opened with the list)
+	//(while the window is open its own list takes this one's place)
 	const unitList = computed(() => world.value === null || !listOpen.value || deploying.value !== null || choice.value !== null ? null
 		: unitListOf(world.value, selected.value));
 	const shop = computed(() => world.value === null || choice.value === null ? null : shopOf(world.value, choice.value));
 	const shopUnits = computed(() => world.value === null || choice.value === null ? null
 		: shopUnitsOf(world.value, deploying.value !== null, choice.value.target));
-	//why the unit list and the window can't open: the old ones opened on a person's turn only (undefined: they can)
+	//why the unit list and the window can't open: they open on a person's turn only (undefined: they can)
 	const shopRefusal = computed(() => world.value === null ? "No game is playing" : isYourTurn(world.value) ? undefined : "Not your turn");
 
 	const pick = (change: Partial<ShopChoice>) => {
@@ -59,7 +59,7 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 		return true;
 	};
 
-	//Closed with the unit list, as the old window closed both
+	//Closes the unit list too
 	const closeShop = () => {
 		choice.value = null;
 		listOpen.value = false;
@@ -72,7 +72,6 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 			listOpen.value = !listOpen.value;
 		},
 
-		//A unit of the list pressed: selected, and in the middle of the map
 		listPick: (id: UnitId) => {
 			lookAt(id);
 		},
@@ -85,8 +84,8 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 
 		openShop, closeShop,
 
-		//A unit of the window's list pressed: the one to upgrade, on its class, country, model and transport, the sort kept
-		//(the old list's click); one on the map also selected and in the middle of the map, one in the reserve picked to deploy
+		//A unit of the window's list pressed: the one to upgrade, on its class, country, model and transport, the sort kept;
+		//one on the map also selected and in the middle of the map, one in the reserve picked to deploy
 		shopUnit: (id: number) => {
 			const w = world.value, c = choice.value;
 			if (w === null || c === null) return;
@@ -96,12 +95,12 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 			choice.value = { ...choiceFor(w, target), sort: c.sort, reverse: c.reverse };
 		},
 
-		//A class tab: its models, nothing picked, no unit to upgrade (the old window cleared it)
+		//A class tab: its models, nothing picked, no unit to upgrade
 		shopClass: (uclass: number) => {
 			pick({ uclass, eqid: -1, transport: -1, target: null });
 		},
 
-		//The country button: the side's next country, as the old window's flag cycled them
+		//The country button: the side's next country
 		shopCountry: () => {
 			const w = world.value, c = choice.value;
 			if (w === null || c === null) return;
@@ -128,7 +127,7 @@ export function createShopState({ world, deploying, selected, select, pickReserv
 			if (c !== null) pick({ reverse: !c.reverse });
 		},
 
-		//Buy new, Upgrade, Sell sent as the old window sent them; a sold unit leaves nothing to work on
+		//Buy new, Upgrade, Sell as commands; a sold unit leaves nothing to work on
 		shopAct: (act: ShopAct) => {
 			const s = shop.value;
 			const action = s === null ? null : act === "buy" ? s.buy : act === "upgrade" ? s.upgrade : s.sell;
