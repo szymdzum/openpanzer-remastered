@@ -8,7 +8,7 @@ import { fixtures, readFixture, restoreState } from "./contracts";
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name) => {
 	const scenario = await restoreState(readFixture("engine", name).state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	mirrorOptions.cache = false; //(the turn and the players written by hand below)
@@ -45,7 +45,7 @@ function turnLimitOf(_scenario: Awaited<ReturnType<typeof restoreState>>) {
 //win in every game; the classic rules went back to the original's (#256)
 test("In the classic rules the side that ended its last turn loses at the turn limit, whatever it holds, as in the original (#256)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
 	const { outcome } = await import("../src/core/turn");
 	mirrorOptions.cache = false;
@@ -214,7 +214,7 @@ test("In the remaster rules a side with units waiting to deploy or arrive isn't 
 test("A new game keeps how many objectives each side had to take at the start, and its save keeps them; a save from before has none (#256)", async () => {
 	const { setupOf } = await import("./corefiles");
 	const { newGame } = await import("../src/core/newgame");
-	const { readSaveObject, SAVE_VERSION } = await import("../src/savegame");
+	const { readSaveObject, SAVE_VERSION } = await import("../src/app/save");
 	const created = newGame(setupOf("drpzop01.xml", { game: 1, ai: 2 }));
 	const keys = ["name", "description", "equipment", "image", "startObjectives", "hexes"];
 	expect([created.data.startObjectives, Object.keys(created.data)]).toEqual([[5, 2], keys]);

@@ -14,11 +14,11 @@ import zlib from "node:zlib";
 import { createHash } from "node:crypto";
 import { expect, test } from "vitest";
 import { freshGame, mulberry32, startState, until } from "./lifecycle";
-import type { Game } from "../src/game";
+import type { Game } from "../src/app/game";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
 import type { AIAction } from "../src/ai";
-import type { Screen } from "../src/screen";
+import type { Screen } from "../src/app/screen";
 
 //harness/replay.sh's items: a few in CI, all with CORE_ALL_ITEMS=1
 const ITEMS = process.env.CORE_ALL_ITEMS
@@ -45,7 +45,7 @@ async function play(item: string): Promise<string[]> {
 	const { toData } = await import("../src/state");
 	const { CombatLog } = await import("../src/combatlog");
 	const { playerType } = await import("../src/core/tables");
-	const { GameState } = await import("../src/gamestate");
+	const { GameState } = await import("../src/app/storage");
 	const { touched } = await import("../src/context");
 	const seed = item.length * 7919;
 	Rng.seed(seed);

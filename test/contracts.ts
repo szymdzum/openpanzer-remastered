@@ -60,9 +60,9 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const { GameRules } = await import("../src/gamerules");
 	const { Equipment } = await import("../src/equipment");
 	const { Unit } = await import("../src/unit");
-	const { GameState } = await import("../src/gamestate");
+	const { GameState } = await import("../src/app/storage");
 	const { CombatLog } = await import("../src/combatlog");
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { Commands } = await import("../src/commands");
 	const { toData } = await import("../src/state");
 	const { Rng } = await import("../src/core/random");
@@ -113,8 +113,8 @@ export function writeFixture(module: string, name: string, fixture: ContractFixt
 //(Game.getCampaignPlayer). Its UI calls go to a stub, its saves to jsdom's localStorage
 export async function restoreState(state: string) {
 	vi.resetModules();
-	const { GameState } = await import("../src/gamestate");
-	const { game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game } = await import("../src/app/game");
 	const setupGameState = game.setupGameState;
 	const loaded = new Promise<void>((resolve) => {
 		game.setupGameState = () => {

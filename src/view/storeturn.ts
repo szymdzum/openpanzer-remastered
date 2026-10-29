@@ -5,7 +5,7 @@ import { computed, signal } from "@preact/signals";
 import type { GameEvent } from "../core/events";
 import type { World } from "../core/types";
 import { unitById, unitData } from "../core/world";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { outcomeNames } from "../core/tables";
 import type { ScenarioOutcome } from "../core/types";
 import { campaignEndOf, dossierOf } from "./dossier";

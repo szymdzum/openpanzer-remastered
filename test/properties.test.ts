@@ -115,7 +115,7 @@ async function sequencesWithCommands(weights: Partial<Record<Kind, number>>, max
 //keeps the undo for a human player only); log lists the commands played
 async function start(fixture: string, seed: number) {
 	const w = await load(fixture);
-	const { GameState } = await import("../src/gamestate");
+	const { GameState } = await import("../src/app/storage");
 	const { toData } = await import("../src/state");
 	//(a campaign's other players stay AI: Game.setupPlayers makes them AI again on every load)
 	for (const p of w.m.getPlayers())
@@ -499,8 +499,8 @@ async function reloaded(p: Play): Promise<[Save, Save] | null> {
 	if (p.ended || p.Actions.endTurn().defeat) return null;
 	const saved = new p.GameState(p.w.game).exportGameState();
 	await restoreState(saved);
-	const { GameState } = await import("../src/gamestate");
-	const { game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game } = await import("../src/app/game");
 	return [JSON.parse(saved), JSON.parse(new GameState(game).exportGameState())];
 }
 

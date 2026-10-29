@@ -40,34 +40,34 @@ function reachedFrom(modules: string[]): Set<string> {
 		if (reached.has(m)) return;
 		reached.add(m);
 		const src = fs.readFileSync(path.join(root, "src", m + ".ts"), "utf8");
-		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"\.\/(\w+)";/gm))
-			if (!i[1]) visit(i[2]);
+		for (const i of src.matchAll(/^(?:import|export)\s+(type\s+)?[^;]*?from\s+"(\.{1,2}\/[\w/]+)";/gm))
+			if (!i[1]) visit(path.posix.join(path.posix.dirname(m), i[2]));
 	};
 	modules.forEach(visit);
 	return reached;
 }
 
 //The page's modules (the old UI's went in #351; the UI's own, src/view/, are checked below)
-const uiModules = ["dom", "game", "gamestate", "main"];
+const uiModules = ["app/page", "app/game", "app/storage", "main"];
 
 test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
-	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "context", "state", "savegame",
+	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "context", "state", "app/save",
 		"mirror"]);
-	expect([...reached].filter((m) => [...uiModules, "coresession", "coreload"].includes(m))).toEqual([]);
+	expect([...reached].filter((m) => [...uiModules, "app/driver", "app/start"].includes(m))).toEqual([]);
 });
 
 //The game host (src/host.ts) plays the game's course on the engine and on the game's glue to the core
 //(coresession, coreload): it reaches no UI module, no game.ts and no dom.ts either
 test("The game host's imports reach no UI module, no game.ts and no dom.ts", () => {
-	const reached = reachedFrom(["host"]);
+	const reached = reachedFrom(["app/host"]);
 	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
-	expect(reached).toContain("coresession");
+	expect(reached).toContain("app/driver");
 });
 
 //The game shows itself through the screen interface (src/screen.ts, #374): the host, the session's glue and
 //the screen that shows nothing reach no UI module; the page gives the host the UI's screen (src/main.ts, #351)
 test("The screen interface and the screen that shows nothing reach no UI module (#374)", () => {
-	const reached = reachedFrom(["screen", "nullscreen", "coresession", "commands"]);
+	const reached = reachedFrom(["app/screen", "app/nullscreen", "app/driver", "commands"]);
 	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
 });
 
@@ -80,7 +80,7 @@ test("The new UI's imports reach no old UI module and no game.ts (#380)", () => 
 		for (const i of fs.readFileSync(path.join(view, file), "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\.\/([\w/]+)";/gm))
 			if (!i[1]) outside.add(i[2]);
 	const engine = [...outside].filter((m) => !m.startsWith("core/"));
-	expect(engine.filter((m) => !["host", "screen", "prototypes"].includes(m))).toEqual([]);
+	expect(engine.filter((m) => !["app/host", "app/screen", "prototypes"].includes(m))).toEqual([]);
 	expect([...reachedFrom(engine)].filter((m) => uiModules.includes(m))).toEqual([]);
 	expect(outside).toContain("core/step");
 });
@@ -89,7 +89,7 @@ test("The new UI's imports reach no old UI module and no game.ts (#380)", () => 
 test("game.ts starts no timer and no listener while it loads, main.ts starts the game and no turn loop", () => {
 	const top = (file: string) => fs.readFileSync(path.join(root, "src", file), "utf8").split("\n")
 		.filter((l) => /^\S/.test(l) && !l.startsWith("//")).join("\n");
-	expect(top("game.ts")).not.toMatch(/setInterval|addEventListener/);
+	expect(top("app/game.ts")).not.toMatch(/setInterval|addEventListener/);
 	const main = fs.readFileSync(path.join(root, "src/main.ts"), "utf8");
 	expect(main).not.toMatch(/setInterval/);
 	expect(main).toMatch(/^window\.addEventListener\("load", game\.gameStart\);$/m);
@@ -126,7 +126,7 @@ test("The rules read the game through the context, at the moment they ask", () =
 //infantry at 7,7 with strength -2. The load takes it off, and the German tank at 4,4 then moves there
 test("A save's unit with no strength left isn't on the map after the load (#290)", async () => {
 	const { smallGameData } = await import("./smallgame");
-	const { readSaveObject, scenarioFromSave, SAVE_VERSION } = await import("../src/savegame");
+	const { readSaveObject, scenarioFromSave, SAVE_VERSION } = await import("../src/app/save");
 	const saved = smallGameData();
 	saved.state.units[4].strength = -2;
 	const read = readSaveObject({ version: SAVE_VERSION, rules: "classic", ...saved });

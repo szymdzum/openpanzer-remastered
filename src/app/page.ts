@@ -13,7 +13,7 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { uiSettings } from "./prototypes";
+import { uiSettings } from "../prototypes";
 
 // Get the element with ID id
 //The element type is the caller's: $<HTMLInputElement>("x").value, or inferred from the variable

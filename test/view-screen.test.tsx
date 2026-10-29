@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { fakeMapImages, until } from "./lifecycle";
 import { headlessGame } from "./headlessgame";
 import { smallGame, smallGameData } from "./smallgame";
-import { nullScreen } from "../src/nullscreen";
+import { nullScreen } from "../src/app/nullscreen";
 import { newScreen, startNewUI } from "../src/view/screen";
 import { createStore, type StoreHost } from "../src/view/store";
 import { prestigeText } from "../src/view/model";
@@ -19,8 +19,8 @@ import type { Executed } from "../src/commands";
 import type { Command } from "../src/core/command";
 import { step } from "../src/core/step";
 import { handWorld } from "./coreworld";
-import type { Game } from "../src/game";
-import type { GameHost } from "../src/host";
+import type { Game } from "../src/app/game";
+import type { GameHost } from "../src/app/host";
 
 fakeMapImages();
 const isAI = [...uiSettings.isAI];

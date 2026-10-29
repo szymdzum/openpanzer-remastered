@@ -14,12 +14,12 @@
  * player clicks away set game.uiMessageClicked and tell the host to go on (goOn).
  */
 
-import type { ScenarioOutcome } from "./core/types";
-import type { ViewEvent } from "./core/controller";
-import type { Position } from "./core/state";
-import type { Executed } from "./commands";
-import type { Command, CommandType } from "./core/command";
-import type { GameEvent } from "./core/events";
+import type { ScenarioOutcome } from "../core/types";
+import type { ViewEvent } from "../core/controller";
+import type { Position } from "../core/state";
+import type { Executed } from "../commands";
+import type { Command, CommandType } from "../core/command";
+import type { GameEvent } from "../core/events";
 
 //The commands a screen shows a program's step of: a move (its cells: the move hexes, where the path may go) and an attack
 export type ShownCommand = Extract<Command, { type: "move" | "attack" }>;

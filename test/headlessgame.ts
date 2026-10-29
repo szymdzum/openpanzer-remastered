@@ -1,8 +1,8 @@
 //The game the host plays, without the DOM: Game's fields (test/host.test.ts, the new UI's screen in
 //test/view-screen.test.tsx)
-import { GameHost, runGame } from "../src/host";
-import type { Game } from "../src/game";
-import type { Screen } from "../src/screen";
+import { GameHost, runGame } from "../src/app/host";
+import type { Game } from "../src/app/game";
+import type { Screen } from "../src/app/screen";
 
 //The game the host plays: Game's fields, and the members the engine and the core's glue call on it
 //(src/coresession.ts, src/coreload.ts, src/mirror.ts), handed on to the host as Game hands them

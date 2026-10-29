@@ -10,18 +10,18 @@
 //order. What modules need of each other while loading: prototypes and core/tables (everything
 //reads them, tables imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
 import * as prototypes from "./prototypes";
-import * as gamestate from "./gamestate";
+import * as storage from "./app/storage";
 import * as combatlog from "./combatlog";
 import * as equipment from "./equipment";
-import * as dom from "./dom";
+import * as page from "./app/page";
 import * as ai from "./ai";
 import * as gamerules from "./gamerules";
 import * as unit from "./unit";
 import * as map from "./map";
-import * as scenarioloader from "./scenarioloader";
+import * as loader from "./app/loader";
 import * as scenario from "./scenario";
 import * as campaign from "./campaign";
-import * as game from "./game";
+import * as game from "./app/game";
 import * as leaders from "./leaders";
 import * as tables from "./core/tables";
 import * as rng from "./core/random";
@@ -31,29 +31,29 @@ import * as visibility from "./visibility";
 import * as selection from "./selection";
 import * as undo from "./undo";
 import * as util from "./util";
-import * as session from "./session";
+import * as running from "./app/running";
 import * as commands from "./commands";
 import * as state from "./state";
-import * as savegame from "./savegame";
+import * as save from "./app/save";
 import * as mirror from "./mirror";
-import * as coresession from "./coresession";
-import * as coreload from "./coreload";
-import * as host from "./host";
-import * as screen from "./screen";
-import * as nullscreen from "./nullscreen";
+import * as driver from "./app/driver";
+import * as start from "./app/start";
+import * as host from "./app/host";
+import * as screen from "./app/screen";
+import * as nullscreen from "./app/nullscreen";
 //(the UI's entry, not one of the modules above, which the harness reaches into)
 import { startNewUI } from "./view/screen";
 
-const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, gamerules, unit,
-	map, scenarioloader, scenario, campaign, game, leaders,
-	tables, rng, context, board, visibility, selection, undo, util, session, commands, state,
-	savegame, mirror, coresession, coreload, host, screen, nullscreen];
+const modules = [prototypes, storage, combatlog, equipment, page, ai, gamerules, unit,
+	map, loader, scenario, campaign, game, leaders,
+	tables, rng, context, board, visibility, selection, undo, util, running, commands, state,
+	save, mirror, driver, start, host, screen, nullscreen];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module
 //reads the settings while loading); here the modules only declare things, so a test can import
 //any of them
-new gamestate.GameState(null).restoreSettings(); //To restore only settings
-dom.changeViewPort();
+new storage.GameState(null).restoreSettings(); //To restore only settings
+page.changeViewPort();
 
 //The random streams seeded once, here and not while core/random.ts loads: until then the game stream reads
 //Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)

@@ -12,7 +12,7 @@ import type { GameEvent } from "../core/events";
 import type { World } from "../core/types";
 import { isAir } from "../core/units";
 import { unitById } from "../core/world";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { neighbourUnit } from "./model";
 import type { MenuKey, Shortcut } from "./shortcuts";
 import { createShopState } from "./shopstate";

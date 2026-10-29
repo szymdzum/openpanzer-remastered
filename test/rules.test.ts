@@ -33,7 +33,7 @@ test("A new game plays the remaster's rules unless the settings ask for the clas
 });
 
 test("A save names its game's rules; a save of version 1 or of the format before plays the classic ones (#53)", async () => {
-	const { readSave } = await import("../src/savegame");
+	const { readSave } = await import("../src/app/save");
 	const read = (o: unknown) => readSave(JSON.stringify(o))?.save;
 	expect(read({ version: 1, data: { name: "a" }, state: { turn: 3 } }))
 		.toEqual({ version: 3, rules: "classic", data: { name: "a", startObjectives: null }, state: { turn: 3 } });
@@ -44,14 +44,14 @@ test("A save names its game's rules; a save of version 1 or of the format before
 
 test("A game saved and loaded plays on by the same rules (#53)", async () => {
 	await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
-	const { game } = await import("../src/game");
-	const { GameState } = await import("../src/gamestate");
+	const { game } = await import("../src/app/game");
+	const { GameState } = await import("../src/app/storage");
 	expect(game.rules).toBe("classic");
 	game.rules = "remaster";
 	const saved = new GameState(game).exportGameState();
 	expect(JSON.parse(saved)).toMatchObject({ version: 3, rules: "remaster" });
 	await restoreState(saved);
-	const loaded = (await import("../src/game")).game;
+	const loaded = (await import("../src/app/game")).game;
 	expect(loaded.rules).toBe("remaster");
 	expect((await import("../src/context")).engineContext.world().rules.name).toBe("remaster");
 }, 60_000);

@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { handWorld } from "./coreworld";
 import { fakeMapImages, until } from "./lifecycle";
 import { headlessGame } from "./headlessgame";
-import { nullScreen } from "../src/nullscreen";
+import { nullScreen } from "../src/app/nullscreen";
 import { newScreen } from "../src/view/screen";
 import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, scenarioAtOpen, scenarioGroups, scenarioView, settleAI }
 	from "../src/view/newgame";

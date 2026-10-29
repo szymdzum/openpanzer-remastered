@@ -7,7 +7,7 @@ import type { Command, CommandType } from "../core/command";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";
 import { unitById } from "../core/world";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { reasonOf } from "./model";
 
 export type CoreHost = Pick<GameHost, "world" | "command">;

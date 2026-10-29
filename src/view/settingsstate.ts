@@ -4,7 +4,7 @@
 //again). Its OK saves them on the host, applies the interface scale a switch suggested, reloads the page when a switch
 //needs it, and goes back to the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { uiSettings } from "../prototypes";
 import { menuBack, type MenuState } from "./menus";
 import { SLIDERS, type SliderSetting, sliderText, type ToggleKey, toggleSetting, TOGGLES } from "./settings";

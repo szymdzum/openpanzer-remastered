@@ -15,24 +15,24 @@
  * stepWorld: what the screen writes into the objects isn't in it, what the harness writes is).
  */
 
-import { actionType, type Cell, CURRENCY_ICON } from "./prototypes";
-import { playerType } from "./core/tables";
-import { CombatLog } from "./combatlog";
-import { AI, type AIAction, type AIDriver } from "./ai";
-import type { GameMap, Player } from "./map";
-import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "./mirror";
-import { beginDraft, finishDraft } from "./core/draft";
-import { destroyUnits } from "./core/fight";
-import { unitById } from "./core/world";
-import { aiController } from "./core/ai";
-import { tutorialController } from "./core/tutorial";
-import type { Command } from "./core/command";
-import type { Controller, Order, ViewEvent } from "./core/controller";
-import type { GameEvent } from "./core/events";
-import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "./core/session";
+import { actionType, type Cell, CURRENCY_ICON } from "../prototypes";
+import { playerType } from "../core/tables";
+import { CombatLog } from "../combatlog";
+import { AI, type AIAction, type AIDriver } from "../ai";
+import type { GameMap, Player } from "../map";
+import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "../mirror";
+import { beginDraft, finishDraft } from "../core/draft";
+import { destroyUnits } from "../core/fight";
+import { unitById } from "../core/world";
+import { aiController } from "../core/ai";
+import { tutorialController } from "../core/tutorial";
+import type { Command } from "../core/command";
+import type { Controller, Order, ViewEvent } from "../core/controller";
+import type { GameEvent } from "../core/events";
+import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "../core/session";
 import type { Game } from "./game";
-import { game as running } from "./session";
-import type { Unit } from "./unit";
+import { game as running } from "./running";
+import type { Unit } from "../unit";
 
 //The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial)
 function controllerFor(type: number, player: number): Controller | null {
