@@ -171,7 +171,9 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] };
 	const range = moveRange(w, u), side = sideOf(w, u);
 	const area = range.filter((c) => c.canMove && !same(c, at)).map((c) => ({ row: c.row, col: c.col }));
-	const outline = range.length === 0 ? [] : outlineOf(w, [at, ...range.map((c) => ({ row: c.row, col: c.col }))]);
+	//(round the hexes it can stop on and its own, as the old map tinted only those: not a friend's or an enemy's hex it
+	//only passes)
+	const outline = range.length === 0 ? [] : outlineOf(w, [at, ...area]);
 	const targets: Position[] = [];
 	for (const c of attackCells(w, u))
 		if (!targets.some((t) => same(t, c))) targets.push({ row: c.row, col: c.col });

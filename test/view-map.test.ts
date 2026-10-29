@@ -117,7 +117,7 @@ test("A ground unit on a bridge of its side is drawn as the bridge, but when it 
 	expect(mapUnits(w, false, 0)[0].bridge).toBe(false);
 });
 
-test("The move area is the core's move range: tinted where the unit can stop, friends passed but not tinted, targets once each", () => {
+test("The move area is the core's move range: tinted and outlined where the unit can stop, friends passed but left out, targets once each", () => {
 	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: INFANTERIE, owner: 0, row: 4, col: 2 }, { eqid: TP7, owner: 1, row: 3, col: 1 }]);
 	const sel = selectionOf(w, 0)!;
 	const range = moveRange(w, unitById(w, 0));
@@ -127,12 +127,15 @@ test("The move area is the core's move range: tinted where the unit can stop, fr
 	expect(range.find((c) => c.row === 4 && c.col === 2)).toMatchObject({ canPass: true, canMove: false });
 	expect(sel.targets).toEqual([{ row: 3, col: 1 }]);
 	expect(attackCells(w, unitById(w, 0))).toEqual(sel.targets);
-	//the outline goes round the area with the unit's and the friend's hexes: no edge between two of them
-	const inside = new Set([sel.at, ...range].map((c) => hexIndex(w, c.row, c.col)));
+	//the outline goes round the hexes it can stop on and its own: no edge between two of them; the friend's hex it only
+	//passes is left out, as the old map left it untinted
+	const inside = new Set([sel.at, ...sel.area].map((c) => hexIndex(w, c.row, c.col)));
 	for (const e of sel.outline) {
 		const n = adjacent(e.row, e.col)[e.side];
 		expect(inside.has(hexIndex(w, n.row, n.col)) && n.row >= 0 && n.col >= 0).toBe(false);
 	}
+	const friend = hexIndex(w, 4, 2);
+	expect(sel.outline.some((e) => { const n = adjacent(e.row, e.col)[e.side]; return hexIndex(w, n.row, n.col) === friend; })).toBe(true);
 	//the enemy selected: its hex, no area; not the person's turn: no area either
 	expect(selectionOf(w, 2)).toEqual({ unit: 2, at: { row: 3, col: 1 }, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] });
 	const theirs = { ...w, state: { ...w.state, turn: { ...w.state.turn, currentPlayer: 1 } } };
