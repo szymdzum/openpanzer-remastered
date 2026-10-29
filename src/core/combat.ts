@@ -63,11 +63,23 @@ export function inRiver(terrain: number, road: number): boolean {
 	return (terrain === terrainType.River || terrain === terrainType.Stream) && road === roadType.none;
 }
 
+//Close combat (the "close combat" step): infantry attacking a unit in a city, forest, mountain or fortification hex
+//(isCloseCombatTerrain), or a fortification anywhere. The defender then uses its close defence
+export function isCloseCombat(atkClass: number, defClass: number, terrain: number): boolean {
+	return (isCloseCombatTerrain(terrain) || defClass === unitClass.fortification) && atkClass === unitClass.infantry;
+}
+
+//What an attacker's own entrenchment adds to its defence (the "entrenchment" step): its level when it is intact
+//against the defender, none in close combat
+export function entrenchmentAttacking(level: number, intact: boolean, closeCombat: boolean): number {
+	return intact && !closeCombat ? level : 0;
+}
+
 //The entrenchment each side's defense counts: intact, the attacker's not in close combat; none
 //against infiltration tactics, unless with ferocious defense
 function entrenchments(f: Fight): [number, number] {
 	const w = f.world;
-	let a = f.aEntrenchIntact && !f.isCloseCombat ? f.atk.entrenchment : 0;
+	let a = entrenchmentAttacking(f.atk.entrenchment, f.aEntrenchIntact, f.isCloseCombat);
 	let d = f.dEntrenchIntact ? f.def.entrenchment : 0;
 	if (hasLeader(w, f.atk, leaderType.infiltrationTactics) && !holdsEntrenchment(w, f.def)) d = 0;
 	if (hasLeader(w, f.def, leaderType.infiltrationTactics) && !holdsEntrenchment(w, f.atk)) a = 0;
@@ -172,8 +184,7 @@ export const classicCombat: CombatStep[] = [
 	{ name: "close combat", run(f) {
 		//infantry attacking in close terrain or a fortification: the defender uses its close defense,
 		//and against infantry so does the attacker; otherwise the attacker gets +4
-		f.isCloseCombat = (isCloseCombatTerrain(f.dTerrain) || f.dData.uclass === unitClass.fortification)
-			&& f.aData.uclass === unitClass.infantry;
+		f.isCloseCombat = isCloseCombat(f.aData.uclass, f.dData.uclass, f.dTerrain);
 		if (!f.isCloseCombat) return;
 		change(f, "close combat", "defender", "ddv", f.dData.closedef);
 		if (f.dData.uclass === unitClass.infantry)
