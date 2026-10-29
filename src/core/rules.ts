@@ -1,8 +1,8 @@
 /**
- * Ruleset - the rules a game plays by, as data: the movement tables, the class leaders and the
- * combat steps. classicRules is today's game (#116), the one the contracts and verify pin against the
- * original; remasterRules (#53) the default for new games, where the remaster's changes to the
- * mechanics and the AI go. A game plays by one of them from its start to its end (the save names it)
+ * Ruleset: the rules a game plays by, as data (the movement tables, the class leaders, the combat steps).
+ * classicRules is the original's game, which the contracts and verify pin; remasterRules is the default for
+ * new games, where the remaster's changes to the mechanics and the AI go. A game plays by one of them from
+ * its start to its end (the save names it)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -13,8 +13,8 @@ import { classicCombat } from "./combat";
 import type { Ruleset } from "./types";
 
 const L = leaderType;
-//The leaders a unit class can get, by unitClass (Leaders.unitClassLeaders): the first is the class
-//leader, which every unit with a leader has too, the others are the ones a unit can win
+//The leaders a unit class can get, by unitClass (the original's Leaders.unitClassLeaders): the first is the
+//class leader, which every unit with a leader has too, the others are the ones a unit can win
 const leaders = [
 	[],
 	[L.tenaciousDefense, L.aggressiveAttack, L.aggressiveManeuver, L.battlefieldIntelligence, L.determinedDefense,
@@ -34,6 +34,7 @@ const leaders = [
 	[], [], [], [], [], [], [], [], [], [],
 ];
 
+/** The original's rules, with no change to the mechanics or the AI. */
 export const classicRules: Ruleset = {
 	name: "classic",
 	movement: [movTableDry, movTableFrozen, movTableMud],
@@ -50,8 +51,10 @@ export const classicRules: Ruleset = {
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
-//The remaster's rules: the classic ones until a change lands here, each measured in the AI arena
-//(docs/ai/arena.md)
+/**
+ * The remaster's rules: the classic ones plus the changes set below, each measured in the AI arena
+ * (docs/ai/arena.md).
+ */
 export const remasterRules: Ruleset = {
 	...classicRules,
 	name: "remaster",
@@ -76,11 +79,13 @@ export const remasterRules: Ruleset = {
 	ai: { ...classicRules.ai, attackerEntrenchment: 0 },
 };
 
-//The ruleset of a name; a name it doesn't know (a save from before #53) plays the classic rules
+/** The ruleset of a name; a name it doesn't know (a save from before the rulesets) plays the classic rules. */
 export const rulesetNamed = (name: string | undefined): Ruleset => name === remasterRules.name ? remasterRules : classicRules;
 
-//The movement costs of a movement method on the scenario's ground (Scenario.setMoveTable: an
-//unknown ground condition moves as on dry ground)
+/**
+ * The movement costs of a movement method on the scenario's ground; an unknown ground condition moves as on dry
+ * (the original's Scenario.setMoveTable).
+ */
 export function moveCosts(rules: Ruleset, ground: number, movmethod: number): number[] {
 	const table = ground === groundCondition.frozen || ground === groundCondition.mud ? rules.movement[ground]
 		: rules.movement[groundCondition.dry];
