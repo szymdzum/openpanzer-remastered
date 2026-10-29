@@ -1,12 +1,12 @@
 //The engine contract's state string as it was before #127 (stateString in
 //test/contracts/engine.contract.js, which walked the objects), and the same string built from
-//toData (src/state.ts) and what the screen shows beside the state: the proof that toData carries
+//toData (src/legacy/state.ts) and what the screen shows beside the state: the proof that toData carries
 //what the contract compared, but for the known losses
 import { contractCommon } from "./contracts";
-import type { GameMap } from "../src/map";
-import type { Scenario } from "../src/scenario";
-import type { Unit } from "../src/unit";
-import type { EquipmentModule } from "../src/equipment";
+import type { GameMap } from "../src/legacy/map";
+import type { Scenario } from "../src/legacy/scenario";
+import type { Unit } from "../src/legacy/unit";
+import type { EquipmentModule } from "../src/legacy/equipment";
 import type { CoreUnit, SavedGame, UnitState } from "../src/core/state";
 
 type Json = Record<string, unknown>;

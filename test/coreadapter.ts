@@ -1,14 +1,14 @@
-//The game's GameRules (src/gamerules.ts rulesOn) over the world of a restored state as the gamerules
+//The game's GameRules (src/legacy/gamerules.ts rulesOn) over the world of a restored state as the gamerules
 //contract plays it (test/core-contract.test.ts): toData of the objects as they are at the call, with
 //the hexes' counters as its sight. The contract's fuzz changes units under counters that stay, and
 //its map snapshot reads the counters setZOCRange and setSpotRange switch: the game's own world
 //computes its sight from the units (D10), which equals the counters on the restored states
-import type { GameRulesModule, rulesOn } from "../src/gamerules";
-import type { Scenario } from "../src/scenario";
-import type { EquipmentModule } from "../src/equipment";
-import type { Transport, Unit } from "../src/unit";
+import type { GameRulesModule, rulesOn } from "../src/legacy/gamerules";
+import type { Scenario } from "../src/legacy/scenario";
+import type { EquipmentModule } from "../src/legacy/equipment";
+import type { Transport, Unit } from "../src/legacy/unit";
 import type { RngStream } from "../src/core/random";
-import type { toData as ToData } from "../src/state";
+import type { toData as ToData } from "../src/legacy/state";
 import { createWorld } from "../src/core/create";
 import { emptySight, unitById } from "../src/core/world";
 import type { Sight, UnitState, World } from "../src/core/types";

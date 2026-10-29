@@ -13,8 +13,8 @@ import { pageResultOf, parseArgs } from "../cli/commands";
 import { run } from "../cli/play";
 import { changes, describe, fightLines } from "../cli/report";
 import { fightRecorder } from "../cli/fightlog";
-import { CombatLog } from "../src/combatlog";
-import type { Unit } from "../src/unit";
+import { CombatLog } from "../src/legacy/combatlog";
+import type { Unit } from "../src/legacy/unit";
 import { sideOf, unitById } from "../src/core/world";
 import { terrainNames, terrainType } from "../src/core/tables";
 
@@ -262,7 +262,7 @@ test("Attackers list every hex a unit can attack the target from after a move, n
 
 test("On the page, an enemy attack that costs only the attacker, and the side's support fire, are reported as fights (#307)", async () => {
 	const g = open(await newSave("drpzop01.xml", [AXIS], 1)), w = world(g);
-	//the screen logs each fire as src/commands.ts does: the units before, then after
+	//the screen logs each fire as src/legacy/commands.ts does: the units before, then after
 	const log = { ...CombatLog }, fights = fightRecorder(log);
 	const unit = (id: number, strength: number) => {
 		const u = unitById(w, id);

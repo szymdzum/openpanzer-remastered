@@ -6,7 +6,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact
 import { smallGame, smallGameData } from "./smallgame";
 import { newScreen } from "../src/view/screen";
 import { safeHtml } from "../src/view/html";
-import { worldOf } from "../src/mirror";
+import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import { readSave, SAVE_VERSION } from "../src/app/save";
 import { CURRENCY_ICON } from "../src/app/settings";

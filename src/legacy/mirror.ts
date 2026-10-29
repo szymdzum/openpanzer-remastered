@@ -10,13 +10,13 @@
  * own code read. After each step or checkpoint applyData updates them in place to the world's state, by
  * unit id, keeping each object (code that holds one sees it change), and keeps that world: the next step
  * and the screen's rules start from it, not from the objects. What is written into them outside a step
- * (the old selection's hexes, src/selection.ts) never reaches the game: what changes the game is a command
- * (a unit left while disembarking goes back aboard by the embark, src/selection.ts). The world is made
- * from the objects only where they were set up outside a step and said so (touched, src/context.ts: a
+ * (the old selection's hexes, src/legacy/selection.ts) never reaches the game: what changes the game is a command
+ * (a unit left while disembarking goes back aboard by the embark, src/legacy/selection.ts). The world is made
+ * from the objects only where they were set up outside a step and said so (touched, src/legacy/context.ts: a
  * load, the players' setup, a test), the streams moved outside a step (a seed) or the campaign went on;
  * and under ?harness (mirrorOptions.cache off), whose scripts set up their games by writing into the
  * objects anywhere: there the world kept is compared with the objects
- * (savedAs, src/state.ts) whenever it is asked for and made again from them when they differ, until the
+ * (savedAs, src/legacy/state.ts) whenever it is asked for and made again from them when they differ, until the
  * harness plays on the game host (#378). mirrorDifference says when the two differ.
  *
  * The spotting and zone of control are the core's, computed from the units (D10: no drift, #72, #73):
@@ -25,19 +25,19 @@
  */
 
 import { Cell } from "./prototypes";
-import { uiSettings } from "./app/settings";
+import { uiSettings } from "../app/settings";
 import { Equipment } from "./equipment";
-import type { EquipmentIndexes } from "./core/state";
+import type { EquipmentIndexes } from "../core/state";
 import { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import type { Reinforcement, Scenario } from "./scenario";
-import { Rng } from "./core/random";
+import { Rng } from "../core/random";
 import { type CampaignHost, campaignState, offMapUnit, restoreUndo, sameData, sameItems, savedAs, setUnitFields, toData, writeSight } from "./state";
-import type { CoreUnit, OffMapUnit, PlayerState, UnitState } from "./core/state";
+import type { CoreUnit, OffMapUnit, PlayerState, UnitState } from "../core/state";
 import { objectWrites } from "./context";
-import { createWorld } from "./core/create";
-import { rulesetNamed } from "./core/rules";
-import type { Ruleset, RulesetName, Sight, World } from "./core/types";
+import { createWorld } from "../core/create";
+import { rulesetNamed } from "../core/rules";
+import type { Ruleset, RulesetName, Sight, World } from "../core/types";
 
 //What the world takes beside the objects: the side the screen shows, the fog of war, the rules
 export interface MirrorInputs {
@@ -266,7 +266,7 @@ function sameCounts(a: Uint16Array, b: Uint16Array): boolean {
 }
 
 //The objects updated in place to the world's state, and its sight into the counters unless counters is
-//false (the selection's back aboard, src/commands.ts)
+//false (the selection's back aboard, src/legacy/commands.ts)
 export function applyData(scenario: Scenario, w: World, host: CampaignHost | null, counters = true) {
 	held = null;
 	const m = scenario.map, s = w.state;
@@ -394,7 +394,7 @@ function applyUnit(m: GameMap, u: Unit, s: UnitState, destroyed: boolean) {
 }
 
 //A unit a step took off the map, its object as it was in the last world of the step it was in (the update
-//to the step's end then takes it off: src/commands.ts)
+//to the step's end then takes it off: src/legacy/commands.ts)
 export function applyGone(m: GameMap, s: UnitState) {
 	const u = unitObject(m, s.id);
 	if (u !== null) applyOffMap(m, u, s);

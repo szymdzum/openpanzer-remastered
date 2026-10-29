@@ -7,7 +7,7 @@ import type { HexData } from "../src/core/state";
 import { attackerSide, turnLimitOutcome } from "../src/core/turn";
 import { isTransportable } from "../src/core/units";
 import { hexIndex, isSpotted, isZOC, sideOf, unitById } from "../src/core/world";
-import { weatherConditionNames } from "../src/prototypes";
+import { weatherConditionNames } from "../src/legacy/prototypes";
 import { groundConditionNames, terrainNames, terrainType, unitClass, unitClassNames } from "../src/core/tables";
 import { attackerLine, attackers } from "./combat";
 import { cell, knownWorld, label, own, playerOfSide, positionOf, seen, SIDES, sideOfPlayer } from "./known";

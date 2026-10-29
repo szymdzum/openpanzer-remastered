@@ -12,7 +12,7 @@
  */
 
 import { leaderDescriptions } from "./prototypes";
-import { leaderType, unitClass } from "./core/tables";
+import { leaderType, unitClass } from "../core/tables";
 import type { Unit } from "./unit";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none
@@ -29,7 +29,7 @@ export var Leaders: LeadersModule = (function(Leaders: LeadersModule) { //Module
 //unit with a leader also has, the others are the random leaders a unit can get (the core's
 //classicRules holds the same lists, src/core/rules.ts)
 Leaders.unitClassLeaders = {};
-//[name, description] by leaderType (src/prototypes.ts: the new UI reads them there)
+//[name, description] by leaderType (src/legacy/prototypes.ts: the new UI reads them there)
 Leaders.description = leaderDescriptions;
 
 Leaders.unitClassLeaders[unitClass.none] = [];

@@ -2,7 +2,7 @@
 //the hex the map is asked to look at, and the person's commands sent to the host. The other parts of the store read it;
 //what a command does to them beside the world (the step shown, the turn's report reset) they give as hooks.
 import { type ReadonlySignal, signal } from "@preact/signals";
-import type { ResultOf } from "../commands";
+import type { ResultOf } from "../legacy/commands";
 import type { Command, CommandType } from "../core/command";
 import type { Position, UnitId, World } from "../core/types";
 import { isAir } from "../core/units";

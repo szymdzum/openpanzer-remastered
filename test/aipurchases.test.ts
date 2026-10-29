@@ -7,7 +7,7 @@ import type { GameEvent } from "../src/core/events";
 import { costPerStrength, unitCost } from "../src/core/costs";
 import { reinforceValue } from "../src/core/supply";
 import { isTransportable } from "../src/core/units";
-import { Equipment } from "../src/equipment";
+import { Equipment } from "../src/legacy/equipment";
 import { aiDefaultConfig, unitClass } from "../src/core/tables";
 import { smallGameData } from "./smallgame";
 

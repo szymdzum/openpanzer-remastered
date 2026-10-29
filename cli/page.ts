@@ -11,8 +11,8 @@ import { game } from "../src/app/running";
 import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageResultOf, parseArgs, runOn, UsageError } from "./commands";
 import { status } from "./board";
 import { SIDES } from "./known";
-import { CombatLog } from "../src/combatlog";
-import { GameRules } from "../src/gamerules";
+import { CombatLog } from "../src/legacy/combatlog";
+import { GameRules } from "../src/legacy/gamerules";
 import { fightRecorder } from "./fightlog";
 import { changes, fightLines } from "./report";
 

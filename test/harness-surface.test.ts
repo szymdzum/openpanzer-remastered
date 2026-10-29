@@ -66,7 +66,8 @@ test("src/main.ts lists every module for ?harness", () => {
 	const main = read("src/main.ts");
 	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/([\w/]+)";/gm)].map((m) => [m[2], m[1]]));
 	const listed = /const modules = \[([^\]]*)\]/.exec(main)![1].split(",").map((s) => s.trim());
-	const modules = fs.readdirSync(path.join(root, "src")).filter((f) => f.endsWith(".ts") && f !== "main.ts").map((f) => f.slice(0, -3));
+	const modules = ["legacy", "app"].flatMap((dir) => fs.readdirSync(path.join(root, "src", dir))
+		.filter((f) => f.endsWith(".ts")).map((f) => dir + "/" + f.slice(0, -3)));
 	expect(modules.filter((m) => !listed.includes(imports.get(m) ?? "")), "not in src/main.ts's modules").toEqual([]);
 });
 

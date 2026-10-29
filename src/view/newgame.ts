@@ -2,7 +2,7 @@
 //scenario windows show of the game's lists (src/uibuilder.ts buildStartMenu, src/ui.ts startMenuButton). Plain
 //TypeScript on the lists it is given (campaignlist.js, scenariolist.js) and the settings' AI sides.
 import type { World } from "../core/types";
-import { countryNames, difficultyType } from "../prototypes";
+import { countryNames, difficultyType } from "../legacy/prototypes";
 import { sideNames } from "../core/tables";
 import type { Nation } from "./icon";
 import { nationOf } from "./model";

@@ -9,7 +9,7 @@
 import { unitClass, unitType } from "./tables";
 import type { EquipmentTable } from "./types";
 
-//The bits of the attr field (src/equipment.ts)
+//The bits of the attr field (src/legacy/equipment.ts)
 const IGNORE_ENTRENCH = 1 << 2;
 const BRIDGE = 1 << 3;
 const NO_START_SOFT_ATTACK = 1 << 4;

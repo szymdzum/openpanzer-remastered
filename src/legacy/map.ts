@@ -13,10 +13,10 @@
  */
 
 import { Cell } from "./prototypes";
-import { uiSettings } from "./app/settings";
-import { outcomeNames, playerType, roadType, sideNames, terrainType, unitClass } from "./core/tables";
+import { uiSettings } from "../app/settings";
+import { outcomeNames, playerType, roadType, sideNames, terrainType, unitClass } from "../core/tables";
 import { Equipment } from "./equipment";
-import type { PlayerDossier } from "./core/state";
+import type { PlayerDossier } from "../core/state";
 import { defined } from "./util";
 import type { AI } from "./ai";
 import { GameRules } from "./gamerules";
@@ -399,7 +399,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	//What takes the units marked destroyed off the map (the game's: src/app/driver.ts)
 	declare static removeDestroyed: (map: GameMap) => void;
 
-	//The selected unit: the old UI's selection's, not the game's (src/selection.ts, #377)
+	//The selected unit: the old UI's selection's, not the game's (src/legacy/selection.ts, #377)
 	get currentUnit(): Unit { return this.getSelection().unit; }
 	set currentUnit(unit: Unit) { this.getSelection().unit = unit; }
 
@@ -446,11 +446,11 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 		return null;
 	}
 	this.getUnitImagesList = function() { return unitImagesList; }
-	//The unit list with its next id, and the undo slot: src/state.ts reads and restores them
+	//The unit list with its next id, and the undo slot: src/legacy/state.ts reads and restores them
 	this.getBoard = function() { return board; }
 	this.getVisibility = function() { return visibility; }
 	this.getUndoSlot = function() { return lastMove; }
-	//The old UI's selection, which it shows after each command as the old commands left it (src/selection.ts)
+	//The old UI's selection, which it shows after each command as the old commands left it (src/legacy/selection.ts)
 	this.getSelection = function() { return selection; }
 
 	this.hasAliveUnits = function(side) {

@@ -8,27 +8,27 @@ import { vi } from "vitest";
 export async function coreEngine() {
 	const { game } = await import("../src/app/game");
 	const { startGameSession, endGameTurn } = await import("../src/app/driver");
-	const { applyData, gameInputs, mirrorDifference, unitObject, stepWorld } = await import("../src/mirror");
+	const { applyData, gameInputs, mirrorDifference, unitObject, stepWorld } = await import("../src/legacy/mirror");
 	const { begin, resume } = await import("../src/core/step");
 	const { unitById } = await import("../src/core/world");
-	const { setUnitFields } = await import("../src/state");
+	const { setUnitFields } = await import("../src/legacy/state");
 	const { aiController } = await import("../src/core/ai");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
-	const { AI } = await import("../src/ai");
-	const { CombatLog } = await import("../src/combatlog");
-	const { GameRules } = await import("../src/gamerules");
-	const { Unit } = await import("../src/unit");
-	const { Cell, actionType } = await import("../src/prototypes");
+	const { AI } = await import("../src/legacy/ai");
+	const { CombatLog } = await import("../src/legacy/combatlog");
+	const { GameRules } = await import("../src/legacy/gamerules");
+	const { Unit } = await import("../src/legacy/unit");
+	const { Cell, actionType } = await import("../src/legacy/prototypes");
 	const { playerType } = await import("../src/core/tables");
-	type Player = import("../src/map").Player;
-	type GameMap = import("../src/map").GameMap;
+	type Player = import("../src/legacy/map").Player;
+	type GameMap = import("../src/legacy/map").GameMap;
 	type Order = import("../src/core/controller").Order;
 	type Controller = import("../src/core/controller").Controller;
 	type World = import("../src/core/types").World;
-	type AIAction = import("../src/ai").AIAction;
+	type AIAction = import("../src/legacy/ai").AIAction;
 	type Command = import("../src/core/command").Command;
 	type UnitState = import("../src/core/types").UnitState;
-	type Unit = import("../src/unit").Unit;
+	type Unit = import("../src/legacy/unit").Unit;
 
 	const worldNow = () => stepWorld(game.scenario, game, gameInputs(game));
 	const mirror = (w: World) => {

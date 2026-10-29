@@ -1,18 +1,18 @@
 //A small game built by hand, no scenario file (the scenario loader and the save need the DOM's XML
 //parser and storage): a 12 x 12 clear map, a German side 0 (a human player) against a Soviet side
-//1 (the AI), four units each and a victory hex for each side, as the game's objects (src/state.ts
-//fromData) with the engine context a game gives them (src/context.ts). Loads the two countries' equipment
+//1 (the AI), four units each and a victory hex for each side, as the game's objects (src/legacy/state.ts
+//fromData) with the engine context a game gives them (src/legacy/context.ts). Loads the two countries' equipment
 import fs from "node:fs";
 import path from "node:path";
 import { classicRules } from "../src/core/rules";
-import { Equipment, type EquipmentCountryFile } from "../src/equipment";
+import { Equipment, type EquipmentCountryFile } from "../src/legacy/equipment";
 import { playerType } from "../src/core/tables";
-import { Scenario } from "../src/scenario";
-import { fromData } from "../src/state";
+import { Scenario } from "../src/legacy/scenario";
+import { fromData } from "../src/legacy/state";
 import type { GameState, PlayerState, SavedGame, UnitState } from "../src/core/state";
-import { setEngineContext } from "../src/context";
-import { mirrorOptions, worldOf } from "../src/mirror";
-import type { GameMap, Player } from "../src/map";
+import { setEngineContext } from "../src/legacy/context";
+import { mirrorOptions, worldOf } from "../src/legacy/mirror";
+import type { GameMap, Player } from "../src/legacy/map";
 
 const root = path.resolve(__dirname, "..");
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.join(root, "game");

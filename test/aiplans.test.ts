@@ -7,7 +7,7 @@ import { type AIPlan, cellScore } from "../src/core/aiscore";
 import { createWorld } from "../src/core/create";
 import { newGame } from "../src/core/newgame";
 import type { World } from "../src/core/types";
-import { Equipment } from "../src/equipment";
+import { Equipment } from "../src/legacy/equipment";
 import { aiDefaultConfig, unitClass } from "../src/core/tables";
 import type { SavedGame } from "../src/core/state";
 import { distance } from "../src/core/geometry";

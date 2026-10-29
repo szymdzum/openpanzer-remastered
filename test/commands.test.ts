@@ -1,17 +1,17 @@
 // @vitest-environment node
-//The player's commands (src/commands.ts) on a small map built by hand: what each one checks,
+//The player's commands (src/legacy/commands.ts) on a small map built by hand: what each one checks,
 //what it does on the core through the game's objects, and when the move and the attack finish
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { Commands } from "../src/commands";
+import { Commands } from "../src/legacy/commands";
 import type { Command } from "../src/core/command";
-import { engineContext, setEngineContext, touched } from "../src/context";
-import { Equipment } from "../src/equipment";
-import { GameRules } from "../src/gamerules";
-import type { GameMap, Player } from "../src/map";
+import { engineContext, setEngineContext, touched } from "../src/legacy/context";
+import { Equipment } from "../src/legacy/equipment";
+import { GameRules } from "../src/legacy/gamerules";
+import type { GameMap, Player } from "../src/legacy/map";
 import { Rng } from "../src/core/random";
-import type { Scenario } from "../src/scenario";
-import { Transport, type Unit } from "../src/unit";
-import { type Cell } from "../src/prototypes";
+import type { Scenario } from "../src/legacy/scenario";
+import { Transport, type Unit } from "../src/legacy/unit";
+import { type Cell } from "../src/legacy/prototypes";
 import { terrainType, unitClass } from "../src/core/tables";
 import { smallGame, smallGameUnits } from "./smallgame";
 
@@ -116,7 +116,7 @@ test("A move is played whole before it is shown: the move, its surprise attack a
 });
 
 //The selection is the old UI's, not the game's (#377): a command leaves it as it was, and the old UI then
-//shows what the old engine's command left selected (src/selection.ts): a move, the moved unit's hexes
+//shows what the old engine's command left selected (src/legacy/selection.ts): a move, the moved unit's hexes
 test("A command leaves the selection alone, which then shows what the old command left selected (#377)", () => {
 	const inf = unitAt(3, 3), tank = unitAt(4, 4), selection = map.getSelection();
 	const cells = (list: Cell[]) => list.map((c) => c.row + "," + c.col);

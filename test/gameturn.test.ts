@@ -15,9 +15,9 @@ import { createHash } from "node:crypto";
 import { expect, test } from "vitest";
 import { freshGame, mulberry32, startState, until } from "./lifecycle";
 import type { Game } from "../src/app/game";
-import type { Unit } from "../src/unit";
-import type { Cell } from "../src/prototypes";
-import type { AIAction } from "../src/ai";
+import type { Unit } from "../src/legacy/unit";
+import type { Cell } from "../src/legacy/prototypes";
+import type { AIAction } from "../src/legacy/ai";
 import type { Screen } from "../src/app/screen";
 
 //harness/replay.sh's items: a few in CI, all with CORE_ALL_ITEMS=1
@@ -39,14 +39,14 @@ function describe(a: AIAction | null) {
 //The game played: what each step recorded
 async function play(item: string): Promise<string[]> {
 	const game = await freshGame();
-	const { AI } = await import("../src/ai");
-	const { unitObject } = await import("../src/mirror");
+	const { AI } = await import("../src/legacy/ai");
+	const { unitObject } = await import("../src/legacy/mirror");
 	const { Rng } = await import("../src/core/random");
-	const { toData } = await import("../src/state");
-	const { CombatLog } = await import("../src/combatlog");
+	const { toData } = await import("../src/legacy/state");
+	const { CombatLog } = await import("../src/legacy/combatlog");
 	const { playerType } = await import("../src/core/tables");
 	const { GameState } = await import("../src/app/storage");
-	const { touched } = await import("../src/context");
+	const { touched } = await import("../src/legacy/context");
 	const seed = item.length * 7919;
 	Rng.seed(seed);
 	Math.random = mulberry32(seed);
@@ -149,7 +149,7 @@ function ticking(game: Game) {
 //call as the old screen made it of the stand-in. The move and the attack played whole, the unit the AI picked
 //selected on the map, what the screen was asked to show recorded, its messages and windows nothing (the old
 //UIBuilder's were stubbed); the game's wait for a step shown ends at the next tick (ticking)
-function stand(game: Game, unitObject: typeof import("../src/mirror").unitObject,
+function stand(game: Game, unitObject: typeof import("../src/legacy/mirror").unitObject,
 	screen: string[]): Screen {
 	const map = () => game.scenario.map;
 	const nothing = () => {};
@@ -164,7 +164,7 @@ function stand(game: Game, unitObject: typeof import("../src/mirror").unitObject
 		reportAchievement: nothing,
 		//(the host played the step; the old screen showed the move's hexes, and the step's end waits for the next tick)
 		step(cmd) {
-			if (cmd.type === "move") map().getSelection().showMoveCells(cmd.cells as import("../src/prototypes").extendedCell[]);
+			if (cmd.type === "move") map().getSelection().showMoveCells(cmd.cells as import("../src/legacy/prototypes").extendedCell[]);
 		},
 		view(event, shown) {
 			if (event.type === "message") {
@@ -223,13 +223,13 @@ test.each(ITEMS)("Game plays %s on the core's session as it did beside the old e
 
 test("The handlers plan nothing themselves: they hand out the session's orders", async () => {
 	const game = await freshGame();
-	const { AI } = await import("../src/ai");
+	const { AI } = await import("../src/legacy/ai");
 	await startState(game, "scripted:tutorial.xml", [2, 2, 2, 2]);
 	const p = game.scenario.map.getPlayers()[0];
 	const ai = new AI(p, game.scenario.map), scripted = new AI(p, game.scenario.map);
 	ai.buildActions();
 	scripted.buildActions();
-	const { actionType } = await import("../src/prototypes");
+	const { actionType } = await import("../src/legacy/prototypes");
 	//(the tutorial's first message of turn 1, then its second: both handlers ask the same session)
 	expect([scripted.getAction().type, ai.getAction().type]).toEqual([actionType.message, actionType.message]);
 });
@@ -238,8 +238,8 @@ test("The handlers plan nothing themselves: they hand out the session's orders",
 //waits only for what the player watches (#8, an AI turn took a minute at an action a second)
 test("The AI plays its resupplies, reinforcements and mounts without waiting for the screen (#8)", async () => {
 	const game = await freshGame();
-	const { unitObject } = await import("../src/mirror");
-	const { actionType } = await import("../src/prototypes");
+	const { unitObject } = await import("../src/legacy/mirror");
+	const { actionType } = await import("../src/legacy/prototypes");
 	game.host.screen = stand(game, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 1, 1, 1]);
@@ -262,8 +262,8 @@ test("The AI plays its resupplies, reinforcements and mounts without waiting for
 //turn at once, a turn of the scenario lost)
 test("A new game's first player, the AI, plays its first turn on the screen (#292)", async () => {
 	const game = await freshGame();
-	const { unitObject } = await import("../src/mirror");
-	const { actionType } = await import("../src/prototypes");
+	const { unitObject } = await import("../src/legacy/mirror");
+	const { actionType } = await import("../src/legacy/prototypes");
 	game.host.screen = stand(game, unitObject, []);
 	const tick = ticking(game);
 	await startState(game, "drpzop01.xml", [1, 0, 0, 0]);

@@ -1,4 +1,4 @@
-//toData and fromData (src/state.ts): the game as plain data in docs/STATE.md's shape, on every
+//toData and fromData (src/legacy/state.ts): the game as plain data in docs/STATE.md's shape, on every
 //engine fixture as restored and after the AI played it. toData carries what the engine contract's
 //state string carried (test/statedata.ts), but for what isn't state (the selection, the counters,
 //the side shown) and the known losses. fromData builds the objects again: toData of them is the same
@@ -31,7 +31,7 @@ test.each(fixtures("engine"))("toData of %s is plain data", async (name) => {
 //D8: a loaded game rolls the dice and plays the AI the saved one would have
 test("fromData puts the game's and the AI's streams back where toData read them", async () => {
 	const r = await restored("drpzop01-t0.json.gz");
-	const { fromData } = await import("../src/state");
+	const { fromData } = await import("../src/legacy/state");
 	r.Rng.seed(3);
 	const saved = r.toData(r.scenario, r.game);
 	const draw = () => [r.Rng.random(), r.Rng.random(), r.Rng.aiRandom(), r.Rng.aiRandom()];
@@ -57,7 +57,7 @@ test.each(fixtures("engine"))("toData of %s carries what the engine contract's s
 //fromData's scenario: its toData is the state it was built from
 test.each(fixtures("engine"))("toData(fromData(toData(x))) is toData(x) for %s, restored and after every AI turn", async (name) => {
 	const r = await restored(name);
-	const { fromData } = await import("../src/state");
+	const { fromData } = await import("../src/legacy/state");
 	const roundTrip = () => {
 		const saved = r.toData(r.scenario, r.game);
 		expect(r.toData(fromData(saved, r.game), r.game)).toEqual(saved);
@@ -70,7 +70,7 @@ test.each(fixtures("engine"))("toData(fromData(toData(x))) is toData(x) for %s, 
 //same states after every step
 test.each(fixtures("engine"))("fromData's scenario of %s plays as the one it was read from", async (name) => {
 	const r = await restored(name);
-	const { fromData } = await import("../src/state");
+	const { fromData } = await import("../src/legacy/state");
 	const start = r.toData(r.scenario, r.game), spotSide = r.game.spotSide;
 	const trace = async () => {
 		const states: string[] = [];
@@ -88,13 +88,13 @@ test.each(fixtures("engine"))("fromData's scenario of %s plays as the one it was
 //The undo slot: a human player's move undone on fromData's scenario as on the original
 test("fromData keeps the last move undoable, and the undo puts back what it did", async () => {
 	const r = await restored("ruscam09-t2.json.gz");
-	const { fromData } = await import("../src/state");
-	const { GameRules } = await import("../src/gamerules");
+	const { fromData } = await import("../src/legacy/state");
+	const { GameRules } = await import("../src/legacy/gamerules");
 	const { playerType } = await import("../src/core/tables");
-	const { Commands } = await import("../src/commands");
+	const { Commands } = await import("../src/legacy/commands");
 	const m = r.scenario.map;
 	m.currentPlayer.type = playerType.humanLocal;
-	const move = (x: import("../src/unit").Unit, c: { row: number; col: number }) =>
+	const move = (x: import("../src/legacy/unit").Unit, c: { row: number; col: number }) =>
 		Commands.execute(r.scenario, { type: "move", unit: x.id, to: { row: c.row, col: c.col } });
 	const u = m.getUnits().find((x) => x.player === m.currentPlayer && x.getPos() && GameRules.getMoveRange(m, x).some((c) => c.canMove)
 		&& (() => { move(x, GameRules.getMoveRange(m, x).find((c) => c.canMove)); return m.canUndoMove(x); })());
@@ -114,7 +114,7 @@ test("fromData keeps the last move undoable, and the undo puts back what it did"
 //new scenario's
 test("fromData gives the game its campaign progress and campaign player", async () => {
 	const r = await restored("campaign-3-1-t0.json.gz");
-	const { fromData } = await import("../src/state");
+	const { fromData } = await import("../src/legacy/state");
 	const saved = r.toData(r.scenario, r.game);
 	expect(saved.state.campaign).not.toBeNull();
 	const progress = { isStart: !saved.state.campaign.progress.isStart, removeNonCampaignUnits: true, awardPrototype: true };
@@ -130,7 +130,7 @@ test("fromData gives the game its campaign progress and campaign player", async 
 //The harness reads the state at any moment: a campaign just started still loads its data
 test("toData of a game whose campaign is still loading has no campaign scenario yet", async () => {
 	const r = await restored("drpzop01-t0.json.gz");
-	const { Campaign } = await import("../src/campaign");
+	const { Campaign } = await import("../src/legacy/campaign");
 	const campaign = new Campaign(0, 0, () => {});
 	const saved = r.toData(r.scenario, { campaign, getCampaignProgress: () => r.game.getCampaignProgress(), setCampaignProgress() {} });
 	expect(saved.state.campaign).toMatchObject({ id: 0, scenario: -1 });
@@ -147,9 +147,9 @@ test("A campaign's next scenario starts with no zone of control or spotting of t
 	const next = game.campaign.getCurrentScenario(); //(the campaign's screen asks for it)
 	game.newScenario(next.scenario, next.intro);
 	await until(() => game.scenario !== before && game.scenario.isLoaded && game.gameStarted, "the next scenario");
-	const { toData } = await import("../src/state");
+	const { toData } = await import("../src/legacy/state");
 	const { createWorld } = await import("../src/core/create");
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	const m = game.scenario.map, w = createWorld(toData(game.scenario, game), Equipment.equipment);
 	expect(game.scenario.file, "the campaign's next scenario").not.toBe(before.file);
 	const counters = viewOf(m, game.spotSide).hexes;
@@ -158,12 +158,12 @@ test("A campaign's next scenario starts with no zone of control or spotting of t
 	expect(m.getUnits().length, "the scenario's own units on the player's deployment hexes taken off").toBeGreaterThan(0);
 });
 
-//savedAs (what the mirror asks of the world it keeps, src/mirror.ts) sees every write toData would:
+//savedAs (what the mirror asks of the world it keeps, src/legacy/mirror.ts) sees every write toData would:
 //each field of a unit's state and of a hex changed on the objects, and a write into each other part
 //of the state, makes it say no, and putting it back yes
 test("savedAs sees what toData would of every field it reads", async () => {
 	const r = await restored("campaign-3-1-t0.json.gz");
-	const { savedAs } = await import("../src/state");
+	const { savedAs } = await import("../src/legacy/state");
 	r.Rng.seed(5);
 	const m = r.scenario.map, saved = r.toData(r.scenario, r.game);
 	const sees = (what: string, write: () => () => void) => {

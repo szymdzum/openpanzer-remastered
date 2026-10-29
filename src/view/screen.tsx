@@ -12,7 +12,7 @@ import type { Position } from "../core/types";
 import type { GameHost } from "../app/host";
 import type { ScenarioOutcome } from "../core/types";
 import type { Screen, ShownCommand } from "../app/screen";
-import type { Executed } from "../commands";
+import type { Executed } from "../legacy/commands";
 import type { CommandType } from "../core/command";
 import { App } from "./app";
 import { pageSounds } from "./player";

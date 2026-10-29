@@ -1,18 +1,18 @@
 // @vitest-environment node
 //The engine without a browser: the core, GameRules, Map, Unit, Scenario, Commands and the game's mirror
 //load in Node, with no DOM, and a game drives them through their seams: the random streams
-//(src/core/random.ts), the engine context (src/context.ts). On a small map built by hand (test/smallgame.ts)
+//(src/core/random.ts), the engine context (src/legacy/context.ts). On a small map built by hand (test/smallgame.ts)
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { Rng } from "../src/core/random";
-import { engineContext, setEngineContext } from "../src/context";
-import { GameRules } from "../src/gamerules";
-import { GameMap } from "../src/map";
-import { Unit } from "../src/unit";
-import { Scenario } from "../src/scenario";
-import { Commands } from "../src/commands";
-import { applyData, worldOf } from "../src/mirror";
+import { engineContext, setEngineContext } from "../src/legacy/context";
+import { GameRules } from "../src/legacy/gamerules";
+import { GameMap } from "../src/legacy/map";
+import { Unit } from "../src/legacy/unit";
+import { Scenario } from "../src/legacy/scenario";
+import { Commands } from "../src/legacy/commands";
+import { applyData, worldOf } from "../src/legacy/mirror";
 import { startSession } from "../src/core/session";
 import { smallGame } from "./smallgame";
 import { classicRules } from "../src/core/rules";
@@ -51,8 +51,8 @@ function reachedFrom(modules: string[]): Set<string> {
 const uiModules = ["app/page", "app/game", "app/storage", "main"];
 
 test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
-	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "context", "state", "app/save",
-		"mirror"]);
+	const reached = reachedFrom(["legacy/gamerules", "legacy/map", "legacy/unit", "legacy/ai", "legacy/scenario", "legacy/commands",
+		"legacy/leaders", "legacy/context", "legacy/state", "app/save", "legacy/mirror"]);
 	expect([...reached].filter((m) => [...uiModules, "app/driver", "app/start"].includes(m))).toEqual([]);
 });
 
@@ -67,7 +67,7 @@ test("The game host's imports reach no UI module, no game.ts and no dom.ts", () 
 //The game shows itself through the screen interface (src/app/screen.ts, #374): the host, the session's glue and
 //the screen that shows nothing reach no UI module; the page gives the host the UI's screen (src/main.ts, #351)
 test("The screen interface and the screen that shows nothing reach no UI module (#374)", () => {
-	const reached = reachedFrom(["app/screen", "app/nullscreen", "app/driver", "commands"]);
+	const reached = reachedFrom(["app/screen", "app/nullscreen", "app/driver", "legacy/commands"]);
 	expect([...reached].filter((m) => uiModules.includes(m))).toEqual([]);
 });
 
@@ -80,7 +80,7 @@ test("The new UI's imports reach no old UI module and no game.ts (#380)", () => 
 		for (const i of fs.readFileSync(path.join(view, file), "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\.\/([\w/]+)";/gm))
 			if (!i[1]) outside.add(i[2]);
 	const engine = [...outside].filter((m) => !m.startsWith("core/"));
-	expect(engine.filter((m) => !["app/host", "app/screen", "app/settings", "prototypes"].includes(m))).toEqual([]);
+	expect(engine.filter((m) => !["app/host", "app/screen", "app/settings", "legacy/prototypes"].includes(m))).toEqual([]);
 	expect([...reachedFrom(engine)].filter((m) => uiModules.includes(m))).toEqual([]);
 	expect(outside).toContain("core/step");
 });

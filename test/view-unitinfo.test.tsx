@@ -7,7 +7,7 @@ import { afterEach, expect, test } from "vitest";
 import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { leaderDescriptions } from "../src/prototypes";
+import { leaderDescriptions } from "../src/legacy/prototypes";
 import { leaderType, terrainType } from "../src/core/tables";
 import { UnitInfoPanel } from "../src/view/infopanel";
 import { createStore } from "../src/view/store";

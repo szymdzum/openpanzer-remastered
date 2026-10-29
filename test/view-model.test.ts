@@ -4,7 +4,7 @@
 //the Soviet Union (player 1) the AI's; the side shown is the Axis
 import { expect, test } from "vitest";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
-import { worldOf } from "../src/mirror";
+import { worldOf } from "../src/legacy/mirror";
 import { classicRules, remasterRules } from "../src/core/rules";
 import type { World } from "../src/core/types";
 import { dateOf, endTurnRefusal, isYourTurn, prestigeText, reasonOf, refusalOf, statusOf, yourPlayer } from "../src/view/model";

@@ -15,7 +15,7 @@ import { newGame, stateEquipment } from "../src/core/newgame";
 import type { ScenarioOutcome } from "../src/core/types";
 import type { CampaignState, SavedGame } from "../src/core/state";
 import type { CoreUnit, EquipmentTable, OffMapUnit, PlayerState, UnitState } from "../src/core/types";
-import type { CommandsAPI } from "../src/commands";
+import type { CommandsAPI } from "../src/legacy/commands";
 
 type Game = Awaited<ReturnType<typeof freshGame>>;
 
@@ -24,15 +24,15 @@ const OUTCOMES: ScenarioOutcome[] = ["briliant", "victory", "tactical", "lose"];
 //The prototypes the game's screen showed, by eqid
 const shownPrototypes: number[] = [];
 
-//What the tests write into the game's objects by hand, said as the screen says it (src/context.ts)
+//What the tests write into the game's objects by hand, said as the screen says it (src/legacy/context.ts)
 let touched: () => void;
 
 //The game, the prototypes its screen shows recorded, its streams seeded, the campaign started
 async function oldCampaign(index: number, difficulty: number): Promise<{ game: Game; data: () => SavedGame }> {
 	const game = await freshGame();
-	({ touched } = await import("../src/context"));
+	({ touched } = await import("../src/legacy/context"));
 	const { Rng } = await import("../src/core/random");
-	const { toData } = await import("../src/state");
+	const { toData } = await import("../src/legacy/state");
 	game.host.screen = { ...game.host.screen, showPrototype(eqid: number) { shownPrototypes.push(eqid); } };
 	Rng.game.state = 135 + index;
 	Rng.ai.state = 7;
@@ -113,7 +113,7 @@ async function playCampaign(index: number, seen: Seen): Promise<string> {
 //A scenario played (playScenario), ended with outcome on both engines and the next one started:
 //"" when they agree and the campaign goes on, "end" when it ended (or threw on both), else what differs
 async function nextScenario({ game, data }: Old, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], seen: Seen): Promise<string> {
-	playScenario(game, (await import("../src/equipment")).Equipment.equipment, (await import("../src/commands")).Commands);
+	playScenario(game, (await import("../src/legacy/equipment")).Equipment.equipment, (await import("../src/legacy/commands")).Commands);
 	const ended = data();
 	shownPrototypes.length = 0;
 	const oldThrew = threw(() => game.continueCampaign(outcome));
@@ -203,7 +203,7 @@ test("A campaign player whose core units all fell starts the next scenario with 
 //so the unit plays there and goes to HQ at its end, refilled
 test("A campaign's core unit of a country the next scenario doesn't load plays there and goes to HQ (#182)", async () => {
 	const { game } = await oldCampaign(campaignlist.findIndex((c) => c.file === "campus.json"), 1);
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	const british = () => game.getCampaignPlayer().getCoreUnitList().find((u) => u.eqid === 373);
 	expect(british(), "wdkass makes the British unit a core unit").toBeDefined();
 	game.continueCampaign("lose");

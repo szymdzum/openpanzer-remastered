@@ -7,7 +7,7 @@ import type { Command, Refusal } from "../core/command";
 import { check } from "../core/step";
 import type { PlayerState, UnitId, UnitState, World } from "../core/types";
 import { hexIndex, isSpotted, unitById } from "../core/world";
-import { countryNames } from "../prototypes";
+import { countryNames } from "../legacy/prototypes";
 import { groundConditionNames, playerType, sideNames, unitClass } from "../core/tables";
 import type { IconName, Nation } from "./icon";
 

@@ -1,4 +1,4 @@
-//The running game's commands on the core (src/commands.ts, #137): random command sequences on the engine
+//The running game's commands on the core (src/legacy/commands.ts, #137): random command sequences on the engine
 //fixtures (test/commandgen.ts), played through the game's objects as the UI plays them (a move and an
 //attack whole, the selection refreshed after the attack's cleanup), the person clicking units between the
 //commands. After every command, two hashes: of toData's state, the combat log and the image cache (not the
@@ -17,9 +17,9 @@ import fc from "fast-check";
 import { afterAll, expect, test } from "vitest";
 import { commandOf, type Sequence, sequences } from "./commandgen";
 import { load, uiCommand } from "./invariants";
-import type { Unit } from "../src/unit";
-import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackResult, MoveResult } from "../src/commands";
+import type { Unit } from "../src/legacy/unit";
+import type { Cell, movementResults } from "../src/legacy/prototypes";
+import type { AttackResult, MoveResult } from "../src/legacy/commands";
 import type { Command } from "../src/core/command";
 
 type World = Awaited<ReturnType<typeof loaded>>;
@@ -119,8 +119,8 @@ function snapshot(w: World): string {
 //shown the current player's, the streams seeded, the combat log empty
 async function loaded(seq: Sequence) {
 	const w = await load(seq.fixture);
-	const { setEngineContext, engineContext } = await import("../src/context");
-	const { worldOf, applyData, gameInputs } = await import("../src/mirror");
+	const { setEngineContext, engineContext } = await import("../src/legacy/context");
+	const { worldOf, applyData, gameInputs } = await import("../src/legacy/mirror");
 	const { arriveReinforcements, outcome } = await import("../src/core/turn");
 	const { step } = await import("../src/core/step");
 	setEngineContext({ ...engineContext, host: () => w.game });

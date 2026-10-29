@@ -1,4 +1,4 @@
-//toData after every action the AI plays (src/state.ts, test/state.test.ts): on every engine fixture,
+//toData after every action the AI plays (src/legacy/state.ts, test/state.test.ts): on every engine fixture,
 //2 turns, it carries what the engine contract's state string carried (test/statedata.ts). Its own file:
 //the slowest of the state's tests, played on a worker of its own
 import { expect, test } from "vitest";

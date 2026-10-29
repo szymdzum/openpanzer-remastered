@@ -1,4 +1,4 @@
-//The turn report's view model (CombatLog, #348): the old combat log (src/combatlog.ts, src/uicombatlog.ts) kept from the
+//The turn report's view model (CombatLog, #348): the old combat log (src/legacy/combatlog.ts, src/uicombatlog.ts) kept from the
 //steps' events instead of the game's objects. From the person's end of turn to their next one, it gathers what the
 //side shown's units did in each fight (their totals, as CombatLog.addCombatEnd added them up), the leaders they won,
 //the objectives taken or lost, the automatic resupplies and the reinforcements of a turn's start; then it writes them
@@ -6,7 +6,7 @@
 import type { EventOf, GameEvent } from "../core/events";
 import { sideOf, unitById } from "../core/world";
 import type { Position, UnitId, World } from "../core/types";
-import { leaderDescriptions } from "../prototypes";
+import { leaderDescriptions } from "../legacy/prototypes";
 import { terrainNames, terrainType, unitClass } from "../core/tables";
 import type { IconName } from "./icon";
 import { dateOf, plural, statusOf, yourPlayer } from "./model";

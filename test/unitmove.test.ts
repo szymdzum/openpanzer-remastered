@@ -5,10 +5,10 @@ import { restoreState, readFixture } from "./contracts";
 
 test("A unit moved on a transport that uses no fuel spends no fuel", async () => {
 	const scenario = await restoreState(readFixture("engine", "ruscam09-t2.json.gz").state);
-	const { Equipment } = await import("../src/equipment");
-	const { GameRules } = await import("../src/gamerules");
-	const { Transport } = await import("../src/unit");
-	const { Commands } = await import("../src/commands");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const { GameRules } = await import("../src/legacy/gamerules");
+	const { Transport } = await import("../src/legacy/unit");
+	const { Commands } = await import("../src/legacy/commands");
 	const m = scenario.map;
 	const eqid = Object.keys(Equipment.equipment).map(Number).find((id) => Equipment.equipment[id].fuel === 0)!;
 	const unit = m.getUnits().find((u) => u.player === m.currentPlayer && u.getPos() && !u.hasMoved && GameRules.unitUsesFuel(u))!;

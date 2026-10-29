@@ -9,7 +9,7 @@ import { classicRules, remasterRules } from "../src/core/rules";
 import { check, step } from "../src/core/step";
 import type { Ruleset, World } from "../src/core/types";
 import { isSpotted } from "../src/core/world";
-import { Equipment } from "../src/equipment";
+import { Equipment } from "../src/legacy/equipment";
 import { aiDefaultConfig, terrainType } from "../src/core/tables";
 import { smallGameData } from "./smallgame";
 

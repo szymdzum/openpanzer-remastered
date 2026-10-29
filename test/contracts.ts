@@ -57,19 +57,19 @@ export async function runFixture(module: string, run: string, name: string, extr
 	const c = contract(module, run);
 	const fixture = readFixture(module, name);
 	const scenario = await restoreState(fixture.state);
-	const { GameRules } = await import("../src/gamerules");
-	const { Equipment } = await import("../src/equipment");
-	const { Unit } = await import("../src/unit");
+	const { GameRules } = await import("../src/legacy/gamerules");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const { Unit } = await import("../src/legacy/unit");
 	const { GameState } = await import("../src/app/storage");
-	const { CombatLog } = await import("../src/combatlog");
+	const { CombatLog } = await import("../src/legacy/combatlog");
 	const { game } = await import("../src/app/game");
-	const { Commands } = await import("../src/commands");
-	const { toData } = await import("../src/state");
+	const { Commands } = await import("../src/legacy/commands");
+	const { toData } = await import("../src/legacy/state");
 	const { Rng } = await import("../src/core/random");
-	const { actionType } = await import("../src/prototypes");
+	const { actionType } = await import("../src/legacy/prototypes");
 	const { terrainType, leaderType, playerType, unitClass } = await import("../src/core/tables");
 	//(the contract's script writes into the game's objects anywhere, as the harness's do: no world kept)
-	(await import("../src/mirror")).mirrorOptions.cache = false;
+	(await import("../src/legacy/mirror")).mirrorOptions.cache = false;
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	//(the engine's players, end of turn and outcome on the game's session)

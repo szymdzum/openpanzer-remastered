@@ -9,7 +9,7 @@ import type { Scenario } from "./scenario";
 import type { Campaign } from "./campaign";
 import type { Player } from "./map";
 import type { CampaignHost } from "./state";
-import type { RulesetName, World } from "./core/types";
+import type { RulesetName, World } from "../core/types";
 
 //The engine modules (map, unit, ai, scenarioloader) read these instead of the global game: the
 //scenario (Unit.copy takes the player from its map, #68), the campaign (difficulty, the
@@ -17,9 +17,9 @@ import type { RulesetName, World } from "./core/types";
 //screen shows (Unit.unitEndTurn hides units by it). Functions, read at the moment the engine
 //needs them: Game sets a context that reads its own fields (game.ts), so a harness or a test
 //that assigns game.spotSide or game.campaign is seen as before. Without a game: no scenario,
-//no campaign, no side shown. host: the game as the state's campaign host (src/state.ts), which the
-//commands on the core read the state of the game with (src/commands.ts); world: the game's world, which
-//the rules read (src/gamerules.ts)
+//no campaign, no side shown. host: the game as the state's campaign host (src/legacy/state.ts), which the
+//commands on the core read the state of the game with (src/legacy/commands.ts); world: the game's world, which
+//the rules read (src/legacy/gamerules.ts)
 export interface EngineContext {
 	scenario(): Scenario | null;
 	campaign(): Campaign | null;
@@ -27,7 +27,7 @@ export interface EngineContext {
 	spotSide(): number;
 	rules(): RulesetName;	//the rules the game plays by (src/core/rules.ts)
 	host(): CampaignHost | null;
-	world(): World; //the game's world now (src/mirror.ts rulesWorld), which the rules read
+	world(): World; //the game's world now (src/legacy/mirror.ts rulesWorld), which the rules read
 }
 
 export var engineContext: EngineContext = {
@@ -44,7 +44,7 @@ export function setEngineContext(context: EngineContext): void {
 	engineContext = context;
 }
 
-//How many times the game's objects were set up by hand outside a step and said so (src/mirror.ts): a load,
+//How many times the game's objects were set up by hand outside a step and said so (src/legacy/mirror.ts): a load,
 //the players' setup, a unit put on a hex, a test. The world is then made from them again when next asked;
 //otherwise the world kept is the game and what is written into the objects never reaches it. Never the
 //screen's: what changes the game is a command (#376). The harness writes without saying: under ?harness

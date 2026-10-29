@@ -5,7 +5,7 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * A controller answers in the core's commands, the ones a human player sends (src/commands.ts), so
+ * A controller answers in the core's commands, the ones a human player sends (src/legacy/commands.ts), so
  * the session checks and plays them all the same way. What it keeps between its calls (the AI's plan
  * of the turn, the tutorial's script) is its memory, not state (docs/STATE.md D6): the state holds
  * what it changed, its random stream's position included.

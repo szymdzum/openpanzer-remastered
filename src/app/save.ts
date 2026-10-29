@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * A save is { version, rules, data, state } (docs/STATE.md D3, D11): the rules the game plays by (#53),
- * toData's scenario data and state (src/state.ts), plain JSON and self-contained, the scenario file
+ * toData's scenario data and state (src/legacy/state.ts), plain JSON and self-contained, the scenario file
  * isn't read again. readSave reads one back, a save of version 2 (before the objectives each side had
  * to take at the start were kept, #256: unknown) or 1 (before the rules were chosen too: the classic
  * ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
@@ -16,14 +16,14 @@
  * writes the saves, loads the equipment and the campaign; this builds the scenario.
  */
 
-import { Equipment } from "../equipment";
+import { Equipment } from "../legacy/equipment";
 import type { PlayerDossier } from "../core/state";
 import type { RulesetName } from "../core/types";
 import { createWorld } from "../core/create";
 import { withoutDestroyed } from "../core/fight";
 import { rulesetNamed } from "../core/rules";
-import { Scenario } from "../scenario";
-import { campaignFromData, type CampaignHost, fromData, offMapUnit, toData } from "../state";
+import { Scenario } from "../legacy/scenario";
+import { campaignFromData, type CampaignHost, fromData, offMapUnit, toData } from "../legacy/state";
 import type { CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, ScenarioData, ScenarioState, UnitState } from "../core/state";
 
 export const SAVE_VERSION = 3;

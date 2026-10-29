@@ -1,4 +1,4 @@
-//The game's objects as a mirror of the core's world (src/mirror.ts, #137): on every engine
+//The game's objects as a mirror of the core's world (src/legacy/mirror.ts, #137): on every engine
 //fixture, the core plays a round as the AI (every order checkpoint by checkpoint, as the screen plays
 //it, every end of turn with its reinforcements), and after each piece applyData updates the objects:
 //- toData of the objects is the world's state, and the counters its sight;
@@ -18,14 +18,14 @@ import { begin, resume, step } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import type { World } from "../src/core/types";
 import type { Command } from "../src/core/command";
-import type { Unit } from "../src/unit";
+import type { Unit } from "../src/legacy/unit";
 
 const stats: Record<string, number> = {};
 const count = (what: string) => { stats[what] = (stats[what] || 0) + 1; };
 
 async function mirrorOf(name: string) {
 	const o = await load(name);
-	const { worldOf, applyData, gameInputs, mirrorDifference, unitObject } = await import("../src/mirror");
+	const { worldOf, applyData, gameInputs, mirrorDifference, unitObject } = await import("../src/legacy/mirror");
 	const inputs = gameInputs(o.game);
 	return { o, inputs, worldOf: () => worldOf(o.scenario, o.game, inputs), applyData: (w: World) => applyData(o.scenario, w, o.game),
 		difference: (w: World) => mirrorDifference(o.scenario, w, o.game), unitObject: (id: number) => unitObject(o.m, id) };
@@ -146,7 +146,7 @@ test("What a screen writes into the objects is in the world made from them", asy
 	const sorted = Object.values(list).find((l) => l.length > 2)!;
 	sorted.reverse();
 	x.o.m.getVisibility().counters[1][1].spot[0] += 2;
-	(await import("../src/context")).touched(); //(as the screen says it wrote)
+	(await import("../src/legacy/context")).touched(); //(as the screen says it wrote)
 	const w = x.worldOf();
 	expect(w.state.units[3]).toMatchObject({ facing: u.facing, strength: 4 });
 	expect(w.state.map.hexes[0].owner).toBe(1);
@@ -162,8 +162,8 @@ test("What a screen writes into the objects is in the world made from them", asy
 //without them. Under ?harness (no cache) the world is kept while toData of the objects is its state
 test("The screen's rules read the world kept until something says it wrote into the objects", async () => {
 	const x = await mirrorOf("drpzop01-t2.json.gz");
-	const { rulesWorld, stepWorld, mirrorOptions } = await import("../src/mirror");
-	const { touched } = await import("../src/context");
+	const { rulesWorld, stepWorld, mirrorOptions } = await import("../src/legacy/mirror");
+	const { touched } = await import("../src/legacy/context");
 	const world = () => rulesWorld(x.o.scenario, x.o.game, x.inputs);
 	const u = x.o.m.getUnits()[3], strength = () => world().state.units[3].strength;
 	const w = world();
@@ -189,7 +189,7 @@ test("The screen's rules read the world kept until something says it wrote into 
 //from, keep their order, in the objects and in the world the rules read
 test("The equipment lists sorted for the purchase window leave the world's lists in their order (#186)", async () => {
 	const x = await mirrorOf("drpzop01-t2.json.gz");
-	const { rulesWorld } = await import("../src/mirror");
+	const { rulesWorld } = await import("../src/legacy/mirror");
 	const world = () => rulesWorld(x.o.scenario, x.o.game, x.inputs);
 	const [country, index] = Object.entries(x.o.Equipment.equipmentIndexes).find(([, e]) => e.unitclass)!;
 	const [uclass] = Object.entries(index.unitclass!).find(([, l]) => l.length > 2)!;

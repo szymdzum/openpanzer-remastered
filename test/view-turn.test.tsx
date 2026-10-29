@@ -5,7 +5,7 @@ import { afterEach, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 import { deployWorld } from "./coreworld";
-import { worldOf } from "../src/mirror";
+import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";

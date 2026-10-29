@@ -13,10 +13,10 @@
  */
 
 import { MAJOR_VERSION, type UISettings, uiSettings } from "./settings";
-import { Equipment, type EquipmentPlayerCountries } from "../equipment";
+import { Equipment, type EquipmentPlayerCountries } from "../legacy/equipment";
 import { isChromeApp } from "./page";
-import { Scenario } from "../scenario";
-import { Campaign } from "../campaign";
+import { Scenario } from "../legacy/scenario";
+import { Campaign } from "../legacy/campaign";
 import { coreCountries } from "../core/campaign";
 import { stateEquipment } from "../core/newgame";
 import type { Game } from "./game";

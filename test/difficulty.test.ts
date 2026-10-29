@@ -5,7 +5,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import type { CampaignScenarioData } from "../src/core/campaign";
 import { newGame } from "../src/core/newgame";
-import { difficultyType } from "../src/prototypes";
+import { difficultyType } from "../src/legacy/prototypes";
 import { difficultyModifiers } from "../src/core/tables";
 import type { CampaignState } from "../src/core/state";
 import { GAME_DIR, setupOf } from "./corefiles";

@@ -2,7 +2,7 @@
 //range of every unit that can move, the combat estimate of every unit on what it can attack) and what
 //building the world from toData costs; a move and an attack played by the core's step and by the
 //game's command (on the world of the objects, the objects updated after); an end of turn; an AI
-//turn on the core and in the game; and the screen's rules (src/gamerules.ts) the render loop and a click ask. Off unless BENCH=1
+//turn on the core and in the game; and the screen's rules (src/legacy/gamerules.ts) the render loop and a click ask. Off unless BENCH=1
 //(timings on a shared machine aren't a test): BENCH=1 npx vitest run test/core-bench.test.ts prints
 //the tables
 import fs from "node:fs";
@@ -16,13 +16,13 @@ import { unitById } from "../src/core/world";
 import { step } from "../src/core/step";
 import { arriveReinforcements } from "../src/core/turn";
 import type { Command } from "../src/core/command";
-import type { Unit } from "../src/unit";
-import type { AIAction } from "../src/ai";
+import type { Unit } from "../src/legacy/unit";
+import type { AIAction } from "../src/legacy/ai";
 
-//A fixture as the page plays it: the mirror without the checks the tests run with (src/mirror.ts)
+//A fixture as the page plays it: the mirror without the checks the tests run with (src/legacy/mirror.ts)
 async function load(name: string) {
 	const w = await loadChecked(name);
-	(await import("../src/mirror")).mirrorOptions.checks = false;
+	(await import("../src/legacy/mirror")).mirrorOptions.checks = false;
 	return w;
 }
 
@@ -41,7 +41,7 @@ test.runIf(!!process.env.BENCH)("Benchmark: the core's move range and combat est
 	const rows: string[] = ["fixture, units that can move | move range µs | estimate µs | world from toData µs"];
 	for (const name of fixtures("engine")) {
 		const w = await load(name);
-		const { toData } = await import("../src/state");
+		const { toData } = await import("../src/legacy/state");
 		const { m, GameRules: GR } = w;
 		const units = m.getUnits().filter((u) => u.getPos());
 		const movers = units.filter((u) => GR.getMoveRange(m, u).length > 0);
@@ -91,7 +91,7 @@ async function timeCommands(name: string, cmds: Command[]): Promise<[number, num
 	let played = Infinity, core = Infinity;
 	for (let round = 0; round < 5; round++) {
 		const w = await load(name);
-		const { toData } = await import("../src/state");
+		const { toData } = await import("../src/legacy/state");
 		w.Rng.game.state = round + 1;
 		let world = createWorld(toData(w.scenario, w.game), w.Equipment.equipment);
 		let t = performance.now();
@@ -126,7 +126,7 @@ test.runIf(!!process.env.BENCH)("Benchmark: the core's end of turn", async () =>
 		let core = Infinity, units = 0, n = 0;
 		for (let round = 0; round < 5; round++) {
 			const w = await load(name);
-			const { toData } = await import("../src/state");
+			const { toData } = await import("../src/legacy/state");
 			let world = createWorld(toData(w.scenario, w.game), w.Equipment.equipment, { spotSide: 0 });
 			units = world.state.units.length;
 			n = 2 * world.state.players.length;
@@ -154,7 +154,7 @@ test.runIf(!!process.env.BENCH)("Benchmark: an AI turn on the core", async () =>
 		let orders = 0;
 		for (let round = 0; round < 5; round++) {
 			const w = await load(name);
-			const { toData } = await import("../src/state");
+			const { toData } = await import("../src/legacy/state");
 			const saved = toData(w.scenario, w.game);
 			saved.state.players.forEach((p) => { p.type = w.playerType.aiLocal; });
 			const world = createWorld(saved, w.Equipment.equipment, { spotSide: -1 });
@@ -210,10 +210,10 @@ test.runIf(!!process.env.BENCH)("Benchmark: an AI turn in the game", async () =>
 	fs.writeSync(2, rows.join("\n") + "\n");
 }, 600_000);
 
-//The screen's rules in the running game (src/gamerules.ts): what the render loop asks of every unit it
+//The screen's rules in the running game (src/legacy/gamerules.ts): what the render loop asks of every unit it
 //draws (the unit's own rules: its move range, ammo, fuel, ground, the bridge it stands on) and what a
 //click asks of the map (the move and attack hexes, the estimate under the attack cursor, the context
-//buttons), on the world kept while nothing wrote into the objects (src/mirror.ts)
+//buttons), on the world kept while nothing wrote into the objects (src/legacy/mirror.ts)
 test.runIf(!!process.env.BENCH)("Benchmark: the screen's rules on the core", async () => {
 	const rows: string[] = ["fixture, units | render loop per unit µs | move+attack hexes µs | estimate µs | context buttons µs"];
 	for (const name of fixtures("engine")) {

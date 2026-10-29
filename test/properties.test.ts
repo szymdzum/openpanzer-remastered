@@ -1,5 +1,5 @@
 //Property-based tests (fast-check): random sequences of player commands on the recorded engine
-//fixtures, played through the command layer (src/commands.ts, Commands.execute) as the game sends
+//fixtures, played through the command layer (src/legacy/commands.ts, Commands.execute) as the game sends
 //them, and what must hold after every step whatever the sequence. When a property breaks,
 //fast-check shrinks the sequence to the shortest one that still breaks it and prints the commands
 //it played with its seed and path: FC_SEED=<seed> FC_PATH=<path> npx vitest run
@@ -20,9 +20,9 @@ import { fixtures, restoreState } from "./contracts";
 import { cellName, load, uiCommand, violations, type Restored as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
-import type { Unit } from "../src/unit";
-import type { Cell } from "../src/prototypes";
-import type { AttackResult } from "../src/commands";
+import type { Unit } from "../src/legacy/unit";
+import type { Cell } from "../src/legacy/prototypes";
+import type { AttackResult } from "../src/legacy/commands";
 import type { Command, Refusal } from "../src/core/command";
 import { coreEngine } from "./coreengine";
 
@@ -116,11 +116,11 @@ async function sequencesWithCommands(weights: Partial<Record<Kind, number>>, max
 async function start(fixture: string, seed: number) {
 	const w = await load(fixture);
 	const { GameState } = await import("../src/app/storage");
-	const { toData } = await import("../src/state");
+	const { toData } = await import("../src/legacy/state");
 	//(a campaign's other players stay AI: Game.setupPlayers makes them AI again on every load)
 	for (const p of w.m.getPlayers())
 		if (!w.game.campaign || p.country === w.game.campaign.country) p.type = w.playerType.humanLocal;
-	(await import("../src/context")).touched(); //(the players' types written, as Game.setupPlayers does)
+	(await import("../src/legacy/context")).touched(); //(the players' types written, as Game.setupPlayers does)
 	w.game.spotSide = w.m.currentPlayer.side; //Game.setCurrentSide in hotseat
 	//The game's session with these players (its end of turn, the core's outcome)
 	const { Actions } = await coreEngine();
@@ -485,7 +485,7 @@ test("Property: execute never throws once check has allowed a command", async ()
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { drift: true })), 25);
 });
 
-//check is pure, and a refused command neither changes the game's data (src/state.ts toData) nor
+//check is pure, and a refused command neither changes the game's data (src/legacy/state.ts toData) nor
 //draws a random number
 test("Property: a refused command changes nothing", async () => {
 	await holds(fc.asyncProperty(await sequencesWithCommands(anyActions, 30), (seq) => run(seq, { refused: true })), 25);

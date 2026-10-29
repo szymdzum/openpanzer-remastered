@@ -5,7 +5,7 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * A unit and its hex point at each other (Hex.setUnit and delUnit keep both sides). A game's objects
- * are made from its state (src/state.ts fromData) and follow it (src/mirror.ts): the spotting and
+ * are made from its state (src/legacy/state.ts fromData) and follow it (src/legacy/mirror.ts): the spotting and
  * zone of control are the core's, computed from the units.
  */
 

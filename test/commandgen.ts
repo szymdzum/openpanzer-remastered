@@ -5,7 +5,7 @@
 import fc from "fast-check";
 import { fixtures } from "./contracts";
 import type { load } from "./invariants";
-import type { Unit } from "../src/unit";
+import type { Unit } from "../src/legacy/unit";
 import type { Command } from "../src/core/command";
 
 //The game's modules of a restored fixture (test/invariants.ts load)

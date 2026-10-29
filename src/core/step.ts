@@ -1,6 +1,6 @@
 /**
  * Step - a command on the state: step(world, command) -> the world after it and the events
- * (docs/CORE.md). The commands are src/commands.ts's, plain data with ids
+ * (docs/CORE.md). The commands are src/legacy/commands.ts's, plain data with ids
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

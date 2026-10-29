@@ -5,15 +5,15 @@
 //embark now. On a small map built by hand (test/smallgame.ts), the world kept as on the page (the
 //small game's other tests write into the objects by hand, as the harness does)
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { backAboard, Commands } from "../src/commands";
-import { engineContext, setEngineContext } from "../src/context";
-import { mirrorOptions, worldOf } from "../src/mirror";
-import { MapSelection } from "../src/selection";
+import { backAboard, Commands } from "../src/legacy/commands";
+import { engineContext, setEngineContext } from "../src/legacy/context";
+import { mirrorOptions, worldOf } from "../src/legacy/mirror";
+import { MapSelection } from "../src/legacy/selection";
 import { adjacent } from "../src/core/geometry";
 import { classicRules } from "../src/core/rules";
 import { computeSight } from "../src/core/sight";
-import type { GameMap } from "../src/map";
-import type { Scenario } from "../src/scenario";
+import type { GameMap } from "../src/legacy/map";
+import type { Scenario } from "../src/legacy/scenario";
 import type { SavedGame } from "../src/core/state";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 

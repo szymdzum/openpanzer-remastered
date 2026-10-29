@@ -8,7 +8,7 @@ import vm from "node:vm";
 import { equipmentCountries, fileEquipment, type GameSetup } from "../src/core/newgame";
 import { readScenarioFile } from "../src/core/scenariofile";
 import type { EquipmentTable } from "../src/core/types";
-import type { EquipmentCountryFile } from "../src/equipment";
+import type { EquipmentCountryFile } from "../src/legacy/equipment";
 import type { EquipmentState } from "../src/core/state";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));

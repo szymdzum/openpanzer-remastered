@@ -1,5 +1,5 @@
 /**
- * Command types - every player action as plain data (what src/commands.ts plays, and the core's step checks)
+ * Command types - every player action as plain data (what src/legacy/commands.ts plays, and the core's step checks)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

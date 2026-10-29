@@ -1,6 +1,6 @@
 /**
  * AI scores - what the AI thinks of a hex for a unit, of an attack, of the attacks from a hex and
- * of the nearest objective (src/ai.ts createAIEvaluator, on the core's queries)
+ * of the nearest objective (src/legacy/ai.ts createAIEvaluator, on the core's queries)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

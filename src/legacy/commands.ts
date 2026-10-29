@@ -6,7 +6,7 @@
  *
  * A command names its units by id and its hexes by cell, so it can be logged, saved, sent and written
  * by a program (docs/REFACTOR.md, step 4). The core plays it (src/core/step.ts: check, then the
- * command's handler); Commands.execute plays it whole in the running game, on the game's world (src/mirror.ts),
+ * command's handler); Commands.execute plays it whole in the running game, on the game's world (src/legacy/mirror.ts),
  * the objects updated to the world after it, and what the old engine did beside the state: the combat log,
  * the image cache.
  *
@@ -18,7 +18,7 @@
  * off the map to its last state in the step).
  *
  * The selection is the old UI's, not the game's (#377): a command doesn't touch it. The old UI shows what
- * the old engine's command left selected after it (src/selection.ts).
+ * the old engine's command left selected after it (src/legacy/selection.ts).
  */
 
 import { Cell, type combatResults, movementResults, type Supply } from "./prototypes";
@@ -28,12 +28,12 @@ import type { GameMap, ReinforceResults } from "./map";
 import type { Scenario } from "./scenario";
 import type { Unit } from "./unit";
 import { applyData, applyGone, checkedDifference, gameInputs, rulesWorld, stepWorld, unitObject } from "./mirror";
-import { attackResult } from "./core/combat";
-import type { Fighter, GameEvent } from "./core/events";
-import { begin, check, resume } from "./core/step";
-import type { Checkpoint, UnitState, World } from "./core/types";
-import { sideOf, unitById, unitData } from "./core/world";
-import type { Command, CommandOf, CommandType, Refusal } from "./core/command";
+import { attackResult } from "../core/combat";
+import type { Fighter, GameEvent } from "../core/events";
+import { begin, check, resume } from "../core/step";
+import type { Checkpoint, UnitState, World } from "../core/types";
+import { sideOf, unitById, unitData } from "../core/world";
+import type { Command, CommandOf, CommandType, Refusal } from "../core/command";
 
 //One side of an attack: its strength before and after the attack, what the animation draws it as (its
 //class before the shots: a mounted defender dismounts in them) and where it faced when they were fired (a
@@ -62,7 +62,7 @@ export interface AttackResult {
 	victorySides: number[]; //the sides that won because the other one has no units left
 	events: GameEvent[]; //what the attack did, in order
 	//The world once the destroyed units left the map, before the retreat or the surrender: the old UI's
-	//selection after the attack is made on it (src/selection.ts)
+	//selection after the attack is made on it (src/legacy/selection.ts)
 	cleanedUp: World;
 }
 
@@ -396,7 +396,7 @@ function retreated(_m: GameMap, result: AttackResult, w: World, events: GameEven
 }
 
 //A unit leaving its carrier put back on it: the selection left it, or it can't land any more (the old
-//selection's flip of its carrier, src/selection.ts). The embark's step alone: what the old UI shows
+//selection's flip of its carrier, src/legacy/selection.ts). The embark's step alone: what the old UI shows
 //beside it (the unit selected again) is the selection's own business there. The hexes' counters stay as
 //they were until the next command, as the old flip left them (the world's sight has the unit aboard),
 //unless counters: then they are the world's (an attack's selection put it back aboard before the attack's

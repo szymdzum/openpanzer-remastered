@@ -8,7 +8,7 @@ import { render as renderInto } from "preact";
 import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import type { Executed } from "../src/commands";
+import type { Executed } from "../src/legacy/commands";
 import type { Command } from "../src/core/command";
 import { terrainType } from "../src/core/tables";
 import { hexCentre } from "../src/view/hexgrid";
