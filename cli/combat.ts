@@ -96,7 +96,7 @@ function movedTo(kw: World, u: UnitState, to: Position): { world: World } | { re
 }
 
 //The hexes u can move to, as the screen shows its range: computed on the game, where a zone of control
-//on a hex the side spots stops a move whoever casts it (reference/src/gamerules.js getMoveRange)
+//on a hex the side spots stops a move whoever casts it (reference/src/legacy/gamerules.js getMoveRange)
 const reachable = (w: World, u: UnitState) => moveRange(w, unitById(w, u.id)).filter((c) => c.canMove);
 const inReach = (w: World, u: UnitState, p: Position) =>
 	(u.row === p.row && u.col === p.col) || reachable(w, u).some((c) => c.row === p.row && c.col === p.col);

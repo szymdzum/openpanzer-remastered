@@ -2,7 +2,7 @@
 // Every rule is an error. "overrides" lists, per rule, the files that broke it when it was
 // turned on: new files get every rule, and a file leaves a list once it is clean (the lists may
 // only shrink). The first override keeps the engine modules from importing UI modules or game.ts
-// (the engine reads the game through src/context.ts, and shows it through the screen interface,
+// (the engine reads the game through src/legacy/context.ts, and shows it through the screen interface,
 // src/app/screen.ts, which the UI implements in src/view/screen.tsx); the next two do the same for
 // the files of the running game (src/app/: the host, the screen interface, the screen that shows
 // nothing, the loader and the save), and keep every file of src/app/ from importing the UI (src/view/).
@@ -47,25 +47,25 @@
 	"overrides": [
 		{
 			"files": [
-				"src/ai.ts",
-				"src/board.ts",
-				"src/combatlog.ts",
-				"src/commands.ts",
-				"src/context.ts",
-				"src/equipment.ts",
-				"src/gamerules.ts",
-				"src/leaders.ts",
-				"src/map.ts",
-				"src/mirror.ts",
-				"src/prototypes.ts",
+				"src/legacy/ai.ts",
+				"src/legacy/board.ts",
+				"src/legacy/combatlog.ts",
+				"src/legacy/commands.ts",
+				"src/legacy/context.ts",
+				"src/legacy/equipment.ts",
+				"src/legacy/gamerules.ts",
+				"src/legacy/leaders.ts",
+				"src/legacy/map.ts",
+				"src/legacy/mirror.ts",
+				"src/legacy/prototypes.ts",
 				"src/core/random.ts",
-				"src/scenario.ts",
-				"src/selection.ts",
-				"src/state.ts",
-				"src/undo.ts",
-				"src/unit.ts",
-				"src/util.ts",
-				"src/visibility.ts"
+				"src/legacy/scenario.ts",
+				"src/legacy/selection.ts",
+				"src/legacy/state.ts",
+				"src/legacy/undo.ts",
+				"src/legacy/unit.ts",
+				"src/legacy/util.ts",
+				"src/legacy/visibility.ts"
 			],
 			"rules": {
 				"no-restricted-imports": [
@@ -74,13 +74,13 @@
 						"patterns": [
 							{
 								"group": [
-									"./app/page",
-									"./app/game",
-									"./app/storage",
-									"./main"
+									"../app/page",
+									"../app/game",
+									"../app/storage",
+									"../main"
 								],
 								"allowTypeImports": true,
-								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md)"
+								"message": "Engine modules don't import UI modules or game.ts: read the game through src/legacy/context.ts (CLAUDE.md)"
 							}
 						]
 					}
@@ -132,7 +132,7 @@
 									"../view/*"
 								],
 								"allowTypeImports": true,
-								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md); src/app/ doesn't import src/view/"
+								"message": "Engine modules don't import UI modules or game.ts: read the game through src/legacy/context.ts (CLAUDE.md); src/app/ doesn't import src/view/"
 							}
 						]
 					}
@@ -194,7 +194,7 @@
 									"../*",
 									"!../core",
 									"!../app",
-									"!../prototypes"
+									"!../legacy/prototypes"
 								],
 								"allowTypeImports": true,
 								"message": "The new UI (src/view/) imports only the core, the game host, the screen interface, the settings (src/app/settings.ts), its own components and Preact: never the old UI or game.ts (docs/ui/PLAN.md)"
@@ -206,17 +206,17 @@
 		},
 		{
 			"files": [
-				"src/board.ts",
-				"src/campaign.ts",
+				"src/legacy/board.ts",
+				"src/legacy/campaign.ts",
 				"src/app/page.ts",
-				"src/equipment.ts",
+				"src/legacy/equipment.ts",
 				"src/app/storage.ts",
-				"src/leaders.ts",
-				"src/map.ts",
-				"src/scenario.ts",
+				"src/legacy/leaders.ts",
+				"src/legacy/map.ts",
+				"src/legacy/scenario.ts",
 				"src/app/loader.ts",
-				"src/selection.ts",
-				"src/undo.ts",
+				"src/legacy/selection.ts",
+				"src/legacy/undo.ts",
 				"test/contracts/engine.contract.js",
 				"test/invariants.test.ts",
 				"test/outcome.test.ts"
@@ -235,9 +235,9 @@
 		},
 		{
 			"files": [
-				"src/combatlog.ts",
-				"src/equipment.ts",
-				"src/leaders.ts"
+				"src/legacy/combatlog.ts",
+				"src/legacy/equipment.ts",
+				"src/legacy/leaders.ts"
 			],
 			"rules": {
 				"no-shadow": "off"
@@ -245,18 +245,18 @@
 		},
 		{
 			"files": [
-				"src/campaign.ts",
-				"src/combatlog.ts",
-				"src/context.ts",
+				"src/legacy/campaign.ts",
+				"src/legacy/combatlog.ts",
+				"src/legacy/context.ts",
 				"src/app/page.ts",
-				"src/equipment.ts",
-				"src/gamerules.ts",
+				"src/legacy/equipment.ts",
+				"src/legacy/gamerules.ts",
 				"src/app/storage.ts",
-				"src/leaders.ts",
-				"src/map.ts",
+				"src/legacy/leaders.ts",
+				"src/legacy/map.ts",
 				"src/core/random.ts",
 				"src/app/loader.ts",
-				"src/unit.ts"
+				"src/legacy/unit.ts"
 			],
 			"rules": {
 				"no-var": "off"
@@ -266,7 +266,7 @@
 			"files": [
 				"src/app/settings.ts",
 				"src/core/tables.ts",
-				"src/prototypes.ts"
+				"src/legacy/prototypes.ts"
 			],
 			"rules": {
 				"prefer-const": "off"
@@ -274,7 +274,7 @@
 		},
 		{
 			"files": [
-				"src/ai.ts",
+				"src/legacy/ai.ts",
 				"src/app/page.ts",
 				"src/app/storage.ts"
 			],
@@ -292,8 +292,8 @@
 		},
 		{
 			"files": [
-				"src/map.ts",
-				"src/visibility.ts"
+				"src/legacy/map.ts",
+				"src/legacy/visibility.ts"
 			],
 			"rules": {
 				"unicorn/no-new-array": "off"

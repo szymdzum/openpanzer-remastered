@@ -13,7 +13,7 @@
  */
 
 import { countryNames } from "./prototypes";
-import type { EquipmentIndexes } from "./core/state";
+import type { EquipmentIndexes } from "../core/state";
 
 //A country equipment file as loaded, the units are value arrays in the parsehints order
 export interface EquipmentCountryFile {

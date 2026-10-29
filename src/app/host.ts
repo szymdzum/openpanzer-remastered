@@ -19,29 +19,29 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, difficultyType, endGameLossText, endGameType } from "../prototypes";
+import { actionType, difficultyType, endGameLossText, endGameType } from "../legacy/prototypes";
 import { DEBUG_AI_MOVES, DEFAULT_SCENARIO, newGameRules, uiSettings } from "./settings";
 import { outcomeNames, playerType, sideNames } from "../core/tables";
-import { AI, type AIAction } from "../ai";
-import { GameMap, Player } from "../map";
-import { Scenario } from "../scenario";
+import { AI, type AIAction } from "../legacy/ai";
+import { GameMap, Player } from "../legacy/map";
+import { Scenario } from "../legacy/scenario";
 import type { ScenarioOutcome } from "../core/types";
-import { Campaign, type CampaignScenario } from "../campaign";
+import { Campaign, type CampaignScenario } from "../legacy/campaign";
 import { coreDriver, endGameTurn, handlerFor, removeDestroyed, startGameSession } from "./driver";
-import { type AttackResult, backAboard, Commands, type Executed, type MoveResult, type ResultOf } from "../commands";
+import { type AttackResult, backAboard, Commands, type Executed, type MoveResult, type ResultOf } from "../legacy/commands";
 import type { Command, CommandType, Refusal } from "../core/command";
-import { CombatLog } from "../combatlog";
-import { GameRules } from "../gamerules";
-import { MapSelection } from "../selection";
+import { CombatLog } from "../legacy/combatlog";
+import { GameRules } from "../legacy/gamerules";
+import { MapSelection } from "../legacy/selection";
 import { buildOnCore, carriedCountries, carryPlayer, prototypeAwarded } from "./start";
-import { applyData, gameInputs, rulesWorld, worldOf } from "../mirror";
+import { applyData, gameInputs, rulesWorld, worldOf } from "../legacy/mirror";
 import { ScenarioLoader } from "./loader";
 import { endCampaignScenario, scenarioEnded } from "../core/campaign";
 import { attackerSide, turnLimitOutcome, turnLimitResult } from "../core/turn";
 import type { SessionEnd } from "../core/session";
 import type { World } from "../core/types";
-import { setEngineContext, touched } from "../context";
-import { defined } from "../util";
+import { setEngineContext, touched } from "../legacy/context";
+import { defined } from "../legacy/util";
 import { Rng } from "../core/random";
 import { game, setGame } from "./running";
 import type { Game } from "./game";
@@ -362,7 +362,7 @@ export class GameHost {
 		return this.game.campaign !== null ? this.campaignPlayer : null;
 	}
 
-	//The campaign's progress between scenarios, for the state (src/state.ts)
+	//The campaign's progress between scenarios, for the state (src/legacy/state.ts)
 	getCampaignProgress(): CampaignProgress {
 		return { isStart: this.isCampaignStart, removeNonCampaignUnits: this.removeNonCampaignUnits,
 			awardPrototype: this.awardPrototype };
@@ -750,7 +750,7 @@ function localSideOf(players: Player[]): number {
 //The game the engine plays in, made the running one: the programs are the session's controllers
 //(src/app/driver.ts), the scenarios start on the core (src/app/start.ts), the selection puts a unit back
 //aboard by the game's embark, and the engine reads the game's fields at the moment it needs them
-//(src/context.ts), so what a harness or a test assigns to game.* is seen as before
+//(src/legacy/context.ts), so what a harness or a test assigns to game.* is seen as before
 export function runGame(g: Game) {
 	setGame(g);
 	AI.driver = coreDriver;

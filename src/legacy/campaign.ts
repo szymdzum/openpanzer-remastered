@@ -12,9 +12,9 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { difficultyModifiers } from "./core/tables";
+import { difficultyModifiers } from "../core/tables";
 import { Scenario } from "./scenario";
-import type { ScenarioOutcome } from "./core/types";
+import type { ScenarioOutcome } from "../core/types";
 
 //One scenario of a campaign data file (resources/campaigns/data/*.json)
 export interface CampaignScenario {

@@ -8,7 +8,7 @@ import { adjacent, directionTo } from "../src/core/geometry";
 import { step } from "../src/core/step";
 import type { Command } from "../src/core/command";
 import type { World } from "../src/core/types";
-import { directionToRadians } from "../src/prototypes";
+import { directionToRadians } from "../src/legacy/prototypes";
 import { uiSettings } from "../src/app/settings";
 import { playerType, terrainType } from "../src/core/tables";
 import { type Beat, beatsFor, SHEETS } from "../src/view/beats";

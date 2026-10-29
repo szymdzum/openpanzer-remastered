@@ -1,5 +1,5 @@
 /**
- * AI - the computer player as a controller (controller.ts) on the core: src/ai.ts's purchases,
+ * AI - the computer player as a controller (controller.ts) on the core: src/legacy/ai.ts's purchases,
  * deployment and plan, answering in commands
  *
  * Licensed under the GPL license:

@@ -2,7 +2,7 @@
  * CoreSession - the running game's turns on the core's session (#137): the players' controllers (the
  * AI, the tutorial), their orders handed out as the old handlers' actions, the end of turn with the
  * next player's turn start, the reinforcements and the save, each mirrored into the game's
- * objects (src/mirror.ts) and told to the screen (src/app/screen.ts) where the old game told it
+ * objects (src/legacy/mirror.ts) and told to the screen (src/app/screen.ts) where the old game told it
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -10,18 +10,18 @@
  * The players keep a handler (Player.handler, an AI): its getAction asks the session
  * for the current player's next order and hands it out as the old action (harness/replay.js wraps it
  * to hash the state there), and the host's processAction plays it as before, its commands on the core
- * (src/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
- * the session with its controller. The session's world is the game's before each call (src/mirror.ts
+ * (src/legacy/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
+ * the session with its controller. The session's world is the game's before each call (src/legacy/mirror.ts
  * stepWorld: what the screen writes into the objects isn't in it, what the harness writes is).
  */
 
-import { actionType, type Cell } from "../prototypes";
+import { actionType, type Cell } from "../legacy/prototypes";
 import { CURRENCY_ICON } from "./settings";
 import { playerType } from "../core/tables";
-import { CombatLog } from "../combatlog";
-import { AI, type AIAction, type AIDriver } from "../ai";
-import type { GameMap, Player } from "../map";
-import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "../mirror";
+import { CombatLog } from "../legacy/combatlog";
+import { AI, type AIAction, type AIDriver } from "../legacy/ai";
+import type { GameMap, Player } from "../legacy/map";
+import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "../legacy/mirror";
 import { beginDraft, finishDraft } from "../core/draft";
 import { destroyUnits } from "../core/fight";
 import { unitById } from "../core/world";
@@ -33,7 +33,7 @@ import type { GameEvent } from "../core/events";
 import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "../core/session";
 import type { Game } from "./game";
 import { game as running } from "./running";
-import type { Unit } from "../unit";
+import type { Unit } from "../legacy/unit";
 
 //The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial)
 function controllerFor(type: number, player: number): Controller | null {

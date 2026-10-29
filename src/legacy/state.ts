@@ -29,12 +29,12 @@ import { Equipment } from "./equipment";
 import { Transport, Unit } from "./unit";
 import { type GameMap, type Hex, Player } from "./map";
 import { Scenario } from "./scenario";
-import { Rng } from "./core/random";
+import { Rng } from "../core/random";
 import type { Campaign } from "./campaign";
-import { createWorld } from "./core/create";
-import type { Sight } from "./core/types";
+import { createWorld } from "../core/create";
+import type { Sight } from "../core/types";
 import { touched } from "./context";
-import type { CampaignProgress, CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, RngStreams, SavedGame, ScenarioData, UndoState, UnitId, UnitState } from "./core/state";
+import type { CampaignProgress, CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, RngStreams, SavedGame, ScenarioData, UndoState, UnitId, UnitState } from "../core/state";
 
 //What toData and fromData read and set of the game beside its scenario (Game): the campaign and
 //its progress in Game's closure. setCampaignProgress also links the scenario's campaign player
@@ -76,7 +76,7 @@ export function toData(scenario: Scenario, host?: CampaignHost | null): SavedGam
 }
 
 //Whether toData of the scenario has saved's values: what the mirror asks of every world it keeps
-//(src/mirror.ts), without making the whole state. The hexes, the units and the equipment lists compared
+//(src/legacy/mirror.ts), without making the whole state. The hexes, the units and the equipment lists compared
 //where they are, the rest made as toData makes it and compared
 export function savedAs(scenario: Scenario, host: CampaignHost | null, saved: SavedGame): boolean {
 	const m = scenario.map, units = m.getUnits(), { data, state } = saved;
@@ -407,7 +407,7 @@ function newUnit(s: OffMapUnit, id: UnitId): Unit {
 }
 
 //A unit's fields but its eqid, id and position to the state's (its transport made again when it is
-//another one): of a new unit, or of one the game holds (src/mirror.ts)
+//another one): of a new unit, or of one the game holds (src/legacy/mirror.ts)
 export function setUnitFields(u: Unit, s: OffMapUnit) {
 	u.owner = s.owner;
 	u.hasMoved = s.hasMoved;

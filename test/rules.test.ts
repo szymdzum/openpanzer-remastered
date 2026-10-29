@@ -19,7 +19,7 @@ test("The remaster's rules are the classic ones but for the AI's play, who attac
 
 test("Without a game the engine reads the classic rules (#53)", async () => {
 	vi.resetModules();
-	const { engineContext } = await import("../src/context");
+	const { engineContext } = await import("../src/legacy/context");
 	expect(engineContext.rules()).toBe("classic");
 });
 
@@ -53,7 +53,7 @@ test("A game saved and loaded plays on by the same rules (#53)", async () => {
 	await restoreState(saved);
 	const loaded = (await import("../src/app/game")).game;
 	expect(loaded.rules).toBe("remaster");
-	expect((await import("../src/context")).engineContext.world().rules.name).toBe("remaster");
+	expect((await import("../src/legacy/context")).engineContext.world().rules.name).toBe("remaster");
 }, 60_000);
 
 test("The command-line player's new game plays the remaster's rules unless --rules classic, and its save keeps them (#53)", async () => {

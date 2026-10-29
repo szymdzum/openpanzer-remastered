@@ -20,9 +20,9 @@ import { freshGame, mulberry32, startState } from "./lifecycle";
 //The game's modules (fresh for every game: the equipment lists are module state, #22)
 async function modules() {
 	const { game } = await import("../src/app/game");
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	const { Rng } = await import("../src/core/random");
-	const { toData } = await import("../src/state");
+	const { toData } = await import("../src/legacy/state");
 	const { uiSettings } = await import("../src/app/settings");
 	const { playerType } = await import("../src/core/tables");
 	return { game, Equipment, Rng, toData, playerType, uiSettings };
@@ -89,7 +89,7 @@ async function tutorialAt(turn: number): Promise<Session> {
 	const { o, localSide } = await startItem("scripted:tutorial.xml", turn);
 	const m = o.game.scenario.map;
 	m.turn = turn;
-	(await import("../src/context")).touched();
+	(await import("../src/legacy/context")).touched();
 	const places = TUTORIAL_PLACES[turn];
 	if (places !== undefined) {
 		if (turn > 3) {

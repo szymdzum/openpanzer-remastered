@@ -17,7 +17,7 @@
 import type { ScenarioOutcome } from "../core/types";
 import type { ViewEvent } from "../core/controller";
 import type { Position } from "../core/state";
-import type { Executed } from "../commands";
+import type { Executed } from "../legacy/commands";
 import type { Command, CommandType } from "../core/command";
 import type { GameEvent } from "../core/events";
 
@@ -60,7 +60,7 @@ export interface Screen {
 	//and its look at a hex (the old UI showed them a moment, #8) and for its message
 	view(event: ViewEvent, shown?: () => void): void;
 	//A program's command other than a move or an attack, played (done: its result or its refusal): what the
-	//screen shows beside the state after it (the old UI's selection, src/selection.ts: the pinned game turns'
+	//screen shows beside the state after it (the old UI's selection, src/legacy/selection.ts: the pinned game turns'
 	//stand-in of the old screen, test/gameturn.test.ts). A screen that reads the game's world has none
 	played?(cmd: Command, done: Executed<CommandType>): void;
 	//A step the screen is still showing, the program's or the person's: a move or an attack it animates (the

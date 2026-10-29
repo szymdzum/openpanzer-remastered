@@ -9,7 +9,7 @@
  * the harness don't have it (#377). It lives here, not on the hexes and the map: GameMap carries it for the
  * old UI and the harness's scripts (GameMap.currentUnit, selectUnit...). The
  * move cells are also what a move finds its path in when the caller passes them (the move command's
- * cells). The hexes are asked of the game's rules, the core's queries (src/gamerules.ts).
+ * cells). The hexes are asked of the game's rules, the core's queries (src/legacy/gamerules.ts).
  *
  * The commands don't touch it: after a command the old UI asks it to show what the old engine's command
  * left selected (after): a move shows the unit's move and attack hexes, an attack clears the attack hexes
@@ -22,13 +22,13 @@
  */
 
 import { type Cell, type extendedCell } from "./prototypes";
-import { unitClass } from "./core/tables";
+import { unitClass } from "../core/tables";
 import { GameRules, type GameRulesModule, rulesOver } from "./gamerules";
 import { engineContext } from "./context";
-import { createWorld } from "./core/create";
-import { unitById } from "./core/world";
+import { createWorld } from "../core/create";
+import { unitById } from "../core/world";
 import type { AttackResult, Executed, MoveResult } from "./commands";
-import type { Command, CommandType } from "./core/command";
+import type { Command, CommandType } from "../core/command";
 import type { GameMap, ReinforceResults } from "./map";
 import type { Unit } from "./unit";
 
@@ -43,7 +43,7 @@ export class MapSelection {
 	declare moveShown: Set<number>;
 	declare attackShown: Set<number>;
 	//The game's embark of a unit leaving its carrier, back aboard (src/app/host.ts runGame sets it: the
-	//selection doesn't reach the commands). counters: the hexes' counters counted again (src/commands.ts)
+	//selection doesn't reach the commands). counters: the hexes' counters counted again (src/legacy/commands.ts)
 	declare static backAboard: (unit: Unit, counters?: boolean) => void;
 
 	constructor(map: GameMap) {

@@ -12,7 +12,7 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { leaderType } from "./core/tables";
+import { leaderType } from "../core/tables";
 
 export let weatherConditionNames = ["Fair", "Overcast", "Raining", "Snowing"];
 
@@ -66,7 +66,7 @@ export let actionType = {
 	endturn: 10,
 	message: 11,
 	viewport: 12
-} as const; //(literal types: a program's action is a union by its type, src/ai.ts AIAction)
+} as const; //(literal types: a program's action is a union by its type, src/legacy/ai.ts AIAction)
 
 //What triggered end of the campaign/scenario
 export let endGameType = {

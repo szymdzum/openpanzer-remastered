@@ -11,8 +11,8 @@ export async function restored(name: string) {
 	const fixture = readFixture("engine", name);
 	const scenario = await restoreState(fixture.state);
 	const { game } = await import("../src/app/game");
-	const { Equipment } = await import("../src/equipment");
-	const { toData } = await import("../src/state");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const { toData } = await import("../src/legacy/state");
 	const { Rng } = await import("../src/core/random"); //the restored modules' (restoreState loads them again)
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
@@ -30,11 +30,11 @@ export function carried(r: Restored) {
 }
 
 //An AI action as the command the game sends for it (src/app/host.ts processAction), null for the UI's
-type AIAction = import("../src/ai").AIAction;
+type AIAction = import("../src/legacy/ai").AIAction;
 type Command = import("../src/core/command").Command;
 async function commandOf(): Promise<(a: AIAction) => Command | null> {
-	const { actionType: A } = await import("../src/prototypes");
-	const { Unit } = await import("../src/unit");
+	const { actionType: A } = await import("../src/legacy/prototypes");
+	const { Unit } = await import("../src/legacy/unit");
 	const make: Record<number, (unit: number, p: AIAction["param"]) => Command> = {
 		[A.move]: (unit, p) => ({ type: "move", unit, to: p[1] as { row: number; col: number } }),
 		[A.attack]: (unit, p) => ({ type: "attack", unit, target: (p[1] as { id: number }).id }),
@@ -50,7 +50,7 @@ async function commandOf(): Promise<(a: AIAction) => Command | null> {
 //seeded, on the game's session (test/coreengine.ts: each player's AI, the end of turn with its
 //reinforcements): after(step) after every action and end of turn
 export async function playAI(r: Restored, seed: number, after: (step: string) => void) {
-	const { Commands } = await import("../src/commands");
+	const { Commands } = await import("../src/legacy/commands");
 	const command = await commandOf();
 	const m = r.scenario.map;
 	const engine = await coreEngine();

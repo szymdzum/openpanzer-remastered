@@ -3,7 +3,7 @@
 //goes on to the second whatever its outcome), a unit bought in the equipment window and deployed, one upgraded through
 //its unit list, a move, the unit list and the unit card, End turn with the AI's turn played out, the turn report and the
 //dossier, an attack and its result, a save to a file and its load back (the same game after it, by toData:
-//src/state.ts), then the turns ended until the scenario's end, its message, and the campaign's next scenario starting.
+//src/legacy/state.ts), then the turns ended until the scenario's end, its message, and the campaign's next scenario starting.
 //
 //It fails on a console error, an uncaught error or an unhandled rejection in the page, or a step that doesn't show what
 //it should. Every random stream is seeded (src/core/random.ts), so it plays the same game every time. The page knows nothing of
@@ -34,7 +34,7 @@ const FAILURE = "harness/out/e2e-failure.png";
 //What the test reads in the page: the page's own modules, put on window.e2e once the game has loaded
 type Probe = {
 	game: typeof import("../../src/app/running").game;
-	toData: typeof import("../../src/state").toData;
+	toData: typeof import("../../src/legacy/state").toData;
 	Rng: typeof import("../../src/core/random").Rng;
 	uiSettings: typeof import("../../src/app/settings").uiSettings;
 	hexCentre: typeof import("../../src/view/hexgrid").hexCentre;
@@ -45,7 +45,7 @@ type Probe = {
 	isAir: typeof import("../../src/core/units").isAir;
 };
 type Probed = { e2e: Probe };
-const MODULES = ["/src/app/running.ts", "/src/state.ts", "/src/core/random.ts", "/src/app/settings.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
+const MODULES = ["/src/app/running.ts", "/src/legacy/state.ts", "/src/core/random.ts", "/src/app/settings.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
 	"/src/view/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
 
 const errors: string[] = [];

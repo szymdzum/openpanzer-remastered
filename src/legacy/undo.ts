@@ -7,7 +7,7 @@
  *
  * The unit, the unit as it was before the move (where it stood, its fuel and moves...) and what the
  * move's capture changed. The core plays the undo (src/core/commands/undo.ts); the game's objects hold
- * the slot as the state has it (src/mirror.ts).
+ * the slot as the state has it (src/legacy/mirror.ts).
  */
 
 import type { Unit } from "./unit";

@@ -5,10 +5,10 @@
 import { readFixture, restoreState } from "./contracts";
 import { coreEngine } from "./coreengine";
 import { createWorld } from "../src/core/create";
-import type { Hex } from "../src/map";
-import type { Unit } from "../src/unit";
-import type { Cell } from "../src/prototypes";
-import type { Executed } from "../src/commands";
+import type { Hex } from "../src/legacy/map";
+import type { Unit } from "../src/legacy/unit";
+import type { Cell } from "../src/legacy/prototypes";
+import type { Executed } from "../src/legacy/commands";
 import type { Command } from "../src/core/command";
 
 //The modules of the restored state (restoreState resets them for every fixture), with the game's
@@ -16,14 +16,14 @@ import type { Command } from "../src/core/command";
 export async function load(name: string) {
 	const fixture = readFixture("engine", name);
 	const scenario = await restoreState(fixture.state);
-	const { GameRules } = await import("../src/gamerules");
-	const { CombatLog } = await import("../src/combatlog");
-	const { Equipment } = await import("../src/equipment");
-	const { Commands } = await import("../src/commands");
+	const { GameRules } = await import("../src/legacy/gamerules");
+	const { CombatLog } = await import("../src/legacy/combatlog");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const { Commands } = await import("../src/legacy/commands");
 	const { Rng } = await import("../src/core/random");
 	const { game } = await import("../src/app/game");
-	const { toData } = await import("../src/state");
-	const prototypes = await import("../src/prototypes");
+	const { toData } = await import("../src/legacy/state");
+	const prototypes = await import("../src/legacy/prototypes");
 	const settings = await import("../src/app/settings");
 	const tables = await import("../src/core/tables");
 	if (fixture.spotSide !== undefined)

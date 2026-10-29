@@ -9,7 +9,7 @@ import { fixtures, readFixture, restoreState } from "./contracts";
 test.each(fixtures("engine"))("The outcome at the turn limit of %s", async (name) => {
 	const scenario = await restoreState(readFixture("engine", name).state);
 	const { game } = await import("../src/app/game");
-	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
+	const { gameInputs, mirrorOptions, worldOf } = await import("../src/legacy/mirror");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	mirrorOptions.cache = false; //(the turn and the players written by hand below)
 	const world = () => worldOf(scenario, game, gameInputs(game));
@@ -46,7 +46,7 @@ function turnLimitOf(_scenario: Awaited<ReturnType<typeof restoreState>>) {
 test("In the classic rules the side that ended its last turn loses at the turn limit, whatever it holds, as in the original (#256)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
 	const { game } = await import("../src/app/game");
-	const { gameInputs, mirrorOptions, worldOf } = await import("../src/mirror");
+	const { gameInputs, mirrorOptions, worldOf } = await import("../src/legacy/mirror");
 	const { outcome } = await import("../src/core/turn");
 	mirrorOptions.cache = false;
 	const m = scenario.map;
@@ -148,7 +148,7 @@ test("When an attack destroys the last unit of both sides the game ends once, as
 	const { classicRules, remasterRules } = await import("../src/core/rules");
 	const { step } = await import("../src/core/step");
 	const { outcome } = await import("../src/core/turn");
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	for (const rules of [classicRules, remasterRules]) {
 		let both = 0;
 		for (let seed = 1; seed <= 300; seed++) {
@@ -172,7 +172,7 @@ test("When an attack destroys the last unit of both sides the game ends once, as
 async function waiting(how: "reserve" | "reinforcement", rules: import("../src/core/types").Ruleset) {
 	const { smallGameData } = await import("./smallgame");
 	const { createWorld } = await import("../src/core/create");
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	const saved = smallGameData([[142, 0, 4, 4], [504, 1, 4, 5], [511, 1, 8, 6]]);
 	const { id: _id, row: _row, col: _col, ...off } = saved.state.units.pop()!;
 	saved.state.map.hexes[8 * 12 + 6].unit = null;

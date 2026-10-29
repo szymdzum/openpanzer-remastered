@@ -7,9 +7,9 @@
  *
  * The rules were the old engine's (reconstructed from the Panzer Marshal 3.2.14 bundle). They are the
  * core's now, over a world: rulesOn(source) takes where that world comes from. The running game's is
- * the game's world (src/mirror.ts rulesWorld: the world kept, which the objects mirror; under ?harness
+ * the game's world (src/legacy/mirror.ts rulesWorld: the world kept, which the objects mirror; under ?harness
  * the objects' while toData of them is its state, so what the harness just wrote into them is in it); the
- * retreat's ranges are asked of a world made for them (src/commands.ts); the gamerules contract's reads
+ * retreat's ranges are asked of a world made for them (src/legacy/commands.ts); the gamerules contract's reads
  * the old counters (test/coreadapter.ts).
  * What a unit is by itself (the render loop asks it of every unit it draws) reads the unit object as
  * the core's unit state, on a world of the equipment alone.
@@ -20,25 +20,25 @@
  */
 
 import { type Cell, type combatResults, type extendedCell, type pathCell, type Supply } from "./prototypes";
-import { terrainType } from "./core/tables";
+import { terrainType } from "../core/tables";
 import { Equipment } from "./equipment";
 import { engineContext, touched } from "./context";
 import type { Hex, GameMap } from "./map";
 import type { Transport, Unit } from "./unit";
-import type { RngStream } from "./core/random";
-import { Rng } from "./core/random";
-import { createWorld } from "./core/create";
-import { isBridge } from "./core/equipment";
-import { emptySight, sideOf, unitById } from "./core/world";
-import type { Position, UnitState, World } from "./core/types";
-import * as units from "./core/units";
-import * as attack from "./core/attack";
-import * as movement from "./core/movement";
-import * as combat from "./core/combat";
-import * as supply from "./core/supply";
-import * as costs from "./core/costs";
-import * as geometry from "./core/geometry";
-import { spotCells, unitSpotRange, zocCells } from "./core/sight";
+import type { RngStream } from "../core/random";
+import { Rng } from "../core/random";
+import { createWorld } from "../core/create";
+import { isBridge } from "../core/equipment";
+import { emptySight, sideOf, unitById } from "../core/world";
+import type { Position, UnitState, World } from "../core/types";
+import * as units from "../core/units";
+import * as attack from "../core/attack";
+import * as movement from "../core/movement";
+import * as combat from "../core/combat";
+import * as supply from "../core/supply";
+import * as costs from "../core/costs";
+import * as geometry from "../core/geometry";
+import { spotCells, unitSpotRange, zocCells } from "../core/sight";
 
 //The GameRules module API. map is the hex grid of a GameMap (GameMap.map), rows/cols its size
 export interface GameRulesModule {
@@ -253,6 +253,6 @@ const gameSource: RulesSource = {
 //(a module object: the harness assigns its members, docs/REFACTOR.md step 3)
 export var GameRules: GameRulesModule = rulesOn(gameSource);
 
-//The rules over a world made for a question of the screen's (the retreat's hexes, src/commands.ts), the
+//The rules over a world made for a question of the screen's (the retreat's hexes, src/legacy/commands.ts), the
 //dice the game's
 export const rulesOver = (w: World): GameRulesModule => rulesOn({ ...gameSource, world: () => w });

@@ -14,8 +14,8 @@
 
 import type { Unit } from "./unit";
 import { GameMap } from "./map";
-import type { ScenarioOutcome } from "./core/types";
-import { ScenarioLoader, scenarioPath } from "./app/loader";
+import type { ScenarioOutcome } from "../core/types";
+import { ScenarioLoader, scenarioPath } from "../app/loader";
 
 //A unit to deploy later, Scenario.reinforcements[turn]
 export interface Reinforcement {

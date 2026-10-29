@@ -9,9 +9,9 @@ import { expect, test } from "vitest";
 import { fixtures } from "./contracts";
 import { cellName, hexName, load, uiCommand, unitName, violations, type Restored as World } from "./invariants";
 import { mulberry32 } from "./lifecycle";
-import type { Hex } from "../src/map";
-import type { Unit } from "../src/unit";
-import type { Cell } from "../src/prototypes";
+import type { Hex } from "../src/legacy/map";
+import type { Unit } from "../src/legacy/unit";
+import type { Cell } from "../src/legacy/prototypes";
 import type { Command } from "../src/core/command";
 
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
@@ -137,7 +137,7 @@ function drill(name: string, fixture: string, run: (w: World, setup: string[]) =
 		if (!drillRuns.has(name))
 			drillRuns.set(name, load(fixture).then(async (w) => {
 				//(a drill writes into the objects by hand, as the harness does: no world kept)
-				(await import("../src/mirror")).mirrorOptions.cache = false;
+				(await import("../src/legacy/mirror")).mirrorOptions.cache = false;
 				const setup: string[] = [];
 				const before = violations(w);
 				if (before.length) setup.push("invariants broken before the drill: " + before.join("; "));

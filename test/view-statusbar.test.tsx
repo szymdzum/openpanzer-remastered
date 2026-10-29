@@ -3,7 +3,7 @@
 import { afterEach, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/preact";
 import { smallGame, smallGameData } from "./smallgame";
-import { worldOf } from "../src/mirror";
+import { worldOf } from "../src/legacy/mirror";
 import { remasterRules } from "../src/core/rules";
 import type { World } from "../src/core/types";
 import { StatusBar } from "../src/view/statusbar";

@@ -1,6 +1,6 @@
 /**
  * State types - the game as plain data (the shapes of docs/STATE.md); toData and fromData, which read and
- * build the old engine's objects from them, are src/state.ts's
+ * build the old engine's objects from them, are src/legacy/state.ts's
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

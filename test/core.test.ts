@@ -5,8 +5,8 @@
 import fc from "fast-check";
 import { expect, test } from "vitest";
 import { nextRandom } from "../src/core/random";
-import { Leaders } from "../src/leaders";
-import { type Cell } from "../src/prototypes";
+import { Leaders } from "../src/legacy/leaders";
+import { type Cell } from "../src/legacy/prototypes";
 import { leaderType, movMethod, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/core/tables";
 import { attackResult, combatResult, inRiver } from "../src/core/combat";
 import { leaderMoves, moveRange, pathTo, shortestPath, unitMoveRange } from "../src/core/movement";
@@ -26,7 +26,7 @@ import { createWorld } from "../src/core/create";
 import { type HandUnit, handWorld } from "./coreworld";
 import { deployedAs } from "../src/core/commands/units";
 import type { OffMapUnit } from "../src/core/state";
-import { Equipment } from "../src/equipment";
+import { Equipment } from "../src/legacy/equipment";
 import { smallGameData } from "./smallgame";
 
 const PZ_IIA = 140, TP7 = 273, INFANTERIE = 115, WZ97 = 264, ME_109 = 159, P11 = 280, PSW_222 = 117;

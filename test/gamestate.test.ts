@@ -70,7 +70,7 @@ test("GameState load numbers the reinforcements of each turn from 1", async () =
 //A command played as the game sends it, on the game the global game module holds now; it must be
 //allowed
 async function play(cmd: import("../src/core/command").Command) {
-	const { Commands } = await import("../src/commands");
+	const { Commands } = await import("../src/legacy/commands");
 	const { game } = await import("../src/app/game");
 	const r = Commands.execute(game.scenario, cmd);
 	if ("refusal" in r) throw new Error(JSON.stringify(cmd) + " refused: " + r.refusal.reason);
@@ -197,9 +197,9 @@ test("GameState load keeps the scenario's description (#128)", async () => {
 //#128: a game saved right after a human player's move can still take the move back once loaded
 test("GameState load keeps the undo of the last move (#128)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t0.json.gz").state);
-	const { GameRules } = await import("../src/gamerules");
+	const { GameRules } = await import("../src/legacy/gamerules");
 	const m = scenario.map;
-	const { Commands } = await import("../src/commands");
+	const { Commands } = await import("../src/legacy/commands");
 	const moved = m.getUnits().filter((u) => u.player === m.currentPlayer && u.getHex()).find((u) => {
 		const cell = GameRules.getMoveRange(m, u).find((c) => c.canMove);
 		if (!cell) return false;
@@ -235,14 +235,14 @@ test("GameState load puts the random streams where the save left them (#128)", a
 //page, the game has the lists as the save had them, not as the equipment files have them
 test("GameState load keeps the equipment lists (#128)", async () => {
 	await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
-	const { Equipment } = await import("../src/equipment");
+	const { Equipment } = await import("../src/legacy/equipment");
 	const country = Object.keys(Equipment.equipmentIndexes)[0], lists = Equipment.equipmentIndexes[country].unitclass;
 	const uclass = Object.keys(lists).find((c) => lists[c].length > 1);
 	lists[uclass].splice(0, 1); //as the old AI's purchases did (#22)
 	lists[uclass].reverse(); //as the purchase window's sorting does
 	const saved = JSON.parse(await exportGame()) as SaveFile;
 	expect((await load(JSON.stringify(saved))).state.equipment).toEqual(saved.state.equipment);
-	const { Equipment: after } = await import("../src/equipment");
+	const { Equipment: after } = await import("../src/legacy/equipment");
 	expect(after.equipmentIndexes[country].unitclass[uclass]).toEqual(lists[uclass]);
 });
 
@@ -270,7 +270,7 @@ async function aiBoughtUnit() {
 	const eqid = m.getUnits().find((u) => u.player === ai).eqid;
 	while (m.currentPlayer !== ai) await play({ type: "endTurn" });
 	ai.prestige += 10000;
-	(await import("../src/context")).touched();
+	(await import("../src/legacy/context")).touched();
 	await play({ type: "buy", eqid, transport: -1 });
 	const free = m.map.flat().find((h) => h.isDeployment > -1 && m.getPlayer(h.isDeployment).side === ai.side && h.unit === null
 		&& h.airunit === null);
@@ -322,7 +322,7 @@ test("GameState import keeps the campaign's core list of a save of the format be
 	expect(scenario.map.currentPlayer).toBe(player);
 	await play({ type: "disband", unit: list[0].id });
 	player.prestige += 10000;
-	(await import("../src/context")).touched();
+	(await import("../src/legacy/context")).touched();
 	await play({ type: "buy", eqid: list[1].eqid, transport: -1 });
 	const { importSave } = await import("../src/app/save");
 	const { save } = importSave(JSON.parse(oldExport(game)));
@@ -336,7 +336,7 @@ test("GameState import keeps the campaign's core list of a save of the format be
 test("A save has no selection, and a save of the format before loads without its selection (#377)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
 	const { game } = await import("../src/app/game");
-	const { GameRules } = await import("../src/gamerules");
+	const { GameRules } = await import("../src/legacy/gamerules");
 	const m = scenario.map;
 	const u = m.getUnits().find((x) => x.player.id === m.currentPlayer.id && x.getPos() !== null
 		&& GameRules.getMoveRange(m, x).some((c) => c.canMove) && GameRules.getUnitAttackCells(m.map, x, m.rows, m.cols).length > 0)!;

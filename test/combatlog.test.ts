@@ -1,9 +1,9 @@
 //The combat log's turn summary from the combats it was told about, on units made by hand: what the
 //attack and the summary window (src/uicombatlog.ts) read of each unit
 import { beforeEach, expect, test, vi } from "vitest";
-import { CombatLog } from "../src/combatlog";
-import { Cell } from "../src/prototypes";
-import type { Unit } from "../src/unit";
+import { CombatLog } from "../src/legacy/combatlog";
+import { Cell } from "../src/legacy/prototypes";
+import type { Unit } from "../src/legacy/unit";
 import { freshGame, startState } from "./lifecycle";
 
 function unit(id: number, side: number, strength: number, entrenchment: number): Unit {
@@ -30,9 +30,9 @@ test("The resupply report lists the first unit of the scenario, id 0 (#114)", ()
 test("A fight is logged with the turn it is fought on, not a global map's (#28)", async () => {
 	const game = await freshGame();
 	await startState(game, "campaign:0:1");
-	const { CombatLog: log } = await import("../src/combatlog");
-	const { Commands } = await import("../src/commands");
-	const { GameRules } = await import("../src/gamerules");
+	const { CombatLog: log } = await import("../src/legacy/combatlog");
+	const { Commands } = await import("../src/legacy/commands");
+	const { GameRules } = await import("../src/legacy/gamerules");
 	const map = game.scenario.map;
 	const own = map.getUnits().filter((u) => u.player.id === map.currentPlayer.id);
 	const [attacker, defender] = own.flatMap((a) => map.getUnits().filter((d) => GameRules.isEnemy(a, d)

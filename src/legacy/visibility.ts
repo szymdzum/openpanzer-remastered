@@ -7,7 +7,7 @@
  * Every hex counts the units of side 0 and 1 that have it in their zone of control and in their
  * spotting range. GameMap.allocMap makes the counters here and gives each Hex its own (Hex.isZOC and
  * isSpotted read them for the screen). They hold the core's sight, computed from the units (docs/
- * STATE.md D10): the game's objects get it after each command (src/mirror.ts). The harness switches
+ * STATE.md D10): the game's objects get it after each command (src/legacy/mirror.ts). The harness switches
  * them by hand when it moves units by hand (GameRules.setZOCRange and setSpotRange, Hex.setZOC and
  * setSpotted); a counter doesn't go below 0.
  */

@@ -1,5 +1,5 @@
 /**
- * The core's types: the state's (src/state.ts, one source of truth) and what the queries take and
+ * The core's types: the state's (src/legacy/state.ts, one source of truth) and what the queries take and
  * answer. Types only: every core module imports them, they import nothing that runs
  *
  * Licensed under the GPL license:

@@ -9,34 +9,34 @@
 //imports (in a cycle, after those not already running), so the import graph decides the real
 //order. What modules need of each other while loading: prototypes and core/tables (everything
 //reads them, tables imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
-import * as prototypes from "./prototypes";
+import * as prototypes from "./legacy/prototypes";
 import * as settings from "./app/settings";
 import * as storage from "./app/storage";
-import * as combatlog from "./combatlog";
-import * as equipment from "./equipment";
+import * as combatlog from "./legacy/combatlog";
+import * as equipment from "./legacy/equipment";
 import * as page from "./app/page";
-import * as ai from "./ai";
-import * as gamerules from "./gamerules";
-import * as unit from "./unit";
-import * as map from "./map";
+import * as ai from "./legacy/ai";
+import * as gamerules from "./legacy/gamerules";
+import * as unit from "./legacy/unit";
+import * as map from "./legacy/map";
 import * as loader from "./app/loader";
-import * as scenario from "./scenario";
-import * as campaign from "./campaign";
+import * as scenario from "./legacy/scenario";
+import * as campaign from "./legacy/campaign";
 import * as game from "./app/game";
-import * as leaders from "./leaders";
+import * as leaders from "./legacy/leaders";
 import * as tables from "./core/tables";
 import * as rng from "./core/random";
-import * as context from "./context";
-import * as board from "./board";
-import * as visibility from "./visibility";
-import * as selection from "./selection";
-import * as undo from "./undo";
-import * as util from "./util";
+import * as context from "./legacy/context";
+import * as board from "./legacy/board";
+import * as visibility from "./legacy/visibility";
+import * as selection from "./legacy/selection";
+import * as undo from "./legacy/undo";
+import * as util from "./legacy/util";
 import * as running from "./app/running";
-import * as commands from "./commands";
-import * as state from "./state";
+import * as commands from "./legacy/commands";
+import * as state from "./legacy/state";
 import * as save from "./app/save";
-import * as mirror from "./mirror";
+import * as mirror from "./legacy/mirror";
 import * as driver from "./app/driver";
 import * as start from "./app/start";
 import * as host from "./app/host";
@@ -57,7 +57,7 @@ new storage.GameState(null).restoreSettings(); //To restore only settings
 page.changeViewPort();
 
 //The random streams seeded once, here and not while core/random.ts loads: until then the game stream reads
-//Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
+//Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/legacy/state.ts)
 rng.Rng.seed(rng.randomSeed());
 
 //The UI shows the game (src/view/, #351): its screen goes to the host before the game starts
@@ -67,7 +67,7 @@ startNewUI(game.game.host);
 //loop ticks: a program's turn goes on when the screen has shown its last action (src/app/host.ts, #375)
 window.addEventListener("load", game.gameStart);
 
-//The mirror's world kept for the screen's rules (src/mirror.ts), but under ?harness, whose scripts write
+//The mirror's world kept for the screen's rules (src/legacy/mirror.ts), but under ?harness, whose scripts write
 //into the game's objects anywhere; its checks on the dev server only (its modules have __harnessSet,
 //vite.config.mts), where a write into the objects that didn't say so throws
 const harness = new URLSearchParams(location.search).has("harness");

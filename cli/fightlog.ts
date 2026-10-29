@@ -1,8 +1,8 @@
 //The fights the game's page plays, as its combat log sees them (#307): the page's front (page.ts) doesn't
 //see the core's events, but every fire, support fire too, goes through the combat log's start and end
-//(src/commands.ts fired), with the attacker and the defender before and after
-import type { CombatLogModule, CombatRound, CombatUnitState } from "../src/combatlog";
-import type { Unit } from "../src/unit";
+//(src/legacy/commands.ts fired), with the attacker and the defender before and after
+import type { CombatLogModule, CombatRound, CombatUnitState } from "../src/legacy/combatlog";
+import type { Unit } from "../src/legacy/unit";
 import type { FightView } from "./report";
 
 const fighterOf = (s: CombatUnitState, after: Unit) =>

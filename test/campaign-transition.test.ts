@@ -33,7 +33,7 @@ async function next(game: Game, outcome: ScenarioOutcome): Promise<boolean> {
 }
 
 async function data(game: Game): Promise<SavedGame> {
-	const { toData } = await import("../src/state");
+	const { toData } = await import("../src/legacy/state");
 	return toData(game.scenario, game.campaign !== null ? game : null);
 }
 
@@ -84,7 +84,7 @@ test("A campaign's next scenario starts as the scenario loaded alone, and its sa
 
 //The comment on #64: Player.setPlayerToHQ left the units at HQ the id they had on the map before,
 //which an id of the next map could take. The next scenario makes its units at HQ from the state,
-//which has no id for them (src/state.ts coreUnit)
+//which has no id for them (src/legacy/state.ts coreUnit)
 test("A campaign's core units waiting at HQ keep no id of the scenario before (#64)", async () => {
 	const game = await campaign(0);
 	await next(game, "victory");

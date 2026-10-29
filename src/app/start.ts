@@ -11,10 +11,10 @@
  */
 
 import { uiSettings } from "./settings";
-import { Equipment } from "../equipment";
+import { Equipment } from "../legacy/equipment";
 import { Rng } from "../core/random";
-import type { Scenario } from "../scenario";
-import { campaignState, fromData } from "../state";
+import type { Scenario } from "../legacy/scenario";
+import { campaignState, fromData } from "../legacy/state";
 import type { PlayerState, RngStreams } from "../core/state";
 import { awardedPrototype, coreCountries } from "../core/campaign";
 import { type FileUnit, newGame, type ScenarioFile } from "../core/newgame";

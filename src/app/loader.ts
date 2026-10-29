@@ -12,10 +12,10 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { Equipment } from "../equipment";
+import { Equipment } from "../legacy/equipment";
 import { fileEquipment, type ScenarioFile } from "../core/newgame";
 import { readScenarioFile } from "../core/scenariofile";
-import type { Scenario } from "../scenario";
+import type { Scenario } from "../legacy/scenario";
 
 //Where the scenario files are, relative to the page (Scenario.scenarioPath is the same string)
 export const scenarioPath = "resources/scenarios/data/";

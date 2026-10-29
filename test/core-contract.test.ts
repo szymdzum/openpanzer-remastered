@@ -11,11 +11,11 @@ import { unitById } from "../src/core/world";
 async function restore(name: string) {
 	const fixture = readFixture("gamerules", name);
 	const scenario = await restoreState(fixture.state);
-	const { Equipment } = await import("../src/equipment");
-	const { toData } = await import("../src/state");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const { toData } = await import("../src/legacy/state");
 	const { Rng } = await import("../src/core/random");
 	const { terrainType, leaderType } = await import("../src/core/tables");
-	const { rulesOn } = await import("../src/gamerules");
+	const { rulesOn } = await import("../src/legacy/gamerules");
 	return { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType, rulesOn };
 }
 

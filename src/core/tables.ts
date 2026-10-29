@@ -179,7 +179,7 @@ export interface AIConfig {
 	unitClassKillValue: number[];
 }
 
-//The settings of the bundle's AI (src/ai.ts and the new core's, src/core/ai.ts)
+//The settings of the bundle's AI (src/legacy/ai.ts and the new core's, src/core/ai.ts)
 export let aiDefaultConfig: AIConfig = {
 	minReinforceStrength: 4,
 	minAmmo: 2,

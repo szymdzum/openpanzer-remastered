@@ -5,7 +5,7 @@
 import { expect, test } from "vitest";
 import { deployWorld, handWorld, type HandUnit } from "./coreworld";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
-import { worldOf } from "../src/mirror";
+import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import { step } from "../src/core/step";
 import { attackCells } from "../src/core/attack";

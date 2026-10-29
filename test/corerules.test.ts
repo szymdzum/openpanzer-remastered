@@ -1,4 +1,4 @@
-//The rules the screen asks of the running game (src/gamerules.ts, #137): on engine fixtures after the
+//The rules the screen asks of the running game (src/legacy/gamerules.ts, #137): on engine fixtures after the
 //units moved and fought a little (random commands, test/commandgen.ts, played as the game plays them),
 //every unit's own rules (air, ground, train, fuel and ammo, ranges, costs and upgrade costs, bridges),
 //its move and attack hexes and whether it can mount, embark, disembark, resupply and reinforce, and for
@@ -51,7 +51,7 @@ test("The rules the screen asks answer as the old engine's did", async () => {
 	const want = recorded(), got: string[] = [];
 	for (const seq of fc.sample(sequences, { seed: 4, numRuns: want.length })) {
 		const w = await load(seq.fixture);
-		const { setEngineContext, engineContext } = await import("../src/context");
+		const { setEngineContext, engineContext } = await import("../src/legacy/context");
 		setEngineContext({ ...engineContext, host: () => w.game });
 		w.Rng.game.state = seq.seed >>> 0;
 		for (const pick of seq.steps) {

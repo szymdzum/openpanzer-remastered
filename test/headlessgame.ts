@@ -5,7 +5,7 @@ import type { Game } from "../src/app/game";
 import type { Screen } from "../src/app/screen";
 
 //The game the host plays: Game's fields, and the members the engine and the core's glue call on it
-//(src/app/driver.ts, src/app/start.ts, src/mirror.ts), handed on to the host as Game hands them
+//(src/app/driver.ts, src/app/start.ts, src/legacy/mirror.ts), handed on to the host as Game hands them
 export function headlessGame(screen: (g: Game) => Screen): Game {
 	let saves = 0, settings = 0;
 	const g = { state: { save() { saves++; }, clear() {}, saves: () => saves, saveSettings() { settings++; },

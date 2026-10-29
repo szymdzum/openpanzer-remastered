@@ -14,11 +14,11 @@ import { headlessGame } from "./headlessgame";
 import type { Screen } from "../src/app/screen";
 import { nullScreen } from "../src/app/nullscreen";
 import type { Game } from "../src/app/game";
-import type { CampaignScenario } from "../src/campaign";
+import type { CampaignScenario } from "../src/legacy/campaign";
 import type { ScenarioOutcome } from "../src/core/types";
 import { uiSettings } from "../src/app/settings";
 import { outcomeNames, playerType, sideNames } from "../src/core/tables";
-import { touched } from "../src/context";
+import { touched } from "../src/legacy/context";
 import { turnLimitOutcome } from "../src/core/turn";
 import { Rng } from "../src/core/random";
 
@@ -338,7 +338,7 @@ test("A program's look at a hex is shown on the screen and waited for (#375)", a
 	const views: string[] = [];
 	let shown: (() => void) | undefined;
 	const g = headlessGame((game) => ({ ...nullScreen(game), view(event, s) { views.push(event.type); shown = s; } }));
-	const { actionType } = await import("../src/prototypes");
+	const { actionType } = await import("../src/legacy/prototypes");
 	expect(g.host.processAction({ type: actionType.viewport, param: [{ row: 1, col: 2 }] } as never)).toBe(true);
 	expect([views, g.host.showing]).toEqual([["viewport"], true]);
 	shown!();
