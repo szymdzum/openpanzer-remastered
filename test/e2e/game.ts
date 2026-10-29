@@ -315,15 +315,17 @@ async function play() {
 		await gone(list);
 	});
 
-	await step("the unit card's line, unfolded and folded", async () => {
+	await step("the unit card's line, open and folded", async () => {
 		//hidden, the default: one line of its four gauges
 		await shown(ui("#unit-info.line .ui-g", { hasText: "Strength" }));
 		check(await ui("#unit-info.line .ui-g").count() === 4, "the unit card's line doesn't show four gauges");
 		await ui("#unit-info").getByRole("button", { name: "More", exact: true }).click();
-		await shown(ui("#unit-card section[aria-label=Attack]"));
-		await shown(ui("#unit-card section[aria-label=Defence]"));
+		//open: its four gauges with what they mean, what it hits and what it holds
+		check(await ui("#unit-info.open .ui-c").count() === 4, "the open unit card doesn't show four gauges");
+		await shown(ui("#unit-info.open section[aria-label='It hits']"));
+		await shown(ui("#unit-info.open section[aria-label='It holds']"));
 		await ui("#unit-info").getByRole("button", { name: "Less", exact: true }).click();
-		await gone(ui("#unit-card"));
+		await gone(ui("#unit-info.open"));
 		await shown(ui("#unit-info.line"));
 	});
 

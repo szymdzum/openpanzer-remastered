@@ -15,8 +15,8 @@ import { settingSignals } from "./uisettings";
 
 type Step = Pick<ReturnType<typeof createStep>, "moving" | "shown" | "showing">;
 
-//closeReport: the first click on the map closes the turn report
-export function createMap(core: Core, step: Step, closeReport: () => void) {
+//clicked: what a click on the map closes, the turn report and the open unit card
+export function createMap(core: Core, step: Step, clicked: () => void) {
 	const { world, selected, airMode, dispatch, select, pickUnit, look } = core;
 	const { moving, shown, showing } = step;
 	const setting = settingSignals();
@@ -83,8 +83,8 @@ export function createMap(core: Core, step: Step, closeReport: () => void) {
 		clickHex(at: Position) {
 			const w = world.value;
 			if (w === null || showing.value) return;
-			//(the first click on the map closes the turn report, and does what it does)
-			closeReport();
+			//(a click on the map closes the turn report and folds the unit card, and does what it does)
+			clicked();
 			if (strategic.value) {
 				strategic.value = false;
 				look({ row: at.row, col: at.col });

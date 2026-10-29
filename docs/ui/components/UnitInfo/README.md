@@ -1,4 +1,4 @@
-**Proposal (2026-10-29); the hidden line is built (#37), the open card not yet.** The owner asked for the card in two sizes, hidden and open, saying what matters about the unit and what each number does. The game still has the port's card (#441): three sizes, the old window's content and nothing more. Where this card goes further than the old window, it says so below.
+**Proposal (2026-10-29), built (#37): the hidden line and the open card.** The owner asked for the card in two sizes, hidden and open, saying what matters about the unit and what each number does. The game still has the port's card (#441): three sizes, the old window's content and nothing more. Where this card goes further than the old window, it says so below.
 
 Everything about the selected unit, docked at the bottom in the middle. Every number says what it does for the player: not "Ammo 1/8" alone but "1 shot left". The map stays quiet (#441): the card opens hidden, as one line, and the open card only on More.
 
@@ -11,11 +11,16 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 | "1 shot left" | the rounds left: every shot uses one, return and support fire too | `fire`, src/core/fight.ts; `ammoOf`, src/core/world.ts | yes |
 | "Can fire", "Can't fire" | it has its shot: not fired (a move riding uses it too), uses ammo and has some; the map's marker says the same (#436). Whether a target is in range is another question, not the card's | `canFireThisTurn`, src/core/attack.ts | yes |
 | "+4 defence" and its tooltip | the level, whether it holds, whether street fighters cancel it here, whether it counts twice | `entrenchmentFacts`, src/core/combat.ts (`entrenchmentAgainst` for one attacker) | yes |
-| entrenchment segments | the hex's limit, the terrain's base + 5; the base drawn lighter | `entrench`, src/core/turn.ts: its limit as a new `entrenchLimit(w, u)` | no |
+| entrenchment segments | the hex's limit, the terrain's base + 5; the base drawn lighter | `entrenchLimit`, `entrenchBase`, src/core/turn.ts | yes |
 | "+1 veteran" | one per 100 XP, added to attack and defence in every fight | `experienceBonus`, src/core/combat.ts | yes |
 | Resupply stamp | ammo or fuel critical, and it can resupply here now | `canResupply`, src/core/supply.ts | yes |
-| riding band | the transport, its fuel; "can't fire the turn it rides" (`isRiding`, used by `burn`); "attacked, it gets off and fights on foot" (`dismounts`); "ambushed, it defends 2" (`surprisedDefendsWith`: that equipment's ground defence) | `riding`, src/core/combat.ts; `isRiding`, src/core/world.ts | yes |
-| the weak defence in `critical` | the lowest of ground, air and close defence, when it is at most half the highest of the three | a pure rule on the equipment, with its test | no |
+| riding band | the transport, its fuel; "can't fire the turn it rides" (`isRiding`, used by `burn`); "attacked, it gets off and fights on foot" (`dismounts`); for a unit that doesn't get off (a towed gun riding), in `critical`, "attacked or ambushed, it defends 2" (`defendsWith`: that equipment's ground defence; mounted infantry's surprise is cleared in its own move, so its band never says it) | `riding`, src/core/combat.ts; `isRiding`, src/core/world.ts | yes |
+| the weak defence in `critical` | the lowest of ground, air and close defence, when it is at most half the highest of the three | `weakDefences`, src/core/equipment.ts | yes |
+| Initiative's tooltip | the side with more, the attacker on a tie, gets +4 defence and its lead in attack, up to +4 | `initiativeEdge`, src/core/combat.ts | yes |
+| From range's tooltip | all of the modifier further than the next hex and within its own gun range, half next to it or from beyond its range (so half always for a unit that fires only at its neighbours); ground units only, not in close combat | `rangeDefence`, src/core/combat.ts | yes |
+| Close assault's tooltip | infantry attacking it in a city, forest, mountain or fortification hex, or a fortification anywhere | `isCloseCombat`, src/core/combat.ts | yes |
+| "attacking, it adds to its defence too" (entrenchment) | its own entrenchment counts for its defence when it attacks, not in close combat | `entrenchmentAttacking`, src/core/combat.ts | yes |
+| Aircraft "can't" | only a unit with an air attack fires on aircraft | `firesOnAircraft`, src/core/attack.ts | yes |
 
 **Hidden, the default: one line.** The sprite (with its transport's when riding), nation mark, name, stars and ordinal; the four gauges, each with its label and, in the label, what it means; what the unit can still do this turn, as compact chips (an icon and a number, the words in their tooltip and for screen readers: the gauges already say the rest); More and Next unit. Every icon has its tooltip and a name for screen readers ("6 moves left", "Can fire", "More", "Next unit"). It replaces the strip that had only the name and three numbers.
 
@@ -40,7 +45,7 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 - **It holds:** Ground fire (ground defence), Air attack (air defence), Close assault (close defence: infantry attacking it in a city, forest, mountain or fortification), From range (the range defence modifier, added in full at range, half adjacent). The weak one is in `critical` by the rule in the table: the lowest of the three, at most half the highest.
 - **Initiative:** just "Initiative 7"; its tooltip says the side with more gets +4 defence and up to +4 attack.
 
-**Riding.** A unit on its transport shows its own values, the ones it fights with: mounted infantry attacked gets off and fights on foot (src/core/combat.ts). A band over the card says what riding does: the transport's moves and fuel, no fire the turn it rides, and the transport's ground defence if it was ambushed. A towed gun riding defends with the transport's values: its band says so in `critical`. The old window's Unit / Transport / Carrier views are gone; the carrier gets the same band.
+**Riding.** A unit on its transport shows its own values, the ones it fights with: mounted infantry attacked gets off and fights on foot (src/core/combat.ts). A band over the card says what riding does: the transport's moves and fuel, no fire the turn it rides, and, for a unit that can't get off, the transport's ground defence. A towed gun riding defends with the transport's values: its band says so in `critical`. The old window's Unit / Transport / Carrier views are gone; the carrier gets the same band.
 
 **Beyond the old window:** the meanings of the gauges, the This turn chips, the XP bar to the next star, the riding band and the Resupply stamp. All of it is the core's data (the unit's flags, its equipment, its transport's), no new rule.
 
