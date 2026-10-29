@@ -2,7 +2,7 @@
 // Needs index.html?harness: lib/hooks.js holds back the async completions (Image, XMLHttpRequest).
 //
 // - virtual clock: the game's timers run from a queue the harness advances (runClock)
-// - snapshot(): game state, toData's (src/state.ts) or built from plain properties, sorted keys
+// - snapshot(): game state, toData's (src/legacy/state.ts) or built from plain properties, sorted keys
 // - waitImages(): every async completion delivered
 // - allShown(), settle(): the game has shown every step; the clock run until it has
 
@@ -108,7 +108,7 @@ if (!window.__clock) {
 	// timing: a redraw at a random point of a step. Drop it, the UI has positioned the layers.
 	window.onresize = null;
 	// The turn loop on the virtual clock, ticking every second as the original's did: the game host's
-	// processTurn (src/host.ts: the game goes on unless the screen still shows a step), the original's own
+	// processTurn (src/app/host.ts: the game goes on unless the screen still shows a step), the original's own
 	// game.processTurn where there is no host
 	clock.loop = setInterval(game.host ? () => game.host.processTurn() : game.processTurn, 1e3);
 	uiSettings.quickAnimation = true;
@@ -183,7 +183,7 @@ function cyrb53(str) {
 
 // ---- Game state
 
-// snapshot() is the game state as src/state.ts's toData reads it (#127), or the walk of the game
+// snapshot() is the game state as src/legacy/state.ts's toData reads it (#127), or the walk of the game
 // objects' plain properties: window.__stateSnapshot ("toData", "toData-norng" or "walk", the
 // default), which replay.sh sets on both pages from what the baseline has
 // (harness/lib/reference.sh). The original game (reference/) and a baseline before #127 have no
@@ -273,7 +273,7 @@ async function waitImages(ms) {
 	return await waitFor(() => pending().length === 0, ms || 15000) ? null : pending();
 }
 
-// The game has shown every step: the screen animates no move or attack, as the game host says (src/host.ts
+// The game has shown every step: the screen animates no move or attack, as the game host says (src/app/host.ts
 // showingStep, #378). The original game and a baseline before #378 don't say it: there game.waitUIAnimation,
 // which the game sets while the UI shows a step. A program's pick or look at a hex shown a moment (#8) is a
 // pending timer, which the waits count beside it

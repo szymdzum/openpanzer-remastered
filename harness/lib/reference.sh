@@ -19,11 +19,16 @@ if [ -n "${BASELINE_REF:-}" ]; then
 	REFERENCE_URL="http://127.0.0.1:$REFERENCE_PORT/index.html?harness"
 	reference_version() { echo "remaster $BASE_SHA"; }
 	# The state snapshot both pages take (harness/lib/harness.js snapshot): toData where the
-	# baseline has it (src/state.ts, #127), without the random streams' positions where its toData
+	# baseline has it (#127), without the random streams' positions where its toData
 	# doesn't fill them (rng: null, before #126). grep reads all of git show's output: grep -q would
 	# stop early, and under pipefail git show's SIGPIPE would make some jobs take toData
-	if ! git cat-file -e "$BASE_SHA:src/state.ts" 2>/dev/null; then STATE_SNAPSHOT=walk
-	elif [ -n "$(git show "$BASE_SHA:src/state.ts" | grep '^[[:space:]]*rng: null,')" ]; then STATE_SNAPSHOT=toData-norng
+	# (toData's file: src/legacy/state.ts since #525, src/state.ts before)
+	BASE_STATE=
+	for f in src/legacy/state.ts src/state.ts; do
+		if git cat-file -e "$BASE_SHA:$f" 2>/dev/null; then BASE_STATE=$f; break; fi
+	done
+	if [ -z "$BASE_STATE" ]; then STATE_SNAPSHOT=walk
+	elif [ -n "$(git show "$BASE_SHA:$BASE_STATE" | grep '^[[:space:]]*rng: null,')" ]; then STATE_SNAPSHOT=toData-norng
 	else STATE_SNAPSHOT=toData; fi
 	start_reference() { (cd "$BASE_DIR" && serve_vite "$REFERENCE_PORT"); }
 else
