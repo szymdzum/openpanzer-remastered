@@ -10,6 +10,9 @@
 import { direction } from "./tables";
 import type { Position } from "./types";
 
+//Two cells are the same hex
+export const samePlace = (a: Position, b: Position): boolean => a.row === b.row && a.col === b.col;
+
 export function distance(row1: number, col1: number, row2: number, col2: number): number {
 	//Shift the grid so its columns run diagonally: x is twice the row, plus one on odd columns
 	const x1 = col1 % 2 ? row1 * 2 + 1 : row1 * 2;
