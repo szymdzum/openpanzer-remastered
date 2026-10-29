@@ -114,8 +114,8 @@ export class Game {
 Game.defaultScenario = DEFAULT_SCENARIO;
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
-//The running game lives in session.ts, where the UI reads it; game.ts makes it, the host wires the engine
-//to it (src/app/host.ts runGame), and it is re-exported for main.ts, the harness and the tests
+//The running game lives in running.ts, where the UI reads it; game.ts makes it, the host sets and wires it
+//(src/app/host.ts runGame), and it is re-exported for main.ts, the harness and the tests
 runGame(new Game());
 export { game };
 

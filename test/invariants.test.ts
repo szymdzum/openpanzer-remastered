@@ -20,7 +20,7 @@ function attack(w: World, a: Unit, d: Unit) {
 	uiCommand(w, { type: "attack", unit: a.id, target: d.id });
 }
 
-//src/host.ts processAction (move): the move range, then the move command
+//src/app/host.ts processAction (move): the move range, then the move command
 function move(w: World, u: Unit, cell: Cell) {
 	w.m.setMoveRange(u);
 	uiCommand(w, { type: "move", unit: u.id, to: { row: cell.row, col: cell.col } });

@@ -35,7 +35,7 @@ function contractSerialize(v) {
 }
 
 // check(name, context, f): runs f with Math.random seeded per call (seed 1, 2, ...), records
-// [name, context, serialized result or "THROW message"] in out. rng: the game's Rng (src/rng.ts),
+// [name, context, serialized result or "THROW message"] in out. rng: the game's Rng (src/core/random.ts),
 // where it has one (the reference doesn't): its streams seeded per call from the same seed, the
 // game's drawing what Math.random draws, then the game stream set back to where it was (reading
 // Math.random in a test)

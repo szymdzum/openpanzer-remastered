@@ -28,7 +28,7 @@ export type AIAction =
 	| { type: A["viewport"]; param: [at: Cell] }
 	| { type: A["upgrade"] | A["buy"] | A["deploy"] | A["endturn"]; param: unknown[] };
 
-//Who plays the programs: the game's session (src/app/driver.ts, set by game.ts). getAction: the
+//Who plays the programs: the game's session (src/app/driver.ts, set by the host's runGame). getAction: the
 //current player's next order as an action, null when it has none; join: a handler made while the
 //game runs joins its player
 export interface AIDriver {
@@ -40,7 +40,7 @@ export class AI {
 	declare getAction: () => AIAction | null;
 	declare buildActions: () => void; //(the session starts and plans the turn)
 
-	declare static driver: AIDriver | null; //assigned below, set by game.ts
+	declare static driver: AIDriver | null; //assigned below, set by the host's runGame
 
 	constructor(player: Player, _map: GameMap) {
 		const driver = AI.driver;
