@@ -438,17 +438,6 @@ export function isEntrenchmentIntact(w: World, atk: UnitState, def: UnitState, t
 		&& isStreetTerrain(terrain));
 }
 
-//What def's entrenchment adds to its defence against atk, as the attack counts it (the "entrenchment" steps of
-//rules.combat, read from their record): its level, none where it isn't intact or against infiltration tactics,
-//twice for infantry in close terrain against vehicles. Draws nothing
-export function entrenchmentAgainst(w: World, atk: UnitState, def: UnitState): number {
-	const record: Contribution[] = [];
-	attackResult(w, atk, def, null, record);
-	return record.filter((c) => c.side === "defender" && c.field === "ddv"
-		&& (c.name === "entrenchment" || c.name === "infantry entrenched in close terrain"))
-		.reduce((sum, c) => sum + c.after - c.before, 0);
-}
-
 //What a unit's entrenchment does for its defence in general ("Entrenched 2: +2 defence") and the exceptions
 //the attack makes (isEntrenchmentIntact, entrenchments, entrenchedInCloseTerrain): level, one point of defence
 //a level; holds, with ferocious defense nothing ignores it; else the attackers that ignore entrenchment and those
