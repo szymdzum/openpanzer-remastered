@@ -1,4 +1,6 @@
-The full unit sheet on tablet. It is a bottom sheet that rises over the map from Stats, or from a long press on a unit. It holds all the supply meters, the leader and transport, the stat sheet in six columns, and the unit's actions as 56px labelled buttons. A Next unit button moves through units that can still act.
+The full unit sheet on tablet. It is a bottom sheet that rises over the map from Stats, or from a long press on a unit. It holds the open card of `UnitInfo` laid out for the sheet (`.uc-open.sheet`): identity, experience and leader across the top, then the condition with This turn beside what the unit hits and holds; and the unit's actions as 56px labelled buttons. A Next unit button moves through units that can still act. The card has no Resupply stamp here: it has moved, so it can't resupply (the Supply button says so).
+
+**Unit card:** the proposal in `UnitInfo` (2026-10-29), not built: the sheet holds its open card. Everything else on this card is Ready.
 
 - Drag the handle down or tap the scrim to close.
 - The actions here duplicate the context menu, so a player who never finds the map menu can still act on the unit.

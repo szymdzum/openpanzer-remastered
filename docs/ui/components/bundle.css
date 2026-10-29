@@ -334,3 +334,12 @@
 .uc-m.weak .k,.uc-m.weak .v,.uc-m.weak .i{color:var(--critical)}.uc-m.weak .uc-bar b{background:var(--critical)}
 .uc-foot{display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:6px;margin-top:2px;border-top:1px solid var(--line);font-size:var(--type-note-size);color:var(--ink-muted)}
 .uc-foot b{color:var(--ink)}.uc-foot .mods{display:inline-flex;gap:8px;margin-left:auto}.uc-foot .plus{color:var(--ok);font-weight:600}
+.uc-segs i.on.over{background:var(--accent-ink);border-color:var(--accent-ink)}
+/* on a touch screen the strip's buttons are full hit targets; on a narrow one the sprite goes, the line stays one */
+.uc-strip.touch .uc-act{inline-size:var(--hit-target);min-inline-size:var(--hit-target);min-block-size:var(--hit-target)}
+.uc-strip.narrow{gap:var(--space-3)}.uc-strip.narrow > .uc-port{display:none}
+/* the open card in the tablet's sheet: its parts one under the other, no buttons column (the sheet has its own) */
+.uc-open.sheet{display:grid;grid-template-columns:auto 1fr;width:auto}
+.uc-open.sheet > .uc-id{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)}
+.uc-open.sheet > .uc-vs{border-right:0}
+.uc-g{inline-size:max-content}
