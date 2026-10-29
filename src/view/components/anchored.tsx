@@ -7,7 +7,6 @@ import { TOKENS } from "../tokens";
 type Point = { x: number, y: number };
 type Size = { width: number, height: number };
 
-//the gap from the screen's edges
 const EDGE = TOKENS.px["space-3"];
 
 const clamp = (v: number, low: number, high: number) => Math.max(low, Math.min(v, high));
@@ -23,8 +22,8 @@ export function clampToScreen(at: Point, size: Size, screen: Size, edge = EDGE):
 
 type Place = "above" | "below" | "beside" | "before";
 
-//Before the clamp: centred above or below the hex, or right of it (beside) or left of it (before) and centred on it, `gap`
-//away from its centre
+//Before the clamp: centred above or below the hex, or right of it (beside) or left of it (before) and centred on it,
+//`gap` away from its centre
 export function placeBy(hex: Point, size: Size, place: Place, gap: number): Point {
 	if (place === "beside") return { x: hex.x + gap, y: hex.y - size.height / 2 };
 	if (place === "before") return { x: hex.x - gap - size.width, y: hex.y - size.height / 2 };

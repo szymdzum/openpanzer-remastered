@@ -22,7 +22,7 @@ export function Facts({ facts, id }: { facts: Fact[], id?: string }) {
 	);
 }
 
-//The stat sheet of a unit: short names over typed numbers, four columns (unit info) or six (the tablet sheet, the dossier)
+//The stat sheet of a unit: short names over typed numbers, four columns (unit info) or six (tablet sheet, dossier)
 export function Stats({ stats, cols = 4 }: { stats: { name: string, value: ComponentChildren }[], cols?: 4 | 6 }) {
 	return (
 		<dl class={cols === 6 ? "pm-stats cols6" : "pm-stats"}>

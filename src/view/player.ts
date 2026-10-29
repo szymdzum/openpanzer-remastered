@@ -1,16 +1,12 @@
-//Plays a step's beats (src/view/beats.ts, #347) one after the other at the old UI's pace (src/animation.ts, src/render.ts
-//MoveAnimation): a move 5 steps a hex, 30 ms each (5 with quick animations); a shot or an explosion a frame every 150 ms
-//(50), the next beat 500 ms after its last frame. What to draw at each moment goes to the map (show), the moving unit is
-//hidden from its hex meanwhile (hide), and each beat's sound plays. The sprite strip and the sound of each beat are
-//picked from the cosmetic stream (pick), never the game's or the AI's. Under prefers-reduced-motion nothing moves on
-//the map: the sounds keep the pace. done is called when the last beat ends, at once for none
+//Plays a step's beats one after the other at the original game's pace (reference/src/animation.js, render.js): a move
+//is 5 steps a hex, 30 ms each (5 quick); a shot or an explosion a frame every 150 ms (50), the next beat 500 ms after
+//the last frame. The sprite strip and sound are picked from the cosmetic stream (pick), never the game's or the AI's.
 import type { PathStep } from "../core/events";
 import type { Position, UnitId } from "../core/types";
 import { uiSettings } from "../app/settings";
 import type { Beat, Sheet } from "./beats";
 
-//What the map draws over the units while a beat plays: the moving unit's sprite at a point of the map (its pixels), a
-//frame of a shot or an explosion on a hex
+//What the map draws over the units while a beat plays; x and y are the map's pixels
 export interface Motion {
 	sprite: { icon: string; x: number; y: number; facing: number } | null;
 	effect: { sheet: Sheet; frame: number; at: Position; facing: number } | null;
@@ -19,10 +15,10 @@ export interface Motion {
 export interface Stage {
 	pick: () => number; //a number in [0, 1) of the cosmetic stream
 	show: (m: Motion | null) => void;
-	hide: (unit: UnitId | null) => void;
+	hide: (unit: UnitId | null) => void; //the moving unit, hidden from its hex meanwhile
 	sound: (file: string) => void;
 	centre: (p: Position) => { x: number; y: number }; //a hex's centre in the map's pixels
-	still: () => boolean; //prefers-reduced-motion
+	still: () => boolean; //prefers-reduced-motion: nothing moves on the map, the sounds keep the pace
 	gone?: (unit: UnitId) => void; //a unit an explosion destroys, off the map once the blast covers it
 }
 
@@ -42,7 +38,8 @@ export function createPlayer(stage: Stage) {
 	let timers: ReturnType<typeof setTimeout>[] = [];
 	const later = (ms: number, f: () => void) => { timers.push(setTimeout(f, ms)); };
 
-	//A unit along its path: hidden on its hex, its sprite drawn on the hexes the side shown sees it pass. Its length
+	//A unit along its path: hidden on its hex, its sprite drawn on the hexes the side shown sees it pass. Returns its
+	//length in ms
 	function move(b: Extract<Beat, { kind: "move" }>, still: boolean): number {
 		stage.sound(pickOf(b.sounds, stage.pick()));
 		const step = stepMs(), path: PathStep[] = b.path;
@@ -56,7 +53,7 @@ export function createPlayer(stage: Stage) {
 		return Math.max(0, path.length - 1) * STEPS * step;
 	}
 
-	//A shot or an explosion: a frame at a time on its hex. Its length, with the gap before the next
+	//A shot or an explosion: a frame at a time on its hex. Returns its length in ms, with the gap before the next
 	function burst(b: Extract<Beat, { kind: "fire" | "explosion" }>, still: boolean): number {
 		const sheet = pickOf(b.sheets, stage.pick());
 		stage.sound(pickOf(b.sounds, stage.pick()));
@@ -89,6 +86,7 @@ export function createPlayer(stage: Stage) {
 	}
 
 	return {
+		//done is called when the last beat ends, at once for none
 		play(beats: Beat[], done: () => void, started: (i: number) => void = () => {}) {
 			from(beats, 0, done, started);
 		},

@@ -41,7 +41,7 @@ type TabsProps<T extends string> = {
 	id?: string,
 };
 
-//A tab's id and its panel's, from the tab list's id (#497: the tabs pattern's names)
+//A tab's id and its panel's, from the tab list's id (the ARIA tabs pattern's names)
 const tabId = (list: string, tab: string) => list + "-" + tab;
 const panelId = (list: string) => list + "-panel";
 

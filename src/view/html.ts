@@ -1,8 +1,6 @@
-//The game's texts are HTML: the scenarios' and campaigns' descriptions, the campaigns' outcomes, the tutorial's
-//orders and the host's messages. A save carries the scenario's description, and a save can come from someone else (a
-//file, a cloud save), so a text is shown only with what the game's own texts use (#486): line breaks, bold, the
-//tutorial's glyphs (a span with its class and a plain style) and the prestige icon (an image of the game's own). Any
-//other tag gives only its text; a script, a style sheet and a frame give nothing
+//Sanitizes the game's HTML texts (descriptions, outcomes, tutorial orders, host messages), which a save from someone
+//else can carry: only br, b, span (class, plain style) and the prestige img of the game's own stay; any other tag gives
+//only its text, and a script, a style sheet or a frame gives nothing
 const KEPT: Record<string, string[]> = { BR: [], B: [], SPAN: ["class", "style"], IMG: ["src"] };
 const DROPPED = new Set(["SCRIPT", "STYLE", "TEMPLATE", "IFRAME", "OBJECT", "EMBED", "NOSCRIPT", "TITLE", "TEXTAREA", "SELECT"]);
 
@@ -45,8 +43,8 @@ function writeChildren(parent: Node, out: string[]) {
 		else if (node.nodeType === Node.ELEMENT_NODE) writeElement(node as Element, out);
 }
 
-//The text as HTML that keeps only the allowed tags and attributes. Parsed in a document of its own, which runs no script
-//and loads no image
+//The text as HTML that keeps only the allowed tags and attributes. Parsed in a document of its own, which runs no
+//script and loads no image
 export function safeHtml(html: string): string {
 	const body = new DOMParser().parseFromString(html, "text/html").body;
 	const out: string[] = [];

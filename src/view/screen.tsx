@@ -1,9 +1,7 @@
-//The UI as the game's screen (src/app/screen.ts, #380), beside the one that shows nothing (src/app/nullscreen.ts). It
-//reads the game only through the host (its world, src/app/host.ts) and sends the person's commands to it (src/view/store/store.ts). A program's move or attack is played whole, then
-//animated from its events (#347, src/view/beats.ts), its results and victories told when the last beat
-//ends, and its shown called then: the program's turn plays at a pace the person can follow. Every other
-//shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The start menu opens over
-//the first scenario's briefing and at a game's end, as the old UI's did (#349).
+//The UI as the game's screen (src/app/screen.ts), beside the one that shows nothing (src/app/nullscreen.ts). It reads
+//the game through the host (src/app/host.ts) and sends the person's commands to the store. Every shown is called at
+//once but a program's step's (when its last beat ends, so its turn plays at a pace to follow) and a message's (at its
+//OK, the tutorial's orders too).
 import { render } from "preact";
 import { effect } from "@preact/signals";
 import type { ViewEvent } from "../core/controller";
@@ -29,7 +27,7 @@ type ScreenHost = Pick<GameHost, "world" | "command" | "won" | "holdForMessage" 
 //prefers-reduced-motion, asked at each step: the map moves nothing then (src/view/player.ts)
 const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-//A saved game downloaded as a file, as the old window did: a link to its text, clicked
+//A saved game downloaded as a file: a link to its text, clicked
 function downloadOn(page: Document) {
 	return (name: string, text: string) => {
 		const link = page.createElement("a");
@@ -43,7 +41,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location), download: downloadOn(root.ownerDocument) });
 	const { refresh } = store;
 	//The interface's scale and width as the settings say, on the page's root: every rem scales from its font size, and the
-	//windows the old interface width sized take it (base.css, screen.css)
+	//windows sized by the interface width take it (base.css, screen.css)
 	effect(() => {
 		const page = root.ownerDocument.documentElement.style;
 		page.setProperty("--ui-scale", String(store.uiScale.value));
@@ -78,7 +76,7 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 	//its OKs not run, so a stale briefing's OK can't let a program play under the new one (#405). The prototype
 	//shown first is the new scenario's own
 	let starting = false;
-	//the first scenario's start opens the start menu over its briefing, as the old UI's first did when it built itself
+	//As the original (reference/src/game.js): the first scenario's start opens the start menu over its briefing
 	let first = true;
 	const startScenario = () => {
 		if (!starting) store.clear();
@@ -106,9 +104,9 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 		},
 		message(title: string, text: string, then?: () => void) { holding(title, text, then); },
 		campaignEnd(outcome: ScenarioOutcome, text: string, then: () => void) { store.endCampaign(outcome, text, then); },
-		//(Options, as the old UI's: the start menu opens, or closes when it is open)
+		//(Options: the start menu opens, or closes when it is open)
 		mainMenu() { store.shortcut({ menu: "options" }); },
-		//(no platform score board on the web: the old UI's OSGlue did nothing there either)
+		//(no platform score board on the web: the original's OSGlue.generic does nothing there either)
 		reportScore: nothing,
 		reportAchievement: nothing,
 
@@ -122,13 +120,13 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			}
 			if (event.type === "select") store.pickUnit(event.unit);
 			else if (event.type === "viewport") store.look(event.at);
-			//(the old UI's main menu button folds or opens the rail; stuck shows nothing, as in the old game)
+			//(the main menu button folds or opens the rail; stuck shows nothing)
 			else if (event.type === "mainMenu") store.toggleRail();
 			refresh();
 			if (shown) shown();
 		},
 		//A step whose beats still play, the program's or the person's: the host's turn loop, the harness and the command-line
-		//player wait on it (#459)
+		//player wait on it
 		showingStep: () => store.showing.value,
 		aiTurnEnded: refresh,
 		//The next player's turn: the program's plays after the browser has drawn this one
@@ -139,22 +137,20 @@ export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
 			setTimeout(next, 0);
 		},
 		unitsPlaced: refresh,
-		//(the alert on the map is D3's)
 		reinforced: refresh,
 		//(the turn report's resupplies and reinforcements)
 		turnEvents(events: GameEvent[]) { store.logTurn(events); },
 	};
 }
 
-//The Theme (?theme=paper or blackout, else the system's): the card's Settings has it, the old list doesn't, so it waits
-//for after the switch (#349)
+//The Theme: ?theme=paper or blackout, else the system's
 function themeOf(search: string): Theme {
 	const t = new URLSearchParams(search).get("theme");
 	return t === "paper" || t === "blackout" ? t : "system";
 }
 
-//The UI on the page (src/main.ts, #351): its stylesheets and faces loaded, its root added, data-theme set, and the
-//screen given to the host before the game starts
+//The UI on the page: its stylesheets and faces loaded, its root added, data-theme set, and the screen given to the host
+//before the game starts
 export function startNewUI(host: GameHost, page: Document = document) {
 	void import("./game.css");
 	const root = page.createElement("div");

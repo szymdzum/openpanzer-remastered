@@ -1,6 +1,5 @@
-//The one button of the new UI (docs/ui/components/Button): the markup and classes of its card,
-//styled by src/view/components/button.css. It only renders: the caller says what it does and why it can't,
-//the view model decides both.
+//The one button (docs/ui/components/Button): the markup and classes of its card, styled by button.css. It only
+//renders: the caller says what it does and why it can't, the view model decides both.
 import type { ComponentChildren } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Icon, type IconName } from "./icon";
@@ -20,7 +19,7 @@ type ButtonProps = {
 	//focusable (aria-disabled, not disabled), so a keyboard reaches it and a screen reader reads the title as its
 	//description (#497)
 	disabled?: string,
-	//else a hint the pointer shows as its title (the old start menu's new game buttons said what they start there)
+	//else a hint the pointer shows as its title (the start menu's new game buttons say what they start)
 	title?: string,
 	onClick?: () => void,
 	//the id the harness, the tests and the shortcuts find it by (handoff.md, Element map)
@@ -38,7 +37,6 @@ function useTitle(title: string | undefined) {
 	return ref;
 }
 
-//The card's classes: its variant, large, icon-only
 function classesOf(variant: ButtonProps["variant"], large: boolean | undefined, iconOnly: boolean) {
 	return ["pm-btn", variant, large && "lg", iconOnly && "icon"].filter(Boolean).join(" ");
 }

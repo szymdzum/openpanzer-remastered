@@ -1,6 +1,6 @@
-//The unit context menu (UnitContext, #437): the person's selected unit's actions as the old UI's #unit-context, docked at
-//the bottom in the middle above the unit info, clear of the map around the unit: a small icon button for each action it
-//can take now, what it gives in its tooltip. What each says is the view model's (src/view/store/context.ts).
+//The unit context menu (#unit-context, as the original game's): a small icon button for each action the person's
+//selected unit can take now, what it gives in its tooltip, docked at the bottom in the middle above the unit info.
+//What each says is the view model's (src/view/store/context.ts).
 import { Icon } from "./icon";
 import type { ActionKey } from "../store/model";
 import { Panel } from "./panel";

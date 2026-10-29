@@ -1,9 +1,7 @@
-//What the UI animates after a step (#347): a step is played whole in the core, then shown from its events as a
-//row of beats, each a unit moving along its path, a unit firing or an explosion, with its sound. The beats and their
-//order are the old UI's (src/ui.ts uiUnitMove, uiAttackHits, uiAttackLosses, uiRetreat, uiSurrender, before #351), its
-//sprite strips and sound files as they are; which variant plays is picked later, from the cosmetic stream
-//(src/view/player.ts). Plain functions of the worlds and the events,
-//tested without the DOM (test/view-beats.test.ts)
+//What the UI animates after a step: its events as a row of beats (a unit moving along its path, a unit firing, an
+//explosion), each with its sound. The beats and their order are the original game's UI (reference/src/ui.js uiUnitMove,
+//uiUnitAttack), its sprite strips and sound files as they are; src/view/player.ts picks the variant that plays.
+//Plain functions of the worlds and the events, tested without the DOM (test/view-beats.test.ts)
 import type { EventOf, Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";
 import type { Position, UnitId, UnitState, World } from "../core/types";
@@ -108,7 +106,7 @@ function turnOf(before: World, w: Fighter, other: Fighter): Turn[] {
 }
 
 //A fight's shots: a support gun's alone; the attacker's, then the defender's when it fires back and is still there. The
-//first shot shown turns both units to face each other before it fires, as the old UI showed them turned first
+//first shot shown turns both units to face each other before it fires, as the original game's UI showed them
 function fightBeats(before: World, after: World, e: EventOf<"fight">): (Beat | null)[] {
 	const first = fireBeat(before, after, e.attacker, e.defender);
 	const shots = e.support || !e.result.defcanfire || e.defender.after.strength <= 0 ? [first] : [first, fireBeat(before, after, e.defender, e.attacker)];
@@ -133,7 +131,6 @@ function beatsOf(before: World, after: World, e: GameEvent): (Beat | null)[] {
 	}
 }
 
-//The beats of a step, in the order of its events: what the side shown sees of it
 export function beatsFor(before: World, after: World, events: GameEvent[]): Beat[] {
 	const beats: Beat[] = [];
 	for (const e of events)
@@ -142,7 +139,6 @@ export function beatsFor(before: World, after: World, events: GameEvent[]): Beat
 	return beats;
 }
 
-//The units a step's events move, fight or take off the map
 function touched(events: GameEvent[]): UnitId[] {
 	const ids: UnitId[] = [];
 	for (const e of events)
@@ -151,8 +147,8 @@ function touched(events: GameEvent[]): UnitId[] {
 	return ids;
 }
 
-//How long the map keeps each unit the step touched as it was before the step (#503), as the old UI showed a step: a
-//unit until the end of its beat (its move, its explosion), one without a beat (it only fought, or moved unseen) until
+//How long the map keeps each unit the step touched as it was before the step, as the original game's UI showed a step:
+//a unit until the end of its beat (its move, its explosion), one without a beat (it only fought, or moved unseen) until
 //the last beat ends. A beat's index, beats.length for the last's end
 export function heldUntil(beats: Beat[], events: GameEvent[]): Map<UnitId, number> {
 	const until = new Map<UnitId, number>();
@@ -163,16 +159,15 @@ export function heldUntil(beats: Beat[], events: GameEvent[]): Map<UnitId, numbe
 	return until;
 }
 
-//The hex slot that holds the unit in a world, null when none does
 function slotOf(w: World, id: UnitId, u: UnitState | null): { hex: number; key: "unit" | "air" } | null {
 	if (u === null || u.row < 0) return null;
 	const hex = hexIndex(w, u.row, u.col), h = w.state.map.hexes[hex];
 	return h.unit === id ? { hex, key: "unit" } : h.air === id ? { hex, key: "air" } : null;
 }
 
-//The world the map draws while a step's beats play (#503): the world after it, with the units held as they were before
-//it, on their hexes (a destroyed one back on the map), each still seen when the step spotted it, and turned the way a
-//fight's first shot turned it (turned)
+//The world the map draws while a step's beats play: the world after it, with the units held as they were before it, on
+//their hexes (a destroyed one back on the map), each still seen when the step spotted it, and turned the way a fight's
+//first shot turned it (turned)
 export function shownWorld(before: World, after: World, held: UnitId[], turned: ReadonlyMap<UnitId, number> = new Map()): World {
 	if (held.length === 0) return after;
 	const units = after.state.units.slice(), hexes = after.state.map.hexes.slice(), index = new Map(after.index);
