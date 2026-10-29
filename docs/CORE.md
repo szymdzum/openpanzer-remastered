@@ -311,7 +311,7 @@ old AI took it before them). Kept: #17 (the attacks count the hidden units' supp
 the objectives in their list's order (D7). Its settings are `aiDefaultConfig`
 (src/prototypes.ts, the old AI's too).
 
-**The tutorial** (tutorial.ts) is src/aiscripted.ts's script without the UI, both sides of
+**The tutorial** (tutorial.ts) is the original's AIScripted script without the UI, both sides of
 tutorial.xml, each turn's actions in order as data. A turn's script is built when the turn starts (and
 when the player joins): the units it names are looked up then, the eight it picked by their starting
 hexes or its own unit on a hex, and its actions are played one by one later, as Game.processAction

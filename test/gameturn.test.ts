@@ -224,10 +224,9 @@ test.each(ITEMS)("Game plays %s on the core's session as it did beside the old e
 test("The handlers plan nothing themselves: they hand out the session's orders", async () => {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
-	const { AIScripted } = await import("../src/aiscripted");
 	await startState(game, "scripted:tutorial.xml", [2, 2, 2, 2]);
 	const p = game.scenario.map.getPlayers()[0];
-	const ai = new AI(p, game.scenario.map), scripted = new AIScripted(p, game.scenario.map);
+	const ai = new AI(p, game.scenario.map), scripted = new AI(p, game.scenario.map);
 	ai.buildActions();
 	scripted.buildActions();
 	const { actionType } = await import("../src/prototypes");

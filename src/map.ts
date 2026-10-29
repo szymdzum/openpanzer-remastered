@@ -16,7 +16,6 @@ import { Cell, outcomeNames, playerType, roadType, sideNames, terrainType, uiSet
 import { Equipment } from "./equipment";
 import { defined } from "./util";
 import type { AI } from "./ai";
-import type { AIScripted } from "./aiscripted";
 import { GameRules } from "./gamerules";
 import { Unit } from "./unit";
 import { HexCounters, MapVisibility } from "./visibility";
@@ -46,7 +45,7 @@ export class Player {
 	declare dossier: PlayerDossier;
 	declare playedTurn: number;
 	declare type: number; //playerType
-	declare handler: AI | AIScripted;
+	declare handler: AI;
 	declare airTransports: number;
 	declare navalTransports: number;
 	declare supportCountries: number[];

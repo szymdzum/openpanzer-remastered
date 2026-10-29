@@ -7,7 +7,7 @@
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The players keep a handler (Player.handler, an AI or an AIScripted): its getAction asks the session
+ * The players keep a handler (Player.handler, an AI): its getAction asks the session
  * for the current player's next order and hands it out as the old action (harness/replay.js wraps it
  * to hash the state there), and the host's processAction plays it as before, its commands on the core
  * (src/commands.ts). A handler made while the game runs (the replay makes every player the AI) joins
@@ -18,7 +18,6 @@
 import { actionType, type Cell, CURRENCY_ICON, playerType } from "./prototypes";
 import { CombatLog } from "./combatlog";
 import { AI, type AIAction, type AIDriver } from "./ai";
-import { AIScripted } from "./aiscripted";
 import type { GameMap, Player } from "./map";
 import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldOf } from "./mirror";
 import { beginDraft, finishDraft } from "./core/draft";
@@ -41,10 +40,10 @@ function controllerFor(type: number, player: number): Controller | null {
 	return null;
 }
 
-//The handler of a player a program plays, by its type (Game.setupPlayers): the scripted tutorial's or the
-//AI's, both handing out the session's orders (a handler made joins its player to the session)
+//The handler of a player a program plays (Game.setupPlayers): an AI, the tutorial's too, handing out the
+//session's orders (a handler made joins its player to the session)
 export function handlerFor(player: Player, map: GameMap): AI {
-	return player.type === playerType.aiScripted ? new AIScripted(player, map) : new AI(player, map);
+	return new AI(player, map);
 }
 
 //The game's world now, of its objects, with the side shown and the fog of war

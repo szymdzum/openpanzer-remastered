@@ -1,6 +1,6 @@
 /**
  * Tutorial - the scripted opponent and guide of the tutorial (tutorial.xml) as a controller
- * (controller.ts): src/aiscripted.ts's script without the UI
+ * (controller.ts): the original's AIScripted script without the UI
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

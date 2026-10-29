@@ -53,7 +53,7 @@ const uiModules = ["dom", "game", "gamestate", "main"];
 test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
 	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame",
 		"mirror"]);
-	expect([...reached].filter((m) => [...uiModules, "aiscripted", "coresession", "coreload"].includes(m))).toEqual([]);
+	expect([...reached].filter((m) => [...uiModules, "coresession", "coreload"].includes(m))).toEqual([]);
 });
 
 //The game host (src/host.ts) plays the game's course on the engine and on the game's glue to the core
