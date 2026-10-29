@@ -131,6 +131,30 @@
 				inline-size: auto;
 			}
 
+			/* the person's units over the tabs, as the old list sat over the window; they scroll sideways */
+			.units {
+				flex: none;
+				overflow-x: auto;
+				padding-block: var(--space-2);
+				padding-inline: var(--space-4);
+				border-block-end: 1px solid var(--line);
+			}
+
+			:where(.units) .cards {
+				display: flex;
+				gap: var(--space-2);
+			}
+
+			.pm-ucard {
+				font: inherit;
+				color: inherit;
+			}
+
+			:where(.units) .sub {
+				font-size: var(--type-label-size);
+				line-height: 0.875rem;
+			}
+
 			.pm-grid {
 				grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
 				overflow-y: auto;

@@ -14,6 +14,8 @@ import { movMethodNames, unitClass, unitClassNames } from "../prototypes";
 import type { IconName, Nation } from "./icon";
 import { classIcon, countryName, isYourTurn, MONTH_NAMES, nationOf, prestigeText, reasonOf } from "./model";
 import { ordinal, tagsOf } from "./unitcard";
+import { trayOf } from "./deploy";
+import { type ListUnit, unitListOf } from "./unitlist";
 
 //The unit the window works on: one on the map, or a core unit off it by its place in the core list (the reserve)
 export type Target = { unit: UnitId } | { index: number };
@@ -322,4 +324,19 @@ export function choiceFor(w: World, target: Target | null): ShopChoice {
 	const e = w.equipment[unit.eqid], uclass = shopClass(e.uclass);
 	const country = Math.max(0, sideCountries(w, p.side).indexOf(+e.country - 1));
 	return { ...base, target, uclass: CLASSES.includes(uclass) ? uclass : unitClass.tank, country, eqid: unit.eqid };
+}
+
+//The unit list in the window (the old list above it, #512): the person's units on the map, each by its id, or while
+//deploying their reserve, each by its core list place; the one the window works on pressed. A card pressed makes its
+//unit the one to upgrade
+export interface ShopUnits {
+	reserve: boolean;
+	units: ListUnit[];
+}
+
+export function shopUnitsOf(w: World, reserve: boolean, target: Target | null): ShopUnits {
+	if (!reserve) return { reserve, units: unitListOf(w, target !== null && "unit" in target ? target.unit : null).units };
+	const tray = trayOf(w, target !== null && "index" in target ? target.index : null);
+	return { reserve, units: tray.units.map((u): ListUnit => ({ id: u.index, name: u.name, sub: "", strength: u.strength, sprite: u.sprite,
+		fuel: null, ammo: null, moved: false, selected: u.picked })) };
 }

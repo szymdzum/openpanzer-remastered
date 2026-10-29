@@ -261,3 +261,43 @@ test("An Infanterie's transport is picked in the window; pressed again, none; th
 	await act(() => store.shortcut({ menu: "buy" }));
 	expect(store.shop.value).toBeNull();
 });
+
+test("Opened on nothing, a unit picked in the window's list is the one to upgrade, on its class and model; another picked instead (#512)", async () => {
+	const store = shopStore(world((x) => { x.state.players[0].prestige = 600; }));
+	await act(() => store.shortcut({ menu: "buy" }));
+	const win = document.getElementById("equipment")!, actions = win.querySelector("#eqActionsContainer")!;
+	expect(actions.textContent).toContain("Buying new units");
+	const list = within(win).getByRole("region", { name: "Your units" });
+	expect(within(list).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false", "false"]);
+	//(the sort the person chose stays, as the old window kept it)
+	await act(() => { fireEvent.click(within(win).getByRole("button", { name: "Hard atk" })); });
+	await act(() => { fireEvent.click(within(list).getByRole("button", { name: /^Pz IIA 101st/ })); });
+	expect(actions.textContent).toContain("Upgrading 101st Pz IIA");
+	expect(within(win).getByRole("tab", { name: "Tank" }).getAttribute("aria-selected")).toBe("true");
+	expect(within(win).getByRole("button", { name: /^Pz IIA, current,/ }).getAttribute("aria-pressed")).toBe("true");
+	expect(within(list).getByRole("button", { name: /^Pz IIA 101st/ }).getAttribute("aria-pressed")).toBe("true");
+	expect([store.selected.value, store.lookAt.value, store.shop.value!.sort]).toEqual([0, { row: 2, col: 2 }, "hardatk"]);
+	await act(() => { fireEvent.click(within(win).getByRole("button", { name: /^Pz IIIE,/ })); });
+	const w = store.world.value!, cost = upgradeCost(w, w.state.units[0], PZ_IIIE, -1);
+	expect(win.querySelector("#eqUpgradeBut")!.querySelector(".cost")!.textContent).toBe(String(cost));
+	await act(() => { fireEvent.click(win.querySelector("#eqUpgradeBut")!); });
+	expect([store.world.value!.state.units[0].eqid, store.world.value!.state.players[0].prestige]).toEqual([PZ_IIIE, 600 - cost]);
+	//another unit picked: the window on it, its class, model and transport
+	await act(() => { fireEvent.click(within(list).getByRole("button", { name: /^Infanterie 1st/ })); });
+	expect(actions.textContent).toContain("Upgrading 1st Infanterie");
+	expect(within(win).getByRole("tab", { name: "Infantry" }).getAttribute("aria-selected")).toBe("true");
+	expect(within(win).getByRole("button", { name: /^Infanterie, current,/ }).getAttribute("aria-pressed")).toBe("true");
+	expect([store.shop.value!.transports.find((t) => t.on)!.eqid, store.selected.value]).toEqual([OPEL, 1]);
+});
+
+test("The window opens with the unit list and closes it, as the old window did with the list over it (#512)", async () => {
+	const store = shopStore(world((x) => { x.state.players[0].side = 1; }));
+	await act(() => store.toggleList());
+	await act(() => store.shortcut({ menu: "buy" }));
+	//one list, the window's, its badges the side's
+	const lists = screen.getAllByRole("region", { name: "Your units" });
+	expect(lists.map((r) => r.closest("#equipment") !== null)).toEqual([true]);
+	expect(lists[0].querySelector(".pm-badge")!.className).toBe("pm-badge allied");
+	await act(() => { fireEvent.click(document.getElementById("eqCloseBut")!); });
+	expect([document.getElementById("equipment"), screen.queryByRole("region", { name: "Your units" }), store.listOpen.value]).toEqual([null, null, false]);
+});

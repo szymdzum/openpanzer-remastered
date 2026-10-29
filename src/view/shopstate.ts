@@ -5,7 +5,7 @@ import { computed, type ReadonlySignal, signal } from "@preact/signals";
 import type { Command } from "../commands";
 import type { Position, UnitId, World } from "../core/types";
 import { unitById } from "../core/world";
-import { choiceFor, type ShopChoice, shopOf, sideCountries, type SortKey, type Target } from "./shop";
+import { choiceFor, type ShopChoice, shopOf, shopUnitsOf, sideCountries, type SortKey, type Target } from "./shop";
 import { unitListOf } from "./unitlist";
 import { isYourTurn } from "./model";
 
@@ -15,20 +15,25 @@ interface Needs {
 	deploying: ReadonlySignal<unknown>;
 	selected: ReadonlySignal<UnitId | null>;
 	select: (id: UnitId | null) => void;
+	//a reserve unit picked to deploy, by its core list place
+	pickReserve: (index: number) => void;
 	look: (at: Position) => void;
 	dispatch: (cmd: Command) => string | null;
 }
 
 export type ShopAct = "buy" | "upgrade" | "sell";
 
-export function createShopState({ world, deploying, selected, select, look, dispatch }: Needs) {
+export function createShopState({ world, deploying, selected, select, pickReserve, look, dispatch }: Needs) {
 	//the unit list open (the status bar's button), and the equipment window's picks while it is open
 	const listOpen = signal(false);
 	const choice = signal<ShopChoice | null>(null);
 
-	const unitList = computed(() => world.value === null || !listOpen.value || deploying.value !== null ? null
+	//(while the window is open its own list takes this one's place, as the old window opened with the list)
+	const unitList = computed(() => world.value === null || !listOpen.value || deploying.value !== null || choice.value !== null ? null
 		: unitListOf(world.value, selected.value));
 	const shop = computed(() => world.value === null || choice.value === null ? null : shopOf(world.value, choice.value));
+	const shopUnits = computed(() => world.value === null || choice.value === null ? null
+		: shopUnitsOf(world.value, deploying.value !== null, choice.value.target));
 	//why the unit list and the window can't open: the old ones opened on a person's turn only (undefined: they can)
 	const shopRefusal = computed(() => world.value === null ? "No game is playing" : isYourTurn(world.value) ? undefined : "Not your turn");
 
@@ -45,8 +50,23 @@ export function createShopState({ world, deploying, selected, select, look, disp
 		choice.value = choiceFor(w, on);
 	};
 
+	//A unit on the map selected and in the middle of the map; false when there is none
+	const lookAt = (id: UnitId) => {
+		const w = world.value, u = w === null ? null : unitById(w, id);
+		if (u === null) return false;
+		select(id);
+		look({ row: u.row, col: u.col });
+		return true;
+	};
+
+	//Closed with the unit list, as the old window closed both
+	const closeShop = () => {
+		choice.value = null;
+		listOpen.value = false;
+	};
+
 	return {
-		unitList, shop, listOpen, shopRefusal,
+		unitList, shop, shopUnits, listOpen, shopRefusal,
 
 		toggleList: () => {
 			listOpen.value = !listOpen.value;
@@ -54,22 +74,26 @@ export function createShopState({ world, deploying, selected, select, look, disp
 
 		//A unit of the list pressed: selected, and in the middle of the map
 		listPick: (id: UnitId) => {
-			const w = world.value, u = w === null ? null : unitById(w, id);
-			if (u === null) return;
-			select(id);
-			look({ row: u.row, col: u.col });
+			lookAt(id);
 		},
 
 		//B and the rail's Buy and upgrade: the window opened, or closed when it is open
 		toggleShop: () => {
 			if (choice.value === null) openShop();
-			else choice.value = null;
+			else closeShop();
 		},
 
-		openShop,
+		openShop, closeShop,
 
-		closeShop: () => {
-			choice.value = null;
+		//A unit of the window's list pressed: the one to upgrade, on its class, country, model and transport, the sort kept
+		//(the old list's click); one on the map also selected and in the middle of the map, one in the reserve picked to deploy
+		shopUnit: (id: number) => {
+			const w = world.value, c = choice.value;
+			if (w === null || c === null) return;
+			const target: Target = deploying.value !== null ? { index: id } : { unit: id };
+			if ("index" in target) pickReserve(id);
+			else if (!lookAt(id)) return;
+			choice.value = { ...choiceFor(w, target), sort: c.sort, reverse: c.reverse };
 		},
 
 		//A class tab: its models, nothing picked, no unit to upgrade (the old window cleared it)
