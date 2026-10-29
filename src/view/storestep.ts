@@ -49,11 +49,12 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 	//A step's beats played, then what it told, then what follows (a person's victories, a program's next action)
 	const play = (before: World, events: GameEvent[], then: () => void) => {
 		const after = world.value!, beats = beatsFor(before, after, events), until = heldUntil(beats, events);
-		//(the units the map still draws as they were before the step)
+		//(the units the map still draws as they were before the step, and those a fight's first shot has turned so far)
 		let held: UnitId[] = [];
+		const turned = new Map<UnitId, number>();
 		const hold = (ids: UnitId[]) => {
 			held = ids;
-			shown.value = shownWorld(before, after, ids);
+			shown.value = shownWorld(before, after, ids, turned);
 		};
 		letGo = (id) => hold(held.filter((x) => x !== id));
 		showing.value = true;
@@ -62,7 +63,11 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 			showing.value = false;
 			tell(before, events);
 			then();
-		}, (i) => hold([...until].filter(([, last]) => last >= i).map(([id]) => id)));
+		}, (i) => {
+			const b = beats[i];
+			if (b.kind === "fire") for (const t of b.turn ?? []) turned.set(t.unit, t.facing);
+			hold([...until].filter(([, last]) => last >= i).map(([id]) => id));
+		});
 	};
 
 	return {

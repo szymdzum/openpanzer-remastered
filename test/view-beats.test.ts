@@ -257,3 +257,23 @@ test("Under reduced motion the units still wait for their beats; a new scenario'
 	store.clear();
 	expect(store.units.value).toEqual(mapUnits(store.world.value!, false, null));
 });
+
+//The old UI turned the two units to face each other, then played the shots (uiAttackShown: "Render so new unit facings
+//are shown correctly"): the fight's first shot turns them, and they stay as they were on their hexes otherwise
+test("A fight's two units face each other from its first shot, not after it (#503)", () => {
+	const w = hand([{ eqid: INFANTERIE, owner: 0, row: 4, col: 3, facing: 12 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, facing: 12 }]);
+	vi.useFakeTimers();
+	const store = storeOf(w, 1), facings: string[] = [];
+	store.dispatch(attack);
+	for (let i = 0; i < 2000 && store.showing.value; i++) {
+		const m = store.motion.value;
+		if (m !== null && m.effect !== null) {
+			const f = (id: number) => store.units.value.find((u) => u.id === id)?.facing;
+			facings.push(f(0) + "," + f(1));
+		}
+		vi.advanceTimersByTime(10);
+	}
+	expect(facings.length).toBeGreaterThan(0);
+	const facingEach = directionTo(4, 3, 4, 4) + "," + directionTo(4, 4, 4, 3);
+	expect(facings.every((f) => f === facingEach)).toBe(true);
+});
