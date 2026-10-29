@@ -10,7 +10,7 @@ import { check } from "../core/step";
 import type { OffMapUnit, PlayerState, UnitId, World } from "../core/types";
 import { isTransportable } from "../core/units";
 import { unitById } from "../core/world";
-import { unitClass, unitClassNames } from "../prototypes";
+import { movMethodNames, unitClass, unitClassNames } from "../prototypes";
 import type { IconName, Nation } from "./icon";
 import { classIcon, countryName, isYourTurn, MONTH_NAMES, nationOf, prestigeText, reasonOf } from "./model";
 import { ordinal, tagsOf } from "./unitcard";
@@ -63,18 +63,23 @@ export interface Model {
 	current: boolean; //what the unit has now
 }
 
-//A stat of the picked model, as the old window showed an entry's: its value and its bar on the 0-15 scale (fuel and ammo
-//on their own)
+//A stat of the picked model on foot and mounted, as text. Mounted, a unit plays on its transport's entry (unitData,
+//movesLeft): its defences, initiative, moves, spotting and fuel, and it can't attack ("–"). A fuel of 0 uses none ("—")
 export interface Compare {
 	name: string;
-	value: number;
-	fill: number;
+	value: string;
+	mounted: string | null; //null: no transport picked
+	change: "up" | "down" | null; //mounted against on foot
 }
 
+//A transport with what it gives: its price, moves, fuel (0: it uses none) and defence, ground · air · close
 export interface Transport {
 	eqid: number; //-2: none
 	name: string;
 	on: boolean;
+	sprite: string | null; //null: None
+	ground: string; //"Wheeled": how it moves; "On foot" for None
+	gives: { cost: number, moves: number, fuel: number, def: string } | null; //null: None
 }
 
 //A button of the action bar: its price, and why it can't be pressed (null: it can)
@@ -93,8 +98,12 @@ export interface Shop {
 	sort: SortKey;
 	reverse: boolean;
 	models: Model[];
-	picked: { eqid: number, name: string, line: string, sprite: string, compare: Compare[] } | null;
+	//rides: the transport picked, with its sprite, null on foot; rule: what riding it does, null with no transport to pick
+	picked: { eqid: number, name: string, line: string, sprite: string, compare: Compare[], rides: { name: string, sprite: string } | null,
+		rule: string | null } | null;
 	transports: Transport[]; //none: the model goes on its own
+	//the price of a model with its transport, in two: the unit's and the transport's; null with none
+	split: { unit: number, transport: string, cost: number } | null;
 	target: string | null; //"1st Pz IIA": the unit the window works on
 	sell: ShopAction | null; //null: nothing to sell
 	upgrade: ShopAction | null; //null: nothing to upgrade
@@ -156,15 +165,31 @@ const STAT_ROWS: [string, keyof EquipmentEntry][] = [["Soft attack", "softatk"],
 	["Naval attack", "navalatk"], ["Ground def", "grounddef"], ["Air def", "airdef"], ["Close def", "closedef"], ["Ranged def", "rangedefmod"],
 	["Initiative", "initiative"], ["Range", "gunrange"], ["Movement", "movpoints"], ["Spotting", "spotrange"], ["Fuel", "fuel"], ["Ammo", "ammo"]];
 
-//(a range of 0 is 1, as the old window showed it; fuel and ammo have bars of their own scale)
+//(a range of 0 is 1, as the old window showed it)
 const statOf = (e: EquipmentEntry, k: keyof EquipmentEntry) => k === "gunrange" ? Math.max(1, e[k]) : e[k] as number;
-const scaleOf = (k: keyof EquipmentEntry) => k === "fuel" ? 100 : k === "ammo" ? 20 : 15;
+const textOf = (k: keyof EquipmentEntry, v: number) => k === "fuel" && v === 0 ? "—" : String(v);
 
-function compareOf(e: EquipmentEntry): Compare[] {
+//What a mounted unit doesn't use of its transport: it can't attack
+const NOT_MOUNTED: (keyof EquipmentEntry)[] = ["softatk", "hardatk", "airatk", "navalatk", "gunrange", "ammo"];
+
+//(fuel has no better or worse: a unit that walks uses none)
+function changeOf(k: keyof EquipmentEntry, value: number, mounted: number | null): Compare["change"] {
+	if (k === "fuel" || mounted === null || mounted === value) return null;
+	return mounted > value ? "up" : "down";
+}
+
+function compareOf(e: EquipmentEntry, t: EquipmentEntry | null): Compare[] {
 	return STAT_ROWS.map(([name, k]) => {
-		const value = statOf(e, k);
-		return { name, value, fill: Math.min(1, Math.max(0, value) / scaleOf(k)) };
+		const value = statOf(e, k), used = t === null || NOT_MOUNTED.includes(k) ? null : statOf(t, k);
+		const mounted = t === null ? null : used === null ? "–" : textOf(k, used);
+		return { name, value: textOf(k, value), mounted, change: changeOf(k, value, used) };
 	});
+}
+
+//What riding does, said once: infantry attacked on its transport gets off and fights on foot, unless surprised (combat.ts)
+function ruleOf(e: EquipmentEntry): string {
+	const off = e.uclass === unitClass.infantry ? "; attacked, it fights on foot unless surprised" : "";
+	return `Mounted, it moves and defends as its transport and can't attack${off}. Def: ground · air · close.`;
 }
 
 //"Need 40 more prestige to upgrade": the old window's words when the price is over the prestige; else the core's
@@ -238,16 +263,23 @@ function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model 
 	return { eqid, name: e.name, year: e.yearavailable, cost: unitCost(w, eqid), stat, sprite: e.icon, current: eqid === current };
 }
 
-//The model picked, with its stats
-function pickedOf(e: EquipmentEntry | null, eqid: number): Shop["picked"] {
+//The model picked, with its stats on foot and on the transport picked, and what riding does where a transport carries it
+function pickedOf(e: EquipmentEntry | null, eqid: number, t: EquipmentEntry | null, rides: boolean): Shop["picked"] {
 	if (e === null) return null;
-	return { eqid, name: e.name, line: tagsOf(e, null).map((t) => t.text).join(" · ") + " · in service from " + e.yearavailable,
-		sprite: e.icon, compare: compareOf(e) };
+	return { eqid, name: e.name, line: tagsOf(e, null).map((x) => x.text).join(" · ") + " · in service from " + e.yearavailable,
+		sprite: e.icon, compare: compareOf(e, t), rides: t === null ? null : { name: t.name, sprite: t.icon }, rule: rides ? ruleOf(e) : null };
+}
+
+function transportOf(w: World, eqid: number, on: boolean): Transport {
+	const t = w.equipment[eqid];
+	return { eqid, name: t.name, on, sprite: t.icon, ground: movMethodNames[t.movmethod],
+		gives: { cost: unitCost(w, eqid), moves: t.movpoints, fuel: t.fuel, def: [t.grounddef, t.airdef, t.closedef].join("·") } };
 }
 
 function transportList(w: World, list: number[], transport: number): Transport[] {
 	if (list.length === 0) return [];
-	return [{ eqid: -2, name: "None", on: !(transport > 0) }, ...list.map((t) => ({ eqid: t, name: w.equipment[t].name, on: t === transport }))];
+	const none: Transport = { eqid: -2, name: "None", on: !(transport > 0), sprite: null, ground: "On foot", gives: null };
+	return [none, ...list.map((t) => transportOf(w, t, t === transport))];
 }
 
 //(the unit's own transport until another is picked, as the old window preselected it)
@@ -268,12 +300,14 @@ export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	const { transport, list } = transportsOf(w, choice, country, presetOf(w, unit, choice));
 	const year = yearOf(w), pricing: Pricing = { w, p, target, unit, eqid: choice.eqid, transport, year };
 	const upgrade = upgradeOf(pricing), buy = buyOf(pricing);
+	const model = choice.eqid > 0 ? w.equipment[choice.eqid] : null, rides = model !== null && transport > 0 ? w.equipment[transport] : null;
 	return {
 		title: name + " · " + MONTH_NAMES[new Date(w.state.scenario.date).getMonth()] + " " + year,
 		country: { name, nation: nationOf(name), many: countries.length > 1 }, prestige: prestigeText(p.prestige), tabs: TABS,
 		uclass: choice.uclass, sort: choice.sort, reverse: choice.reverse,
 		models: modelsOf(w, country, choice.uclass, choice.sort, choice.reverse).map((m) => modelOf(w, m, choice.sort, unit === null ? -1 : unit.eqid)),
-		picked: pickedOf(choice.eqid > 0 ? w.equipment[choice.eqid] : null, choice.eqid), transports: transportList(w, list, transport),
+		picked: pickedOf(model, choice.eqid, rides, list.length > 0), transports: transportList(w, list, transport),
+		split: rides === null ? null : { unit: unitCost(w, choice.eqid), transport: rides.name, cost: unitCost(w, transport) },
 		target: unit === null ? null : targetName(w, unit, target!), sell: sellOf(pricing), upgrade, buy,
 	};
 }

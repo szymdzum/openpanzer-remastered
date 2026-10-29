@@ -94,7 +94,7 @@
 /* ============ equipment (#equipment) ============ */
 .pm-eq .body { display: grid; grid-template-columns: 1fr 340px; min-height: 0; flex: 1; }
 .pm-eq .list { padding: var(--space-3) var(--space-3) var(--space-3) var(--space-6); display: grid; grid-template-rows: auto 1fr; gap: var(--space-3); min-height: 0; }
-.pm-eq .tools { display: flex; align-items: center; gap: var(--space-3); }
+.pm-eq .tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 150px; gap: var(--space-2); align-content: start; padding: var(--space-2); background: var(--panel-sunken); border: 1px solid var(--line); overflow: hidden; }
 .pm-card { position: relative; display: grid; grid-template-rows: 1fr auto auto; justify-items: center; padding: 6px 8px 8px; border: 1px solid var(--line); border-radius: var(--radius-none); background: var(--panel-raised) linear-gradient(transparent 0 calc(100% - 41px), var(--line) calc(100% - 41px) calc(100% - 40px), transparent calc(100% - 40px)); cursor: pointer; }
 .pm-card .spr { width: 80px; height: 50px; background-repeat: no-repeat; align-self: center; }
@@ -115,17 +115,21 @@
 .pm-cmp .d { font-family: var(--font-mono); font-weight: 700; font-size: var(--type-note-size); text-align: right; color: var(--ink-muted); }
 .pm-cmp .d.up { color: var(--ok); } .pm-cmp .d.dn { color: var(--critical); }
 /* the transport: the model on foot and mounted side by side, and every transport with what it gives, so the
-   choice reads without opening anything. A wider detail column; the model grid takes three cards a row */
-.pm-eq .body:has(.pm-mount) { grid-template-columns: 1fr 468px; }
+   choice reads without opening anything. A wider detail column: in a narrow window the models take fewer cards a
+   row and the sort wraps */
+.pm-eq .body:has(.pm-mount) { grid-template-columns: minmax(0, 1fr) 468px; }
 .pm-eq .detail:has(.pm-mount) { gap: var(--space-2); padding-top: var(--space-2); overflow: hidden; }
 .pm-eq .detail .top:has(.duo) { grid-template-columns: auto 1fr; }
 .pm-eq .fr { background-size: 900% 100%; background-position-x: 25%; background-repeat: no-repeat; }
 .pm-eq .duo { display: flex; align-items: center; gap: 2px; }
 .pm-eq .duo .spr { width: 72px; height: 45px; }
 .pm-eq .duo .plus { font: 700 var(--type-data-lg-size)/1 var(--font-mono); color: var(--ink-muted); }
-.pm-mount { display: grid; grid-template-columns: 1fr 44px 74px 1fr 44px 74px; gap: 1px 8px; font-size: var(--type-small-size); line-height: 16px; }
+.pm-mount { display: grid; grid-template-columns: 1fr auto auto 1fr auto auto; gap: 1px var(--space-2); font-size: var(--type-small-size); line-height: 16px; }
 .pm-mount .hdr, .pm-eq .trh { font-size: var(--type-micro-size); letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--ink-muted); text-align: right; }
 .pm-mount .hdr:nth-child(3n+1) { text-align: left; }
+/* with no transport to pick, one value a stat */
+.pm-mount.solo { grid-template-columns: 1fr auto 1fr auto; }
+.pm-mount.solo .hdr:nth-child(odd) { text-align: left; } .pm-mount.solo .hdr:nth-child(even) { text-align: right; }
 .pm-mount .n { font-family: var(--font-mono); font-weight: 700; text-align: right; }
 .pm-mount .m.up { color: var(--ok); } .pm-mount .m.dn { color: var(--critical); } .pm-mount .m.off { color: var(--ink-muted); font-weight: 400; }
 .pm-eq .trh, .pm-eq .tr { display: grid; grid-template-columns: 48px 1fr 38px 40px 32px 44px; gap: 6px; align-items: center; }
