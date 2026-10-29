@@ -3,10 +3,10 @@
 //fuel pays for, the moves left, the shot, what riding a transport means, the resupply, what the entrenchment and the
 //experience add in a fight. Each is checked against what the step and the attack actually do
 import { expect, test } from "vitest";
-import { canFireThisTurn } from "../src/core/attack";
+import { canFire, canFireThisTurn, firesOnAircraft } from "../src/core/attack";
 import {
 	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentAgainst, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
-	experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, rangeDefence, riding
+	entrenchmentAttacking, experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, isCloseCombat, rangeDefence, riding
 } from "../src/core/combat";
 import { fullMoves, movesLeftThisTurn, unitMoveRange } from "../src/core/movement";
 import { step, type Stepped } from "../src/core/step";
@@ -299,4 +299,41 @@ test("Range defence: all of the modifier from further than the next hex within t
 	expect(defended(INFANTERIE, A_WZ13, 4)).toEqual([inf.rangedefmod >> 1]);
 	expect(defended(INFANTERIE, TP7, 3)).toEqual([inf.rangedefmod >> 1]);
 	expect(defended(INFANTERIE, PIECHOTA, 3, terrainType.Forest)).toEqual([]);
+});
+
+test("Close combat: infantry attacking a unit in a city, forest, mountain or fortification hex, or a fortification anywhere; the defender uses its close defence (#37)", () => {
+	const close = [terrainType.Clear, terrainType.City, terrainType.Forest, terrainType.Mountain, terrainType.Fortification, terrainType.Rough,
+		terrainType.Hill].filter((t) => isCloseCombat(unitClass.infantry, unitClass.tank, t));
+	expect(close.map((t) => terrainNames[t])).toEqual(["City", "Forest", "Mountain", "Fortification"]);
+	expect(isCloseCombat(unitClass.infantry, unitClass.fortification, terrainType.Clear)).toBe(true);
+	expect(isCloseCombat(unitClass.tank, unitClass.infantry, terrainType.City)).toBe(false);
+	//what the attack does: a 7TP in a forest attacked by infantry defends with its close defence, by a tank not
+	const defence = (attacker: number) => {
+		const w = handWorld({ rows: 6, cols: 8, terrain: () => terrainType.Forest, units: [{ eqid: TP7, owner: 1, row: 2, col: 2 },
+			{ eqid: attacker, owner: 0, row: 2, col: 3 }] });
+		const record: Contribution[] = [];
+		attackResult(w, unitById(w, 1), unitById(w, 0), null, record);
+		return record.filter((c) => c.name === "close combat" && c.side === "defender").map((c) => c.after);
+	};
+	const tp7 = handWorld({ rows: 1, cols: 1, units: [] }).equipment[TP7];
+	expect([defence(INFANTERIE), defence(PZ_IIA)]).toEqual([[tp7.closedef], []]);
+});
+
+test("Attacking, a unit's own entrenchment adds to its defence, none in close combat (#37)", () => {
+	expect([entrenchmentAttacking(3, true, false), entrenchmentAttacking(3, true, true), entrenchmentAttacking(3, false, false)]).toEqual([3, 0, 0]);
+	const own = (attacker: number, terrain: number) => {
+		const w = handWorld({ rows: 6, cols: 8, terrain: () => terrain, units: [{ eqid: attacker, owner: 0, row: 2, col: 2, entrenchment: 2 },
+			{ eqid: PIECHOTA, owner: 1, row: 2, col: 3 }] });
+		const record: Contribution[] = [];
+		attackResult(w, unitById(w, 0), unitById(w, 1), null, record);
+		return record.filter((c) => c.name === "entrenchment" && c.side === "attacker").map((c) => c.after - c.before);
+	};
+	expect([own(PZ_IIA, terrainType.Forest), own(INFANTERIE, terrainType.Clear), own(INFANTERIE, terrainType.Forest)]).toEqual([[2], [2], []]);
+});
+
+test("Only a unit with an air attack fires on aircraft (#37)", () => {
+	const w = handWorld({ rows: 6, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 2, col: 2 }, { eqid: FLAK36, owner: 0, row: 2, col: 4 },
+		{ eqid: ME_109, owner: 1, row: 2, col: 3 }] });
+	expect([firesOnAircraft(w.equipment[PZ_IIA]), firesOnAircraft(w.equipment[FLAK36])]).toEqual([false, true]);
+	expect([canFire(w, unitById(w, 0), unitById(w, 2)), canFire(w, unitById(w, 1), unitById(w, 2))]).toEqual([false, true]);
 });

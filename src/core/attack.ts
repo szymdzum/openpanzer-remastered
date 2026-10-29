@@ -24,7 +24,12 @@ export function unitAttackRange(w: World, u: UnitState): number {
 //only for a unit with an air attack
 export function canFire(w: World, u: UnitState, target: UnitState): boolean {
 	if (isGone(w, u) || ammoOf(u) <= 0 || isGone(w, target) || !isEnemy(w, u, target)) return false;
-	return !(isAir(w, target) && unitData(w, u).airatk <= 0);
+	return !(isAir(w, target) && !firesOnAircraft(unitData(w, u)));
+}
+
+//Whether equipment fires on aircraft: only with an air attack
+export function firesOnAircraft(e: EquipmentEntry): boolean {
+	return e.airatk > 0;
 }
 
 //Whether u still has its shot this turn ("can fire"): it hasn't fired (an attack, or a move on its transport,
