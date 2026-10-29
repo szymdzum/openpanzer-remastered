@@ -4,12 +4,12 @@
 //Every rule comes from the core's queries, never from distance: the move area is the core's move range,
 //the path the one the move takes, the targets the attack cells.
 import type { Command } from "../commands";
-import { attackableUnit, attackCells } from "../core/attack";
+import { attackableUnit, attackCells, canFireThisTurn } from "../core/attack";
 import { adjacent } from "../core/geometry";
-import { isBridgeForSide, moveRange, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
+import { isBridgeForSide, moveRange, movesLeftThisTurn, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
 import { isAir, isGround, unitUsesAmmo } from "../core/units";
-import { airUnitAt, ammoOf, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
+import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
 import { unitClass } from "../prototypes";
 import { canOrder } from "./model";
 
@@ -91,9 +91,9 @@ export function isShown(w: World, u: UnitState): boolean {
 //What the side shown's unit can still do this turn; only the current player's units show it
 function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove" | "canFire" | "noAmmo" | "done"> {
 	if (!own || u.owner !== w.state.turn.currentPlayer) return { canMove: false, canFire: false, noAmmo: false, done: false };
-	const canMove = !u.hasMoved && unitMoveRange(w, u) > 0;
+	const canMove = movesLeftThisTurn(w, u) > 0;
 	const fires = !u.hasFired && unitUsesAmmo(w, u);
-	const canFire = fires && ammoOf(u) > 0;
+	const canFire = canFireThisTurn(w, u);
 	return { canMove, canFire, noAmmo: fires && !canFire, done: !canMove && !fires };
 }
 
