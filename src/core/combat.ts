@@ -102,6 +102,14 @@ function entrenchedInCloseTerrain(f: Fight): boolean {
 	return doublesEntrenchment(f.dData.uclass, f.dTerrain) && !f.isCloseCombat && entrenchmentCountsTwiceAgainst(f.aData.uclass);
 }
 
+//What a range defence modifier adds in a fight of ground units, out of close combat (the "range defense" step):
+//all of it when they are further apart (apart: their distance) than neighbours and within the defender's gun range
+//(defenderRange), half of it, rounded down, next to each other or beyond the defender's range. Both sides add
+//theirs at the same distance
+export function rangeDefence(mod: number, apart: number, defenderRange: number): number {
+	return apart <= 1 || defenderRange < apart ? mod >> 1 : mod;
+}
+
 //Anti-tank that moved has no range defense, unless a tank killer
 function attackerRangeDefense(f: Fight): boolean {
 	return !(f.aData.uclass === unitClass.antiTank && f.atk.hasMoved && !hasLeader(f.world, f.atk, leaderType.tankKiller));
@@ -244,9 +252,9 @@ export const classicCombat: CombatStep[] = [
 		//the defender's range, all of it otherwise
 		const w = f.world, d = f.distance;
 		if (!isGround(w, f.atk) || !isGround(w, f.def) || f.isCloseCombat) return;
-		const half = d <= 1 || unitAttackRange(w, f.def) < d;
-		if (attackerRangeDefense(f)) add(f, "range defense", "attacker", "adv", half ? f.aData.rangedefmod >> 1 : f.aData.rangedefmod);
-		add(f, "range defense", "defender", "ddv", half ? f.dData.rangedefmod >> 1 : f.dData.rangedefmod);
+		const range = unitAttackRange(w, f.def);
+		if (attackerRangeDefense(f)) add(f, "range defense", "attacker", "adv", rangeDefence(f.aData.rangedefmod, d, range));
+		add(f, "range defense", "defender", "ddv", rangeDefence(f.dData.rangedefmod, d, range));
 	} },
 	{ name: "initiative", run(f) {
 		const w = f.world;

@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { canFireThisTurn } from "../src/core/attack";
 import {
 	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentAgainst, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
-	experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, riding
+	experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, rangeDefence, riding
 } from "../src/core/combat";
 import { fullMoves, movesLeftThisTurn, unitMoveRange } from "../src/core/movement";
 import { step, type Stepped } from "../src/core/step";
@@ -278,4 +278,25 @@ test("Initiative: the side with more, the attacker on a tie, gets 4 more defence
 		const side = e.attacker ? "attacker" : "defender";
 		expect(steps).toEqual([[side, e.attacker ? "adv" : "ddv", e.defence], ...e.attack > 0 ? [[side, e.attacker ? "aav" : "dav", e.attack]] : []]);
 	}
+});
+
+test("Range defence: all of the modifier from further than the next hex within the defender's range, half adjacent or beyond it, none in close combat (#37)", () => {
+	expect([rangeDefence(5, 2, 3), rangeDefence(5, 3, 3), rangeDefence(5, 1, 3), rangeDefence(5, 4, 3), rangeDefence(5, 2, 1)]).toEqual([5, 5, 2, 2, 2]);
+	//what the attack does to the defender's modifier: artillery attacked by artillery two hexes off, within its range (all
+	//of it) or not; an Infanterie, which fires only next to it, attacked from two hexes off (half) and next to it (half);
+	//none in close combat
+	const defended = (defender: number, attacker: number, col: number, terrain = terrainType.Clear) => {
+		const w = handWorld({ rows: 6, cols: 8, terrain: () => terrain, units: [{ eqid: defender, owner: 0, row: 2, col: 2 },
+			{ eqid: attacker, owner: 1, row: 2, col }] });
+		const record: Contribution[] = [];
+		attackResult(w, unitById(w, 1), unitById(w, 0), null, record);
+		return record.filter((c) => c.name === "range defense" && c.side === "defender").map((c) => c.after - c.before);
+	};
+	const gun = (eqid: number) => handWorld({ rows: 1, cols: 1, units: [] }).equipment[eqid];
+	const art = gun(A_WZ13), inf = gun(INFANTERIE);
+	expect(art.gunrange).toBeGreaterThanOrEqual(2);
+	expect(defended(A_WZ13, A_WZ13, 4)).toEqual([art.rangedefmod]);
+	expect(defended(INFANTERIE, A_WZ13, 4)).toEqual([inf.rangedefmod >> 1]);
+	expect(defended(INFANTERIE, TP7, 3)).toEqual([inf.rangedefmod >> 1]);
+	expect(defended(INFANTERIE, PIECHOTA, 3, terrainType.Forest)).toEqual([]);
 });
