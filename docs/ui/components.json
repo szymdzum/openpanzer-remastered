@@ -9,6 +9,15 @@
 		"readme": true
 	},
 	{
+		"name": "AttackCursor",
+		"group": "Screens · In game",
+		"width": 1110,
+		"height": 720,
+		"subtitle": "The attack cursor: a thin tank sight on the target, both flags, losses and strengths in a header beside it, clear of both units",
+		"status": "Proposal: not built",
+		"readme": true
+	},
+	{
 		"name": "AttackPreview",
 		"group": "Screens · In game",
 		"width": 1110,
