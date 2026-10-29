@@ -278,7 +278,7 @@ It also cheats a little: it scores attacks with `calculateCombatResults(..., wit
 true, ...)` (ai.ts), so it counts the support fire of the player's units hidden in the fog of
 war.
 
-`AIScripted` (aiscripted.ts) is only the tutorial's scripted opponent.
+The original's `AIScripted` is only the tutorial's scripted opponent.
 
 ### A cautious attacker, a weak defender
 

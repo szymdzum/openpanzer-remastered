@@ -15,7 +15,6 @@ export async function coreEngine() {
 	const { aiController } = await import("../src/core/ai");
 	const { outcome, reachedTurnLimit } = await import("../src/core/turn");
 	const { AI } = await import("../src/ai");
-	const { AIScripted } = await import("../src/aiscripted");
 	const { CombatLog } = await import("../src/combatlog");
 	const { GameRules } = await import("../src/gamerules");
 	const { Unit } = await import("../src/unit");
@@ -77,7 +76,7 @@ export async function coreEngine() {
 
 		constructor(p: Player, m: GameMap) {
 			if (p.type === playerType.aiLocal || p.type === playerType.aiScripted) {
-				const handler = p.type === playerType.aiLocal ? new AI(p, m) : new AIScripted(p, m);
+				const handler = new AI(p, m);
 				this.getAction = () => handler.getAction();
 				this.buildActions = () => {
 					const s = game.session;

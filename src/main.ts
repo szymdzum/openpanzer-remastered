@@ -15,7 +15,6 @@ import * as combatlog from "./combatlog";
 import * as equipment from "./equipment";
 import * as dom from "./dom";
 import * as ai from "./ai";
-import * as aiscripted from "./aiscripted";
 import * as gamerules from "./gamerules";
 import * as unit from "./unit";
 import * as map from "./map";
@@ -44,7 +43,7 @@ import * as nullscreen from "./nullscreen";
 //(the UI's entry, not one of the modules above, which the harness reaches into)
 import { startNewUI } from "./view/screen";
 
-const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, aiscripted, gamerules, unit,
+const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, gamerules, unit,
 	map, scenarioloader, scenario, campaign, game, leaders,
 	rng, context, board, visibility, selection, undo, util, session, commands, state,
 	savegame, mirror, coresession, coreload, host, screen, nullscreen];
