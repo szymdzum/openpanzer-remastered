@@ -135,7 +135,7 @@ The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are s
 
 ## On the old engine (#127)
 
-`src/core/state.ts` has the types and `src/state.ts` has `toData(scenario, game)` and `fromData({ data, state }, game)`, which
+`src/core/state.ts` has the types and `src/legacy/state.ts` has `toData(scenario, game)` and `fromData({ data, state }, game)`, which
 builds the old engine's objects again (the equipment and the campaign loaded already). What
 #127 spelled out, and where the old engine made the sketch above more precise:
 
@@ -269,7 +269,7 @@ On the old engine (#127) `undoable` is filled from `UndoSlot`.
 **D6. Not state: the selection, the controllers, the UI settings, the combat log.**
 - `currentUnit`, `isMoveSel`/`isAttackSel` and the move and attack cells are the UI's (they were
   saved in the format before and never read back). Since #377 the old UI's `MapSelection` holds them
-  (src/selection.ts), not the map and the hexes, and neither the contracts nor the harness hash them.
+  (src/legacy/selection.ts), not the map and the hexes, and neither the contracts nor the harness hash them.
 - A player's `handler` is a controller chosen from `type`; the AI's plan and queue are its
   memory during its turn (saves happen at turn start).
 - `noFOW` and `airMode` are inputs to a query or a command, not state; `isAI` picks the

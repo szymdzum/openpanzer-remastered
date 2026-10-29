@@ -60,7 +60,7 @@ Set `data-theme="paper"` or `data-theme="blackout"` on the game root. The System
 
 ## What the map has to show
 
-The rules below decide a player's move, and the engine already knows each of them. Today most of them are invisible: a move range ends with no reason, an attack goes badly with no warning. Each line names the rule as the code has it (`src/gamerules.ts` is `gr`) and where the player sees it: the map layer (`MapOverlays`), the unit marker, the odds preview (`CombatOdds`) or the unit card (`UnitInfo`).
+The rules below decide a player's move, and the engine already knows each of them. Today most of them are invisible: a move range ends with no reason, an attack goes badly with no warning. Each line names the rule as the code has it (`src/legacy/gamerules.ts` is `gr`) and where the player sees it: the map layer (`MapOverlays`), the unit marker, the odds preview (`CombatOdds`) or the unit card (`UnitInfo`).
 
 ### Moving
 

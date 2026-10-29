@@ -87,7 +87,7 @@ Newer, less settled ground.
 In the first playtests (playtests/2026-10-23-ostpreussen.md) a model played in Chrome through
 DevTools (bdg), calling the old UI's own actions and reading the combat estimate before every
 attack. That makes it a good playtester (it found #231), but too slow for an opponent, one tool
-call per action. An opponent needs the commands (src/commands.ts) plus queries the engine
+call per action. An opponent needs the commands (src/legacy/commands.ts) plus queries the engine
 already answers: the visible units, a unit's move range, the predicted losses of an attack, ammo
 and fuel. That is #45, the LLM general.
 

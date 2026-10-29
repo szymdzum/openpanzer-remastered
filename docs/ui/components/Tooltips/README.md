@@ -3,7 +3,7 @@
 Three kinds of tooltip, plus the AI indicator.
 
 - **Hex tooltip** (`#gameToolTip`): a panel with a pointer, shown on hover or long-press over a hex. It holds the place name and its flag, the terrain, whether it is a victory hex and who holds it, and what the terrain does, each value from the engine:
-  - **Entrenchment:** the level a unit gets at once on the hex, `terrainEntrenchment[terrain]` (`src/prototypes.ts`; a city is 3). The unit digs deeper from there as turns pass (`entrench`, `src/core/turn.ts`).
+  - **Entrenchment:** the level a unit gets at once on the hex, `terrainEntrenchment[terrain]` (`src/legacy/prototypes.ts`; a city is 3). The unit digs deeper from there as turns pass (`entrench`, `src/core/turn.ts`).
   - **Defence:** a terrain step of the combat, only where there is one: +4 for a defender in a city (`src/core/combat.ts`), the river penalty in a river or stream without a road.
   - **Move cost:** for the selected unit, from the movement table of its movement type and the ground condition (`movTableDry` and the others), with a road's cost where there is one. "Stops" for 254, nothing for 255. Hidden with no unit selected.
   - **Resupply:** full in a city, divided by 1.3 elsewhere and again by the enemies next to it (`resupplyValue`, `src/core/supply.ts`); aircraft at their country's airfield, ships in a port.

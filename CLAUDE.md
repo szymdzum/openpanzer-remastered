@@ -50,7 +50,7 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
   Never draw from another stream's: the AI and the UI don't move the dice.
 - The harness reaches into the game: `?harness` exposes every module's exports as globals and
   patches module objects (`GameRules`, `Leaders`...), `harness/lib/harness.js` snapshots the game
-  at every step through `toData` (`src/state.ts`, docs/STATE.md), or by walking the objects' own
+  at every step through `toData` (`src/legacy/state.ts`, docs/STATE.md), or by walking the objects' own
   data properties against a baseline without it (the original game). Renaming an export the
   harness uses shows up there. `test/harness-surface.test.ts` lists the
   names the harness uses.
@@ -60,12 +60,20 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 ## Style
 
 - Opening braces on the same line (`function f() {`, `} else {`). Tabs.
-- Engine modules (the core in `src/core/`, `commands`, `mirror`, `gamerules`, `map` and its parts,
-  `unit`, `ai`, `scenario`...) don't import the UI (`src/view/`), the page's modules (`app/page`, `main`)
-  or `app/game`: they read the game through `src/context.ts`. The game plays on the core (docs/CORE.md)
-  and shows itself through the screen interface (`src/app/screen.ts`), which the UI implements
-  (`src/view/screen.tsx`); the objects (GameMap, Unit, Player) mirror its state for the harness, the
-  contracts and their own code (src/mirror.ts). The UI reads only the core, `src/app/` (the host, the screen interface, the settings). The linter and `test/headless.test.ts` check it.
+- `src/` holds `main.ts` and four layers, as folders. Imports go one way, `core <- legacy <- app <- view`
+  (`cli/` uses all three but the UI); the linter and `test/headless.test.ts` check it. The game plays on
+  the core (docs/CORE.md) and shows itself through the screen interface (`src/app/screen.ts`), which the
+  UI implements (`src/view/screen.tsx`); the objects (GameMap, Unit, Player) mirror its state for the
+  harness and the contracts (`src/legacy/mirror.ts`).
+
+  | Folder | What it is | May import | What goes there |
+  |---|---|---|---|
+  | `src/core/` | the game: data in, data out | nothing outside `core/` | every new rule, command and AI score |
+  | `src/legacy/` | the old engine's objects, a copy of the core's world, for verify, the contracts and the CLI | `core/`, itself, and `app/settings` and `app/loader` (the exceptions of #520) | nothing new; only what keeps the old objects working |
+  | `src/app/` | one running game without the DOM: host, driver, start, load, save, settings | `core/`, `legacy/` | the game's glue to the page; no UI |
+  | `src/view/` | the UI | `core/`, `app/`, `legacy/` for types only (and `legacy/prototypes`) | components and what they draw |
+
+  New rules go to `core/`, never to `legacy/`.
 - `src/` has no unused code and no import cycles; CI runs `fallow dead-code` on the whole tree.
   Keep it that way: the modules that read the running game do it through `src/app/running.ts`, not
   `app/game.ts`.

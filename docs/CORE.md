@@ -29,7 +29,7 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
 
 The types are src/core/state.ts's (one source of truth): the core imports them with `import type`;
-the functions that read and build them off the old engine's objects (`toData`, `fromData`) are src/state.ts's.
+the functions that read and build them off the old engine's objects (`toData`, `fromData`) are src/legacy/state.ts's.
 The derived parts are a cache beside the state, never saved; a step rebuilds them.
 
 ## Modules (src/core/)
@@ -156,7 +156,7 @@ the animation's end, showing the state in between. `begin(world, command)` plays
 first checkpoint, `resume(world, checkpoint)` from one to the next: a move stops once moved
 (`surprise` next: the surprise attack and the capture's victory), an attack once its shots are fired
 (`cleanUp` next: the destroyed units leave the map) and once they are gone (`end` next: the retreat or
-the surrender, the elimination victory). The world resumed from is the game's kept one (src/mirror.ts):
+the surrender, the elimination victory). The world resumed from is the game's kept one (src/legacy/mirror.ts):
 since #376 nothing the screen writes into its objects is in it. The surprise attack hits the hidden unit of the mover's kind first, the one that
 stopped it (#77: the old game picked by the person's air mode toggle, for the AI's moves too). `step`
 passes every checkpoint at once on one draft; test/core-steps.test.ts played each of its commands both
@@ -429,7 +429,7 @@ result (`MoveResult`, `AttackResult`: the events, and what the old animation rea
 strengths, the units' classes and facings at the shots, where the move stopped and which way the unit faced
 there), and the UI animates it after from the events: the move, the surprise, the shots, the explosions, the
 retreat; then it calls shown, and the host tells the victories (the host plays a program's step and hands the
-screen its result, `playShown`, review A12). The screen that shows nothing calls it at once. The old UI's selection (src/selection.ts) showed what the old engine's
+screen its result, `playShown`, review A12). The screen that shows nothing calls it at once. The old UI's selection (src/legacy/selection.ts) showed what the old engine's
 command left selected (`MapSelection.after`: the attacker selected again after an attack, a moved unit's
 hexes...), for the program's other commands too (the screen's optional `played`). The UI and the null screen
 have none; the pinned game turns' stand-in for the old screen (test/gameturn.test.ts) and the engine contract
@@ -460,7 +460,7 @@ went with it, their results as measured below; the engine contract runs on the g
 session now (test/coreengine.ts), the gamerules contract on the game's GameRules.
 
 - **The gamerules contract** (test/core-contract.test.ts): the recorded calls of every fixture run
-  against the game's `GameRules` (src/gamerules.ts `rulesOn`, test/coreadapter.ts): each call takes
+  against the game's `GameRules` (src/legacy/gamerules.ts `rulesOn`, test/coreadapter.ts): each call takes
   `toData` of the same restored state and the core's answer, in the old API's shapes. Every rule,
   every unit pair, every result must equal the recording.
   - The spotting and zone of control the queries read are the hexes' counters there: the
