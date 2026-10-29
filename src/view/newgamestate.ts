@@ -4,7 +4,7 @@
 //scenario starts; the host is given them). What they show is src/view/newgame.ts's; the starts are the host's.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { uiSettings } from "../prototypes";
 import { MENU_CLOSED, type MenuState } from "./menus";
 import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, FIRST_DIFFICULTY, scenarioAtOpen, scenarioGroups, scenarioView,

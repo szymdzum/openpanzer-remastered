@@ -85,13 +85,13 @@ test("The list of exports the harness uses is complete", async () => {
 const referenceOnly = ["deployReinforcements", "loop", "processTurn", "waitUIAnimation", "ui"];
 
 test("The game.* members the harness uses exist", async () => {
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const missing = members(/(?<![\w$])game\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game) && !referenceOnly.includes(n));
 	expect(missing, "game members used by harness/ or test/contracts").toEqual([]);
 });
 
 test("The game.host.* members the harness uses exist", async () => {
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const missing = members(/(?<![\w$])game\.host\.([A-Za-z_$][\w$]*)/g).filter((n) => !(n in game.host));
 	expect(missing, "game.host members used by harness/ or test/contracts").toEqual([]);
 });

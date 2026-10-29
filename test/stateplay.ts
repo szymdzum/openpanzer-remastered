@@ -10,7 +10,7 @@ import { contractStateString, stateStringFromData, viewOf } from "./statedata";
 export async function restored(name: string) {
 	const fixture = readFixture("engine", name);
 	const scenario = await restoreState(fixture.state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { Equipment } = await import("../src/equipment");
 	const { toData } = await import("../src/state");
 	const { Rng } = await import("../src/core/random"); //the restored modules' (restoreState loads them again)

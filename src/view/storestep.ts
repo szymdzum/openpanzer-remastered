@@ -5,7 +5,7 @@ import type { ResultOf } from "../commands";
 import type { CommandType } from "../core/command";
 import type { GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
-import type { GameHost } from "../host";
+import type { GameHost } from "../app/host";
 import { beatsFor, heldUntil, shownWorld } from "./beats";
 import { hexCentre } from "./hexgrid";
 import { createPlayer, type Motion, type Stage } from "./player";

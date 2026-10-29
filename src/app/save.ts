@@ -16,15 +16,15 @@
  * writes the saves, loads the equipment and the campaign; this builds the scenario.
  */
 
-import { Equipment } from "./equipment";
-import type { PlayerDossier } from "./core/state";
-import type { RulesetName } from "./core/types";
-import { createWorld } from "./core/create";
-import { withoutDestroyed } from "./core/fight";
-import { rulesetNamed } from "./core/rules";
-import { Scenario } from "./scenario";
-import { campaignFromData, type CampaignHost, fromData, offMapUnit, toData } from "./state";
-import type { CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, ScenarioData, ScenarioState, UnitState } from "./core/state";
+import { Equipment } from "../equipment";
+import type { PlayerDossier } from "../core/state";
+import type { RulesetName } from "../core/types";
+import { createWorld } from "../core/create";
+import { withoutDestroyed } from "../core/fight";
+import { rulesetNamed } from "../core/rules";
+import { Scenario } from "../scenario";
+import { campaignFromData, type CampaignHost, fromData, offMapUnit, toData } from "../state";
+import type { CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, ScenarioData, ScenarioState, UnitState } from "../core/state";
 
 export const SAVE_VERSION = 3;
 

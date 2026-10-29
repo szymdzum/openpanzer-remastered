@@ -33,7 +33,7 @@ const FAILURE = "harness/out/e2e-failure.png";
 
 //What the test reads in the page: the page's own modules, put on window.e2e once the game has loaded
 type Probe = {
-	game: typeof import("../../src/session").game;
+	game: typeof import("../../src/app/running").game;
 	toData: typeof import("../../src/state").toData;
 	Rng: typeof import("../../src/core/random").Rng;
 	uiSettings: typeof import("../../src/prototypes").uiSettings;
@@ -45,7 +45,7 @@ type Probe = {
 	isAir: typeof import("../../src/core/units").isAir;
 };
 type Probed = { e2e: Probe };
-const MODULES = ["/src/session.ts", "/src/state.ts", "/src/core/random.ts", "/src/prototypes.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
+const MODULES = ["/src/app/running.ts", "/src/state.ts", "/src/core/random.ts", "/src/prototypes.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
 	"/src/view/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
 
 const errors: string[] = [];

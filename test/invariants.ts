@@ -21,7 +21,7 @@ export async function load(name: string) {
 	const { Equipment } = await import("../src/equipment");
 	const { Commands } = await import("../src/commands");
 	const { Rng } = await import("../src/core/random");
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");
 	const tables = await import("../src/core/tables");

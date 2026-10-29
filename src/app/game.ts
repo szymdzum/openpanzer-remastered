@@ -12,18 +12,18 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { DEFAULT_SCENARIO, uiSettings } from "./prototypes";
-import { GameState } from "./gamestate";
-import type { Scenario } from "./scenario";
-import type { ScenarioOutcome } from "./core/types";
-import type { Campaign } from "./campaign";
-import type { Player } from "./map";
+import { DEFAULT_SCENARIO, uiSettings } from "../prototypes";
+import { GameState } from "./storage";
+import type { Scenario } from "../scenario";
+import type { ScenarioOutcome } from "../core/types";
+import type { Campaign } from "../campaign";
+import type { Player } from "../map";
 import { nullScreen } from "./nullscreen";
 import { GameHost, runGame } from "./host";
-import type { Session } from "./core/session";
-import type { RulesetName } from "./core/types";
-import { game } from "./session";
-import type { CampaignProgress } from "./core/state";
+import type { Session } from "../core/session";
+import type { RulesetName } from "../core/types";
+import { game } from "./running";
+import type { CampaignProgress } from "../core/state";
 
 //Game is what the page, the harness and the tests hold of the running game: its fields, and the members that
 //hand the game's course and a program's turn to its host (src/host.ts), which keeps the campaign's progress and

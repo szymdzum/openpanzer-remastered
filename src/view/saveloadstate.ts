@@ -3,8 +3,8 @@
 //last cloud saves kept in the settings. The saves and loads are the host's; a game loaded closes the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
-import type { CloudReport } from "../gamestate";
-import type { GameHost } from "../host";
+import type { CloudReport } from "../app/storage";
+import type { GameHost } from "../app/host";
 import { uiSettings } from "../prototypes";
 import { MENU_CLOSED, menuBack, type MenuState } from "./menus";
 import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "./saveload";

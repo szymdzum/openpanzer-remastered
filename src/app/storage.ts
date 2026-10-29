@@ -12,16 +12,16 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { MAJOR_VERSION, type UISettings, uiSettings } from "./prototypes";
-import { Equipment, type EquipmentPlayerCountries } from "./equipment";
-import { isChromeApp } from "./dom";
-import { Scenario } from "./scenario";
-import { Campaign } from "./campaign";
-import { coreCountries } from "./core/campaign";
-import { stateEquipment } from "./core/newgame";
+import { MAJOR_VERSION, type UISettings, uiSettings } from "../prototypes";
+import { Equipment, type EquipmentPlayerCountries } from "../equipment";
+import { isChromeApp } from "./page";
+import { Scenario } from "../scenario";
+import { Campaign } from "../campaign";
+import { coreCountries } from "../core/campaign";
+import { stateEquipment } from "../core/newgame";
 import type { Game } from "./game";
-import { game } from "./session";
-import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./savegame";
+import { game } from "./running";
+import { campaignFromSave, type ReadSave, readSave, readSaveObject, scenarioFromSave, writeSave } from "./save";
 
 //What saveToCloud and restoreFromCloud read from the GitHub gists API
 export interface GistReply {

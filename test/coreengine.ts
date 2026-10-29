@@ -6,8 +6,8 @@
 import { vi } from "vitest";
 
 export async function coreEngine() {
-	const { game } = await import("../src/game");
-	const { startGameSession, endGameTurn } = await import("../src/coresession");
+	const { game } = await import("../src/app/game");
+	const { startGameSession, endGameTurn } = await import("../src/app/driver");
 	const { applyData, gameInputs, mirrorDifference, unitObject, stepWorld } = await import("../src/mirror");
 	const { begin, resume } = await import("../src/core/step");
 	const { unitById } = await import("../src/core/world");

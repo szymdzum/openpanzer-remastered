@@ -9,8 +9,8 @@ import { App } from "../src/view/app";
 import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
 import { MAJOR_VERSION, type UISettings, uiSettings } from "../src/prototypes";
-import type { GameHost } from "../src/host";
-import { GameState } from "../src/gamestate";
+import type { GameHost } from "../src/app/host";
+import { GameState } from "../src/app/storage";
 
 let saved: UISettings;
 beforeEach(() => { saved = structuredClone(uiSettings); });

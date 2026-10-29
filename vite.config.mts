@@ -103,9 +103,9 @@ export default defineConfig({
 		coverage: {
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
-				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/scenarioloader.ts", "src/campaign.ts", "src/game.ts",
-				"src/gamestate.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts",
-				"src/context.ts", "src/util.ts", "src/state.ts", "src/savegame.ts", "src/mirror.ts", "src/coresession.ts", "src/coreload.ts", "src/host.ts", "src/nullscreen.ts",
+				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/app/loader.ts", "src/campaign.ts", "src/app/game.ts",
+				"src/app/storage.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts",
+				"src/context.ts", "src/util.ts", "src/state.ts", "src/app/save.ts", "src/mirror.ts", "src/app/driver.ts", "src/app/start.ts", "src/app/host.ts", "src/app/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/storecore.ts", "src/view/storestep.ts", "src/view/storemap.ts",
 				"src/view/storecard.ts", "src/view/storeturn.ts", "src/view/storenotes.ts", "src/view/hexgrid.ts", "src/view/mapview.ts",
@@ -115,7 +115,7 @@ export default defineConfig({
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
 				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
 				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/layers.ts"],
-			exclude: ["src/core/types.ts", "src/core/state.ts", "src/core/command.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
+			exclude: ["src/core/types.ts", "src/core/state.ts", "src/core/command.ts", "src/core/events.ts", "src/core/controller.ts", "src/app/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -130,15 +130,15 @@ export default defineConfig({
 				"src/context.ts": { statements: 91, branches: 100, functions: 90, lines: 91 },
 				"src/equipment.ts": { statements: 95, branches: 78, functions: 83, lines: 94 },
 				//(its turn loop, covered, went to the host in #374: the functions left are fewer, not less covered)
-				"src/game.ts": { statements: 93, branches: 100, functions: 86, lines: 94 },
+				"src/app/game.ts": { statements: 93, branches: 100, functions: 86, lines: 94 },
 				"src/gamerules.ts": { statements: 96, branches: 97, functions: 96, lines: 97 },
-				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
+				"src/app/storage.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
 				"src/leaders.ts": { statements: 76, branches: 50, functions: 50, lines: 78 },
 				"src/map.ts": { statements: 95, branches: 84, functions: 96, lines: 94 },
 				//(its tables, covered, went to src/core/tables.ts in #523: the share left is lower, not less covered)
 				"src/prototypes.ts": { statements: 91, branches: 33, functions: 66, lines: 91 },
 				"src/scenario.ts": { statements: 92, branches: 83, functions: 90, lines: 92 },
-				"src/scenarioloader.ts": { statements: 91, branches: 61, functions: 93, lines: 90 },
+				"src/app/loader.ts": { statements: 91, branches: 61, functions: 93, lines: 90 },
 				"src/selection.ts": { statements: 97, branches: 100, functions: 96, lines: 97 },
 				"src/undo.ts": { statements: 92, branches: 100, functions: 75, lines: 92 },
 				"src/unit.ts": { statements: 95, branches: 89, functions: 92, lines: 96 },
@@ -178,11 +178,11 @@ export default defineConfig({
 				"src/core/commands/undo.ts": { statements: 96, branches: 90, functions: 80, lines: 95 },
 				"src/core/commands/turn.ts": { statements: 97, branches: 100, functions: 85, lines: 97 },
 				"src/core/commands/units.ts": { statements: 98, branches: 94, functions: 95, lines: 96 },
-				"src/savegame.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
-				"src/coresession.ts": { statements: 89, branches: 87, functions: 94, lines: 94 },
-				"src/coreload.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
-				"src/host.ts": { statements: 96, branches: 90, functions: 98, lines: 97 },
-				"src/nullscreen.ts": { statements: 90, branches: 87, functions: 87, lines: 88 }, //(smaller since the host plays a program's step: the one uncovered is the harness setter)
+				"src/app/save.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
+				"src/app/driver.ts": { statements: 89, branches: 87, functions: 94, lines: 94 },
+				"src/app/start.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },
+				"src/app/host.ts": { statements: 96, branches: 90, functions: 98, lines: 97 },
+				"src/app/nullscreen.ts": { statements: 90, branches: 87, functions: 87, lines: 88 }, //(smaller since the host plays a program's step: the one uncovered is the harness setter)
 				"src/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 				"src/view/app.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },

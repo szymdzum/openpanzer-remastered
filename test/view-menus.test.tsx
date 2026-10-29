@@ -10,7 +10,7 @@ import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
 import { VERSION } from "../src/prototypes";
 import type { World } from "../src/core/types";
-import type { GameHost } from "../src/host";
+import type { GameHost } from "../src/app/host";
 
 afterEach(() => {
 	cleanup();

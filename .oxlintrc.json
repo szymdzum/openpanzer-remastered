@@ -53,17 +53,12 @@
 				"src/context.ts",
 				"src/equipment.ts",
 				"src/gamerules.ts",
-				"src/host.ts",
 				"src/leaders.ts",
 				"src/map.ts",
 				"src/mirror.ts",
-				"src/nullscreen.ts",
 				"src/prototypes.ts",
 				"src/core/random.ts",
-				"src/savegame.ts",
 				"src/scenario.ts",
-				"src/scenarioloader.ts",
-				"src/screen.ts",
 				"src/selection.ts",
 				"src/state.ts",
 				"src/undo.ts",
@@ -78,13 +73,65 @@
 						"patterns": [
 							{
 								"group": [
-									"./dom",
-									"./game",
-									"./gamestate",
+									"./app/page",
+									"./app/game",
+									"./app/storage",
 									"./main"
 								],
 								"allowTypeImports": true,
 								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md)"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"src/app/*.ts"
+			],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"../view",
+									"../view/*"
+								],
+								"allowTypeImports": true,
+								"message": "The running game (src/app/) doesn't import the UI (src/view/): the UI imports it (docs/REFACTOR.md)"
+							}
+						]
+					}
+				]
+			}
+		},
+		{
+			"files": [
+				"src/app/host.ts",
+				"src/app/nullscreen.ts",
+				"src/app/save.ts",
+				"src/app/loader.ts",
+				"src/app/screen.ts"
+			],
+			"rules": {
+				"no-restricted-imports": [
+					"error",
+					{
+						"patterns": [
+							{
+								"group": [
+									"./page",
+									"./game",
+									"./storage",
+									"../main",
+									"../view",
+									"../view/*"
+								],
+								"allowTypeImports": true,
+								"message": "Engine modules don't import UI modules or game.ts: read the game through src/context.ts (CLAUDE.md); src/app/ doesn't import src/view/"
 							}
 						]
 					}
@@ -145,8 +192,7 @@
 								"group": [
 									"../*",
 									"!../core",
-									"!../host",
-									"!../screen",
+									"!../app",
 									"!../prototypes"
 								],
 								"allowTypeImports": true,
@@ -161,13 +207,13 @@
 			"files": [
 				"src/board.ts",
 				"src/campaign.ts",
-				"src/dom.ts",
+				"src/app/page.ts",
 				"src/equipment.ts",
-				"src/gamestate.ts",
+				"src/app/storage.ts",
 				"src/leaders.ts",
 				"src/map.ts",
 				"src/scenario.ts",
-				"src/scenarioloader.ts",
+				"src/app/loader.ts",
 				"src/selection.ts",
 				"src/undo.ts",
 				"test/contracts/engine.contract.js",
@@ -201,14 +247,14 @@
 				"src/campaign.ts",
 				"src/combatlog.ts",
 				"src/context.ts",
-				"src/dom.ts",
+				"src/app/page.ts",
 				"src/equipment.ts",
 				"src/gamerules.ts",
-				"src/gamestate.ts",
+				"src/app/storage.ts",
 				"src/leaders.ts",
 				"src/map.ts",
 				"src/core/random.ts",
-				"src/scenarioloader.ts",
+				"src/app/loader.ts",
 				"src/unit.ts"
 			],
 			"rules": {
@@ -227,8 +273,8 @@
 		{
 			"files": [
 				"src/ai.ts",
-				"src/dom.ts",
-				"src/gamestate.ts"
+				"src/app/page.ts",
+				"src/app/storage.ts"
 			],
 			"rules": {
 				"typescript/no-explicit-any": "off"

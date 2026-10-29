@@ -10,15 +10,15 @@
  * harness replays); only who makes the units and players changed. Set by game.ts as ScenarioLoader.build.
  */
 
-import { uiSettings } from "./prototypes";
-import { Equipment } from "./equipment";
-import { Rng } from "./core/random";
-import type { Scenario } from "./scenario";
-import { campaignState, fromData } from "./state";
-import type { PlayerState, RngStreams } from "./core/state";
-import { awardedPrototype, coreCountries } from "./core/campaign";
-import { type FileUnit, newGame, type ScenarioFile } from "./core/newgame";
-import { game } from "./session";
+import { uiSettings } from "../prototypes";
+import { Equipment } from "../equipment";
+import { Rng } from "../core/random";
+import type { Scenario } from "../scenario";
+import { campaignState, fromData } from "../state";
+import type { PlayerState, RngStreams } from "../core/state";
+import { awardedPrototype, coreCountries } from "../core/campaign";
+import { type FileUnit, newGame, type ScenarioFile } from "../core/newgame";
+import { game } from "./running";
 
 //What the game carries into a scenario it starts: a campaign's player from the scenario before
 let carried: PlayerState | null = null;

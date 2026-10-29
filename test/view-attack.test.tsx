@@ -15,7 +15,7 @@ import { hexCentre } from "../src/view/hexgrid";
 import { MapView } from "../src/view/map";
 import { createStore, type StoreHost } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
-import type { GameHost } from "../src/host";
+import type { GameHost } from "../src/app/host";
 
 beforeEach(() => {
 	vi.useFakeTimers();

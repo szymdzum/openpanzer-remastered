@@ -7,13 +7,13 @@ import { expect, test, vi } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 import { failedLoads, failRequests, fakeMapImages, freshGame, startState, until } from "./lifecycle";
 import { oldExport, oldLocalItems, withoutLosses, withoutUnknown } from "./saves";
-import type { SaveFile } from "../src/savegame";
+import type { SaveFile } from "../src/app/save";
 import type { UnitState } from "../src/core/state";
 
 //The save of the game the global game module holds now
 async function exportGame() {
-	const { GameState } = await import("../src/gamestate");
-	const { game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game } = await import("../src/app/game");
 	return new GameState(game).exportGameState();
 }
 
@@ -24,12 +24,12 @@ async function load(save: string): Promise<SaveFile> {
 }
 
 //The fixture's save as imported, what it never stored, and the save loaded and saved again
-const loaded = new Map<string, Promise<{ saved: SaveFile; unknown: import("../src/savegame").UnknownPart[]; again: SaveFile }>>();
+const loaded = new Map<string, Promise<{ saved: SaveFile; unknown: import("../src/app/save").UnknownPart[]; again: SaveFile }>>();
 function loadFixture(name: string) {
 	if (!loaded.has(name)) {
 		const state = readFixture("engine", name).state;
 		loaded.set(name, (async () => {
-			const { readSave } = await import("../src/savegame");
+			const { readSave } = await import("../src/app/save");
 			const { save: saved, unknown } = readSave(state);
 			return { saved, unknown, again: await load(state) };
 		})());
@@ -71,7 +71,7 @@ test("GameState load numbers the reinforcements of each turn from 1", async () =
 //allowed
 async function play(cmd: import("../src/core/command").Command) {
 	const { Commands } = await import("../src/commands");
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const r = Commands.execute(game.scenario, cmd);
 	if ("refusal" in r) throw new Error(JSON.stringify(cmd) + " refused: " + r.refusal.reason);
 }
@@ -149,7 +149,7 @@ test("GameState load on the AI's turn has the AI play it (#71)", async () => {
 	await play({ type: "endTurn" });
 	const ai = scenario.map.currentPlayer.id, save = await exportGame();
 	const game = await playing("drpzop01-t0.json.gz");
-	const { Game } = await import("../src/game");
+	const { Game } = await import("../src/app/game");
 	const { uiSettings } = await import("../src/prototypes");
 	const { playerType } = await import("../src/core/tables");
 	game.setupGameState = new Game().setupGameState; //Game's own, restoreState's stand-in only waits
@@ -178,7 +178,7 @@ function coreLists(s: SaveFile) {
 //disbanded (it stays in the list until the player goes to HQ), saved and loaded
 test("GameState load keeps the campaign's core list (#142)", async () => {
 	await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	await play({ type: "disband", unit: game.getCampaignPlayer().getCoreUnitList()[0].id });
 	const saved = JSON.parse(await exportGame()) as SaveFile;
 	expect(coreLists(saved).flat(), "a destroyed core unit").toContain("lost 539");
@@ -210,7 +210,7 @@ test("GameState load keeps the undo of the last move (#128)", async () => {
 	expect(saved.state.turn.undoable).not.toBeNull();
 	const again = await load(JSON.stringify(saved));
 	expect(again.state.turn.undoable).toEqual(saved.state.turn.undoable);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const u = game.scenario.map.getUnitById(moved.id);
 	await play({ type: "undo", unit: u.id });
 	expect([u.getPos().row, u.getPos().col]).toEqual([saved.state.turn.undoable.before.row, saved.state.turn.undoable.before.col]);
@@ -253,8 +253,8 @@ test("GameState load keeps the equipment lists (#128)", async () => {
 test("GameState load keeps a campaign's progress and doesn't apply it again (#128)", async () => {
 	localStorage.clear();
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
-	const { GameState } = await import("../src/gamestate");
-	const { game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game } = await import("../src/app/game");
 	game.setCampaignProgress({ isStart: true, removeNonCampaignUnits: true, awardPrototype: true }, scenario);
 	game.state = new GameState(game);
 	game.state.save();
@@ -265,7 +265,7 @@ test("GameState load keeps a campaign's progress and doesn't apply it again (#12
 //The campaign fixture with a unit of the AI bought and deployed on its turn, saved and loaded
 async function aiBoughtUnit() {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const m = scenario.map, ai = m.getPlayers().find((p) => p.country !== game.campaign.country);
 	const eqid = m.getUnits().find((u) => u.player === ai).eqid;
 	while (m.currentPlayer !== ai) await play({ type: "endTurn" });
@@ -305,9 +305,9 @@ test("GameState load keeps the units bought outside a campaign (#149)", async ()
 test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz", "ruscam09-t2.json.gz"])(
 	"GameState loads a save of the format before %s", async (name) => {
 		await restoreState(readFixture("engine", name).state);
-		const { game } = await import("../src/game");
+		const { game } = await import("../src/app/game");
 		const old = oldExport(game), save = await exportGame();
-		const { readSave } = await import("../src/savegame");
+		const { readSave } = await import("../src/app/save");
 		const { unknown } = readSave(old);
 		expect(withoutUnknown(await load(old), unknown)).toEqual(withoutUnknown(await load(save), unknown));
 	});
@@ -317,14 +317,14 @@ test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz", "ruscam09-t2.json.g
 //disbanded and a unit bought)
 test("GameState import keeps the campaign's core list of a save of the format before", async () => {
 	const scenario = await restoreState(readFixture("engine", "campaign-3-1-t0.json.gz").state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const player = game.getCampaignPlayer(), list = player.getCoreUnitList();
 	expect(scenario.map.currentPlayer).toBe(player);
 	await play({ type: "disband", unit: list[0].id });
 	player.prestige += 10000;
 	(await import("../src/context")).touched();
 	await play({ type: "buy", eqid: list[1].eqid, transport: -1 });
-	const { importSave } = await import("../src/savegame");
+	const { importSave } = await import("../src/app/save");
 	const { save } = importSave(JSON.parse(oldExport(game)));
 	expect(save.state.players[player.id].core).toEqual(list.map((u, i) => i === 0 ? { lost: expect.objectContaining({ eqid: u.eqid }) }
 		: i === list.length - 1 ? { reserve: expect.objectContaining({ eqid: u.eqid }) } : { onMap: u.id }));
@@ -335,7 +335,7 @@ test("GameState import keeps the campaign's core list of a save of the format be
 //save loads as the same save without it, nothing selected
 test("A save has no selection, and a save of the format before loads without its selection (#377)", async () => {
 	const scenario = await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const { GameRules } = await import("../src/gamerules");
 	const m = scenario.map;
 	const u = m.getUnits().find((x) => x.player.id === m.currentPlayer.id && x.getPos() !== null
@@ -346,18 +346,18 @@ test("A save has no selection, and a save of the format before loads without its
 	const selected = oldExport(game);
 	for (const field of ['"currentUnit":{"', '"isMoveSel":true', '"isAttackSel":true'])
 		expect(selected, "the save of the format before had " + field).toContain(field);
-	const { readSave } = await import("../src/savegame");
+	const { readSave } = await import("../src/app/save");
 	expect(readSave(selected)).toEqual(readSave(old));
 	const loadedSelected = await load(selected);
 	//(the load starts the game's modules again)
-	expect((await import("../src/game")).game.scenario.map.currentUnit, "nothing selected after the load").toBeNull();
+	expect((await import("../src/app/game")).game.scenario.map.currentUnit, "nothing selected after the load").toBeNull();
 	expect(loadedSelected).toEqual(await load(old));
 });
 
 //Not a save: unreadable, another format or a later version
 test("GameState refuses what isn't a save", async () => {
-	const { readSave } = await import("../src/savegame");
-	const { GameState } = await import("../src/gamestate");
+	const { readSave } = await import("../src/app/save");
+	const { GameState } = await import("../src/app/storage");
 	for (const text of ["not a save", "{}", "null", JSON.stringify({ version: 4, data: {}, state: {} }), JSON.stringify({ scenario: {} })]) {
 		expect(readSave(text), text).toBeNull();
 		expect(new GameState(null).restoreFromString(text), text).toBe(false);
@@ -368,7 +368,7 @@ test("GameState refuses what isn't a save", async () => {
 //with the local save there is, returns its save
 async function startup() {
 	vi.resetModules(); //a new page, the local save stays
-	const { game: fresh } = await import("../src/game");
+	const { game: fresh } = await import("../src/app/game");
 	fresh.init();
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the startup restore");
 	return JSON.parse(await exportGame()) as SaveFile;
@@ -380,7 +380,7 @@ test("A start without a save plays the default scenario, the AI on the Allies, t
 	localStorage.clear();
 	vi.resetModules();
 	fakeMapImages();
-	const { game: fresh } = await import("../src/game");
+	const { game: fresh } = await import("../src/app/game");
 	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/prototypes");
 	fresh.init();
 	fresh.host.processTurn(); //(no scenario yet: a tick that went on would throw)
@@ -392,8 +392,8 @@ test("A start without a save plays the default scenario, the AI on the Allies, t
 test.each(fixtures("engine"))("GameState local save and startup restore %s", async (name) => {
 	localStorage.clear();
 	await restoreState(readFixture("engine", name).state);
-	const { GameState } = await import("../src/gamestate");
-	const { game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game } = await import("../src/app/game");
 	game.state = new GameState(game);
 	game.state.save();
 	const exported = await exportGame();
@@ -407,9 +407,9 @@ test.each(fixtures("engine"))("GameState local save and startup restore %s", asy
 //A local save of the format before (three items) is read back at startup when there's no game item
 test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"])("GameState startup restore of a local save of the format before %s", async (name) => {
 	await restoreState(readFixture("engine", name).state);
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	const items = oldLocalItems(game), old = oldExport(game);
-	const { readSave } = await import("../src/savegame");
+	const { readSave } = await import("../src/app/save");
 	const { unknown } = readSave(old);
 	const want = withoutUnknown(await load(old), unknown);
 	localStorage.clear();
@@ -423,8 +423,8 @@ test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"])("GameState startup
 //it), the UI stubbed: a load from a file or the cloud starts from here
 async function playing(name: string) {
 	await restoreState(readFixture("engine", name).state);
-	const { GameState } = await import("../src/gamestate");
-	const { game, Game } = await import("../src/game");
+	const { GameState } = await import("../src/app/storage");
+	const { game, Game } = await import("../src/app/game");
 	game.cleanup = new Game().cleanup; //Game's own: the methods are its constructor's closures
 	game.state = new GameState(game);
 	return game;
@@ -432,7 +432,7 @@ async function playing(name: string) {
 
 //Waits for the game to load another scenario than old and returns its save
 async function loadedAfter(old: unknown) {
-	const { game } = await import("../src/game");
+	const { game } = await import("../src/app/game");
 	await until(() => game.scenario !== old && game.scenario !== null && game.scenario.isLoaded, "the load");
 	return JSON.parse(await exportGame()) as SaveFile;
 }
@@ -475,7 +475,7 @@ test.each(["equipment-country-0.json", "equipment-country-31.json"])(
 //reinforcements have arrived, so a reload during the turn has them (they arrive only once)
 test("The turn-start save has the reinforcements that arrived that turn (#93)", async () => {
 	const game = await playing("ruscam09-t2.json.gz");
-	const { Game } = await import("../src/game");
+	const { Game } = await import("../src/app/game");
 	game.setupGameState = new Game().setupGameState; //Game's own: it starts the session the turns end on
 	const old = game.scenario;
 	game.state.restoreFromString(readFixture("engine", "ruscam09-t2.json.gz").state);
@@ -594,7 +594,7 @@ test("GameState clear removes the saves, the settings stay", async () => {
 test("On the screen the remaster's turn limit ends the game once both sides have played their last turn, a campaign with its player's outcome (#256)", async () => {
 	for (const name of ["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"]) {
 		const game = await playing(name);
-		const { Game } = await import("../src/game");
+		const { Game } = await import("../src/app/game");
 		game.setupGameState = new Game().setupGameState;
 		const save = JSON.parse(await exportGame()) as SaveFile;
 		const turn = save.state.turn.turn, old = game.scenario;
@@ -626,7 +626,7 @@ test("On the screen the remaster's turn limit ends the game once both sides have
 test("The turn limit's end is told once and the combat log stays closed over it, after the AI's last turn too (#365)", async () => {
 	for (const name of ["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"]) {
 		const game = await playing(name);
-		const { Game } = await import("../src/game");
+		const { Game } = await import("../src/app/game");
 		game.setupGameState = new Game().setupGameState;
 		const save = JSON.parse(await exportGame()) as SaveFile;
 		const turn = save.state.turn.turn, old = game.scenario;

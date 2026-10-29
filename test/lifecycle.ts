@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { vi } from "vitest";
 
-type Game = import("../src/game").Game;
+type Game = import("../src/app/game").Game;
 
 //The map images' pixel sizes (test/mapsizes.json, from the PNG headers): ScenarioLoader sizes
 //the map from its image. CI checks out without Git LFS, so the images themselves aren't there
@@ -63,8 +63,8 @@ export async function freshGame(): Promise<Game> {
 	vi.resetModules();
 	localStorage.clear();
 	fakeMapImages();
-	const { game } = await import("../src/game");
-	const { GameState } = await import("../src/gamestate");
+	const { game } = await import("../src/app/game");
+	const { GameState } = await import("../src/app/storage");
 	game.state = new GameState(game);
 	return game;
 }

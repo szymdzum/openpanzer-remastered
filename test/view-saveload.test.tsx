@@ -10,8 +10,8 @@ import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "..
 import { StartMenu } from "../src/view/startmenu";
 import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
-import { nullScreen } from "../src/nullscreen";
-import { type CloudReport, type CloudSaved, GameState } from "../src/gamestate";
+import { nullScreen } from "../src/app/nullscreen";
+import { type CloudReport, type CloudSaved, GameState } from "../src/app/storage";
 import { uiSettings } from "../src/prototypes";
 import type { World } from "../src/core/types";
 

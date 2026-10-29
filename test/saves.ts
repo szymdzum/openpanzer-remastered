@@ -1,7 +1,7 @@
 //Saved games compared across a load, as test/gamestate.test.ts and test/properties.test.ts compare
 //them, and the saves of the format before written the way the game wrote them, to import
-import type { Game } from "../src/game";
-import type { SaveFile, UnknownPart } from "../src/savegame";
+import type { Game } from "../src/app/game";
+import type { SaveFile, UnknownPart } from "../src/app/save";
 
 export type Save = SaveFile;
 
