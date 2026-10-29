@@ -44,7 +44,7 @@ async function play(item: string): Promise<string[]> {
 	const { Rng } = await import("../src/core/random");
 	const { toData } = await import("../src/state");
 	const { CombatLog } = await import("../src/combatlog");
-	const { playerType } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	const { GameState } = await import("../src/gamestate");
 	const { touched } = await import("../src/context");
 	const seed = item.length * 7919;

@@ -10,7 +10,7 @@ import type { Position, UnitId, UnitState, World } from "../core/types";
 import { isTrain } from "../core/units";
 import { isBridgeForSide } from "../core/movement";
 import { hexIndex, unitById } from "../core/world";
-import { unitClass } from "../prototypes";
+import { unitClass } from "../core/tables";
 import { at, seen } from "./results";
 
 //A sprite strip: its frames side by side, each width pixels wide

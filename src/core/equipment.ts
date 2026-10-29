@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { unitClass, unitType } from "../prototypes";
+import { unitClass, unitType } from "./tables";
 import type { EquipmentTable } from "./types";
 
 //The bits of the attr field (src/equipment.ts)

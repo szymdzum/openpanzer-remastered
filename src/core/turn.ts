@@ -10,12 +10,11 @@
  * its reinforcements don't act on the turn they arrive. The game saves after them (#93).
  */
 
-import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "../prototypes";
-import type { ScenarioOutcome } from "../scenario";
+import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "./tables";
 import { beginDraft, emit, finishDraft, place, playerAt, writeUnit } from "./draft";
 import type { GameEvent } from "./events";
 import { reinforcementDeployPosition } from "./movement";
-import type { Draft, OffMapUnit, UnitId, UnitState, World } from "./types";
+import type { Draft, OffMapUnit, UnitId, UnitState, ScenarioOutcome, World } from "./types";
 import { canEntrench, sideHasUnits } from "./units";
 import { hexIndex, isSpotted, sideOf, unitData } from "./world";
 

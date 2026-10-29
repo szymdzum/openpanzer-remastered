@@ -11,7 +11,7 @@
  * what it changed, its random stream's position included.
  */
 
-import type { Command } from "../commands";
+import type { Command } from "./command";
 import type { GameEvent } from "./events";
 import type { Position, UnitId, World } from "./types";
 

@@ -8,7 +8,7 @@ import { fixtures, readFixture, restoreState } from "./contracts";
 import { failedLoads, failRequests, fakeMapImages, freshGame, startState, until } from "./lifecycle";
 import { oldExport, oldLocalItems, withoutLosses, withoutUnknown } from "./saves";
 import type { SaveFile } from "../src/savegame";
-import type { UnitState } from "../src/state";
+import type { UnitState } from "../src/core/state";
 
 //The save of the game the global game module holds now
 async function exportGame() {
@@ -69,7 +69,7 @@ test("GameState load numbers the reinforcements of each turn from 1", async () =
 
 //A command played as the game sends it, on the game the global game module holds now; it must be
 //allowed
-async function play(cmd: import("../src/commands").Command) {
+async function play(cmd: import("../src/core/command").Command) {
 	const { Commands } = await import("../src/commands");
 	const { game } = await import("../src/game");
 	const r = Commands.execute(game.scenario, cmd);
@@ -150,7 +150,8 @@ test("GameState load on the AI's turn has the AI play it (#71)", async () => {
 	const ai = scenario.map.currentPlayer.id, save = await exportGame();
 	const game = await playing("drpzop01-t0.json.gz");
 	const { Game } = await import("../src/game");
-	const { uiSettings, playerType } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	game.setupGameState = new Game().setupGameState; //Game's own, restoreState's stand-in only waits
 	uiSettings.isAI[ai] = 1;
 	try {

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/preact";
 import { handWorld, type HandUnit } from "./coreworld";
 import type { World } from "../src/core/types";
-import { terrainType } from "../src/prototypes";
+import { terrainType } from "../src/core/tables";
 import { locationOf, pinsOf } from "../src/view/hextip";
 import { hexCentre } from "../src/view/hexgrid";
 import { MapView } from "../src/view/map";

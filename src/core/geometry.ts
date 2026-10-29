@@ -7,7 +7,7 @@
  * Columns are offset: an odd column sits half a hex lower. A cell is { row, col }.
  */
 
-import { direction } from "../prototypes";
+import { direction } from "./tables";
 import type { Position } from "./types";
 
 //The distance in hexes between two cells (GameRules.distance)

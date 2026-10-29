@@ -102,12 +102,9 @@
 						"patterns": [
 							{
 								"group": [
-									"../*",
-									"!../prototypes",
-									"!../rng"
+									"../*"
 								],
-								"allowTypeImports": true,
-								"message": "The new core imports only the tables of src/prototypes.ts, src/rng.ts and types: not the old engine (docs/CORE.md)"
+								"message": "The core imports nothing outside src/core/, types included (docs/CORE.md)"
 							}
 						]
 					}
@@ -125,12 +122,9 @@
 						"patterns": [
 							{
 								"group": [
-									"../../*",
-									"!../../prototypes",
-									"!../../rng"
+									"../../*"
 								],
-								"allowTypeImports": true,
-								"message": "The new core imports only the tables of src/prototypes.ts, src/rng.ts and types: not the old engine (docs/CORE.md)"
+								"message": "The core imports nothing outside src/core/, types included (docs/CORE.md)"
 							}
 						]
 					}
@@ -156,7 +150,7 @@
 									"!../prototypes"
 								],
 								"allowTypeImports": true,
-								"message": "The new UI (src/view/) imports only the core, the game host, the screen interface, the tables of src/prototypes.ts, its own components and Preact: never the old UI or game.ts (docs/ui/PLAN.md)"
+								"message": "The new UI (src/view/) imports only the core, the game host, the screen interface, the settings of src/prototypes.ts, its own components and Preact: never the old UI or game.ts (docs/ui/PLAN.md)"
 							}
 						]
 					}
@@ -223,6 +217,7 @@
 		},
 		{
 			"files": [
+				"src/core/tables.ts",
 				"src/prototypes.ts"
 			],
 			"rules": {

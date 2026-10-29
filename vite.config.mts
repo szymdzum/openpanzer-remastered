@@ -115,7 +115,7 @@ export default defineConfig({
 				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
 				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
 				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/layers.ts"],
-			exclude: ["src/core/types.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
+			exclude: ["src/core/types.ts", "src/core/state.ts", "src/core/command.ts", "src/core/events.ts", "src/core/controller.ts", "src/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
 			//coverage goes up for good, raise its numbers here
@@ -135,7 +135,8 @@ export default defineConfig({
 				"src/gamestate.ts": { statements: 90, branches: 75, functions: 85, lines: 90 },
 				"src/leaders.ts": { statements: 76, branches: 50, functions: 50, lines: 78 },
 				"src/map.ts": { statements: 95, branches: 84, functions: 96, lines: 94 },
-				"src/prototypes.ts": { statements: 94, branches: 33, functions: 66, lines: 94 },
+				//(its tables, covered, went to src/core/tables.ts in #523: the share left is lower, not less covered)
+				"src/prototypes.ts": { statements: 91, branches: 33, functions: 66, lines: 91 },
 				"src/scenario.ts": { statements: 92, branches: 83, functions: 90, lines: 92 },
 				"src/scenarioloader.ts": { statements: 91, branches: 61, functions: 93, lines: 90 },
 				"src/selection.ts": { statements: 97, branches: 100, functions: 96, lines: 97 },
@@ -160,6 +161,7 @@ export default defineConfig({
 				"src/core/moves.ts": { statements: 97, branches: 97, functions: 95, lines: 96 },
 				"src/core/newgame.ts": { statements: 97, branches: 87, functions: 96, lines: 99 },
 				"src/core/random.ts": { statements: 93, branches: 100, functions: 85, lines: 93 },
+				"src/core/tables.ts": { statements: 97, branches: 100, functions: 0, lines: 97 },
 				"src/core/rules.ts": { statements: 90, branches: 100, functions: 75, lines: 88 },
 				"src/core/scenariofile.ts": { statements: 90, branches: 75, functions: 91, lines: 94 },
 				"src/core/session.ts": { statements: 96, branches: 96, functions: 94, lines: 98 },

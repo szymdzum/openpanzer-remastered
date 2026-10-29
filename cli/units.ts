@@ -7,7 +7,7 @@ import { canReinforce, canResupply, reinforceValue, resupplyValue } from "../src
 import type { MoveCell, UnitState, World } from "../src/core/types";
 import { canMount, canUnmount } from "../src/core/units";
 import { fuelOf, movesLeft, sideOf, unitById, unitData } from "../src/core/world";
-import { OVERSTRENGTH_PENALTY, unitClassNames } from "../src/prototypes";
+import { OVERSTRENGTH_PENALTY, unitClassNames } from "../src/core/tables";
 import { targetsOf } from "./combat";
 import { cell, label, own } from "./known";
 

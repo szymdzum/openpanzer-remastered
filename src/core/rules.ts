@@ -8,7 +8,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { aiDefaultConfig, groundCondition, leaderType, movTableDry, movTableFrozen, movTableMud } from "../prototypes";
+import { aiDefaultConfig, groundCondition, leaderType, movTableDry, movTableFrozen, movTableMud } from "./tables";
 import { classicCombat } from "./combat";
 import type { Ruleset } from "./types";
 

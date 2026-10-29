@@ -19,7 +19,8 @@
  * (the harness moves units by hand with them).
  */
 
-import { type Cell, type combatResults, type extendedCell, type pathCell, type Supply, terrainType } from "./prototypes";
+import { type Cell, type combatResults, type extendedCell, type pathCell, type Supply } from "./prototypes";
+import { terrainType } from "./core/tables";
 import { Equipment } from "./equipment";
 import { engineContext, touched } from "./context";
 import type { Hex, GameMap } from "./map";

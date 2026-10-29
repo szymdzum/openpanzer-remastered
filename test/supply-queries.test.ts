@@ -9,7 +9,7 @@ import { adjacentEnemies, canSupplyHere, isInCity, reinforcement, reinforceDivis
 	resupplyValue } from "../src/core/supply";
 import type { World } from "../src/core/types";
 import { unitById } from "../src/core/world";
-import { OVERSTRENGTH_PENALTY, terrainType } from "../src/prototypes";
+import { OVERSTRENGTH_PENALTY, terrainType } from "../src/core/tables";
 import { type HandUnit, handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273, ME_109 = 159;

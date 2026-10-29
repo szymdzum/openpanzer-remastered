@@ -20,8 +20,8 @@
  * list (D7).
  */
 
-import type { Command } from "../commands";
-import { type AIConfig, movMethod, unitClass } from "../prototypes";
+import type { Command } from "./command";
+import { type AIConfig, movMethod, unitClass } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";

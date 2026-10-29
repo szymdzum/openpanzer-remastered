@@ -9,7 +9,7 @@ import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
 import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";
-import { playerType } from "../src/prototypes";
+import { playerType } from "../src/core/tables";
 import { aiStatusOf, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "../src/view/turn";
 import { AiIndicator, TurnBanner } from "../src/view/turnbanner";
 import { createStore } from "../src/view/store";

@@ -5,7 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
 import type { World } from "../src/core/types";
-import { unitClass } from "../src/prototypes";
+import { unitClass } from "../src/core/tables";
 import { campaignEndOf, dossierOf } from "../src/view/dossier";
 import { DossierWindow } from "../src/view/dossierwindow";
 import { LogWindow } from "../src/view/logwindow";

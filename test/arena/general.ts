@@ -11,8 +11,8 @@
 //     A ground unit on an objective its side holds never leaves it: it fires from there.
 //It sees what its side sees (fog of war) and asks the core whether an order is allowed (check) before
 //it gives it, so the session never refuses it.
-import type { Command } from "../../src/commands";
-import { terrainType, unitClass } from "../../src/prototypes";
+import type { Command } from "../../src/core/command";
+import { terrainType, unitClass } from "../../src/core/tables";
 import { aiController } from "../../src/core/ai";
 import { attackableUnit, isInAttackRange, unitAttackRange } from "../../src/core/attack";
 import { combatResult } from "../../src/core/combat";

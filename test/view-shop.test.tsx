@@ -10,7 +10,7 @@ import { handWorld, reserveUnit } from "./coreworld";
 import { sellCost, unitCost, upgradeCost } from "../src/core/costs";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { playerType, unitClass } from "../src/prototypes";
+import { playerType, unitClass } from "../src/core/tables";
 import { choiceFor, type ShopChoice, shopOf } from "../src/view/shop";
 import { createStore } from "../src/view/store";
 import { unitListOf, NAVAL_ICON } from "../src/view/unitlist";

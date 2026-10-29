@@ -3,7 +3,7 @@
 //screen the page runs (src/screen.ts: the UI's, src/view/screen.tsx, #378): the moves and attacks
 //shown by the screen as a program's are, with their animations where it has them, the end of turn the
 //host's, so the AI then plays its turn on the screen. A person watches the game the program plays
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import { check } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { newGameRules, uiSettings } from "../src/prototypes";

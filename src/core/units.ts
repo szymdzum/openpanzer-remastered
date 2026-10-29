@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { movMethod, terrainType, unitClass, unitEntrenchRate } from "../prototypes";
+import { movMethod, terrainType, unitClass, unitEntrenchRate } from "./tables";
 import type { UnitState, World } from "./types";
 import { sideOf, unitData } from "./world";
 

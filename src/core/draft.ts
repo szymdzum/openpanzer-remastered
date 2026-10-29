@@ -18,7 +18,7 @@
  * all the same, without marking: the sight always equals computeSight's.
  */
 
-import { difficultyModifiers, movMethod, outcomeNames, unitClass } from "../prototypes";
+import { difficultyModifiers, movMethod, outcomeNames, unitClass } from "./tables";
 import type { GameEvent } from "./events";
 import { spotCells, zocCells } from "./sight";
 import type {

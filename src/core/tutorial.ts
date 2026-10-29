@@ -20,8 +20,8 @@
  * (#81).
  */
 
-import type { Command } from "../commands";
-import { playerSide, playerType } from "../prototypes";
+import type { Command } from "./command";
+import { playerSide, playerType } from "./tables";
 import type { Controller, Order, Played, ViewEvent } from "./controller";
 import type { Position, UnitId, UnitState, World } from "./types";
 import { isInAttackRange } from "./attack";

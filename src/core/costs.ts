@@ -5,7 +5,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { CURRENCY_MULTIPLIER, UPGRADE_PENALTY } from "../prototypes";
+import { CURRENCY_MULTIPLIER, UPGRADE_PENALTY } from "./tables";
 import type { UnitState, World } from "./types";
 import { unitData } from "./world";
 

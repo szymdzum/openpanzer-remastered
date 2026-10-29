@@ -8,7 +8,8 @@ import { createWorld } from "../src/core/create";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
-import type { Command, Executed } from "../src/commands";
+import type { Executed } from "../src/commands";
+import type { Command } from "../src/core/command";
 
 //The modules of the restored state (restoreState resets them for every fixture), with the game's
 //session the engine contract plays on (test/coreengine.ts): its players and end of turn
@@ -23,12 +24,13 @@ export async function load(name: string) {
 	const { game } = await import("../src/game");
 	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");
+	const tables = await import("../src/core/tables");
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	const engine = await coreEngine();
 	const m = scenario.map;
 	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),
-		...prototypes };
+		...prototypes, ...tables };
 }
 //A command as the old UI played it (src/ui.ts played, before #351): then the selection shows what the old engine's
 //command left selected (a disband the command allows deselects first)

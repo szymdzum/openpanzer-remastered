@@ -7,7 +7,7 @@ import { handWorld, type HandUnit } from "./coreworld";
 import { combatResult } from "../src/core/combat";
 import type { World } from "../src/core/types";
 import { unitById } from "../src/core/world";
-import { terrainType } from "../src/prototypes";
+import { terrainType } from "../src/core/tables";
 import { selectionOf } from "../src/view/mapview";
 import { glanceOf } from "../src/view/odds";
 

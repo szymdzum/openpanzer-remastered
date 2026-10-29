@@ -10,12 +10,11 @@
  * (#61, #64), and the units removed from the deployment hexes leave without a trace in the dossier.
  */
 
-import { CURRENCY_MULTIPLIER, PROTOTYPE_MIN_COST, playerType, unitClass } from "../prototypes";
+import { CURRENCY_MULTIPLIER, PROTOTYPE_MIN_COST, playerType, unitClass } from "./tables";
 import { nextRandom } from "./random";
-import type { ScenarioOutcome } from "../scenario";
-import type { CampaignState } from "../state";
+import type { CampaignState } from "./state";
 import { newDossier, offMap, playerAt, removeUnit, writePlayer, writeUnit } from "./draft";
-import type { CoreUnit, Draft, EquipmentTable, GameState, OffMapUnit, PlayerState, UnitState, World } from "./types";
+import type { CoreUnit, Draft, EquipmentTable, GameState, OffMapUnit, PlayerState, ScenarioOutcome, UnitState, World } from "./types";
 
 //A campaign data file's scenario (resources/campaigns/data/*.json): what each outcome gives and
 //where it goes (254 and 255 end the campaign)

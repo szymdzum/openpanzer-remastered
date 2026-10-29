@@ -150,7 +150,7 @@ test today).
 
 ### 2. After step 1, in parallel (each in its own worktree) — done
 
-- **RNG seam and a headless engine.** `src/rng.ts` used at the engine's draw sites (dice,
+- **RNG seam and a headless engine.** `src/core/random.ts` used at the engine's draw sites (dice,
   leaders, AI), defaulting to `Math.random`, every draw at its call site. Move `defined()` out
   of dom.ts; move game.ts's load-time `setInterval` and `addEventListener` into init; an engine
   context instead of the 9 reads of `game.*` (spotSide, campaign, scenario; `unitEndTurn` must
@@ -188,7 +188,7 @@ test today).
 **How the RNG seam, the headless engine and the AI seams were done** (one thread, a commit each;
 nothing re-recorded, verify as before step 2):
 
-- **`src/rng.ts`**: `Rng.random()` is `Rng.source()` when set, otherwise `Math.random()` read at
+- **`src/core/random.ts`**: `Rng.random()` is `Rng.source()` when set, otherwise `Math.random()` read at
   the call, so the harness's and record.js's seeded `Math.random` still seeds the engine.
   `GameRules.rollDice`, both leader rolls, `getRandomPrototype` and the AI draw through it, one
   call per former `Math.random()`. The UI's sprite, sound and menu picks kept `Math.random` (#126
@@ -475,7 +475,7 @@ whole turn at its start as the old one did, its draws from its own stream in the
 its queue out; `startSession` and `advance` play a game in Game's order. The old game played headless
 (test/aigames.ts) and the core's session play the engine fixtures and the replay's items in lockstep,
 compared after every order and turn; the engine contract's AI turns run on the core's AI beside the
-old one. The AI's settings moved to src/prototypes.ts, which the core may read. The scripted tutorial
+old one. The AI's settings moved to src/prototypes.ts, which the core read then (now src/core/tables.ts). The scripted tutorial
 is a controller too (src/core/tutorial.ts): AIScripted's script as data, its UI calls as view events
 (a message, a selection, the main menu), #80 and #81 kept, played in lockstep with the old one from
 its start, from its later turns and in the engine contract.

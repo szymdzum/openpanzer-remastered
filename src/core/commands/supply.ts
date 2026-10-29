@@ -6,8 +6,8 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf } from "../../commands";
-import { scoreGains } from "../../prototypes";
+import type { CommandOf } from "../command";
+import { scoreGains } from "../tables";
 import { addScore, emit, writePlayer, writeUnit } from "../draft";
 import { canResupply, reinforcement, reinforceValue, resupplyValue } from "../supply";
 import type { Draft, CommandHandler, Supply, UnitId } from "../types";

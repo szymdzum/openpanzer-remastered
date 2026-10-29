@@ -6,7 +6,7 @@ import type { EventOf, Fighter, GameEvent } from "../core/events";
 import { distance } from "../core/geometry";
 import type { Position, UnitId, World } from "../core/types";
 import { hexIndex, isSpotted, unitById } from "../core/world";
-import { terrainNames } from "../prototypes";
+import { terrainNames } from "../core/tables";
 
 //A loss chip right of a unit's strength plate: the strength lost (none: 0 on paper) and a note that explains it
 export interface HitChip {

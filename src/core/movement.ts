@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { embarkType, leaderType, movMethod, roadType, terrainType, unitClass } from "../prototypes";
+import { embarkType, leaderType, movMethod, roadType, terrainType, unitClass } from "./tables";
 import { isBridge } from "./equipment";
 import { adjacent, cellsInRange, distance, facingToAdjacentIndex, isPartialEdge, neighbourCol, neighbourRow } from "./geometry";
 import { moveCosts } from "./rules";

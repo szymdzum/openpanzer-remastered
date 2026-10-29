@@ -5,7 +5,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf } from "../../commands";
+import type { CommandOf } from "../command";
 import { emit } from "../draft";
 import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../fight";
 import { isInAttackRange, isTargetFrom } from "../attack";

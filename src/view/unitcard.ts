@@ -18,9 +18,8 @@ import { entrenchBase, entrenchLimit } from "../core/turn";
 import type { UnitId, UnitState, World } from "../core/types";
 import { canEntrench, isGround } from "../core/units";
 import { hexIndex, unitData } from "../core/world";
-import {
-	leaderDescriptions, leaderType, movMethod, movMethodNames, terrainNames, terrainType, unitClass, unitClassNames, unitTypeNames
-} from "../prototypes";
+import { leaderDescriptions } from "../prototypes";
+import { leaderType, movMethod, movMethodNames, terrainNames, terrainType, unitClass, unitClassNames, unitTypeNames } from "../core/tables";
 import type { IconName, Nation } from "./icon";
 import { classIcon, countryName, nationOf, shownUnit } from "./model";
 import { type LeaderLine, leadersOf } from "./unitinfo";

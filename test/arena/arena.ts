@@ -13,7 +13,7 @@ import { type Advance, advance, type Session, startSession } from "../../src/cor
 import { outcome, victoryRating } from "../../src/core/turn";
 import type { RulesetName, World } from "../../src/core/types";
 import { sideOf } from "../../src/core/world";
-import { playerType } from "../../src/prototypes";
+import { playerType } from "../../src/core/tables";
 import { setupOf } from "../corefiles";
 import { generalController } from "./general";
 

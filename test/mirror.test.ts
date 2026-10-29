@@ -17,7 +17,7 @@ import { endTurn, nextOrder, play, playOn, type Session, startSession } from "..
 import { begin, resume, step } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import type { World } from "../src/core/types";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import type { Unit } from "../src/unit";
 
 const stats: Record<string, number> = {};

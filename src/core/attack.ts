@@ -5,7 +5,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType, unitClass } from "../prototypes";
+import { leaderType, unitClass } from "./tables";
 import { canStartAttackOn } from "./equipment";
 import { cellsInRange, distance } from "./geometry";
 import type { Position, UnitState, World } from "./types";

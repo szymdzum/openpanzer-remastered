@@ -15,7 +15,8 @@
  * stepWorld: what the screen writes into the objects isn't in it, what the harness writes is).
  */
 
-import { actionType, type Cell, CURRENCY_ICON, playerType } from "./prototypes";
+import { actionType, type Cell, CURRENCY_ICON } from "./prototypes";
+import { playerType } from "./core/tables";
 import { CombatLog } from "./combatlog";
 import { AI, type AIAction, type AIDriver } from "./ai";
 import type { GameMap, Player } from "./map";
@@ -25,7 +26,7 @@ import { destroyUnits } from "./core/fight";
 import { unitById } from "./core/world";
 import { aiController } from "./core/ai";
 import { tutorialController } from "./core/tutorial";
-import type { Command } from "./commands";
+import type { Command } from "./core/command";
 import type { Controller, Order, ViewEvent } from "./core/controller";
 import type { GameEvent } from "./core/events";
 import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "./core/session";

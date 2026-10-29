@@ -5,8 +5,8 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf, Refusal } from "../../commands";
-import { movMethod, terrainType, unitClass } from "../../prototypes";
+import type { CommandOf, Refusal } from "../command";
+import { movMethod, terrainType, unitClass } from "../tables";
 import { sellCost, unitCost, upgradeCost } from "../costs";
 import { deploymentHexes } from "../deployment";
 import { changeUnit, emit, place, removeUnit, writePlayer } from "../draft";

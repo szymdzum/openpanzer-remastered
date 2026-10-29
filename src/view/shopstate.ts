@@ -2,7 +2,7 @@
 //(src/view/store.ts), which gives them the world, the selection and the person's commands. What they show is the view
 //model's (src/view/unitlist.ts, src/view/shop.ts); here is only what the person has open and picked
 import { computed, type ReadonlySignal, signal } from "@preact/signals";
-import type { Command } from "../commands";
+import type { Command } from "../core/command";
 import type { Position, UnitId, World } from "../core/types";
 import { unitById } from "../core/world";
 import { choiceFor, type ShopChoice, shopOf, shopUnitsOf, sideCountries, type SortKey, type Target } from "./shop";

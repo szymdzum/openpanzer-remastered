@@ -7,7 +7,8 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { handWorld } from "./coreworld";
 import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";
-import { leaderDescriptions, leaderType, terrainType } from "../src/prototypes";
+import { leaderDescriptions } from "../src/prototypes";
+import { leaderType, terrainType } from "../src/core/tables";
 import { combatLogOf, emptyLog, type LogEntry, logStep, logTurnStart, type TurnLog } from "../src/view/log";
 import { LogWindow } from "../src/view/logwindow";
 import { MessageDialog } from "../src/view/message";

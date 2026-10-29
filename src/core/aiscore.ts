@@ -15,7 +15,7 @@
  * fire of the hidden units (#17).
  */
 
-import { type AIConfig, roadType, terrainEntrenchment, terrainInitiative, terrainType, unitClass } from "../prototypes";
+import { type AIConfig, roadType, terrainEntrenchment, terrainInitiative, terrainType, unitClass } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { attackCells, attackableUnit, canInitiateAttack } from "./attack";
 import { combatResult } from "./combat";

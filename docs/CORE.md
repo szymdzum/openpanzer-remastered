@@ -28,7 +28,8 @@ A query is a plain function of a `World` (src/core/world.ts):
 | `index` | unit id -> its index in `state.units` (D2) | derived, built with the world |
 | `sight` | spotting and zone of control counts per hex and side (D10) | derived, `computeSight` |
 
-The types are src/state.ts's (one source of truth): the core imports them with `import type`.
+The types are src/core/state.ts's (one source of truth): the core imports them with `import type`;
+the functions that read and build them off the old engine's objects (`toData`, `fromData`) are src/state.ts's.
 The derived parts are a cache beside the state, never saved; a step rebuilds them.
 
 ## Modules (src/core/)
@@ -53,6 +54,10 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `step.ts` | `step` and `check`, the handlers' registry |
 | `draft.ts` | the state a step changes, copied on write, and its primitives: place, relocate, remove a unit with its sight, the score, the dossier |
 | `events.ts` | the events a step emits (types) |
+| `state.ts` | the state's and the data's types: `GameState`, `UnitState`, `ScenarioData`, `SavedGame`... (types) |
+| `command.ts` | `Command`, `CommandType`, `CommandOf` and `Refusal`: the player's actions as plain data (types) |
+| `tables.ts` | the enums and tables the rules read: unit classes, terrain, movement tables, leaders, scores, prices, `aiDefaultConfig` (Nicu Pavel's `prototypes.js`, split) |
+| `random.ts` | the random streams (`Rng`, `nextRandom`): the game's, the AI's and the cosmetic one |
 | `fight.ts` | an attack: each shot resolved then applied, the attack's finish (destroyed, retreat, surrender, elimination), the surprise attack |
 | `moves.ts` | a move: the path walked, the surprise, the capture, the fuel and points, the undo it leaves |
 | `controller.ts` | `Controller`, the orders it gives (a command, or something to show) (types) |
@@ -62,8 +67,8 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `session.ts` | a game played headless: the controllers, the turns in the old game's order, the end of the game |
 | `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell; `turn.ts`: the end of turn) |
 
-The core imports only `src/prototypes.ts` (the enums and tables), `nextRandom` of `src/rng.ts`
-and types: no UI module, no mutable object of the old engine (the linter checks it).
+The core imports nothing outside `src/core/`, types included: no UI module, no object of the old
+engine (the linter checks it).
 
 **Kept bugs are kept.** The classic ruleset reproduces the old engine exactly, every kept bug
 included (#72...): they are fixed after the switch, in the core.
@@ -109,7 +114,7 @@ game's, `state.rng.game`, D8) in today's order: support fire first, each unit's 
 ## Commands (#134)
 
 `step(world, command)` checks the command, then plays it: `{ ok: true, world, events }` or
-`{ ok: false, refusal }`. The commands are src/commands.ts's `Command` values, the old engine's
+`{ ok: false, refusal }`. The commands are src/core/command.ts's `Command` values, the old engine's
 (ids and cells, plain data); `check(world, command)` alone says whether one is allowed, or why not,
 and changes nothing. Each type has a handler in `commands/` (`check` and `run`), in a registry
 typed by a mapped type: every command of the old engine, the end of turn included (#135). A type
@@ -309,7 +314,7 @@ its country's ground transports that carries it, is in service and fits the budg
 bought none). Its reinforcements are budgeted with the prestige left after its purchases (#21: the
 old AI took it before them). Kept: #17 (the attacks count the hidden units' support fire),
 the objectives in their list's order (D7). Its settings are `aiDefaultConfig`
-(src/prototypes.ts, the old AI's too).
+(src/core/tables.ts, the old AI's too).
 
 **The tutorial** (tutorial.ts) is the original's AIScripted script without the UI, both sides of
 tutorial.xml, each turn's actions in order as data. A turn's script is built when the turn starts (and

@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf } from "../../commands";
+import type { CommandOf } from "../command";
 import { addScore, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer } from "../draft";
 import { reselect, updateVictorySides } from "../moves";
 import type { CommandHandler } from "../types";

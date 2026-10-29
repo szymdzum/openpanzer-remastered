@@ -10,7 +10,7 @@ import { check, step } from "../src/core/step";
 import type { Ruleset, World } from "../src/core/types";
 import { isSpotted } from "../src/core/world";
 import { Equipment } from "../src/equipment";
-import { aiDefaultConfig, terrainType } from "../src/prototypes";
+import { aiDefaultConfig, terrainType } from "../src/core/tables";
 import { smallGameData } from "./smallgame";
 
 const INFANTRY = 504, FIGHTER = 530, DESTROYER = 510;

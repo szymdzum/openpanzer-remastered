@@ -12,7 +12,7 @@ import { mulberry32 } from "./lifecycle";
 import type { Hex } from "../src/map";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 
 //The game's flow without the UI, as the engine contract plays it (test/contracts/engine.contract.js):
 //the commands, played whole, with the UI's selection refresh after an attack (#29 guarded)

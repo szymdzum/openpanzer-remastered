@@ -12,8 +12,8 @@ import { difference, GAME_DIR, readEquipment, setupOf } from "./corefiles";
 import { awardedPrototype, coreCountries, endCampaignScenario, type CampaignScenarioData, scenarioEnded } from "../src/core/campaign";
 import { createWorld } from "../src/core/create";
 import { newGame, stateEquipment } from "../src/core/newgame";
-import type { ScenarioOutcome } from "../src/scenario";
-import type { CampaignState, SavedGame } from "../src/state";
+import type { ScenarioOutcome } from "../src/core/types";
+import type { CampaignState, SavedGame } from "../src/core/state";
 import type { CoreUnit, EquipmentTable, OffMapUnit, PlayerState, UnitState } from "../src/core/types";
 import type { CommandsAPI } from "../src/commands";
 
@@ -93,7 +93,7 @@ function compared(what: string, want: SavedGame, got: SavedGame): string {
 //A campaign on both engines: its start, then up to three scenarios ended and the next started.
 //What differs
 async function playCampaign(index: number, seen: Seen): Promise<string> {
-	const { difficultyModifiers } = await import("../src/prototypes");
+	const { difficultyModifiers } = await import("../src/core/tables");
 	const difficulty = index % 3, file = campaignlist[index].file;
 	const scenarios = JSON.parse(fs.readFileSync(path.join(GAME_DIR, "resources/campaigns/data", file), "utf8")) as CampaignScenarioData[];
 	const old = await oldCampaign(index, difficulty);

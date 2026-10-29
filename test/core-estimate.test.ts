@@ -9,7 +9,7 @@ import { step } from "../src/core/step";
 import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";
 import { hexIndex, isSpotted, unitById } from "../src/core/world";
-import { terrainType } from "../src/prototypes";
+import { terrainType } from "../src/core/tables";
 
 const PZ_38T = 136, PZ_IIA = 140, INFANTERIE = 115, LEFH18 = 92, TP7 = 273, PIECHOTA = 270, WZ97 = 264;
 

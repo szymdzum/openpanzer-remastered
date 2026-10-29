@@ -21,12 +21,14 @@
  * embark (backAboard), as the old selection put it back on its carrier (#376).
  */
 
-import { type Cell, type extendedCell, unitClass } from "./prototypes";
+import { type Cell, type extendedCell } from "./prototypes";
+import { unitClass } from "./core/tables";
 import { GameRules, type GameRulesModule, rulesOver } from "./gamerules";
 import { engineContext } from "./context";
 import { createWorld } from "./core/create";
 import { unitById } from "./core/world";
-import type { AttackResult, Command, CommandType, Executed, MoveResult } from "./commands";
+import type { AttackResult, Executed, MoveResult } from "./commands";
+import type { Command, CommandType } from "./core/command";
 import type { GameMap, ReinforceResults } from "./map";
 import type { Unit } from "./unit";
 

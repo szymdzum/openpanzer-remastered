@@ -1,7 +1,8 @@
 //The store's step (src/view/store.ts, review proposal 3): a step's beats played on the map (src/view/player.ts), then
 //what it told over the map and in the status bar (CombatResults)
 import { type ReadonlySignal, signal } from "@preact/signals";
-import type { CommandType, ResultOf } from "../commands";
+import type { ResultOf } from "../commands";
+import type { CommandType } from "../core/command";
 import type { GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import type { GameHost } from "../host";

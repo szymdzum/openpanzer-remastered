@@ -25,15 +25,14 @@
  */
 
 import { Cell, uiSettings } from "./prototypes";
-import { Equipment, type EquipmentIndexes } from "./equipment";
+import { Equipment } from "./equipment";
+import type { EquipmentIndexes } from "./core/state";
 import { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import type { Reinforcement, Scenario } from "./scenario";
 import { Rng } from "./core/random";
-import {
-	type CampaignHost, campaignState, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, sameData, sameItems,
-	savedAs, setUnitFields, toData, type UnitState, writeSight
-} from "./state";
+import { type CampaignHost, campaignState, offMapUnit, restoreUndo, sameData, sameItems, savedAs, setUnitFields, toData, writeSight } from "./state";
+import type { CoreUnit, OffMapUnit, PlayerState, UnitState } from "./core/state";
 import { objectWrites } from "./context";
 import { createWorld } from "./core/create";
 import { rulesetNamed } from "./core/rules";

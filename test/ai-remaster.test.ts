@@ -1,7 +1,7 @@
 //The remaster's AI (#53): the changes to its play the remaster's rules make (src/core/rules.ts, ai), each
 //against the classic AI on a small map built by hand, where the change decides what a unit does
 import { expect, test } from "vitest";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import { aiController } from "../src/core/ai";
 import { classicRules, remasterRules } from "../src/core/rules";
 import type { Ruleset, World } from "../src/core/types";

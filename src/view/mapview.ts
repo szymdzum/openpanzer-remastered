@@ -3,14 +3,14 @@
 //hand-built world (test/view-map.test.ts); the canvas (src/view/mapdraw.ts) only draws their answers.
 //Every rule comes from the core's queries, never from distance: the move area is the core's move range,
 //the path the one the move takes, the targets the attack cells.
-import type { Command } from "../commands";
+import type { Command } from "../core/command";
 import { attackableUnit, attackCells, canFireThisTurn } from "../core/attack";
 import { adjacent } from "../core/geometry";
 import { isBridgeForSide, moveRange, movesLeftThisTurn, shortestPath, terrainCost, unitMoveRange } from "../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../core/types";
 import { isAir, isGround, unitUsesAmmo } from "../core/units";
 import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../core/world";
-import { unitClass } from "../prototypes";
+import { unitClass } from "../core/tables";
 import { canOrder } from "./model";
 
 //A unit's marker under its sprite (MapOverlays): what it can still do this turn, its strength in its

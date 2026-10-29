@@ -3,7 +3,7 @@
 //Each call loads the save, plays or answers, and writes it back
 import fs from "node:fs";
 import path from "node:path";
-import type { Command, Refusal } from "../src/commands";
+import type { Command, Refusal } from "../src/core/command";
 import { aiController } from "../src/core/ai";
 import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
@@ -12,7 +12,7 @@ import { type Advance, advance, endTurn, play, playOn, type Session, type Sessio
 import type { Outcome } from "../src/core/turn";
 import { rulesetNamed } from "../src/core/rules";
 import type { GameState, RulesetName, ScenarioData, World } from "../src/core/types";
-import { playerType } from "../src/prototypes";
+import { playerType } from "../src/core/tables";
 import { type Front, resultOf } from "./commands";
 import { readEquipment, setupOf } from "./files";
 import { describe } from "./report";

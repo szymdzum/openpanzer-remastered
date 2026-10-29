@@ -18,14 +18,15 @@ export async function coreEngine() {
 	const { CombatLog } = await import("../src/combatlog");
 	const { GameRules } = await import("../src/gamerules");
 	const { Unit } = await import("../src/unit");
-	const { Cell, actionType, playerType } = await import("../src/prototypes");
+	const { Cell, actionType } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	type Player = import("../src/map").Player;
 	type GameMap = import("../src/map").GameMap;
 	type Order = import("../src/core/controller").Order;
 	type Controller = import("../src/core/controller").Controller;
 	type World = import("../src/core/types").World;
 	type AIAction = import("../src/ai").AIAction;
-	type Command = import("../src/commands").Command;
+	type Command = import("../src/core/command").Command;
 	type UnitState = import("../src/core/types").UnitState;
 	type Unit = import("../src/unit").Unit;
 

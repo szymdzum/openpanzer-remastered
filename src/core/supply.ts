@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { OVERSTRENGTH_PENALTY, terrainType, unitClass } from "../prototypes";
+import { OVERSTRENGTH_PENALTY, terrainType, unitClass } from "./tables";
 import { costPerStrength } from "./costs";
 import { adjacent } from "./geometry";
 import type { Supply, UnitState, World } from "./types";

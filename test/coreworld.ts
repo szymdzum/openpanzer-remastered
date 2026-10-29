@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createWorld, type WorldOptions } from "../src/core/create";
 import type { EquipmentTable, GameState, ScenarioData, UnitState, World } from "../src/core/types";
-import type { Dossier, OffMapUnit, PlayerState } from "../src/state";
-import { terrainType, unitClass } from "../src/prototypes";
+import type { Dossier, OffMapUnit, PlayerState } from "../src/core/state";
+import { terrainType, unitClass } from "../src/core/tables";
 
 const GAME_DIR = process.env.OPENPANZER_GAME_DIR || path.resolve(__dirname, "../game");
 

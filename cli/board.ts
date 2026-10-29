@@ -3,11 +3,12 @@
 import { unitCost } from "../src/core/costs";
 import { deploymentHexes } from "../src/core/deployment";
 import type { HexState, Position, UnitState, World } from "../src/core/types";
-import type { HexData } from "../src/state";
+import type { HexData } from "../src/core/state";
 import { attackerSide, turnLimitOutcome } from "../src/core/turn";
 import { isTransportable } from "../src/core/units";
 import { hexIndex, isSpotted, isZOC, sideOf, unitById } from "../src/core/world";
-import { groundConditionNames, terrainNames, terrainType, unitClass, unitClassNames, weatherConditionNames } from "../src/prototypes";
+import { weatherConditionNames } from "../src/prototypes";
+import { groundConditionNames, terrainNames, terrainType, unitClass, unitClassNames } from "../src/core/tables";
 import { attackerLine, attackers } from "./combat";
 import { cell, knownWorld, label, own, playerOfSide, positionOf, seen, SIDES, sideOfPlayer } from "./known";
 import { unitLine } from "./units";

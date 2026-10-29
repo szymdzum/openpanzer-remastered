@@ -4,7 +4,7 @@
 import type { Position, UnitId, World } from "../core/types";
 import { unitLowAmmo, unitLowFuel } from "../core/units";
 import { hexIndex, onMap, unitAt, unitData } from "../core/world";
-import { roadType, terrainNames, terrainType } from "../prototypes";
+import { roadType, terrainNames, terrainType } from "../core/tables";
 import type { IconName } from "./icon";
 import { isShown } from "./mapview";
 

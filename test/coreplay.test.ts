@@ -19,7 +19,8 @@ import { commandOf, type Sequence, sequences } from "./commandgen";
 import { load, uiCommand } from "./invariants";
 import type { Unit } from "../src/unit";
 import type { Cell, movementResults } from "../src/prototypes";
-import type { AttackResult, Command, MoveResult } from "../src/commands";
+import type { AttackResult, MoveResult } from "../src/commands";
+import type { Command } from "../src/core/command";
 
 type World = Awaited<ReturnType<typeof loaded>>;
 

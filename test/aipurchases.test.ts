@@ -8,7 +8,7 @@ import { costPerStrength, unitCost } from "../src/core/costs";
 import { reinforceValue } from "../src/core/supply";
 import { isTransportable } from "../src/core/units";
 import { Equipment } from "../src/equipment";
-import { aiDefaultConfig, unitClass } from "../src/prototypes";
+import { aiDefaultConfig, unitClass } from "../src/core/tables";
 import { smallGameData } from "./smallgame";
 
 //The small game with a free deployment hex for the Soviet side, at 10,9

@@ -16,7 +16,7 @@ import { canResupply } from "../src/core/supply";
 import { entrenchBase, entrenchLimit, unitEndTurn } from "../src/core/turn";
 import type { Contribution, UnitState, World } from "../src/core/types";
 import { isRiding, unitById } from "../src/core/world";
-import { leaderType, terrainNames, terrainType, unitClass } from "../src/prototypes";
+import { leaderType, terrainNames, terrainType, unitClass } from "../src/core/tables";
 import { type HandUnit, handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273, ME_109 = 159, INFANTERIE = 115, OPEL_BLITZ = 157, PFERDEWAGEN = 158, PAK36 = 66, FLAK36 = 79;

@@ -14,7 +14,7 @@ import { classicRules } from "../src/core/rules";
 import { computeSight } from "../src/core/sight";
 import type { GameMap } from "../src/map";
 import type { Scenario } from "../src/scenario";
-import type { SavedGame } from "../src/state";
+import type { SavedGame } from "../src/core/state";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 
 const JU52 = 176; //a German air transport

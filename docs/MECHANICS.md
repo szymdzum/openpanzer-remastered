@@ -82,7 +82,7 @@ protects your units the same way.
 
 - A unit that doesn't move entrenches over the turns (`Unit` entrench, unit.ts), up to the
   terrain's base + 5. Experience and the unit class's entrench rate make it faster.
-- Terrain base (`terrainEntrenchment`, prototypes.ts): fortification 4, city 3; forest,
+- Terrain base (`terrainEntrenchment`, core/tables.ts): fortification 4, city 3; forest,
   bocage, mountain and rough 2; hill and port 1; everything else 0.
 - Moving out of the hex loses all of it. Every hit taken loses 1 level.
 - Some equipment ignores entrenchment (engineers). The infiltration tactics and street fighter
@@ -305,7 +305,7 @@ threat map of where the player can attack next turn, and withdrawing damaged uni
 ## Difficulty
 
 The difficulty doesn't change the AI: it plays the same at every level. Only campaigns have a
-difficulty, single scenarios don't (`difficultyModifiers`, prototypes.ts):
+difficulty, single scenarios don't (`difficultyModifiers`, core/tables.ts):
 
 | Level | Start prestige | Minimum prestige per turn | Turn limit | Score |
 |-------|----------------|---------------------------|------------|-------|

@@ -7,7 +7,7 @@ import type { GameMap } from "../src/map";
 import type { Scenario } from "../src/scenario";
 import type { Unit } from "../src/unit";
 import type { EquipmentModule } from "../src/equipment";
-import type { CoreUnit, SavedGame, UnitState } from "../src/state";
+import type { CoreUnit, SavedGame, UnitState } from "../src/core/state";
 
 type Json = Record<string, unknown>;
 

@@ -16,7 +16,7 @@ import { fightRecorder } from "../cli/fightlog";
 import { CombatLog } from "../src/combatlog";
 import type { Unit } from "../src/unit";
 import { sideOf, unitById } from "../src/core/world";
-import { terrainNames, terrainType } from "../src/prototypes";
+import { terrainNames, terrainType } from "../src/core/tables";
 
 const AXIS = 0;
 const seenEnemies = (g: ReturnType<typeof open>) =>

@@ -25,8 +25,8 @@
  * turn plans it again (#71).
  */
 
-import type { Command, Refusal } from "../commands";
-import { playerType } from "../prototypes";
+import type { Command, Refusal } from "./command";
+import { playerType } from "./tables";
 import type { Controller, Order, ViewEvent } from "./controller";
 import type { GameEvent } from "./events";
 import { begin, resume, step } from "./step";

@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType, playerType, prestigeGains, scoreGains, unitClass } from "../prototypes";
+import { leaderType, playerType, prestigeGains, scoreGains, unitClass } from "./tables";
 import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer, writeUnit } from "./draft";
 import type { PathStep } from "./events";
 import { directionTo } from "./geometry";

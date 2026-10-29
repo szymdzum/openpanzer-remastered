@@ -2,7 +2,8 @@
 //The player's commands (src/commands.ts) on a small map built by hand: what each one checks,
 //what it does on the core through the game's objects, and when the move and the attack finish
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { Commands, type Command } from "../src/commands";
+import { Commands } from "../src/commands";
+import type { Command } from "../src/core/command";
 import { engineContext, setEngineContext, touched } from "../src/context";
 import { Equipment } from "../src/equipment";
 import { GameRules } from "../src/gamerules";
@@ -10,7 +11,8 @@ import type { GameMap, Player } from "../src/map";
 import { Rng } from "../src/core/random";
 import type { Scenario } from "../src/scenario";
 import { Transport, type Unit } from "../src/unit";
-import { type Cell, terrainType, unitClass } from "../src/prototypes";
+import { type Cell } from "../src/prototypes";
+import { terrainType, unitClass } from "../src/core/tables";
 import { smallGame, smallGameUnits } from "./smallgame";
 
 const check = (sc: Scenario, cmd: Command) => Commands.check(sc, cmd);
