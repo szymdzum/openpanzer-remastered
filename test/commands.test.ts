@@ -7,7 +7,7 @@ import { engineContext, setEngineContext, touched } from "../src/context";
 import { Equipment } from "../src/equipment";
 import { GameRules } from "../src/gamerules";
 import type { GameMap, Player } from "../src/map";
-import { Rng } from "../src/rng";
+import { Rng } from "../src/core/random";
 import type { Scenario } from "../src/scenario";
 import { Transport, type Unit } from "../src/unit";
 import { type Cell, terrainType, unitClass } from "../src/prototypes";

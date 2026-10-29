@@ -22,7 +22,7 @@
 
 import type { Command } from "../commands";
 import { type AIConfig, movMethod, unitClass } from "../prototypes";
-import { nextRandom, type RngStream } from "../rng";
+import { nextRandom, type RngStream } from "./random";
 import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
 import type { Controller, Played } from "./controller";

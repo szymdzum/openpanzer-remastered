@@ -29,7 +29,7 @@ import { Equipment, type EquipmentIndexes } from "./equipment";
 import { Transport, Unit } from "./unit";
 import { type GameMap, type Hex, Player, type PlayerDossier } from "./map";
 import { Scenario } from "./scenario";
-import { Rng } from "./rng";
+import { Rng } from "./core/random";
 import type { Campaign } from "./campaign";
 import { createWorld } from "./core/create";
 import type { Sight } from "./core/types";
@@ -430,7 +430,7 @@ function copyData<T>(x: T): T {
 }
 
 //Where the game's and the AI's streams are (D8): the cosmetic stream isn't state. Null while the
-//game stream isn't seeded: it reads Math.random then (src/rng.ts), whose position nobody can read
+//game stream isn't seeded: it reads Math.random then (src/core/random.ts), whose position nobody can read
 function rngStreams(): RngStreams | null {
 	return Rng.game.state === null || Rng.ai.state === null ? null : { game: Rng.game.state, ai: Rng.ai.state };
 }

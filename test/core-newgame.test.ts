@@ -19,7 +19,7 @@ test("A scenario file starts the same game on the core as in the game", async ()
 	let leaders = 0;
 	for (const file of files) {
 		const game = await freshGame();
-		const { Rng } = await import("../src/rng");
+		const { Rng } = await import("../src/core/random");
 		const { toData } = await import("../src/state");
 		Rng.game.state = SEEDS.game;
 		Rng.ai.state = SEEDS.ai;
@@ -41,7 +41,7 @@ test("A scenario started against the AI, or the scripted tutorial, starts the sa
 		["tutorial.xml", [2, 2, 2, 2]]];
 	for (const [file, isAI] of cases) {
 		const game = await freshGame();
-		const { Rng } = await import("../src/rng");
+		const { Rng } = await import("../src/core/random");
 		const { toData } = await import("../src/state");
 		const { uiSettings } = await import("../src/prototypes");	//(the fresh modules')
 		Rng.game.state = SEEDS.game;

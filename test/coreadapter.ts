@@ -7,7 +7,7 @@ import type { GameRulesModule, rulesOn } from "../src/gamerules";
 import type { Scenario } from "../src/scenario";
 import type { EquipmentModule } from "../src/equipment";
 import type { Transport, Unit } from "../src/unit";
-import type { RngStream } from "../src/rng";
+import type { RngStream } from "../src/core/random";
 import type { toData as ToData } from "../src/state";
 import { createWorld } from "../src/core/create";
 import { emptySight, unitById } from "../src/core/world";

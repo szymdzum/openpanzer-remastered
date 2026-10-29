@@ -181,7 +181,7 @@ reinforces, and how far each unit is from one. The staff reads it:
 
 ## Across the layers
 
-- **Determinism.** It draws only from the AI's stream (`Rng.aiRandom`, src/rng.ts, CLAUDE.md's
+- **Determinism.** It draws only from the AI's stream (`Rng.aiRandom`, src/core/random.ts, CLAUDE.md's
   rule on streams); a branched world's dice move only in the branch, since the stream's position
   is part of the state. A search budget counted in nodes, not milliseconds. The harness, the replays and the contracts work as
   they do today.

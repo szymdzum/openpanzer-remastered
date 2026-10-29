@@ -12,7 +12,7 @@
 
 import { uiSettings } from "./prototypes";
 import { Equipment } from "./equipment";
-import { Rng } from "./rng";
+import { Rng } from "./core/random";
 import type { Scenario } from "./scenario";
 import { campaignState, fromData, type PlayerState, type RngStreams } from "./state";
 import { awardedPrototype, coreCountries } from "./core/campaign";

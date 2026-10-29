@@ -6,7 +6,7 @@
 //src/state.ts), then the turns ended until the scenario's end, its message, and the campaign's next scenario starting.
 //
 //It fails on a console error, an uncaught error or an unhandled rejection in the page, or a step that doesn't show what
-//it should. Every random stream is seeded (src/rng.ts), so it plays the same game every time. The page knows nothing of
+//it should. Every random stream is seeded (src/core/random.ts), so it plays the same game every time. The page knows nothing of
 //the test: the test reads the page's own modules (the dev server serves each once) to know where the units are on the
 //canvas, which hexes a click can take, and to compare the saved game.
 //
@@ -35,7 +35,7 @@ const FAILURE = "harness/out/e2e-failure.png";
 type Probe = {
 	game: typeof import("../../src/session").game;
 	toData: typeof import("../../src/state").toData;
-	Rng: typeof import("../../src/rng").Rng;
+	Rng: typeof import("../../src/core/random").Rng;
 	uiSettings: typeof import("../../src/prototypes").uiSettings;
 	hexCentre: typeof import("../../src/view/hexgrid").hexCentre;
 	selectionOf: typeof import("../../src/view/mapview").selectionOf;
@@ -45,7 +45,7 @@ type Probe = {
 	isAir: typeof import("../../src/core/units").isAir;
 };
 type Probed = { e2e: Probe };
-const MODULES = ["/src/session.ts", "/src/state.ts", "/src/rng.ts", "/src/prototypes.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
+const MODULES = ["/src/session.ts", "/src/state.ts", "/src/core/random.ts", "/src/prototypes.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
 	"/src/view/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
 
 const errors: string[] = [];

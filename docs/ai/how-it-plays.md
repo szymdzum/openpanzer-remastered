@@ -3,7 +3,7 @@
 The AI is a controller on the new core (docs/CORE.md, "The AI"): `aiController` in src/core/ai.ts,
 scores in src/core/aiscore.ts, settings in `aiDefaultConfig` (src/prototypes.ts), which the rules
 the game plays by hand it (`ai`, src/core/rules.ts). It reproduces the bundle's AI exactly, draw
-for draw on the AI's own random stream (src/rng.ts), apart from the bugs fixed since (#74, #75,
+for draw on the AI's own random stream (src/core/random.ts), apart from the bugs fixed since (#74, #75,
 #77, #82, #100, #101, #207, #224, #21).
 
 ## The turn

@@ -10,7 +10,7 @@
 import {
 	leaderType, roadType, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD, unitClass, unitEntrenchRate, unitType
 } from "../prototypes";
-import { nextRandom, type RngStream } from "../rng";
+import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";
 import { distance } from "./geometry";

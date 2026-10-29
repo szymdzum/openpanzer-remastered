@@ -13,7 +13,7 @@ async function restore(name: string) {
 	const scenario = await restoreState(fixture.state);
 	const { Equipment } = await import("../src/equipment");
 	const { toData } = await import("../src/state");
-	const { Rng } = await import("../src/rng");
+	const { Rng } = await import("../src/core/random");
 	const { terrainType, leaderType } = await import("../src/prototypes");
 	const { rulesOn } = await import("../src/gamerules");
 	return { fixture, scenario, Equipment, toData, Rng, terrainType, leaderType, rulesOn };

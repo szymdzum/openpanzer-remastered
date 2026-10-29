@@ -40,7 +40,7 @@ import type { SessionEnd } from "./core/session";
 import type { World } from "./core/types";
 import { setEngineContext, touched } from "./context";
 import { defined } from "./util";
-import { Rng } from "./rng";
+import { Rng } from "./core/random";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
 import type { CampaignProgress } from "./state";
@@ -490,7 +490,7 @@ export class GameHost {
 	}
 
 	//A number in [0, 1) of the cosmetic stream, for the screen's sprite and sound picks: never the game's or the
-	//AI's, whose order of draws is behavior (src/rng.ts)
+	//AI's, whose order of draws is behavior (src/core/random.ts)
 	cosmetic(): number {
 		return Rng.cosmeticRandom();
 	}
