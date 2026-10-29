@@ -29,7 +29,7 @@ export function carried(r: Restored) {
 	};
 }
 
-//An AI action as the command the game sends for it (src/host.ts processAction), null for the UI's
+//An AI action as the command the game sends for it (src/app/host.ts processAction), null for the UI's
 type AIAction = import("../src/ai").AIAction;
 type Command = import("../src/core/command").Command;
 async function commandOf(): Promise<(a: AIAction) => Command | null> {

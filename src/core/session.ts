@@ -1,6 +1,6 @@
 /**
  * Session - a game played headless on the core: the players' controllers, the turns in the old game's
- * order, the end of the game. What the game host's turn loop does (src/host.ts processTurn,
+ * order, the end of the game. What the game host's turn loop does (src/app/host.ts processTurn,
  * processAIActions, endTurn), without the screen, the clock and the save
  *
  * Licensed under the GPL license:

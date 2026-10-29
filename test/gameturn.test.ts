@@ -1,4 +1,4 @@
-//The running game's turns on the core's session (src/coresession.ts, #137): a game of AI players played
+//The running game's turns on the core's session (src/app/driver.ts, #137): a game of AI players played
 //through Game itself (processTurn, processAIActions, processAction and endTurn: the host's), shown on a
 //stand-in for the old UI's screen (src/oldscreen.ts until #351) that plays the move and the attack whole, as
 //the old UI did before it animated them. The game goes on one tick at a time, as the turn loop ticked until #375:

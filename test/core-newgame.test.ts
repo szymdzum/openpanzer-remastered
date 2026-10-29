@@ -1,6 +1,6 @@
 //A new game on the core's newGame against the game's (docs/CORE.md, #135; the old engine's until
 //#137): the scenario files of the scenario list, each started by Game.newScenario (its players human,
-//the streams seeded: the scenario loader's files, src/coreload.ts) and by the core's newGame from the
+//the streams seeded: the scenario loader's files, src/app/start.ts) and by the core's newGame from the
 //same file read by scenariofile.ts, the equipment read from its own files: the same toData, as JSON
 //(the save's key order, the streams' positions after the leaders' draws). CI starts every eighth
 //scenario of the list; CORE_ALL_SCENARIOS=1 starts them all

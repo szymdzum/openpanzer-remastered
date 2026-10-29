@@ -7,7 +7,7 @@
  *
  * The AI itself is the core's controller now: it plans its turn at the turn's start, in the session.
  * A handler only hands out the session's orders, as the old AI's actions (harness/replay.js wraps
- * getAction and hashes the state there), and the host's processAction plays them (src/host.ts). A
+ * getAction and hashes the state there), and the host's processAction plays them (src/app/host.ts). A
  * handler made while the game runs (the replay's `new AI(player, map)`) joins its player to the session.
  */
 
@@ -28,7 +28,7 @@ export type AIAction =
 	| { type: A["viewport"]; param: [at: Cell] }
 	| { type: A["upgrade"] | A["buy"] | A["deploy"] | A["endturn"]; param: unknown[] };
 
-//Who plays the programs: the game's session (src/coresession.ts, set by game.ts). getAction: the
+//Who plays the programs: the game's session (src/app/driver.ts, set by game.ts). getAction: the
 //current player's next order as an action, null when it has none; join: a handler made while the
 //game runs joins its player
 export interface AIDriver {

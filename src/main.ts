@@ -64,7 +64,7 @@ rng.Rng.seed(rng.randomSeed());
 startNewUI(game.game.host);
 
 //The start on window load. game.ts did it while loading; here, so that importing it starts nothing. No turn
-//loop ticks: a program's turn goes on when the screen has shown its last action (src/host.ts, #375)
+//loop ticks: a program's turn goes on when the screen has shown its last action (src/app/host.ts, #375)
 window.addEventListener("load", game.gameStart);
 
 //The mirror's world kept for the screen's rules (src/mirror.ts), but under ?harness, whose scripts write

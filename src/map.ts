@@ -396,7 +396,7 @@ export class GameMap { //Map in the original, renamed: it replaced the built-in 
 	declare updateUnitList: () => void;
 	declare cleanup: () => void;
 
-	//What takes the units marked destroyed off the map (the game's: src/coresession.ts)
+	//What takes the units marked destroyed off the map (the game's: src/app/driver.ts)
 	declare static removeDestroyed: (map: GameMap) => void;
 
 	//The selected unit: the old UI's selection's, not the game's (src/selection.ts, #377)

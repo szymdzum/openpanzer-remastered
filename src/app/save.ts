@@ -12,7 +12,7 @@
  * ones), or imports a save of the format before it (GameStateExport, the JSON of the game's
  * objects): what that save had is kept, what it never stored is listed as unknown, and the load
  * keeps the game's own there (the equipment lists as loaded, the random streams where they are,
- * the campaign's progress), as loading it always did. GameState (src/gamestate.ts) reads and
+ * the campaign's progress), as loading it always did. GameState (src/app/storage.ts) reads and
  * writes the saves, loads the equipment and the campaign; this builds the scenario.
  */
 

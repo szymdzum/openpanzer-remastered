@@ -87,7 +87,7 @@ class Play {
 	}
 }
 
-//The end of turn as Game.endTurn plays it on the session (src/coresession.ts endGameTurn), no player
+//The end of turn as Game.endTurn plays it on the session (src/app/driver.ts endGameTurn), no player
 //planning (the people play): the selection cleared, the end of turn step, the resupplies of the new
 //turn in the combat log, the next player's side shown, its reinforcements arrived, each in the log
 function endTurn(p: Play) {

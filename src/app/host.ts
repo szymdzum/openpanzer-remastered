@@ -8,8 +8,8 @@
  * http://www.gnu.org/licenses/gpl.html
  *
  * The host decides; the screen only shows. It tells the screen what to show through the screen
- * interface (src/screen.ts), which the UI implements (src/view/screen.tsx) and a program that shows
- * nothing too (src/nullscreen.ts). It also plays a program's turn: its actions one after the other, each
+ * interface (src/app/screen.ts), which the UI implements (src/view/screen.tsx) and a program that shows
+ * nothing too (src/app/nullscreen.ts). It also plays a program's turn: its actions one after the other, each
  * one the screen shows waited for until the screen calls its shown (#375: there is no turn loop ticking
  * any more), then the end of its turn. What goes on is told: the screen's shown, the message the player
  * clicked away (goOn: then the campaign's next scenario loads), the person's end of turn, the screen once
@@ -52,11 +52,11 @@ import type { Screen, ShownCommand } from "./screen";
 //How a victory was won, as the loss texts and the campaign name it (endGameType)
 const endTypes = { capture: endGameType.moveCapture, elimination: endGameType.noEnemyLeft };
 
-//The game's course: Game's members hand it what the player and the files do (src/game.ts), the screen
+//The game's course: Game's members hand it what the player and the files do (src/app/game.ts), the screen
 //shows what it says. What a campaign keeps between its scenarios is here, as Game's closure kept it
 export class GameHost {
 	declare game: Game;
-	declare screen: Screen;		//what shows the game (src/screen.ts)
+	declare screen: Screen;		//what shows the game (src/app/screen.ts)
 	declare localSide: number;		//which sides play on this screen when the game started (localSideOf)
 	declare campaignPlayer: Player | null;	//the player that plays the campaign on this screen
 	declare savedPlayer: Player | null;	//its copy kept between the campaign's scenarios
@@ -102,7 +102,7 @@ export class GameHost {
 
 	//The scenario loaded, from its file or a save (isRestore): the players set up, the session started,
 	//the save, the screen. The scenario's start gave the players their prestige and a campaign's start its
-	//player (the core's newGame, src/coreload.ts)
+	//player (the core's newGame, src/app/start.ts)
 	scenarioLoaded(intro: string | null | undefined, isRestore: boolean) {
 		const g = this.game;
 		if (!g.scenario.isLoaded) {
@@ -194,7 +194,7 @@ export class GameHost {
 		this.carryCampaignPlayer(p, isRestore);
 	}
 
-	//The campaign player: the scenario's start carried it already (src/coreload.ts). Saved when the
+	//The campaign player: the scenario's start carried it already (src/app/start.ts). Saved when the
 	//campaign starts, as the file had it before the campaign's start; a load during the campaign copies
 	//the saved one over it (kept #196)
 	carryCampaignPlayer(p: Player, isRestore: boolean) {
@@ -471,7 +471,7 @@ export class GameHost {
 		this.showing = false;
 	}
 
-	//The turn ends on the session (src/coresession.ts): the next player's turn start, the save, the side
+	//The turn ends on the session (src/app/driver.ts): the next player's turn start, the save, the side
 	//shown, the reinforcements; or the game's end at the turn limit (src/core/turn.ts endsAtTurnLimit), true
 	//then: the host tells the end (whichever side's last turn ended it, the person's end turn button or the
 	//program's turn, #365), and the next turn's info isn't shown over it
@@ -748,7 +748,7 @@ function localSideOf(players: Player[]): number {
 }
 
 //The game the engine plays in, made the running one: the programs are the session's controllers
-//(src/coresession.ts), the scenarios start on the core (src/coreload.ts), the selection puts a unit back
+//(src/app/driver.ts), the scenarios start on the core (src/app/start.ts), the selection puts a unit back
 //aboard by the game's embark, and the engine reads the game's fields at the moment it needs them
 //(src/context.ts), so what a harness or a test assigns to game.* is seen as before
 export function runGame(g: Game) {

@@ -1,5 +1,5 @@
 //GameState: saved games loaded back. Every engine fixture's state is a save of the reference in the
-//format before (src/savegame.ts GameStateExport): imported, it is what that save had; loaded and
+//format before (src/app/save.ts GameStateExport): imported, it is what that save had; loaded and
 //saved again, it shows what a load keeps and what it loses. A load is a fixed point after one pass
 //(load, save, load gives the same save), but the first load loses fields: those tests are test.fails
 //with the issue that describes the loss, a fix flips them

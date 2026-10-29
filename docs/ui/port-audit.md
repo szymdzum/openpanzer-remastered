@@ -40,7 +40,7 @@ The old UI's stylesheet, game/css/ui.css, is one minified line: its rows name th
 | Deployment zone (overlays.ts:59 `drawDeployZone`) | while deploying | render.ts:250 `hexstyle.deploy` | port |
 | Deployment ghost, the unit drawn on the hovered hex (mapdraw.ts:205 `drawGhost`) | while deploying | none | cut, not done in this round |
 | Placing tag beside the hovered hex (map.tsx:357 `PlaceTag`) | while deploying | none: the status line says what a click does | cut, not done in this round |
-| Combat results: loss over each fighter, one word (src/view/resultmarks.tsx, src/view/results.ts) | after a combat, 2.5 s | the bouncing labels (src/ui.ts:698 `uiShowAlert`, src/dom.ts:311): the losses, Rugged Defense, OverRun, Attack Stopped, New Leader | port; the chip's note under the loss and the retreat's dashed trail (attackdraw.ts:49) have no old counterpart: cut, not done in this round |
+| Combat results: loss over each fighter, one word (src/view/resultmarks.tsx, src/view/results.ts) | after a combat, 2.5 s | the bouncing labels (src/ui.ts:698 `uiShowAlert`, src/app/page.ts:311): the losses, Rugged Defense, OverRun, Attack Stopped, New Leader | port; the chip's note under the loss and the retreat's dashed trail (attackdraw.ts:49) have no old counterpart: cut, not done in this round |
 | Animations and sounds (src/view/motiondraw.ts, src/view/beats.ts) | each step | src/render.ts:427-470, src/ui.ts:562 | port |
 | Strategic map (src/view/strategic.ts:32, src/view/strategicdraw.ts) | Z | render.ts:254-285, src/ui.ts:1550 `uiToggleMapZoom` | port |
 

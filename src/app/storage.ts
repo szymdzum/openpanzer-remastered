@@ -52,7 +52,7 @@ export class GameState {
 	declare exportGameState: () => string;
 
 	constructor(Game: Game | null) {
-		//The game is one item (src/savegame.ts); a local save of the format before is three, the
+		//The game is one item (src/app/save.ts); a local save of the format before is three, the
 		//scenario, its players and the campaign's progress, read when there's no game item
 		var saveName = {
 			game: 'openpanzer-game-'+MAJOR_VERSION,
@@ -207,7 +207,7 @@ export class GameState {
 			restoreItem(saveName.settings, null, function() {}, 1);
 		}
 
-		//Returns the game (src/savegame.ts) as a JSON string
+		//Returns the game (src/app/save.ts) as a JSON string
 		this.exportGameState = function() {
 			return JSON.stringify(writeSave(Game.scenario, Game, Game.rules));
 		}

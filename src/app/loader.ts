@@ -22,13 +22,13 @@ export const scenarioPath = "resources/scenarios/data/";
 
 //Loading is asynchronous: the scenario XML, then the map image (its size gives the real map
 //size), then the equipment of the players countries and of the units; then ScenarioLoader.build makes the game (the
-//core's newGame, src/coreload.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load (an
+//core's newGame, src/app/start.ts, #137) and calls scen.onLoadFinished(). A file that doesn't load (an
 //equipment file too, #367) calls it with scen.isLoaded false.
 //A class with its closure body as the constructor: the methods are own properties, as the original
 export class ScenarioLoader {
-	//Who makes the game once its files are in (src/coreload.ts, set by game.ts)
+	//Who makes the game once its files are in (src/app/start.ts, set by game.ts)
 	declare static build: (scen: Scenario, file: ScenarioFile, imageSize: [number, number]) => void;
-	//The countries of the core units a campaign carries in, loaded beside the players' (src/coreload.ts)
+	//The countries of the core units a campaign carries in, loaded beside the players' (src/app/start.ts)
 	declare static coreCountries: () => number[];
 	declare noCache: boolean;
 	declare loadScenario: (scenarioObject: Scenario) => void;

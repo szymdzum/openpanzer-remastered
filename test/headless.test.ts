@@ -56,7 +56,7 @@ test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => 
 	expect([...reached].filter((m) => [...uiModules, "app/driver", "app/start"].includes(m))).toEqual([]);
 });
 
-//The game host (src/host.ts) plays the game's course on the engine and on the game's glue to the core
+//The game host (src/app/host.ts) plays the game's course on the engine and on the game's glue to the core
 //(coresession, coreload): it reaches no UI module, no game.ts and no dom.ts either
 test("The game host's imports reach no UI module, no game.ts and no dom.ts", () => {
 	const reached = reachedFrom(["app/host"]);
@@ -64,7 +64,7 @@ test("The game host's imports reach no UI module, no game.ts and no dom.ts", () 
 	expect(reached).toContain("app/driver");
 });
 
-//The game shows itself through the screen interface (src/screen.ts, #374): the host, the session's glue and
+//The game shows itself through the screen interface (src/app/screen.ts, #374): the host, the session's glue and
 //the screen that shows nothing reach no UI module; the page gives the host the UI's screen (src/main.ts, #351)
 test("The screen interface and the screen that shows nothing reach no UI module (#374)", () => {
 	const reached = reachedFrom(["app/screen", "app/nullscreen", "app/driver", "commands"]);
@@ -72,7 +72,7 @@ test("The screen interface and the screen that shows nothing reach no UI module 
 });
 
 //The new UI (src/view/, #380) reads the game through the core, the game host and the screen interface: what
-//its modules import from outside src/view/ is only those and src/prototypes.ts (the settings), and none of
+//its modules import from outside src/view/ is only those and src/app/settings.ts (the settings), and none of
 //it reaches an old UI module or game.ts
 test("The new UI's imports reach no old UI module and no game.ts (#380)", () => {
 	const view = path.join(root, "src/view"), outside = new Set<string>();

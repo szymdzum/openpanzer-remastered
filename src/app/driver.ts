@@ -2,7 +2,7 @@
  * CoreSession - the running game's turns on the core's session (#137): the players' controllers (the
  * AI, the tutorial), their orders handed out as the old handlers' actions, the end of turn with the
  * next player's turn start, the reinforcements and the save, each mirrored into the game's
- * objects (src/mirror.ts) and told to the screen (src/screen.ts) where the old game told it
+ * objects (src/mirror.ts) and told to the screen (src/app/screen.ts) where the old game told it
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

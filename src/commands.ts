@@ -98,7 +98,7 @@ interface CommandResults {
 	upgradeUndeployed: boolean;
 	disband: boolean;
 	sell: boolean;
-	endTurn: null; //(the game ends a turn through its session, src/coresession.ts: this is the step alone)
+	endTurn: null; //(the game ends a turn through its session, src/app/driver.ts: this is the step alone)
 }
 export type ResultOf<T extends CommandType> = CommandResults[T];
 

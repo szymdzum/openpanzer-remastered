@@ -26,9 +26,9 @@ import { game } from "./running";
 import type { CampaignProgress } from "../core/state";
 
 //Game is what the page, the harness and the tests hold of the running game: its fields, and the members that
-//hand the game's course and a program's turn to its host (src/host.ts), which keeps the campaign's progress and
+//hand the game's course and a program's turn to its host (src/app/host.ts), which keeps the campaign's progress and
 //shows the game on its screen: the page's UI (src/view/screen.tsx, given by src/main.ts), a screen that shows
-//nothing until then (src/nullscreen.ts). The constructor's body sets up the methods, typed as declare fields
+//nothing until then (src/app/nullscreen.ts). The constructor's body sets up the methods, typed as declare fields
 //(docs/TYPES.md rule 3). A class isn't hoisted: the game is made after it
 export class Game {
 	declare state: GameState;
@@ -39,8 +39,8 @@ export class Game {
 	declare spotSide: number;
 	declare rules: RulesetName;
 	declare uiMessageClicked: boolean;
-	declare session: Session | null; //the core's session the game plays on (src/coresession.ts), null before a scenario
-	declare host: GameHost; //the game's course: scenarios, the campaign, the end (src/host.ts)
+	declare session: Session | null; //the core's session the game plays on (src/app/driver.ts), null before a scenario
+	declare host: GameHost; //the game's course: scenarios, the campaign, the end (src/app/host.ts)
 	declare init: () => void;
 	declare endTurn: () => boolean; //true when the turn limit ended the game (the end announced)
 	declare setupGameState: () => void;
@@ -77,7 +77,7 @@ export class Game {
 				this.newScenario.bind(this, "failRestore"));
 		}
 
-		//A program's turn is the host's (src/host.ts), and so is the harness's turn loop (processTurn)
+		//A program's turn is the host's (src/app/host.ts), and so is the harness's turn loop (processTurn)
 		this.endTurn = function() { return this.host.endTurn(); }
 
 		this.session = null;
@@ -115,7 +115,7 @@ Game.defaultScenario = DEFAULT_SCENARIO;
 Game.defaultScenarioAI = [0, 1, 0, 0]; //uiSettings.isAI for the default scenario
 
 //The running game lives in session.ts, where the UI reads it; game.ts makes it, the host wires the engine
-//to it (src/host.ts runGame), and it is re-exported for main.ts, the harness and the tests
+//to it (src/app/host.ts runGame), and it is re-exported for main.ts, the harness and the tests
 runGame(new Game());
 export { game };
 
