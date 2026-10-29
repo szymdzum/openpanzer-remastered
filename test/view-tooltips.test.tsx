@@ -1,4 +1,4 @@
-//The new UI's tooltips (src/view/hextip.ts, src/view/maptips.tsx, the rail's, Tooltips, #346) on hand-built worlds: the
+//The new UI's tooltips (src/view/map/hextip.ts, src/view/map/maptips.tsx, the rail's, Tooltips, #346) on hand-built worlds: the
 //hex under the pointer told in the status line as the old #locmsg (#441), the pins over units low on fuel or out of
 //ammo, the rail's tooltip with each button's key; in jsdom, no tooltip over the map however long the pointer rests, L
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -6,12 +6,12 @@ import { act, cleanup, fireEvent, render } from "@testing-library/preact";
 import { handWorld, type HandUnit } from "./coreworld";
 import type { World } from "../src/core/types";
 import { terrainType } from "../src/core/tables";
-import { locationOf, pinsOf } from "../src/view/hextip";
-import { hexCentre } from "../src/view/hexgrid";
-import { MapView } from "../src/view/map";
-import { Rail } from "../src/view/rail";
-import { StatusBar } from "../src/view/statusbar";
-import { createStore } from "../src/view/store";
+import { locationOf, pinsOf } from "../src/view/map/hextip";
+import { hexCentre } from "../src/view/map/hexgrid";
+import { MapView } from "../src/view/map/map";
+import { Rail } from "../src/view/hud/rail";
+import { StatusBar } from "../src/view/hud/statusbar";
+import { createStore } from "../src/view/store/store";
 
 beforeEach(() => {
 	vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(new Proxy({}, { get: (_t, name) =>

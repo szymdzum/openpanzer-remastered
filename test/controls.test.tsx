@@ -1,7 +1,7 @@
-//The new UI's settings controls and text field (src/view/controls.tsx) in jsdom
+//The new UI's settings controls and text field (src/view/components/controls.tsx) in jsdom
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
-import { Input, Slider, Toggle } from "../src/view/controls";
+import { Input, Slider, Toggle } from "../src/view/components/controls";
 
 afterEach(cleanup);
 

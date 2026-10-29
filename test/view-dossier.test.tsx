@@ -1,4 +1,4 @@
-//The dossier and the campaign's end on the new UI (src/view/dossier.ts, src/view/dossierwindow.tsx; Dossier,
+//The dossier and the campaign's end on the new UI (src/view/windows/dossier.ts, src/view/windows/dossierwindow.tsx; Dossier,
 //CampaignEnd, #348) on a hand-built campaign world: only what the game keeps, the counts by class, their sums and the
 //medal record; the window from the reports' Dossier button and at the campaign's end, in jsdom
 import { afterEach, expect, test, vi } from "vitest";
@@ -6,12 +6,12 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { handWorld } from "./coreworld";
 import type { World } from "../src/core/types";
 import { unitClass } from "../src/core/tables";
-import { campaignEndOf, dossierOf } from "../src/view/dossier";
-import { DossierWindow } from "../src/view/dossierwindow";
-import { LogWindow } from "../src/view/logwindow";
-import { MessageDialog } from "../src/view/message";
-import { createStore } from "../src/view/store";
-import { TurnBanner } from "../src/view/turnbanner";
+import { campaignEndOf, dossierOf } from "../src/view/windows/dossier";
+import { DossierWindow } from "../src/view/windows/dossierwindow";
+import { LogWindow } from "../src/view/windows/logwindow";
+import { MessageDialog } from "../src/view/hud/message";
+import { createStore } from "../src/view/store/store";
+import { TurnBanner } from "../src/view/hud/turnbanner";
 
 afterEach(cleanup);
 

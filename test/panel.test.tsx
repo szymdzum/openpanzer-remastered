@@ -1,8 +1,8 @@
-//The new UI's containers (src/view/panel.tsx) in jsdom: the HUD panel, the window, the scrim and the stamp
+//The new UI's containers (src/view/components/panel.tsx) in jsdom: the HUD panel, the window, the scrim and the stamp
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
-import { Panel, Scrim, Stamp, Window } from "../src/view/panel";
-import { Button } from "../src/view/button";
+import { Panel, Scrim, Stamp, Window } from "../src/view/components/panel";
+import { Button } from "../src/view/components/button";
 
 afterEach(cleanup);
 

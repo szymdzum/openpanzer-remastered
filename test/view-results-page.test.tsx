@@ -9,10 +9,10 @@ import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { uiSettings } from "../src/app/settings";
 import { terrainType } from "../src/core/tables";
-import { MapView } from "../src/view/map";
+import { MapView } from "../src/view/map/map";
 import { pageSounds } from "../src/view/player";
-import { StatusBar } from "../src/view/statusbar";
-import { createStore, type StoreHost } from "../src/view/store";
+import { StatusBar } from "../src/view/hud/statusbar";
+import { createStore, type StoreHost } from "../src/view/store/store";
 
 beforeEach(() => {
 	vi.useFakeTimers();

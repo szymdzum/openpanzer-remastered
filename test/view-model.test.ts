@@ -1,5 +1,5 @@
 // @vitest-environment node
-//The new UI's view model (src/view/model.ts, #380) on the small game built by hand (test/smallgame.ts): what
+//The new UI's view model (src/view/store/model.ts, #380) on the small game built by hand (test/smallgame.ts): what
 //the screens show of a world, and why a control is off, without the DOM. Germany (player 0) is a person's,
 //the Soviet Union (player 1) the AI's; the side shown is the Axis
 import { expect, test } from "vitest";
@@ -7,7 +7,7 @@ import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 import { worldOf } from "../src/legacy/mirror";
 import { classicRules, remasterRules } from "../src/core/rules";
 import type { World } from "../src/core/types";
-import { dateOf, endTurnRefusal, isYourTurn, prestigeText, reasonOf, refusalOf, statusOf, yourPlayer } from "../src/view/model";
+import { dateOf, endTurnRefusal, isYourTurn, prestigeText, reasonOf, refusalOf, statusOf, yourPlayer } from "../src/view/store/model";
 
 //The small game's world, with the units given and the current player, the side shown 0
 function world(units = smallGameUnits, current = 0): World {

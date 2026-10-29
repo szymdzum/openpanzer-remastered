@@ -1,4 +1,4 @@
-//The new UI's status bar (src/view/statusbar.tsx, StatusBar, #346) in jsdom, on the small game built by hand: the
+//The new UI's status bar (src/view/hud/statusbar.tsx, StatusBar, #346) in jsdom, on the small game built by hand: the
 //cells the card has, the rules the game plays (#317), the two window buttons off until their windows, the status line
 import { afterEach, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/preact";
@@ -6,8 +6,8 @@ import { smallGame, smallGameData } from "./smallgame";
 import { worldOf } from "../src/legacy/mirror";
 import { remasterRules } from "../src/core/rules";
 import type { World } from "../src/core/types";
-import { StatusBar } from "../src/view/statusbar";
-import { createStore } from "../src/view/store";
+import { StatusBar } from "../src/view/hud/statusbar";
+import { createStore } from "../src/view/store/store";
 
 afterEach(cleanup);
 

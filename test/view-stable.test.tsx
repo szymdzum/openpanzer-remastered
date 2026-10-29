@@ -7,10 +7,10 @@ import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { App } from "../src/view/app";
-import { createStore } from "../src/view/store";
-import { UnitInfoPanel } from "../src/view/infopanel";
-import { UnitContextMenu } from "../src/view/contextmenu";
-import { TurnBanner } from "../src/view/turnbanner";
+import { createStore } from "../src/view/store/store";
+import { UnitInfoPanel } from "../src/view/hud/infopanel";
+import { UnitContextMenu } from "../src/view/components/contextmenu";
+import { TurnBanner } from "../src/view/hud/turnbanner";
 import { sameData, stableComputed } from "../src/view/stable";
 import { signal } from "@preact/signals";
 

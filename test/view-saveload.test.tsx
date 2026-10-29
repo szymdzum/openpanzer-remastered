@@ -1,4 +1,4 @@
-//The save and load window (src/view/saveload.ts, saveloadstate.ts, saveloadwindow.tsx, #349): the old
+//The save and load window (src/view/windows/saveload.ts, saveloadstate.ts, saveloadwindow.tsx, #349): the old
 //#smState's file and cloud saves and loads (src/uibuilder.ts buildGameStateMenu, gameStateButton, onCloudSaved, before #351), on the
 //host, and a game saved to a file and loaded back on a real game state
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -6,9 +6,9 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { handWorld } from "./coreworld";
 import { fakeMapImages, until } from "./lifecycle";
 import { headlessGame } from "./headlessgame";
-import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "../src/view/saveload";
-import { StartMenu } from "../src/view/startmenu";
-import { createStore } from "../src/view/store";
+import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "../src/view/windows/saveload";
+import { StartMenu } from "../src/view/windows/startmenu";
+import { createStore } from "../src/view/store/store";
 import { newScreen } from "../src/view/screen";
 import { nullScreen } from "../src/app/nullscreen";
 import { type CloudReport, type CloudSaved, GameState } from "../src/app/storage";

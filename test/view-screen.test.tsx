@@ -1,6 +1,6 @@
 //The new UI as the game's screen (src/view/screen.tsx, #380) in jsdom: a scenario played on the game host
 //through it, the person's commands sent from its controls, the AI's turn shown, the tutorial's orders
-//clicked through; and its signals (src/view/store.ts), which render again only what changed
+//clicked through; and its signals (src/view/store/store.ts), which render again only what changed
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { fakeMapImages, until } from "./lifecycle";
@@ -8,8 +8,8 @@ import { headlessGame } from "./headlessgame";
 import { smallGame, smallGameData } from "./smallgame";
 import { nullScreen } from "../src/app/nullscreen";
 import { newScreen, startNewUI } from "../src/view/screen";
-import { createStore, type StoreHost } from "../src/view/store";
-import { prestigeText } from "../src/view/model";
+import { createStore, type StoreHost } from "../src/view/store/store";
+import { prestigeText } from "../src/view/store/model";
 import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import { uiSettings } from "../src/app/settings";

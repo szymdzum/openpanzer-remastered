@@ -1,8 +1,8 @@
-//The new UI's Button (src/view/button.tsx) in jsdom: what it renders and when it calls its handler
+//The new UI's Button (src/view/components/button.tsx) in jsdom: what it renders and when it calls its handler
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { signal } from "@preact/signals";
-import { Button } from "../src/view/button";
+import { Button } from "../src/view/components/button";
 
 afterEach(cleanup);
 

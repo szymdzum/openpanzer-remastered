@@ -1,4 +1,4 @@
-//The start of a turn on the new UI (src/view/turn.ts, src/view/turnbanner.tsx; TurnStart, TurnBanner, the AI indicator
+//The start of a turn on the new UI (src/view/turn.ts, src/view/hud/turnbanner.tsx; TurnStart, TurnBanner, the AI indicator
 //of Tooltips, #346) on the small game built by hand: the short report as the old UI computed it, what the enemy's turn
 //did from its steps' events, the first unit, the program's turn counted in units; the report and the indicator in jsdom
 import { afterEach, expect, test } from "vitest";
@@ -11,8 +11,8 @@ import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";
 import { playerType } from "../src/core/tables";
 import { aiStatusOf, firstUnitOf, noteEnemy, quietTurn, turnReportOf } from "../src/view/turn";
-import { AiIndicator, TurnBanner } from "../src/view/turnbanner";
-import { createStore } from "../src/view/store";
+import { AiIndicator, TurnBanner } from "../src/view/hud/turnbanner";
+import { createStore } from "../src/view/store/store";
 
 afterEach(cleanup);
 

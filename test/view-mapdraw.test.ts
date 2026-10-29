@@ -1,17 +1,17 @@
 // @vitest-environment node
-//The map's canvas (src/view/mapdraw.ts, #345) on a context that records what it is told: the MapOverlays
+//The map's canvas (src/view/map/mapdraw.ts, #345) on a context that records what it is told: the MapOverlays
 //card's order, the tokens' colours and widths, and the overlays at screen size at every map scale (ZoomLevels)
 import { expect, test } from "vitest";
 import { deployWorld, handWorld } from "./coreworld";
-import { fitViewport, toScreen, type Viewport } from "../src/view/canvas";
-import { strategicOf } from "../src/view/strategic";
-import { deploymentOf, ghostOf } from "../src/view/deploy";
-import { BRIDGE, drawMap, type Images, type Scene } from "../src/view/mapdraw";
-import { type MapUnit, mapUnits, pathOf, selectionOf } from "../src/view/mapview";
-import { fogOf, plaquesOf, supportOf } from "../src/view/mapinfo";
+import { fitViewport, toScreen, type Viewport } from "../src/view/map/canvas";
+import { strategicOf } from "../src/view/map/strategic";
+import { deploymentOf, ghostOf } from "../src/view/map/deploy";
+import { BRIDGE, drawMap, type Images, type Scene } from "../src/view/map/mapdraw";
+import { type MapUnit, mapUnits, pathOf, selectionOf } from "../src/view/map/mapview";
+import { fogOf, plaquesOf, supportOf } from "../src/view/map/mapinfo";
 import { hexIndex } from "../src/core/world";
 import { TOKENS } from "../src/view/tokens";
-import { hexCentre } from "../src/view/hexgrid";
+import { hexCentre } from "../src/view/map/hexgrid";
 
 const MAP = TOKENS.map;
 

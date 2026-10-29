@@ -1,5 +1,5 @@
 // @vitest-environment node
-//The attack cursor's view model (src/view/odds.ts, #441) on hand-built worlds: over a target, the two numbers the old
+//The attack cursor's view model (src/view/hud/odds.ts, #441) on hand-built worlds: over a target, the two numbers the old
 //UI's cursor showed (generateAttackCursor), the core's combat result before the attack with the support fire its side
 //sees; nothing off a target
 import { expect, test } from "vitest";
@@ -8,8 +8,8 @@ import { combatResult } from "../src/core/combat";
 import type { World } from "../src/core/types";
 import { unitById } from "../src/core/world";
 import { terrainType } from "../src/core/tables";
-import { selectionOf } from "../src/view/mapview";
-import { glanceOf } from "../src/view/odds";
+import { selectionOf } from "../src/view/map/mapview";
+import { glanceOf } from "../src/view/hud/odds";
 
 const PZ_IIA = 140, TP7 = 273, PIECHOTA = 270, WZ97 = 264;
 

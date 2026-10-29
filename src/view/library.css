@@ -3,12 +3,12 @@
    the cards (scripts/ui-design.mjs, docs/ui/index.html) load the same files. Every rule is in one
    of the cascade layers whose order tokens.css declares, once (docs/ui/handoff.md, CSS). */
 @import url("./base.css");
-@import url("./panel.css");
-@import url("./button.css");
-@import url("./tabs.css");
-@import url("./controls.css");
-@import url("./list.css");
-@import url("./meter.css");
-@import url("./facts.css");
-@import url("./tooltip.css");
-@import url("./unitinfo.css");
+@import url("./components/panel.css");
+@import url("./components/button.css");
+@import url("./components/tabs.css");
+@import url("./components/controls.css");
+@import url("./components/list.css");
+@import url("./components/meter.css");
+@import url("./components/facts.css");
+@import url("./components/tooltip.css");
+@import url("./hud/unitinfo.css");

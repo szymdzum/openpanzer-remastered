@@ -1,4 +1,4 @@
-//The unit card's line (src/view/unitline.ts, src/view/infopanel.tsx; UnitInfo, #37), the card hidden, its default size,
+//The unit card's line (src/view/hud/unitline.ts, src/view/hud/infopanel.tsx; UnitInfo, #37), the card hidden, its default size,
 //on hand-built worlds: the four gauges with what each means, the This turn chips, and their names for screen readers.
 //Every phrase is a core query's (test/unitfacts.test.ts checks those against the step and the attack)
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
@@ -7,10 +7,10 @@ import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { leaderType, terrainType } from "../src/core/tables";
-import { UnitInfoPanel } from "../src/view/infopanel";
-import { createStore } from "../src/view/store";
-import { unitCardOf } from "../src/view/unitcard";
-import type { CardLine, LineGauge } from "../src/view/unitline";
+import { UnitInfoPanel } from "../src/view/hud/infopanel";
+import { createStore } from "../src/view/store/store";
+import { unitCardOf } from "../src/view/hud/unitcard";
+import type { CardLine, LineGauge } from "../src/view/hud/unitline";
 
 afterEach(cleanup);
 

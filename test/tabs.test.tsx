@@ -1,7 +1,7 @@
-//The new UI's tabs and segmented control (src/view/tabs.tsx) in jsdom: their roles, states and keys
+//The new UI's tabs and segmented control (src/view/components/tabs.tsx) in jsdom: their roles, states and keys
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
-import { SegmentedControl, Tabs } from "../src/view/tabs";
+import { SegmentedControl, Tabs } from "../src/view/components/tabs";
 
 afterEach(cleanup);
 

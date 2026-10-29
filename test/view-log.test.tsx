@@ -1,4 +1,4 @@
-//The turn report and the message dialog on the new UI (src/view/log.ts, src/view/logwindow.tsx, src/view/message.tsx;
+//The turn report and the message dialog on the new UI (src/view/windows/log.ts, src/view/windows/logwindow.tsx, src/view/hud/message.tsx;
 //CombatLog, MessageDialog, #348) on hand-built worlds: the old combat log's totals kept from the steps' events, the
 //resupplies and reinforcements of a turn's start, the five reports as the window writes them, and the briefing and
 //the notices in jsdom
@@ -9,12 +9,12 @@ import type { GameEvent } from "../src/core/events";
 import type { World } from "../src/core/types";
 import { leaderDescriptions } from "../src/legacy/prototypes";
 import { leaderType, terrainType } from "../src/core/tables";
-import { combatLogOf, emptyLog, type LogEntry, logStep, logTurnStart, type TurnLog } from "../src/view/log";
-import { LogWindow } from "../src/view/logwindow";
-import { MessageDialog } from "../src/view/message";
-import { createStore } from "../src/view/store";
+import { combatLogOf, emptyLog, type LogEntry, logStep, logTurnStart, type TurnLog } from "../src/view/windows/log";
+import { LogWindow } from "../src/view/windows/logwindow";
+import { MessageDialog } from "../src/view/hud/message";
+import { createStore } from "../src/view/store/store";
 import { quietTurn } from "../src/view/turn";
-import { TurnBanner } from "../src/view/turnbanner";
+import { TurnBanner } from "../src/view/hud/turnbanner";
 
 afterEach(cleanup);
 

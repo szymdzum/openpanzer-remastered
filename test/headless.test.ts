@@ -75,10 +75,15 @@ test("The screen interface and the screen that shows nothing reach no UI module 
 //its modules import from outside src/view/ is only those and src/app/settings.ts (the settings), and none of
 //it reaches an old UI module or game.ts
 test("The new UI's imports reach no old UI module and no game.ts (#380)", () => {
-	const view = path.join(root, "src/view"), outside = new Set<string>();
-	for (const file of fs.readdirSync(view).filter((f) => /\.tsx?$/.test(f)))
-		for (const i of fs.readFileSync(path.join(view, file), "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\.\/([\w/]+)";/gm))
-			if (!i[1]) outside.add(i[2]);
+	const src = path.join(root, "src"), outside = new Set<string>();
+	//(its modules sit in src/view/ and its subfolders: components, map, hud, windows, store)
+	const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true })
+		.flatMap((e) => e.isDirectory() ? walk(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []);
+	for (const file of walk(path.join(src, "view")))
+		for (const i of fs.readFileSync(file, "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"(\.\.?\/[\w/.]+)";/gm)) {
+			const target = path.relative(src, path.resolve(path.dirname(file), i[2]));
+			if (!i[1] && !target.startsWith("view/")) outside.add(target);
+		}
 	const engine = [...outside].filter((m) => !m.startsWith("core/"));
 	expect(engine.filter((m) => !["app/host", "app/screen", "app/settings", "legacy/prototypes"].includes(m))).toEqual([]);
 	expect([...reachedFrom(engine)].filter((m) => uiModules.includes(m))).toEqual([]);

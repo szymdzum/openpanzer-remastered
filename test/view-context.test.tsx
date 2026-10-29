@@ -1,4 +1,4 @@
-//The new UI's unit context menu (src/view/context.ts, src/view/contextmenu.tsx, UnitContext, #437) on hand-built worlds
+//The new UI's unit context menu (src/view/store/context.ts, src/view/components/contextmenu.tsx, UnitContext, #437) on hand-built worlds
 //whose host plays the person's commands on the core: the actions the old UI's #unit-context showed, by its rules and in
 //its order, and only those; what each gives in its tooltip; the menu in jsdom, docked at the bottom over the unit info
 import { afterEach, expect, test } from "vitest";
@@ -11,8 +11,8 @@ import { unitById } from "../src/core/world";
 import type { Command } from "../src/core/command";
 import { OVERSTRENGTH_PENALTY, playerType, terrainType } from "../src/core/tables";
 import { App } from "../src/view/app";
-import { contextOf } from "../src/view/context";
-import { createStore } from "../src/view/store";
+import { contextOf } from "../src/view/store/context";
+import { createStore } from "../src/view/store/store";
 
 afterEach(cleanup);
 

@@ -7,7 +7,7 @@
 @import url("../../docs/ui/tokens.css");
 @import url("./library.css");
 @import url("../../docs/ui/components/bundle.css") layer(components.cards);
-@import url("./map.css");
+@import url("./map/map.css");
 @import url("./combat.css");
 @import url("./screen.css");
-@import url("./menus.css");
+@import url("./windows/menus.css");

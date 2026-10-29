@@ -1,12 +1,12 @@
-//The start menu (src/view/menus.ts, src/view/startmenu.tsx, #349): its windows switched as the old start
+//The start menu (src/view/windows/menus.ts, src/view/windows/startmenu.tsx, #349): its windows switched as the old start
 //menu's buttons switch them (src/ui.ts startMenuButton, mainMenuButton "options", before #351), its main window with the old
 //entries, and the screen opening it over the first scenario's briefing and at a game's end
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
-import { MENU_CLOSED, menuAfter, menuToggled, type MenuState } from "../src/view/menus";
-import { StartMenu } from "../src/view/startmenu";
-import { createStore } from "../src/view/store";
+import { MENU_CLOSED, menuAfter, menuToggled, type MenuState } from "../src/view/windows/menus";
+import { StartMenu } from "../src/view/windows/startmenu";
+import { createStore } from "../src/view/store/store";
 import { newScreen } from "../src/view/screen";
 import { VERSION } from "../src/app/settings";
 import type { World } from "../src/core/types";

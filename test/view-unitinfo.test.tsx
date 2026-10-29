@@ -1,4 +1,4 @@
-//The new UI's unit card docked at the bottom (src/view/infopanel.tsx, UnitInfo, #346, #348 with #37) on hand-built
+//The new UI's unit card docked at the bottom (src/view/hud/infopanel.tsx, UnitInfo, #346, #348 with #37) on hand-built
 //worlds, in jsdom: open on More, who the unit is, its condition with what each gauge means, this turn, what it hits and
 //holds with every name's tooltip, the bonuses, the riding band (its line is test/view-unitline.test.tsx's); the
 //leaders as the game words them, Next unit, and the unit always read by its id, never a copy (#404)
@@ -9,10 +9,10 @@ import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { leaderDescriptions } from "../src/legacy/prototypes";
 import { leaderType, terrainType } from "../src/core/tables";
-import { UnitInfoPanel } from "../src/view/infopanel";
-import { createStore } from "../src/view/store";
-import { unitCardOf } from "../src/view/unitcard";
-import { supplyState } from "../src/view/unitinfo";
+import { UnitInfoPanel } from "../src/view/hud/infopanel";
+import { createStore } from "../src/view/store/store";
+import { unitCardOf } from "../src/view/hud/unitcard";
+import { supplyState } from "../src/view/hud/unitinfo";
 
 afterEach(cleanup);
 

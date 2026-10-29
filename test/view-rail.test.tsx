@@ -1,4 +1,4 @@
-//The new UI's game menu (src/view/rail.tsx, GameMenu, #346) in jsdom, on a hand-built world whose host plays the
+//The new UI's game menu (src/view/hud/rail.tsx, GameMenu, #346) in jsdom, on a hand-built world whose host plays the
 //person's commands on the core: the rail's buttons as the card has them, every key the old UI reads (the shortcuts,
 //src/view/shortcuts.ts), the next and previous unit, and End turn's question while units can still act (#8)
 import { afterEach, expect, test } from "vitest";
@@ -8,11 +8,11 @@ import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
 import type { Command } from "../src/core/command";
-import { EndTurn, EndTurnQuestion, Rail } from "../src/view/rail";
+import { EndTurn, EndTurnQuestion, Rail } from "../src/view/hud/rail";
 import { shortcutOf } from "../src/view/shortcuts";
-import { neighbourUnit, stillToAct } from "../src/view/model";
-import { unitsToAct } from "../src/view/mapview";
-import { createStore } from "../src/view/store";
+import { neighbourUnit, stillToAct } from "../src/view/store/model";
+import { unitsToAct } from "../src/view/map/mapview";
+import { createStore } from "../src/view/store/store";
 import { playerType } from "../src/core/tables";
 
 afterEach(cleanup);

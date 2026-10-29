@@ -1,7 +1,7 @@
 //The keyboard shortcuts (GameMenu, #346): every key the old UI read (handleKeyboard, src/ui.ts before #351), by the
 //same physical keys (KeyboardEvent.code, so a French or German layout plays the same keys) and Escape by its name.
-//Plain TypeScript: the store (src/view/store.ts) does what each one says.
-import type { ActionKey } from "./model";
+//Plain TypeScript: the store (src/view/store/store.ts) does what each one says.
+import type { ActionKey } from "./store/model";
 
 //The rail's buttons and the map's keys: I, B, H, A, Z, L, the next and previous unit, Escape; Options, the start menu, is
 //the rail's button and Escape's with no unit selected

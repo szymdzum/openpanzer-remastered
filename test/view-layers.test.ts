@@ -1,11 +1,11 @@
 // @vitest-environment node
-//The map's ground kept as a layer while the hex grid is on (src/view/layers.ts, review proposal 7), on canvases that record
+//The map's ground kept as a layer while the hex grid is on (src/view/map/layers.ts, review proposal 7), on canvases that record
 //what they are told: drawn once while the scroll, the scale and the fog stay, again when one changes and the view stands
 //still, never during a scroll; let go with the grid, on the strategic map and past the memory budget. That the layer
 //gives the same pixels as drawMap was checked in Chrome (the pull request has the numbers): jsdom draws nothing
 import { expect, test } from "vitest";
-import { type Frame, LAYER_BUDGET, MapLayers } from "../src/view/layers";
-import type { Images, Scene } from "../src/view/mapdraw";
+import { type Frame, LAYER_BUDGET, MapLayers } from "../src/view/map/layers";
+import type { Images, Scene } from "../src/view/map/mapdraw";
 
 type Fake = { width: number; height: number; getContext: () => CanvasRenderingContext2D };
 

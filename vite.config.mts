@@ -107,14 +107,14 @@ export default defineConfig({
 				"src/app/storage.ts", "src/legacy/equipment.ts", "src/legacy/combatlog.ts", "src/legacy/prototypes.ts", "src/app/settings.ts", "src/legacy/commands.ts",
 				"src/legacy/context.ts", "src/legacy/util.ts", "src/legacy/state.ts", "src/app/save.ts", "src/legacy/mirror.ts", "src/app/driver.ts", "src/app/start.ts", "src/app/host.ts", "src/app/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
-				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/storecore.ts", "src/view/storestep.ts", "src/view/storemap.ts",
-				"src/view/storecard.ts", "src/view/storeturn.ts", "src/view/storenotes.ts", "src/view/hexgrid.ts", "src/view/mapview.ts",
-				"src/view/mapdraw.ts", "src/view/mapinfo.ts", "src/view/canvas.ts", "src/view/overlays.ts", "src/view/strategic.ts",
-				"src/view/strategicdraw.ts", "src/view/deploy.ts", "src/view/shortcuts.ts", "src/view/unitinfo.ts", "src/view/context.ts", "src/view/hextip.ts", "src/view/turn.ts",
-				"src/view/odds.ts", "src/view/attackdraw.ts", "src/view/results.ts",
-				"src/view/beats.ts", "src/view/player.ts", "src/view/motiondraw.ts", "src/view/unitcard.ts", "src/view/unitlist.ts", "src/view/shop.ts", "src/view/shopstate.ts", "src/view/log.ts", "src/view/dossier.ts",
-				"src/view/menus.ts", "src/view/newgame.ts", "src/view/newgamestate.ts",
-				"src/view/settings.ts", "src/view/settingsstate.ts", "src/view/saveload.ts", "src/view/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/layers.ts"],
+				"src/view/**/*.tsx", "src/view/store/model.ts", "src/view/store/store.ts", "src/view/store/storecore.ts", "src/view/store/storestep.ts", "src/view/store/storemap.ts",
+				"src/view/store/storecard.ts", "src/view/store/storeturn.ts", "src/view/store/storenotes.ts", "src/view/map/hexgrid.ts", "src/view/map/mapview.ts",
+				"src/view/map/mapdraw.ts", "src/view/map/mapinfo.ts", "src/view/map/canvas.ts", "src/view/map/overlays.ts", "src/view/map/strategic.ts",
+				"src/view/map/strategicdraw.ts", "src/view/map/deploy.ts", "src/view/shortcuts.ts", "src/view/hud/unitinfo.ts", "src/view/store/context.ts", "src/view/map/hextip.ts", "src/view/turn.ts",
+				"src/view/hud/odds.ts", "src/view/map/attackdraw.ts", "src/view/hud/results.ts",
+				"src/view/beats.ts", "src/view/player.ts", "src/view/map/motiondraw.ts", "src/view/hud/unitcard.ts", "src/view/hud/unitlist.ts", "src/view/windows/shop.ts", "src/view/windows/shopstate.ts", "src/view/windows/log.ts", "src/view/windows/dossier.ts",
+				"src/view/windows/menus.ts", "src/view/windows/newgame.ts", "src/view/windows/newgamestate.ts",
+				"src/view/windows/settings.ts", "src/view/windows/settingsstate.ts", "src/view/windows/saveload.ts", "src/view/windows/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/map/layers.ts"],
 			exclude: ["src/core/types.ts", "src/core/state.ts", "src/core/command.ts", "src/core/events.ts", "src/core/controller.ts", "src/app/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's
@@ -187,87 +187,87 @@ export default defineConfig({
 				"src/legacy/mirror.ts": { statements: 93, branches: 89, functions: 98, lines: 96 },
 				"src/core/tutorial.ts": { statements: 98, branches: 97, functions: 94, lines: 98 },
 				"src/view/app.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/model.ts": { statements: 97, branches: 98, functions: 95, lines: 97 },
+				"src/view/store/model.ts": { statements: 97, branches: 98, functions: 95, lines: 97 },
 				"src/view/screen.tsx": { statements: 100, branches: 86, functions: 100, lines: 100 },
 				//(the store split into its parts, proposal 3: in each the one uncovered is the harness setter every module gets)
-				"src/view/store.ts": { statements: 98, branches: 99, functions: 96, lines: 98 },
-				"src/view/storecore.ts": { statements: 96, branches: 100, functions: 80, lines: 96 },
-				"src/view/storestep.ts": { statements: 96, branches: 100, functions: 90, lines: 96 }, //(letGo's first value runs only if a blast came with no step playing)
-				"src/view/storemap.ts": { statements: 98, branches: 100, functions: 95, lines: 98 },
-				"src/view/storecard.ts": { statements: 94, branches: 95, functions: 85, lines: 92 },
-				"src/view/storeturn.ts": { statements: 99, branches: 98, functions: 97, lines: 98 },
-				"src/view/storenotes.ts": { statements: 90, branches: 100, functions: 80, lines: 88 },
-				"src/view/hexgrid.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
-				"src/view/map.tsx": { statements: 97, branches: 90, functions: 97, lines: 100 },
-				"src/view/layers.ts": { statements: 96, branches: 93, functions: 90, lines: 97 }, //(the one uncovered: the harness setter)
+				"src/view/store/store.ts": { statements: 98, branches: 99, functions: 96, lines: 98 },
+				"src/view/store/storecore.ts": { statements: 96, branches: 100, functions: 80, lines: 96 },
+				"src/view/store/storestep.ts": { statements: 96, branches: 100, functions: 90, lines: 96 }, //(letGo's first value runs only if a blast came with no step playing)
+				"src/view/store/storemap.ts": { statements: 98, branches: 100, functions: 95, lines: 98 },
+				"src/view/store/storecard.ts": { statements: 94, branches: 95, functions: 85, lines: 92 },
+				"src/view/store/storeturn.ts": { statements: 99, branches: 98, functions: 97, lines: 98 },
+				"src/view/store/storenotes.ts": { statements: 90, branches: 100, functions: 80, lines: 88 },
+				"src/view/map/hexgrid.ts": { statements: 94, branches: 100, functions: 80, lines: 93 },
+				"src/view/map/map.tsx": { statements: 97, branches: 90, functions: 97, lines: 100 },
+				"src/view/map/layers.ts": { statements: 96, branches: 93, functions: 90, lines: 97 }, //(the one uncovered: the harness setter)
 				//(functions: its shared helpers went to canvas.ts and overlays.ts, the dev server's __harnessSet stays a
 				//larger share of what is left)
-				"src/view/mapdraw.ts": { statements: 98, branches: 95, functions: 94, lines: 99 },
-				"src/view/canvas.ts": { statements: 98, branches: 100, functions: 90, lines: 97 },
-				"src/view/mapinfo.ts": { statements: 97, branches: 100, functions: 85, lines: 95 },
-				"src/view/overlays.ts": { statements: 97, branches: 90, functions: 95, lines: 99 },
-				"src/view/strategic.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(its flag strip went to mapinfo.ts, #504: the uncovered harness setter is a larger share)
-				"src/view/deploy.ts": { statements: 96, branches: 96, functions: 90, lines: 95 },
-				"src/view/strategicdraw.ts": { statements: 98, branches: 88, functions: 80, lines: 97 },
-				"src/view/mapview.ts": { statements: 96, branches: 96, functions: 93, lines: 98 },
-				"src/view/anchored.tsx": { statements: 100, branches: 83, functions: 100, lines: 100 },
-				"src/view/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/controls.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/facts.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/icon.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/list.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/meter.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/panel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/tabs.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/tooltip.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/map/mapdraw.ts": { statements: 98, branches: 95, functions: 94, lines: 99 },
+				"src/view/map/canvas.ts": { statements: 98, branches: 100, functions: 90, lines: 97 },
+				"src/view/map/mapinfo.ts": { statements: 97, branches: 100, functions: 85, lines: 95 },
+				"src/view/map/overlays.ts": { statements: 97, branches: 90, functions: 95, lines: 99 },
+				"src/view/map/strategic.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(its flag strip went to mapinfo.ts, #504: the uncovered harness setter is a larger share)
+				"src/view/map/deploy.ts": { statements: 96, branches: 96, functions: 90, lines: 95 },
+				"src/view/map/strategicdraw.ts": { statements: 98, branches: 88, functions: 80, lines: 97 },
+				"src/view/map/mapview.ts": { statements: 96, branches: 96, functions: 93, lines: 98 },
+				"src/view/components/anchored.tsx": { statements: 100, branches: 83, functions: 100, lines: 100 },
+				"src/view/components/button.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/controls.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/facts.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/icon.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/list.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/meter.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/panel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/tabs.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/components/tooltip.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				//the HUD (#346)
-				"src/view/statusbar.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/rail.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/hud/statusbar.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/hud/rail.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/shortcuts.ts": { statements: 87, branches: 100, functions: 50, lines: 83 },
-				"src/view/infopanel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/unitinfo.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(the one uncovered: the harness setter every module gets)
-				"src/view/context.ts": { statements: 97, branches: 100, functions: 88, lines: 96 },
-				"src/view/contextmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/hextip.ts": { statements: 95, branches: 100, functions: 75, lines: 93 },
-				"src/view/maptips.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/hud/infopanel.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/hud/unitinfo.ts": { statements: 88, branches: 100, functions: 75, lines: 85 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/store/context.ts": { statements: 97, branches: 100, functions: 88, lines: 96 },
+				"src/view/components/contextmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/map/hextip.ts": { statements: 95, branches: 100, functions: 75, lines: 93 },
+				"src/view/map/maptips.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/turn.ts": { statements: 97, branches: 100, functions: 95, lines: 96 },
-				"src/view/turnbanner.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/hud/turnbanner.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				//(a small file: the dev server's __harnessSet is a quarter of its functions)
-				"src/view/odds.ts": { statements: 83, branches: 88, functions: 75, lines: 85 },
-				"src/view/attackdraw.ts": { statements: 97, branches: 100, functions: 83, lines: 97 },
-				"src/view/results.ts": { statements: 93, branches: 82, functions: 96, lines: 93 },
-				"src/view/resultmarks.tsx": { statements: 100, branches: 92, functions: 100, lines: 100 },
+				"src/view/hud/odds.ts": { statements: 83, branches: 88, functions: 75, lines: 85 },
+				"src/view/map/attackdraw.ts": { statements: 97, branches: 100, functions: 83, lines: 97 },
+				"src/view/hud/results.ts": { statements: 93, branches: 82, functions: 96, lines: 93 },
+				"src/view/hud/resultmarks.tsx": { statements: 100, branches: 92, functions: 100, lines: 100 },
 				"src/view/beats.ts": { statements: 92, branches: 75, functions: 92, lines: 97 },
 				"src/view/player.ts": { statements: 98, branches: 100, functions: 94, lines: 98 },
-				"src/view/motiondraw.ts": { statements: 92, branches: 83, functions: 66, lines: 95 },
-				"src/view/unitcard.ts": { statements: 98, branches: 98, functions: 92, lines: 97 }, //(the one uncovered: the harness setter every module gets)
-				"src/view/unitlist.ts": { statements: 96, branches: 92, functions: 88, lines: 94 },
-				"src/view/shop.ts": { statements: 96, branches: 91, functions: 96, lines: 98 },
-				"src/view/shopstate.ts": { statements: 90, branches: 84, functions: 94, lines: 97 },
-				"src/view/unitstrip.tsx": { statements: 100, branches: 82, functions: 100, lines: 100 },
-				"src/view/log.ts": { statements: 95, branches: 91, functions: 91, lines: 98 },
-				"src/view/logwindow.tsx": { statements: 100, branches: 94, functions: 100, lines: 100 },
-				"src/view/message.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/map/motiondraw.ts": { statements: 92, branches: 83, functions: 66, lines: 95 },
+				"src/view/hud/unitcard.ts": { statements: 98, branches: 98, functions: 92, lines: 97 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/hud/unitlist.ts": { statements: 96, branches: 92, functions: 88, lines: 94 },
+				"src/view/windows/shop.ts": { statements: 96, branches: 91, functions: 96, lines: 98 },
+				"src/view/windows/shopstate.ts": { statements: 90, branches: 84, functions: 94, lines: 97 },
+				"src/view/hud/unitstrip.tsx": { statements: 100, branches: 82, functions: 100, lines: 100 },
+				"src/view/windows/log.ts": { statements: 95, branches: 91, functions: 91, lines: 98 },
+				"src/view/windows/logwindow.tsx": { statements: 100, branches: 94, functions: 100, lines: 100 },
+				"src/view/hud/message.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/view/html.ts": { statements: 97, branches: 95, functions: 90, lines: 96 }, //(the one uncovered: the harness setter every module gets)
 				"src/view/stable.ts": { statements: 95, branches: 100, functions: 85, lines: 93 }, //(the one uncovered: the harness setter)
-				"src/view/dossier.ts": { statements: 93, branches: 78, functions: 91, lines: 95 },
-				"src/view/dossierwindow.tsx": { statements: 100, branches: 95, functions: 100, lines: 100 },
-				"src/view/tray.tsx": { statements: 100, branches: 87, functions: 100, lines: 100 },
-				"src/view/shopwindow.tsx": { statements: 100, branches: 98, functions: 100, lines: 100 },
-				"src/view/menus.ts": { statements: 92, branches: 100, functions: 75, lines: 92 }, //(the one uncovered: the harness setter every module gets)
-				"src/view/startmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/newgame.ts": { statements: 97, branches: 100, functions: 92, lines: 96 }, //(the one uncovered: the harness setter every module gets)
-				"src/view/newgamestate.ts": { statements: 98, branches: 100, functions: 92, lines: 97 }, //(the harness setter)
-				"src/view/newgamewindows.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/settings.ts": { statements: 94, branches: 100, functions: 83, lines: 93 }, //(the harness setter)
+				"src/view/windows/dossier.ts": { statements: 93, branches: 78, functions: 91, lines: 95 },
+				"src/view/windows/dossierwindow.tsx": { statements: 100, branches: 95, functions: 100, lines: 100 },
+				"src/view/hud/tray.tsx": { statements: 100, branches: 87, functions: 100, lines: 100 },
+				"src/view/windows/shopwindow.tsx": { statements: 100, branches: 98, functions: 100, lines: 100 },
+				"src/view/windows/menus.ts": { statements: 92, branches: 100, functions: 75, lines: 92 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/windows/startmenu.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/windows/newgame.ts": { statements: 97, branches: 100, functions: 92, lines: 96 }, //(the one uncovered: the harness setter every module gets)
+				"src/view/windows/newgamestate.ts": { statements: 98, branches: 100, functions: 92, lines: 97 }, //(the harness setter)
+				"src/view/windows/newgamewindows.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/windows/settings.ts": { statements: 94, branches: 100, functions: 83, lines: 93 }, //(the harness setter)
 				//(the harness setter; and a page without devicePixelRatio)
-				"src/view/settingsstate.ts": { statements: 96, branches: 95, functions: 88, lines: 95 }, //(smaller since its counters went: the one uncovered is the harness setter every module gets)
+				"src/view/windows/settingsstate.ts": { statements: 96, branches: 95, functions: 88, lines: 95 }, //(smaller since its counters went: the one uncovered is the harness setter every module gets)
 				"src/view/uisettings.ts": { statements: 93, branches: 100, functions: 80, lines: 92 }, //(the one uncovered: the harness setter)
-				"src/view/settingswindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
-				"src/view/saveload.ts": { statements: 90, branches: 100, functions: 87, lines: 85 }, //(the harness setter)
+				"src/view/windows/settingswindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/windows/saveload.ts": { statements: 90, branches: 100, functions: 87, lines: 85 }, //(the harness setter)
 				//(the harness setter; the field's other attributes, which the game's state doesn't set, and no save of the settings)
-				"src/view/saveloadstate.ts": { statements: 95, branches: 91, functions: 92, lines: 94 }, //(functions: the field's stand-in went, a report came: the uncovered one is still the harness setter)
-				"src/view/saveloadwindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
+				"src/view/windows/saveloadstate.ts": { statements: 95, branches: 91, functions: 92, lines: 94 }, //(functions: the field's stand-in went, a report came: the uncovered one is still the harness setter)
+				"src/view/windows/saveloadwindow.tsx": { statements: 100, branches: 100, functions: 100, lines: 100 },
 				"src/core/deployment.ts": { statements: 96, branches: 100, functions: 91, lines: 95 },
 				"src/view/theme.ts": { statements: 90, branches: 100, functions: 80, lines: 88 }, //(the harness setter)
 			},

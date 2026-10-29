@@ -6,9 +6,9 @@ import type { EventOf, GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import { sideOf, unitById, unitData } from "../core/world";
 import { outcomeNames, unitClass } from "../core/tables";
-import type { Nation } from "./icon";
-import { lost } from "./results";
-import { type Condition, countryName, dateOf, isYourTurn, nationOf, plural, prestigeText, statusOf, yourPlayer } from "./model";
+import type { Nation } from "./components/icon";
+import { lost } from "./hud/results";
+import { type Condition, countryName, dateOf, isYourTurn, nationOf, plural, prestigeText, statusOf, yourPlayer } from "./store/model";
 
 //What the enemy's turn did to the side shown, gathered from its steps' events
 export interface EnemyTurn {

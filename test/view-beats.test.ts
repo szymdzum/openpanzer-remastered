@@ -1,7 +1,7 @@
 // @vitest-environment node
 //A step animated on the new UI (#347): its beats from the events (src/view/beats.ts) on hand-built worlds played with
 //the game's dice, the player's pace and picks (src/view/player.ts) on fake timers, and a beat drawn on the canvas
-//(src/view/motiondraw.ts)
+//(src/view/map/motiondraw.ts)
 import { afterEach, expect, test, vi } from "vitest";
 import { handWorld, type HandUnit } from "./coreworld";
 import { adjacent, directionTo } from "../src/core/geometry";
@@ -12,15 +12,15 @@ import { directionToRadians } from "../src/legacy/prototypes";
 import { uiSettings } from "../src/app/settings";
 import { playerType, terrainType } from "../src/core/tables";
 import { type Beat, beatsFor, SHEETS } from "../src/view/beats";
-import type { Viewport } from "../src/view/canvas";
-import { hexCentre } from "../src/view/hexgrid";
-import { SPRITE_RAISE } from "../src/view/mapdraw";
-import { drawMotion } from "../src/view/motiondraw";
+import type { Viewport } from "../src/view/map/canvas";
+import { hexCentre } from "../src/view/map/hexgrid";
+import { SPRITE_RAISE } from "../src/view/map/mapdraw";
+import { drawMotion } from "../src/view/map/motiondraw";
 import { createPlayer, type Motion } from "../src/view/player";
 import type { GameEvent } from "../src/core/events";
 import { unitById } from "../src/core/world";
-import { mapUnits } from "../src/view/mapview";
-import { createStore, type StoreHost } from "../src/view/store";
+import { mapUnits } from "../src/view/map/mapview";
+import { createStore, type StoreHost } from "../src/view/store/store";
 
 afterEach(() => {
 	vi.useRealTimers();

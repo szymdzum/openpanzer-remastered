@@ -1,4 +1,4 @@
-//The new campaign's and the new scenario's windows (src/view/newgame.ts, newgamestate.ts, newgamewindows.tsx,
+//The new campaign's and the new scenario's windows (src/view/windows/newgame.ts, newgamestate.ts, newgamewindows.tsx,
 //#349): the old start menu's campaign and scenario windows (src/uibuilder.ts buildStartMenu, src/ui.ts startMenuButton, before #351),
 //on hand-made lists and on the game's
 import { afterEach, expect, test, vi } from "vitest";
@@ -9,9 +9,9 @@ import { headlessGame } from "./headlessgame";
 import { nullScreen } from "../src/app/nullscreen";
 import { newScreen } from "../src/view/screen";
 import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, scenarioAtOpen, scenarioGroups, scenarioView, settleAI }
-	from "../src/view/newgame";
-import { StartMenu } from "../src/view/startmenu";
-import { createStore } from "../src/view/store";
+	from "../src/view/windows/newgame";
+import { StartMenu } from "../src/view/windows/startmenu";
+import { createStore } from "../src/view/store/store";
 import { uiSettings } from "../src/app/settings";
 import type { World } from "../src/core/types";
 

@@ -1,11 +1,11 @@
-//The new UI's icons (src/view/icon.tsx, sprite.ts) in jsdom: the sprite is the Icons card's, and an icon is a <use> of it
+//The new UI's icons (src/view/components/icon.tsx, sprite.ts) in jsdom: the sprite is the Icons card's, and an icon is a <use> of it
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "@testing-library/preact";
-import { Icon, IconSprite, Mark } from "../src/view/icon";
-import { ICONS, NATION_MARKS } from "../src/view/sprite";
+import { Icon, IconSprite, Mark } from "../src/view/components/icon";
+import { ICONS, NATION_MARKS } from "../src/view/map/sprite";
 
 afterEach(cleanup);
 
