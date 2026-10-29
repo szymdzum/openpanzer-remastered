@@ -13,12 +13,12 @@
  * A move and an attack are played to their end before anything is shown (#375): a move with its surprise
  * attack and its capture, an attack with its support fire, the destroyed units, the retreat or the
  * surrender and the victory. The screen then animates them from the result (the step's events, with what
- * the old animation read in between: the strengths and the facings at the shots, read off the worlds of
+ * the animation reads in between: the strengths and the facings at the shots, read off the worlds of
  * the step's checkpoints). The objects are updated once, to the world at the step's end (a unit the step took
  * off the map to its last state in the step).
  *
- * The selection is the old UI's, not the game's (#377): a command doesn't touch it. The old UI shows what
- * the old engine's command left selected after it (src/legacy/selection.ts).
+ * The selection is not the game's (#377): a command doesn't touch it. MapSelection.after sets what the
+ * command left selected (src/legacy/selection.ts).
  */
 
 import { Cell, type combatResults, movementResults, type Supply } from "./prototypes";
@@ -61,7 +61,7 @@ export interface AttackResult {
 	surrender: boolean; //the defender had nowhere to retreat to
 	victorySides: number[]; //the sides that won because the other one has no units left
 	events: GameEvent[]; //what the attack did, in order
-	//The world once the destroyed units left the map, before the retreat or the surrender: the old UI's
+	//The world once the destroyed units left the map, before the retreat or the surrender: the
 	//selection after the attack is made on it (src/legacy/selection.ts)
 	cleanedUp: World;
 }
@@ -76,7 +76,7 @@ export interface MoveResult {
 	capture: boolean;
 	victorySide: number;
 	events: GameEvent[]; //what the move did, its surprise attack's too, in order
-	moved: World; //the world once the unit moved, before its surprise attack: the old UI shows its hexes on it
+	moved: World; //the world once the unit moved, before its surprise attack: the selection shows its hexes on it
 }
 
 
@@ -119,8 +119,8 @@ function mirror(scenario: Scenario, w: World) {
 }
 
 //The objects to the last of a step's worlds, once. A unit the step took off the map keeps what it was in the
-//last world it was in, as the objects going through the step's worlds left it: the old UI reads a destroyed
-//unit's object after the step (its strength, whether it fired)
+//last world it was in, as the objects going through the step's worlds left it: a destroyed
+//unit's object is read after the step (its strength, whether it fired)
 function mirrorEnd(scenario: Scenario, worlds: World[]) {
 	const end = worlds[worlds.length - 1], gone = new Set<number>();
 	for (let i = worlds.length - 2; i >= 0; i--)
@@ -395,10 +395,10 @@ function retreated(_m: GameMap, result: AttackResult, w: World, events: GameEven
 	result.retreatMove = mr;
 }
 
-//A unit leaving its carrier put back on it: the selection left it, or it can't land any more (the old
-//selection's flip of its carrier, src/legacy/selection.ts). The embark's step alone: what the old UI shows
-//beside it (the unit selected again) is the selection's own business there. The hexes' counters stay as
-//they were until the next command, as the old flip left them (the world's sight has the unit aboard),
+//A unit leaving its carrier put back on it: the selection left it, or it can't land any more (the
+//selection's flip of its carrier, src/legacy/selection.ts). The embark's step alone: what the selection shows
+//beside it (the unit selected again) is its own business there. The hexes' counters stay as
+//they were until the next command, as the flip left them (the world's sight has the unit aboard),
 //unless counters: then they are the world's (an attack's selection put it back aboard before the attack's
 //end, whose update counted them again)
 export function backAboard(scenario: Scenario, unit: number, counters = false) {

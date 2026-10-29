@@ -1,24 +1,22 @@
 /**
- * MapSelection - the selected unit and the hexes it can move to and attack: the old UI's view, not the game's.
- * The old UI went in #351; the contracts (test/contracts/engine.contract.js) and the harness still read it
+ * MapSelection - the selected unit and the hexes it can move to and attack: not the game's state
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The selection is what the old UI shows (docs/STATE.md D6): the game's state, the save, the contracts and
- * the harness don't have it (#377). It lives here, not on the hexes and the map: GameMap carries it for the
- * old UI and the harness's scripts (GameMap.currentUnit, selectUnit...). The
+ * The game's state, the save and the harness's snapshots don't have it (docs/STATE.md D6, #377). It lives here,
+ * not on the hexes and the map: GameMap carries it for the contracts (test/contracts/engine.contract.js) and
+ * the harness's scripts (GameMap.currentUnit, selectUnit...). The
  * move cells are also what a move finds its path in when the caller passes them (the move command's
  * cells). The hexes are asked of the game's rules, the core's queries (src/legacy/gamerules.ts).
  *
- * The commands don't touch it: after a command the old UI asks it to show what the old engine's command
- * left selected (after): a move shows the unit's move and attack hexes, an attack clears the attack hexes
+ * The commands don't touch it: after a command, `after` sets what the original's command left selected: a move shows the unit's move and attack hexes, an attack clears the attack hexes
  * and selects the unit again, a retreat shows the retreated unit's hexes, a resupply or a reinforcement
  * clears the hexes, a mount, an unmount, an embark and an undo select the unit again, a disembark shows
- * the hexes it can land on, a disband deselects first.
+ * the hexes it can land on, a disband is left to the caller, who deselects first.
  *
  * The selection only shows the game: a unit left while it was disembarking goes back aboard by the game's
- * embark (backAboard), as the old selection put it back on its carrier (#376).
+ * embark (backAboard), as the original's selection does (#376).
  */
 
 import { type Cell, type extendedCell } from "./prototypes";
@@ -140,9 +138,9 @@ export class MapSelection {
 		}
 	}
 
-	//---- What a command leaves selected, as the old engine's commands left it
+	//---- What a command leaves selected, as the original's commands left it
 
-	//After a command played (a refused one changes nothing). Before a disband the old UI deselects (clear)
+	//After a command played (a refused one changes nothing). A disband isn't handled: whoever plays one deselects (clear)
 	after(cmd: Command, done: Executed<CommandType>) {
 		const shown = afterCommand[cmd.type];
 		if (done.ok && shown !== undefined)
@@ -177,7 +175,7 @@ export class MapSelection {
 			this.afterAttack(r.surprise.attack);
 	}
 
-	//The attack itself (not the support fire alone) clears the attack hexes, then the old UI's selection after
+	//The attack itself (not the support fire alone) clears the attack hexes, then the selection after
 	//the attack's cleanup, then the retreat's
 	afterAttack(r: AttackResult) {
 		if (r.events.some((e) => e.type === "fight" && !e.support))
@@ -191,7 +189,7 @@ export class MapSelection {
 		}
 	}
 
-	//The old UI's uiReselectAfterAttack, after the destroyed units left the map and before the retreat or the
+	//The original's uiReselectAfterAttack, after the destroyed units left the map and before the retreat or the
 	//surrender, on the world then (a defender that surrenders still stands there, #89): the selection cleared
 	//when its unit was destroyed, else selected again, with its move hexes made again when it destroyed the
 	//defender (the old game read the cleared selection when both units were destroyed: it threw, #326, #29).
