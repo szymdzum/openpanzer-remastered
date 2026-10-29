@@ -18,7 +18,8 @@ const hexes = (n: number) => n + (n === 1 ? " hex" : " hexes");
 const width = (fill: number) => ({ width: `${Math.round(fill * 100)}%` });
 
 function Name({ card, big = false }: { card: UnitCard, big?: boolean }) {
-	return <div id="uName" class={big ? "name lg" : "name"}>{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}{card.name}</div>;
+	//(a name longer than the card ends in an ellipsis, the whole name in its tooltip)
+	return <div id="uName" class={big ? "name lg" : "name"} title={card.name}>{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}<span class="nm">{card.name}</span></div>;
 }
 
 //The leaders by name, each with what it gives as the game words it
@@ -40,9 +41,9 @@ function Leaders({ leaders }: { leaders: LeaderLine[] }) {
 function Identity({ card }: { card: UnitCard }) {
 	return (
 		<div class="ui-col ui-id">
+			<Name card={card} big />
 			<Portrait line={card.line} big />
 			<div>
-				<Name card={card} big />
 				<div class="cls">{card.sub}</div>
 				<div class="ui-tags">{card.tags.map((t, i) => <span key={t.text}>{i > 0 && " · "}{t.core ? <b>{t.text}</b> : t.text}</span>)}</div>
 			</div>
