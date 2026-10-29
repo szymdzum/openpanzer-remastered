@@ -59,7 +59,7 @@
 				"src/mirror.ts",
 				"src/nullscreen.ts",
 				"src/prototypes.ts",
-				"src/rng.ts",
+				"src/core/random.ts",
 				"src/savegame.ts",
 				"src/scenario.ts",
 				"src/scenarioloader.ts",
@@ -213,7 +213,7 @@
 				"src/gamestate.ts",
 				"src/leaders.ts",
 				"src/map.ts",
-				"src/rng.ts",
+				"src/core/random.ts",
 				"src/scenarioloader.ts",
 				"src/unit.ts"
 			],

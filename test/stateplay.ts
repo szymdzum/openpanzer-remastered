@@ -13,7 +13,7 @@ export async function restored(name: string) {
 	const { game } = await import("../src/game");
 	const { Equipment } = await import("../src/equipment");
 	const { toData } = await import("../src/state");
-	const { Rng } = await import("../src/rng"); //the restored modules' (restoreState loads them again)
+	const { Rng } = await import("../src/core/random"); //the restored modules' (restoreState loads them again)
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	return { scenario, game, Equipment, toData, Rng };

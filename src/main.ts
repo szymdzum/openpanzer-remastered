@@ -23,7 +23,7 @@ import * as scenario from "./scenario";
 import * as campaign from "./campaign";
 import * as game from "./game";
 import * as leaders from "./leaders";
-import * as rng from "./rng";
+import * as rng from "./core/random";
 import * as context from "./context";
 import * as board from "./board";
 import * as visibility from "./visibility";
@@ -54,7 +54,7 @@ const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, gamerules
 new gamestate.GameState(null).restoreSettings(); //To restore only settings
 dom.changeViewPort();
 
-//The random streams seeded once, here and not while rng.ts loads: until then the game stream reads
+//The random streams seeded once, here and not while core/random.ts loads: until then the game stream reads
 //Math.random, which the tests seed. Seeded, the dice have a position the state keeps (src/state.ts)
 rng.Rng.seed(rng.randomSeed());
 

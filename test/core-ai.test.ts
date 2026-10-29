@@ -21,7 +21,7 @@ import { freshGame, mulberry32, startState } from "./lifecycle";
 async function modules() {
 	const { game } = await import("../src/game");
 	const { Equipment } = await import("../src/equipment");
-	const { Rng } = await import("../src/rng");
+	const { Rng } = await import("../src/core/random");
 	const { toData } = await import("../src/state");
 	const { playerType, uiSettings } = await import("../src/prototypes");
 	return { game, Equipment, Rng, toData, playerType, uiSettings };

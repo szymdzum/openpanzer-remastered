@@ -16,7 +16,7 @@
  */
 
 import { type AIConfig, roadType, terrainEntrenchment, terrainInitiative, terrainType, unitClass } from "../prototypes";
-import { nextRandom, type RngStream } from "../rng";
+import { nextRandom, type RngStream } from "./random";
 import { attackCells, attackableUnit, canInitiateAttack } from "./attack";
 import { combatResult } from "./combat";
 import { playerAt } from "./draft";

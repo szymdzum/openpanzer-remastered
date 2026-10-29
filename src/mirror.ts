@@ -29,7 +29,7 @@ import { Equipment, type EquipmentIndexes } from "./equipment";
 import { Unit } from "./unit";
 import type { GameMap, Player } from "./map";
 import type { Reinforcement, Scenario } from "./scenario";
-import { Rng } from "./rng";
+import { Rng } from "./core/random";
 import {
 	type CampaignHost, campaignState, type CoreUnit, offMapUnit, type OffMapUnit, type PlayerState, restoreUndo, sameData, sameItems,
 	savedAs, setUnitFields, toData, type UnitState, writeSight

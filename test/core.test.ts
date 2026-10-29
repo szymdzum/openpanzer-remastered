@@ -4,7 +4,7 @@
 //test/engine.test.ts; test/core-differential.test.ts's until #137)
 import fc from "fast-check";
 import { expect, test } from "vitest";
-import { nextRandom } from "../src/rng";
+import { nextRandom } from "../src/core/random";
 import { Leaders } from "../src/leaders";
 import { type Cell, leaderType, movMethod, movTableDry, movTableMud, roadType, terrainType, unitClass } from "../src/prototypes";
 import { attackResult, combatResult, inRiver } from "../src/core/combat";

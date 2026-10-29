@@ -13,7 +13,7 @@
  */
 
 import { scoreGains, UNIT_MAX_EXPERIENCE } from "../prototypes";
-import { nextRandom, type RngStream } from "../rng";
+import { nextRandom, type RngStream } from "./random";
 import { attackableUnit, supportFireUnits } from "./attack";
 import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
 import { addScore, beginDraft, changeUnit, emit, finishDraft, playerAt, removeUnit, spotOff, spotOn, writeUnit } from "./draft";

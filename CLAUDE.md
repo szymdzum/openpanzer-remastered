@@ -44,7 +44,7 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
   test/headless.test.ts).
 - **Kept bugs are kept**: many are pinned by `test.fails` tests named after their issue. A fix
   flips its test.
-- The order of the draws within each random stream (`src/rng.ts`) is behavior: the game stream
+- The order of the draws within each random stream (`src/core/random.ts`) is behavior: the game stream
   (`Rng.random`: the dice, the leaders, the prototypes), the AI's (`Rng.aiRandom`: its purchases
   and scores) and the cosmetic stream (`Rng.cosmeticRandom`: the UI's sprite and sound picks).
   Never draw from another stream's: the AI and the UI don't move the dice.

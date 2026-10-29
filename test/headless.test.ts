@@ -1,11 +1,11 @@
 // @vitest-environment node
 //The engine without a browser: the core, GameRules, Map, Unit, Scenario, Commands and the game's mirror
 //load in Node, with no DOM, and a game drives them through their seams: the random streams
-//(src/rng.ts), the engine context (src/context.ts). On a small map built by hand (test/smallgame.ts)
+//(src/core/random.ts), the engine context (src/context.ts). On a small map built by hand (test/smallgame.ts)
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { Rng } from "../src/rng";
+import { Rng } from "../src/core/random";
 import { engineContext, setEngineContext } from "../src/context";
 import { GameRules } from "../src/gamerules";
 import { GameMap } from "../src/map";
@@ -51,7 +51,7 @@ function reachedFrom(modules: string[]): Set<string> {
 const uiModules = ["dom", "game", "gamestate", "main"];
 
 test("The engine's imports reach no UI module, no game.ts and no dom.ts", () => {
-	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "rng", "context", "state", "savegame",
+	const reached = reachedFrom(["gamerules", "map", "unit", "ai", "scenario", "commands", "leaders", "context", "state", "savegame",
 		"mirror"]);
 	expect([...reached].filter((m) => [...uiModules, "coresession", "coreload"].includes(m))).toEqual([]);
 });

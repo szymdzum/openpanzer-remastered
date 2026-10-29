@@ -8,7 +8,7 @@
 
 import type { Command, Refusal } from "../commands";
 import type { AIConfig } from "../prototypes";
-import type { RngStream } from "../rng";
+import type { RngStream } from "./random";
 import type { GameState, Position, ScenarioData, UnitId, UnitState } from "../state";
 import type { GameEvent } from "./events";
 

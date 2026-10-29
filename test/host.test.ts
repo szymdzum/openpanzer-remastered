@@ -19,7 +19,7 @@ import type { ScenarioOutcome } from "../src/scenario";
 import { outcomeNames, playerType, sideNames, uiSettings } from "../src/prototypes";
 import { touched } from "../src/context";
 import { turnLimitOutcome } from "../src/core/turn";
-import { Rng } from "../src/rng";
+import { Rng } from "../src/core/random";
 
 fakeMapImages();
 

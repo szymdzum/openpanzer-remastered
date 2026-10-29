@@ -219,13 +219,13 @@ test("GameState load keeps the undo of the last move (#128)", async () => {
 //game's and the AI's streams are where the save left them, the cosmetic one isn't the save's
 test("GameState load puts the random streams where the save left them (#128)", async () => {
 	await restoreState(readFixture("engine", "drpzop01-t2.json.gz").state);
-	const { Rng } = await import("../src/rng");
+	const { Rng } = await import("../src/core/random");
 	Rng.seed(11);
 	const save = await exportGame();
 	const draws = (rng: typeof Rng) => [rng.random(), rng.random(), rng.aiRandom(), rng.aiRandom()];
 	const want = draws(Rng);
 	await restoreState(save);
-	const { Rng: after } = await import("../src/rng");
+	const { Rng: after } = await import("../src/core/random");
 	expect(draws(after)).toEqual(want);
 });
 

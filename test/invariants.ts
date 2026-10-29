@@ -19,7 +19,7 @@ export async function load(name: string) {
 	const { CombatLog } = await import("../src/combatlog");
 	const { Equipment } = await import("../src/equipment");
 	const { Commands } = await import("../src/commands");
-	const { Rng } = await import("../src/rng");
+	const { Rng } = await import("../src/core/random");
 	const { game } = await import("../src/game");
 	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");

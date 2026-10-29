@@ -15,7 +15,7 @@
 import {
 	difficultyModifiers, playerType, SCENARIO_START_PRESTIGE, scoreGains, terrainType
 } from "../prototypes";
-import type { RngStream } from "../rng";
+import type { RngStream } from "./random";
 import type { CampaignState, EquipmentState, RngStreams } from "../state";
 import { startCampaignScenario } from "./campaign";
 import { unitCost } from "./costs";

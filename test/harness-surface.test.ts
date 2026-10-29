@@ -20,7 +20,7 @@ const code = (file: string) => read(file).replace(/\/\*[\s\S]*?\*\//g, "").repla
 async function exposed(): Promise<Map<string, unknown>> {
 	const names = new Map<string, unknown>();
 	const main = read("src/main.ts");
-	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/(\w+)";/gm)].map((m) => [m[1], m[2]]));
+	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/([\w/]+)";/gm)].map((m) => [m[1], m[2]]));
 	const listed = /const modules = \[([^\]]*)\]/.exec(main)![1].split(",").map((s) => s.trim());
 	for (const ns of listed) {
 		const module: Record<string, unknown> = await import(/* @vite-ignore */ path.join(root, "src", imports.get(ns)! + ".ts"));
@@ -64,7 +64,7 @@ test("The exports the harness uses are exposed by src/main.ts, under their names
 //A module left out of the list hides its exports from ?harness
 test("src/main.ts lists every module for ?harness", () => {
 	const main = read("src/main.ts");
-	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/(\w+)";/gm)].map((m) => [m[2], m[1]]));
+	const imports = new Map([...main.matchAll(/^import \* as (\w+) from "\.\/([\w/]+)";/gm)].map((m) => [m[2], m[1]]));
 	const listed = /const modules = \[([^\]]*)\]/.exec(main)![1].split(",").map((s) => s.trim());
 	const modules = fs.readdirSync(path.join(root, "src")).filter((f) => f.endsWith(".ts") && f !== "main.ts").map((f) => f.slice(0, -3));
 	expect(modules.filter((m) => !listed.includes(imports.get(m) ?? "")), "not in src/main.ts's modules").toEqual([]);

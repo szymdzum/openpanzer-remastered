@@ -11,7 +11,7 @@
  */
 
 import { CURRENCY_MULTIPLIER, PROTOTYPE_MIN_COST, playerType, unitClass } from "../prototypes";
-import { nextRandom } from "../rng";
+import { nextRandom } from "./random";
 import type { ScenarioOutcome } from "../scenario";
 import type { CampaignState } from "../state";
 import { newDossier, offMap, playerAt, removeUnit, writePlayer, writeUnit } from "./draft";

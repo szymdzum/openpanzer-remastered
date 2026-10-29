@@ -1,8 +1,8 @@
-//The random streams (src/rng.ts, #126): the game stream (the dice, the leaders), the AI's and the
+//The random streams (src/core/random.ts, #126): the game stream (the dice, the leaders), the AI's and the
 //cosmetic one (the UI's sprite and sound picks), each a mulberry32 whose state is one number, so the
 //AI's choices, an animation or a sound no longer move the dice
 import { afterEach, expect, test } from "vitest";
-import { nextRandom, Rng } from "../src/rng";
+import { nextRandom, Rng } from "../src/core/random";
 import { mulberry32 } from "./lifecycle";
 
 const realRandom = Math.random, startState = { game: Rng.game.state, ai: Rng.ai.state, cosmetic: Rng.cosmetic.state };

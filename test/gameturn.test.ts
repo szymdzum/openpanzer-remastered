@@ -41,7 +41,7 @@ async function play(item: string): Promise<string[]> {
 	const game = await freshGame();
 	const { AI } = await import("../src/ai");
 	const { unitObject } = await import("../src/mirror");
-	const { Rng } = await import("../src/rng");
+	const { Rng } = await import("../src/core/random");
 	const { toData } = await import("../src/state");
 	const { CombatLog } = await import("../src/combatlog");
 	const { playerType } = await import("../src/prototypes");

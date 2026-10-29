@@ -64,7 +64,7 @@ possible turns is astronomical. What works instead:
 ## 4. Learning
 
 - **Tuning the weights by evolution or self-play**: the cheapest real gain. The engine is
-  deterministic, headless and seeded (src/rng.ts), and the weights are data (`AIConfig`): play a
+  deterministic, headless and seeded (src/core/random.ts), and the weights are data (`AIConfig`): play a
   tournament of AIs with different weights in the arena (#46) and keep the winners. No neural
   networks.
 - **Reinforcement learning**: AlphaZero (board games), AlphaStar (StarCraft II), OpenAI Five
