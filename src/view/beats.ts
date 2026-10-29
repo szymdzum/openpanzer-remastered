@@ -8,7 +8,8 @@ import type { EventOf, Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";
 import type { Position, UnitId, UnitState, World } from "../core/types";
 import { isTrain } from "../core/units";
-import { unitById } from "../core/world";
+import { isBridgeForSide } from "../core/movement";
+import { hexIndex, unitById } from "../core/world";
 import { unitClass } from "../prototypes";
 import { at, seen } from "./results";
 
@@ -19,11 +20,17 @@ export interface Sheet {
 	width: number;
 }
 
+//A unit turned to face the other as a fight begins
+export interface Turn {
+	unit: UnitId;
+	facing: number;
+}
+
 export type Beat =
 	//a unit along its path (seen: the side shown sees it on that hex), its sprite strip
 	| { kind: "move"; unit: UnitId; icon: string; path: PathStep[]; sounds: string[] }
-	//a unit firing, facing its target
-	| { kind: "fire"; at: Position; facing: number; sheets: Sheet[]; sounds: string[] }
+	//a unit firing, facing its target; the fight's first shot turns its two units to face each other first (turn)
+	| { kind: "fire"; at: Position; facing: number; sheets: Sheet[]; sounds: string[]; turn?: Turn[] }
 	//an explosion where a unit was destroyed or surrendered
 	| { kind: "explosion"; unit: UnitId; at: Position; facing: number; sheets: Sheet[]; sounds: string[] };
 
@@ -94,11 +101,21 @@ function explosion(before: World, after: World, unit: UnitId, p: Position): Beat
 	return seen(before, after, p) ? { kind: "explosion", unit, at: at(p), facing: 0, sheets: EXPLOSIONS, sounds: EXPLOSION_SOUNDS } : null;
 }
 
-//A fight's shots: a support gun's alone; the attacker's, then the defender's when it fires back and is still there
+//A fighter turned to face the other, as the core turns them (src/core/fight.ts face): not on a bridge of its side
+function turnOf(before: World, w: Fighter, other: Fighter): Turn[] {
+	if (isBridgeForSide(before, hexIndex(before, w.row, w.col), w.side)) return [];
+	return [{ unit: w.unit, facing: directionTo(w.row, w.col, other.row, other.col) }];
+}
+
+//A fight's shots: a support gun's alone; the attacker's, then the defender's when it fires back and is still there. The
+//first shot shown turns both units to face each other before it fires, as the old UI showed them turned first
 function fightBeats(before: World, after: World, e: EventOf<"fight">): (Beat | null)[] {
 	const first = fireBeat(before, after, e.attacker, e.defender);
-	if (e.support || !e.result.defcanfire || e.defender.after.strength <= 0) return [first];
-	return [first, fireBeat(before, after, e.defender, e.attacker)];
+	const shots = e.support || !e.result.defcanfire || e.defender.after.strength <= 0 ? [first] : [first, fireBeat(before, after, e.defender, e.attacker)];
+	const opening = shots.find((b) => b !== null && b.kind === "fire");
+	if (opening !== undefined && opening.kind === "fire")
+		opening.turn = [...turnOf(before, e.attacker, e.defender), ...turnOf(before, e.defender, e.attacker)];
+	return shots;
 }
 
 function beatsOf(before: World, after: World, e: GameEvent): (Beat | null)[] {
@@ -154,8 +171,9 @@ function slotOf(w: World, id: UnitId, u: UnitState | null): { hex: number; key: 
 }
 
 //The world the map draws while a step's beats play (#503): the world after it, with the units held as they were before
-//it, on their hexes (a destroyed one back on the map), each still seen when the step spotted it
-export function shownWorld(before: World, after: World, held: UnitId[]): World {
+//it, on their hexes (a destroyed one back on the map), each still seen when the step spotted it, and turned the way a
+//fight's first shot turned it (turned)
+export function shownWorld(before: World, after: World, held: UnitId[], turned: ReadonlyMap<UnitId, number> = new Map()): World {
 	if (held.length === 0) return after;
 	const units = after.state.units.slice(), hexes = after.state.map.hexes.slice(), index = new Map(after.index);
 	//(each taken off its hex first, then put back where it was: a hex one left may be another's before)
@@ -167,7 +185,7 @@ export function shownWorld(before: World, after: World, held: UnitId[]): World {
 		const was = unitById(before, id), now = unitById(after, id), slot = slotOf(before, id, was);
 		if (was === null) continue;
 		const i = index.get(id);
-		const u = { ...was, tempSpotted: was.tempSpotted || (now !== null && now.tempSpotted) };
+		const u = { ...was, facing: turned.get(id) ?? was.facing, tempSpotted: was.tempSpotted || (now !== null && now.tempSpotted) };
 		if (i === undefined) {
 			index.set(id, units.length);
 			units.push(u);
