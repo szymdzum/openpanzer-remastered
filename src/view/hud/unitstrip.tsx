@@ -1,6 +1,5 @@
-//The unit list (UnitList, #348): the person's units on the map as a strip of cards under the status bar, opened with
-//the status bar's Unit list button. A card pressed selects its unit and brings it to the middle of the map. What each
-//card says is the view model's (src/view/hud/unitlist.ts). The close button or Esc closes it.
+//The unit list: the person's units on the map as a strip of cards under the status bar, opened with its Unit list
+//button. A card pressed selects its unit and centres the map on it. The close button or Esc closes it.
 import { Button } from "../components/button";
 import { Icon } from "../components/icon";
 import { Badge } from "../components/meter";

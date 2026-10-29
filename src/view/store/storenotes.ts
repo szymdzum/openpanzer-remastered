@@ -1,16 +1,14 @@
-//The store's messages (src/view/store/store.ts, review proposal 3): the message windows open, one shown at a time
-//(MessageDialog), each OK doing what the message asked
+//The store's messages: the message windows open, one shown at a time, each OK doing what the message asked
 import { computed, signal } from "@preact/signals";
 import type { Position } from "../../core/types";
 
-//A message window: its title, its text (HTML: the scenarios' briefings and the tutorial's messages are the
-//game's own), the hex it points at (the map's, D2) and what its OK does
+/** The text is HTML: the scenarios' briefings and the tutorial's messages are the game's own. */
 export interface Note {
 	title: string;
 	html: string;
 	at: Position | null;
 	ok: () => void;
-	//a scenario's briefing (MessageDialog): the full window with its stamp; else a short notice
+	//a scenario's briefing: the full window with its stamp; else a short notice
 	briefing?: boolean;
 }
 
@@ -20,7 +18,7 @@ export function createNotes() {
 	return {
 		notes, note,
 
-		//A message shown after those already open, one at a time
+		//Shown after those already open
 		show(n: Note) {
 			notes.value = [...notes.value, n];
 		},

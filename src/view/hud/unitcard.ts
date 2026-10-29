@@ -1,10 +1,7 @@
-//The unit card's view model (UnitInfo, #348 with #37, docs/ui/components/UnitInfo): the selected unit's card docked at
-//the bottom in its two sizes. Hidden, the default: its line (src/view/hud/unitline.ts). Open, on More: who it is (name,
-//formation and country, target type, movement and Core, its experience to the next star, its leaders), its condition
-//(the line's four gauges, each with what it means, and the Resupply stamp), what it can still do this turn, what it hits
-//and holds against each kind of enemy with the bonuses in force, its initiative, range, spotting and value, and the
-//band of what riding means. Every phrase reads a core query (the README's table, test/unitfacts.test.ts); only the
-//thresholds of the gauges' states and the bars' scale are the view's. From the core's World and nothing else
+//The open unit card's view model (docs/ui/components/UnitInfo): who the unit is, its condition, what it can still do,
+//what it hits and holds, and the band of what riding means; hidden, its line (unitline.ts). Every phrase reads a core
+//query (the README's table, test/unitfacts.test.ts); only the gauges' state thresholds and the bars' scale are the
+//view's
 import { firesOnAircraft, unitAttackRange } from "../../core/attack";
 import {
 	defenderEqid, entrenchmentAttacking, entrenchmentCountsTwiceAgainst, entrenchmentFacts, experienceBonus, INITIATIVE_DEFENCE,
@@ -25,49 +22,44 @@ import { classIcon, countryName, nationOf, shownUnit } from "../store/model";
 import { type LeaderLine, leadersOf } from "./unitinfo";
 import { type CardLine, type LineChip, type LineGauge, unitLineOf } from "./unitline";
 
-//How much of the map the card takes: its line (hidden, the default), or open over the map
+/** The line is the card hidden, the default. */
 export type CardSize = "line" | "open";
 
-//A tag under the name: what the rules care about (the shop's line of an entry too)
+/** A tag under the name: what the rules care about (the shop's line of an entry too). */
 export interface CardTag {
 	text: string;
 	icon: IconName | null;
 	core: boolean; //the core tag, in brass
 }
 
-//A gauge of the open card: the line's, with what its label and its meaning say in their tooltips
 export interface CardGauge extends LineGauge {
 	tip: string | null;
 	sayTip: string | null;
 }
 
-//What it hits or holds against a kind of enemy: its icon, name and what it means, its value and its bar on the 0-15
-//scale. none: it can't ("can't" against aircraft); weak: its weak defence; plus: added to the defence, with no bar
 export interface CardStat {
 	icon: IconName;
 	name: string;
 	tip: string;
 	value: string;
-	fill: number;
-	tone: "none" | "weak" | "plus" | null;
+	fill: number; //its bar on the 0-15 scale
+	tone: "none" | "weak" | "plus" | null; //none: it can't; weak: its weak defence; plus: added to the defence, with no bar
 }
 
-//A bonus in force ("+1 veteran") and what it adds to ("attack and defence")
 export interface CardBonus {
-	text: string;
-	to: string;
+	text: string; //"+1 veteran"
+	to: string; //what it adds to: "attack and defence"
 	tip: string;
 }
 
-//What riding its transport (or a carrier) means: "On Opel Blitz", then its phrases, warn ones in critical
 export interface BandItem {
 	text: string;
 	tip: string | null;
-	warn: boolean;
+	warn: boolean; //shown in critical
 }
 
 export interface RideBand {
-	on: string;
+	on: string; //"On Opel Blitz"
 	items: BandItem[];
 }
 
@@ -96,23 +88,22 @@ export interface UnitCard {
 	line: CardLine; //the card hidden, as one line
 }
 
-//The stats' scale: the bars run to 15
 const SCALE = 15;
 const XP_STAR = 100, MAX_STARS = 5;
 
-//A unit's ordinal as the old window wrote it before the name (UIBuilder.unitIDToOrdinal): 1st, 2nd, 11th, 101st for 0
+/** 1st, 2nd, 11th, 101st for 0, as the original writes it (UIBuilder.unitIDToOrdinal, reference/src/uibuilder.js). */
 export function ordinal(id: number): string {
 	if (id < 0) return "";
 	if (id === 0) return "101st";
 	const last = id % 10;
-	//(only 11, 12 and 13 themselves are "th": 111 is 111st, as the old window wrote it)
+	//(only 11, 12 and 13 themselves are "th": 111 is 111st)
 	if (last === 1 && id !== 11) return id + "st";
 	if (last === 2 && id !== 12) return id + "nd";
 	if (last === 3 && id !== 13) return id + "rd";
 	return id + "th";
 }
 
-//What an entry is as a mover: a train is a ground unit on rails (uclass up to air defence with naval movement)
+//A train is a ground unit on rails (uclass up to air defence with naval movement)
 function moveName(e: EquipmentEntry): string {
 	return e.uclass <= unitClass.airDefence && e.movmethod === movMethod.deepnaval ? "Rail road" : movMethodNames[e.movmethod];
 }
@@ -127,17 +118,15 @@ export function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
 	return tags;
 }
 
-//"1st Tank · Germany"; a unit with no country of its own (a fortification): its class alone
+//A unit with no country of its own (a fortification) has its class alone
 const subOf = (what: string, country: string) => country === "" ? what : what + " · " + country;
 
-//"a, b or c": the several terrains or classes a rule names
 const anyOf = (names: string[]) => names.slice(0, -1).join(", ") + " or " + names[names.length - 1];
 
 const leaderName = (l: number) => leaderDescriptions[l][0];
-//The terrains a rule of the core names
 const terrainsWhere = (rule: (t: number) => boolean) => anyOf(Object.values(terrainType).filter(rule).map((t) => terrainNames[t].toLowerCase()));
 
-//What its entrenchment does, as the attack counts it (entrenchmentFacts, entrenchmentAttacking): never a written list
+//Computed from the attack's own facts (entrenchmentFacts, entrenchmentAttacking), never a written list
 function entrenchmentTip(w: World, u: UnitState): string {
 	const f = entrenchmentFacts(w, u), said = ["Each level adds a point to its defence"];
 	if (f.holds) said.push(leaderName(leaderType.ferociousDefense) + ": nothing ignores it");
@@ -152,7 +141,7 @@ function entrenchmentTip(w: World, u: UnitState): string {
 	return said.join("; ");
 }
 
-//The open card's gauges: the line's, strength out of ten, the entrenchment's limit here and what it does
+//The line's gauges, with strength out of ten and the entrenchment's limit here and what it does
 function conditionOf(w: World, u: UnitState, line: CardLine): CardGauge[] {
 	const [strength, fuel, ammo, dug] = line.gauges;
 	const plain = (g: LineGauge): CardGauge => ({ ...g, tip: null, sayTip: null });
@@ -168,7 +157,7 @@ function conditionOf(w: World, u: UnitState, line: CardLine): CardGauge[] {
 const stat = (icon: IconName, name: string, tip: string, value: number, weak = false): CardStat =>
 	({ icon, name, tip, value: String(value), fill: Math.min(1, Math.max(0, value) / SCALE), tone: weak ? "weak" : null });
 
-//What it hits: its attack on each kind of target. Soft and hard as the game words them, said once in their tooltips
+//Soft and hard as the game words them, said once in their tooltips
 function hitsOf(e: EquipmentEntry): CardStat[] {
 	return [
 		stat("infantry", "Soft", "Its attack on soft targets: unarmoured", e.softatk),
@@ -180,8 +169,8 @@ function hitsOf(e: EquipmentEntry): CardStat[] {
 }
 
 //What it holds: its defence against each kind of attack, the weak one in critical. Close assault and the range
-//defence modifier (what it adds: rangeDefence) only on the ground: an aircraft fights over clear terrain, where infantry
-//doesn't close in, and range defence is for ground units against ground units
+//defence modifier (what it adds: rangeDefence) only on the ground: an aircraft fights over clear terrain, where
+//infantry doesn't close in, and range defence is for ground units against ground units
 function holdsOf(w: World, self: UnitState, e: EquipmentEntry): CardStat[] {
 	const weak = weakDefences(e), is = (f: DefenceField) => weak.includes(f);
 	const ground = isGround(w, self), none = (icon: IconName, name: string, tip: string): CardStat => ({ icon, name, tip, value: "–", fill: 0, tone: "none" });
@@ -204,7 +193,7 @@ function holdsOf(w: World, self: UnitState, e: EquipmentEntry): CardStat[] {
 	];
 }
 
-//The bonuses in force and what they add to: experience to attack and defence, entrenchment to defence alone
+//Experience adds to attack and defence, entrenchment to defence alone
 function bonusesOf(w: World, u: UnitState): CardBonus[] {
 	const bonuses: CardBonus[] = [], vet = experienceBonus(u), level = entrenchmentFacts(w, u).level;
 	if (vet > 0) bonuses.push({ text: "+" + vet + " veteran", to: "attack and defence", tip: "Its experience: +" + vet + " to its attack and its defence in every fight" });
@@ -234,7 +223,7 @@ function bandOf(w: World, u: UnitState): RideBand | null {
 	] };
 }
 
-//The card of a unit on the map that the side shown sees; null when there is none
+/** Null unless the unit is on the map and the side shown sees it. */
 export function unitCardOf(w: World, id: UnitId): UnitCard | null {
 	const u = shownUnit(w, id);
 	if (u === null) return null;

@@ -1,7 +1,6 @@
-//The message dialog (MessageDialog, #348): a scenario's briefing as a typed order sheet, the full window with its stamp;
-//every other message (the game's notices, the tutorial's orders, an error) the same window at its short width without
-//the stamp. Its one button acknowledges it; the game waits for it, so it has no
-//close and Esc doesn't take it away. Messages come one at a time (the store's notes).
+//The message dialog: a scenario's briefing as a typed order sheet, the full window with its stamp; every other message
+//(a notice, the tutorial's orders, an error) the same window at its short width without the stamp. The game waits for
+//its one button, so it has no close and Esc doesn't take it away. Messages come one at a time (the store's notes).
 import { safeHtml } from "../html";
 import { Button } from "../components/button";
 import { Dialog, Scrim, Stamp } from "../components/panel";
@@ -10,7 +9,7 @@ import { briefingLabelOf } from "../turn";
 
 export function MessageDialog({ store }: { store: Pick<Store, "close" | "menu" | "note" | "world"> }) {
 	const note = store.note.value, w = store.world.value;
-	//(set aside while the settings are open, as the old settings window hid the message under it)
+	//(set aside while the settings are open)
 	if (note === null || store.menu.value.window === "settings") return null;
 	const brief = note.briefing === true && w !== null ? briefingLabelOf(w) : null;
 	return (

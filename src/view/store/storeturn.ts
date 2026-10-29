@@ -1,6 +1,5 @@
-//The store's turn (src/view/store/store.ts, review proposal 3): the status bar's cells, End turn and its question (#8), the
-//turn reports (TurnBanner, CombatLog) with what the enemy's turn did, the dossier and the campaign's end, and the person's
-//turn start
+//The store's turn: the status bar's cells, End turn and its question, the turn reports with what the enemy's turn did,
+//the dossier and the campaign's end, and the person's turn start
 import { computed, signal } from "@preact/signals";
 import type { GameEvent } from "../../core/events";
 import type { World } from "../../core/types";
@@ -23,15 +22,15 @@ type Step = Pick<ReturnType<typeof createStep>, "showing">;
 
 export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: Step, notes: Pick<Notes, "show">, host: Pick<GameHost, "world">) {
 	const { world, select, look, dispatch } = core;
-	//the units End turn warns of while it asks (#8)
+	//The units End turn warns of while it asks
 	const asking = signal<string[] | null>(null);
-	//what the enemy's turn did to the side shown (from a program's steps), and the short turn report open (TurnBanner)
+	//What the enemy's turn did to the side shown (from a program's steps), and the short turn report open
 	const enemy = signal<EnemyTurn>(quietTurn());
 	const banner = signal(false);
-	//the turn's log from the person's end of turn on, and the full turn report open (CombatLog)
+	//The turn's log from the person's end of turn on, and the full turn report open
 	const log = signal(emptyLog());
 	const logOpen = signal(false);
-	//the dossier open (Dossier), or the campaign's end over it with what its close does (CampaignEnd)
+	//The dossier open, or the campaign's end over it with what its close does
 	const dossierOpen = signal(false);
 	const ending = signal<{ outcome: ScenarioOutcome, html: string, closed: () => void } | null>(null);
 
@@ -41,7 +40,6 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 	const sideName = computed(() => status.value === null ? "" : status.value.sideName);
 	const turn = computed(() => status.value === null ? "" : status.value.turn + "/" + status.value.maxTurns);
 	const prestige = computed(() => status.value === null ? null : status.value.prestige);
-	//(written as the HUD writes it: 3,056)
 	const prestigeShown = computed(() => prestige.value === null ? null : prestigeText(prestige.value));
 	const country = computed(() => status.value === null ? "" : status.value.country);
 	const nation = computed(() => status.value === null ? null : status.value.nation);
@@ -51,14 +49,13 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 	const rules = computed(() => status.value === null ? "" : status.value.rules);
 	const endTurn = computed(() => world.value === null ? "No game is playing" : endTurnRefusal(world.value));
 	const askingText = computed(() => asking.value === null ? null : stillToAct(asking.value));
-	//the turn report while it is open; the program's turn in progress (the AI indicator)
+	//The turn report and the log while open; the program's turn in progress (the AI indicator)
 	const report = stableComputed(() => world.value === null || !banner.value ? null : turnReportOf(world.value, enemy.value));
 	const combatLog = stableComputed(() => world.value === null || !logOpen.value ? null : combatLogOf(world.value, log.value, enemy.value));
 	const dossier = stableComputed(() => world.value === null || (!dossierOpen.value && ending.value === null) ? null : dossierOf(world.value));
 	const campaignEnd = computed(() => ending.value === null ? null : campaignEndOf(ending.value.outcome, ending.value.html));
 	const ai = stableComputed(() => world.value === null ? null : aiStatusOf(world.value));
-	//(the status bar's turn report button: the person's report, none while a program plays)
-	//(the report is there whenever the person has a side, turn.ts turnReportOf)
+	//The status bar's turn report button: there is a report whenever the person has a side (turnReportOf)
 	const reportRefusal = computed(() => world.value === null || yourPlayer(world.value) === null ? "No report to show" : undefined);
 
 	return {
@@ -78,8 +75,7 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			log.value = logStep(log.value, before, world.value!, events);
 		},
 
-		//A new scenario's start: the last game's enemy turn not reported (#466: the old UI reset its combat log at a new
-		//scenario and a load)
+		//A new scenario's start: the last game's enemy turn not reported (#466)
 		reset() {
 			log.value = emptyLog();
 			enemy.value = quietTurn();
@@ -92,7 +88,7 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			dossierOpen.value = true;
 		},
 
-		//Its close: at the campaign's end, what the game asked (the main menu)
+		//At the campaign's end its close runs what the game asked (the main menu)
 		closeDossier() {
 			const end = ending.value;
 			dossierOpen.value = false;
@@ -100,14 +96,14 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			if (end !== null) end.closed();
 		},
 
-		//The campaign's end (the screen's campaignEnd): the dossier under its outcome and closing words; with no campaign
-		//player to show (no world), the outcome as a message, as before
+		//The campaign's end: the dossier under its outcome and closing words; with no campaign player to show (no world),
+		//the outcome as a message
 		endCampaign(outcome: ScenarioOutcome, html: string, then: () => void) {
 			if (world.value !== null && dossierOf(world.value) !== null) ending.value = { outcome, html, closed: then };
 			else notes.show({ title: outcomeNames[outcome], html, at: null, ok: then });
 		},
 
-		//The full turn report (the short one's Turn report), in place of the short one; closed
+		//The full turn report, in place of the short one
 		openLog() {
 			banner.value = false;
 			logOpen.value = true;
@@ -117,14 +113,13 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			logOpen.value = false;
 		},
 
-		//What a turn's start did (the screen's turnEvents): its resupplies and reinforcements in the log
+		//What a turn's start did: its resupplies and reinforcements in the log
 		logTurn(events: GameEvent[]) {
 			const w = host.world();
 			if (w !== null) log.value = logTurnStart(log.value, w, events);
 		},
 
-		//End turn: on at once when every unit has done what it can; else the question, with the units that can still
-		//act (#8)
+		//End turn: on at once when every unit has done what it can; else the question, with the units that can still act
 		askEndTurn() {
 			const w = world.value;
 			if (w === null || endTurn.value !== null || step.showing.value) return;
@@ -133,7 +128,6 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			else asking.value = ready.map((u) => unitData(w, u).name);
 		},
 
-		//The question's answer: the turn ended, or played on
 		answerEndTurn(end: boolean) {
 			asking.value = null;
 			if (end) dispatch({ type: "endTurn" });
@@ -157,7 +151,7 @@ export function createTurn(core: Core, map: Pick<MapPart, "deployment">, step: S
 			look({ row: u.row, col: u.col });
 		},
 
-		//The report's close (×), or the status bar's turn report button: closed, or open again
+		//The report's close (×) or the status bar's turn report button
 		showReport(open: boolean) {
 			banner.value = open;
 		},

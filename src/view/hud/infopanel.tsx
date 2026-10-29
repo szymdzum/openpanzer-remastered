@@ -1,10 +1,6 @@
-//The unit card (UnitInfo, #346, #348 with #37): the one card of the selected unit, docked at the bottom, in two sizes.
-//Hidden, the default: one line (docs/ui/components/UnitInfo), the sprite, flag, name, stars and formation, the four
-//gauges each with what it means, the chips of what it can still do this turn, More and Next unit. Open, on More, over
-//the map: who it is, its condition with what each gauge means, what it can still do this turn, what it hits and holds
-//against each kind of enemy, and the band of what riding means. What it says is the view model's (src/view/hud/unitcard.ts,
-//src/view/hud/unitline.ts), read by the unit's id (#404). Inspect unit (I) shows or hides it; Less, Esc or a click on the
-//map fold it back to its line, and it never opens by itself
+//The card of the selected unit, docked at the bottom: one line (the default; docs/ui/components/UnitInfo) or, on More,
+//open over the map. What it says is the view model's (unitcard.ts, unitline.ts), read by the unit's id (#404). Inspect
+//unit (I) shows or hides it; Less, Esc or a click on the map fold it back to its line, and it never opens by itself
 import { Icon, type IconName, Mark } from "../components/icon";
 import { Stars } from "../components/meter";
 import { useEscape } from "../components/panel";
@@ -22,7 +18,6 @@ function Name({ card, big = false }: { card: UnitCard, big?: boolean }) {
 	return <div id="uName" class={big ? "name lg" : "name"} title={card.name}>{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}<span class="nm">{card.name}</span></div>;
 }
 
-//The leaders by name, each with what it gives as the game words it
 function Leaders({ leaders }: { leaders: LeaderLine[] }) {
 	if (leaders.length === 0) return <div class="ui-lead none">No leader yet</div>;
 	return (
@@ -37,7 +32,6 @@ function Leaders({ leaders }: { leaders: LeaderLine[] }) {
 	);
 }
 
-//Who it is: sprite, flag, name, formation and country, its tags, its experience to the next star, its leaders
 function Identity({ card }: { card: UnitCard }) {
 	return (
 		<div class="ui-col ui-id">
@@ -56,7 +50,6 @@ function Identity({ card }: { card: UnitCard }) {
 	);
 }
 
-//A gauge of the open card: its label, its segments or bar, its value, and what it means
 function Gauge({ g }: { g: CardGauge }) {
 	return (
 		<div class={g.state === null ? "ui-c" : "ui-c " + g.state}>
@@ -68,7 +61,7 @@ function Gauge({ g }: { g: CardGauge }) {
 	);
 }
 
-//Its condition and what it can still do this turn: the chips in words, ok when it can, dashed when it can't
+//The chips are in words here: ok when it can, dashed when it can't
 function Condition({ card }: { card: UnitCard }) {
 	return (
 		<div class="ui-col ui-cond">
@@ -84,7 +77,6 @@ function Condition({ card }: { card: UnitCard }) {
 	);
 }
 
-//What it hits or holds against a kind of enemy: icon, name (what it means in its tooltip), bar and value
 function Stat({ s }: { s: CardStat }) {
 	return (
 		<div class={s.tone === null ? "ui-m" : "ui-m " + s.tone} title={s.tip}>
@@ -97,8 +89,6 @@ function Stat({ s }: { s: CardStat }) {
 	);
 }
 
-//Against the enemy: what it hits and holds, initiative, range, spotting, the bonuses in force and what they add to; its
-//value in the corner
 function Versus({ card }: { card: UnitCard }) {
 	return (
 		<div class="ui-col ui-vs">
@@ -120,7 +110,6 @@ function Versus({ card }: { card: UnitCard }) {
 	);
 }
 
-//The band over the card while it rides: what riding does, what it can't get off from in critical
 function Band({ band }: { band: RideBand }) {
 	return (
 		<div class="ui-ribbon">
@@ -130,8 +119,7 @@ function Band({ band }: { band: RideBand }) {
 	);
 }
 
-//A small icon button at the card's edge: the card's room goes to the unit, not to its controls. The name is its label
-//and its tooltip
+//A small icon button at the card's edge: the card's room goes to the unit, not to its controls
 function Act({ icon, up = false, label, onClick }: { icon: IconName, up?: boolean, label: string, onClick: () => void }) {
 	return (
 		<button type="button" class={up ? "pm-btn ghost icon ui-act up" : "pm-btn ghost icon ui-act"} aria-label={label} title={label}
@@ -139,14 +127,12 @@ function Act({ icon, up = false, label, onClick }: { icon: IconName, up?: boolea
 	);
 }
 
-//A gauge's segments, or its bar when it has none
 function Track({ g }: { g: LineGauge }) {
 	return g.segs !== null
 		? <span class="ui-segs" aria-hidden="true">{g.segs.map((k, i) => <i key={i} class={k} />)}</span>
 		: <span class="ui-bar" aria-hidden="true"><b style={width(g.fill)} /></span>;
 }
 
-//A gauge of the line: its label with what it means, its segments or bar, its value
 function LineGaugeView({ g }: { g: LineGauge }) {
 	return (
 		<div class={g.state === null ? "ui-g" : "ui-g " + g.state}>
@@ -157,7 +143,7 @@ function LineGaugeView({ g }: { g: LineGauge }) {
 	);
 }
 
-//What it can still do this turn: an icon and a number, the words in its tooltip and for screen readers
+//The words are in its tooltip and for screen readers
 function Chip({ c }: { c: LineChip }) {
 	return (
 		<span class={c.tone === null ? "ui-chip" : "ui-chip " + c.tone} title={c.words}>
@@ -168,7 +154,6 @@ function Chip({ c }: { c: LineChip }) {
 	);
 }
 
-//The sprite, with its transport's under it when it rides; big on the open card
 function Portrait({ line, big = false }: { line: CardLine, big?: boolean }) {
 	return (
 		<span class="ui-port">
@@ -180,7 +165,6 @@ function Portrait({ line, big = false }: { line: CardLine, big?: boolean }) {
 	);
 }
 
-//The card hidden: one line
 function Line({ card, store }: { card: UnitCard, store: Pick<Store, "shortcut" | "sizeCard"> }) {
 	const line = card.line;
 	return (

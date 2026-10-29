@@ -1,5 +1,4 @@
-//The store's step (src/view/store/store.ts, review proposal 3): a step's beats played on the map (src/view/player.ts), then
-//what it told over the map and in the status bar (CombatResults)
+//The store's step: a step's beats played on the map (player.ts), then what it told over the map and in the status bar
 import { type ReadonlySignal, signal } from "@preact/signals";
 import type { ResultOf } from "../../legacy/commands";
 import type { CommandType } from "../../core/command";
@@ -12,26 +11,25 @@ import { createPlayer, type Motion, type Stage } from "../player";
 import { type News, type Results, resultsOf } from "../hud/results";
 import type { Core } from "./storecore";
 
-//What the page gives the step's beats: its sounds, and whether the person asked for reduced motion
+/** `still` is whether the person asked for reduced motion. */
 export type StepPage = Pick<Stage, "sound" | "still">;
 
 export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHost, "cosmetic">>, page: StepPage) {
 	const { world } = core;
-	//What the last step told (CombatResults): its chips and stamp over the map until they fade, its line in the status bar
-	//until the next command
+	//What the last step told: its chips and stamp over the map until they fade, its line in the status bar until the next
+	//command
 	const results = signal<Results | null>(null);
 	const news = signal<News | null>(null);
-	//A step's beats while they play (src/view/player.ts): what the map draws over the units, the unit hidden from its hex
-	//while it moves; the map takes no click meanwhile
+	//While a step's beats play: what the map draws over the units, and the unit hidden from its hex while it moves
 	const motion = signal<Motion | null>(null);
 	const moving = signal<UnitId | null>(null);
 	//The world the map draws while the beats play (#503): the units a beat still has to move or blow up as they were
 	//before the step, until their beat; null between steps, when the map draws the world
 	const shown = signal<World | null>(null);
-	//A step's beats playing (src/view/player.ts): the map takes no click meanwhile, the screen tells the host it is still
-	//showing a step (#459), and the person's commands wait for it, as the old UI's End turn waited (#465, #58, #289)
+	//A step's beats playing: the map takes no click meanwhile, the screen tells the host it is still showing a step
+	//(#459), and the person's commands wait for it (#465)
 	const showing = signal(false);
-	//(the sprite and sound picks from the cosmetic stream; with no host to draw from, the first of each)
+	//(the sprite and sound picks come from the cosmetic stream; with no host to draw from, the first of each)
 	const cosmetic = host.cosmetic;
 	//A unit an explosion destroyed, let go by the step playing: off the map once the blast covers it (#503)
 	let letGo = (_id: UnitId) => {};
@@ -88,7 +86,7 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 	};
 }
 
-//The events of a command's result: a move's and an attack's carry theirs, the others none
+/** A move's and an attack's result carry events, the others' none. */
 export function eventsOf(result: ResultOf<CommandType>): GameEvent[] {
 	return result !== null && typeof result === "object" && "events" in result ? result.events : [];
 }

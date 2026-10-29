@@ -1,16 +1,12 @@
-//The status bar (StatusBar, #346): the one always-visible strip of game state. The top row has the side whose turn
-//it is (its flag, its country and a chip in the side's colour), the turn, the date, the weather and the ground, the
-//rules the game plays (#317), the person's prestige, and the unit list and turn report buttons; the second row is
-//the status line. What each cell says is the view model's (src/view/store/model.ts statusOf), carried by the store.
+//The status bar: the one always-visible strip of game state. The top row has the side whose turn it is (its flag, its
+//country and a chip in the side's colour), the turn, the date, the weather and the ground, the rules, the person's
+//prestige, and the unit list and turn report buttons; the second row is the status line. What each cell says is
+//statusOf's (src/view/store/model.ts).
 import { Button } from "../components/button";
 import { Icon, Mark } from "../components/icon";
 import { Panel } from "../components/panel";
 import type { Store } from "../store/store";
 
-//The unit list button opens the strip of the person's units (UnitList); the turn report button opens the short report
-//again (TurnStart)
-
-//What StatusBar reads of the store
 type StatusBarReads = Pick<Store, "airMode" | "banner" | "country" | "date" | "deployment" | "ground" | "located" |
 	"nation" | "news" | "prestigeShown" | "refused" | "reportRefusal" | "rules" | "shopRefusal" | "showReport" |
 	"side" | "sideName" | "strategic" | "toggleList" | "turn" | "weather">;
@@ -40,9 +36,8 @@ export function StatusBar({ store }: { store: StatusBarReads }) {
 	);
 }
 
-//The status line: on the strategic map how to leave it (StrategicMap); while deploying what a click does (Deployment);
-//else the layer shown first (AirLayer), then a refusal, the last combat's news (CombatResults) or the hex under the
-//pointer, as the old UI's #locmsg told it
+//The status line: on the strategic map how to leave it; while deploying what a click does; else the layer shown first,
+//then a refusal, the last combat's news or the hex under the pointer (as the original's #locmsg, reference/src/ui.js)
 function MapLine({ store }: { store: Pick<Store, "airMode" | "deployment" | "located" | "news" | "refused" | "strategic"> }) {
 	const air = store.airMode.value, deploy = store.deployment.value;
 	if (store.strategic.value)

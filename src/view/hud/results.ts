@@ -1,14 +1,14 @@
-//What the map shows right after a combat (#347, the CombatResults card), from the step's events and nothing else: the
-//strength each fighter lost over its hex, one stamp for what happened, and the same news as a line for the status bar.
-//It replaces the old UI's bouncing labels (uiShowAlert). Only what the side shown sees is told. Plain functions, tested
-//on hand-built worlds (test/view-results.test.ts)
+//What the map shows right after a combat, from the step's events and nothing else: the strength each fighter lost over
+//its hex, one stamp for what happened, and the same news as a line for the status bar. It replaces the original game's
+//bouncing labels (uiShowAlert, reference/src/ui.js). Only what the side shown sees is told. Tested in
+//test/view-results.test.ts
 import type { EventOf, Fighter, GameEvent } from "../../core/events";
 import { distance } from "../../core/geometry";
 import type { Position, UnitId, World } from "../../core/types";
 import { hexIndex, isSpotted, unitById } from "../../core/world";
 import { terrainNames } from "../../core/tables";
 
-//A loss chip right of a unit's strength plate: the strength lost (none: 0 on paper) and a note that explains it
+/** A loss chip right of a unit's strength plate: the strength lost (none: 0 on paper) and a note that explains it. */
 export interface HitChip {
 	at: Position;
 	loss: number;
@@ -17,7 +17,7 @@ export interface HitChip {
 
 export type StampTone = "good" | "bad" | "warn" | "brass";
 
-//The one stamp of a combat, over the unit it concerns: its word, the number after it
+/** The one stamp of a combat, over the unit it concerns: its word, the number after it. */
 export interface Stamp {
 	at: Position;
 	word: string;
@@ -25,7 +25,7 @@ export interface Stamp {
 	tone: StampTone;
 }
 
-//The status bar's line: the unit's name in bold, then what happened
+/** The status bar's line: the unit's name in bold, then what happened. */
 export interface News {
 	name: string;
 	text: string;
@@ -42,15 +42,14 @@ type Fight = EventOf<"fight">;
 
 const find = <T extends GameEvent["type"]>(events: GameEvent[], type: T): EventOf<T> | undefined =>
 	events.find((e): e is EventOf<T> => e.type === type);
-//A hex's position copied off a unit or a fighter (the beats and the turn report take it too)
+/** A hex's position copied off a unit or a fighter. */
 export const at = (f: { row: number; col: number }): Position => ({ row: f.row, col: f.col });
 //A loss as the chips write it: −6, and 0 for none
 const loss = (n: number) => n === 0 ? "0" : "−" + n;
-//The strength a fighter lost (the dice can kill more than a unit has: it loses what it had)
+/** The dice can kill more than a unit has: it loses what it had. */
 export const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
 
-//The combat of a step read from its events: the attack itself (none when the support fire stopped it), the support
-//fire's shots, and what came after
+//The attack itself is none when the support fire stopped it
 interface Combat {
 	main: Fight | null;
 	support: Fight[];
@@ -76,7 +75,7 @@ function nameOf(before: World, after: World, id: UnitId): string {
 	return u === null ? "" : (after.equipment[u.eqid] || before.equipment[u.eqid]).name;
 }
 
-//Whether the side shown sees a hex, before or after the step; no side shown: every hex (the step's beats too, beats.ts)
+/** The side shown sees a hex before or after the step; with no side shown, every hex (the beats use it too). */
 export function seen(before: World, after: World, p: Position): boolean {
 	const side = after.spotSide;
 	if (side < 0 || side > 1 || after.noFOW) return true;
@@ -105,18 +104,15 @@ function defenderChip(c: Combat): HitChip | null {
 //Both fighters' chips, none for a unit destroyed: its stamp says it
 const chipsOf = (c: Combat): HitChip[] => [attackerChip(c), defenderChip(c)].filter((x) => x !== null);
 
-//A stamp and its line, in the card's order: the one that decides the combat first
 interface Told {
 	stamp: Stamp | null;
 	news: News;
 }
 
-//The terrain the defender stood on, as the line names it
 function placeOf(w: World, p: Position): string {
 	return terrainNames[w.data.hexes[hexIndex(w, p.row, p.col)].terrain].toLowerCase();
 }
 
-//An attack that took place, as its tellers read it
 interface Fought {
 	before: World;
 	c: Combat;
@@ -207,7 +203,7 @@ function moveTold(before: World, after: World, events: GameEvent[]): Told | null
 		news: { name: nameOf(before, after, captured.unit), text: "took " + place + " · +" + captured.prestige + " prestige" } };
 }
 
-//A new leader for a unit of the side shown (the old UI told only those)
+//A new leader for a unit of the side shown only, as in the original game (reference/src/ui.js)
 function leaderTold(before: World, after: World, events: GameEvent[]): Told | null {
 	for (const e of events) {
 		const u = e.type === "leader" ? unitById(after, e.unit) : null;
@@ -217,13 +213,11 @@ function leaderTold(before: World, after: World, events: GameEvent[]): Told | nu
 	return null;
 }
 
-//A retreat's trail, when its stamp is shown
 function trailOf(c: Combat, stamp: Stamp | null): Results["trail"] {
 	return c.retreat !== undefined && stamp !== null && stamp.word === "Retreat" ? { from: c.retreat.from, to: c.retreat.to } : null;
 }
 
-//What a step shows over the map once it has been played, from the worlds before and after it and its events; null for
-//a step with nothing to tell, or whose combat the side shown doesn't see at all
+/** Null for a step with nothing to tell, or whose combat the side shown doesn't see at all. */
 export function resultsOf(before: World, after: World, events: GameEvent[]): Results | null {
 	const c = combatOf(events);
 	const t = attackTold(before, after, c) || moveTold(before, after, events) || leaderTold(before, after, events);
