@@ -10,7 +10,7 @@ import { leaderDescriptions } from "../../legacy/prototypes";
 import { terrainNames, terrainType, unitClass } from "../../core/tables";
 import type { IconName } from "../components/icon";
 import { dateOf, plural, statusOf, yourPlayer } from "../store/model";
-import { at } from "../hud/results";
+import { at, lost } from "../hud/results";
 import { type EnemyTurn, turnReportOf } from "../turn";
 import { ordinal } from "../hud/unitcard";
 import { NAVAL_ICON } from "../hud/unitlist";
@@ -51,9 +51,6 @@ export interface TurnLog {
 export const emptyLog = (): TurnLog => ({ combat: [], resupply: [], reinforce: [], leaders: [], objectives: [] });
 
 type Fighter = EventOf<"fight">["attacker"];
-
-//(the dice can kill more than a unit has: it loses what it had, #428)
-const lost = (f: Fighter) => Math.max(0, f.before.strength - Math.max(0, f.after.strength));
 
 //A unit as the log keeps it, from the world where it is (null: gone, or not the side shown's)
 function loggedOf(w: World, id: UnitId): Logged | null {
