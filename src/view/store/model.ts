@@ -6,7 +6,7 @@
 import type { Command, Refusal } from "../../core/command";
 import { check } from "../../core/step";
 import type { PlayerState, UnitId, UnitState, World } from "../../core/types";
-import { hexIndex, isSpotted, unitById } from "../../core/world";
+import { hexIndex, isSpotted, sideOf, unitById } from "../../core/world";
 import { countryNames } from "../../legacy/prototypes";
 import { groundConditionNames, playerType, sideNames, unitClass } from "../../core/tables";
 import type { IconName, Nation } from "../components/icon";
@@ -161,14 +161,16 @@ export function stillToAct(names: string[]): string {
 	return plural(n, "1 unit", n + " units") + " can still move or fire: " + shown + (n > 6 ? " and " + (n - 6) + " more" : "") + ". End the turn?";
 }
 
-//The unit when it is on the map and the side shown sees it: its own, an enemy on a hex it spots, or one that fired
-//from hiding, as the map shows it (src/view/map/mapview.ts isShown; the old unit info did too, #483). No side shown: no
-//game is on the screen, nothing is seen
+//The side shown sees a unit on the map: its own, on a hex it spots, or one that fired from hiding. No side shown: no
+//game is on the screen, nothing is seen. The one rule for the map and the unit info (#483)
+export function isShown(w: World, u: UnitState): boolean {
+	return sideOf(w, u) === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide));
+}
+
+//The unit when it is on the map and the side shown sees it
 export function shownUnit(w: World, id: UnitId): UnitState | null {
 	const u = unitById(w, id);
-	if (u === null || u.row < 0) return null;
-	const side = w.state.players[u.owner].side;
-	return side === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) ? u : null;
+	return u === null || u.row < 0 || !isShown(w, u) ? null : u;
 }
 
 //The next (N) or previous (P) unit of the unit's player that hasn't moved, in the order of the units, round the

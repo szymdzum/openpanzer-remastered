@@ -6,7 +6,7 @@ import { unitLowAmmo, unitLowFuel } from "../../core/units";
 import { hexIndex, onMap, unitAt, unitData } from "../../core/world";
 import { roadType, terrainNames, terrainType } from "../../core/tables";
 import type { IconName } from "../components/icon";
-import { isShown } from "./mapview";
+import { isShown } from "../store/model";
 
 //The hex under the pointer: the unit on it the side sees, in the layer shown (null: none), then its name, the current
 //player's transports there, its terrain and road and where it is, "Llucmacanes · City/Road (9,15)"

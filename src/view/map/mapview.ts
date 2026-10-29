@@ -11,7 +11,7 @@ import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../
 import { isAir, isGround, unitUsesAmmo } from "../../core/units";
 import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../../core/world";
 import { unitClass } from "../../core/tables";
-import { canOrder } from "../store/model";
+import { canOrder, isShown } from "../store/model";
 
 //A unit's marker under its sprite (MapOverlays): what it can still do this turn, its strength in its
 //side's colour, experience, entrenchment and the hits it took this turn
@@ -82,11 +82,6 @@ export type Click = { command: Command } | { select: UnitId | null };
 
 const STOP = 254;
 const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-
-//The side shown sees a unit: its own, on a hex it spots, or one that fired from hiding
-export function isShown(w: World, u: UnitState): boolean {
-	return sideOf(w, u) === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide));
-}
 
 //What the side shown's unit can still do this turn; only the current player's units show it
 function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove" | "canFire" | "noAmmo" | "done"> {
