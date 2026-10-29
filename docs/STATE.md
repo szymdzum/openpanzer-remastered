@@ -185,7 +185,7 @@ builds the old engine's objects again (the equipment and the campaign loaded alr
 
 ## The save (#128)
 
-`src/savegame.ts` writes and reads the save: `{ version: 3, rules, data: ScenarioData, state: GameState }`,
+`src/app/save.ts` writes and reads the save: `{ version: 3, rules, data: ScenarioData, state: GameState }`,
 toData's output with the format's version first (D3, D11) and the rules the game plays by (#53:
 `"classic"` or `"remaster"`, src/core/rules.ts). The rules sit beside the state, not in it: they don't
 change during a game, and the state the contracts hash stays the same. Version 1 had no rules: such a

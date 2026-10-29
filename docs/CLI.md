@@ -30,7 +30,7 @@ sends the commands a screen would and reads the game as text or JSON, the same c
 `npm run play:live` is the dev server with `OPENPANZER_CLI=1`: its `cliBridge` (vite.config.mts) adds
 cli/page.ts to the page and takes a call's words at `POST /__cli`, hands them to the page over the dev
 server's websocket and its answer back. The page plays them on the running game (the host's world,
-src/host.ts) and answers with the same commands as headless; it waits for a move's or an attack's
+src/app/host.ts) and answers with the same commands as headless; it waits for a move's or an attack's
 animation, and for the AI's turn, before it answers. It doesn't know a turn's events, so it tells the
 fights the screen's combat log saw (cli/fightlog.ts: the enemy's attacks on the side's units, the
 support fire either side gave, #307), then what changed between the world before and after: the units

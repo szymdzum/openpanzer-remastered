@@ -177,7 +177,7 @@ test("Every campaign starts, ends its scenarios and carries its player on as the
 
 //#183: the old game carried a campaign player whose core units all fell on with the list it brought into
 //the scenario, its dead units in it. The game starts a campaign's scenario on the core now
-//(src/coreload.ts): the player starts the next one with no core unit. In the campaign's second scenario
+//(src/app/start.ts): the player starts the next one with no core unit. In the campaign's second scenario
 //(the first brings in none)
 test("A campaign player whose core units all fell starts the next scenario with none (#183)", async () => {
 	const { game } = await oldCampaign(0, 1);

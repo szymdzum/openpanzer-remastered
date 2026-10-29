@@ -1,7 +1,7 @@
 //GameMap's parts (MapVisibility, MapBoard, MapSelection, UndoSlot): a hex's counters keep their
 //arithmetic, off with nothing on stays at 0, and the edges of the selection and the lookups. (The
 //map's and the hexes' own data fields were pinned here while the save was the JSON of the objects;
-//since #128 it is toData's state, src/savegame.ts)
+//since #128 it is toData's state, src/app/save.ts)
 import { expect, test } from "vitest";
 import { fixtures, readFixture, restoreState } from "./contracts";
 import { smallGame } from "./smallgame";

@@ -1,6 +1,6 @@
 //The engine contract's driver on the game's core (#137): what test/contracts/engine.contract.js asks
 //of the game that isn't a function of its own any more. The game plays on its session
-//(src/coresession.ts), started here as Game.setupGameState starts it after a load; the players are
+//(src/app/driver.ts), started here as Game.setupGameState starts it after a load; the players are
 //its controllers, a human player's stand-in is the core's AI outside it; the end of turn is the game's
 //and the outcome the core's. Built after restoreState, from the fresh modules
 import { vi } from "vitest";

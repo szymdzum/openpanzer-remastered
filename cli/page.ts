@@ -1,6 +1,6 @@
 //The command-line player on the game's page (#279, "npm run play:live"): the dev server hands the page a
-//call's words (vite.config.mts cliBridge) and the page plays it on the game host (src/host.ts) and the
-//screen the page runs (src/screen.ts: the UI's, src/view/screen.tsx, #378): the moves and attacks
+//call's words (vite.config.mts cliBridge) and the page plays it on the game host (src/app/host.ts) and the
+//screen the page runs (src/app/screen.ts: the UI's, src/view/screen.tsx, #378): the moves and attacks
 //shown by the screen as a program's are, with their animations where it has them, the end of turn the
 //host's, so the AI then plays its turn on the screen. A person watches the game the program plays
 import type { Command } from "../src/core/command";
@@ -47,7 +47,7 @@ const select = (unit: number | null) => game.host.screen.view({ type: "select", 
 
 type Animated = Extract<Command, { type: "move" | "attack" }>;
 
-//A move or an attack played and shown as a program's is (the host's playShown, src/screen.ts step): the unit selected
+//A move or an attack played and shown as a program's is (the host's playShown, src/app/screen.ts step): the unit selected
 //first as a person selects it, the step played whole, then shown to its end (its shown). The move takes its
 //path from the unit's move range, as the host gives a program's
 async function animate(cmd: Animated) {

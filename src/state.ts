@@ -508,7 +508,7 @@ export function restoreUndo(m: GameMap, s: UndoState) {
 
 //The campaign's scenario and Game's progress: the campaign must be the one loaded, fromData doesn't
 //load it (Campaign loads asynchronously). A load sets the scenario first and this once the campaign
-//is in (src/savegame.ts)
+//is in (src/app/save.ts)
 export function campaignFromData(host: CampaignHost, c: CampaignState | null, scenario: Scenario) {
 	if (c === null) {
 		if (host.campaign !== null)

@@ -11,7 +11,7 @@ export function withoutLosses(save: SaveFile): unknown {
 	return structuredClone(save);
 }
 
-//A save without what an imported save never stored (src/savegame.ts UnknownPart): an imported save
+//A save without what an imported save never stored (src/app/save.ts UnknownPart): an imported save
 //has placeholders there, a loaded one the game's own
 export function withoutUnknown(save: SaveFile, unknown: UnknownPart[]): SaveFile {
 	const { version, rules, data, state } = structuredClone(save);

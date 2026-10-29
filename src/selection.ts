@@ -42,7 +42,7 @@ export class MapSelection {
 	//The hexes shown, by index (row * cols + col): the move hexes it can move to, the hexes it can attack
 	declare moveShown: Set<number>;
 	declare attackShown: Set<number>;
-	//The game's embark of a unit leaving its carrier, back aboard (src/host.ts runGame sets it: the
+	//The game's embark of a unit leaving its carrier, back aboard (src/app/host.ts runGame sets it: the
 	//selection doesn't reach the commands). counters: the hexes' counters counted again (src/commands.ts)
 	declare static backAboard: (unit: Unit, counters?: boolean) => void;
 

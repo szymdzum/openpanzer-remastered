@@ -79,7 +79,7 @@ async function step(name: string, run: () => Promise<void>) {
 	console.log(`ok ${((Date.now() - t) / 1000).toFixed(1).padStart(5)}s  ${name}`);
 }
 
-//What read says of the world the game plays now (as the screen reads it, src/host.ts) and of the page's modules, with
+//What read says of the world the game plays now (as the screen reads it, src/app/host.ts) and of the page's modules, with
 //arg. read runs in the page: it sees nothing of this file
 async function world<T, A = null>(read: (on: [World, Probe], arg: A) => T, arg: A = null as A): Promise<T> {
 	const on = await page.evaluateHandle(() => {

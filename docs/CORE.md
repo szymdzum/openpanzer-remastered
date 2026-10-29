@@ -384,7 +384,7 @@ it against the session:
 
 ## The game host (#373)
 
-The running game's course is `GameHost` (src/host.ts), outside the UI: a scenario started from its file
+The running game's course is `GameHost` (src/app/host.ts), outside the UI: a scenario started from its file
 or loaded from a save (the players' types and handlers, the sides played here, the session, the save), the
 campaign's chain (each scenario's end with `endCampaignScenario`, the outcome told, the next scenario once
 the player has clicked its message away, the prototype, the core units carried, the dossier at the end),
@@ -405,9 +405,9 @@ UI module (test/headless.test.ts), and a whole campaign and a game's turns play 
 
 ## The screen (#374)
 
-The host and the session's glue (src/coresession.ts) show the game through one interface, `Screen`
-(src/screen.ts), and nothing else. The UI implements it (src/view/screen.tsx, #380), and a program that
-shows nothing does too (src/nullscreen.ts: the headless tests). The old UI did, through a thin adapter
+The host and the session's glue (src/app/driver.ts) show the game through one interface, `Screen`
+(src/app/screen.ts), and nothing else. The UI implements it (src/view/screen.tsx, #380), and a program that
+shows nothing does too (src/app/nullscreen.ts: the headless tests). The old UI did, through a thin adapter
 (src/oldscreen.ts), until it went in #351. Its members, who calls them and what the UI does for each:
 
 | Member | Called by | The UI |
@@ -500,7 +500,7 @@ session now (test/coreengine.ts), the gamerules contract on the game's GameRules
   - scripted: buy, deploy, upgrade off and on the map, sell and disband on every fixture that can
     deploy; a campaign's kills and losses in the dossier.
 - **A new game against the old loader** (test/core-newgame.test.ts; against the game's own path,
-  src/coreload.ts, since #137): a scenario file started by Game.newScenario and by `newGame` from the
+  src/app/start.ts, since #137): a scenario file started by Game.newScenario and by `newGame` from the
   same file and the equipment's own files, the streams seeded: the same toData as JSON. CI starts every eighth file of the scenario list (51 of its 403 entries) and some
   against the AI and the scripted tutorial; `CORE_ALL_SCENARIOS=1` starts them all (17 s): no difference.
 - **A campaign against the old engine** (test/core-campaign.test.ts; against the game's own path

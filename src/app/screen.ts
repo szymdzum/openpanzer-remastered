@@ -1,12 +1,12 @@
 /**
  * Screen - what the game asks of whatever shows it (#374): the one interface between the game (its host,
- * src/host.ts, and the session's glue, src/coresession.ts) and a screen. Types only
+ * src/app/host.ts, and the session's glue, src/app/driver.ts) and a screen. Types only
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
  * The game decides, the screen shows. The UI implements it (src/view/screen.tsx, #380; the old UI did until
- * #351), and a program that shows nothing too (src/nullscreen.ts: the headless tests, later the CLI and the
+ * #351), and a program that shows nothing too (src/app/nullscreen.ts: the headless tests, later the CLI and the
  * arena). What the game waits on takes a callback, shown, which the screen calls once the player has seen
  * it: a program's move or attack, played whole before it is shown (#375), a unit it picked, a message
  * pointing at a hex. A program's next action waits for it: the UI calls it at the end of the step's last
@@ -74,7 +74,7 @@ export interface Screen {
 	//plays), once the screen is ready for it; a screen that shows nothing leaves it to its caller
 	turnChanged(next: () => void): void;
 
-	//---- The events of the end of a turn (src/coresession.ts)
+	//---- The events of the end of a turn (src/app/driver.ts)
 
 	//Units came onto the map without a move (the AI's purchases and deployment at its turn start, the
 	//reinforcements): the screen draws them

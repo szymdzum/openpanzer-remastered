@@ -72,7 +72,7 @@ Rhythm: small steps; `check` and `test` after each, `verify` before each commit.
 The combat sequence lives in `src/ui.ts`, in the animation code: `uiUnitAttack` (support fire,
 the attack, attack stopped) and `uiAttackAnimationFinished` (destroyed units removed, retreat or
 surrender, selection refresh, elimination victory), `uiUnitMove` and `uiMoveAnimationFinished`
-(the surprise attack, captures, victory). In `src/game.ts`: `processAction`, `endTurn` and
+(the surprise attack, captures, victory). In `src/app/game.ts`: `processAction`, `endTurn` and
 `deployReinforcements`. Who wins is decided only in the UI.
 
 1. **`moveUnit` off the UI selection.** It finds its path through `moveSelected`
@@ -437,7 +437,7 @@ game)` and `fromData({ data, state }, game)` on the old engine.
 - The save is toData's state since #128 (docs/STATE.md, "The save"): the objects' fields and their
   order are no longer part of it.
 
-**How #128 was done (stage B).** `src/savegame.ts`: the save is `{ version: 1, data, state }`,
+**How #128 was done (stage B).** `src/app/save.ts`: the save is `{ version: 1, data, state }`,
 written by every save path (one local item instead of three, the file export, the cloud) and read
 back through fromData; the scenario file isn't read on load. The saves of the format before (the
 JSON of the objects, and the three local items) are imported: what they had is kept, what they
@@ -508,7 +508,7 @@ them, and the game runs on the session.
   same arguments, in the same order, and the same state, selection, counters, combat log and images
   (2,000 sequences). It found the undo's order on the drifting counters (the unit copied back, then
   its sight off, as the old engine).
-- The game's turns on the session (src/coresession.ts): Game.init sets the drivers of `AI` and
+- The game's turns on the session (src/app/driver.ts): Game.init sets the drivers of `AI` and
   `AIScripted`, so a player's handler hands out the session's next order as the old action (the
   replay still wraps `handler.getAction` and hashes the state there) and a handler made while the game
   runs (the replay's `new AI`) joins the session with its controller; Game.processAction plays the
@@ -536,7 +536,7 @@ them, and the game runs on the session.
   | The context buttons (5 rules) | 1-2 µs | 430-805 µs |
 
   The map's rules pay for the world made from the objects (about 150 µs): under a millisecond a click.
-- The scenarios started on the core (src/coreload.ts, `ScenarioLoader.build`, set by Game.init): the
+- The scenarios started on the core (src/app/start.ts, `ScenarioLoader.build`, set by Game.init): the
   loader reads the file, the map image and the equipment as before (the page's requests in the same
   order), then the core's `newGame` makes the game (the AI asked for, the single scenario's prestige,
   a campaign's start: its player carried, its units on the deployment hexes removed, the prototype)
@@ -555,7 +555,7 @@ them, and the game runs on the session.
   seen, a move range).
 - The old engine removed: src/actions.ts; the old command handlers (src/commands.ts is the game's
   entry on the core, coreplay.ts merged into it); the old AI and AIScripted (now handlers that hand
-  out the session's orders, src/coresession.ts drives them); GameRules' own rules (src/gamerules.ts is
+  out the session's orders, src/app/driver.ts drives them); GameRules' own rules (src/gamerules.ts is
   corerules.ts's mapping over a world, `rulesOn`; setZOCRange and setSpotRange still switch the
   counters the harness moves units with); the counters' arithmetic (MapVisibility only holds them);
   and what of GameMap, Unit, Scenario, Leaders, ScenarioLoader, MapBoard and UndoSlot only the old

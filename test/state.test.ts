@@ -137,7 +137,7 @@ test("toData of a game whose campaign is still loading has no campaign scenario 
 });
 
 //#72: the old engine took a campaign's removed units off without their zone of control and spotting,
-//which stayed until a reload. The game starts a campaign's scenario on the core now (src/coreload.ts):
+//which stayed until a reload. The game starts a campaign's scenario on the core now (src/app/start.ts):
 //its counters are its units' sight, the units it took off have none left
 test("A campaign's next scenario starts with no zone of control or spotting of the units it took off (#72)", async () => {
 	const game = await freshGame();

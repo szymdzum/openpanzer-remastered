@@ -30,7 +30,7 @@ function move(w: World, u: Unit, cell: Cell) {
 const named = (x: unknown) => x === null || x === undefined ? "no unit" : typeof x === "string" ? "a message"
 	: typeof (x as Unit).unitData === "function" ? unitName(x as Unit) : cellName(x as Cell);
 
-//An AI action as src/host.ts processAction plays it: the units a move put another unit on, "end" when it
+//An AI action as src/app/host.ts processAction plays it: the units a move put another unit on, "end" when it
 //ends the turn. The tutorial's messages name a hex; a unit its script meant that isn't there (#188)
 //the game's command refuses, and its stuck attack with no unit (#80) is where the game stops
 function playAction(w: World, type: number, p: [Unit, Unit & Cell]): Unit[] | "end" {

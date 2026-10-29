@@ -1,5 +1,5 @@
-//The UI as the game's screen (src/screen.ts, #380), beside the one that shows nothing (src/nullscreen.ts). It
-//reads the game only through the host (its world, src/host.ts) and sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
+//The UI as the game's screen (src/app/screen.ts, #380), beside the one that shows nothing (src/app/nullscreen.ts). It
+//reads the game only through the host (its world, src/app/host.ts) and sends the person's commands to it (src/view/store.ts). A program's move or attack is played whole, then
 //animated from its events (#347, src/view/beats.ts), its results and victories told when the last beat
 //ends, and its shown called then: the program's turn plays at a pace the person can follow. Every other
 //shown is called at once but a message's, which waits for its OK (the tutorial's orders too). The start menu opens over

@@ -1,7 +1,7 @@
 // @vitest-environment node
-//The game host (src/host.ts) without the DOM and without the old UI: a game of plain fields (what Game
+//The game host (src/app/host.ts) without the DOM and without the old UI: a game of plain fields (what Game
 //holds), the files read from disk (test/setup.ts, the map images' sizes from test/lifecycle.ts), and a
-//screen that shows nothing (src/nullscreen.ts) or only notes what it is asked to show. The host starts the
+//screen that shows nothing (src/app/nullscreen.ts) or only notes what it is asked to show. The host starts the
 //scenarios, plays the campaign's chain, plays the programs' turns and tells the end of the game, deciding
 //what follows each
 import fs from "node:fs";
