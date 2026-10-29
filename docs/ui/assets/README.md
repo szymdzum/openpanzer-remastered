@@ -9,3 +9,4 @@ Material from the game itself, used only to stage the mockups. None of it is UI 
 - `startmenu-1.jpg` is the game's own start-menu photograph (Omaha Beach, 6 June 1944, US Coast Guard, public domain). The start menu shows it in greyscale under `photo-tint`.
 - `map-ciechanow-full.jpg` is the whole Ciechanów map image (`map_12.png`, 1632×1577) as JPEG, for the scenes drawn on real hex geometry (Deployment, TurnStart, AirLayer, StrategicMap, MovePath, ZoomLevels, UnitContext). Map pixel x,y is image x,y.
 - `units1939.png` holds ten 80×50 frames from the Ciechanów scenario's own units: Infanterie, Psw 231(8), 15 sFH18, Me-109E-3, Ju-87B-1, PZL.23B Karas, 39 Kawaleria, 38 Piechota, 75mm A wz.97 and Pz IIIE.
+- `flags-med.png` is the equipment eqp-adlerkorps flag strip (`flags_med.png`): 21×14 a country, Germany frame 7, Poland frame 15.
