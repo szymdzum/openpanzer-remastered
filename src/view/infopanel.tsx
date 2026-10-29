@@ -133,6 +133,7 @@ function Chip({ c }: { c: LineChip }) {
 	return (
 		<span class={c.tone === null ? "ui-chip" : "ui-chip " + c.tone} title={c.words}>
 			<Icon name={c.icon} size="sm" />{c.count !== null && <span class="n" aria-hidden="true">{c.count}</span>}
+			{c.unit !== null && <span class="u" aria-hidden="true">{c.unit}</span>}
 			<span class="pm-sr">{c.words}</span>
 		</span>
 	);

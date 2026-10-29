@@ -28,11 +28,13 @@ export interface LineGauge {
 	fill: number;
 }
 
-//What it can still do this turn: an icon, a number, the words (its tooltip and its name for screen readers); ok when it
-//can, off when it can't, neither for a state (riding)
+//What it can still do this turn: an icon, a number and what it counts ("9 moves"), the words (its tooltip and its name
+//for screen readers); ok when it can, off when it can't, neither for a state (riding). The icons are the map's readiness
+//marks: an arrow to move, a crosshair to fire
 export interface LineChip {
 	icon: IconName;
 	count: number | null;
+	unit: string | null;
 	words: string;
 	tone: "ok" | "off" | null;
 }
@@ -89,10 +91,11 @@ function entrenchGauge(w: World, u: UnitState): LineGauge {
 
 function chipsOf(w: World, u: UnitState): LineChip[] {
 	const moves = movesLeftThisTurn(w, u), fires = canFireThisTurn(w, u);
-	const chips: LineChip[] = isRiding(u) ? [{ icon: "mount", count: null, words: "Riding", tone: null }] : [];
-	chips.push(moves > 0 ? { icon: "play", count: moves, words: plural(moves, "move left", "moves left"), tone: "ok" }
-		: { icon: "play", count: 0, words: u.hasMoved ? "Moved" : "Can't move", tone: "off" });
-	chips.push({ icon: "attack", count: null, words: fires ? "Can fire" : "Can't fire", tone: fires ? "ok" : "off" });
+	const chips: LineChip[] = isRiding(u) ? [{ icon: "mount", count: null, unit: null, words: "Riding", tone: null }] : [];
+	const unit = moves === 1 ? "move" : "moves";
+	chips.push(moves > 0 ? { icon: "arrow-right", count: moves, unit, words: plural(moves, "move left", "moves left"), tone: "ok" }
+		: { icon: "arrow-right", count: 0, unit, words: u.hasMoved ? "Moved" : "Can't move", tone: "off" });
+	chips.push({ icon: "target", count: null, unit: null, words: fires ? "Can fire" : "Can't fire", tone: fires ? "ok" : "off" });
 	return chips;
 }
 

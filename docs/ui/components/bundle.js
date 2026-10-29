@@ -48,6 +48,7 @@
     'fighter': '<path d="M12 3c.9 0 1.4 1 1.4 2.5V10l7 3v2l-7-1.5V18l2 1.5V21L12 20l-3.4 1v-1.5l2-1.5v-4.5l-7 1.5v-2l7-3V5.5C10.6 4 11.1 3 12 3z"/>',
     'bomber': '<path d="M12 3v18M2 11h20M8 19h8M6 11v2.5M18 11v2.5"/>',
     'naval': '<path d="M3 15h18l-3 4H6zM7 15v-4h10v4M10 11V7h3v4"/>',
+    'target': '<circle cx="12" cy="12" r="6"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
     'attack': '<path d="M4 4l11 11M20 4L9 15M4 4v4M4 4h4M20 4v4M20 4h-4M13 17l4 4M11 17l-4 4"/>',
     'ok': '<path d="M5 12.5l4.5 4.5L19 7"/>',
     'low': '<path d="M12 4l9 16H3zM12 10v4.5M12 17.2v.3"/>',

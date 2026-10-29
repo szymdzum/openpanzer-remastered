@@ -49,7 +49,9 @@ test("A tank ready to act: full strength, the full moves its fuel is enough for,
 	expect(ammo.segs).toEqual(["on", "off", "off", "off", "off", "off", "off", "off"]);
 	expect(dug.segs).toEqual(["base-on", "on", "on", "on", "off", "off"]);
 	//(its class leader's hex is a move: 5 and 1)
-	expect(chips(line)).toEqual([["play", 6, "6 moves left", "ok"], ["attack", null, "Can fire", "ok"]]);
+	expect(chips(line)).toEqual([["arrow-right", 6, "6 moves left", "ok"], ["target", null, "Can fire", "ok"]]);
+	//(the map's readiness marks, an arrow and a crosshair; the number says what it counts)
+	expect(line.chips.map((c) => c.unit)).toEqual(["moves", null]);
 });
 
 test("Mounted infantry after its move: the truck's fuel and moves, its own rounds, no entrenchment; riding, moved, can't fire (#37)", () => {
@@ -62,7 +64,7 @@ test("Mounted infantry after its move: the truck's fuel and moves, its own round
 	expect(line.gauges.map(read)).toEqual([["Strength", "lost 3", "7", "ok"], ["Fuel", "2 full moves", "22/55", "low"],
 		["Ammo", "5 shots left", "5/6", "ok"], ["Entrenched", null, "0", "dug"]]);
 	expect(line.gauges[3].segs).toEqual(Array(5).fill("off"));
-	expect(chips(line)).toEqual([["mount", null, "Riding", null], ["play", 0, "Moved", "off"], ["attack", null, "Can't fire", "off"]]);
+	expect(chips(line)).toEqual([["mount", null, "Riding", null], ["arrow-right", 0, "Moved", "off"], ["target", null, "Can't fire", "off"]]);
 });
 
 test("Over strength: the points past ten in brass and the word for them; strength 3 is critical (#37)", () => {
@@ -76,13 +78,13 @@ test("An aircraft shows its fuel alone, with no moves; it can't dig in (#37)", (
 	const line = lineOf(world(), 3);
 	expect(line.gauges.map(read)).toEqual([["Strength", "full", "10", "ok"], ["Fuel", null, "18/115", "critical"],
 		["Ammo", "11 shots left", "11/11", "ok"], ["Entrenched", null, "–", null]]);
-	expect(chips(line)[1]).toEqual(["attack", null, "Can fire", "ok"]);
+	expect(chips(line)[1]).toEqual(["target", null, "Can fire", "ok"]);
 });
 
 test("A unit with no fuel: no full moves, and it can't move; a gun with more rounds than segments has a bar; the enemy has no chips (#37)", () => {
 	const w = world(), line = lineOf(w, 4);
 	expect(read(line.gauges[1])).toEqual(["Fuel", "0 full moves", "0/50", "critical"]);
-	expect(chips(line)[0]).toEqual(["play", 0, "Can't move", "off"]);
+	expect(chips(line)[0]).toEqual(["arrow-right", 0, "Can't move", "off"]);
 	//(a towed gun burns no fuel: "–"; its 24 rounds as a bar)
 	const gun = lineOf(w, 5);
 	expect([read(gun.gauges[1]), gun.gauges[2].segs, gun.gauges[2].value]).toEqual([["Fuel", null, "–", null], null, "24"]);
