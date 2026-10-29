@@ -7,8 +7,8 @@
 
 //The modules in the order of the bundle's script tags. A module runs after the modules it
 //imports (in a cycle, after those not already running), so the import graph decides the real
-//order. What modules need of each other while loading: prototypes (everything reads it, it
-//imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
+//order. What modules need of each other while loading: prototypes and core/tables (everything
+//reads them, tables imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
 import * as prototypes from "./prototypes";
 import * as gamestate from "./gamestate";
 import * as combatlog from "./combatlog";
@@ -23,6 +23,7 @@ import * as scenario from "./scenario";
 import * as campaign from "./campaign";
 import * as game from "./game";
 import * as leaders from "./leaders";
+import * as tables from "./core/tables";
 import * as rng from "./core/random";
 import * as context from "./context";
 import * as board from "./board";
@@ -45,7 +46,7 @@ import { startNewUI } from "./view/screen";
 
 const modules = [prototypes, gamestate, combatlog, equipment, dom, ai, gamerules, unit,
 	map, scenarioloader, scenario, campaign, game, leaders,
-	rng, context, board, visibility, selection, undo, util, session, commands, state,
+	tables, rng, context, board, visibility, selection, undo, util, session, commands, state,
 	savegame, mirror, coresession, coreload, host, screen, nullscreen];
 
 //Restores the settings and sets the viewport. The bundle did it while loading dom.js (no module

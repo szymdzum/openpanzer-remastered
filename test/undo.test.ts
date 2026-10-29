@@ -7,7 +7,7 @@ import { readFixture, restoreState } from "./contracts";
 test("After an undo the unit still belongs to its player, and a reinforcement costs that player (#68)", async () => {
 	const scenario = await restoreState(readFixture("engine", "ruscam09-t2.json.gz").state);
 	const { GameRules } = await import("../src/gamerules");
-	const { playerType } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	const { Commands } = await import("../src/commands");
 	(await import("../src/mirror")).mirrorOptions.cache = false; //(the strength written by hand below)
 	const map = scenario.map;

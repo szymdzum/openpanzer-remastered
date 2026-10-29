@@ -5,7 +5,7 @@
 import type { UnitId, UnitState, World } from "../core/types";
 import { unitUsesAmmo, unitUsesFuel } from "../core/units";
 import { ammoOf, fuelOf, unitData } from "../core/world";
-import { unitClass } from "../prototypes";
+import { unitClass } from "../core/tables";
 import type { SupplyState } from "./meter";
 import { isYourTurn } from "./model";
 import { ordinal } from "./unitcard";

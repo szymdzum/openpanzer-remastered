@@ -5,9 +5,9 @@ import { expect, test } from "vitest";
 import { handWorld, type HandUnit } from "./coreworld";
 import { adjacent } from "../src/core/geometry";
 import { step } from "../src/core/step";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import type { World } from "../src/core/types";
-import { terrainType } from "../src/prototypes";
+import { terrainType } from "../src/core/tables";
 import { resultsOf } from "../src/view/results";
 
 const PZ_38T = 136, PZ_IIA = 140, INFANTERIE = 115, LEFH18 = 92, TP7 = 273, PIECHOTA = 270, WZ97 = 264;

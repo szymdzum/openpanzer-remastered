@@ -6,8 +6,8 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf } from "../../commands";
-import { unitClass } from "../../prototypes";
+import type { CommandOf } from "../command";
+import { unitClass } from "../tables";
 import { changeUnit, emit, spotOff, spotOn, writePlayer, writeUnit } from "../draft";
 import { disembarkPositions, embarkTypeOf } from "../movement";
 import { reselect } from "../moves";

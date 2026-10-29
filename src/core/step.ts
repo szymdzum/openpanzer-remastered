@@ -11,7 +11,7 @@
  * (draft.ts), and the world returned shares the rest with it.
  */
 
-import type { Command, CommandOf, CommandType, Refusal } from "../commands";
+import type { Command, CommandOf, CommandType, Refusal } from "./command";
 import { beginDraft, finishDraft } from "./draft";
 import type { GameEvent } from "./events";
 import { attack, attackFirst, move, moveFirst, resumeFrom } from "./commands/move";

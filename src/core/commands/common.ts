@@ -5,7 +5,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { Refusal } from "../../commands";
+import type { Refusal } from "../command";
 import type { CoreUnit, OffMapUnit, PlayerState, UnitState, World } from "../types";
 import { unitById } from "../world";
 

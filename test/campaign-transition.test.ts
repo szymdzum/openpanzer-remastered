@@ -6,8 +6,8 @@
 //however many ticks of the turn loop pass while it loads, and the save stays until it has
 import { expect, test } from "vitest";
 import { freshGame, startState, until } from "./lifecycle";
-import type { SavedGame } from "../src/state";
-import type { ScenarioOutcome } from "../src/scenario";
+import type { SavedGame } from "../src/core/state";
+import type { ScenarioOutcome } from "../src/core/types";
 
 type Game = Awaited<ReturnType<typeof freshGame>>;
 

@@ -6,15 +6,18 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { Command, Refusal } from "../commands";
-import type { AIConfig } from "../prototypes";
+import type { Command, Refusal } from "./command";
+import type { AIConfig } from "./tables";
 import type { RngStream } from "./random";
-import type { GameState, Position, ScenarioData, UnitId, UnitState } from "../state";
+import type { GameState, Position, ScenarioData, UnitId, UnitState } from "./state";
 import type { GameEvent } from "./events";
 
 export type {
 	CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ScenarioData, UndoState, UnitId, UnitState
-} from "../state";
+} from "./state";
+
+//The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
+export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 
 //The equipment by eqid, as loaded (Equipment.equipment): read-only
 export type EquipmentTable = Readonly<{ [eqid: string]: EquipmentEntry }>;

@@ -8,7 +8,7 @@ import { App } from "../src/view/app";
 import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import { MapView } from "../src/view/map";
 import { hexCentre } from "../src/view/hexgrid";
 import { createStore, type Store, type StoreHost } from "../src/view/store";

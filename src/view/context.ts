@@ -2,14 +2,14 @@
 //UI's #unit-context listed them (updateUnitContextWindow, src/ui.ts:742): by the same rules, in its order, an action it
 //can't take left out. What each gives, computed with the functions the command runs (src/core/supply.ts,
 //src/core/costs.ts), is its tooltip. Plain TypeScript tested on hand-built worlds (test/view-context.test.tsx)
-import type { Command } from "../commands";
+import type { Command } from "../core/command";
 import { costPerStrength } from "../core/costs";
 import { canDisembark, canEmbark, embarkTypeOf } from "../core/movement";
 import { canReinforce, canResupply, reinforcement, resupplyValue } from "../core/supply";
 import type { Supply, UnitId, UnitState, World } from "../core/types";
 import { canMount } from "../core/units";
 import { playerOf, unitById } from "../core/world";
-import { unitClass } from "../prototypes";
+import { unitClass } from "../core/tables";
 import type { IconName } from "./icon";
 import { type ActionKey, canOrder, prestigeText } from "./model";
 

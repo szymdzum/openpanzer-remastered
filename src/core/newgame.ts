@@ -12,11 +12,9 @@
  * game stream as the loader reaches it, the reinforcements first.
  */
 
-import {
-	difficultyModifiers, playerType, SCENARIO_START_PRESTIGE, scoreGains, terrainType
-} from "../prototypes";
+import { difficultyModifiers, playerType, SCENARIO_START_PRESTIGE, scoreGains, terrainType } from "./tables";
 import type { RngStream } from "./random";
-import type { CampaignState, EquipmentState, RngStreams } from "../state";
+import type { CampaignState, EquipmentState, RngStreams } from "./state";
 import { startCampaignScenario } from "./campaign";
 import { unitCost } from "./costs";
 import { createWorld } from "./create";

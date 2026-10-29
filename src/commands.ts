@@ -33,36 +33,7 @@ import type { Fighter, GameEvent } from "./core/events";
 import { begin, check, resume } from "./core/step";
 import type { Checkpoint, UnitState, World } from "./core/types";
 import { sideOf, unitById, unitData } from "./core/world";
-
-//The player's actions. unit: a unit on the map by its id; index: a core unit not on the map, by
-//its place in the current player's core unit list (the deployment list); eqid and transport:
-//equipment ids, a transport of -1 or 0 for none. Buying, deploying and the undeployed units are
-//the current player's
-export type Command =
-	| { type: "move"; unit: number; to: Cell; cells?: Cell[] } //cells: where the path may go (the move hexes shown)
-	| { type: "attack"; unit: number; target: number }
-	| { type: "resupply"; unit: number }
-	| { type: "reinforce"; unit: number; overstrength?: boolean }
-	| { type: "mount"; unit: number }
-	| { type: "unmount"; unit: number }
-	| { type: "embark"; unit: number }
-	| { type: "disembark"; unit: number }
-	| { type: "undo"; unit: number } //the unit's last move
-	| { type: "deploy"; index: number; to: Cell }
-	| { type: "buy"; eqid: number; transport: number }
-	| { type: "upgrade"; unit: number; eqid: number; transport: number } //eqid 0 or -1 keeps the unit, for a new transport
-	| { type: "upgradeUndeployed"; index: number; eqid: number; transport: number }
-	| { type: "disband"; unit: number } //a unit on the map, sold
-	| { type: "sell"; index: number } //a core unit not on the map
-	| { type: "endTurn" };
-
-export type CommandType = Command["type"];
-export type CommandOf<T extends CommandType> = Extract<Command, { type: T }>;
-
-//Why a command isn't allowed, in words a player understands
-export interface Refusal {
-	reason: string;
-}
+import type { Command, CommandOf, CommandType, Refusal } from "./core/command";
 
 //One side of an attack: its strength before and after the attack, what the animation draws it as (its
 //class before the shots: a mounted defender dismounts in them) and where it faced when they were fired (a

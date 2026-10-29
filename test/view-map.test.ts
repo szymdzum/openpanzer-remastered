@@ -13,7 +13,7 @@ import { adjacent } from "../src/core/geometry";
 import { moveRange } from "../src/core/movement";
 import { hexIndex, unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
-import { roadType, terrainType } from "../src/prototypes";
+import { roadType, terrainType } from "../src/core/tables";
 import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
 import { clickOn, mapUnits, outlineOf, pathOf, selectionOf, unitsToAct } from "../src/view/mapview";
 import { fogOf, mapPlaques, plaquesOf, supportOf } from "../src/view/mapinfo";

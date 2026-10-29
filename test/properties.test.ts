@@ -22,7 +22,8 @@ import { mulberry32 } from "./lifecycle";
 import { withoutLosses, type Save } from "./saves";
 import type { Unit } from "../src/unit";
 import type { Cell } from "../src/prototypes";
-import type { AttackResult, Command, Refusal } from "../src/commands";
+import type { AttackResult } from "../src/commands";
+import type { Command, Refusal } from "../src/core/command";
 import { coreEngine } from "./coreengine";
 
 //What just happened, for the outcome: a move's (or a retreat's) capture, the side that ended its turn

@@ -17,16 +17,14 @@
  */
 
 import { Equipment } from "./equipment";
-import type { PlayerDossier } from "./map";
+import type { PlayerDossier } from "./core/state";
 import type { RulesetName } from "./core/types";
 import { createWorld } from "./core/create";
 import { withoutDestroyed } from "./core/fight";
 import { rulesetNamed } from "./core/rules";
 import { Scenario } from "./scenario";
-import {
-	campaignFromData, type CampaignHost, type CampaignState, type CoreUnit, fromData, type GameState, type HexState, type OffMapUnit,
-	offMapUnit, type PlayerState, type Position, type ReinforcementState, type ScenarioData, type ScenarioState, toData, type UnitState
-} from "./state";
+import { campaignFromData, type CampaignHost, fromData, offMapUnit, toData } from "./state";
+import type { CampaignState, CoreUnit, GameState, HexState, OffMapUnit, PlayerState, Position, ReinforcementState, ScenarioData, ScenarioState, UnitState } from "./core/state";
 
 export const SAVE_VERSION = 3;
 

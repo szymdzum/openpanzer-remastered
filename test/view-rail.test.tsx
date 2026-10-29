@@ -7,13 +7,13 @@ import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import { EndTurn, EndTurnQuestion, Rail } from "../src/view/rail";
 import { shortcutOf } from "../src/view/shortcuts";
 import { neighbourUnit, stillToAct } from "../src/view/model";
 import { unitsToAct } from "../src/view/mapview";
 import { createStore } from "../src/view/store";
-import { playerType } from "../src/prototypes";
+import { playerType } from "../src/core/tables";
 
 afterEach(cleanup);
 

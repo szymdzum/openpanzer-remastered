@@ -9,7 +9,7 @@ import { step } from "../src/core/step";
 import { canReinforce, canResupply, reinforceValue, resupplyValue } from "../src/core/supply";
 import type { Ruleset, World } from "../src/core/types";
 import { unitById } from "../src/core/world";
-import { terrainType } from "../src/prototypes";
+import { terrainType } from "../src/core/tables";
 import { handWorld } from "./coreworld";
 
 const ZERSTORER_1934 = 129; //a German destroyer: 20 ammo, no fuel

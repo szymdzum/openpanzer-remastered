@@ -3,7 +3,7 @@
 //limit, a controller that gets stuck or hands its player over. That it plays as the old game does is
 //test/core-ai.test.ts's
 import { expect, test } from "vitest";
-import { playerType } from "../src/prototypes";
+import { playerType } from "../src/core/tables";
 import { aiController } from "../src/core/ai";
 import type { Controller, Order } from "../src/core/controller";
 import { advance, endTurn, nextOrder, play, playOn, playTurn, type StartedTurn, startSession } from "../src/core/session";

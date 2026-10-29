@@ -14,10 +14,8 @@
 
 import type { Unit } from "./unit";
 import { GameMap } from "./map";
+import type { ScenarioOutcome } from "./core/types";
 import { ScenarioLoader, scenarioPath } from "./scenarioloader";
-
-//The outcomes of a scenario, as checkVictory returns them (the campaign outcome keys)
-export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 
 //A unit to deploy later, Scenario.reinforcements[turn]
 export interface Reinforcement {

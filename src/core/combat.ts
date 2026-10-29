@@ -7,9 +7,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import {
-	leaderType, roadType, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD, unitClass, unitEntrenchRate, unitType
-} from "../prototypes";
+import { leaderType, roadType, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD, unitClass, unitEntrenchRate, unitType } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";

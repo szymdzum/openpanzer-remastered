@@ -135,7 +135,7 @@ The campaign part, `Dossier`, `EquipmentState`, `UndoState` and `RngState` are s
 
 ## On the old engine (#127)
 
-`src/state.ts` has the types, `toData(scenario, game)` and `fromData({ data, state }, game)`, which
+`src/core/state.ts` has the types and `src/state.ts` has `toData(scenario, game)` and `fromData({ data, state }, game)`, which
 builds the old engine's objects again (the equipment and the campaign loaded already). What
 #127 spelled out, and where the old engine made the sketch above more precise:
 

@@ -5,7 +5,7 @@
 import type { EventOf, GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import { sideOf, unitById, unitData } from "../core/world";
-import { outcomeNames, unitClass } from "../prototypes";
+import { outcomeNames, unitClass } from "../core/tables";
 import type { Nation } from "./icon";
 import { lost } from "./results";
 import { type Condition, countryName, dateOf, isYourTurn, nationOf, plural, prestigeText, statusOf, yourPlayer } from "./model";

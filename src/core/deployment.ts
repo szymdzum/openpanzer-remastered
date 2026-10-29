@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { movMethod, terrainType, unitClass } from "../prototypes";
+import { movMethod, terrainType, unitClass } from "./tables";
 import { playerAt } from "./draft";
 import { cellsInRange } from "./geometry";
 import type { World } from "./types";

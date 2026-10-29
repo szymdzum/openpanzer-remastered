@@ -9,7 +9,8 @@ import { INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, rangeDefence } from "../src/
 import { weakDefences } from "../src/core/equipment";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { leaderDescriptions, leaderType, movMethod, terrainType, unitClass } from "../src/prototypes";
+import { leaderDescriptions } from "../src/prototypes";
+import { leaderType, movMethod, terrainType, unitClass } from "../src/core/tables";
 import { createStore } from "../src/view/store";
 import { type CardStat, ordinal, type UnitCard, unitCardOf } from "../src/view/unitcard";
 import { App } from "../src/view/app";

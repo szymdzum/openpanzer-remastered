@@ -3,14 +3,14 @@
 //a country of their side and a model in service this year, its transport where one carries it, and buys it new,
 //upgrades the unit chosen to it, or sells that unit; each with its price and the core's refusal. From the core's
 //World and nothing else
-import type { Command } from "../commands";
+import type { Command } from "../core/command";
 import { asUnit, coreAt, coreUnitOf } from "../core/commands/common";
 import { sellCost, unitCost, upgradeCost } from "../core/costs";
 import { check } from "../core/step";
 import type { OffMapUnit, PlayerState, UnitId, World } from "../core/types";
 import { isTransportable } from "../core/units";
 import { unitById } from "../core/world";
-import { movMethodNames, unitClass, unitClassNames } from "../prototypes";
+import { movMethodNames, unitClass, unitClassNames } from "../core/tables";
 import type { IconName, Nation } from "./icon";
 import { classIcon, countryName, isYourTurn, MONTH_NAMES, nationOf, prestigeText, reasonOf } from "./model";
 import { ordinal, tagsOf } from "./unitcard";

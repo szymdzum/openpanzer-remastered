@@ -12,7 +12,7 @@
  * estimate before the attack, which decides an overrun, draws nothing.
  */
 
-import { scoreGains, UNIT_MAX_EXPERIENCE } from "../prototypes";
+import { scoreGains, UNIT_MAX_EXPERIENCE } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { attackableUnit, supportFireUnits } from "./attack";
 import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";

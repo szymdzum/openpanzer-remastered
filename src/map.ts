@@ -12,8 +12,10 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { Cell, outcomeNames, playerType, roadType, sideNames, terrainType, uiSettings, unitClass } from "./prototypes";
+import { Cell, uiSettings } from "./prototypes";
+import { outcomeNames, playerType, roadType, sideNames, terrainType, unitClass } from "./core/tables";
 import { Equipment } from "./equipment";
+import type { PlayerDossier } from "./core/state";
 import { defined } from "./util";
 import type { AI } from "./ai";
 import { GameRules } from "./gamerules";
@@ -24,16 +26,6 @@ import { MapSelection } from "./selection";
 import { UndoSlot } from "./undo";
 
 //Hex, Player and Map classes
-
-//Campaign stats of a player, unit counts by unit class and scenario names by outcome
-export interface PlayerDossier {
-	units?: {
-		lostaux?: { [uclass: number]: number };
-		lostcore?: { [uclass: number]: number };
-		killed?: { [uclass: number]: number };
-	};
-	outcomes?: { [outcome: string]: string[] }; //outcomeNames keys
-}
 
 //Player Object Constructor
 export class Player {

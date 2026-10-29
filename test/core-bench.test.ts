@@ -15,7 +15,7 @@ import { combatResult } from "../src/core/combat";
 import { unitById } from "../src/core/world";
 import { step } from "../src/core/step";
 import { arriveReinforcements } from "../src/core/turn";
-import type { Command } from "../src/commands";
+import type { Command } from "../src/core/command";
 import type { Unit } from "../src/unit";
 import type { AIAction } from "../src/ai";
 

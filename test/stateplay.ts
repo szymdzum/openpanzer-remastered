@@ -31,7 +31,7 @@ export function carried(r: Restored) {
 
 //An AI action as the command the game sends for it (src/host.ts processAction), null for the UI's
 type AIAction = import("../src/ai").AIAction;
-type Command = import("../src/commands").Command;
+type Command = import("../src/core/command").Command;
 async function commandOf(): Promise<(a: AIAction) => Command | null> {
 	const { actionType: A } = await import("../src/prototypes");
 	const { Unit } = await import("../src/unit");

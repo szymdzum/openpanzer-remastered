@@ -19,15 +19,16 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, outcomeNames, playerType, sideNames,
-	uiSettings } from "./prototypes";
+import { actionType, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, uiSettings } from "./prototypes";
+import { outcomeNames, playerType, sideNames } from "./core/tables";
 import { AI, type AIAction } from "./ai";
 import { GameMap, Player } from "./map";
-import { Scenario, type ScenarioOutcome } from "./scenario";
+import { Scenario } from "./scenario";
+import type { ScenarioOutcome } from "./core/types";
 import { Campaign, type CampaignScenario } from "./campaign";
 import { coreDriver, endGameTurn, handlerFor, removeDestroyed, startGameSession } from "./coresession";
-import { type AttackResult, backAboard, type Command, type CommandType, Commands, type Executed, type MoveResult, type Refusal,
-	type ResultOf } from "./commands";
+import { type AttackResult, backAboard, Commands, type Executed, type MoveResult, type ResultOf } from "./commands";
+import type { Command, CommandType, Refusal } from "./core/command";
 import { CombatLog } from "./combatlog";
 import { GameRules } from "./gamerules";
 import { MapSelection } from "./selection";
@@ -43,7 +44,7 @@ import { defined } from "./util";
 import { Rng } from "./core/random";
 import { game, setGame } from "./session";
 import type { Game } from "./game";
-import type { CampaignProgress } from "./state";
+import type { CampaignProgress } from "./core/state";
 import type { CloudReport, CloudSaved } from "./gamestate";
 import type { Screen, ShownCommand } from "./screen";
 

@@ -72,7 +72,7 @@ test("The screen interface and the screen that shows nothing reach no UI module 
 });
 
 //The new UI (src/view/, #380) reads the game through the core, the game host and the screen interface: what
-//its modules import from outside src/view/ is only those and the tables of src/prototypes.ts, and none of
+//its modules import from outside src/view/ is only those and src/prototypes.ts (the settings), and none of
 //it reaches an old UI module or game.ts
 test("The new UI's imports reach no old UI module and no game.ts (#380)", () => {
 	const view = path.join(root, "src/view"), outside = new Set<string>();

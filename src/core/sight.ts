@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType } from "../prototypes";
+import { leaderType } from "./tables";
 import { adjacent, cellsInRange } from "./geometry";
 import type { Position, Sight, UnitState, World } from "./types";
 import { hasLeader, isAir } from "./units";

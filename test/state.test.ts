@@ -90,7 +90,7 @@ test("fromData keeps the last move undoable, and the undo puts back what it did"
 	const r = await restored("ruscam09-t2.json.gz");
 	const { fromData } = await import("../src/state");
 	const { GameRules } = await import("../src/gamerules");
-	const { playerType } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	const { Commands } = await import("../src/commands");
 	const m = r.scenario.map;
 	m.currentPlayer.type = playerType.humanLocal;

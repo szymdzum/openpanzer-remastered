@@ -6,7 +6,8 @@
 import type { EventOf, GameEvent } from "../core/events";
 import { sideOf, unitById } from "../core/world";
 import type { Position, UnitId, World } from "../core/types";
-import { leaderDescriptions, terrainNames, terrainType, unitClass } from "../prototypes";
+import { leaderDescriptions } from "../prototypes";
+import { terrainNames, terrainType, unitClass } from "../core/tables";
 import type { IconName } from "./icon";
 import { dateOf, plural, statusOf, yourPlayer } from "./model";
 import { at } from "./results";

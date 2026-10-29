@@ -6,8 +6,8 @@
 import { campaignPlayer } from "../core/campaign";
 import { newDossier } from "../core/draft";
 import type { World } from "../core/types";
-import type { ScenarioOutcome } from "../scenario";
-import { unitClass } from "../prototypes";
+import type { ScenarioOutcome } from "../core/types";
+import { unitClass } from "../core/tables";
 import type { IconName } from "./icon";
 import { classIcon, countryName, prestigeText } from "./model";
 

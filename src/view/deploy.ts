@@ -2,7 +2,7 @@
 //the hexes their side deploys on, and the reserve unit picked shown on the hovered hex where a click places it.
 //Plain functions of the core's World, tested without the DOM (test/view-map.test.ts); every rule is the deploy
 //command's own (src/core/commands/units.ts): where it may go is its check, how it lands its deployedAs.
-import type { Command } from "../commands";
+import type { Command } from "../core/command";
 import { asUnit } from "../core/commands/common";
 import { deployedAs } from "../core/commands/units";
 import { deploymentHexes } from "../core/deployment";

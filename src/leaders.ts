@@ -11,7 +11,8 @@
  * Reconstructed from the Panzer Marshal 3.2.14 bundle, there is no 2.9 counterpart.
  */
 
-import { leaderDescriptions, leaderType, unitClass } from "./prototypes";
+import { leaderDescriptions } from "./prototypes";
+import { leaderType, unitClass } from "./core/tables";
 import type { Unit } from "./unit";
 
 //The Leaders module API. A leader is a leaderType value, -1 for none

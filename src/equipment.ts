@@ -13,11 +13,7 @@
  */
 
 import { countryNames } from "./prototypes";
-
-//The index lists of a country file: equipment ids by unit class
-export interface EquipmentIndexes {
-	unitclass?: { [uclass: string]: number[] };
-}
+import type { EquipmentIndexes } from "./core/state";
 
 //A country equipment file as loaded, the units are value arrays in the parsehints order
 export interface EquipmentCountryFile {

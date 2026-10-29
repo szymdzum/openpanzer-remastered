@@ -3,11 +3,12 @@
 //(test/view-model.test.ts); the signals (src/view/store.ts) carry their answers to the components.
 //A control the player can't use now shows why: the core's Refusal (src/core/step.ts check) in plain
 //words, or the screen's own reason (not your turn, not your unit) where the core doesn't ask.
-import type { Command, Refusal } from "../commands";
+import type { Command, Refusal } from "../core/command";
 import { check } from "../core/step";
 import type { PlayerState, UnitId, UnitState, World } from "../core/types";
 import { hexIndex, isSpotted, unitById } from "../core/world";
-import { countryNames, groundConditionNames, playerType, sideNames, unitClass } from "../prototypes";
+import { countryNames } from "../prototypes";
+import { groundConditionNames, playerType, sideNames, unitClass } from "../core/tables";
 import type { IconName, Nation } from "./icon";
 
 //A state the status bar shows as an icon and a word: the weather, the ground

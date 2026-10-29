@@ -1,7 +1,7 @@
 //The command-line player's commands (#279): the words of a call as the core's commands and queries, on
 //a Front, where the game is played: headless on the core from a save file (game.ts), or on the game's
 //page with its animations (page.ts, "npm run play:live"). Nothing here reads a file or the page
-import type { Command, Refusal } from "../src/commands";
+import type { Command, Refusal } from "../src/core/command";
 import { attackableUnit } from "../src/core/attack";
 import type { GameEvent } from "../src/core/events";
 import { check } from "../src/core/step";
@@ -10,7 +10,7 @@ import { outcome, type Outcome } from "../src/core/turn";
 import type { Position, RulesetName, World } from "../src/core/types";
 import { isAir } from "../src/core/units";
 import { hexIndex, onMap, sideOf, unitById } from "../src/core/world";
-import { unitClassNames } from "../src/prototypes";
+import { unitClassNames } from "../src/core/tables";
 import { hex, map, reserve, shop, status } from "./board";
 import { attackerLine, attackers, estimateLine, isTarget, targets } from "./combat";
 import { knownWorld, SIDES, seen } from "./known";

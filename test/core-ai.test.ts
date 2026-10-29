@@ -23,7 +23,8 @@ async function modules() {
 	const { Equipment } = await import("../src/equipment");
 	const { Rng } = await import("../src/core/random");
 	const { toData } = await import("../src/state");
-	const { playerType, uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	return { game, Equipment, Rng, toData, playerType, uiSettings };
 }
 type Modules = Awaited<ReturnType<typeof modules>>;
@@ -215,7 +216,7 @@ function playedToHandOver(s: Session): { refused: string[]; places: Record<numbe
 async function cityMessages(seed: number): Promise<[string, boolean][]> {
 	const { setupOf } = await import("./corefiles");
 	const { newGame } = await import("../src/core/newgame");
-	const { playerType } = await import("../src/prototypes");
+	const { playerType } = await import("../src/core/tables");
 	const setup = { ...setupOf("tutorial.xml", { game: seed, ai: seed + 7 }), isAI: [2, 2, 2, 2] };
 	const s = startSession(createWorld(newGame(setup), setup.equipment), (type, player) => type === playerType.aiLocal
 		? aiController(player) : type === playerType.aiScripted ? tutorialController(player) : null, { fresh: true });
