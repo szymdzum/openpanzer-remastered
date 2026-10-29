@@ -149,23 +149,40 @@
 				font-size: var(--type-note-size);
 			}
 
-			/* (the columns as wide as the models' names in the header) */
-			.pm-cmp {
-				grid-template-columns: 1fr auto 1fr;
-			}
-
-			.pm-cmp :is(thead, tbody, tr) {
+			/* the stats a table laid out as the card's grid, two a line */
+			.pm-mount :is(thead, tbody, tr) {
 				display: contents;
 			}
 
-			.pm-cmp th {
+			.pm-mount :where(th[scope="row"]) {
 				font-weight: 400;
 				text-align: start;
 			}
 
+			/* the transports: a group of toggle rows, the card's rows as buttons */
 			.transport {
-				display: grid;
-				gap: var(--space-2);
+				margin: 0;
+				padding: 0;
+				border: 0;
+				min-inline-size: 0;
+			}
+
+			.tr {
+				inline-size: 100%;
+				border: 0;
+				border-block-start: 1px solid var(--line);
+				font: inherit;
+				color: inherit;
+				text-align: start;
+
+			}
+
+			:where(.tr):first-child {
+				border-block-start: 0;
+			}
+
+			:where(.tr):hover {
+				background: var(--panel);
 			}
 
 			.actions {

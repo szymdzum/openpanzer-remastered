@@ -90,10 +90,11 @@ test("Opened on a unit it shows its class with its model current; a better one p
 	const cost = upgradeCost(w, w.state.units[0], PZ_IIIE, -1);
 	expect(better.upgrade).toEqual({ cost, refusal: null, command: { type: "upgrade", unit: 0, eqid: PZ_IIIE, transport: -1 } });
 	expect(better.picked).toMatchObject({ name: "Pz IIIE", line: "Tank · Hard target · Tracked · in service from 1939" });
-	//its stats as the old window showed an entry's, no difference to the unit's (#441)
+	//its stats as the old window showed an entry's, no difference to the unit's (#441); a tank rides nothing (#513)
 	const e = w.equipment;
-	expect(better.picked!.compare.find((c) => c.name === "Hard attack")).toEqual({ name: "Hard attack", value: e[PZ_IIIE].hardatk,
-		fill: e[PZ_IIIE].hardatk / 15 });
+	expect(better.picked!.compare.find((c) => c.name === "Hard attack")).toEqual({ name: "Hard attack", value: String(e[PZ_IIIE].hardatk),
+		mounted: null, change: null });
+	expect([better.picked!.rides, better.picked!.rule, better.split]).toEqual([null, null, null]);
 	//too dear: the old window's words
 	const poor = world((x) => { x.state.players[0].prestige = 50; });
 	expect(shopOf(poor, { ...choice, eqid: PZ_IVD })!.upgrade!.refusal).toBe(`Need ${upgradeCost(w, w.state.units[0], PZ_IVD, -1) - 50} more prestige to upgrade`);
@@ -119,7 +120,7 @@ test("The transports that carry the model, with None; the unit's own is picked u
 	const w = world(), choice = choiceFor(w, { unit: 1 });
 	const shop = shopOf(w, choice)!;
 	expect(shop.uclass).toBe(unitClass.infantry);
-	expect(shop.transports[0]).toEqual({ eqid: -2, name: "None", on: false });
+	expect(shop.transports[0]).toEqual({ eqid: -2, name: "None", on: false, sprite: null, ground: "On foot", gives: null });
 	expect(shop.transports.find((t) => t.on)!.eqid).toBe(OPEL);
 	//every one carries an Infanterie's weight; a tank has none to pick
 	expect(shop.transports.slice(1).every((t) => (w.equipment[t.eqid].groundweight & w.equipment[INFANTERIE].groundweight) !== 0)).toBe(true);
@@ -128,6 +129,31 @@ test("The transports that carry the model, with None; the unit's own is picked u
 	const truck = shopOf(w, { ...choice, transport: SDKFZ251 })!;
 	expect(truck.upgrade).toMatchObject({ cost: upgradeCost(w, w.state.units[1], INFANTERIE, SDKFZ251), command: { transport: SDKFZ251 } });
 	expect(shopOf(w, { ...choice, transport: -2 })!.transports[0].on).toBe(true);
+});
+
+test("Each transport says what it gives, and the model's stats show it on foot and mounted (#513)", () => {
+	const w = world(), e = w.equipment, opel = e[OPEL], choice = { ...base, uclass: unitClass.infantry, eqid: INFANTERIE, transport: OPEL };
+	const shop = shopOf(w, choice)!;
+	//the truck's row: its price, moves, fuel and defence, ground · air · close, and how it moves
+	expect(shop.transports.find((t) => t.eqid === OPEL)).toEqual({ eqid: OPEL, name: opel.name, on: true, sprite: opel.icon, ground: "Wheeled",
+		gives: { cost: unitCost(w, OPEL), moves: opel.movpoints, fuel: opel.fuel, def: `${opel.grounddef}·${opel.airdef}·${opel.closedef}` } });
+	//mounted, the infantry moves and defends as its truck and can't attack; fuel has no better or worse
+	const stat = (name: string) => shop.picked!.compare.find((c) => c.name === name)!;
+	expect(stat("Movement")).toEqual({ name: "Movement", value: String(e[INFANTERIE].movpoints), mounted: String(opel.movpoints), change: "up" });
+	expect(stat("Ground def")).toEqual({ name: "Ground def", value: String(e[INFANTERIE].grounddef), mounted: String(opel.grounddef), change: "down" });
+	expect(stat("Soft attack")).toMatchObject({ mounted: "–", change: null });
+	expect(stat("Fuel")).toEqual({ name: "Fuel", value: "—", mounted: String(opel.fuel), change: null });
+	expect(shop.picked!.rides).toEqual({ name: opel.name, sprite: opel.icon });
+	expect(shop.picked!.rule).toBe("Mounted, it moves and defends as its transport and can't attack; attacked, it fights on foot unless surprised. Def: ground · air · close.");
+	//the price in two, the unit's and the truck's, as Buy new adds them
+	expect(shop.split).toEqual({ unit: unitCost(w, INFANTERIE), transport: opel.name, cost: unitCost(w, OPEL) });
+	expect(shop.split!.unit + shop.split!.cost).toBe(shop.buy.cost);
+	//a horse-drawn wagon uses no fuel: "—" mounted too
+	const horse = shop.transports.find((t) => t.gives !== null && t.gives.fuel === 0)!;
+	expect(shopOf(w, { ...choice, transport: horse.eqid })!.picked!.compare.find((c) => c.name === "Fuel")!.mounted).toBe("—");
+	//on foot: no Mounted column, no split, the rule still said
+	const foot = shopOf(w, { ...choice, transport: -2 })!;
+	expect([foot.picked!.rides, foot.split, foot.picked!.compare.every((c) => c.mounted === null), foot.picked!.rule !== null]).toEqual([null, null, true, true]);
 });
 
 test("A reserve unit is upgraded and sold off the map by its core list place; in a campaign only core units sell, and only its country buys (#348)", () => {
@@ -218,9 +244,13 @@ test("An Infanterie's transport is picked in the window; pressed again, none; th
 	const store = shopStore(world((x) => { x.state.players[0].supportCountries = [15 + 1]; }));
 	await act(() => { store.pickUnit(1); store.shortcut({ menu: "buy" }); });
 	const win = document.getElementById("equipment")!, transport = within(win).getByRole("group", { name: "Transport" });
-	await act(() => { fireEvent.click(within(transport).getByRole("button", { name: store.world.value!.equipment[SDKFZ251].name })); });
+	//a row says what the transport gives, in words for a screen reader
+	const halftrack = () => within(transport).getByRole("button", { name: new RegExp(`^${store.world.value!.equipment[SDKFZ251].name}, Half Tracked, \\d+ prestige, \\d+ moves`) });
+	await act(() => { fireEvent.click(halftrack()); });
 	expect(store.shop.value!.transports.find((t) => t.on)!.eqid).toBe(SDKFZ251);
-	await act(() => { fireEvent.click(within(transport).getByRole("button", { name: store.world.value!.equipment[SDKFZ251].name })); });
+	expect(within(win).getAllByRole("columnheader", { name: "Mounted" })).toHaveLength(2);
+	expect(win.querySelector("#eqActionsContainer")!.textContent).toContain(`+ ${store.world.value!.equipment[SDKFZ251].name}`);
+	await act(() => { fireEvent.click(halftrack()); });
 	expect(store.shop.value!.transports.find((t) => t.on)!.eqid).toBe(-2);
 	await act(() => { fireEvent.click(win.querySelector("#eqSelCountryButton")!); });
 	expect([store.shop.value!.country.name, store.shop.value!.target]).toEqual(["Poland", null]);
