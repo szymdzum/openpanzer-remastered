@@ -1,7 +1,6 @@
-//The unit list's view model (UnitList, #348): the person's units on the map as the old unit list showed them
-//(updateEquipmentWindow's #unitlist, uiAddUnitBox), a card each: the sprite (a generic one for the larger ships), the
-//strength, the name and ordinal, whether it has moved or fired, and a warning for low fuel or ammo; the core units
-//first, then by class, name and id (unitListSorter). From the core's World and nothing else
+//The unit list's view model: the person's units on the map, a card each, as the original game's list shows them
+//(updateEquipmentWindow, uiAddUnitBox in reference/src/ui.js): the sprite, the strength, the name and ordinal, whether
+//it has moved or fired, and a warning for low fuel or ammo. From the core's World and nothing else
 import type { UnitId, UnitState, World } from "../../core/types";
 import { unitUsesAmmo, unitUsesFuel } from "../../core/units";
 import { ammoOf, fuelOf, unitData } from "../../core/world";
@@ -11,10 +10,10 @@ import { isYourTurn } from "../store/model";
 import { ordinal } from "./unitcard";
 import { supplyState } from "./unitinfo";
 
-//The sprite the old list showed for every ship larger than a submarine (UIBuilder.navalReplacementIcon)
+//The sprite for every ship larger than a submarine (UIBuilder.navalReplacementIcon, reference/src/uibuilder.js)
 export const NAVAL_ICON = "resources/units/images/le211.png";
 
-//The old list's warning lines: under 5 fuel, under 2 ammo
+//The warning lines, as in uiAddUnitBox: under 5 fuel, under 2 ammo
 const LOW_FUEL = 5, LOW_AMMO = 2;
 
 export interface ListUnit {
@@ -33,7 +32,7 @@ export interface UnitList {
 	units: ListUnit[];
 }
 
-//The core units first, then by class, name and id (the old list's order)
+//The core units first, then by class, name and id (unitListSorter in reference/src/ui.js)
 function byList(w: World) {
 	return (a: UnitState, b: UnitState) => {
 		if (a.isCore !== b.isCore) return a.isCore ? -1 : 1;
@@ -44,7 +43,6 @@ function byList(w: World) {
 	};
 }
 
-//The sprite a list shows of an entry: its own, a generic one for the larger ships
 export function listSprite(e: EquipmentEntry): string {
 	return e.uclass > unitClass.submarine ? NAVAL_ICON : e.icon;
 }
@@ -64,7 +62,7 @@ function listUnit(w: World, u: UnitState, selected: UnitId | null): ListUnit {
 	};
 }
 
-//The current player's units on the map, on a person's turn; none on a program's (the old list showed only theirs)
+/** The current player's units on the map, on a person's turn; none on a program's. */
 export function unitListOf(w: World, selected: UnitId | null): UnitList {
 	const p = w.state.turn.currentPlayer;
 	const own = isYourTurn(w) ? w.state.units.filter((u) => u.row >= 0 && u.owner === p).sort(byList(w)) : [];

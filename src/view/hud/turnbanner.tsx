@@ -1,6 +1,6 @@
-//The start of a turn (TurnStart, TurnBanner, #346): the short turn report under the status bar (#combatLog), and the
-//AI indicator while a program plays (Tooltips). What they say is the view model's (src/view/turn.ts); the report
-//closes on its ×, Esc or the first click on the map, and the status bar's turn report button opens it again.
+//The start of a turn: the short turn report under the status bar, and the AI indicator while a program plays
+//(src/view/turn.ts). The report closes on its ×, Esc or the first click on the map; the status bar's turn report
+//button opens it again.
 import { Button } from "../components/button";
 import { Icon, Mark } from "../components/icon";
 import type { Store } from "../store/store";
@@ -52,8 +52,8 @@ export function TurnBanner({ store }: { store: Pick<Store, "briefing" | "openDos
 	);
 }
 
-//"Poland is moving · 14 of 38 units", with a blinking dot in the side's colour (it stops under prefers-reduced-motion): the
-//Allies' rust, the Axis's field grey
+//"Poland is moving · 14 of 38 units", with a blinking dot in the side's colour (it stops under
+//prefers-reduced-motion): the Allies' rust, the Axis's field grey
 export function AiIndicator({ store }: { store: Pick<Store, "ai"> }) {
 	const ai = store.ai.value;
 	if (ai === null) return null;

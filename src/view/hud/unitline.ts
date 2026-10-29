@@ -1,7 +1,6 @@
-//The unit card's line (UnitInfo, #37, docs/ui/components/UnitInfo): the card hidden, its default size, one line docked
-//at the bottom. Who the unit is, its four gauges (the fuel's with what it means: "3 full moves"), and what it
-//can still do this turn as chips. Every phrase reads a core query (the README's table); only the gauges' low and
-//critical thresholds are the view's
+//The unit card's line (docs/ui/components/UnitInfo): the card hidden, its default size, docked at the bottom. Who the
+//unit is, its four gauges (the fuel's with what it means: "3 full moves") and what it can still do this turn as chips.
+//Every phrase reads a core query (the README's table); only the gauges' low and critical thresholds are the view's
 import { canFireThisTurn } from "../../core/attack";
 import { dismountsWhenAttacked, entrenchmentFacts } from "../../core/combat";
 import { fullMoves, movesLeftThisTurn } from "../../core/movement";
@@ -13,30 +12,26 @@ import type { IconName } from "../components/icon";
 import type { SupplyState } from "../components/meter";
 import { supplyState } from "./unitinfo";
 
-//A gauge's segment: off, on, past ten (over strength), or one of the terrain's own levels of entrenchment, dug or not
+/** Past ten is over strength; base is one of the terrain's own levels of entrenchment, dug or not. */
 export type Seg = "off" | "on" | "over" | "base" | "base-on";
 
-//A gauge of the line: its label and, beside it, what the value means; the value ("18", "+4", "–") and its maximum
-//("/50"); segments, or a bar's fill when it has none
 export interface LineGauge {
 	label: string;
-	say: string | null;
-	value: string;
-	of: string | null;
+	say: string | null; //what the value means, beside the label
+	value: string; //"18", "+4", "–"
+	of: string | null; //its maximum, "/50"
 	state: SupplyState | "dug" | null;
-	segs: Seg[] | null;
+	segs: Seg[] | null; //none: a bar of `fill` instead
 	fill: number;
 }
 
-//What it can still do this turn: an icon, a number and what it counts ("9 moves"), the words (its tooltip and its name
-//for screen readers); ok when it can, off when it can't, neither for a state (riding). The icons are the map's readiness
-//marks: an arrow to move, a crosshair to fire
+//What it can still do this turn. The icons are the map's readiness marks: an arrow to move, a crosshair to fire
 export interface LineChip {
 	icon: IconName;
-	count: number | null;
+	count: number | null; //with its unit: "9 moves"
 	unit: string | null;
-	words: string;
-	tone: "ok" | "off" | null;
+	words: string; //its tooltip and its name for screen readers
+	tone: "ok" | "off" | null; //null for a state (riding)
 }
 
 export interface CardLine {
@@ -54,8 +49,7 @@ const segs = (n: number, of: (i: number) => Seg): Seg[] => Array.from({ length: 
 const plural = (n: number, one: string, many: string) => n + " " + (n === 1 ? one : many);
 const none = (label: string): LineGauge => ({ label, say: null, value: "–", of: null, state: null, segs: null, fill: 0 });
 
-//Strength: ten segments, those past ten (over strength) in brass; low at 6, critical at 3. No words beside it: the
-//segments and the number already say what it lost
+//Ten segments, those past ten (over strength) in brass; low at 6, critical at 3. No words: the segments say the loss
 function strengthOf(u: UnitState): LineGauge {
 	const n = u.strength;
 	const state = n <= 3 ? "critical" : n <= 6 ? "low" : "ok";
@@ -63,7 +57,7 @@ function strengthOf(u: UnitState): LineGauge {
 		segs: segs(Math.max(10, n), (i) => i >= n ? "off" : i >= 10 ? "over" : "on") };
 }
 
-//Fuel: the transport's when riding, and the full moves it is enough for; none counted for an aircraft (fuelOf alone)
+//The transport's fuel when riding, and the full moves it is enough for; none counted for an aircraft (fuelOf alone)
 function fuelGauge(w: World, u: UnitState): LineGauge {
 	if (!unitUsesFuel(w, u)) return none("Fuel");
 	const fuel = fuelOf(u), max = unitData(w, u).fuel, moves = fullMoves(w, u);
@@ -71,8 +65,8 @@ function fuelGauge(w: World, u: UnitState): LineGauge {
 		state: supplyState(fuel, max), segs: null, fill: Math.min(1, fuel / max) };
 }
 
-//Ammo: a segment a round, every shot uses one (return and support fire too). What it is now has (ammoOf), but riding
-//infantry's own: attacked, it gets off and fights with its own rounds. No words beside it: the number is the shots left
+//A segment a round, every shot uses one (return and support fire too). What it has now (ammoOf), but riding infantry's
+//own: attacked, it gets off and fights with its own rounds. No words: the number is the shots left
 function ammoGauge(w: World, u: UnitState): LineGauge {
 	const self = dismountsWhenAttacked(w, u), max = unitData(w, u, self).ammo;
 	if (max === 0) return none("Ammo");
@@ -81,7 +75,7 @@ function ammoGauge(w: World, u: UnitState): LineGauge {
 		state: supplyState(ammo, max), fill: Math.min(1, ammo / max), segs: max > MAX_SEGS ? null : segs(max, (i) => i < ammo ? "on" : "off") };
 }
 
-//Entrenchment: a segment a level the hex allows, the terrain's own levels lighter
+//A segment a level the hex allows, the terrain's own levels lighter
 function entrenchGauge(w: World, u: UnitState): LineGauge {
 	if (!canEntrench(w, u)) return none("Entrenched");
 	const level = entrenchmentFacts(w, u).level, base = entrenchBase(w, u), limit = Math.max(level, entrenchLimit(w, u));
@@ -99,7 +93,7 @@ function chipsOf(w: World, u: UnitState): LineChip[] {
 	return chips;
 }
 
-//The line of a unit on the map; own: the side's own unit, which has the This turn chips
+/** `own`: the side's own unit, which has the This turn chips. */
 export function unitLineOf(w: World, u: UnitState, formation: string, own: boolean): CardLine {
 	const t = isRiding(u) ? w.equipment[u.transport!.eqid] : null;
 	return {

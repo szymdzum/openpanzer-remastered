@@ -1,6 +1,5 @@
-//The reserve tray (Deployment, #348): while the person deploys, their reserve docked at the bottom, the unit picked
-//to place on a brass hex, Upgrade for the picked unit (the equipment window, on it) and Done to leave the rest for
-//later. What it says is the view model's (src/view/map/deploy.ts trayOf).
+//The reserve tray: while the person deploys, their reserve docked at the bottom, the unit picked to place on a brass
+//hex, Upgrade for the picked unit (the equipment window, on it) and Done to leave the rest for later (map/deploy.ts)
 import { Button } from "../components/button";
 import { Icon } from "../components/icon";
 import { Badge } from "../components/meter";

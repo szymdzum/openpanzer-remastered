@@ -1,6 +1,6 @@
-//The combat's results over the map (CombatResults, #347): a loss chip right of each fighter's strength plate and one
-//stamp above the unit it concerns, from the view model (src/view/hud/results.ts); the map places them. They stay 2.5 s (1 s
-//with quick animations), then fade (combat.css: none under prefers-reduced-motion) and go
+//The combat's results over the map: a loss chip right of each fighter's strength plate and one stamp above the unit it
+//concerns (results.ts); the map places them. They stay 2.5 s (1 s with quick animations), then fade (combat.css: hidden
+//at once under prefers-reduced-motion) and go
 import { useEffect, useState } from "preact/hooks";
 import type { Position } from "../../core/types";
 import { uiSettings } from "../../app/settings";
@@ -10,7 +10,6 @@ import { TOKENS } from "../tokens";
 
 const MS = TOKENS.ms;
 
-//Shown, then fading, then gone: each new result starts again
 function useFade(results: Results, gone: () => void): boolean {
 	const [fading, setFading] = useState(false);
 	useEffect(() => {
@@ -26,7 +25,7 @@ function useFade(results: Results, gone: () => void): boolean {
 	return fading;
 }
 
-//where: a hex's centre on the screen; half: half a hex's height there
+/** `where` is a hex's centre on the screen; `half` is half a hex's height there. */
 export function ResultMarks({ results, where, half, gone }: { results: Results, where: (p: Position) => Point, half: number, gone: () => void }) {
 	const fading = useFade(results, gone), stamp = results.stamp;
 	return (

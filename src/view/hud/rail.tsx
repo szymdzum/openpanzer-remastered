@@ -1,6 +1,5 @@
-//The game menu (GameMenu, #346): the rail on the right with the game's own buttons, End turn in the corner with its
-//question when units can still act (#8), and every keyboard shortcut the old UI reads (src/view/shortcuts.ts). What
-//each does is the store's.
+//The game menu: the rail on the right with the game's own buttons, End turn in the corner with its question when
+//units can still act, and every keyboard shortcut (src/view/shortcuts.ts). What each does is the store's.
 import { useEffect, useState } from "preact/hooks";
 import { Button } from "../components/button";
 import { Icon, type IconName } from "../components/icon";
@@ -27,10 +26,10 @@ type RailButtonProps = {
 	onHint?: (hint: Hint | null) => void,
 };
 
-//The rail's tooltip (#uiToolTip): a button's label and its key, beside it at its middle
+//A button's label and its key, beside it at its middle
 type Hint = { label: string, keyName: string, y: number };
 
-//A rail button: an icon, its label shown on touch (screen.css), its label and key in the rail's tooltip, or why it is off
+//A rail button: its label shown on touch (screen.css), its label and key in the rail's tooltip, or why it is off
 function RailButton({ id, icon, label, keyName, pressed, expanded, controls, caption, disabled, onClick, onHint }: RailButtonProps) {
 	const on = pressed === true || expanded === true;
 	const hint = (e: Event) => {
@@ -48,7 +47,7 @@ function RailButton({ id, icon, label, keyName, pressed, expanded, controls, cap
 	);
 }
 
-//The tooltip beside the rail, its pointer on the button (Tooltips: desktop only, the rail shows labels on touch)
+//Desktop only: the rail shows labels on touch
 function RailTip({ hint }: { hint: Hint }) {
 	return (
 		<div id="uiToolTip" class="pm-tip right pm-railtip" role="tooltip" style={{ top: hint.y + "px" }}>
@@ -97,7 +96,7 @@ export function Rail({ store }: { store: Pick<Store, "airMode" | "hexGrid" | "me
 	);
 }
 
-//The brass button in the corner, the HUD's one primary action: off with its reason when it isn't the person's turn
+/** The HUD's one primary action: off with its reason when it isn't the person's turn. */
 export function EndTurn({ store }: { store: Pick<Store, "askEndTurn" | "endTurn"> }) {
 	const refusal = store.endTurn.value;
 	return (
@@ -108,7 +107,7 @@ export function EndTurn({ store }: { store: Pick<Store, "askEndTurn" | "endTurn"
 	);
 }
 
-//End turn's question while units can still act (#8): which ones, then end the turn or play on (Esc plays on)
+/** Which units can still act, then end the turn or play on (Esc plays on). */
 export function EndTurnQuestion({ store }: { store: Pick<Store, "answerEndTurn" | "askingText"> }) {
 	const text = store.askingText.value;
 	if (text === null) return null;
