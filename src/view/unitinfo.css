@@ -26,7 +26,14 @@
 			display: flex;
 			align-items: center;
 			gap: var(--space-2);
+			min-inline-size: 0;
 			font: 700 var(--type-unit-name-size) / 1.375rem var(--font-display);
+
+			& > .nm {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
 		}
 
 		& .name.lg {
@@ -301,7 +308,8 @@
 		border-inline-end: 1px solid var(--line);
 	}
 
-	/* identity: the sprite beside the name, formation and tags; the experience and the leaders under them */
+	/* identity: the name across the column (German names run long), then the sprite beside the formation and tags; the
+	   experience and the leaders under them */
 	.ui-id {
 		grid-area: id;
 		grid-template-columns: 5rem minmax(0, 1fr);
@@ -311,7 +319,8 @@
 			align-self: start;
 		}
 
-		& > :nth-child(n + 3) {
+		& > .name,
+		& > :nth-child(n + 4) {
 			grid-column: 1 / -1;
 		}
 	}
