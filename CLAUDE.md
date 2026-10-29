@@ -60,7 +60,6 @@ Against the original (no BASELINE_REF), main is not "all identical": it differs 
 ## Style
 
 - Opening braces on the same line (`function f() {`, `} else {`). Tabs.
-
 - Engine modules (the core in `src/core/`, `commands`, `mirror`, `gamerules`, `map` and its parts,
   `unit`, `ai`, `scenario`...) don't import the UI (`src/view/`), the page's modules (`dom`, `main`)
   or `game`: they read the game through `src/context.ts`. The game plays on the core (docs/CORE.md)
@@ -101,13 +100,14 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: readonly { r
 	retreat = false): MoveOutcome {
 
 // After: a named type, two sentences
-type PathCells = readonly { row: number; col: number; cost: number }[];
+type MoveCells = readonly { row: number; col: number; cost: number }[];
 
 /**
  * Moves a unit along the cheapest path through `cells` (its move range when null) and stops it before
- * a hidden enemy. A human's move can be undone when it spotted nothing new; a retreat never can.
+ * a hidden enemy. A human's move can be undone when it spotted nothing new and wasn't surprised;
+ * a retreat never can.
  */
-export function moveUnit(d: Draft, id: UnitId, to: Position, cells: PathCells | null, retreat = false): MoveOutcome {
+export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | null, retreat = false): MoveOutcome {
 ```
 
 ## Git
