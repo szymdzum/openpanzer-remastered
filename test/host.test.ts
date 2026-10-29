@@ -16,7 +16,7 @@ import { nullScreen } from "../src/app/nullscreen";
 import type { Game } from "../src/app/game";
 import type { CampaignScenario } from "../src/campaign";
 import type { ScenarioOutcome } from "../src/core/types";
-import { uiSettings } from "../src/prototypes";
+import { uiSettings } from "../src/app/settings";
 import { outcomeNames, playerType, sideNames } from "../src/core/tables";
 import { touched } from "../src/context";
 import { turnLimitOutcome } from "../src/core/turn";

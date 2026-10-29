@@ -5,7 +5,7 @@
 //A list setting (isAI, lastCloudSave) changes when a new list is written; a write into the list in place reaches the UI
 //only when something else changes (the game's state restores them in place, before the UI is made)
 import { type ReadonlySignal, signal } from "@preact/signals";
-import { type UISettings, uiSettings } from "../prototypes";
+import { type UISettings, uiSettings } from "../app/settings";
 
 export type SettingSignals = { readonly [K in keyof UISettings]: ReadonlySignal<UISettings[K]> };
 

@@ -5,7 +5,7 @@
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
 import type { GameHost } from "../app/host";
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "../app/settings";
 import { MENU_CLOSED, type MenuState } from "./menus";
 import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, FIRST_DIFFICULTY, scenarioAtOpen, scenarioGroups, scenarioView,
 	settleAI } from "./newgame";

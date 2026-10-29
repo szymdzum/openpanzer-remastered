@@ -5,7 +5,7 @@
 //needs it, and goes back to the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { GameHost } from "../app/host";
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "../app/settings";
 import { menuBack, type MenuState } from "./menus";
 import { SLIDERS, type SliderSetting, sliderText, type ToggleKey, toggleSetting, TOGGLES } from "./settings";
 import { settingSignals } from "./uisettings";

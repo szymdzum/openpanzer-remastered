@@ -1,7 +1,7 @@
 //The save and load window (SaveLoad, #349): the names the old window gave a save (src/uibuilder.ts gameStateButton,
 //onCloudSaved) and the last three cloud saves it remembered in the settings (fillCloudSavesList). Plain TypeScript.
 import type { World } from "../core/types";
-import type { CloudSave } from "../prototypes";
+import type { CloudSave } from "../app/settings";
 
 //What the old window wrote when a file didn't load
 export const LOAD_ERROR = "Error loading game. Cannot parse save game data.";

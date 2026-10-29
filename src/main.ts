@@ -10,6 +10,7 @@
 //order. What modules need of each other while loading: prototypes and core/tables (everything
 //reads them, tables imports nothing so it runs first) and ScenarioLoader (scenario). The game starts on window load.
 import * as prototypes from "./prototypes";
+import * as settings from "./app/settings";
 import * as storage from "./app/storage";
 import * as combatlog from "./combatlog";
 import * as equipment from "./equipment";
@@ -44,7 +45,7 @@ import * as nullscreen from "./app/nullscreen";
 //(the UI's entry, not one of the modules above, which the harness reaches into)
 import { startNewUI } from "./view/screen";
 
-const modules = [prototypes, storage, combatlog, equipment, page, ai, gamerules, unit,
+const modules = [prototypes, settings, storage, combatlog, equipment, page, ai, gamerules, unit,
 	map, loader, scenario, campaign, game, leaders,
 	tables, rng, context, board, visibility, selection, undo, util, running, commands, state,
 	save, mirror, driver, start, host, screen, nullscreen];

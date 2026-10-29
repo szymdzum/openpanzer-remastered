@@ -74,7 +74,7 @@ export async function freshGame(): Promise<Game> {
 //player the scripted AI) or Game.newCampaign ("campaign:<index>:<difficulty>"). Resolves when it has
 //loaded
 export async function startState(game: Game, item: string, isAI = [0, 0, 0, 0]) {
-	const { uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/app/settings");
 	//New games play the original's rules, which the contracts pin, as the harness has them (#53)
 	uiSettings.classicRules = true;
 	Math.random = mulberry32(1);

@@ -19,7 +19,8 @@
  * without the DOM (test/host.test.ts).
  */
 
-import { actionType, DEBUG_AI_MOVES, DEFAULT_SCENARIO, difficultyType, endGameLossText, endGameType, newGameRules, uiSettings } from "../prototypes";
+import { actionType, difficultyType, endGameLossText, endGameType } from "../prototypes";
+import { DEBUG_AI_MOVES, DEFAULT_SCENARIO, newGameRules, uiSettings } from "./settings";
 import { outcomeNames, playerType, sideNames } from "../core/tables";
 import { AI, type AIAction } from "../ai";
 import { GameMap, Player } from "../map";

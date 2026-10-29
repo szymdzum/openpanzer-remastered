@@ -9,7 +9,7 @@ import { smallGame } from "./smallgame";
 //No describe block: Stryker's Vitest runner picks tests by name and misses names inside one
 test("a hex counter doesn't go below 0", async () => {
 	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
-	const { uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/app/settings");
 	const noFOW = uiSettings.noFOW;
 	uiSettings.noFOW = false;
 	const h = scenario.map.map[0][0];
@@ -59,7 +59,7 @@ test("looking up a unit id that isn't on the map gives null", async () => {
 
 test("an enemy on a hex the attacker's side doesn't spot can be attacked only after it fired from hiding", async () => {
 	const scenario = await restoreState(readFixture("engine", fixtures("engine")[0]).state);
-	const { uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/app/settings");
 	const { GameRules } = await import("../src/gamerules");
 	const noFOW = uiSettings.noFOW;
 	uiSettings.noFOW = false;

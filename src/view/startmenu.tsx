@@ -5,7 +5,7 @@
 //start menu, as the old Options did. It opens with the first scenario and from the game menu's Options. The campaign's
 //and the scenario's windows take the main window's place over the photographs.
 import { useLayoutEffect, useRef } from "preact/hooks";
-import { VERSION } from "../prototypes";
+import { VERSION } from "../app/settings";
 import { Button } from "./button";
 import { Icon } from "./icon";
 import { MAIN_BUTTONS, MENU_LINKS, type MenuEntry, NEW_GAME_BUTTONS } from "./menus";

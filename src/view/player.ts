@@ -6,7 +6,7 @@
 //the map: the sounds keep the pace. done is called when the last beat ends, at once for none
 import type { PathStep } from "../core/events";
 import type { Position, UnitId } from "../core/types";
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "../app/settings";
 import type { Beat, Sheet } from "./beats";
 
 //What the map draws over the units while a beat plays: the moving unit's sprite at a point of the map (its pixels), a

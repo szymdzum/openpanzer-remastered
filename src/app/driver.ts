@@ -15,7 +15,8 @@
  * stepWorld: what the screen writes into the objects isn't in it, what the harness writes is).
  */
 
-import { actionType, type Cell, CURRENCY_ICON } from "../prototypes";
+import { actionType, type Cell } from "../prototypes";
+import { CURRENCY_ICON } from "./settings";
 import { playerType } from "../core/tables";
 import { CombatLog } from "../combatlog";
 import { AI, type AIAction, type AIDriver } from "../ai";

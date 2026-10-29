@@ -12,7 +12,7 @@ import type { Command } from "../src/core/command";
 import { MapView } from "../src/view/map";
 import { hexCentre } from "../src/view/hexgrid";
 import { createStore, type Store, type StoreHost } from "../src/view/store";
-import { uiSettings } from "../src/prototypes";
+import { uiSettings } from "../src/app/settings";
 
 //A context that counts what is drawn
 let drawn = 0;

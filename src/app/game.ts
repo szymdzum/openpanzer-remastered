@@ -12,7 +12,7 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { DEFAULT_SCENARIO, uiSettings } from "../prototypes";
+import { DEFAULT_SCENARIO, uiSettings } from "./settings";
 import { GameState } from "./storage";
 import type { Scenario } from "../scenario";
 import type { ScenarioOutcome } from "../core/types";

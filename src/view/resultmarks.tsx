@@ -3,7 +3,7 @@
 //with quick animations), then fade (combat.css: none under prefers-reduced-motion) and go
 import { useEffect, useState } from "preact/hooks";
 import type { Position } from "../core/types";
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "../app/settings";
 import type { Point } from "./hexgrid";
 import type { Results } from "./results";
 import { TOKENS } from "./tokens";

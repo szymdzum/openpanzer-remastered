@@ -6,7 +6,7 @@
 import type { Command } from "../src/core/command";
 import { check } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { newGameRules, uiSettings } from "../src/prototypes";
+import { newGameRules, uiSettings } from "../src/app/settings";
 import { game } from "../src/app/running";
 import { answer, type Answer, type Args, flagInt, flagRules, type Front, pageResultOf, parseArgs, runOn, UsageError } from "./commands";
 import { status } from "./board";

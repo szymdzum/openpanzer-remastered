@@ -24,7 +24,7 @@ test("Without a game the engine reads the classic rules (#53)", async () => {
 });
 
 test("A new game plays the remaster's rules unless the settings ask for the classic ones (#53)", async () => {
-	const { newGameRules, uiSettings } = await import("../src/prototypes");
+	const { newGameRules, uiSettings } = await import("../src/app/settings");
 	expect(uiSettings.classicRules).toBe(false);
 	expect(newGameRules()).toBe("remaster");
 	uiSettings.classicRules = true;
