@@ -86,8 +86,8 @@ test("More opens the card: who it is, its condition with what each gauge means, 
 	expect(panel.querySelector(".ui-xp")!.textContent).toBe("Experience 1 of 5120 XP");
 	expect(texts(panel.querySelectorAll(".ui-lead b"))).toEqual(["Battlefield Intelligence", "Aggressive Tank Maneuver"]);
 	//the gauges with their value and meaning; the stamp, as it can resupply with one round left
-	expect([...panel.querySelectorAll(".ui-c")].map((g) => [g.className, g.textContent])).toEqual([["ui-c ok", "Strength10/10full"],
-		["ui-c low", "Fuel18/503 full moves"], ["ui-c critical", "Ammo1/81 shot left"], ["ui-c dug", "Entrenched+4+4 defence"]]);
+	expect([...panel.querySelectorAll(".ui-c")].map((g) => [g.className, g.textContent])).toEqual([["ui-c ok", "Strength10/10"],
+		["ui-c low", "Fuel18/503 full moves"], ["ui-c critical", "Ammo1/8"], ["ui-c dug", "Entrenched+4+4 defence"]]);
 	expect(panel.querySelector(".ui-c.dug .k")!.getAttribute("title")).toBe("Entrenchment: up to 8 here, the city's own 3 at once");
 	expect(panel.querySelector(".pm-stamp")!.textContent).toBe("Resupply");
 	expect(texts(panel.querySelectorAll(".ui-cond .ui-chip"))).toEqual(["6 moves left", "Can fire"]);

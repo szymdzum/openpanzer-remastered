@@ -34,9 +34,9 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 
 **What each gauge says** (the game's rules, docs/MECHANICS.md):
 
-- **Strength:** ten segments, one per strength point; in `ok`, `low` (6 or less) or `critical` (3 or less). Every point fires on its own. Over strength (11 to 15, one per 100 XP) the segments past ten are drawn in `accent-ink` and the word is "+2 over"; under ten it is "lost 3", at ten "full".
+- **Strength:** ten segments, one per strength point; in `ok`, `low` (6 or less) or `critical` (3 or less). Every point fires on its own. Over strength (11 to 15, one per 100 XP) the segments past ten are drawn in `accent-ink`. No words beside it: the segments and the number say what it lost.
 - **Fuel:** a bar, and the full moves it is enough for (`fullMoves`). A unit that uses none shows "–"; a unit with a transport shows the transport's fuel. Aircraft show the fuel alone, "18/50", with no moves: they have to get back to an airfield, which a count of moves would hide.
-- **Ammo:** one segment per round, and "N shots left": every shot uses one round, return and support fire too (`fire`, src/core/fight.ts).
+- **Ammo:** one segment per round, and the number with no words beside it: every shot uses one round, return and support fire too (`fire`, src/core/fight.ts).
 - **Entrenchment:** one segment per level, as many as the hex allows: the terrain's base + 5: 5 in the open, 6 on a hill or port, 7 in a forest, bocage, mountain or rough ground, 8 in a city, 9 in a fortification. The terrain's own levels (it gets them at once) are drawn lighter than those it dug. Moving loses all of it, every hit one level. "Entrenched" in the strip and the card alike.
 
 **Against the enemy.** The game splits targets by armour, not weight: every unit is a soft (unarmoured), hard (armoured), air or naval target. Soft: all infantry, most towed guns, trucks and wagons, most bunkers. Hard: every tank, armoured cars, halftracks, self-propelled guns. A light tank is hard; a heavy towed gun isn't.
