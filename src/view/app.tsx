@@ -2,22 +2,22 @@
 //the unit info at the bottom, as the old UI's), End turn, the windows (#348), the message window and the start menu over
 //them all (#349), composed of the component library. The components only read the
 //store's signals and send its commands: what they show and why a control is off is the view model's.
-import { IconSprite } from "./icon";
-import { UnitContextMenu } from "./contextmenu";
-import { UnitInfoPanel } from "./infopanel";
-import { UnitStrip } from "./unitstrip";
-import { DeployButton, ReserveTray } from "./tray";
-import { LogWindow } from "./logwindow";
-import { MessageDialog } from "./message";
-import { StartMenu } from "./startmenu";
-import { SettingsWindow } from "./settingswindow";
-import { DossierWindow } from "./dossierwindow";
-import { ShopWindow } from "./shopwindow";
-import { MapView } from "./map";
-import { EndTurn, EndTurnQuestion, Rail } from "./rail";
-import { StatusBar } from "./statusbar";
-import { AiIndicator, TurnBanner } from "./turnbanner";
-import type { Store } from "./store";
+import { IconSprite } from "./components/icon";
+import { UnitContextMenu } from "./components/contextmenu";
+import { UnitInfoPanel } from "./hud/infopanel";
+import { UnitStrip } from "./hud/unitstrip";
+import { DeployButton, ReserveTray } from "./hud/tray";
+import { LogWindow } from "./windows/logwindow";
+import { MessageDialog } from "./hud/message";
+import { StartMenu } from "./windows/startmenu";
+import { SettingsWindow } from "./windows/settingswindow";
+import { DossierWindow } from "./windows/dossierwindow";
+import { ShopWindow } from "./windows/shopwindow";
+import { MapView } from "./map/map";
+import { EndTurn, EndTurnQuestion, Rail } from "./hud/rail";
+import { StatusBar } from "./hud/statusbar";
+import { AiIndicator, TurnBanner } from "./hud/turnbanner";
+import type { Store } from "./store/store";
 import { useEffect, useRef } from "preact/hooks";
 
 //The room the dock takes at the screen's bottom, kept in the store: the map scrolls past it (#453)

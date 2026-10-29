@@ -11,9 +11,9 @@ import type { World } from "../src/core/types";
 import type { Executed } from "../src/legacy/commands";
 import type { Command } from "../src/core/command";
 import { terrainType } from "../src/core/tables";
-import { hexCentre } from "../src/view/hexgrid";
-import { MapView } from "../src/view/map";
-import { createStore, type StoreHost } from "../src/view/store";
+import { hexCentre } from "../src/view/map/hexgrid";
+import { MapView } from "../src/view/map/map";
+import { createStore, type StoreHost } from "../src/view/store/store";
 import { newScreen } from "../src/view/screen";
 import type { GameHost } from "../src/app/host";
 

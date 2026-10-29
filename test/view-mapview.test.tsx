@@ -1,4 +1,4 @@
-//The map in the page (src/view/map.tsx, #345), in jsdom, on a store over a hand-built world whose host plays
+//The map in the page (src/view/map/map.tsx, #345), in jsdom, on a store over a hand-built world whose host plays
 //the person's commands on the core: the pointer's hex, the path's tag, a click that selects, moves and attacks,
 //a refusal in the status line, and the canvas drawn again when what it shows changes
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
@@ -9,9 +9,9 @@ import { step } from "../src/core/step";
 import { unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
 import type { Command } from "../src/core/command";
-import { MapView } from "../src/view/map";
-import { hexCentre } from "../src/view/hexgrid";
-import { createStore, type Store, type StoreHost } from "../src/view/store";
+import { MapView } from "../src/view/map/map";
+import { hexCentre } from "../src/view/map/hexgrid";
+import { createStore, type Store, type StoreHost } from "../src/view/store/store";
 import { uiSettings } from "../src/app/settings";
 
 //A context that counts what is drawn

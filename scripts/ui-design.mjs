@@ -25,7 +25,7 @@ const view = path.join(dir, "..", "..", "src", "view");
 
 //A stylesheet of a folder with its @imports written in, in their order
 const inlined = (folder, file) => fs.readFileSync(path.join(folder, file), "utf8")
-	.replace(/@import url\("\.\/([\w-]+\.css)"\);/g, (_, f) => fs.readFileSync(path.join(folder, f), "utf8"));
+	.replace(/@import url\("\.\/([\w/-]+\.css)"\);/g, (_, f) => fs.readFileSync(path.join(folder, f), "utf8"));
 
 //The components' CSS: the game's (src/view/library.css), then those only the gallery shows (docs/ui/live/gallery.css)
 function libraryCss() {
@@ -137,7 +137,7 @@ function stale() {
 function check() {
 	const problems = stale();
 	checkCss("docs/ui/components/bundle.css", read("components/bundle.css"), problems);
-	for (const file of fs.readdirSync(view).filter((f) => f.endsWith(".css")).sort())
+	for (const file of fs.readdirSync(view, { recursive: true }).filter((f) => f.endsWith(".css")).sort())
 		checkCss(`src/view/${file}`, fs.readFileSync(path.join(view, file), "utf8"), problems);
 	for (const file of fs.readdirSync(path.join(dir, "live")).filter((f) => f.endsWith(".css")).sort())
 		checkCss(`docs/ui/live/${file}`, read(`live/${file}`), problems);

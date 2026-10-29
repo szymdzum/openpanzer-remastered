@@ -1,9 +1,9 @@
 // @vitest-environment node
-//The attack cursor on the map's canvas (src/view/attackdraw.ts, #441) on a context that records what it is told: the
+//The attack cursor on the map's canvas (src/view/map/attackdraw.ts, #441) on a context that records what it is told: the
 //brass crosshair and both losses in their sides' colours, as the old cursor showed them; a retreat's trail
 import { expect, test } from "vitest";
-import { drawPreview } from "../src/view/attackdraw";
-import type { Viewport } from "../src/view/canvas";
+import { drawPreview } from "../src/view/map/attackdraw";
+import type { Viewport } from "../src/view/map/canvas";
 import { TOKENS } from "../src/view/tokens";
 
 const MAP = TOKENS.map;

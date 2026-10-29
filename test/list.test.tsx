@@ -1,7 +1,7 @@
-//The new UI's selectable list (src/view/list.tsx) in jsdom: a radio group of rows under their group names
+//The new UI's selectable list (src/view/components/list.tsx) in jsdom: a radio group of rows under their group names
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/preact";
-import { List } from "../src/view/list";
+import { List } from "../src/view/components/list";
 
 afterEach(cleanup);
 

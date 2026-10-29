@@ -4,12 +4,12 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { Dialog, Window } from "../src/view/panel";
-import { Button } from "../src/view/button";
-import { TabPanel, Tabs } from "../src/view/tabs";
-import { StatusBar } from "../src/view/statusbar";
-import { MessageDialog } from "../src/view/message";
-import { createStore } from "../src/view/store";
+import { Dialog, Window } from "../src/view/components/panel";
+import { Button } from "../src/view/components/button";
+import { TabPanel, Tabs } from "../src/view/components/tabs";
+import { StatusBar } from "../src/view/hud/statusbar";
+import { MessageDialog } from "../src/view/hud/message";
+import { createStore } from "../src/view/store/store";
 import { handWorld } from "./coreworld";
 
 afterEach(() => {

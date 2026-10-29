@@ -1,4 +1,4 @@
-//The reserve tray on the new UI (src/view/deploy.ts trayOf, src/view/tray.tsx; Deployment, #348) on the Deployment
+//The reserve tray on the new UI (src/view/map/deploy.ts trayOf, src/view/hud/tray.tsx; Deployment, #348) on the Deployment
 //card's hand-built world (deployWorld: a Pz IIA on the map, an Infanterie and a Me-109E-3 in the reserve): the tray
 //docked while deploying with the placed count, the unit picked, Upgrade on it, Done, and the unit list giving way to it
 import { afterEach, expect, test } from "vitest";
@@ -6,11 +6,11 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { deployWorld } from "./coreworld";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
-import { trayOf } from "../src/view/deploy";
-import { createStore } from "../src/view/store";
-import { DeployButton, ReserveTray } from "../src/view/tray";
-import { ShopWindow } from "../src/view/shopwindow";
-import { UnitStrip } from "../src/view/unitstrip";
+import { trayOf } from "../src/view/map/deploy";
+import { createStore } from "../src/view/store/store";
+import { DeployButton, ReserveTray } from "../src/view/hud/tray";
+import { ShopWindow } from "../src/view/windows/shopwindow";
+import { UnitStrip } from "../src/view/hud/unitstrip";
 
 afterEach(cleanup);
 

@@ -1,4 +1,4 @@
-//The unit card's view model (src/view/unitcard.ts, UnitInfo, #348 with #37) on hand-built worlds, the card open: who the
+//The unit card's view model (src/view/hud/unitcard.ts, UnitInfo, #348 with #37) on hand-built worlds, the card open: who the
 //unit is, its condition with what each gauge means, what it can still do this turn, what it hits and holds against each
 //kind of enemy with the bonuses in force, and the band of what riding means. Every phrase is a core query's
 //(test/unitfacts.test.ts checks those against the step and the attack); and the dock's height the screen keeps
@@ -11,8 +11,8 @@ import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { leaderDescriptions } from "../src/legacy/prototypes";
 import { leaderType, movMethod, terrainType, unitClass } from "../src/core/tables";
-import { createStore } from "../src/view/store";
-import { type CardStat, ordinal, type UnitCard, unitCardOf } from "../src/view/unitcard";
+import { createStore } from "../src/view/store/store";
+import { type CardStat, ordinal, type UnitCard, unitCardOf } from "../src/view/hud/unitcard";
 import { App } from "../src/view/app";
 
 afterEach(cleanup);

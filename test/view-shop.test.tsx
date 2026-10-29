@@ -1,5 +1,5 @@
-//The unit list and the equipment window on the new UI (src/view/unitlist.ts, src/view/shop.ts, src/view/shopstate.ts,
-//src/view/unitstrip.tsx, src/view/shopwindow.tsx; UnitList, Equipment, #348) on hand-built worlds with Germany's
+//The unit list and the equipment window on the new UI (src/view/hud/unitlist.ts, src/view/windows/shop.ts, src/view/windows/shopstate.ts,
+//src/view/hud/unitstrip.tsx, src/view/windows/shopwindow.tsx; UnitList, Equipment, #348) on hand-built worlds with Germany's
 //equipment lists of the game's files: the list's cards and order, the models in service by class with their counts and
 //sorts, the transports that carry a model, and Buy new, Upgrade and Sell with the core's prices and refusals
 import fs from "node:fs";
@@ -11,11 +11,11 @@ import { sellCost, unitCost, upgradeCost } from "../src/core/costs";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { playerType, unitClass } from "../src/core/tables";
-import { choiceFor, type ShopChoice, shopOf } from "../src/view/shop";
-import { createStore } from "../src/view/store";
-import { unitListOf, NAVAL_ICON } from "../src/view/unitlist";
-import { ShopWindow } from "../src/view/shopwindow";
-import { UnitStrip } from "../src/view/unitstrip";
+import { choiceFor, type ShopChoice, shopOf } from "../src/view/windows/shop";
+import { createStore } from "../src/view/store/store";
+import { unitListOf, NAVAL_ICON } from "../src/view/hud/unitlist";
+import { ShopWindow } from "../src/view/windows/shopwindow";
+import { UnitStrip } from "../src/view/hud/unitstrip";
 
 afterEach(cleanup);
 

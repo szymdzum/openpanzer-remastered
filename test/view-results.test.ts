@@ -1,5 +1,5 @@
 // @vitest-environment node
-//What the map tells after a combat (src/view/results.ts, #347, the CombatResults card): attacks played on hand-built
+//What the map tells after a combat (src/view/hud/results.ts, #347, the CombatResults card): attacks played on hand-built
 //worlds with the game's dice, the loss chips, the one stamp and the status bar's line read from the step's events
 import { expect, test } from "vitest";
 import { handWorld, type HandUnit } from "./coreworld";
@@ -8,7 +8,7 @@ import { step } from "../src/core/step";
 import type { Command } from "../src/core/command";
 import type { World } from "../src/core/types";
 import { terrainType } from "../src/core/tables";
-import { resultsOf } from "../src/view/results";
+import { resultsOf } from "../src/view/hud/results";
 
 const PZ_38T = 136, PZ_IIA = 140, INFANTERIE = 115, LEFH18 = 92, TP7 = 273, PIECHOTA = 270, WZ97 = 264;
 

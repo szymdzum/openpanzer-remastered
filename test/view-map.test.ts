@@ -1,6 +1,6 @@
 // @vitest-environment node
-//The new UI's map (#345) without the DOM: the hex grid (src/view/hexgrid.ts) and the map's view model
-//(src/view/mapview.ts) on hand-built worlds (test/coreworld.ts, test/smallgame.ts). What each hex shows, the
+//The new UI's map (#345) without the DOM: the hex grid (src/view/map/hexgrid.ts) and the map's view model
+//(src/view/map/mapview.ts) on hand-built worlds (test/coreworld.ts, test/smallgame.ts). What each hex shows, the
 //move path's tag, what a click does; the path and its numbers are checked against the move itself
 import { expect, test } from "vitest";
 import { deployWorld, handWorld, type HandUnit } from "./coreworld";
@@ -14,11 +14,11 @@ import { moveRange } from "../src/core/movement";
 import { hexIndex, unitById } from "../src/core/world";
 import type { World } from "../src/core/types";
 import { roadType, terrainType } from "../src/core/tables";
-import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/hexgrid";
-import { clickOn, mapUnits, outlineOf, pathOf, selectionOf, unitsToAct } from "../src/view/mapview";
-import { fogOf, mapPlaques, plaquesOf, supportOf } from "../src/view/mapinfo";
-import { strategicOf } from "../src/view/strategic";
-import { deploymentOf, ghostOf, placeOn, reserveOf } from "../src/view/deploy";
+import { CORNERS, EDGES, cellAt, gridSize, hexCentre } from "../src/view/map/hexgrid";
+import { clickOn, mapUnits, outlineOf, pathOf, selectionOf, unitsToAct } from "../src/view/map/mapview";
+import { fogOf, mapPlaques, plaquesOf, supportOf } from "../src/view/map/mapinfo";
+import { strategicOf } from "../src/view/map/strategic";
+import { deploymentOf, ghostOf, placeOn, reserveOf } from "../src/view/map/deploy";
 
 const PZ_IIA = 140, BRUCKE = 111, WZ13 = 262, TP7 = 273, INFANTERIE = 115, PSW_222 = 117, OPEL_BLITZ = 157, ME_109 = 159;
 const KAWALERIA = 267, PZL_23 = 281, TRANSPORTSCHIFFE = 546;

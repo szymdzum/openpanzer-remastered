@@ -10,7 +10,7 @@ import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import { readSave, SAVE_VERSION } from "../src/app/save";
 import { CURRENCY_ICON } from "../src/app/settings";
-import { DIFFICULTY_HELP } from "../src/view/newgame";
+import { DIFFICULTY_HELP } from "../src/view/windows/newgame";
 import type { GameHost } from "../src/app/host";
 
 afterEach(() => {

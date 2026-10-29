@@ -37,16 +37,16 @@ type Probe = {
 	toData: typeof import("../../src/legacy/state").toData;
 	Rng: typeof import("../../src/core/random").Rng;
 	uiSettings: typeof import("../../src/app/settings").uiSettings;
-	hexCentre: typeof import("../../src/view/hexgrid").hexCentre;
-	selectionOf: typeof import("../../src/view/mapview").selectionOf;
-	deploymentOf: typeof import("../../src/view/deploy").deploymentOf;
-	reserveOf: typeof import("../../src/view/deploy").reserveOf;
+	hexCentre: typeof import("../../src/view/map/hexgrid").hexCentre;
+	selectionOf: typeof import("../../src/view/map/mapview").selectionOf;
+	deploymentOf: typeof import("../../src/view/map/deploy").deploymentOf;
+	reserveOf: typeof import("../../src/view/map/deploy").reserveOf;
 	unitData: typeof import("../../src/core/world").unitData;
 	isAir: typeof import("../../src/core/units").isAir;
 };
 type Probed = { e2e: Probe };
-const MODULES = ["/src/app/running.ts", "/src/legacy/state.ts", "/src/core/random.ts", "/src/app/settings.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
-	"/src/view/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
+const MODULES = ["/src/app/running.ts", "/src/legacy/state.ts", "/src/core/random.ts", "/src/app/settings.ts", "/src/view/map/hexgrid.ts", "/src/view/map/mapview.ts",
+	"/src/view/map/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
 
 const errors: string[] = [];
 let page: Page;
@@ -110,7 +110,7 @@ async function clickHex(at: Position) {
 		const c = p.hexCentre(row, col);
 		s.scrollLeft = c.x * scale - s.clientWidth / 2;
 		s.scrollTop = c.y * scale - s.clientHeight / 2;
-		//(the map's size; one smaller than the screen is centred in it: src/view/map.tsx origin)
+		//(the map's size; one smaller than the screen is centred in it: src/view/map/map.tsx origin)
 		const width = area.offsetWidth, height = area.offsetHeight - (dock.offsetHeight + (parseFloat(getComputedStyle(dock).bottom) || 0));
 		const box = s.getBoundingClientRect();
 		const x = box.left + c.x * scale - (s.scrollLeft - Math.max(0, (s.clientWidth - width) / 2));
@@ -139,7 +139,7 @@ async function clickHexOnce(at: Position, done: () => Promise<boolean>, what: st
 
 //A unit of the person's that the click picks and where to: the first by id whose hexes, its own and where, sit away from
 //the map's edges (the map can't scroll an edge to the middle, where nothing covers it), a unit on the deployment zone
-//first, which leaves its hex to the reserve. where: its move area or its targets, from the view model (src/view/mapview.ts
+//first, which leaves its hex to the reserve. where: its move area or its targets, from the view model (src/view/map/mapview.ts
 //selectionOf)
 type Order = { unit: number, name: string, air: boolean, from: Position, to: Position };
 const orderOf = (kind: "area" | "targets") => world(([w, p], k) => {

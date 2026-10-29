@@ -3,7 +3,7 @@
 //the keyboard has the close button and Esc. Styled by sheet.css beside it.
 import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
-import { Scrim, Window } from "../../../src/view/panel";
+import { Scrim, Window } from "../../../src/view/components/panel";
 
 //How far the grip is dragged down before letting go closes the sheet
 const CLOSE_AT = 96;

@@ -1,12 +1,12 @@
-//The settings window (src/view/settings.ts, settingsstate.ts, settingswindow.tsx, #349): the old settings list
+//The settings window (src/view/windows/settings.ts, settingsstate.ts, settingswindow.tsx, #349): the old settings list
 //(src/uibuilder.ts buildStartMenu, before #351), the same keys in uiSettings, saved on the host
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/preact";
 import { handWorld } from "./coreworld";
 import { hexIndex } from "../src/core/world";
-import { sliderText, toggleSetting, TOGGLES } from "../src/view/settings";
+import { sliderText, toggleSetting, TOGGLES } from "../src/view/windows/settings";
 import { App } from "../src/view/app";
-import { createStore } from "../src/view/store";
+import { createStore } from "../src/view/store/store";
 import { newScreen } from "../src/view/screen";
 import { MAJOR_VERSION, type UISettings, uiSettings } from "../src/app/settings";
 import type { GameHost } from "../src/app/host";

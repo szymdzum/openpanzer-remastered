@@ -11,7 +11,7 @@ import { isTrain } from "../core/units";
 import { isBridgeForSide } from "../core/movement";
 import { hexIndex, unitById } from "../core/world";
 import { unitClass } from "../core/tables";
-import { at, seen } from "./results";
+import { at, seen } from "./hud/results";
 
 //A sprite strip: its frames side by side, each width pixels wide
 export interface Sheet {
