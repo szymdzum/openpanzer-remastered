@@ -34,8 +34,8 @@ export function coreAt(w: World, index: number): CoreUnit | null {
 	return c === undefined ? null : c;
 }
 
-//The unit of a core list entry: the map's, or the one off it
-export function coreUnitOf(w: World, c: CoreUnit): OffMapUnit {
+export
+ function coreUnitOf(w: World, c: CoreUnit): OffMapUnit {
 	if ("onMap" in c) return unitById(w, c.onMap);
 	return "reserve" in c ? c.reserve : c.lost;
 }

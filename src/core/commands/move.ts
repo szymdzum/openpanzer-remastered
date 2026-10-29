@@ -15,8 +15,9 @@ import type { Checkpoint, CommandHandler, Draft, Position } from "../types";
 import { playerAt, refuse, unitCheck } from "./common";
 import { onMap, unitById } from "../world";
 
-//The cells the path may go through, as the command gives them: a cell without a cost costs NaN (the
-//old engine casts the command's cells)
+//The cells the path may go through, as the command gives them: a cell without a cost costs NaN (the original
+//casts them)
+
 type PathCells = readonly { row: number; col: number; cost: number }[];
 const cellsOf = (cells: Position[]) => cells as unknown as PathCells;
 
@@ -36,7 +37,6 @@ export const move: CommandHandler<CommandOf<"move">> = {
 	},
 };
 
-//The move itself, up to its checkpoint
 export function moveFirst(d: Draft, cmd: CommandOf<"move">): Checkpoint {
 	const moved = moveUnit(d, cmd.unit, cmd.to, cmd.cells !== undefined ? cellsOf(cmd.cells) : null);
 	return { next: "surprise", unit: cmd.unit, surprise: moved.surprise, win: moved.win };
@@ -58,8 +58,8 @@ export const attack: CommandHandler<CommandOf<"attack">> = {
 	},
 };
 
-//The shots, up to the attack's checkpoint
-export function attackFirst(d: Draft, cmd: CommandOf<"attack">): Checkpoint {
+export
+ function attackFirst(d: Draft, cmd: CommandOf<"attack">): Checkpoint {
 	return { next: "cleanUp", attack: resolveAttack(d, cmd.unit, cmd.target) };
 }
 

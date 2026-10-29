@@ -1,6 +1,6 @@
 /**
- * Undo the last move (D5): the state keeps whether it can be undone and what the move changed
- * (turn.undoable, the old engine's single slot); the states before are the caller's
+ * Undo the last move: the state keeps whether it can be undone and what the move changed (turn.undoable, a single
+ * slot as in the original); the states before are the caller's
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -13,11 +13,10 @@ import type { CommandHandler } from "../types";
 import { hexIndex, unitById } from "../world";
 import { unitCheck } from "./common";
 
-//Map.undoLastMove: the unit as it was before the move, back where it stood, spotting from there again
-//without marking the enemy units it sees there as seen: they are as they were before the move (#140:
-//the original marked them, as if they had fired), the hex it took given back, an objective in its
-//place in its side's list (#141: the original put it at the end), the prestige and score taken back
-//Only the current player's own unit (#171)
+//Map.undoLastMove: the unit as it was before the move, back where it stood, spotting from there again without marking
+//the enemy units it sees as seen (#140: the original marked them, as if they had fired), the hex it took given back,
+//an objective in its place in its side's list (#141: the original put it at the end), the prestige and score taken
+//back. Only the current player's own unit (#171)
 export const undo: CommandHandler<CommandOf<"undo">> = {
 	check(w, cmd) {
 		const slot = w.state.turn.undoable;
@@ -28,7 +27,7 @@ export const undo: CommandHandler<CommandOf<"undo">> = {
 		const slot = d.state.turn.undoable, before = slot.before;
 		const at = unitById(d, cmd.unit), from = { row: at.row, col: at.col };
 		emit(d, { type: "undone", unit: cmd.unit, from, to: { row: before.row, col: before.col } });
-		//(Unit.copy: every field but tempSpotted; a transport only when the saved unit has one)
+		//Unit.copy: every field but tempSpotted; a transport only when the saved unit has one
 		relocate(d, cmd.unit, before, (u) => {
 			Object.assign(u, before, { row: u.row, col: u.col, tempSpotted: u.tempSpotted,
 				transport: before.transport !== null ? { ...before.transport } : u.transport });
@@ -41,7 +40,8 @@ export const undo: CommandHandler<CommandOf<"undo">> = {
 		if (slot.oldVictorySide !== null) {
 			updateVictorySides(d, ~player.side & 1, from);
 			writeHex(d, hex).victorySide = slot.oldVictorySide;
-			//(a save from before #141 has no index: the objective stays at the end)
+			//A save from before #141 has no index: the objective stays at the end
+
 			const own = writeObjectives(d, player.side), last = own.length - 1;
 			if (slot.objectiveIndex !== undefined && last >= 0 && own[last].row === from.row && own[last].col === from.col)
 				own.splice(slot.objectiveIndex, 0, ...own.splice(last, 1));

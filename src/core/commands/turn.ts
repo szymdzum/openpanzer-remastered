@@ -1,6 +1,6 @@
 /**
  * End the turn: the next player's turn starts. The reinforcements arrive after it, in a step of
- * their own (turn.ts arriveReinforcements): an AI player plans its turn in between (#94 kept)
+ * their own (turn.ts arriveReinforcements): an AI player plans its turn in between (kept bug #94)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -27,8 +27,7 @@ function playerEndTurn(d: Draft, id: number) {
 	emit(d, { type: "turnEnded", player: id, prestige });
 }
 
-//Scenario.endTurn: the time of day, a day later after the day's last turn (in local time, as the old
-//engine counts it)
+//Scenario.endTurn: the time of day, a day later after the day's last turn (in local time, as the original counts it)
 function nextTimeOfDay(d: Draft) {
 	const s = d.state.scenario = { ...d.state.scenario };
 	s.dayTurn++;
@@ -39,9 +38,9 @@ function nextTimeOfDay(d: Draft) {
 	s.date = date.toISOString();
 }
 
-//Map.endTurn's new round, once every player has played: each unit in the list's order gets off its
-//transport, takes the turn start's resupply (in a city with no enemy around) and ends its
-//turn
+//Map.endTurn's new round, once every player has played: each unit in the list's order gets off its transport,
+//takes the turn start's resupply (in a city with no enemy around) and ends its turn
+
 function newRound(d: Draft) {
 	for (const id of d.state.units.map((u) => u.id)) {
 		if (unitById(d, id).isMounted) {
