@@ -1,7 +1,6 @@
-//The start of a turn's view model (TurnStart, TurnBanner, the AI indicator of Tooltips, #346): the short turn report
-//as the old UI computed it (UICombatLog.buildTurnInfo: the objectives left, the turns left to each outcome, the
-//prestige and the next turn's, the ground), what the enemy's turn did to the side shown, the unit the turn starts on,
-//and the program's turn in progress counted in units. From the core's World and the steps' events, nothing else
+//The view model of a turn's start: the short turn report (as the original game's UICombatLog.buildTurnInfo: objectives
+//left, turns left to each outcome, prestige and the next turn's, the ground), what the enemy's turn did to the side
+//shown, the unit the turn starts on, the program's turn in progress counted in units. Only the World and the events
 import type { EventOf, GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import { sideOf, unitById, unitData } from "../core/world";
@@ -33,7 +32,6 @@ function captured(turn: EnemyTurn, w: World, e: EventOf<"captured">): EnemyTurn 
 	return u !== null && sideOf(w, u) !== w.spotSide ? { ...turn, objectives: turn.objectives + 1 } : turn;
 }
 
-//The events of a program's step added to what its turn did to the side shown
 export function noteEnemy(turn: EnemyTurn, w: World, events: GameEvent[]): EnemyTurn {
 	return events.reduce((t, e) => e.type === "fight" ? fought(t, e, w.spotSide) : e.type === "captured" ? captured(t, w, e) : t, turn);
 }
@@ -84,7 +82,7 @@ function enemyLines(enemy: EnemyTurn): EnemyLine[] {
 	return lines.length > 0 ? lines : [{ tone: "muted", text: "All quiet on this front" }];
 }
 
-//The turns left to each outcome, victoryTurns[i] - (turn - 1), those already gone left out, as the old report did
+//The turns left to each outcome, victoryTurns[i] - (turn - 1), those already gone left out
 function outcomes(w: World) {
 	const turn = w.state.turn.turn, max = w.state.scenario.maxTurns;
 	const all = w.state.scenario.victoryTurns.slice(0, 3).map((at, i) => ({ name: shortName(OUTCOMES[i]), left: at - (turn - 1), at }));
@@ -110,12 +108,11 @@ export function turnReportOf(w: World, enemy: EnemyTurn): TurnReport | null {
 	};
 }
 
-//A briefing's header (MessageDialog): "Briefing · Turn 1"
 export function briefingLabelOf(w: World): string {
 	return "Briefing · Turn " + w.state.turn.turn;
 }
 
-//The unit a person's turn starts on: their first ground unit, not a fighter or a bomber (uiMapRenderAndSelectUnit)
+//The unit a person's turn starts on: their first ground unit, not a fighter or a bomber (as uiMapRenderAndSelectUnit)
 export function firstUnitOf(w: World): UnitId | null {
 	if (!isYourTurn(w)) return null;
 	const air = [unitClass.fighter, unitClass.levelBomber, unitClass.tacticalBomber];

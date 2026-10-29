@@ -80,7 +80,6 @@ function setCloser(id: string, close: (() => void) | undefined) {
 	else document.addEventListener("keydown", onEscape); //the same listener twice is added once
 }
 
-//Esc closes the panel or window that calls it while it is open, the last opened first
 export function useEscape(onClose: (() => void) | undefined) {
 	const id = useId();
 	useLayoutEffect(() => setCloser(id, onClose), [id, onClose]);
@@ -96,8 +95,8 @@ function skippedRadio(e: HTMLElement, dialog: HTMLElement): boolean {
 	return [...dialog.querySelectorAll<HTMLInputElement>("input[type=radio]")].some((r) => r.name === e.name && r.checked);
 }
 
-//The window's Tab stops, in their order, as the browser's Tab finds them: not an icon's <use href> or a negative tabindex,
-//nothing hidden, one radio a group (the lead's playtest of #498)
+//The window's Tab stops, in their order, as the browser's Tab finds them: not an icon's <use href> or a negative
+//tabindex, nothing hidden, one radio a group
 const focusables = (dialog: HTMLElement) => [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((e) => e.tabIndex >= 0
 	&& !e.closest("[hidden]") && (typeof e.checkVisibility !== "function" || e.checkVisibility()) && !skippedRadio(e, dialog));
 
@@ -118,10 +117,10 @@ function keepTab(e: KeyboardEvent, dialog: HTMLElement) {
 	(e.shiftKey ? all[all.length - 1] : all[0]).focus();
 }
 
-//A modal window's focus (#497, handoff.md's checklist): it takes the focus when it opens (unless one of its own controls
-//already took it, as the start menu's windows do), keeps it while open, and gives it back to where it was when it
-//closes. shown: what the window shows, when it shows something new without closing (the message window's next message):
-//it takes the focus again if the focus went elsewhere meanwhile. Returns the window's ref
+//A modal window's focus (#497, handoff.md's checklist): it takes the focus when it opens (unless one of its own
+//controls already took it, as the start menu's windows do), keeps it while open, and gives it back to where it was when
+//it closes. shown: what the window shows, when it shows something new without closing (the message window's next
+//message): it takes the focus again if the focus went elsewhere meanwhile. Returns the window's ref
 function useModalFocus<T extends HTMLElement>(shown: unknown): RefObject<T> {
 	const ref = useRef<T>(null);
 	useLayoutEffect(() => {
@@ -140,8 +139,8 @@ function useModalFocus<T extends HTMLElement>(shown: unknown): RefObject<T> {
 }
 
 //A modal <dialog> shown open in place (not showModal's top layer: the z-index tokens stack it with the HUD), with its
-//focus (useModalFocus): the windows below, the message and the dossier. shown: what it shows, when that can change while
-//it stays open (the message window's message)
+//focus (useModalFocus): the windows below, the message and the dossier. shown: what it shows, when that can change
+//while it stays open (the message window's message)
 export function Dialog({ id, class: cls, labelledBy, style, shown, children }: { id?: string, class: string, labelledBy: string,
 	style?: CSSProperties, shown?: unknown, children: ComponentChildren }) {
 	const ref = useModalFocus<HTMLDialogElement>(shown);
@@ -153,8 +152,8 @@ export function Dialog({ id, class: cls, labelledBy, style, shown, children }: {
 	);
 }
 
-//A modal window: equipment, combat log, dossier, messages, the start menu's windows. A <dialog>
-//shown open in place (not showModal's top layer): the z-index tokens stack it with the HUD
+//A modal window: equipment, combat log, dossier, messages, the start menu's windows. A Dialog with a header, body and
+//footer
 export function Window({ title, heading = "display", lead, sub, stamp, tools, children, footer, onClose, grip, id, ...place }: WindowProps) {
 	const titleId = useId();
 	useEscape(onClose);

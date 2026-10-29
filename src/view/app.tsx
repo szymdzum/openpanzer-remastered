@@ -1,7 +1,6 @@
-//The UI's root (#380): the map (#345), the HUD (#346: the status bar, the game menu, the unit context menu docked above
-//the unit info at the bottom, as the old UI's), End turn, the windows (#348), the message window and the start menu over
-//them all (#349), composed of the component library. The components only read the
-//store's signals and send its commands: what they show and why a control is off is the view model's.
+//The UI's root: the map, the HUD (status bar, game menu, the unit context menu docked above the unit info),
+//End turn, the windows, the message window and the start menu over them all. The components only read the store's
+//signals and send its commands: what they show and why a control is off is the view model's.
 import { IconSprite } from "./components/icon";
 import { UnitContextMenu } from "./components/contextmenu";
 import { UnitInfoPanel } from "./hud/infopanel";
@@ -20,7 +19,7 @@ import { AiIndicator, TurnBanner } from "./hud/turnbanner";
 import type { Store } from "./store/store";
 import { useEffect, useRef } from "preact/hooks";
 
-//The room the dock takes at the screen's bottom, kept in the store: the map scrolls past it (#453)
+//The room the dock takes at the screen's bottom, kept in the store: the map scrolls past it
 function useDockHeight(store: Pick<Store, "dockHeight">) {
 	const dock = useRef<HTMLDivElement>(null), height = store.dockHeight;
 	useEffect(() => {
