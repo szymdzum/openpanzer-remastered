@@ -10,10 +10,13 @@ import {
 } from "../src/core/combat";
 import { fullMoves, movesLeftThisTurn, unitMoveRange } from "../src/core/movement";
 import { step, type Stepped } from "../src/core/step";
+import { beginDraft, finishDraft } from "../src/core/draft";
+import { weakDefences } from "../src/core/equipment";
 import { canResupply } from "../src/core/supply";
+import { entrenchBase, entrenchLimit, unitEndTurn } from "../src/core/turn";
 import type { Contribution, UnitState, World } from "../src/core/types";
 import { isRiding, unitById } from "../src/core/world";
-import { leaderType, terrainType, unitClass } from "../src/prototypes";
+import { leaderType, terrainNames, terrainType, unitClass } from "../src/prototypes";
 import { type HandUnit, handWorld } from "./coreworld";
 
 const PZ_IIA = 140, TP7 = 273, ME_109 = 159, INFANTERIE = 115, OPEL_BLITZ = 157, PFERDEWAGEN = 158, PAK36 = 66, FLAK36 = 79;
@@ -222,4 +225,38 @@ test("Experience adds a point a 100 to the attack and the defence, attacking and
 	attackResult(w, unitById(w, 0), unitById(w, 1), null, record);
 	expect(record.filter((c) => c.name === "experience").map((c) => [c.side, c.field, c.after - c.before]))
 		.toEqual([["attacker", "aav", 2], ["attacker", "adv", 2], ["defender", "dav", 1], ["defender", "ddv", 1]]);
+});
+
+test("A hex's entrenchment limit is its terrain's base and 5 levels more, which the end of turn digs up to and no further (#37)", () => {
+	const limits = [terrainType.Clear, terrainType.Hill, terrainType.Port, terrainType.Forest, terrainType.Bocage, terrainType.Mountain,
+		terrainType.Rough, terrainType.City, terrainType.Fortification].map((t) => {
+		const { w, u } = one({ eqid: INFANTERIE }, undefined, () => t);
+		return [terrainNames[t], entrenchBase(w, u), entrenchLimit(w, u)];
+	});
+	expect(limits).toEqual([["Clear", 0, 5], ["Hill", 1, 6], ["Port", 1, 6], ["Forest", 2, 7], ["Bocage", 2, 7], ["Mountain", 2, 7],
+		["Rough", 2, 7], ["City", 3, 8], ["Fortification", 4, 9]]);
+	//a veteran in a city: the base at the first end of turn, then a level at a time, and never past the limit
+	let { w } = one({ eqid: INFANTERIE, experience: 500 }, undefined, () => terrainType.City);
+	const levels: number[] = [];
+	for (let turn = 0; turn < 40; turn++) {
+		const d = beginDraft(w);
+		unitEndTurn(d, 0);
+		w = finishDraft(d);
+		levels.push(unitById(w, 0).entrenchment);
+	}
+	expect([levels[0], Math.max(...levels), levels[levels.length - 1]]).toEqual([3, 8, 8]);
+});
+
+test("The weak defence is the lowest of ground, air and close defence, when it is at most half the highest (#37)", () => {
+	const weak = (grounddef: number, airdef: number, closedef: number) => weakDefences({ grounddef, airdef, closedef } as EquipmentEntry);
+	expect(weak(7, 8, 2)).toEqual(["closedef"]); //the Pz IIA: 2 against 8
+	expect(weak(7, 8, 4)).toEqual(["closedef"]); //half, exactly
+	expect(weak(7, 8, 5)).toEqual([]);
+	expect(weak(3, 10, 5)).toEqual(["grounddef"]);
+	expect(weak(9, 1, 6)).toEqual(["airdef"]);
+	expect(weak(2, 0, 0)).toEqual(["airdef", "closedef"]); //the lowest twice: both
+	expect(weak(0, 0, 0)).toEqual([]); //nothing to be weak against
+	//the game's own: the Pz IIA and the Infanterie are weak at close quarters
+	const { w } = one({ eqid: PZ_IIA });
+	expect([weakDefences(w.equipment[PZ_IIA]), weakDefences(w.equipment[INFANTERIE])]).toEqual([["closedef"], ["closedef"]]);
 });
