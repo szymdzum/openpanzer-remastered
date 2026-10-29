@@ -1,5 +1,5 @@
-//The pins over the side playing's units low on fuel or out of ammo (Tooltips, #346), as the old UI's small tooltips
-//over its units. What they say is the view model's (src/view/map/hextip.ts); the map places them.
+//The pins over the side playing's units low on fuel or out of ammo. What they say is the view model's (hextip.ts);
+//the map places them.
 import type { Point } from "./hexgrid";
 import { Icon } from "../components/icon";
 import type { Pin } from "./hextip";

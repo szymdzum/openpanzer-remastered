@@ -1,6 +1,6 @@
-//A beat as the map's canvas draws it (#347): the moving unit's sprite where the player has it (src/view/player.ts), a
-//frame of a shot or an explosion on its hex, turned the way the unit fires (the strips face north). At the map's scale,
-//over the units and the preview
+//A beat as the map's canvas draws it: the moving unit's sprite where the player (src/view/player.ts) has it, a frame
+//of a shot or an explosion on its hex turned the way the unit fires (the strips face north). At the map's scale, over
+//the units and the preview
 import { directionToRadians } from "../../legacy/prototypes";
 import { atMap, type Viewport } from "./canvas";
 import { hexCentre } from "./hexgrid";

@@ -1,7 +1,6 @@
-//The deployment (#345, the Deployment card): the person's core units waiting in the reserve, the brass zone of
-//the hexes their side deploys on, and the reserve unit picked shown on the hovered hex where a click places it.
-//Plain functions of the core's World, tested without the DOM (test/view-map.test.ts); every rule is the deploy
-//command's own (src/core/commands/units.ts): where it may go is its check, how it lands its deployedAs.
+//The deployment: the person's reserve units, the zone their side deploys on, and the picked unit on the hovered hex.
+//Every rule is the deploy command's own (src/core/commands/units.ts): where it may go is its check, how it lands its
+//deployedAs. Tested without the DOM (test/view-map.test.ts).
 import type { Command } from "../../core/command";
 import { asUnit } from "../../core/commands/common";
 import { deployedAs } from "../../core/commands/units";
@@ -13,15 +12,15 @@ import { type Edge, outlineOf } from "./mapview";
 import { isYourTurn, refusalOf } from "../store/model";
 import { listSprite } from "../hud/unitlist";
 
-//A unit in the reserve: its place in its player's core list (the deploy command's index), its name and strength
+//index is the unit's place in its player's core list, as the deploy command takes it
 export interface ReserveUnit {
 	index: number;
 	name: string;
 	strength: number;
 }
 
-//The zone while a reserve unit is picked: the side's deployment hexes, those free (tinted: no unit in either slot,
-//a taken one keeps only its line), the one outline round them, and the unit picked with how many wait in the reserve
+//The zone while a reserve unit is picked; free: the hexes with no unit in either slot (tinted, a taken one keeps only
+//its line); waiting: how many units wait in the reserve
 export interface Deployment {
 	unit: ReserveUnit;
 	zone: Position[];
@@ -30,8 +29,8 @@ export interface Deployment {
 	waiting: number;
 }
 
-//The picked unit on the hovered hex where it can be placed: its sprite and facing at 55%, and the tag beside it
-//(DOM): "Place Pz IIIE", then how it lands and that it can't go back
+//The picked unit on the hovered hex where it can be placed, drawn at 55%, and the tag beside it (DOM): title
+//"Place Pz IIIE", note how it lands and that it can't go back
 export interface Ghost {
 	row: number;
 	col: number;
@@ -56,7 +55,6 @@ export function reserveOf(w: World): ReserveUnit[] {
 	return units;
 }
 
-//The reserve tray (Deployment): the reserve's units with their sprites, the one picked
 export interface Tray {
 	units: (ReserveUnit & { sprite: string, picked: boolean })[];
 }

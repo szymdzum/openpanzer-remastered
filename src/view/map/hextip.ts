@@ -1,6 +1,6 @@
-//What the status line says of the hex under the pointer, as the old UI's #locmsg (updateStatusBarLocation,
-//src/ui.ts:1350), and the pins over the side playing's units low on fuel or out of ammo (Tooltips, #346), from the core's
-//World and nothing else. Plain TypeScript tested on hand-built worlds (test/view-tooltips.test.tsx)
+//What the status line says of the hex under the pointer (as the original's #locmsg, updateStatusBarLocation in
+//reference/src/ui.js), and the pins over the side playing's units low on fuel or out of ammo. Tested on hand-built
+//worlds (test/view-tooltips.test.tsx)
 import type { Position, UnitId, World } from "../../core/types";
 import { unitLowAmmo, unitLowFuel } from "../../core/units";
 import { hexIndex, onMap, unitAt, unitData } from "../../core/world";
@@ -15,7 +15,7 @@ export interface Location {
 	text: string;
 }
 
-//The air transports on an airfield, the naval ones in a port, of the current player, when it has any
+//The current player's air transports on an airfield, its naval ones in a port, when it has any
 function transportsAt(w: World, terrain: number): string {
 	const p = w.state.players[w.state.turn.currentPlayer];
 	if (terrain === terrainType.Airfield && p.airTransports > 0) return "Air transports: " + p.airTransports;
@@ -23,7 +23,6 @@ function transportsAt(w: World, terrain: number): string {
 	return "";
 }
 
-//The hex as the status line tells it, null off the map
 export function locationOf(w: World, at: Position, airMode: boolean): Location | null {
 	if (!onMap(w, at.row, at.col)) return null;
 	const i = hexIndex(w, at.row, at.col), d = w.data.hexes[i], u = unitAt(w, i, airMode);
@@ -32,7 +31,6 @@ export function locationOf(w: World, at: Position, airMode: boolean): Location |
 		text: [d.name || "", transportsAt(w, d.terrain), terrain].filter(Boolean).join(" · ") };
 }
 
-//A pin over a unit: its supply state in a word, with its icon and tone
 export interface Pin {
 	unit: UnitId;
 	row: number;

@@ -1,7 +1,6 @@
-//The map's overlays beside the move area (#345, the MapOverlays card): the fog of war, the hatched hexes
-//the unit can reach but its side doesn't see, the enemy zone bars, the support fire arcs, and the plaques
-//of the objectives and the towns (#62), and the deployment zone. They draw what the view model computed
-//(src/view/map/mapview.ts, mapinfo.ts, deploy.ts), at screen size at every map scale; colours and widths are the tokens'.
+//The map's overlays beside the move area: the fog of war, the hatch over hexes the unit can reach but its side doesn't
+//see, the enemy zone bars, the support fire arcs, the plaques and the deployment zone. They draw what the view model
+//computed (mapview.ts, mapinfo.ts, deploy.ts), at screen size at every map scale.
 import type { Position } from "../../core/types";
 import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, sideColour, strokeLine, toScreen, type Viewport } from "./canvas";
 import type { Deployment } from "./deploy";
@@ -12,15 +11,15 @@ import { TOKENS } from "../tokens";
 
 const MAP = TOKENS.map, PX = TOKENS.px;
 
-//A flat wash on every hex in view the side shown doesn't see
 export function drawFog(c: CanvasRenderingContext2D, vp: Viewport, fog: Uint8Array, rows: number, cols: number) {
 	addHexesInView(c, vp, rows, cols, (hex) => fog[hex] === 1);
 	c.fillStyle = MAP["hex-fog"];
 	c.fill();
 }
 
-//The hexes a ground unit can reach but its side doesn't see, hatched at 45 degrees instead of tinted: a hidden
-//enemy there is an ambush (an aircraft gets none: only an enemy aircraft could stop it). The hatch is drawn at screen size inside the hexes, 6px apart
+//Hexes a ground unit can reach but its side doesn't see, hatched at 45 degrees instead of tinted: a hidden enemy there
+//is an ambush (an aircraft gets none: only an enemy aircraft could stop it). Drawn at screen size inside the hexes,
+//6px apart
 export function drawHatch(c: CanvasRenderingContext2D, vp: Viewport, hexes: Position[]) {
 	if (hexes.length === 0) return;
 	c.save();
@@ -45,7 +44,6 @@ export function drawHatch(c: CanvasRenderingContext2D, vp: Viewport, hexes: Posi
 	c.restore();
 }
 
-//The screen box round some hexes, and its height
 function boundsOf(hexes: Position[], vp: Viewport): { x0: number; y0: number; x1: number; y1: number; h: number } {
 	const pts = hexes.map((h) => toScreen(hexCentre(h.row, h.col), vp));
 	const rx = PX["hex-w"] / 2 * vp.scale, ry = PX["hex-h"] / 2 * vp.scale;
@@ -79,7 +77,6 @@ export function drawDeployZone(c: CanvasRenderingContext2D, vp: Viewport, d: Dep
 	strokeLine(c, vp, MAP["hex-select"], PX["hex-deploy-width"], PX["hex-shadow-width"]);
 }
 
-//The hex where the picked reserve unit would be placed: a light outline over the dark under-stroke
 export function drawPlaceOutline(c: CanvasRenderingContext2D, vp: Viewport, at: Position) {
 	atMap(c, vp);
 	c.beginPath();
@@ -102,8 +99,7 @@ export function drawZones(c: CanvasRenderingContext2D, vp: Viewport, zones: Edge
 	strokeLine(c, vp, MAP["hex-target"], PX["hex-zone-width"], PX["hex-zone-width"] + 2);
 }
 
-//Support fire: a dashed arc from each gun to the attacker's hex with an arrowhead, the gun's hex outlined
-//with a thin dotted line
+//A dashed arc from each gun to the attacker's hex with an arrowhead, the gun's hex outlined with a thin dotted line
 export function drawSupport(c: CanvasRenderingContext2D, vp: Viewport, s: Support) {
 	const to = hexCentre(s.attacker.row, s.attacker.col);
 	atMap(c, vp);
@@ -145,14 +141,13 @@ function arrowHead(c: CanvasRenderingContext2D, from: Point, tip: Point) {
 	c.fill();
 }
 
-//How a label looks: its type size and height, its paper, ink and edge, the room left of its text (a star's)
 export interface Look {
 	size: number;
 	height: number;
 	paper: string;
 	ink: string;
 	edge: string;
-	lead?: number;
+	lead?: number; //the room left of the text (a star's)
 }
 
 //A label on the map at screen size, centred at x with its top at y: text on paper with a thin edge
@@ -172,7 +167,6 @@ export function label(c: CanvasRenderingContext2D, text: string, x: number, y: n
 	return { left, width };
 }
 
-//A five-pointed star
 export function star(c: CanvasRenderingContext2D, x: number, y: number, r: number) {
 	c.beginPath();
 	for (let i = 0; i < 10; i++) {
@@ -187,7 +181,7 @@ export function star(c: CanvasRenderingContext2D, x: number, y: number, r: numbe
 	c.stroke();
 }
 
-//What a plaque says: its name as the data writes it, never re-cased (principles.md), as the old map's tooltip did
+//Its name as the data writes it, never re-cased (principles.md), as the original's tooltips
 function plaqueText(p: Plaque): string {
 	return p.name !== "" ? p.name : p.objective ? "Objective" : "Town";
 }
@@ -204,22 +198,21 @@ const PLAQUE_ALPHA = 0.7;
 type Strip = CanvasImageSource | null;
 const FLAG = { width: 21, height: 14 };
 
-//A country's flag from the strip, at the screen's pixels
 function drawFlag(c: CanvasRenderingContext2D, strip: Strip, flag: number, x: number, y: number, width: number, height: number) {
 	if (strip === null || flag < 0) return;
 	c.drawImage(strip, flag * FLAG.width, 0, FLAG.width, FLAG.height, x, y, width, height);
 }
 
-//The flags and plaques of the map's towns and objectives, beneath the units (#62, #438, #504). The flag where the old map
-//drew it: its 21 by 14 pixels at the foot of the hex, at the map's scale. While its name shows, the plaque just under
-//the hex: an objective with a star and its name, a town its name, the bar at the foot in the owner's side colour
+//Beneath the units. The flag is its 21 by 14 pixels at the foot of the hex, at the map's scale. While its name shows,
+//the plaque goes just under the hex: an objective with a star and its name, a town its name, the bar at the foot in the
+//owner's side colour
 export function drawPlaques(c: CanvasRenderingContext2D, vp: Viewport, plaques: Plaque[], strip: Strip) {
 	atScreen(c, vp);
 	c.save();
 	const fw = Math.round(FLAG.width * vp.scale), fh = Math.round(FLAG.height * vp.scale), foot = PX["hex-h"] / 2 * vp.scale;
 	for (const p of plaques) {
 		const at = toScreen(hexCentre(p.row, p.col), vp);
-		//(the flag whole, as the old map drew it; the plaque see-through, so the units over it read first)
+		//(the flag whole; the plaque see-through, so the units over it read first)
 		c.globalAlpha = 1;
 		drawFlag(c, strip, p.flag, Math.round(at.x - fw / 2), Math.round(at.y + foot - fh - 2 * vp.scale), fw, fh);
 		if (!p.named) continue;

@@ -1,6 +1,5 @@
-//What the map tells beside the selected unit's moves (#345, the MapOverlays card): the fog of war, the guns
-//that will fire in support when the hovered target is attacked, and the plaques of the objectives and the
-//towns (#62). Plain functions of the core's World, tested without the DOM (test/view-map.test.ts).
+//What the map tells beside the selected unit's moves: the fog of war, the guns that will fire in support when the
+//hovered target is attacked, and the plaques of the objectives and the towns (test/view-map.test.ts).
 import { attackableUnit, supportFireUnits } from "../../core/attack";
 import type { Position, World } from "../../core/types";
 import { hexIndex, isSpotted, sideOf, unitById } from "../../core/world";
@@ -35,9 +34,9 @@ export function supportOf(w: World, sel: Selection | null, hover: Position | nul
 	return guns.length === 0 ? null : { attacker: sel.at, target: { row: hover.row, col: hover.col }, guns };
 }
 
-//A plaque over a flag or an objective (#62): its name, its owner's side (-1: none) and the flag on it (a country in
-//the flag strip, -1: none), whether its name shows or only its flag (named). Every objective has one; one without a
-//flag of its own shows its owner's, as the old map did with showHiddenVictoryHexes on (its default, #504)
+//A plaque over a flag or an objective: its owner's side (-1: none), the flag on it (a country in the flag strip, -1:
+//none), whether its name shows or only its flag (named). Every objective has one (#62); one without a flag of its own
+//shows its owner's, as the original game does with showHiddenVictoryHexes on (its default)
 export interface Plaque {
 	row: number;
 	col: number;
@@ -48,11 +47,11 @@ export interface Plaque {
 	named: boolean;
 }
 
-//The flag strip the old map drew its flags from, 21 by 14 pixels a country (a save from before the equipment set
-//was kept has none: the default set's)
+//The flag strip, 21 by 14 pixels a country (a save from before the equipment set was kept has none: the default
+//set's)
 export const flagStrip = (w: World) => "resources/ui/flags/" + (w.data.equipment || "eqp-adlerkorps") + "/flags_med.png";
 
-//A hex's flag: its own, else an objective's holder's country (the old map's showHiddenVictoryHexes), else none
+//A hex's flag: its own, else an objective's holder's country (showHiddenVictoryHexes), else none
 function flagOf(flag: number, objective: boolean, owner: { country: number } | null): number {
 	if (flag !== -1) return flag;
 	return objective && owner !== null ? owner.country : -1;
@@ -72,9 +71,8 @@ export function plaquesOf(w: World): Plaque[] {
 	return plaques;
 }
 
-//The map's plaques: every flag on the map, as the old map drew them (#504); the names over them only while the labels
-//show (L clears them), the objectives' always, the other towns' with the setting the old map's tooltips read for
-//them (showDetailInfoToolTips, src/ui.ts addSmallToolTips)
+//Every flag on the map; the names over them only while the labels show (L clears them): the objectives' always, the
+//other towns' with showDetailInfoToolTips, the setting the original's tooltips read (reference/src/ui.js)
 export function mapPlaques(w: World, towns: boolean, labels: boolean): Plaque[] {
 	return plaquesOf(w).map((p) => ({ ...p, named: labels && (p.objective || towns) }));
 }
