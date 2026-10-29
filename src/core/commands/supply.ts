@@ -1,6 +1,6 @@
 /**
- * Resupply and reinforce, refused where the rules refuse them: a unit that can't resupply, or would
- * get no strength (#147: the old engine played them on any unit and changed it, the score too)
+ * Resupply and reinforce, refused where the rules refuse them: a unit that can't resupply, or would get no
+ * strength (#147: the original played them on any unit and changed it, the score too)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -14,8 +14,8 @@ import type { Draft, CommandHandler, Supply, UnitId } from "../types";
 import { unitById } from "../world";
 import { playerAt, unitCheck } from "./common";
 
-//Player.resupplyUnit and Unit.resupply: the score, the ammo and fuel (its transport's too), and the
-//unit is done for the turn. Resupply costs no prestige
+//Player.resupplyUnit: the score, then the refill. Resupply costs no prestige
+
 function resupplyUnit(d: Draft, id: UnitId, s: Supply) {
 	addScore(d, playerAt(d, d.state.units[d.index.get(id)].owner).id, scoreGains.resupply);
 	refill(d, id, s);

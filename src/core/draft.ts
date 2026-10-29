@@ -1,6 +1,5 @@
 /**
- * Draft - the state a step changes, and the primitives it changes it with: place, move and remove a
- * unit with its sight, score, the dossier
+ * Draft - the state a step changes, and the primitives to change it: place, move and remove a unit, score, dossier
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -11,11 +10,10 @@
  * what it changes, not the size of the state. Write through the write* functions, never to an
  * object a query returned before it: that one may be the caller's.
  *
- * The sight (D10) is kept up to date as the old engine switched its counters: off before a unit
- * leaves or changes, on after. On, it marks the enemy units the unit's side didn't see as seen
- * (tempSpotted), where the old engine's setSpotRange did. Where the old engine forgot to switch
- * its counters (#73: an embark, an upgrade, a leader that sees farther), the draft switches them
- * all the same, without marking: the sight always equals computeSight's.
+ * The sight is kept up to date as the original switched its counters: off before a unit leaves or changes, on
+ * after. On, it marks the enemy units the unit's side didn't see as seen (tempSpotted), as the original's
+ * setSpotRange did. Where the original forgot to switch its counters (#73: an embark, an upgrade, a leader that
+ * sees farther), the draft switches them all the same, without marking: the sight always equals computeSight's.
  */
 
 import { difficultyModifiers, movMethod, outcomeNames, unitClass } from "./tables";
@@ -80,7 +78,6 @@ export function writePlayer(d: Draft, id: number): PlayerState {
 	return c;
 }
 
-//A side's objectives, to change
 export function writeObjectives(d: Draft, side: number): Position[] {
 	const list = d.state.objectives[side];
 	if (d.copied.has(list)) return list;
@@ -139,7 +136,7 @@ export function spotOff(d: Draft, u: UnitState) {
 	countCells(d, d.sight.spot, u, spotCells(d, u), -1);
 }
 
-//Hex by hex in the old engine's order: a hex the side didn't see yet shows its unit (the ground one
+//Hex by hex in the original's order: a hex the side didn't see yet shows its unit (the ground one
 //of two), marked seen when it is an enemy's, then the hex counts as seen
 export function spotOn(d: Draft, u: UnitState): UnitId[] {
 	const side = sideOf(d, u), spotted: UnitId[] = [];
@@ -164,9 +161,9 @@ function countCells(d: Draft, counts: [Uint16Array, Uint16Array], u: UnitState, 
 	for (const c of cells) counts[side][c.row * d.state.map.cols + c.col] += by;
 }
 
-//Moves a unit to a hex (MapBoard.relocate): its sight off, the hexes, change (the facing, the undo's
-//fields), its sight on. The enemy units it spotted for the first time, marked seen; with mark false
-//(the undo, #140) none: the units it sees again are left as they are
+//Moves a unit to a hex (MapBoard.relocate): sight off, the hexes, change (the facing, the undo's fields), sight on.
+//Returns the enemy units it spotted for the first time, marked seen; with mark false (the undo, #140) none: the
+//units it sees again are left as they are
 export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitState) => void, mark = true): UnitId[] {
 	const u = writeUnit(d, id);
 	sightOff(d, u);
@@ -180,8 +177,9 @@ export function relocate(d: Draft, id: UnitId, to: Position, change: (u: UnitSta
 	return [];
 }
 
-//Changes a unit where the old engine left its counters as they were (#73: an embark, an upgrade, a
-//leader that sees farther): its sight off and on around the change, no unit marked seen
+//Changes a unit where the original left its counters as they were (#73: an embark, an upgrade, a leader that
+//sees farther): its sight off and on around the change, no unit marked seen
+
 export function changeUnit(d: Draft, id: UnitId, change: (u: UnitState) => void) {
 	const u = writeUnit(d, id);
 	sightOff(d, u);

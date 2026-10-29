@@ -1,14 +1,15 @@
 /**
- * Session - a game played headless on the core: the players' controllers, the turns in the old game's
- * order, the end of the game. What the game host's turn loop does (src/app/host.ts processTurn,
- * processAIActions, endTurn), without the screen, the clock and the save
+ * Session - a game played headless on the core: the players' controllers, the turns, the end of the game
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * A turn: the current player's controller gives its orders one by one, each command stepped (a
- * refused one changes nothing, as the old game's action did nothing), until it has none left. Then
- * the end of turn, and in the old game's order (Map.endTurn, Game.endTurn):
+ * What the game host's turn loop does (src/app/host.ts processTurn, processAIActions, endTurn), without the screen,
+ * the clock and the save.
+ *
+ * A turn: the current player's controller gives its orders one by one, each command stepped (a refused one changes
+ * nothing, as in the original), until it has none left. Then the end of turn, in the original's order
+ * (Map.endTurn, Game.endTurn):
  *   the end of turn step -> the next player's controller starts and plans its turn -> the defeat at
  *   the turn limit -> [the screen's turn start] -> the side the screen shows -> the reinforcements
  *   arrive -> [the save point: after them, #93]
@@ -16,13 +17,13 @@
  * the game only for a side that plays on this screen (localSide, Game's getLocalSide); in the remaster's
  * once both sides have played their last turn (#256).
  * The game ends at a victory (a capture of the last objective, or a side with no unit left after an
- * attack), at the turn limit (turn.ts endsAtTurnLimit), or where the old game got stuck (#80).
+ * attack), at the turn limit (turn.ts endsAtTurnLimit), or where the original got stuck (#80).
  *
- * A player only a person plays (human, remote) has no controller here: its turns end at once. A new
- * game whose first player is the AI starts that player's turn as on every later one, its purchases,
- * deployment and plan (the option fresh, Session.first; the old game's AI planned nothing then and ended its first turn
- * at once, #292). The scripted tutorial's script plays its first turn itself. A game loaded on an AI's
- * turn plans it again (#71).
+ * A player only a person plays (human, remote) has no controller here: its turns end at once. A new game whose
+ * first player is the AI starts that player's turn as on every later one: its purchases, deployment and plan
+ * (the option fresh, Session.first); deliberate (#292), the original's AI planned nothing then and ended its first
+ * turn at once. The scripted tutorial's script plays its first turn itself. A game loaded on an AI's turn plans it
+ * again (#71).
  */
 
 import type { Command, Refusal } from "./command";
@@ -34,15 +35,13 @@ import { arriveReinforcements, endsAtTurnLimit } from "./turn";
 import type { Checkpoint, World } from "./types";
 import { sideOf, unitById } from "./world";
 
-//How a game ended: a side won, the turn limit (side: the side whose last turn ended it), or the old game
-//got stuck
+//How a game ended; turnLimit's side is the side whose last turn ended it, stuck is where the original got stuck
 export type SessionEnd =
 	| { kind: "victory"; side: number; how: "capture" | "elimination" }
 	| { kind: "turnLimit"; side: number }
 	| { kind: "stuck"; reason: string };
 
-//The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial), null when
-//no program plays it
+//The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial); null when no program plays it
 export type ControllerFor = (type: number, player: number) => Controller | null;
 
 export interface Session {
@@ -61,15 +60,14 @@ export interface Session {
 	ended: SessionEnd | null;
 }
 
-//What one advance did: an order played (refused: the step said no and nothing changed), or a turn
-//ended (with the next player's turn start and plan, then the reinforcements that arrived)
+//What one advance did: an order played (a refusal changed nothing), or a turn ended with the next player's turn
+//start and the reinforcements that arrived
 export type Advance =
 	| { kind: "order"; player: number; order: Order; events: GameEvent[]; refusal: Refusal | null }
 	| { kind: "endTurn"; player: number; events: GameEvent[]; started: StartedTurn | null; arrived: GameEvent[] }
 	| { kind: "ended" };
 
-//The next player's turn start, when a controller plays it: the player's type then (the tutorial may
-//hand it over at its start)
+//The next player's turn start, when a controller plays it: the player's type then (the tutorial may hand it over)
 export interface StartedTurn {
 	player: number;
 	type: number;
@@ -86,9 +84,8 @@ export interface SessionOptions {
 	localSide?: number;	//the sides on this screen, when not the players' types' (Game counts them when the game loads)
 }
 
-//Game.setupPlayers and the rest of a scenario's start: the controllers by the players' types, each
-//joining in the players' order, the side the screen shows; in a new game the AI moving first starts its
-//turn (first), in a loaded one the AI whose turn it is plans it again
+//Game.setupPlayers and the rest of a scenario's start: the controllers by the players' types, joining in the players'
+//order, the side shown; a new game's AI moving first starts its turn (first), a loaded one's AI plans it again
 export function startSession(w: World, controllerFor: ControllerFor, options: SessionOptions = {}): Session {
 	const players = w.state.players;
 	const localSide = options.localSide === undefined ? localSideOf(w) : options.localSide;
@@ -151,25 +148,24 @@ export function advance(s: Session): Advance {
 	return { kind: "order", player, order, events: r.events, refusal: null };
 }
 
-//The current player's controller's next order, not played yet (a screen shows the state before it:
-//harness/replay.js reads it there); null when it has none left, which ends its turn, or when a person
-//plays the player
+//The next order of the current player's controller, not played yet (a screen shows the state before it:
+//harness/replay.js reads it there); null when none is left (its turn ends) or a person plays the player
 export function nextOrder(s: Session): Order | null {
 	const c = controllerOf(s, s.world.state.turn.currentPlayer);
 	return c === null ? null : c.next(s.world);
 }
 
-//What a command played up to a checkpoint did: refused (nothing changed), or its events so far and the
-//checkpoint where it waits for the screen (null: done)
+//What a command played up to a checkpoint did: refused (nothing changed), or its events so far and where it waits
+//for the screen (null: done)
 export interface Phase {
 	events: GameEvent[];
 	refusal: Refusal | null;
 	checkpoint: Checkpoint | null;
 }
 
-//A command a person sends, or a controller's order a screen animates: played up to its first
-//checkpoint (a move or an attack) or whole. A victory in it ends the session; the screen says so when
-//it has shown it (the old game ended at the animation's end)
+//A command a person sends, or a controller's order a screen animates: played up to its first checkpoint (a move or
+//an attack) or whole. A victory in it ends the session; the screen says so once it has shown it (the original
+//ended at the animation's end)
 export function play(s: Session, cmd: Command): Phase {
 	const r = begin(s.world, cmd);
 	if ("refusal" in r) return { events: [], refusal: r.refusal, checkpoint: null };
@@ -178,7 +174,6 @@ export function play(s: Session, cmd: Command): Phase {
 	return { events: r.events, refusal: null, checkpoint: r.checkpoint };
 }
 
-//Plays on from a checkpoint, once the screen has shown it
 export function playOn(s: Session, cp: Checkpoint): Phase {
 	const r = resume(s.world, cp);
 	s.world = r.world;
@@ -187,7 +182,7 @@ export function playOn(s: Session, cp: Checkpoint): Phase {
 }
 
 //A step's victory: a capture of the last objective, a side with no unit left after an attack, then a
-//retreat that took its side's last objective (the old game's retreat finished its move after the attack)
+//retreat that took its side's last objective (the original's retreat finished its move after the attack)
 function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
 	for (const e of events)
 		if (e.type === "victory") return { kind: "victory", side: e.side, how: e.kind };
@@ -197,7 +192,7 @@ function victoryIn(w: World, events: GameEvent[]): SessionEnd | null {
 }
 
 //The end of the current player's turn, the next player's turn start and plan, the defeat at the turn
-//limit, the screen's turn start (shown: what a screen does there, in the old game's order: it shows the
+//limit, the screen's turn start (shown: what a screen does there, in the original's order: it shows the
 //units the AI deployed at its turn start), the side shown, the reinforcements, the save point (#93)
 export function endTurn(s: Session, shown?: (started: StartedTurn | null, events: GameEvent[]) => void): Advance {
 	const player = s.world.state.turn.currentPlayer, side = s.world.state.players[player].side;
@@ -227,8 +222,9 @@ function startTurn(s: Session): StartedTurn | null {
 	const played = c.startTurn(s.world);
 	s.world = c.plan(played.world);
 	if (!played.handOver) return { player, type, commands: played.commands, events: played.events, view: played.view };
-	//The tutorial hands its players over, to a person and to the AI: the AI starts and plans the turn it is
-	//given (#81: the old game's new AI had no plan, and the allies skipped their first turn after the tutorial)
+	//The tutorial hands its players over, to a person and to the AI: the AI starts and plans the turn it is given
+	//(#81: the original's new AI had no plan, so the allies skipped their first turn after the tutorial)
+
 	type = s.world.state.players[player].type;
 	join(s, player, type);
 	const next = s.controllers[player];

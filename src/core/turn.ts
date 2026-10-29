@@ -1,13 +1,12 @@
 /**
- * Turn - what happens between two players' turns and how a game ends: a unit's end of turn, the
- * reinforcements arriving, the turn limit and the outcome
+ * Turn - a unit's end of turn, the reinforcements arriving, the turn limit and the game's outcome
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The end of turn itself is a command (commands/turn.ts). The reinforcements arrive after it, as a
- * step of their own (arriveReinforcements): between the two an AI player plans its turn (#94 kept), so
- * its reinforcements don't act on the turn they arrive. The game saves after them (#93).
+ * The end of turn itself is a command (commands/turn.ts). The reinforcements arrive after it, as a step of their
+ * own (arriveReinforcements): between the two an AI player plans its turn (kept bug #94), so its reinforcements
+ * don't act on the turn they arrive. The game saves after them (#93).
  */
 
 import { playerSide, terrainEntrenchment, unitClass, unitEntrenchRate } from "./tables";
@@ -29,13 +28,13 @@ export function unitEndTurn(d: Draft, id: UnitId) {
 	if (unitData(d, u).uclass !== unitClass.fortification && u.row >= 0 && !seenByEnemy(d, u)) u.tempSpotted = false;
 }
 
-//The enemy side spots the unit's hex. The old game asked the side the screen showed, so that side's
-//own units stayed seen in the fog for good once they had fired (#75)
+//The enemy side spots the unit's hex. Deliberate (#75): the original asked the side the screen showed, so that
+//side's own units stayed seen in the fog for good once they had fired
 function seenByEnemy(w: World, u: UnitState): boolean {
 	return isSpotted(w, hexIndex(w, u.row, u.col), ~sideOf(w, u) & 1);
 }
 
-//The levels the unit's hex gives at once, its terrain's: a unit that can entrench gets them at its first end of turn
+//The levels the unit's terrain gives at once: a unit that can entrench gets them at its first end of turn
 export function entrenchBase(w: World, u: UnitState): number {
 	return terrainEntrenchment[w.data.hexes[hexIndex(w, u.row, u.col)].terrain];
 }
@@ -68,7 +67,7 @@ function entrench(d: Draft, u: UnitState) {
 	}
 }
 
-//Every player of the side has played the turn (Scenario's hasSidePlayedTurn)
+//Scenario.hasSidePlayedTurn
 function sidePlayed(w: World, side: number, turn: number): boolean {
 	return w.state.players.every((p) => p.side !== side || p.playedTurn >= turn);
 }
@@ -110,8 +109,9 @@ export function winsByCapture(w: World, side: number): boolean {
 
 //Whether the turn limit side just reached ends the game. In the remaster rules once both sides have played
 //their last turn, whichever side plays on the screen: the attacker plays all its turns (#256). In the classic
-//rules at the last turn of a side that plays on the screen (Game's local side, 2 for both), as the old game
+//rules at the last turn of a side that plays on the screen (Game's local side, 2 for both), as the original
 //asked only for it
+
 export function endsAtTurnLimit(w: World, side: number, localSide: number): boolean {
 	if (w.rules.defenderHoldsOut) return reachedTurnLimit(w, 0) && reachedTurnLimit(w, 1);
 	return localSide === 2 || localSide === side;
@@ -124,18 +124,16 @@ export interface LastPlayed {
 	endedSide?: number;
 }
 
-//How a game ended: a side took all its objectives (capture), a side has no units left
-//(elimination), a side played its last turn (turnLimit)
 export type OutcomeKind = "capture" | "elimination" | "turnLimit";
 
 export interface Outcome {
 	kind: OutcomeKind;
-	winner: number; //the side that won, -1 at a turn limit nobody wins
-	loser: number; //the side that lost
+	winner: number; //-1 at a turn limit nobody wins
+	loser: number;
 	rating: ScenarioOutcome; //the winner's rating by the turn, "lose" at a turn limit nobody wins
 }
 
-//Whether the game is over, who won and why (the old engine's Actions.checkOutcome): a capture that took the side's
+//Whether the game is over, who won and why (Actions.checkOutcome): a capture that took the side's
 //last objective, a side with no unit left (sideHasUnits: in the classic rules its units waiting to deploy
 //don't count, #115; axis first, so with none on either side the allies win), the ended side's turn
 //limit. Null when the game goes on
@@ -151,12 +149,11 @@ export function outcome(w: World, last: LastPlayed = {}): Outcome | null {
 	return null;
 }
 
-//At the turn limit neither side took all its objectives (a capture of the last one ends the game). In the
-//classic rules the side that ended its last turn loses whatever it holds, and nobody wins, as in the
-//original. In the remaster's, PG2's rule (#256): the attacker didn't take all its objectives, it loses, and
-//the defender that held out wins, rated by the last turn. With no attacker (as many objectives each at the
-//start, or a save from before they were kept) the side holding more objectives wins (#231); with as many
-//each, nobody, and the side that ended its last turn loses
+//At the turn limit neither side took all its objectives (a capture of the last one ends the game). Classic rules: the
+//side that ended its last turn loses whatever it holds and nobody wins, as in the original. Remaster rules, PG2's
+//(#256): the attacker, having not taken them all, loses and the defender that held out wins, rated by the last
+//turn. With no attacker (as many objectives each at the start, or an old save) the side holding more objectives wins
+//(#231); with as many each, nobody wins and the side that ended its last turn loses
 export function turnLimitOutcome(w: World, endedSide: number): Outcome {
 	if (!w.rules.defenderHoldsOut) return { kind: "turnLimit", winner: -1, loser: endedSide, rating: "lose" };
 	const rating = ratingOn(w, Math.min(w.state.turn.turn, w.state.scenario.maxTurns));
@@ -170,8 +167,7 @@ export function turnLimitOutcome(w: World, endedSide: number): Outcome {
 	return { kind: "turnLimit", winner, loser: ~winner & 1, rating };
 }
 
-//What the turn limit gives side: its rating when it won there, a loss otherwise (a campaign's outcome for
-//its player)
+//What the turn limit gives side: its rating when it won there, else a loss (a campaign's outcome for its player)
 export function turnLimitResult(w: World, endedSide: number, side: number): ScenarioOutcome {
 	const o = turnLimitOutcome(w, endedSide);
 	return o.winner === side ? o.rating : "lose";
@@ -190,7 +186,7 @@ export function arriveReinforcements(w: World): { world: World; events: GameEven
 		const at = reinforcementDeployPosition(d, r.unit as OffMapUnit as UnitState, r.row, r.col);
 		if (at === null) continue;
 		left.splice(left.indexOf(r), 1);
-		//(the unit it becomes gets the next id; what it spots on arriving comes after)
+		//The unit it becomes gets the next id; what it spots on arriving comes after
 		emit(d, { type: "arrived", unit: d.state.nextUnitId, at: { row: at.row, col: at.col } });
 		place(d, r.unit, at);
 	}

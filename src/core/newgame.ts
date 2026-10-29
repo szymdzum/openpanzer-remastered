@@ -1,15 +1,13 @@
 /**
- * New game - a game's data and state from a scenario file, as ScenarioLoader loads it and Game starts
- * it (docs/CORE.md)
+ * New game - a game's data and state from a scenario file, as ScenarioLoader loads it and Game starts it
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * The files are read elsewhere (src/scenariofile.ts, the equipment's JSON): newGame only turns what
- * they hold into the state, in the old loader's order. The order is behavior: the units get their
- * ids as their hexes come in the file, a unit entering the map marks the enemy units it is the first
- * of its side to see (tempSpotted, as MapBoard.add does), and a unit with a leader draws it from the
- * game stream as the loader reaches it, the reinforcements first.
+ * The files are read elsewhere (src/core/scenariofile.ts, the equipment's JSON). The loader's order is behavior:
+ * the units get their ids as their hexes come in the file, a unit entering the map marks the enemy units it is the
+ * first of its side to see (tempSpotted, as MapBoard.add does), and a unit with a leader draws it from the game
+ * stream as the loader reaches it, the reinforcements first.
  */
 
 import { difficultyModifiers, playerType, SCENARIO_START_PRESTIGE, scoreGains, terrainType } from "./tables";
@@ -90,8 +88,8 @@ export interface ScenarioFile {
 
 //What starts a game besides the file
 export interface GameSetup {
-	file: string;			//the scenario's file name
-	name: string;			//from the scenario list
+	file: string;
+	name: string;
 	description: string;		//the scenario list's, or the campaign's intro
 	scenario: ScenarioFile;
 	imageSize: [number, number];	//the map image's width and height: they size the map
@@ -106,9 +104,8 @@ export interface GameSetup {
 
 const DEFAULT_EQUIPMENT = "eqp-adlerkorps";
 
-//The equipment country files a scenario needs (Equipment.addPlayersEquipment), by country index:
-//-1 for the generic file, then the players' countries and their supporting ones, and the countries
-//of the core units a campaign carries in (campaign.ts coreCountries, #182), in the order they load
+//The equipment country files a scenario needs (Equipment.addPlayersEquipment), by country index, in load order: -1 for
+//the generic file, the players' countries and their supporting ones, the core units' (coreCountries, #182)
 export function equipmentCountries(file: ScenarioFile, core: number[] = []): number[] {
 	const set: { [country: string]: boolean } = { "-1": true };
 	for (const p of file.players) {
@@ -121,8 +118,8 @@ export function equipmentCountries(file: ScenarioFile, core: number[] = []): num
 
 const supportCountries = (p: FilePlayer) => p.support.filter((c) => c > 0);
 
-//The equipment a scenario file's units are (theirs, their transports' and carriers'), which isn't all of
-//its players' countries' (#286): the files those are in load beside the countries' (Equipment.addUnitsEquipment)
+//The equipment a scenario file's units are (theirs, transports' and carriers'): their files load beside the players'
+//countries' (Equipment.addUnitsEquipment, #286)
 export function fileEquipment(file: ScenarioFile): number[] {
 	const eqids: (number | null)[] = [];
 	const add = (u: FileUnit) => eqids.push(u.eqid, u.transport, u.carrier);
@@ -175,7 +172,6 @@ function imageRows(height: number) {
 	return { rows: fraction >= 0.39 ? Math.ceil(rows) : Math.floor(rows), partial: fraction >= 0.39 && fraction < 0.8 };
 }
 
-//Sets the fields given a value (not null), keeps the others
 function given<T extends object>(target: T, values: { [K in keyof T]?: T[K] | null }) {
 	for (const k of Object.keys(values) as (keyof T)[])
 		if (values[k] !== null) target[k] = values[k];
@@ -189,25 +185,25 @@ export function newGame(g: GameSetup): { data: ScenarioData; state: GameState } 
 		const u = loadUnit(g, state, rng, r.unit);
 		if (u !== null) state.reinforcements.push({ turn: r.turn, row: r.row, col: r.col, unit: u });
 	}
-	//(Scenario.reinforcements is keyed by turn: they come out by turn, each turn's in the file's order)
+	//Scenario.reinforcements is keyed by turn: they come out by turn, each turn's in the file's order
 	state.reinforcements.sort((a, b) => a.turn - b.turn);
 	if (state.rng !== null) state.rng.game = rng.state;
 	//The hexes on a draft: it places the units with their sight, and the leaders draw from its stream
 	const d = beginDraft(createWorld({ data, state }, g.equipment, { rules: g.rules }));
 	for (const h of f.hexes) loadHex(d, g, h);
 	const s = finishDraft(d).state;
-	//(how many objectives each side has to take now, kept for the game: the side with more attacks, #256)
+	//Kept for the game: the side with more objectives to take attacks (#256)
 	data.startObjectives = [s.objectives[0].length, s.objectives[1].length];
 	initialScores(s);
 	if (g.campaign === null) return { data, state: singleScenario(g, s) };
-	//(a campaign's start on a draft too: it removes units and draws the prototype)
+	//A campaign's start on a draft too: it removes units and draws the prototype
 	const c = beginDraft(createWorld({ data, state: s }, g.equipment, { rules: g.rules }));
 	startCampaignScenario(c, g.campaign, g.carried || null);
 	return { data, state: finishDraft(c).state };
 }
 
-//The map header and the players: a map of clear hexes, no unit yet. A campaign's difficulty adds
-//turns to the last victory turn, which is the turn limit
+//The map header and the players, on clear hexes with no unit; a campaign's difficulty adds turns to the last victory
+//turn, which is the turn limit
 function emptyGame(g: GameSetup): { data: ScenarioData; state: GameState } {
 	const f = g.scenario, size = mapSize(f.rows, f.cols, g.imageSize[0], g.imageSize[1]);
 	const turns = f.turns.slice();
@@ -235,9 +231,8 @@ function emptyGame(g: GameSetup): { data: ScenarioData; state: GameState } {
 	return { data, state };
 }
 
-//A file's player as the loader reads it: a campaign gives its own country's player each turn at least
-//a share of its starting prestige, by the difficulty, not the AI's players (#15: the old loader gave it
-//to every player, so an easier level made the AI richer); the first turn's prestige to start with
+//A file's player: in a campaign its country's player gets each turn at least a share of the starting prestige, by
+//difficulty; the AI's players don't. Deliberate (#15): the original gave it to every player. Turn 1's is the start
 function newPlayer(p: FilePlayer, campaign: CampaignState | null): PlayerState {
 	const min = campaign === null || p.country !== campaign.country ? 0
 		: Math.round(campaign.startPrestige * difficultyModifiers[campaign.difficulty].turnPrestige);
@@ -280,8 +275,7 @@ function loadUnit(g: GameSetup, s: GameState, rng: RngStream, fu: FileUnit): Off
 	return u;
 }
 
-//A unit in its side's units' cost and experience: what a bought unit's experience and a single
-//scenario's starting prestige are made of
+//Counts the unit in its side's cost and experience (a single scenario's starting prestige, a bought unit's experience)
 function countUnit(w: World, u: OffMapUnit) {
 	const s = w.state.scenario, side = playerAt(w.state, u.owner).side;
 	s.unitsCostPerSide[side] += unitCost(w, u.eqid, u.transport ? u.transport.eqid : null);
@@ -289,9 +283,8 @@ function countUnit(w: World, u: OffMapUnit) {
 	s.expPerSide[side].count++;
 }
 
-//ScenarioLoader.loadHexes and Map.setHex: a hex in the map takes what the file sets, its units go
-//to their slots (a later one over an earlier, #74), then it becomes an objective of the side that
-//has to take it, and its units enter the map, the ground one first
+//ScenarioLoader.loadHexes and Map.setHex: the hex takes what the file sets, its units go to their slots (a later
+//one over an earlier, #74), it may become an objective, and its units enter the map, the ground one first
 function loadHex(d: Draft, g: GameSetup, h: FileHex) {
 	const s = d.state;
 	if (h.row >= s.map.rows || h.col >= s.map.cols) return;
@@ -300,7 +293,7 @@ function loadHex(d: Draft, g: GameSetup, h: FileHex) {
 	const hs = writeHex(d, i);
 	given(data, { terrain: h.terrain, road: h.road, name: h.name, deployment: h.deploy });
 	given(hs, { flag: h.flag, owner: h.owner, victorySide: h.victory });
-	//(supply hexes deploy too, unless the hex has a deploy side)
+	//Supply hexes deploy too, unless the hex has a deploy side
 	if (h.supply !== null && data.deployment === -1) data.deployment = h.supply;
 	const slots = hexUnits(d, g, h);
 	const at = { row: h.row, col: h.col };
@@ -321,7 +314,7 @@ function hexUnits(d: Draft, g: GameSetup, h: FileHex) {
 	return slots;
 }
 
-//An objective already taken by the side it was for is the other side's to take back; once
+//An objective already taken by the side it was for is the other side's to take back; listed once
 function addObjective(s: GameState, hs: HexState, at: Position) {
 	let side = hs.victorySide;
 	if (side === -1) return;
@@ -341,9 +334,9 @@ function initialScores(s: GameState) {
 	for (const p of s.players) p.score += (scores[p.id] * 1 * coef) >> 0;
 }
 
-//Game's setupPlayers and the single scenario's start: the AI where asked; every side starts with
-//the prestige its units are short of the other's, at least SCENARIO_START_PRESTIGE (not the tutorial).
-//A campaign's players are its own (campaign.ts)
+//Game.setupPlayers and a single scenario's start: the AI where asked; each side starts with the prestige its units
+//are short of the other's, at least SCENARIO_START_PRESTIGE (not the tutorial). A campaign's players: campaign.ts
+
 function singleScenario(g: GameSetup, s: GameState): GameState {
 	for (const p of s.players) {
 		if (g.isAI[p.id] === 1) p.type = playerType.aiLocal;

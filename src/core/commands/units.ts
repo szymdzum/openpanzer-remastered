@@ -36,7 +36,6 @@ function upgradeCheck(w: World, u: OffMapUnit, prestige: number, cmd: { eqid: nu
 	return sameClass(w, u, cmd.eqid) ? null : refuse("not the same class");
 }
 
-//A transport fresh from the equipment
 function newTransport(w: World, eqid: number): OffMapUnit["transport"] {
 	return { eqid, ammo: w.equipment[eqid].ammo, fuel: w.equipment[eqid].fuel };
 }
@@ -61,8 +60,7 @@ function upgradeUnit(w: World, u: OffMapUnit, eqid: number, transport: number, d
 	if (deployed) u.hasMoved = u.hasFired = u.hasOverstrength = u.hasResupplied = true;
 }
 
-//A core list entry's unit upgraded and paid for by player: on the map (its counters stayed as they
-//were, #73), or off it
+//Upgrades and pays for a core list entry's unit, on the map (its counters stayed as they were, #73) or off it
 function upgradeEntry(d: Draft, player: number, c: CoreUnit, index: number | null, eqid: number, transport: number) {
 	const cost = upgradeCost(d, asUnit(coreUnitOf(d, c)), eqid, transport);
 	if ("onMap" in c) {
@@ -77,7 +75,6 @@ function upgradeEntry(d: Draft, player: number, c: CoreUnit, index: number | nul
 	emit(d, { type: "upgraded", unit: "onMap" in c ? c.onMap : null, index, eqid, transport, cost });
 }
 
-//The hexes the current player's side deploys a unit of eqid on (deployment.ts)
 const deployHexesOf = (w: World, eqid: number) => deploymentHexes(w, currentPlayer(w).side, eqid);
 
 //The hex's air slot free for an air unit, its ground slot for any other
@@ -86,17 +83,16 @@ function freeFor(w: World, hex: number, air: boolean): boolean {
 	return air ? h.air === null : h.unit === null;
 }
 
-//A reserve unit as deploy places it on a hex: a ground unit on the ocean embarked on its country's naval transport,
-//when the country has one (the new UI's placing tag says so before the click)
+//A reserve unit as deploy places it on a hex: a ground unit on the ocean embarks on its country's naval transport,
+//when the country has one (the UI's placing tag says so before the click)
 export function deployedAs(w: World, unit: OffMapUnit, hex: number): OffMapUnit {
 	if (isAir(w, asUnit(unit)) || w.data.hexes[hex].terrain !== terrainType.Ocean) return unit;
 	const carrier = firstOfClass(w, unitClass.navalTransport, playerAt(w, unit.owner).country + 1);
 	return carrier ? { ...unit, carrier } : unit;
 }
 
-//On a free deployment hex of the player's side (the UI's click, Map.deployPlayerUnit; in the remaster's
-//rules a side with none deploys on its own towns, #302): a ground unit on the ocean embarks on its
-//country's naval transport
+//On a free deployment hex of the player's side (Map.deployPlayerUnit; in the remaster's rules a side with none
+//deploys on its own towns, #302); deployedAs says what the unit becomes there
 export const deploy: CommandHandler<CommandOf<"deploy">> = {
 	check(w, cmd) {
 		const c = coreAt(w, cmd.index);
@@ -116,11 +112,11 @@ export const deploy: CommandHandler<CommandOf<"deploy">> = {
 	},
 };
 
-//A new core unit, off the map until deployed (Player.buyUnit): outside a campaign it gets the other
-//side's average experience. Only while the side has a deployment hex free for it (#60): the original
-//sold units to a side with none, which waited in its reserve for the whole game (in the remaster's rules
-//a side with none deploys on its own towns, #302). The units already in the reserve don't hold a hex, as
-//deploy lets any of them take any free one
+//A new core unit, off the map until deployed (Player.buyUnit): outside a campaign it gets the other side's average
+//experience. Only while the side has a deployment hex free for it (#60): the original sold units to a side with none,
+//which waited in its reserve for the whole game (remaster's rules: a side with none deploys on its own towns, #302).
+//The units already in the reserve don't hold a hex, as deploy lets any of them take any free one
+
 export const buy: CommandHandler<CommandOf<"buy">> = {
 	check(w, cmd) {
 		if (!(cmd.eqid > 0) || !known(w, cmd.eqid) || !known(w, cmd.transport)) return refuse("no such equipment");

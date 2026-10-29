@@ -1,6 +1,6 @@
 /**
  * Mount and unmount a ground transport, embark on and disembark from an air or naval one. Mount and
- * unmount are refused where canMount and canUnmount refuse them (#147: the old engine played them)
+ * unmount are refused where canMount and canUnmount refuse them (#147: the original played them)
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -16,8 +16,8 @@ import { canMount, canUnmount } from "../units";
 import { unitById } from "../world";
 import { playerAt, unitCheck } from "./common";
 
-//The first equipment of a unit class a country has (Equipment.getCountryEquipmentByClass(...)[0]:
-//the lists as the game holds them, D9), undefined for none
+//The first equipment of a unit class a country has (Equipment.getCountryEquipmentByClass(...)[0]), undefined for none
+
 export function firstOfClass(w: World, uclass: number, country: number): number | undefined {
 	const indexes = w.state.equipment.indexes[country];
 	const list = indexes !== undefined && indexes.unitclass !== undefined ? indexes.unitclass[uclass] : undefined;

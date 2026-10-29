@@ -1,13 +1,12 @@
 /**
- * Campaign - a campaign's scenario started and ended: the campaign player's prestige, dossier and
- * core units at the start, sent to HQ at the end and carried into the next scenario (docs/CORE.md)
+ * Campaign - the campaign player's prestige, dossier and core units, carried from one scenario to the next
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * Kept as the old game plays it (fixed after the switch): the next scenario's players of the
- * campaign's country take the carried player's id, side and country whatever the scenario says
- * (#61, #64), and the units removed from the deployment hexes leave without a trace in the dossier.
+ * Kept as the original plays it (#61, #64): the next scenario's players of the campaign's country take the
+ * carried player's id, side and country whatever the scenario says, and the units removed from the
+ * deployment hexes leave without a trace in the dossier.
  */
 
 import { CURRENCY_MULTIPLIER, PROTOTYPE_MIN_COST, playerType, unitClass } from "./tables";
@@ -16,8 +15,7 @@ import type { CampaignState } from "./state";
 import { newDossier, offMap, playerAt, removeUnit, writePlayer, writeUnit } from "./draft";
 import type { CoreUnit, Draft, EquipmentTable, GameState, OffMapUnit, PlayerState, ScenarioOutcome, UnitState, World } from "./types";
 
-//A campaign data file's scenario (resources/campaigns/data/*.json): what each outcome gives and
-//where it goes (254 and 255 end the campaign)
+//A campaign data file's scenario (resources/campaigns/data/*.json); an outcome's goto 254 or 255 ends the campaign
 export interface CampaignScenarioData {
 	id: number;
 	intro: string;
@@ -25,17 +23,15 @@ export interface CampaignScenarioData {
 	outcome: { [outcome in ScenarioOutcome]: { goto: number; prestige: number } };
 }
 
-//The campaign player: the last player of the campaign's country (Game's setupPlayers), -1 for none
+//The campaign player: the last player of the campaign's country (Game.setupPlayers), -1 for none
 export function campaignPlayer(state: { players: PlayerState[] }, campaign: CampaignState): number {
 	let id = -1;
 	state.players.forEach((p, i) => { if (p.country === campaign.country) id = i; });
 	return id;
 }
 
-//Game.setupPlayers and startCampaignScenario on a new scenario's draft: the other countries' players
-//are the AI; the campaign's take the carried player (its score added to theirs, its core units); then
-//the first scenario's prestige, dossier and core units (its units on its deployment hexes), a later
-//one's units on the deployment hexes removed, and the prototype a brilliant victory earned
+//A new scenario's start (Game.setupPlayers, startCampaignScenario): the other countries' players are the AI, the
+//campaign's take the carried player; the progress flags say what else happens
 export function startCampaignScenario(d: Draft, campaign: CampaignState, carried: PlayerState | null) {
 	const cp = campaignPlayer(d.state, campaign);
 	d.state.players.forEach((p, i) => {
@@ -50,15 +46,14 @@ export function startCampaignScenario(d: Draft, campaign: CampaignState, carried
 	if (progress.awardPrototype && awardPrototype(d, cp)) progress.awardPrototype = false;
 }
 
-//Whether the unit is the campaign player's (by its player's id, which the carried player may have
-//changed) and stands on one of its deployment hexes
+//Whether the unit is the campaign player's (by id: the carried player may have changed it) and on its deployment hex
 function onOwnDeployment(d: Draft, u: UnitState, cp: number): boolean {
 	const id = d.state.players[cp].id;
 	return playerAt(d, u.owner).id === id && d.data.hexes[u.row * d.state.map.cols + u.col].deployment === id;
 }
 
-//Player.copy(carried, true): the id, side, country, prestige, turn played and type are the carried
-//player's (#61), its score is added; its core units and dossier when it has them
+//Player.copy(carried, true): the carried id, side, country, prestige, turn played and type replace the player's;
+//its score is added, its core units and dossier taken when it has them
 function carry(p: PlayerState, carried: PlayerState) {
 	Object.assign(p, { id: carried.id, side: carried.side, country: carried.country, prestige: carried.prestige,
 		playedTurn: carried.playedTurn, type: carried.type });
@@ -67,8 +62,7 @@ function carry(p: PlayerState, carried: PlayerState) {
 	if (carried.dossier.units) p.dossier = structuredClone(carried.dossier);
 }
 
-//The first scenario: the campaign's starting prestige, an empty dossier, and its units on its
-//deployment hexes become its core units, in the unit list's order
+//The first scenario: the starting prestige, an empty dossier; its units on its deployment hexes become core units
 function firstScenario(d: Draft, cp: number, prestige: number) {
 	const p = writePlayer(d, cp);
 	p.prestige = prestige;
@@ -80,16 +74,14 @@ function firstScenario(d: Draft, cp: number, prestige: number) {
 	}
 }
 
-//Map.removeNonCampaignUnits: the scenario's own units of the campaign player on its deployment hexes
-//make room for its core units (no loss in the dossier)
+//Map.removeNonCampaignUnits: the scenario's own units on the deployment hexes make room for the core units
 function removeNonCampaignUnits(d: Draft, cp: number) {
 	const gone = d.state.units.filter((u) => !u.isCore && onOwnDeployment(d, u, cp));
 	for (const u of gone) removeUnit(d, u.id, false);
 }
 
-//Scenario.getRandomPrototype and Player.acquireUnit: a unit of the country's next year's combat
-//classes worth at least PROTOTYPE_MIN_COST, drawn from the game stream (drawn even with none), joins
-//the core units. Whether one was given
+//Scenario.getRandomPrototype and Player.acquireUnit: a prototype of the next year joins the core units, drawn from
+//the game stream (drawn even with none). Whether one was given
 function awardPrototype(d: Draft, cp: number): boolean {
 	const p = d.state.players[cp];
 	const list = prototypes(d, p.country + 1, new Date(d.state.scenario.date).getFullYear() + 1);
@@ -104,8 +96,7 @@ function awardPrototype(d: Draft, cp: number): boolean {
 	return true;
 }
 
-//The prototype a new campaign scenario's start gave (newGame with the campaign given, which said a
-//brilliant victory earned one): its eqid, for the message that tells the player; null when none was
+//The prototype a new campaign scenario's start gave: its eqid, for the message to the player; null when none
 export function awardedPrototype(campaign: CampaignState | null, state: GameState): number | null {
 	if (campaign === null || !campaign.progress.awardPrototype || state.campaign === null || state.campaign.progress.awardPrototype)
 		return null;
@@ -113,39 +104,35 @@ export function awardedPrototype(campaign: CampaignState | null, state: GameStat
 	return "reserve" in last ? last.reserve.eqid : null;
 }
 
-//Scenario.getPrototypeUnitsAvailable: the equipment of a country file's country (by its country
-//field, as the equipment holds it) available in the year, of the tank to anti-tank and artillery to
-//tactical bomber classes, not too cheap
+//Scenario.getPrototypeUnitsAvailable: the equipment of the country (by its country field) available in the year
 function prototypes(w: World, country: number, year: number): number[] {
 	if (w.state.equipment.indexes[country] === undefined) return [];
 	const list: number[] = [];
 	for (const id of Object.keys(w.equipment)) {
 		const e = w.equipment[id];
-		//(the file's country field is a number, as the old engine's == compares it)
+		//The country field is compared as a number, as the original's ==
 		if (+e.country === country && e.yearavailable === year && isPrototype(e)) list.push(+id);
 	}
 	return list;
 }
 
-//The tank to anti-tank and artillery to tactical bomber classes, worth at least PROTOTYPE_MIN_COST
 function isPrototype(e: EquipmentEntry): boolean {
 	const combat = (e.uclass >= unitClass.tank && e.uclass <= unitClass.antiTank)
 		|| (e.uclass >= unitClass.artillery && e.uclass <= unitClass.tacticalBomber);
 	return combat && e.cost * CURRENCY_MULTIPLIER >= PROTOTYPE_MIN_COST;
 }
 
-//What a scenario's end leaves for the next: the campaign player as it goes on, its next scenario
-//(null: the campaign ended) and the campaign's progress
+//What a scenario's end leaves for the next; next is null when the campaign ended
 export interface CampaignNext {
 	player: PlayerState;
 	next: CampaignScenarioData | null;
 	campaign: CampaignState;
 }
 
-//Game.continueCampaign: the outcome's prestige and the scenario in the dossier, the campaign player
-//sent to HQ (Player.setPlayerToHQ), then the next scenario the outcome leads to; a brilliant victory
-//earns a prototype there (the core units' equipment is loaded: coreCountries, #182). Not reproduced: a player whose core units all fell carries none, where the old engine
-//carried the dead units it brought in (#183: the list it brought isn't state)
+//Game.continueCampaign: the outcome's prestige and the scenario in the dossier, the player sent to HQ
+//(Player.setPlayerToHQ), then the next scenario the outcome leads to; a brilliant victory earns a prototype there.
+//Not reproduced (#183): the original carried the dead units it brought in, so a player whose core units all fell
+//carries none here (that list isn't state)
 export function endCampaignScenario(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[]): CampaignNext {
 	const campaign = w.state.campaign, played = scenarios[campaign.scenario];
 	const p = playerAtHQ(w, outcome, scenarios);
@@ -156,11 +143,9 @@ export function endCampaignScenario(w: World, outcome: ScenarioOutcome, scenario
 	return { player: p, next, campaign: { ...campaign, scenario: next !== null ? goto : campaign.scenario, progress } };
 }
 
-//The scenario as the old game leaves it once it is over, until the next one loads (Game.continueCampaign
-//worked on the campaign player in place, and the screen shows it meanwhile): the outcome's prestige and
-//the scenario in its dossier, its transports, support and prestige by turn gone, its lost units out of
-//its list and the others as at HQ, the ones on the map off their hexes but still in the unit list (the
-//hexes still name them). The campaign's progress is the next scenario's
+//The scenario as the original leaves it once it is over, until the next loads (Game.continueCampaign worked on the
+//campaign player in place, and the screen shows it meanwhile): the player as playerAtHQ, its core units as at HQ, the
+//ones on the map off their hexes but still in the unit list (the hexes still name them). The progress is the next's
 export function scenarioEnded(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[], next: CampaignState): GameState {
 	const s = w.state, cp = campaignPlayer(s, s.campaign);
 	const p = playerAtHQ(w, outcome, scenarios);
@@ -170,9 +155,9 @@ export function scenarioEnded(w: World, outcome: ScenarioOutcome, scenarios: Cam
 	return { ...s, units, players: s.players.map((x, i) => i === cp ? p : x), campaign: next };
 }
 
-//The campaign player at its scenario's end (Game.continueCampaign, Player.setPlayerToHQ): the outcome's
-//prestige, the scenario in its dossier, no transports, support or prestige by turn, its lost units out
-//of its core list (the others as they are, for the caller to send to HQ)
+//The campaign player at its scenario's end (Game.continueCampaign, Player.setPlayerToHQ): the outcome's prestige and
+//scenario in the dossier, no transports, support or prestige by turn, lost units out of the core list (the caller
+//sends the others to HQ)
 function playerAtHQ(w: World, outcome: ScenarioOutcome, scenarios: CampaignScenarioData[]): PlayerState {
 	const s = w.state, played = scenarios[s.campaign.scenario];
 	const p = structuredClone(s.players[campaignPlayer(s, s.campaign)]);
@@ -184,10 +169,9 @@ function playerAtHQ(w: World, outcome: ScenarioOutcome, scenarios: CampaignScena
 	return p;
 }
 
-//The countries whose equipment a player's core units need, by country index as the players have
-//theirs (Equipment.addPlayersEquipment): a unit's and its transport's, by the equipment's file when the
-//table knows the unit, else by the unit's flag (a scenario's own units don't always fly their
-//equipment's country). A scenario loads them beside its players' (#182): a supporting country's unit
+//The countries whose equipment a player's core units and their transports need (Equipment.addPlayersEquipment): by the
+//equipment's file when the table knows the unit, else by the unit's flag (a scenario's own units don't always fly
+//their equipment's country). A scenario loads them beside its players' (#182), so that a supporting country's unit
 //made a core unit plays on in scenarios that country isn't in
 export function coreCountries(p: PlayerState, units: readonly UnitState[], equipment: EquipmentTable): number[] {
 	const countries = new Set<number>();
@@ -204,8 +188,9 @@ export function coreCountries(p: PlayerState, units: readonly UnitState[], equip
 	return [...countries];
 }
 
-//A core unit at HQ: off its transport and carrier, its turn's flags clear, back to full strength (an
-//overstrength one keeps it), ammo, fuel and points, no entrenchment
+//A core unit at HQ: off its transport and carrier, turn flags clear, full strength (overstrength kept), ammo, fuel,
+//points; no entrenchment
+
 function toHQ(w: World, c: CoreUnit): OffMapUnit {
 	const u = "onMap" in c ? offMap(w.state.units[w.index.get(c.onMap)]) : structuredClone((c as { reserve: OffMapUnit }).reserve);
 	const e = w.equipment[u.eqid];

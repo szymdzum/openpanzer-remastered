@@ -1,19 +1,20 @@
 /**
- * ScenarioFile - a scenario XML file (resources/scenarios/data/) as plain data, read the way
- * ScenarioLoader reads it, for newGame to start a game from (newgame.ts)
+ * ScenarioFile - a scenario XML file (resources/scenarios/data/) as plain data, read as ScenarioLoader reads it
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  *
- * Only the reading, from a parsed document (the caller parses: DOMParser in the page and in the tests):
- * what the numbers mean, and what a value missing or out of range does, is newGame's. A number attribute reads as ScenarioLoader's +attribute does (missing: 0); an optional one
- * is null when missing, where the loader keeps its default.
+ * Only the reading, from a parsed document (the caller parses: DOMParser in the page and in the tests): what the
+ * numbers mean, and what a value missing or out of range does, is newGame's. A number attribute reads as
+ * ScenarioLoader's +attribute does (missing: 0); an optional one is null when missing, where the loader keeps its
+ * default.
+
  */
 
 import type { FileHex, FilePlayer, FileReinforcement, FileUnit, ScenarioFile } from "./newgame";
 
-//+getAttribute: a missing attribute is 0
-function num(e: Element, name: string): number {
+function num
+(e: Element, name: string): number {
 	return +e.getAttribute(name);
 }
 
