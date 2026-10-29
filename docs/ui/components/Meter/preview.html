@@ -1,7 +1,7 @@
-<!-- @dsCard group="Controls" height=260 width=900 subtitle="Supply meters in ok, low and critical, experience stars and strength badges" status="Ready" -->
+<!-- @dsCard group="Controls" height=420 width=900 subtitle="Supply meters in ok, low and critical, experience stars and strength badges; the unit card's gauges (segments, over strength, the meaning beside the value) and its This turn chips" status="Ready" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
 
-<div class="pm" style="padding:24px;background:var(--panel);display:flex;gap:40px;align-items:flex-start">
+<div class="pm" style="padding:24px;background:var(--panel);display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
   <div style="width:180px">
       <div class="pm-meter ok"><svg class="i sm" aria-hidden="true"><use href="#pm-strength"/></svg><span>Strength</span><span class="v">10/10</span><span class="track"><b style="width:100%"></b></span></div>
       <div class="pm-meter low"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg><span>Fuel<span class="st">Low</span></span><span class="v">18/50</span><span class="track"><b style="width:36%"></b></span></div>
@@ -15,6 +15,25 @@
   <div style="display:grid;gap:12px">
     <span style="display:flex;gap:8px;align-items:center"><span class="pm-badge">10</span><span class="pm-badge allied">8</span><span class="pm-badge neutral">5</span></span>
     <span style="display:flex;gap:8px;align-items:center"><span class="pm-tag pm-low"><svg class="i sm" aria-hidden="true"><use href="#pm-low"/></svg>Low fuel</span><span class="pm-tag pm-critical"><svg class="i sm" aria-hidden="true"><use href="#pm-critical"/></svg>No ammo</span></span>
+  </div>
+
+  <div class="uc-cond" style="display:grid;gap:6px;width:360px">
+    <div class="uc-h"><span>Gauges with their meaning</span></div>
+    <div class="uc-c ok"><span class="k">Strength</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="v">10<small>/10</small></span><span class="say">full</span></div>
+    <div class="uc-c ok"><span class="k">Strength</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on over"></i><i class="on over"></i></span><span class="v">12<small>/10</small></span><span class="say">+2 over</span></div>
+    <div class="uc-c low"><span class="k">Strength</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="v">5<small>/10</small></span><span class="say">lost 5</span></div>
+    <div class="uc-c low"><span class="k">Fuel</span><span class="uc-bar" aria-hidden="true"><b style="width:36%"></b></span><span class="v">18<small>/50</small></span><span class="say">3 full moves</span></div>
+    <div class="uc-c "><span class="k">Fuel</span><span class="uc-bar" aria-hidden="true"><b style="width:36%"></b></span><span class="v">18<small>/50</small></span><span class="say">aircraft: no moves</span></div>
+    <div class="uc-c critical"><span class="k">Ammo</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="v">1<small>/8</small></span><span class="say">1 shot left</span></div>
+    <div class="uc-c dug"><span class="k">Entrenched</span><span class="uc-segs" aria-hidden="true"><i class="on t"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class=""></i><i class=""></i></span><span class="v">+4</span><span class="say">+4 defence</span></div>
+  </div>
+  <div style="display:grid;gap:10px;align-content:start">
+    <div class="uc-h"><span>In the strip</span></div>
+    <div class="uc-g low"><span class="lab">Fuel<em>3 full moves</em></span><span class="uc-bar" aria-hidden="true"><b style="width:36%"></b></span><span class="v">18<small>/50</small></span></div>
+    <div class="uc-g critical"><span class="lab">Ammo<em>1 shot left</em></span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="v">1<small>/8</small></span></div>
+    <div class="uc-h"><span>This turn</span></div>
+    <div class="uc-turn"><span class="uc-chip ok"><svg class="i sm" aria-hidden="true"><use href="#pm-play"/></svg>6 moves left</span><span class="uc-chip ok"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg>Can fire</span><span class="uc-chip"><svg class="i sm" aria-hidden="true"><use href="#pm-mount"/></svg>Riding</span><span class="uc-chip off"><svg class="i sm" aria-hidden="true"><use href="#pm-play"/></svg>Moved</span><span class="uc-chip off"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg>Can't fire</span></div>
+    <div class="uc-turn mini"><span class="uc-chip ok" title="6 moves left"><svg class="i sm" aria-hidden="true"><use href="#pm-play"/></svg>6<span class="pm-sr">6 moves left</span></span><span class="uc-chip ok" title="Can fire"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg><span class="pm-sr">Can fire</span></span><span class="uc-chip off" title="Moved"><svg class="i sm" aria-hidden="true"><use href="#pm-play"/></svg>0<span class="pm-sr">Moved</span></span></div>
   </div>
 </div>
 <script>window.PM && PM.mount();</script>

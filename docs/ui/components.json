@@ -122,7 +122,7 @@
 		"width": 1920,
 		"height": 1080,
 		"subtitle": "The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview",
-		"status": "Ready",
+		"status": "Ready but the unit card (UnitInfo, a proposal)",
 		"readme": true
 	},
 	{
@@ -131,7 +131,7 @@
 		"width": 1366,
 		"height": 768,
 		"subtitle": "The full HUD at 1366×768: the same elements, proving the map stays visible on a small laptop",
-		"status": "Ready",
+		"status": "Ready but the unit card (UnitInfo, a proposal)",
 		"readme": true
 	},
 	{
@@ -183,8 +183,8 @@
 		"name": "Meter",
 		"group": "Controls",
 		"width": 900,
-		"height": 260,
-		"subtitle": "Supply meters in ok, low and critical, experience stars and strength badges",
+		"height": 420,
+		"subtitle": "Supply meters in ok, low and critical, experience stars and strength badges; the unit card's gauges (segments, over strength, the meaning beside the value) and its This turn chips",
 		"status": "Ready",
 		"readme": true
 	},
@@ -320,7 +320,7 @@
 		"width": 1180,
 		"height": 820,
 		"subtitle": "iPad landscape (1180×820): touch HUD with labelled rail, compact unit info and odds on first tap",
-		"status": "Ready",
+		"status": "Ready but the unit card (UnitInfo, a proposal)",
 		"readme": true
 	},
 	{
@@ -329,7 +329,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "iPad portrait (820×1180): bottom command bar, two-row status bar, unit card above the bar",
-		"status": "Ready",
+		"status": "Ready but the unit card (UnitInfo, a proposal)",
 		"readme": true
 	},
 	{
@@ -338,7 +338,7 @@
 		"width": 820,
 		"height": 1180,
 		"subtitle": "iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet",
-		"status": "Ready",
+		"status": "Ready but the unit card (UnitInfo, a proposal)",
 		"readme": true
 	},
 	{

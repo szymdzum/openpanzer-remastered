@@ -62,8 +62,8 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 | [Deployment](components/Deployment/README.md)<br>[render](renders/Deployment.webp) | Deployment at 1920×1080: the zone, units placed, the next one shown on the hovered hex, and the reserve tray | Ready |
 | [Equipment](components/Equipment/README.md)<br>[render](renders/Equipment.webp) | Equipment window (#equipment) at 1366×768: class tabs, sorted grid, the model on foot and mounted, transports with what each gives, prestige | Ready |
 | [GameMenu](components/GameMenu/README.md)<br>[render](renders/GameMenu.webp) | Game menu (#menu): the game's own buttons, open and folded, the labelled rail for touch, and every keyboard shortcut | Ready |
-| [HudDesktop](components/HudDesktop/README.md)<br>[render](renders/HudDesktop.webp) | The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview | Ready |
-| [HudLaptop](components/HudLaptop/README.md)<br>[render](renders/HudLaptop.webp) | The full HUD at 1366×768: the same elements, proving the map stays visible on a small laptop | Ready |
+| [HudDesktop](components/HudDesktop/README.md)<br>[render](renders/HudDesktop.webp) | The full HUD at 1920×1080 over the Ciechanów map: unit selected, context menu, odds preview | Ready but the unit card (UnitInfo, a proposal) |
+| [HudLaptop](components/HudLaptop/README.md)<br>[render](renders/HudLaptop.webp) | The full HUD at 1366×768: the same elements, proving the map stays visible on a small laptop | Ready but the unit card (UnitInfo, a proposal) |
 | [MapLayers](components/MapLayers/README.md)<br>[render](renders/MapLayers.webp) | The same hexes in the ground layer and the air layer: which unit is on top, which gets the marker on a shared hex, which is the target | Ready |
 | [MapOverlays](components/MapOverlays/README.md)<br>[render](renders/MapOverlays.webp) | The map layer: selection, move area, enemy zones, move path, attack target, support fire, fog, entrenchment, objectives and towns | Ready |
 | [MovePath](components/MovePath/README.md)<br>[render](renders/MovePath.webp) | Move path preview (#32): the route to the hovered hex, moves and fuel left, and where a move stops, captures, turns blind or ends firing | Ready |
@@ -84,7 +84,7 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 |---|---|---|
 | [Button](components/Button/README.md)<br>[render](renders/Button.webp) | Primary, secondary, icon, ghost and danger, with hot, pressed, disabled and focus states | Ready |
 | [ListRow](components/ListRow/README.md)<br>[render](renders/ListRow.webp) | Selectable rows with a group header, as in the campaign and scenario lists | Ready |
-| [Meter](components/Meter/README.md)<br>[render](renders/Meter.webp) | Supply meters in ok, low and critical, experience stars and strength badges | Ready |
+| [Meter](components/Meter/README.md)<br>[render](renders/Meter.webp) | Supply meters in ok, low and critical, experience stars and strength badges; the unit card's gauges (segments, over strength, the meaning beside the value) and its This turn chips | Ready |
 | [Panel](components/Panel/README.md)<br>[render](renders/Panel.webp) | The HUD panel and the modal window with header and footer | Ready |
 | [SegmentedControl](components/SegmentedControl/README.md)<br>[render](renders/SegmentedControl.webp) | Sort, filter and transport choice | Ready |
 | [Slider](components/Slider/README.md)<br>[render](renders/Slider.webp) | Interface width, interface scale and map scale | Ready |
@@ -123,8 +123,8 @@ Status says whether a card can be built as it is (PLAN.md): Ready, or what has t
 |---|---|---|
 | [TabletEquipmentLandscape](components/TabletEquipmentLandscape/README.md)<br>[render](renders/TabletEquipmentLandscape.webp) | iPad landscape: equipment full screen, 3-column grid and the comparison column | Ready |
 | [TabletEquipmentPortrait](components/TabletEquipmentPortrait/README.md)<br>[render](renders/TabletEquipmentPortrait.webp) | iPad portrait: equipment full screen, grid on top and the comparison below | Ready |
-| [TabletHudLandscape](components/TabletHudLandscape/README.md)<br>[render](renders/TabletHudLandscape.webp) | iPad landscape (1180×820): touch HUD with labelled rail, compact unit info and odds on first tap | Ready |
-| [TabletHudPortrait](components/TabletHudPortrait/README.md)<br>[render](renders/TabletHudPortrait.webp) | iPad portrait (820×1180): bottom command bar, two-row status bar, unit card above the bar | Ready |
-| [TabletUnitInfo](components/TabletUnitInfo/README.md)<br>[render](renders/TabletUnitInfo.webp) | iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet | Ready |
+| [TabletHudLandscape](components/TabletHudLandscape/README.md)<br>[render](renders/TabletHudLandscape.webp) | iPad landscape (1180×820): touch HUD with labelled rail, compact unit info and odds on first tap | Ready but the unit card (UnitInfo, a proposal) |
+| [TabletHudPortrait](components/TabletHudPortrait/README.md)<br>[render](renders/TabletHudPortrait.webp) | iPad portrait (820×1180): bottom command bar, two-row status bar, unit card above the bar | Ready but the unit card (UnitInfo, a proposal) |
+| [TabletUnitInfo](components/TabletUnitInfo/README.md)<br>[render](renders/TabletUnitInfo.webp) | iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet | Ready but the unit card (UnitInfo, a proposal) |
 
 <!-- gallery:end -->

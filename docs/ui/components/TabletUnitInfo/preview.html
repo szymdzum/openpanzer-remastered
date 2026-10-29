@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens · Tablet" height=1180 width=820 subtitle="iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet" status="Ready" -->
+<!-- @dsCard group="Screens · Tablet" height=1180 width=820 subtitle="iPad portrait: the unit sheet opened from Stats, with actions and the full stat sheet" status="Ready but the unit card (UnitInfo, a proposal)" -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Libre+Franklin:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
 <style>
 .pm-scene{position:absolute;left:0;top:0;width:1632px;height:1577px;transform-origin:0 0;background:url(assets/map-ciechanow-full.jpg) no-repeat;image-rendering:auto;font-family:"Libre Franklin",Arial,sans-serif}
@@ -32,17 +32,44 @@
   <div class="pm-scrim"></div>
   <section id="unit-info" class="pm-window" style="left:0;right:0;bottom:0;height:640px;border-radius:0" aria-label="Selected unit">
     <div style="display:grid;place-items:center;padding:8px 0 0"><span style="width:48px;height:5px;background:var(--line)"></span></div>
-    <div class="hd" style="padding-top:8px"><svg class="mark lg" aria-hidden="true"><use href="#pm-flag-de"/></svg><div><h1 class="pm-title" style="font-size:24px;line-height:28px">Pz IIA</h1><div class="sub">1st Panzer · Tank · Core · 120 XP</div></div><span class="grow"></span><span class="pm-stars" aria-label="Experience 1 of 5"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span><button class="pm-btn icon" aria-label="Close"><svg class="i " aria-hidden="true"><use href="#pm-close"/></svg></button></div>
-    <div class="bd" style="display:grid;gap:18px;padding-top:16px;align-content:start">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
-        <div>
-      <div class="pm-meter ok"><svg class="i sm" aria-hidden="true"><use href="#pm-strength"/></svg><span>Strength</span><span class="v">10/10</span><span class="track"><b style="width:100%"></b></span></div>
-      <div class="pm-meter low"><svg class="i sm" aria-hidden="true"><use href="#pm-fuel"/></svg><span>Fuel<span class="st">Low</span></span><span class="v">18/50</span><span class="track"><b style="width:36%"></b></span></div>
-      <div class="pm-meter critical"><svg class="i sm" aria-hidden="true"><use href="#pm-ammo"/></svg><span>Ammo<span class="st">Critical</span></span><span class="v">1/8</span><span class="track"><b style="width:12%"></b></span></div>
-      <div class="pm-meter"><svg class="i sm" aria-hidden="true"><use href="#pm-entrench"/></svg><span>Entrench</span><span class="v">0</span><span class="track"><b style="width:0"></b></span></div></div>
-        <div style="display:grid;align-content:start;gap:8px"><div class="pm-label">Leader</div><div style="display:flex;gap:8px;align-items:flex-start"><svg class="i sm" aria-hidden="true" style="flex:none;margin-top:2px"><use href="#pm-leader"/></svg><div><b class="pm-prestige">Battlefield Intelligence</b><div class="pm-muted" style="font-size:13px">The unit cannot be surprised.</div></div></div><div style="display:flex;gap:8px;align-items:flex-start"><svg class="i sm" aria-hidden="true" style="flex:none;margin-top:2px"><use href="#pm-info"/></svg><div><b class="pm-prestige">Aggressive Tank Maneuver</b> <span class="pm-muted" style="font-size:13px">· class leader</span><div class="pm-muted" style="font-size:13px">Tank movement factor is increased by 1.</div></div></div><div class="pm-label" style="margin-top:6px">Transport</div><div style="display:flex;gap:8px;align-items:center"><svg class="i sm" aria-hidden="true"><use href="#pm-tank"/></svg>Self-propelled · tracked</div></div>
-      </div>
-      <div class="pm-stats cols6"><div><span class="k">Soft atk</span><span class="n">5</span></div><div><span class="k">Hard atk</span><span class="n">3</span></div><div><span class="k">Air atk</span><span class="n">0</span></div><div><span class="k">Naval atk</span><span class="n">1</span></div><div><span class="k">Gnd def</span><span class="n">7</span></div><div><span class="k">Air def</span><span class="n">8</span></div><div><span class="k">Close def</span><span class="n">2</span></div><div><span class="k">Initiative</span><span class="n">7</span></div><div><span class="k">Range</span><span class="n">1</span></div><div><span class="k">Spotting</span><span class="n">2</span></div><div><span class="k">Move</span><span class="n">6</span></div><div><span class="k">Exp</span><span class="n">120</span></div></div>
+    <div class="bd" style="display:grid;gap:12px;padding-top:4px;align-content:start">
+      <section class="uc-open sheet" aria-label="Selected unit">
+  
+  <div class="uc-col uc-id">
+    <span class="uc-port"><span class="uc-spr" style="background-image:url(../../game/resources/units/images/pa137.png)"></span></span>
+    <div>
+      <div class="uc-name lg"><svg class="mark sm"><use href="#pm-flag-de"/></svg>Pz IIA</div>
+      <div class="uc-sub">1st Tank · Germany</div>
+      <div class="uc-tags">Hard target · Tracked · <b class="core">Core</b></div>
+    </div>
+        <div class="uc-xp"><span class="uc-stars"><span class="on"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span><span class="off"><svg class="i sm" aria-hidden="true"><use href="#pm-star"/></svg></span></span><span class="n">120 XP</span><span class="uc-bar" aria-hidden="true"><b style="width:20%"></b></span></div>
+    <div class="uc-lead"><svg class="i sm" aria-hidden="true"><use href="#pm-leader"/></svg><div><b>Battlefield Intelligence</b><span>can't be surprised</span></div></div>
+  </div>
+  <div class="uc-col uc-cond">
+    <div class="uc-h"><span>Condition</span></div>
+    
+  <div class="uc-c ok"><span class="k">Strength</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="v">10<small>/10</small></span><span class="say">full</span></div>
+  <div class="uc-c low"><span class="k">Fuel</span><span class="uc-bar" aria-hidden="true"><b style="width:36%"></b></span><span class="v">18<small>/50</small></span><span class="say">3 full moves</span></div>
+  <div class="uc-c critical"><span class="k">Ammo</span><span class="uc-segs" aria-hidden="true"><i class="on"></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="v">1<small>/8</small></span><span class="say">1 shot left</span></div>
+  <div class="uc-c dug"><span class="k" title="Entrenchment: the terrain's levels come at once, up to its base + 5">Entrenched</span><span class="uc-segs" aria-hidden="true"><i class=""></i><i class=""></i><i class=""></i><i class=""></i><i class=""></i></span><span class="v">0</span><span class="say">it moved</span></div>
+    <div class="uc-h t">This turn</div>
+    <div class="uc-turn"><span class="uc-chip off"><svg class="i sm" aria-hidden="true"><use href="#pm-play"/></svg>Moved</span><span class="uc-chip ok"><svg class="i sm" aria-hidden="true"><use href="#pm-attack"/></svg>Can fire</span></div>
+  </div>
+  <div class="uc-col uc-vs">
+    <div class="uc-h"><span>Against the enemy</span><span class="uc-val" title="What the unit is worth, in prestige">Value <svg class="i sm" aria-hidden="true"><use href="#pm-prestige"/></svg>216</span></div>
+    <div class="uc-two">
+      <div><div class="uc-sh">It hits</div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-infantry"/></svg><span class="k">Soft</span><span class="uc-bar" aria-hidden="true"><b style="width:33%"></b></span><span class="v">5</span></div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-tank"/></svg><span class="k">Hard</span><span class="uc-bar" aria-hidden="true"><b style="width:20%"></b></span><span class="v">3</span></div><div class="uc-m none"><svg class="i sm" aria-hidden="true"><use href="#pm-air"/></svg><span class="k">Aircraft</span><span class="uc-bar"></span><span class="v">can't</span></div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-naval"/></svg><span class="k">Ships</span><span class="uc-bar" aria-hidden="true"><b style="width:7%"></b></span><span class="v">1</span></div></div>
+      <div><div class="uc-sh">It holds</div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-ground"/></svg><span class="k">Ground fire</span><span class="uc-bar" aria-hidden="true"><b style="width:47%"></b></span><span class="v">7</span></div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-air"/></svg><span class="k">Air attack</span><span class="uc-bar" aria-hidden="true"><b style="width:53%"></b></span><span class="v">8</span></div><div class="uc-m weak"><svg class="i sm" aria-hidden="true"><use href="#pm-infantry"/></svg><span class="k">Close assault</span><span class="uc-bar" aria-hidden="true"><b style="width:13%"></b></span><span class="v">2</span></div><div class="uc-m"><svg class="i sm" aria-hidden="true"><use href="#pm-artillery"/></svg><span class="k">From range</span><span class="uc-bar plus"></span><span class="v">+5</span></div></div>
+    </div>
+    <div class="uc-foot">
+      <span title="The side with more gets +4 defence and up to +4 attack"><b>Initiative 7</b></span>
+      <span><b>Fires</b> 1 hex</span>
+      <span><b>Sees</b> 2 hexes</span>
+      <span class="mods"><span class="plus">+1 veteran</span></span>
+    </div>
+  </div>
+  
+</section>
       <div>
         <div class="pm-label" style="margin-bottom:8px">Actions</div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
