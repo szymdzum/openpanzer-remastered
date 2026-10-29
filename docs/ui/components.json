@@ -398,10 +398,10 @@
 	{
 		"name": "UnitInfo",
 		"group": "Screens · In game",
-		"width": 1100,
-		"height": 760,
-		"subtitle": "The unit card (#unit-info), docked at the bottom in three sizes: one row of identity, condition and the short stat sheet; unfolded, a band above it of every stat, the figures, the experience and the leaders; hidden, a strip of the name and supply",
-		"status": "Ready",
+		"width": 1390,
+		"height": 900,
+		"subtitle": "The unit card (#unit-info) in two sizes over the map: hidden, a strip of who it is, its four gauges and what it can still do this turn; open, its identity and role, its condition with what each gauge means, and what it hits and holds against each kind of enemy",
+		"status": "Proposal: not built",
 		"readme": true
 	},
 	{
