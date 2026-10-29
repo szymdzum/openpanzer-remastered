@@ -23,7 +23,7 @@ async function modules() {
 	const { Equipment } = await import("../src/equipment");
 	const { Rng } = await import("../src/core/random");
 	const { toData } = await import("../src/state");
-	const { uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/app/settings");
 	const { playerType } = await import("../src/core/tables");
 	return { game, Equipment, Rng, toData, playerType, uiSettings };
 }

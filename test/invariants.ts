@@ -24,13 +24,14 @@ export async function load(name: string) {
 	const { game } = await import("../src/app/game");
 	const { toData } = await import("../src/state");
 	const prototypes = await import("../src/prototypes");
+	const settings = await import("../src/app/settings");
 	const tables = await import("../src/core/tables");
 	if (fixture.spotSide !== undefined)
 		game.spotSide = fixture.spotSide;
 	const engine = await coreEngine();
 	const m = scenario.map;
 	return { scenario, m, GameRules, CombatLog, Equipment, Commands, Rng, game, toData, AI: engine.AI, endTurn: () => engine.Actions.endTurn(),
-		...prototypes, ...tables };
+		...prototypes, ...settings, ...tables };
 }
 //A command as the old UI played it (src/ui.ts played, before #351): then the selection shows what the old engine's
 //command left selected (a disband the command allows deselects first)

@@ -12,7 +12,7 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { MAJOR_VERSION, type UISettings, uiSettings } from "../prototypes";
+import { MAJOR_VERSION, type UISettings, uiSettings } from "./settings";
 import { Equipment, type EquipmentPlayerCountries } from "../equipment";
 import { isChromeApp } from "./page";
 import { Scenario } from "../scenario";

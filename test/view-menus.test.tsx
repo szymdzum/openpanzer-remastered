@@ -8,7 +8,7 @@ import { MENU_CLOSED, menuAfter, menuToggled, type MenuState } from "../src/view
 import { StartMenu } from "../src/view/startmenu";
 import { createStore } from "../src/view/store";
 import { newScreen } from "../src/view/screen";
-import { VERSION } from "../src/prototypes";
+import { VERSION } from "../src/app/settings";
 import type { World } from "../src/core/types";
 import type { GameHost } from "../src/app/host";
 

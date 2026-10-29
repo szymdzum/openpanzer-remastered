@@ -150,7 +150,7 @@ test("GameState load on the AI's turn has the AI play it (#71)", async () => {
 	const ai = scenario.map.currentPlayer.id, save = await exportGame();
 	const game = await playing("drpzop01-t0.json.gz");
 	const { Game } = await import("../src/app/game");
-	const { uiSettings } = await import("../src/prototypes");
+	const { uiSettings } = await import("../src/app/settings");
 	const { playerType } = await import("../src/core/tables");
 	game.setupGameState = new Game().setupGameState; //Game's own, restoreState's stand-in only waits
 	uiSettings.isAI[ai] = 1;
@@ -381,7 +381,7 @@ test("A start without a save plays the default scenario, the AI on the Allies, t
 	vi.resetModules();
 	fakeMapImages();
 	const { game: fresh } = await import("../src/app/game");
-	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/prototypes");
+	const { DEFAULT_SCENARIO, uiSettings } = await import("../src/app/settings");
 	fresh.init();
 	fresh.host.processTurn(); //(no scenario yet: a tick that went on would throw)
 	await until(() => fresh.gameStarted && fresh.scenario !== null && fresh.scenario.isLoaded, "the default scenario");
@@ -397,7 +397,7 @@ test.each(fixtures("engine"))("GameState local save and startup restore %s", asy
 	game.state = new GameState(game);
 	game.state.save();
 	const exported = await exportGame();
-	const { MAJOR_VERSION } = await import("../src/prototypes");
+	const { MAJOR_VERSION } = await import("../src/app/settings");
 	expect(localStorage.getItem("openpanzer-game-" + MAJOR_VERSION)).not.toBeNull();
 	const restored = await startup();
 	expect(restored.state.scenario.file, "restored, not the default scenario").toBe(JSON.parse(exported).state.scenario.file);
@@ -413,7 +413,7 @@ test.each(["drpzop01-t2.json.gz", "campaign-3-1-t0.json.gz"])("GameState startup
 	const { unknown } = readSave(old);
 	const want = withoutUnknown(await load(old), unknown);
 	localStorage.clear();
-	const { MAJOR_VERSION } = await import("../src/prototypes");
+	const { MAJOR_VERSION } = await import("../src/app/settings");
 	for (const key of ["scenario", "players", "campaign"] as const)
 		if (items[key] !== null) localStorage.setItem("openpanzer-" + key + "-" + MAJOR_VERSION, items[key]);
 	expect(withoutUnknown(await startup(), unknown)).toEqual(want);
@@ -480,7 +480,7 @@ test("The turn-start save has the reinforcements that arrived that turn (#93)", 
 	const old = game.scenario;
 	game.state.restoreFromString(readFixture("engine", "ruscam09-t2.json.gz").state);
 	await loadedAfter(old);
-	const { MAJOR_VERSION } = await import("../src/prototypes");
+	const { MAJOR_VERSION } = await import("../src/app/settings");
 	const pending = async () => (JSON.parse(await exportGame()) as SaveFile).state.reinforcements.length;
 	let arrived = 0;
 	for (let i = 0; i < 12 && arrived === 0 && !game.gameEnded; i++) {
@@ -579,7 +579,7 @@ test("GameState saves to the cloud and loads the save back", async () => {
 test("GameState clear removes the saves, the settings stay", async () => {
 	localStorage.clear();
 	const game = await playing("drpzop01-t0.json.gz");
-	const { MAJOR_VERSION } = await import("../src/prototypes");
+	const { MAJOR_VERSION } = await import("../src/app/settings");
 	for (const key of ["scenario", "players", "campaign"])
 		localStorage.setItem("openpanzer-" + key + "-" + MAJOR_VERSION, "{}");
 	game.state.save();

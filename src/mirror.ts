@@ -24,7 +24,8 @@
  * read.
  */
 
-import { Cell, uiSettings } from "./prototypes";
+import { Cell } from "./prototypes";
+import { uiSettings } from "./app/settings";
 import { Equipment } from "./equipment";
 import type { EquipmentIndexes } from "./core/state";
 import { Unit } from "./unit";

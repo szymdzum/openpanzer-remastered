@@ -10,7 +10,7 @@
  * harness replays); only who makes the units and players changed. Set by game.ts as ScenarioLoader.build.
  */
 
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "./settings";
 import { Equipment } from "../equipment";
 import { Rng } from "../core/random";
 import type { Scenario } from "../scenario";

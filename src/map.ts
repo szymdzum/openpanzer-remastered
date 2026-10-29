@@ -12,7 +12,8 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-import { Cell, uiSettings } from "./prototypes";
+import { Cell } from "./prototypes";
+import { uiSettings } from "./app/settings";
 import { outcomeNames, playerType, roadType, sideNames, terrainType, unitClass } from "./core/tables";
 import { Equipment } from "./equipment";
 import type { PlayerDossier } from "./core/state";

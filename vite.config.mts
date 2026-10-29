@@ -104,7 +104,7 @@ export default defineConfig({
 			provider: "v8",
 			include: ["src/gamerules.ts", "src/unit.ts", "src/map.ts", "src/ai.ts",
 				"src/leaders.ts", "src/visibility.ts", "src/board.ts", "src/selection.ts", "src/undo.ts", "src/scenario.ts", "src/app/loader.ts", "src/campaign.ts", "src/app/game.ts",
-				"src/app/storage.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/commands.ts",
+				"src/app/storage.ts", "src/equipment.ts", "src/combatlog.ts", "src/prototypes.ts", "src/app/settings.ts", "src/commands.ts",
 				"src/context.ts", "src/util.ts", "src/state.ts", "src/app/save.ts", "src/mirror.ts", "src/app/driver.ts", "src/app/start.ts", "src/app/host.ts", "src/app/nullscreen.ts",
 				"src/core/*.ts", "src/core/commands/*.ts",
 				"src/view/*.tsx", "src/view/model.ts", "src/view/store.ts", "src/view/storecore.ts", "src/view/storestep.ts", "src/view/storemap.ts",
@@ -136,7 +136,7 @@ export default defineConfig({
 				"src/leaders.ts": { statements: 76, branches: 50, functions: 50, lines: 78 },
 				"src/map.ts": { statements: 95, branches: 84, functions: 96, lines: 94 },
 				//(its tables, covered, went to src/core/tables.ts in #523: the share left is lower, not less covered)
-				"src/prototypes.ts": { statements: 91, branches: 33, functions: 66, lines: 91 },
+				"src/prototypes.ts": { statements: 90, branches: 0, functions: 50, lines: 90 },
 				"src/scenario.ts": { statements: 92, branches: 83, functions: 90, lines: 92 },
 				"src/app/loader.ts": { statements: 91, branches: 61, functions: 93, lines: 90 },
 				"src/selection.ts": { statements: 97, branches: 100, functions: 96, lines: 97 },
@@ -178,6 +178,7 @@ export default defineConfig({
 				"src/core/commands/undo.ts": { statements: 96, branches: 90, functions: 80, lines: 95 },
 				"src/core/commands/turn.ts": { statements: 97, branches: 100, functions: 85, lines: 97 },
 				"src/core/commands/units.ts": { statements: 98, branches: 94, functions: 95, lines: 96 },
+				"src/app/settings.ts": { statements: 90, branches: 100, functions: 66, lines: 88 }, //(split from prototypes.ts: it had 91/33/66/91, the one uncovered function is the harness setter)
 				"src/app/save.ts": { statements: 95, branches: 85, functions: 95, lines: 95 },
 				"src/app/driver.ts": { statements: 89, branches: 87, functions: 94, lines: 94 },
 				"src/app/start.ts": { statements: 92, branches: 92, functions: 85, lines: 95 },

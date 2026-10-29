@@ -80,7 +80,7 @@ test("The new UI's imports reach no old UI module and no game.ts (#380)", () => 
 		for (const i of fs.readFileSync(path.join(view, file), "utf8").matchAll(/^import\s+(type\s+)?[^;]*?from\s+"\.\.\/([\w/]+)";/gm))
 			if (!i[1]) outside.add(i[2]);
 	const engine = [...outside].filter((m) => !m.startsWith("core/"));
-	expect(engine.filter((m) => !["app/host", "app/screen", "prototypes"].includes(m))).toEqual([]);
+	expect(engine.filter((m) => !["app/host", "app/screen", "app/settings", "prototypes"].includes(m))).toEqual([]);
 	expect([...reachedFrom(engine)].filter((m) => uiModules.includes(m))).toEqual([]);
 	expect(outside).toContain("core/step");
 });

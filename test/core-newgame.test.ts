@@ -43,7 +43,7 @@ test("A scenario started against the AI, or the scripted tutorial, starts the sa
 		const game = await freshGame();
 		const { Rng } = await import("../src/core/random");
 		const { toData } = await import("../src/state");
-		const { uiSettings } = await import("../src/prototypes");	//(the fresh modules')
+		const { uiSettings } = await import("../src/app/settings");	//(the fresh modules')
 		Rng.game.state = SEEDS.game;
 		Rng.ai.state = SEEDS.ai;
 		const old = game.scenario;

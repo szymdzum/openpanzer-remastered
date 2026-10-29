@@ -12,7 +12,7 @@ import { createStore, type StoreHost } from "../src/view/store";
 import { prestigeText } from "../src/view/model";
 import { worldOf } from "../src/mirror";
 import { classicRules } from "../src/core/rules";
-import { uiSettings } from "../src/prototypes";
+import { uiSettings } from "../src/app/settings";
 import { playerType } from "../src/core/tables";
 import type { World } from "../src/core/types";
 import type { Executed } from "../src/commands";

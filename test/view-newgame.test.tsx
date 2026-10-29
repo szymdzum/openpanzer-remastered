@@ -12,7 +12,7 @@ import { campaignAtOpen, campaignRows, campaignView, DIFFICULTY_HELP, scenarioAt
 	from "../src/view/newgame";
 import { StartMenu } from "../src/view/startmenu";
 import { createStore } from "../src/view/store";
-import { uiSettings } from "../src/prototypes";
+import { uiSettings } from "../src/app/settings";
 import type { World } from "../src/core/types";
 
 fakeMapImages();

@@ -36,7 +36,7 @@ type Probe = {
 	game: typeof import("../../src/app/running").game;
 	toData: typeof import("../../src/state").toData;
 	Rng: typeof import("../../src/core/random").Rng;
-	uiSettings: typeof import("../../src/prototypes").uiSettings;
+	uiSettings: typeof import("../../src/app/settings").uiSettings;
 	hexCentre: typeof import("../../src/view/hexgrid").hexCentre;
 	selectionOf: typeof import("../../src/view/mapview").selectionOf;
 	deploymentOf: typeof import("../../src/view/deploy").deploymentOf;
@@ -45,7 +45,7 @@ type Probe = {
 	isAir: typeof import("../../src/core/units").isAir;
 };
 type Probed = { e2e: Probe };
-const MODULES = ["/src/app/running.ts", "/src/state.ts", "/src/core/random.ts", "/src/prototypes.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
+const MODULES = ["/src/app/running.ts", "/src/state.ts", "/src/core/random.ts", "/src/app/settings.ts", "/src/view/hexgrid.ts", "/src/view/mapview.ts",
 	"/src/view/deploy.ts", "/src/core/world.ts", "/src/core/units.ts"];
 
 const errors: string[] = [];
@@ -227,9 +227,9 @@ async function play() {
 		await shown(ui("#smMain"));
 		check(await ui("#smButtons button").count() === 4, "the start menu hasn't its four buttons");
 		await page.evaluate(async (files) => {
-			const [session, state, rng, prototypes, hexgrid, mapview, deploy, coreWorld, units] =
+			const [session, state, rng, settings, hexgrid, mapview, deploy, coreWorld, units] =
 				await Promise.all(files.map((f) => import(f) as Promise<Record<string, unknown>>));
-			(window as unknown as Probed).e2e = { game: session.game, toData: state.toData, Rng: rng.Rng, uiSettings: prototypes.uiSettings,
+			(window as unknown as Probed).e2e = { game: session.game, toData: state.toData, Rng: rng.Rng, uiSettings: settings.uiSettings,
 				hexCentre: hexgrid.hexCentre, selectionOf: mapview.selectionOf, deploymentOf: deploy.deploymentOf, reserveOf: deploy.reserveOf,
 				unitData: coreWorld.unitData, isAir: units.isAir } as Probe;
 		}, MODULES);

@@ -5,7 +5,7 @@ import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../core/types";
 import type { CloudReport } from "../app/storage";
 import type { GameHost } from "../app/host";
-import { uiSettings } from "../prototypes";
+import { uiSettings } from "../app/settings";
 import { MENU_CLOSED, menuBack, type MenuState } from "./menus";
 import { cloudRows, fileName, LOAD_ERROR, rememberCloudSave, saveName } from "./saveload";
 import { settingSignals } from "./uisettings";
