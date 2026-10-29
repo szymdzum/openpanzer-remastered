@@ -1,107 +1,130 @@
 //The unit card (UnitInfo, #346, #348 with #37): the one card of the selected unit, docked at the bottom, in two sizes.
 //Hidden, the default: one line (docs/ui/components/UnitInfo), the sprite, flag, name, stars and formation, the four
-//gauges each with what it means, the chips of what it can still do this turn, More and Next unit. Unfolded, on More:
-//the port's card for now (the open card is the next step of #37), its identity (tags, leader, views), its condition and
-//a band above them, over the map: every stat with its bar, move, range, spotting and value, the experience and the
-//leaders. What it says is the view model's (src/view/unitcard.ts, src/view/unitline.ts), read by the unit's id (#404).
-//Inspect unit (I) shows or hides it; Less and Esc fold it back to its line. The leader's tooltip opens on hover, focus
-//or a tap, above the card, never over the unit's name.
-import { useState } from "preact/hooks";
+//gauges each with what it means, the chips of what it can still do this turn, More and Next unit. Open, on More, over
+//the map: who it is, its condition with what each gauge means, what it can still do this turn, what it hits and holds
+//against each kind of enemy, and the band of what riding means. What it says is the view model's (src/view/unitcard.ts,
+//src/view/unitline.ts), read by the unit's id (#404). Inspect unit (I) shows or hides it; Less, Esc or a click on the
+//map fold it back to its line, and it never opens by itself
 import { Icon, type IconName, Mark } from "./icon";
-import { Meter, Stars } from "./meter";
+import { Stars } from "./meter";
 import { useEscape } from "./panel";
 import type { Store } from "./store";
-import { SegmentedControl } from "./tabs";
-import { Tooltip } from "./tooltip";
 import { frameStyle } from "./unitstrip";
-import type { CardStat, CardView, UnitCard } from "./unitcard";
+import type { CardGauge, CardStat, RideBand, UnitCard } from "./unitcard";
 import type { LeaderLine } from "./unitinfo";
 import type { CardLine, LineChip, LineGauge } from "./unitline";
 
-const VIEW_NAMES: Record<CardView, string> = { unit: "Unit", transport: "Transport", carrier: "Carrier" };
+const hexes = (n: number) => n + (n === 1 ? " hex" : " hexes");
+const width = (fill: number) => ({ width: `${Math.round(fill * 100)}%` });
 
-//The leader's name in brass, and its tooltip: both leaders as the game words them
-function Leader({ leaders }: { leaders: LeaderLine[] }) {
-	const [open, setOpen] = useState(false);
-	if (leaders.length === 0) return <div class="leader">No leader yet</div>;
-	const show = () => setOpen(true), hide = () => setOpen(false);
+function Name({ card, big = false }: { card: UnitCard, big?: boolean }) {
+	return <div id="uName" class={big ? "name lg" : "name"}>{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}{card.name}</div>;
+}
+
+//The leaders by name, each with what it gives as the game words it
+function Leaders({ leaders }: { leaders: LeaderLine[] }) {
+	if (leaders.length === 0) return <div class="ui-lead none">No leader yet</div>;
 	return (
 		<>
-			<button type="button" class="leader has" aria-describedby="uLeaderTip" aria-expanded={open} onMouseEnter={show} onMouseLeave={hide}
-				onFocus={show} onBlur={hide} onClick={() => setOpen(!open)}>
-				<Icon name="leader" size="sm" />{leaders[0].name}
-			</button>
-			<div id="uLeaderTip" class="pm-info-tip" hidden={!open}>
-				<Tooltip side="above">
-					{leaders.map((l) => (
-						<div key={l.name}>
-							<div class="hd"><Icon name={l.classLeader ? "info" : "leader"} size="sm" />{l.name}{l.classLeader && <span class="pm-muted"> · class leader</span>}</div>
-							<div>{l.description}</div>
-						</div>
-					))}
-				</Tooltip>
-			</div>
+			{leaders.map((l) => (
+				<div key={l.name} class="ui-lead">
+					<Icon name={l.classLeader ? "info" : "leader"} size="sm" />
+					<div><b>{l.name}</b>{l.classLeader && <span class="cl"> · class leader</span>}<span class="d">{l.description}</span></div>
+				</div>
+			))}
 		</>
 	);
 }
 
-function Name({ card }: { card: UnitCard }) {
-	return <div id="uName" class="name">{card.nation !== null && <span id="uSmallFlag"><Mark nation={card.nation} size="sm" /></span>}{card.name}</div>;
-}
-
-function Identity({ card, store }: { card: UnitCard, store: Pick<Store, "viewCard"> }) {
+//Who it is: sprite, flag, name, formation and country, its tags, its experience to the next star, its leaders
+function Identity({ card }: { card: UnitCard }) {
 	return (
-		<div id="statsRowTop" class="ui-id">
-			<div class="ui-spr" aria-hidden="true" style={frameStyle(card.sprite)} />
+		<div class="ui-col ui-id">
+			<Portrait line={card.line} big />
 			<div>
-				<Name card={card} />
+				<Name card={card} big />
 				<div class="cls">{card.sub}</div>
+				<div class="ui-tags">{card.tags.map((t, i) => <span key={t.text}>{i > 0 && " · "}{t.core ? <b>{t.text}</b> : t.text}</span>)}</div>
 			</div>
-			<div class="ui-tags">
-				{card.tags.slice(1).map((t) => <span key={t.text} class={t.core ? "pm-tag ui-core" : "pm-tag"}>{t.text}</span>)}
+			<div class="ui-xp" title={card.xp}>
+				<Stars earned={card.stars} /><span class="n">{card.xp}</span>
+				<span class="ui-bar" aria-hidden="true"><b style={width(card.toNextStar)} /></span>
 			</div>
-			<Stars earned={card.stars} />
-			<Leader key={card.unit} leaders={card.leaders} />
-			{card.views.length > 1 && <SegmentedControl label="Show" value={card.view} onChange={(v) => store.viewCard(v)}
-				options={card.views.map((v) => ({ value: v, label: VIEW_NAMES[v] }))} />}
+			<Leaders leaders={card.leaders} />
 		</div>
 	);
 }
 
+//A gauge of the open card: its label, its segments or bar, its value, and what it means
+function Gauge({ g }: { g: CardGauge }) {
+	return (
+		<div class={g.state === null ? "ui-c" : "ui-c " + g.state}>
+			<span class="k" title={g.tip ?? undefined}>{g.label}</span>
+			<Track g={g} />
+			<span class="v">{g.value}{g.of !== null && <small>{g.of}</small>}</span>
+			<span class="say" title={g.sayTip ?? undefined}>{g.say}</span>
+		</div>
+	);
+}
+
+//Its condition and what it can still do this turn: the chips in words, ok when it can, dashed when it can't
+function Condition({ card }: { card: UnitCard }) {
+	return (
+		<div class="ui-col ui-cond">
+			<h3 class="ui-h"><span>Condition</span>{card.resupply && <span class="pm-stamp ui-stamp">Resupply</span>}</h3>
+			{card.condition.map((g) => <Gauge key={g.label} g={g} />)}
+			{card.chips.length > 0 && <>
+				<h3 class="ui-h t">This turn</h3>
+				<div class="ui-turn wide">
+					{card.chips.map((c) => <span key={c.words} class={c.tone === null ? "ui-chip" : "ui-chip " + c.tone}><Icon name={c.icon} size="sm" />{c.words}</span>)}
+				</div>
+			</>}
+		</div>
+	);
+}
+
+//What it hits or holds against a kind of enemy: icon, name (what it means in its tooltip), bar and value
 function Stat({ s }: { s: CardStat }) {
 	return (
-		<div class="ui-stat">
+		<div class={s.tone === null ? "ui-m" : "ui-m " + s.tone} title={s.tip}>
+			<Icon name={s.icon} size="sm" />
 			<span class="k">{s.name}</span>
-			<span class="bar" aria-hidden="true"><b style={{ width: `${Math.round(s.fill * 100)}%` }} /></span>
+			{s.tone === "plus" || s.tone === "none" ? <span class="ui-bar empty" aria-hidden="true" />
+				: <span class="ui-bar" aria-hidden="true"><b style={width(s.fill)} /></span>}
 			<span class="v">{s.value}</span>
 		</div>
 	);
 }
 
-//The unfolded band: attack, defence, the figures, the experience and the leaders
-function Details({ card }: { card: UnitCard }) {
+//Against the enemy: what it hits and holds, initiative, range, spotting, the bonuses in force and what they add to; its
+//value in the corner
+function Versus({ card }: { card: UnitCard }) {
 	return (
-		<div id="unit-card" class="ui-more">
-			<section aria-label="Attack"><h3>Attack</h3>{card.attack.map((s) => <Stat key={s.name} s={s} />)}</section>
-			<section aria-label="Defence"><h3>Defence</h3>{card.defence.map((s) => <Stat key={s.name} s={s} />)}</section>
-			<section aria-label="Figures" class="ui-four">
-				{card.figures.map((f) => (
-					<div key={f.label}>
-						<span class="pm-label">{f.label}</span>
-						<span class={f.prestige ? "big pm-prestige" : "big"}>{f.value}</span>
-					</div>
-				))}
-			</section>
-			<section aria-label="Experience and leaders">
-				<h3>Experience</h3>
-				<p class="ui-xp">{card.xp}</p>
-				{card.leaders.map((l) => (
-					<div key={l.name} class="ui-ab">
-						<Icon name={l.classLeader ? "info" : "leader"} size="sm" />
-						<div><b>{l.name}</b><p>{l.description}</p></div>
-					</div>
-				))}
-			</section>
+		<div class="ui-col ui-vs">
+			<h3 class="ui-h"><span>Against the enemy</span>
+				<span class="ui-val" title="What the unit is worth, in prestige">Value <Icon name="prestige" size="sm" />{card.value}</span></h3>
+			<div class="ui-two">
+				<section aria-label="It hits"><h4>It hits</h4>{card.hits.map((s) => <Stat key={s.name} s={s} />)}</section>
+				<section aria-label="It holds"><h4>It holds</h4>{card.holds.map((s) => <Stat key={s.name} s={s} />)}</section>
+			</div>
+			<div class="ui-foot">
+				<span title={card.initiative.tip}><b>Initiative {card.initiative.value}</b></span>
+				<span><b>Fires</b> {hexes(card.fires)}</span>
+				<span><b>Sees</b> {hexes(card.sees)}</span>
+				{card.bonuses.length > 0 && <span class="mods">{card.bonuses.map((b) => (
+					<span key={b.text} title={b.tip}><span class="plus">{b.text}</span> <span class="to">{b.to}</span></span>
+				))}</span>}
+			</div>
+		</div>
+	);
+}
+
+//The band over the card while it rides: what riding does, what it can't get off from in critical
+function Band({ band }: { band: RideBand }) {
+	return (
+		<div class="ui-ribbon">
+			<Icon name="mount" size="sm" /><b>{band.on}</b>
+			{band.items.map((i) => <span key={i.text} class={i.warn ? "warn" : undefined} title={i.tip ?? undefined}>{i.text}</span>)}
 		</div>
 	);
 }
@@ -115,14 +138,19 @@ function Act({ icon, up = false, label, onClick }: { icon: IconName, up?: boolea
 	);
 }
 
+//A gauge's segments, or its bar when it has none
+function Track({ g }: { g: LineGauge }) {
+	return g.segs !== null
+		? <span class="ui-segs" aria-hidden="true">{g.segs.map((k, i) => <i key={i} class={k} />)}</span>
+		: <span class="ui-bar" aria-hidden="true"><b style={width(g.fill)} /></span>;
+}
+
 //A gauge of the line: its label with what it means, its segments or bar, its value
 function LineGaugeView({ g }: { g: LineGauge }) {
 	return (
 		<div class={g.state === null ? "ui-g" : "ui-g " + g.state}>
 			<span class="lab">{g.label}{g.say !== null && <em>{g.say}</em>}</span>
-			{g.segs !== null
-				? <span class="ui-segs" aria-hidden="true">{g.segs.map((k, i) => <i key={i} class={k} />)}</span>
-				: <span class="ui-bar" aria-hidden="true"><b style={{ width: `${Math.round(g.fill * 100)}%` }} /></span>}
+			<Track g={g} />
 			<span class="v">{g.value}{g.of !== null && <small>{g.of}</small>}</span>
 		</div>
 	);
@@ -139,20 +167,21 @@ function Chip({ c }: { c: LineChip }) {
 	);
 }
 
-//The sprite, with its transport's under it when it rides
-function Portrait({ line }: { line: CardLine }) {
+//The sprite, with its transport's under it when it rides; big on the open card
+function Portrait({ line, big = false }: { line: CardLine, big?: boolean }) {
 	return (
 		<span class="ui-port">
-			<span class="ui-spr sm" aria-hidden="true" style={frameStyle(line.sprite)} />
+			<span class={big ? "ui-spr" : "ui-spr sm"} aria-hidden="true" style={frameStyle(line.sprite)} />
 			{line.rides !== null && <span class="ui-ride" title={"On its " + line.rides.name}>
-				<span class="ui-spr xs" style={frameStyle(line.rides.sprite)} /><span class="pm-sr">On its {line.rides.name}</span>
+				<span class={big ? "ui-spr sm" : "ui-spr xs"} style={frameStyle(line.rides.sprite)} /><span class="pm-sr">On its {line.rides.name}</span>
 			</span>}
 		</span>
 	);
 }
 
 //The card hidden: one line
-function Line({ card, line, store }: { card: UnitCard, line: CardLine, store: Pick<Store, "shortcut" | "sizeCard"> }) {
+function Line({ card, store }: { card: UnitCard, store: Pick<Store, "shortcut" | "sizeCard"> }) {
+	const line = card.line;
 	return (
 		<section id="unit-info" class="pm-panel pm-uinfo line" aria-label="Selected unit">
 			<Portrait line={line} />
@@ -163,27 +192,25 @@ function Line({ card, line, store }: { card: UnitCard, line: CardLine, store: Pi
 			{line.gauges.map((g) => <LineGaugeView key={g.label} g={g} />)}
 			{line.chips.length > 0 && <span class="ui-turn">{line.chips.map((c) => <Chip key={c.words} c={c} />)}</span>}
 			<span class="ui-acts">
-				<Act icon="chevron-down" up label="More" onClick={() => store.sizeCard("full")} />
+				<Act icon="chevron-down" up label="More" onClick={() => store.sizeCard("open")} />
 				{card.next && <Act icon="arrow-right" label="Next unit" onClick={() => store.shortcut({ menu: "next" })} />}
 			</span>
 		</section>
 	);
 }
 
-//The card unfolded over the map, until the open card (#37)
-export function UnitInfoPanel({ store }: { store: Pick<Store, "card" | "cardSize" | "infoShown" | "shortcut" | "sizeCard" | "viewCard"> }) {
+export function UnitInfoPanel({ store }: { store: Pick<Store, "card" | "cardSize" | "infoShown" | "shortcut" | "sizeCard"> }) {
 	const card = store.card.value;
-	const shown = card !== null && store.infoShown.value, full = store.cardSize.value === "full";
-	useEscape(shown && full ? () => store.sizeCard("line") : undefined);
+	const shown = card !== null && store.infoShown.value, open = store.cardSize.value === "open";
+	useEscape(shown && open ? () => store.sizeCard("line") : undefined);
 	if (!shown) return null;
-	if (!full && card.line !== null) return <Line card={card} line={card.line} store={store} />;
+	if (!open) return <Line card={card} store={store} />;
 	return (
 		<section id="unit-info" class="pm-panel pm-uinfo open" aria-label="Selected unit">
-			<Details card={card} />
-			<Identity card={card} store={store} />
-			<div class="ui-meters">
-				{card.condition.map((m) => <Meter key={m.label} icon={m.icon} label={m.label} value={m.value} fill={m.fill} state={m.state} />)}
-			</div>
+			{card.band !== null && <Band band={card.band} />}
+			<Identity card={card} />
+			<Condition card={card} />
+			<Versus card={card} />
 			<div class="ui-acts">
 				<Act icon="chevron-down" label="Less" onClick={() => store.sizeCard("line")} />
 				{card.next && <Act icon="arrow-right" label="Next unit" onClick={() => store.shortcut({ menu: "next" })} />}

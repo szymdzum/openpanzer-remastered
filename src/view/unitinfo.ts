@@ -1,18 +1,8 @@
-//What the unit card (UnitInfo, src/view/unitcard.ts) words a unit's supply and leaders with: a meter, its state, the
+//What the unit card (UnitInfo, src/view/unitcard.ts) words a unit's supply and leaders with: a gauge's state, the
 //leaders as the game describes them. From the core's World and nothing else
 import type { World } from "../core/types";
 import { leaderDescriptions } from "../prototypes";
-import type { IconName } from "./icon";
 import type { SupplyState } from "./meter";
-
-//A supply meter: what it measures, "18/50", how full, and its state (none for entrenchment, or a unit that has none)
-export interface Gauge {
-	icon: IconName;
-	label: string;
-	value: string;
-	fill: number;
-	state?: SupplyState;
-}
 
 //A leader as the tooltip words it (Leaders.description); classLeader: the one every unit of its class with a leader has
 export interface LeaderLine {

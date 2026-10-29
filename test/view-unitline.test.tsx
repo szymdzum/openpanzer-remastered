@@ -32,7 +32,7 @@ function world(): World {
 	] }, undefined, { spotSide: 0 });
 }
 
-const lineOf = (w: World, id: number): CardLine => unitCardOf(w, id, null)!.line!;
+const lineOf = (w: World, id: number): CardLine => unitCardOf(w, id)!.line;
 //a gauge as it reads: label, what it means, value, maximum, state
 const read = (g: LineGauge) => [g.label, g.say, g.value + (g.of ?? ""), g.state];
 const chips = (line: CardLine) => line.chips.map((c) => [c.icon, c.count, c.words, c.tone]);
@@ -127,26 +127,30 @@ test("The line: sprite, flag, name, stars and formation, the gauges with their m
 	expect(chipsShown.map((c) => c.querySelector(".n")?.textContent ?? null)).toEqual(["6", null]);
 	for (const name of ["More", "Next unit"]) expect(screen.getByRole("button", { name }).getAttribute("title")).toBe(name);
 	//nothing of the open card, and no Hide: the line is the card hidden
-	expect([document.getElementById("unit-card"), screen.queryByRole("button", { name: "Hide" })]).toEqual([null, null]);
+	expect([document.querySelector("#unit-info .ui-vs"), screen.queryByRole("button", { name: "Hide" })]).toEqual([null, null]);
 	//Next unit selects the side's next unit that hasn't moved, on its line
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Next unit" })); });
 	expect([store.selected.value, document.getElementById("unit-info")!.className]).toEqual([1, "pm-panel pm-uinfo line"]);
 });
 
-test("Riding, the transport's sprite under the unit's, named; More unfolds the card, Less and Esc fold it back to the line (#37)", async () => {
+test("Riding, the transport's sprite under the unit's, named; More opens the card, Less, Esc and a click on the map fold it back to the line (#37)", async () => {
 	const store = panelOf(world());
 	await act(() => { store.pickUnit(1); });
 	const ride = document.querySelector("#unit-info .ui-ride")!;
 	expect([ride.getAttribute("title"), ride.textContent]).toEqual(["On its Opel Blitz", "On its Opel Blitz"]);
 	expect(screen.getByTitle("Riding").textContent).toBe("Riding");
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
-	expect([document.getElementById("unit-info")!.className, store.cardSize.value]).toEqual(["pm-panel pm-uinfo open", "full"]);
-	expect(document.getElementById("unit-card")).not.toBeNull();
+	expect([document.getElementById("unit-info")!.className, store.cardSize.value]).toEqual(["pm-panel pm-uinfo open", "open"]);
+	expect(document.querySelector("#unit-info .ui-ribbon")).not.toBeNull();
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "Less" })); });
 	expect([document.getElementById("unit-info")!.className, store.cardSize.value]).toEqual(["pm-panel pm-uinfo line", "line"]);
 	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
 	await act(() => { fireEvent.keyDown(document, { key: "Escape" }); });
 	expect(store.cardSize.value).toBe("line");
+	await act(() => { fireEvent.click(screen.getByRole("button", { name: "More" })); });
+	await act(() => { store.clickHex({ row: 6, col: 2 }); });
+	expect([store.cardSize.value, document.getElementById("unit-info")!.className]).toEqual(["line", "pm-panel pm-uinfo line"]);
+	await act(() => { store.pickUnit(1); });
 	//an enemy: no chips, no Next unit
 	await act(() => { store.pickUnit(6); });
 	expect([document.querySelector("#unit-info .ui-chip"), screen.queryByRole("button", { name: "Next unit" })]).toEqual([null, null]);

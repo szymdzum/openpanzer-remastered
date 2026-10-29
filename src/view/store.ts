@@ -48,7 +48,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	const { world, selected, airMode, refresh, dispatch, select, pickUnit, look } = core;
 	const step = createStep(core, host, page);
 	const notes = createNotes();
-	const map = createMap(core, step, () => { turn.banner.value = false; });
+	//(a click on the map closes the turn report and folds the unit card)
+	const map = createMap(core, step, () => { turn.banner.value = false; card.sizeCard("line"); });
 	const card = createCard(core, map, step);
 	const turn = createTurn(core, map, step, notes, host);
 	const { strategic, hexGrid } = map;
