@@ -1,6 +1,6 @@
 /**
  * The equipment's attribute bits the rules read: bridges, units that ignore entrenchment, the
- * targets a unit can start an attack on
+ * targets a unit can start an attack on; and its weak defence
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -50,4 +50,17 @@ export function canStartAttackOn(table: EquipmentTable, eqid: number, targetEqid
 		|| (!airAttackers.includes(e.uclass) && (e.attr & ATTACKS_AIR) === 0)))
 		return false;
 	return true;
+}
+
+//The defences an attacker would pick: ground, air and close
+export type DefenceField = "grounddef" | "airdef" | "closedef";
+const DEFENCES: DefenceField[] = ["grounddef", "airdef", "closedef"];
+
+//Its weak defence: the lowest of ground, air and close defence (each one at that value), when it is at most half the
+//highest of the three; none when all three are 0
+export function weakDefences(e: EquipmentEntry): DefenceField[] {
+	const values = DEFENCES.map((f) => e[f]);
+	const low = Math.min(...values), high = Math.max(...values);
+	if (high === 0 || low * 2 > high) return [];
+	return DEFENCES.filter((f) => e[f] === low);
 }

@@ -36,12 +36,22 @@ function seenByEnemy(w: World, u: UnitState): boolean {
 	return isSpotted(w, hexIndex(w, u.row, u.col), ~sideOf(w, u) & 1);
 }
 
+//The levels the unit's hex gives at once, its terrain's: a unit that can entrench gets them at its first end of turn
+export function entrenchBase(w: World, u: UnitState): number {
+	return terrainEntrenchment[w.data.hexes[hexIndex(w, u.row, u.col)].terrain];
+}
+
+//The most the unit can dig in on its hex: the terrain's levels and 5 more
+export function entrenchLimit(w: World, u: UnitState): number {
+	return entrenchBase(w, u) + 5;
+}
+
 //Unit.entrench: up to the terrain's entrenchment at once, then one level at a time as the ticks
-//(experience and the class's rate) fill it, at most 5 levels above the terrain's
+//(experience and the class's rate) fill it, up to the hex's limit
 function entrench(d: Draft, u: UnitState) {
 	if (!canEntrench(d, u) || u.row < 0) return;
 	const uclass = unitData(d, u).uclass;
-	const terrain = terrainEntrenchment[d.data.hexes[hexIndex(d, u.row, u.col)].terrain];
+	const terrain = entrenchBase(d, u);
 	if (u.entrenchment < terrain) {
 		u.entrenchment = terrain;
 		u.entrenchTicks = 0;
@@ -50,7 +60,7 @@ function entrench(d: Draft, u: UnitState) {
 	let level = u.entrenchment - terrain;
 	let next = 9 * level + 4;
 	u.entrenchTicks += +(u.experience / 100) + (terrain + 1) * unitEntrenchRate[uclass];
-	while (u.entrenchTicks >= next && u.entrenchment < terrain + 5) {
+	while (u.entrenchTicks >= next && u.entrenchment < entrenchLimit(d, u)) {
 		u.entrenchTicks -= next;
 		u.entrenchment++;
 		level++;
