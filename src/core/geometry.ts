@@ -10,7 +10,6 @@
 import { direction } from "./tables";
 import type { Position } from "./types";
 
-/** The distance in hexes between two cells (the original's GameRules.distance). */
 export function distance(row1: number, col1: number, row2: number, col2: number): number {
 	//Shift the grid so its columns run diagonally: x is twice the row, plus one on odd columns
 	const x1 = col1 % 2 ? row1 * 2 + 1 : row1 * 2;
@@ -48,11 +47,7 @@ export function adjacent(row: number, col: number): Position[] {
 	];
 }
 
-/**
- * The cells around (row, col) up to `range` on a rows x cols map, without the cell itself: its column first,
- * top down, then the columns at 1, 2... on the right and the left, row by row. The order is the move range's
- * and the attack cells'. Column 0 is a column like the others (#69).
- */
+/** The cells around (row, col) up to `range`, not itself: its column, top down, then columns 1, 2... right and left. */
 export function cellsInRange(row: number, col: number, range: number, rows: number, cols: number): Position[] {
 	const cells: Position[] = [];
 	if (range <= 0) return cells;
@@ -82,20 +77,14 @@ function columnPair(cells: Position[], lo: number, hi: number, col: number, colO
 	}
 }
 
-/**
- * Whether (row, col) is one of the half hexes on the map's edges, which no unit can enter: the even columns of
- * the first row, the last column and the odd columns of the last row when the map says they are partial.
- */
+/** Whether (row, col) is a half hex on the map's edge, which no unit can enter. */
 export function isPartialEdge(row: number, col: number, rows: number, cols: number,
 	lastRowPartial: boolean, lastColPartial: boolean): boolean {
 	return (row === 0 && col % 2 === 0) || (lastColPartial && col === cols - 1)
 		|| (lastRowPartial && row === rows - 1 && col % 2 === 1);
 }
 
-/**
- * The approximate compass direction from (row1, col1) to (row2, col2), one of 16 (the original's
- * GameRules.getDirection).
- */
+/** The approximate compass direction between two cells, one of 16 (the original's GameRules.getDirection). */
 export function directionTo(row1: number, col1: number, row2: number, col2: number): number {
 	if (col1 & 1 && row1 === row2) row1++;
 	if (col2 & 1 && row1 === row2) row2++;

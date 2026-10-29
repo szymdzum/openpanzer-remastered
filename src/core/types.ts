@@ -22,10 +22,7 @@ export type ScenarioOutcome = "briliant" | "victory" | "tactical" | "lose";
 /** The equipment by eqid, as loaded: read-only. */
 export type EquipmentTable = Readonly<{ [eqid: string]: EquipmentEntry }>;
 
-/**
- * What a query reads (docs/CORE.md): the data, the state, the equipment and the rules, the inputs that aren't
- * state, and what is derived from the state, kept beside it (D2, D10).
- */
+/** What a query reads (docs/CORE.md): data, state, equipment, rules, other inputs, and what is derived (D2, D10). */
 export interface World {
 	readonly data: ScenarioData;
 	readonly state: GameState;
@@ -47,19 +44,14 @@ export interface World {
 	scratch: Int32Array | null;
 }
 
-/**
- * How many units of side 0 and 1 spot each hex and have it in their zone of control, by hex index
- * (row * cols + col).
- */
+/** How many units of each side spot a hex and have it in their zone of control, by hex index (row * cols + col). */
 export interface Sight {
 	spot: [Uint16Array, Uint16Array];
 	zoc: [Uint16Array, Uint16Array];
 }
 
-/** The rulesets a game can play by (rules.ts). */
 export type RulesetName = "classic" | "remaster";
 
-/** The rules a game plays by, as data: its tables and the switches of the remaster's changes. */
 export interface Ruleset {
 	name: RulesetName;
 	//The movement cost tables by ground condition (dry, frozen, mud): a row per movMethod, a cost
@@ -104,10 +96,7 @@ export interface Ruleset {
 	ai: AIRules;
 }
 
-/**
- * The computer player's rules: its settings (aiDefaultConfig, the bundle's, in the classic rules) and the
- * switches of the remaster's changes to its play, each off in the classic rules.
- */
+/** The AI's rules: its settings and the remaster's switches to its play, each off in the classic rules. */
 export interface AIRules {
 	config: AIConfig;
 	//The share of the bonus for staying entrenched that a side attacking keeps for a unit away from the
@@ -116,10 +105,7 @@ export interface AIRules {
 	attackerEntrenchment: number;
 }
 
-/**
- * A hex of a move range (the original's extendedCell): its distance from the unit, the cost to enter it (cin)
- * and to leave it (cout), its terrain cost, and whether the unit can stop there or pass through.
- */
+/** A hex of a move range (the original's extendedCell): its distance, cost to enter (cin) and leave (cout) it. */
 export interface MoveCell {
 	row: number;
 	col: number;
@@ -139,7 +125,6 @@ export interface PathCell {
 	dist: number;
 }
 
-/** A unit's ammo and fuel, and its transport's. */
 export interface Supply {
 	ammo: number;
 	fuel: number;
@@ -147,10 +132,7 @@ export interface Supply {
 	transportFuel: number;
 }
 
-/**
- * An attack's result (the original's combatResults): the strength the defender loses (kills) and the attacker
- * loses (losses), the experience each gains, and what happened.
- */
+/** An attack's result: the strength the defender (kills) and the attacker (losses) lose, the experience gained. */
 export interface CombatResult {
 	kills: number;
 	losses: number;
@@ -165,10 +147,7 @@ export interface CombatResult {
 	isRugged: boolean;
 }
 
-/**
- * The four values an attack compares: the attacker's attack (aav) and defense (adv), the defender's attack
- * (dav) and defense (ddv).
- */
+/** The four values an attack compares: attacker's attack (aav) and defense (adv), defender's (dav, ddv). */
 export interface CombatValues {
 	aav: number;
 	adv: number;
@@ -176,7 +155,6 @@ export interface CombatValues {
 	ddv: number;
 }
 
-/** Which of the two fighters. */
 export type Side = "attacker" | "defender";
 
 /** What a combat step changed: `{ name: "rugged defense", side: "defender", field: "aav", before: 9, after: 4.5 }`. */
@@ -188,10 +166,7 @@ export interface Contribution {
 	after: number;
 }
 
-/**
- * An attack while its steps run: the two units, what they fight as, where, and the values the steps change
- * (combat.ts change() sets one and records it when `record` isn't null).
- */
+/** An attack while its steps run: the units, what they fight as, and the values the steps change and record. */
 export interface Fight {
 	readonly world: World;
 	readonly atk: UnitState;
@@ -213,17 +188,12 @@ export interface Fight {
 	readonly record: Contribution[] | null;
 }
 
-/** One step that makes an attack's values. */
 export interface CombatStep {
 	name: string;
 	run(fight: Fight): void;
 }
 
-/**
- * A step's world (draft.ts): the state as the step changes it, copied on write so the state the step was
- * given stays as it was, with the unit index and the sight kept up to date as it goes, the game's random
- * stream and the events so far.
- */
+/** A step's world (draft.ts): the state copied on write, with the index, sight, game stream and events. */
 export interface Draft extends World {
 	readonly state: GameState;
 	index: ReadonlyMap<UnitId, number>;
@@ -235,16 +205,12 @@ export interface Draft extends World {
 	readonly events: GameEvent[];
 }
 
-/**
- * A command's handler: `check` says whether it is allowed, or why not, without changing anything; `run` plays
- * it on a draft, once `check` has allowed it.
- */
+/** A command's handler: `check` says whether it is allowed, or why not; `run` plays it on a draft once allowed. */
 export interface CommandHandler<C extends Command> {
 	check(w: World, cmd: C): Refusal | null;
 	run(d: Draft, cmd: C): void;
 }
 
-/** The strengths before an attack, for its finish. */
 export interface AttackStart {
 	attacker: UnitId;
 	defender: UnitId;
@@ -252,10 +218,7 @@ export interface AttackStart {
 	defStrength: number;
 }
 
-/**
- * Where a move or an attack waits for the screen, which animates it and finishes it when the animation ends,
- * showing the state in between; a program goes on at once.
- */
+/** Where a move or an attack waits for the screen to animate it; a program goes on at once. */
 export type Checkpoint =
 	//The unit moved: next, the surprise attack on the hidden enemy it ran into and the capture's victory
 	| { next: "surprise"; unit: UnitId; surprise: Position | null; win: boolean }

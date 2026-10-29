@@ -8,10 +8,8 @@
 
 /** A unit's id: given when it enters the map, never changed. */
 export type UnitId = number;
-/** A player's index in the state's player list. */
 export type PlayerId = number;
 
-/** A hex of the map. */
 export interface Position {
 	row: number;
 	col: number;
@@ -29,7 +27,6 @@ export interface ScenarioData {
 	hexes: HexData[];		//flat, index row * cols + col (the size is the state's, MapState)
 }
 
-/** The unchanging part of a hex. */
 export interface HexData {
 	terrain: number;
 	road: number;			//roadType bit mask
@@ -37,7 +34,6 @@ export interface HexData {
 	deployment: number;		//the player id that deploys here, -1 for none
 }
 
-/** The whole game state a step changes: everything but the scenario's data. */
 export interface GameState {
 	version: 1;
 	scenario: ScenarioState;
@@ -53,7 +49,6 @@ export interface GameState {
 	equipment: EquipmentState;
 }
 
-/** The scenario's own state: its date, ground and turn limits. */
 export interface ScenarioState {
 	file: string;			//the scenario it was loaded from, for the record (D3)
 	date: string;			//ISO date of the current turn
@@ -68,16 +63,12 @@ export interface ScenarioState {
 	unitsCostPerSide: [number, number];
 }
 
-/**
- * The experience of a side's units at the start and how many there were: outside a campaign a bought unit
- * gets the enemy side's average (the original's Scenario.getSideUnitsAvgExp).
- */
+/** A side's units' experience at the start and their count: outside a campaign a bought unit gets the enemy's. */
 export interface SideExperience {
 	exp: number;
 	count: number;
 }
 
-/** The map's size and its hexes' state. */
 export interface MapState {
 	rows: number;
 	cols: number;
@@ -95,7 +86,6 @@ export interface HexState {
 	victorySide: number;		//-1 when not an objective
 }
 
-/** A unit on the map. */
 export interface UnitState {
 	id: UnitId;			//given when the unit enters the map, never changed (D1)
 	eqid: number;
@@ -125,7 +115,6 @@ export interface UnitState {
 	tempSpotted: boolean;		//lost by today's save (#84)
 }
 
-/** The transport a unit can mount. */
 export interface TransportState {
 	eqid: number;
 	ammo: number;
@@ -135,7 +124,6 @@ export interface TransportState {
 /** A unit not on the map: it has no id (D1) and no hex. */
 export type OffMapUnit = Omit<UnitState, "id" | "row" | "col">;
 
-/** A player. */
 export interface PlayerState {
 	id: PlayerId;
 	side: number;
@@ -162,29 +150,19 @@ export interface PlayerDossier {
 	outcomes?: { [outcome: string]: string[] }; //outcomeNames keys
 }
 
-/**
- * The campaign's statistics of a player: the units lost (core and auxiliary) and killed by unit class, the
- * scenario names by outcome. Empty until the original's Player.initDossier.
- */
+/** The campaign's statistics of a player: units lost (core and auxiliary) and killed by class, scenarios by outcome. */
 export type Dossier = PlayerDossier;
 
-/**
- * A core unit: deployed (on the map, by id), bought or sent to HQ and waiting to be deployed (#149), or
- * destroyed on the map and still in the list until the player goes to HQ (setPlayerToHQ drops it).
- */
+/** A core unit: on the map, waiting to deploy (#149), or destroyed and listed until the player goes to HQ. */
 export type CoreUnit = { onMap: UnitId } | { reserve: OffMapUnit } | { lost: OffMapUnit };
 
-/** The turn and whose it is. */
 export interface TurnState {
 	turn: number;
 	currentPlayer: PlayerId;	//lost by today's save (#71); -1 without players
 	undoable: UndoState | null;	//the last move, while it can be taken back (D5)
 }
 
-/**
- * The last move of a human player's unit while it can be undone: the unit, the unit as it was before the
- * move (where it stood, its fuel and moves...) and what the move's capture changed, to put back.
- */
+/** A human player's last move, while it can be undone: the unit as it was before, and the capture to put back. */
 export interface UndoState {
 	unit: UnitId;
 	before: UnitState;
@@ -196,7 +174,6 @@ export interface UndoState {
 	objectiveIndex?: number;	//where the objective taken was in its side's list (#141); absent when none, or in a save from before #141
 }
 
-/** A unit that arrives on the map at a turn. */
 export interface ReinforcementState {
 	turn: number;			//a number, not a string (#55)
 	row: number;
@@ -206,13 +183,11 @@ export interface ReinforcementState {
 
 /** A random stream's position (D8): mulberry32, its whole state one 32-bit number. */
 export type RngState = number;
-/** The game's and the AI's random streams. */
 export interface RngStreams {
 	game: RngState;
 	ai: RngState;
 }
 
-/** The campaign a game belongs to. */
 export interface CampaignState {
 	id: number;			//its index in campaignlist
 	file: string;			//its data file, which finds it again if the list changes
@@ -223,14 +198,12 @@ export interface CampaignState {
 	progress: CampaignProgress;
 }
 
-/** What the game keeps between a campaign's scenarios. */
 export interface CampaignProgress {
 	isStart: boolean;		//the first scenario: its prestige, dossier and core units are set when it loads
 	removeNonCampaignUnits: boolean;	//a later one: the scenario's own units on the deployment hexes go
 	awardPrototype: boolean;	//after a brilliant victory: a prototype unit in the next scenario
 }
 
-/** The index lists of a country file: equipment ids by unit class. */
 export interface EquipmentIndexes {
 	unitclass?: { [uclass: string]: number[] };
 }
@@ -244,7 +217,6 @@ export interface EquipmentState {
 	indexes: { [country: string]: EquipmentIndexes };
 }
 
-/** A game as saved: its data and its state. */
 export interface SavedGame {
 	data: ScenarioData;
 	state: GameState;

@@ -15,7 +15,6 @@ export function unitIndex(state: GameState): Map<UnitId, number> {
 	return index;
 }
 
-/** The unit with an id, null when it isn't on the map. */
 export function unitById(w: World, id: UnitId): UnitState | null {
 	const i = w.index.get(id);
 	return i === undefined ? null : w.state.units[i];
@@ -26,7 +25,6 @@ export function hexIndex(w: World, row: number, col: number): number {
 	return row * w.state.map.cols + col;
 }
 
-/** Whether (row, col) is a hex of the map. */
 export function onMap(w: World, row: number, col: number): boolean {
 	return row >= 0 && row < w.state.map.rows && col >= 0 && col < w.state.map.cols;
 }
@@ -37,7 +35,6 @@ export function groundUnitAt(w: World, hex: number): UnitState | null {
 	return id === null ? null : unitById(w, id);
 }
 
-/** The air unit on a hex, null for none. */
 export function airUnitAt(w: World, hex: number): UnitState | null {
 	const id = w.state.map.hexes[hex].air;
 	return id === null ? null : unitById(w, id);
@@ -50,28 +47,20 @@ export function unitAt(w: World, hex: number, airMode: boolean): UnitState | nul
 	return ground !== null ? ground : air;
 }
 
-/** The player a unit belongs to. */
 export function playerOf(w: World, u: UnitState): PlayerState {
 	return w.state.players[u.owner];
 }
 
-/** The side of a unit's player. */
 export function sideOf(w: World, u: UnitState): number {
 	return w.state.players[u.owner].side;
 }
 
-/**
- * Whether the unit is riding its transport: the transport's fuel and points are the ones a move uses, and a
- * move uses the unit's shot too (moves.ts burn).
- */
+/** Whether the unit rides its transport: its fuel and points are a move's, and a move uses the unit's shot too. */
 export function isRiding(u: UnitState): boolean {
 	return u.isMounted && u.transport !== null;
 }
 
-/**
- * What the unit currently is (the original's Unit.getEqid): the carrier it is on, its transport if mounted,
- * or itself. `forceUnit`: itself.
- */
+/** What the unit currently is (the original's Unit.getEqid): its carrier, its transport if mounted, or itself. */
 export function currentEqid(u: UnitState, forceUnit = false): number {
 	if (u.carrier > 0 && !forceUnit) return u.carrier;
 	if (isRiding(u) && !forceUnit) return u.transport.eqid;
@@ -105,12 +94,10 @@ export function isSpotted(w: World, hex: number, side: number): boolean {
 	return w.noFOW || (side < 2 && w.sight.spot[side][hex] > 0);
 }
 
-/** Whether the hex is in the side's zone of control. */
 export function isZOC(w: World, hex: number, side: number): boolean {
 	return side < 2 && w.sight.zoc[side][hex] > 0;
 }
 
-/** Sight with no unit counted, for a map of `hexes` hexes. */
 export function emptySight(hexes: number): Sight {
 	return { spot: [new Uint16Array(hexes), new Uint16Array(hexes)], zoc: [new Uint16Array(hexes), new Uint16Array(hexes)] };
 }

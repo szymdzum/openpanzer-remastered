@@ -10,18 +10,15 @@ import { movMethod, terrainType, unitClass, unitEntrenchRate } from "./tables";
 import type { UnitState, World } from "./types";
 import { ammoOf, fuelOf, sideOf, unitData } from "./world";
 
-/** Whether the unit currently moves by air. */
 export function isAir(w: World, u: UnitState): boolean {
 	return unitData(w, u).movmethod === movMethod.air;
 }
 
-/** Whether the unit is a ship or a submarine. */
 export function isSea(w: World, u: UnitState): boolean {
 	const uclass = unitData(w, u).uclass;
 	return uclass >= unitClass.submarine && uclass <= unitClass.lightCruiser;
 }
 
-/** Whether the unit is of a ground class. */
 export function isGround(w: World, u: UnitState): boolean {
 	return unitData(w, u).uclass <= unitClass.airDefence;
 }
@@ -31,7 +28,6 @@ export function isTrain(w: World, u: UnitState): boolean {
 	return isGround(w, u) && unitData(w, u).movmethod === movMethod.deepnaval;
 }
 
-/** Whether the terrain makes an attack on it close combat. */
 export function isCloseCombatTerrain(terrain: number): boolean {
 	return terrain === terrainType.City || terrain === terrainType.Forest || terrain === terrainType.Mountain
 		|| terrain === terrainType.Fortification;
@@ -44,7 +40,6 @@ export function hasLeader(w: World, u: UnitState, leader: number): boolean {
 	return w.rules.classLeaders[unitData(w, u).uclass] === leader;
 }
 
-/** Whether the two units are on different sides. */
 export function isEnemy(w: World, u: UnitState, target: UnitState): boolean {
 	return sideOf(w, u) !== sideOf(w, target);
 }
@@ -60,32 +55,26 @@ export function usesFuel(e: EquipmentEntry): boolean {
 	return e.movmethod !== movMethod.leg && e.movmethod !== movMethod.towed && e.movmethod !== movMethod.allTerrainLeg;
 }
 
-/** Whether the unit burns fuel as what it currently is. */
 export function unitUsesFuel(w: World, u: UnitState): boolean {
 	return usesFuel(unitData(w, u));
 }
 
-/** Whether the unit uses ammo as what it currently is. */
 export function unitUsesAmmo(w: World, u: UnitState): boolean {
 	return unitData(w, u).ammo !== 0;
 }
 
-/** Whether the unit burns fuel and has less than `threshold` left. */
 export function unitLowFuel(w: World, u: UnitState, threshold: number): boolean {
 	return unitUsesFuel(w, u) && fuelOf(u) < threshold;
 }
 
-/** Whether the unit uses ammo and has less than `threshold` left. */
 export function unitLowAmmo(w: World, u: UnitState, threshold: number): boolean {
 	return unitUsesAmmo(w, u) && ammoOf(u) < threshold;
 }
 
-/** Whether the unit can mount its transport. */
 export function canMount(w: World, u: UnitState): boolean {
 	return !u.hasMoved && isGround(w, u) && u.transport !== null;
 }
 
-/** Whether the unit can get off its transport. */
 export function canUnmount(u: UnitState): boolean {
 	return !u.hasMoved && u.isMounted;
 }
@@ -109,11 +98,7 @@ export function isTransportable(w: World, eqid: number): boolean {
 	return w.equipment[eqid].groundweight !== 0;
 }
 
-/**
- * Whether the side still has units to fight with: one on the map or, in the remaster's rules, one waiting to
- * deploy (a reserve unit of one of its players) or to arrive (a reinforcement). The original counts only the
- * units on the map, so a side whose units all wait to deploy is eliminated (#115).
- */
+/** Whether the side has units to fight: on the map or, in the remaster's rules, waiting to deploy or arrive (#115). */
 export function sideHasUnits(w: World, side: number): boolean {
 	const s = w.state;
 	if (s.units.some((u) => sideOf(w, u) === side)) return true;
