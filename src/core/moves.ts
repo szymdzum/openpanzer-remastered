@@ -14,7 +14,7 @@ import { canPassInto, disembarkPositions, pathTo, shortestPath, terrainCost, uni
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
-import { hexIndex, isSpotted, unitById, unitData } from "./world";
+import { hexIndex, isRiding, isSpotted, unitById, unitData } from "./world";
 
 //What a move came to: the hex a hidden enemy stopped it before (null: none), and whether its
 //capture took its side's last objective
@@ -122,7 +122,7 @@ function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 //The fuel and points a move uses: a transport's fuel and all its points (it can't fire after), or
 //the unit's own (no fuel on a carrier)
 function burn(d: Draft, u: UnitState, used: number) {
-	if (u.isMounted && u.transport !== null) {
+	if (isRiding(u)) {
 		u.hasFired = true;
 		if (usesFuel(d.equipment[u.transport.eqid])) u.transport.fuel -= used;
 		u.moveLeft = 0;

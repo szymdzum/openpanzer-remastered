@@ -12,10 +12,10 @@
  * estimate before the attack, which decides an overrun, draws nothing.
  */
 
-import { scoreGains, UNIT_MAX_EXPERIENCE, unitClass } from "../prototypes";
+import { scoreGains, UNIT_MAX_EXPERIENCE } from "../prototypes";
 import { nextRandom, type RngStream } from "../rng";
 import { attackableUnit, supportFireUnits } from "./attack";
-import { attackResult, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
+import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
 import { addScore, beginDraft, changeUnit, emit, finishDraft, playerAt, removeUnit, spotOff, spotOn, writeUnit } from "./draft";
 import type { Fighter, FighterState } from "./events";
 import { directionTo } from "./geometry";
@@ -50,7 +50,7 @@ export function resolveFight(w: World, atk: UnitState, def: UnitState, rng: RngS
 	const record: Contribution[] = [];
 	const result = attackResult(w, atk, def, rng, record);
 	//Mounted infantry gets off its transport when attacked, unless it was surprised moving
-	const dismount = def.isMounted && !def.isSurprised && w.equipment[def.eqid].uclass === unitClass.infantry;
+	const dismount = dismountsWhenAttacked(w, def);
 	if (overrun) {
 		record.push({ name: "overrun", side: "attacker", field: "kills", before: result.kills, after: def.strength });
 		result.kills = def.strength;

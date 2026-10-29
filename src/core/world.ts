@@ -55,11 +55,17 @@ export function sideOf(w: World, u: UnitState): number {
 	return w.state.players[u.owner].side;
 }
 
+//Riding its transport: the transport's fuel and points are the ones a move uses, and a move uses the
+//unit's shot too (moves.ts burn)
+export function isRiding(u: UnitState): boolean {
+	return u.isMounted && u.transport !== null;
+}
+
 //What the unit currently is: the carrier it is on, the transport it is mounted on, or itself
 //(Unit.getEqid). forceUnit: itself
 export function currentEqid(u: UnitState, forceUnit = false): number {
 	if (u.carrier > 0 && !forceUnit) return u.carrier;
-	if (u.isMounted && u.transport !== null && !forceUnit) return u.transport.eqid;
+	if (isRiding(u) && !forceUnit) return u.transport.eqid;
 	return u.eqid;
 }
 
@@ -70,17 +76,17 @@ export function unitData(w: World, u: UnitState, forceUnit = false): EquipmentEn
 //The movement points left: a carrier's or a transport's whole points (they use them all at once)
 export function movesLeft(w: World, u: UnitState): number {
 	if (u.carrier > 0) return w.equipment[u.carrier].movpoints;
-	if (u.isMounted && u.transport !== null) return w.equipment[u.transport.eqid].movpoints;
+	if (isRiding(u)) return w.equipment[u.transport.eqid].movpoints;
 	return u.hasMoved ? 0 : u.moveLeft;
 }
 
 //The ammo and fuel the unit uses now: its transport's when mounted
 export function ammoOf(u: UnitState): number {
-	return u.isMounted && u.transport !== null ? u.transport.ammo : u.ammo;
+	return isRiding(u) ? u.transport.ammo : u.ammo;
 }
 
 export function fuelOf(u: UnitState): number {
-	return u.isMounted && u.transport !== null ? u.transport.fuel : u.fuel;
+	return isRiding(u) ? u.transport.fuel : u.fuel;
 }
 
 export function isSpotted(w: World, hex: number, side: number): boolean {

@@ -7,9 +7,8 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { unitClass } from "../prototypes";
 import { supportFireUnits } from "./attack";
-import { attackResult, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
+import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
 import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import type { CombatResult, Contribution, UnitId, UnitState, World } from "./types";
@@ -50,7 +49,7 @@ function seenSupport(w: World, atk: UnitState, def: UnitState): UnitState[] {
 function defenderAfter(w: World, atk: UnitState, def: UnitState, kills: number): UnitState {
 	const facing = isBridgeForSide(w, hexIndex(w, def.row, def.col), sideOf(w, def)) ? def.facing
 		: directionTo(def.row, def.col, atk.row, atk.col);
-	const dismount = def.isMounted && !def.isSurprised && w.equipment[def.eqid].uclass === unitClass.infantry;
+	const dismount = dismountsWhenAttacked(w, def);
 	return { ...def, strength: def.strength - kills, facing, isMounted: dismount ? false : def.isMounted };
 }
 

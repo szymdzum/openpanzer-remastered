@@ -18,7 +18,7 @@ import type {
 	CombatResult, CombatStep, CombatValues, Contribution, Fight, Side, UnitState, World
 } from "./types";
 import { hasLeader, isAir, isCloseCombatTerrain, isGround, isSea } from "./units";
-import { hexIndex, isSpotted, sideOf, unitData } from "./world";
+import { currentEqid, hexIndex, isRiding, isSpotted, sideOf, unitData } from "./world";
 
 //Sets a value of the fight, recorded when the fight keeps a record and the value changed
 function change(f: Fight, name: string, side: Side, field: keyof CombatValues, value: number) {
@@ -31,7 +31,11 @@ function add(f: Fight, name: string, side: Side, field: keyof CombatValues, amou
 	change(f, name, side, field, f.values[field] + amount);
 }
 
-const expBars = (u: UnitState) => (u.experience / 100) >> 0;
+//What a unit's experience adds in a fight ("+1 veteran"): a point per 100, to its attack and its defence, attacking
+//or defending (the "experience" step); its rugged defense counts it too
+export function experienceBonus(u: UnitState): number {
+	return (u.experience / 100) >> 0;
+}
 
 //A step that applies a leader's bonus to the side that has it
 function leaderStep(name: string, leader: number, run: (f: Fight, atk: boolean, def: boolean) => void): CombatStep {
@@ -49,16 +53,37 @@ function entrenchments(f: Fight): [number, number] {
 	const w = f.world;
 	let a = f.aEntrenchIntact && !f.isCloseCombat ? f.atk.entrenchment : 0;
 	let d = f.dEntrenchIntact ? f.def.entrenchment : 0;
-	if (hasLeader(w, f.atk, leaderType.infiltrationTactics) && !hasLeader(w, f.def, leaderType.ferociousDefense)) d = 0;
-	if (hasLeader(w, f.def, leaderType.infiltrationTactics) && !hasLeader(w, f.atk, leaderType.ferociousDefense)) a = 0;
+	if (hasLeader(w, f.atk, leaderType.infiltrationTactics) && !holdsEntrenchment(w, f.def)) d = 0;
+	if (hasLeader(w, f.def, leaderType.infiltrationTactics) && !holdsEntrenchment(w, f.atk)) a = 0;
 	return [a, d];
+}
+
+//Ferocious defense: nothing ignores the unit's entrenchment
+export function holdsEntrenchment(w: World, u: UnitState): boolean {
+	return hasLeader(w, u, leaderType.ferociousDefense);
+}
+
+//A city, rough or a port: where a street fighter ignores the entrenchment, and an infiltrating unit too
+export function isStreetTerrain(terrain: number): boolean {
+	return terrain === terrainType.City || terrain === terrainType.Rough || terrain === terrainType.Port;
+}
+
+//Infantry in a city, forest, mountain or fortification: its entrenchment counts twice against the classes that
+//entrenchmentCountsTwiceAgainst names
+export function doublesEntrenchment(defClass: number, terrain: number): boolean {
+	return defClass === unitClass.infantry && isCloseCombatTerrain(terrain);
+}
+
+//The classes infantry's entrenchment counts twice against in close terrain: tanks, recon, anti-tank, flak and
+//fortifications (not infantry, artillery, air or ships)
+export function entrenchmentCountsTwiceAgainst(atkClass: number): boolean {
+	return atkClass > unitClass.infantry && atkClass < unitClass.groundTransport;
 }
 
 //Infantry in a city, forest or mountain, not attacked by infantry, artillery, air or ships: its
 //entrenchment counts twice
 function entrenchedInCloseTerrain(f: Fight): boolean {
-	return f.dData.uclass === unitClass.infantry && isCloseCombatTerrain(f.dTerrain) && !f.isCloseCombat
-		&& f.aData.uclass > unitClass.infantry && f.aData.uclass < unitClass.groundTransport;
+	return doublesEntrenchment(f.dData.uclass, f.dTerrain) && !f.isCloseCombat && entrenchmentCountsTwiceAgainst(f.aData.uclass);
 }
 
 //Anti-tank that moved has no range defense, unless a tank killer
@@ -70,8 +95,7 @@ function attackerRangeDefense(f: Fight): boolean {
 export const classicCombat: CombatStep[] = [
 	{ name: "infantry dismounts", run(f) {
 		//a mounted infantry defender fights on foot, unless surprised
-		if (f.def.isMounted && !f.def.isSurprised && unitData(f.world, f.def, true).uclass === unitClass.infantry)
-			f.dData = f.world.equipment[f.def.eqid];
+		if (dismountsWhenAttacked(f.world, f.def)) f.dData = f.world.equipment[f.def.eqid];
 	} },
 	{ name: "attacker's type", run(f) {
 		//the defender's attack and defense against what the attacker is
@@ -184,7 +208,7 @@ export const classicCombat: CombatStep[] = [
 		if (entrenchedInCloseTerrain(f)) add(f, "infantry entrenched in close terrain", "defender", "ddv", d);
 	} },
 	{ name: "experience", run(f) {
-		const a = expBars(f.atk), d = expBars(f.def);
+		const a = experienceBonus(f.atk), d = experienceBonus(f.def);
 		add(f, "experience", "attacker", "aav", a);
 		add(f, "experience", "attacker", "adv", a);
 		add(f, "experience", "defender", "dav", d);
@@ -374,17 +398,80 @@ export function combatResult(w: World, atk: UnitState, def: UnitState, withHidde
 //Whether def's entrenchment counts against atk on terrain: not against a unit that ignores it, or
 //an infiltrating or street fighting one in a city, rough or port; always with ferocious defense
 export function isEntrenchmentIntact(w: World, atk: UnitState, def: UnitState, terrain: number): boolean {
-	if (hasLeader(w, def, leaderType.ferociousDefense)) return true;
+	if (holdsEntrenchment(w, def)) return true;
 	if (ignoresEntrenchment(w.equipment, atk.eqid)) return false;
 	return !((hasLeader(w, atk, leaderType.infiltrationTactics) || hasLeader(w, atk, leaderType.streetFighter))
-		&& (terrain === terrainType.City || terrain === terrainType.Rough || terrain === terrainType.Port));
+		&& isStreetTerrain(terrain));
+}
+
+//What def's entrenchment adds to its defence against atk, as the attack counts it (the "entrenchment" steps of
+//rules.combat, read from their record): its level, none where it isn't intact or against infiltration tactics,
+//twice for infantry in close terrain against vehicles. Draws nothing
+export function entrenchmentAgainst(w: World, atk: UnitState, def: UnitState): number {
+	const record: Contribution[] = [];
+	attackResult(w, atk, def, null, record);
+	return record.filter((c) => c.side === "defender" && c.field === "ddv"
+		&& (c.name === "entrenchment" || c.name === "infantry entrenched in close terrain"))
+		.reduce((sum, c) => sum + c.after - c.before, 0);
+}
+
+//What a unit's entrenchment does for its defence in general ("Entrenched 2: +2 defence") and the exceptions
+//the attack makes (isEntrenchmentIntact, entrenchments, entrenchedInCloseTerrain): level, one point of defence
+//a level; holds, with ferocious defense nothing ignores it; else the attackers that ignore entrenchment and those
+//with infiltration tactics ignore it anywhere, street fighters where streetFighters (a city, rough, a port);
+//doubled, infantry in close terrain counts it twice against tanks, recon, anti-tank, flak and fortifications.
+//It is 0 after a move: moving drops it (moves.ts payMove), each hit takes a level (fight.ts hit), and it comes
+//back at the end of the turn (turn.ts entrench)
+export interface EntrenchmentFacts {
+	level: number;
+	holds: boolean;
+	streetFighters: boolean;
+	doubled: boolean;
+}
+
+export function entrenchmentFacts(w: World, u: UnitState): EntrenchmentFacts {
+	//(an air unit fights over clear terrain, as attackResult has it)
+	const terrain = isAir(w, u) ? terrainType.Clear : w.data.hexes[hexIndex(w, u.row, u.col)].terrain;
+	const holds = holdsEntrenchment(w, u);
+	return { level: u.entrenchment, holds, streetFighters: !holds && isStreetTerrain(terrain),
+		doubled: doublesEntrenchment(w.equipment[defenderEqid(w, u)].uclass, terrain) };
+}
+
+//A mounted infantry defender gets off its transport and fights on foot, unless it was surprised moving
+export function dismountsWhenAttacked(w: World, u: UnitState): boolean {
+	return u.isMounted && !u.isSurprised && w.equipment[u.eqid].uclass === unitClass.infantry;
+}
+
+//The equipment the attack reads for u as a defender: its own when it dismounts, else what it is now (a
+//mounted gun or a surprised mounted infantry defends as its transport, a unit on a carrier as the carrier)
+export function defenderEqid(w: World, u: UnitState): number {
+	return dismountsWhenAttacked(w, u) ? u.eqid : currentEqid(u);
+}
+
+//What riding its transport means for a mounted unit ("on the truck's fuel", "can't fire the turn it rides",
+//"attacked, it gets off and fights on foot"); null when it isn't riding. transport: its eqid, whose fuel (fuel) and
+//points its moves use, all the points at once, its shot with them (moves.ts burn: isRiding). dismounts: attacked now,
+//it fights on foot with its own equipment; defendsWith: the equipment it defends with now (defenderEqid), and
+//surprisedDefendsWith the one it would defend with surprised in a move (the transport's, no dismount)
+export interface Riding {
+	transport: number;
+	fuel: number;
+	dismounts: boolean;
+	defendsWith: number;
+	surprisedDefendsWith: number;
+}
+
+export function riding(w: World, u: UnitState): Riding | null {
+	if (!isRiding(u)) return null;
+	return { transport: u.transport.eqid, fuel: u.transport.fuel, dismounts: dismountsWhenAttacked(w, u),
+		defendsWith: defenderEqid(w, u), surprisedDefendsWith: defenderEqid(w, { ...u, isSurprised: true }) };
 }
 
 //An entrenched defender's rugged defense: its experience, leader and entrenchment rate against the
 //attacker's
 export function isRuggedDefense(w: World, atk: UnitState, def: UnitState): boolean {
-	let aRugged = expBars(atk) + 2;
-	let dRugged = expBars(def) + 2;
+	let aRugged = experienceBonus(atk) + 2;
+	let dRugged = experienceBonus(def) + 2;
 	if (hasLeader(w, atk, leaderType.tenaciousDefense)) aRugged += 2;
 	if (hasLeader(w, def, leaderType.tenaciousDefense)) dRugged += 2;
 	const aRate = unitEntrenchRate[unitData(w, atk).uclass] + 1;
