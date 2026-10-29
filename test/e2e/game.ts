@@ -292,7 +292,7 @@ async function play() {
 	await step("a move off the deployment zone", move);
 
 	await step("the bought unit deployed", async () => {
-		await ui(".pm-reserve button", { hasText: "Deploy" }).click();
+		await ui(".pm-corner .pm-deploynow").click();
 		await shown(ui("section.pm-deploy[aria-label=Reserve]"));
 		const at = await world(([w, p]) => {
 			const r = p.reserveOf(w)[0], d = p.deploymentOf(w, r.index)!;
