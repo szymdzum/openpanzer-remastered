@@ -5,7 +5,7 @@
 import { expect, test } from "vitest";
 import { canFire, canFireThisTurn, firesOnAircraft } from "../src/core/attack";
 import {
-	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentAgainst, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
+	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
 	entrenchmentAttacking, experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, isCloseCombat, rangeDefence, riding
 } from "../src/core/combat";
 import { fullMoves, movesLeftThisTurn, unitMoveRange } from "../src/core/movement";
@@ -168,6 +168,15 @@ test("A unit can resupply when it hasn't moved, fired or resupplied and is short
 	expect(can({ eqid: INFANTERIE, transport: truck(30) })).toBe(true); //the truck is short of fuel
 	expect(can({ eqid: ME_109, ammo: 2 })).toBe(false); //no airfield near
 });
+
+//What def's entrenchment adds to its defence against atk, read from the "entrenchment" steps of the attack's record
+function entrenchmentAgainst(w: World, atk: UnitState, def: UnitState): number {
+	const record: Contribution[] = [];
+	attackResult(w, atk, def, null, record);
+	return record.filter((c) => c.side === "defender" && c.field === "ddv"
+		&& (c.name === "entrenchment" || c.name === "infantry entrenched in close terrain"))
+		.reduce((sum, c) => sum + c.after - c.before, 0);
+}
 
 test("Entrenchment adds its level to the defence, nothing against those that ignore it, twice for infantry in close terrain against vehicles (#37)", () => {
 	const forest = () => terrainType.Forest, city = () => terrainType.City, clear = () => terrainType.Clear;

@@ -8,7 +8,7 @@
 
 import { movMethod, terrainType, unitClass, unitEntrenchRate } from "./tables";
 import type { UnitState, World } from "./types";
-import { sideOf, unitData } from "./world";
+import { ammoOf, fuelOf, sideOf, unitData } from "./world";
 
 export function isAir(w: World, u: UnitState): boolean {
 	return unitData(w, u).movmethod === movMethod.air;
@@ -64,11 +64,11 @@ export function unitUsesAmmo(w: World, u: UnitState): boolean {
 }
 
 export function unitLowFuel(w: World, u: UnitState, threshold: number): boolean {
-	return unitUsesFuel(w, u) && (u.isMounted ? u.transport.fuel : u.fuel) < threshold;
+	return unitUsesFuel(w, u) && fuelOf(u) < threshold;
 }
 
 export function unitLowAmmo(w: World, u: UnitState, threshold: number): boolean {
-	return unitUsesAmmo(w, u) && (u.isMounted ? u.transport.ammo : u.ammo) < threshold;
+	return unitUsesAmmo(w, u) && ammoOf(u) < threshold;
 }
 
 export function canMount(w: World, u: UnitState): boolean {

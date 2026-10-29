@@ -56,10 +56,11 @@ function entrench(d: Draft, u: UnitState) {
 		u.entrenchTicks = 0;
 		return;
 	}
+	const limit = entrenchLimit(d, u);
 	let level = u.entrenchment - terrain;
 	let next = 9 * level + 4;
 	u.entrenchTicks += +(u.experience / 100) + (terrain + 1) * unitEntrenchRate[uclass];
-	while (u.entrenchTicks >= next && u.entrenchment < entrenchLimit(d, u)) {
+	while (u.entrenchTicks >= next && u.entrenchment < limit) {
 		u.entrenchTicks -= next;
 		u.entrenchment++;
 		level++;

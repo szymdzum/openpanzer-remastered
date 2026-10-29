@@ -10,7 +10,7 @@ Everything about the selected unit, docked at the bottom in the middle. Every nu
 | "3 full moves" | its fuel (the transport's when riding) over a whole turn's points and the leaders' hexes, rounded down; `null`, no count, for legs, towed guns, horse-drawn transports, aircraft (fuel alone) and a unit on a carrier | `fullMoves`, src/core/movement.ts | yes |
 | "1 shot left" | the rounds left: every shot uses one, return and support fire too | `fire`, src/core/fight.ts; `ammoOf`, src/core/world.ts | yes |
 | "Can fire", "Can't fire" | it has its shot: not fired (a move riding uses it too), uses ammo and has some; the map's marker says the same (#436). Whether a target is in range is another question, not the card's | `canFireThisTurn`, src/core/attack.ts | yes |
-| "+4 defence" and its tooltip | the level, whether it holds, whether street fighters cancel it here, whether it counts twice | `entrenchmentFacts`, src/core/combat.ts (`entrenchmentAgainst` for one attacker) | yes |
+| "+4 defence" and its tooltip | the level, whether it holds, whether street fighters cancel it here, whether it counts twice | `entrenchmentFacts`, src/core/combat.ts | yes |
 | entrenchment segments | the hex's limit, the terrain's base + 5; the base drawn lighter | `entrenchLimit`, `entrenchBase`, src/core/turn.ts | yes |
 | "+1 veteran" | one per 100 XP, added to attack and defence in every fight | `experienceBonus`, src/core/combat.ts | yes |
 | Resupply stamp | ammo or fuel critical, and it can resupply here now | `canResupply`, src/core/supply.ts | yes |
