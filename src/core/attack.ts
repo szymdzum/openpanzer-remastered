@@ -9,7 +9,7 @@ import { leaderType, unitClass } from "../prototypes";
 import { canStartAttackOn } from "./equipment";
 import { cellsInRange, distance } from "./geometry";
 import type { Position, UnitState, World } from "./types";
-import { hasLeader, isAir, isEnemy, isGone } from "./units";
+import { hasLeader, isAir, isEnemy, isGone, unitUsesAmmo } from "./units";
 import { ammoOf, currentEqid, hexIndex, isSpotted, sideOf, unitAt, unitData } from "./world";
 
 //A gun range of 0 fires at the neighbours
@@ -25,6 +25,13 @@ export function unitAttackRange(w: World, u: UnitState): number {
 export function canFire(w: World, u: UnitState, target: UnitState): boolean {
 	if (isGone(w, u) || ammoOf(u) <= 0 || isGone(w, target) || !isEnemy(w, u, target)) return false;
 	return !(isAir(w, target) && unitData(w, u).airatk <= 0);
+}
+
+//Whether u still has its shot this turn ("can fire"): it hasn't fired (an attack, or a move on its transport,
+//uses it: moves.ts burn), what it is now uses ammo, and it has some left (its transport's when mounted).
+//Not whether anything is in range: attackCells says that (#436)
+export function canFireThisTurn(w: World, u: UnitState): boolean {
+	return !u.hasFired && unitUsesAmmo(w, u) && ammoOf(u) > 0;
 }
 
 //Whether u can start an attack on target (some units only fire back at some targets)

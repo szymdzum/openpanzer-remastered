@@ -44,6 +44,24 @@ export function unitMoveRange(w: World, u: UnitState): number {
 	return range;
 }
 
+//The hexes a unit can still move this turn, terrain aside ("6 moves left"): its move range's reach, none once it
+//has moved (a mounted unit's or a carrier's points stay whole after the move, and the leaders' hexes come on top of
+//the 0 a moved unit has left: only hasMoved ends its moves, as moveRange says)
+export function movesLeftThisTurn(w: World, u: UnitState): number {
+	return u.hasMoved ? 0 : unitMoveRange(w, u);
+}
+
+//How many full moves its fuel pays for ("3 full moves"): a move burns the points it uses (moves.ts burn), at most
+//a whole turn's, the points of what it is now (its transport's when mounted) and the leaders' hexes; its fuel
+//(the transport's when mounted) over that, rounded down, 0 when the fuel is short of one full move. null: no
+//fuel to count, for a unit that burns none (legs, a towed gun, a horse-drawn transport), an aircraft (its fuel
+//is its time in the air, not moves) and a unit on a carrier (the carrier moves it on no fuel of its own)
+export function fullMoves(w: World, u: UnitState): number | null {
+	if (u.carrier > 0 || isAir(w, u) || !unitUsesFuel(w, u)) return null;
+	const perMove = unitData(w, u).movpoints + leaderMoves(w, u);
+	return perMove > 0 ? Math.floor(fuelOf(u) / perMove) : null;
+}
+
 //Whether u can end its move on a hex: nothing of its kind (ground and naval, or air) there
 export function canMoveInto(w: World, u: UnitState, cell: Position): boolean {
 	const hex = hexIndex(w, cell.row, cell.col);
