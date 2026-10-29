@@ -13,10 +13,7 @@ import type { Command } from "./command";
 import type { GameEvent } from "./events";
 import type { Position, UnitId, World } from "./types";
 
-/**
- * What a controller asks of the screen, which changes nothing in the state: select a unit, show a message
- * pointing at a hex, look at a hex, open the main menu. A program playing the game ignores them.
- */
+/** What a controller asks of the screen, which changes nothing in the state; a program playing the game ignores it. */
 export type ViewEvent =
 	| { type: "select"; unit: UnitId | null }
 	//The text is HTML; {prestige} stands for the prestige icon, which is the view's
@@ -27,14 +24,9 @@ export type ViewEvent =
 	//The attack it got stuck on, its unit and target (null: none)
 	| { type: "stuck"; reason: string; unit?: UnitId | null; target?: UnitId | null };
 
-/** One thing to do: a command to step, or something to show. */
 export type Order = { command: Command } | { view: ViewEvent };
 
-/**
- * What a controller did to the world outside the orders: the world after (its commands stepped, its stream
- * moved on), the commands it played, in order, and what they and it told. `handOver`: it gave its player
- * away (the tutorial at its end), to whoever the player's type in the world now says.
- */
+/** What a controller did: the world after, its commands, what they told. `handOver`: it gave its player away. */
 export interface Played {
 	world: World;
 	commands: Command[];

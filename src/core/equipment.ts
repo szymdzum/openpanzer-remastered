@@ -27,20 +27,15 @@ function hasAttr(table: EquipmentTable, eqid: number, bit: number): boolean {
 	return e !== undefined && (e.attr & bit) !== 0;
 }
 
-/** Whether the equipment is a bridge unit. */
 export function isBridge(table: EquipmentTable, eqid: number): boolean {
 	return hasAttr(table, eqid, BRIDGE);
 }
 
-/** Whether the equipment ignores the defender's entrenchment. */
 export function ignoresEntrenchment(table: EquipmentTable, eqid: number): boolean {
 	return hasAttr(table, eqid, IGNORE_ENTRENCH);
 }
 
-/**
- * Whether a unit of type `eqid` can start an attack on a unit of type `targetEqid` (whether it can fire at
- * all is attack.ts's canFire).
- */
+/** Whether `eqid` can start an attack on `targetEqid` (whether it can fire at all is attack.ts's canFire). */
 export function canStartAttackOn(table: EquipmentTable, eqid: number, targetEqid: number): boolean {
 	const e = table[eqid], t = table[targetEqid];
 	if (e === undefined || t === undefined) return false;
@@ -56,14 +51,10 @@ export function canStartAttackOn(table: EquipmentTable, eqid: number, targetEqid
 	return true;
 }
 
-/** The defences an attacker would pick: ground, air and close. */
 export type DefenceField = "grounddef" | "airdef" | "closedef";
 const DEFENCES: DefenceField[] = ["grounddef", "airdef", "closedef"];
 
-/**
- * The entry's weak defence: the lowest of ground, air and close defence (each one at that value), when it is
- * at most half the highest of the three; none when all three are 0.
- */
+/** The entry's weak defence: the lowest of the three, when at most half the highest; none when all are 0. */
 export function weakDefences(e: EquipmentEntry): DefenceField[] {
 	const values = DEFENCES.map((f) => e[f]);
 	const low = Math.min(...values), high = Math.max(...values);

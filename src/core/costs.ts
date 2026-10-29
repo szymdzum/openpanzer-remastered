@@ -17,10 +17,7 @@ export function unitCost(w: World, eqid?: number, transportId?: number): number 
 	return cost;
 }
 
-/**
- * The price of upgrading `u` to `upgradeId` (none: itself) with `transportId` (-1 removes the transport), less
- * what `u` is worth: a different unit or transport costs UPGRADE_PENALTY times its price.
- */
+/** The price of upgrading `u` to `upgradeId` with `transportId` (-1: none), less its worth; a change costs more. */
 export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transportId?: number): number {
 	let ncost: number;
 	if (upgradeId > 0)

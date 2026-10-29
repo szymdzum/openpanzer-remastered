@@ -57,7 +57,6 @@ export function randomSeed(): number {
 //number don't draw the same numbers
 var AI_SALT = 0x61692121, COSMETIC_SALT = 0x636f736d;
 
-/** The game's, the AI's and the cosmetic random streams. */
 export var Rng: RngModule = {
 	source: null,
 	game: { state: null },

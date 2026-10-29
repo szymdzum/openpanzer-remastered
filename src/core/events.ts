@@ -8,14 +8,12 @@
 
 import type { CombatResult, Contribution, Position, Supply, UnitId } from "./types";
 
-/** A hex of a move's path and whether the other side saw the unit pass it. */
 export interface PathStep {
 	row: number;
 	col: number;
 	visible: boolean;
 }
 
-/** A unit in a fight, before and after it (the combat log's entries). */
 export interface Fighter {
 	unit: UnitId;
 	eqid: number;
@@ -28,7 +26,6 @@ export interface Fighter {
 	after: FighterState;
 }
 
-/** A fighter's numbers at one moment of the fight. */
 export interface FighterState {
 	strength: number;
 	experience: number;
@@ -36,7 +33,6 @@ export interface FighterState {
 	ammo: number;
 }
 
-/** What a step did, one variant per kind of thing, in the order it happened. */
 export type GameEvent =
 	//The unit moved along path (its hex first), paying cost; visible: the other side saw some of it
 	| { type: "moved"; unit: UnitId; path: PathStep[]; cost: number; visible: boolean }
@@ -89,5 +85,4 @@ export type GameEvent =
 	//A scenario's reinforcement arrived on the map
 	| { type: "arrived"; unit: UnitId; at: Position };
 
-/** The event of one type: `EventOf<"fight">`. */
 export type EventOf<T extends GameEvent["type"]> = Extract<GameEvent, { type: T }>;

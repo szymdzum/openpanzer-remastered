@@ -30,9 +30,7 @@ export type Command =
 	| { type: "sell"; index: number } //a core unit not on the map
 	| { type: "endTurn" };
 
-/** The `type` tag of a command. */
 export type CommandType = Command["type"];
-/** The command of one type: `CommandOf<"move">`. */
 export type CommandOf<T extends CommandType> = Extract<Command, { type: T }>;
 
 /** Why a command isn't allowed, in words a player understands. */

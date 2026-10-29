@@ -34,7 +34,6 @@ const leaders = [
 	[], [], [], [], [], [], [], [], [], [],
 ];
 
-/** The original's rules, with no change to the mechanics or the AI. */
 export const classicRules: Ruleset = {
 	name: "classic",
 	movement: [movTableDry, movTableFrozen, movTableMud],
@@ -51,10 +50,7 @@ export const classicRules: Ruleset = {
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
-/**
- * The remaster's rules: the classic ones plus the changes set below, each measured in the AI arena
- * (docs/ai/arena.md).
- */
+/** The remaster's rules: the classic ones plus the changes below, each measured in the AI arena (docs/ai/arena.md). */
 export const remasterRules: Ruleset = {
 	...classicRules,
 	name: "remaster",
@@ -82,10 +78,7 @@ export const remasterRules: Ruleset = {
 /** The ruleset of a name; a name it doesn't know (a save from before the rulesets) plays the classic rules. */
 export const rulesetNamed = (name: string | undefined): Ruleset => name === remasterRules.name ? remasterRules : classicRules;
 
-/**
- * The movement costs of a movement method on the scenario's ground; an unknown ground condition moves as on dry
- * (the original's Scenario.setMoveTable).
- */
+/** The movement costs of a movement method on the scenario's ground; an unknown ground moves as dry. */
 export function moveCosts(rules: Ruleset, ground: number, movmethod: number): number[] {
 	const table = ground === groundCondition.frozen || ground === groundCondition.mud ? rules.movement[ground]
 		: rules.movement[groundCondition.dry];

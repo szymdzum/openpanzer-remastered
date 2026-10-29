@@ -34,7 +34,6 @@ export function spotCells(w: World, u: UnitState): Position[] {
 	return cells;
 }
 
-/** Every unit's spotting and zone of control, counted per hex and side. */
 export function computeSight(w: World): Sight {
 	const sight = emptySight(w.state.map.rows * w.state.map.cols);
 	for (const u of w.state.units) {

@@ -12,12 +12,9 @@
  * carried over from the openpanzer 2.9 source where the code matches.
  */
 
-/** A unit's target type: how it is hit. */
 export let unitType = { none:-1, soft:0, hard:1, air:2, sea:3 };
-/** Display names of unitType, from soft. */
 export let unitTypeNames = ["Soft", "Hard", "Air", "Sea"];
 
-/** Unit classes by name. */
 export let unitClass = {
 	none: 0, infantry: 1, tank: 2, recon: 3, antiTank: 4, flak: 5, fortification: 6,
 	groundTransport: 7, artillery: 8, airDefence: 9, fighter: 10, tacticalBomber: 11,
@@ -25,7 +22,6 @@ export let unitClass = {
 	carrier: 17, navalTransport: 18, battleCruiser: 19, cruiser: 20, lightCruiser: 21
 };
 
-/** Display names of unitClass. */
 export let unitClassNames =
 [
 	"No Class", "Infantry", "Tank", "Recon", "Anti Tank", "Flak", "Fortification",
@@ -34,13 +30,9 @@ export let unitClassNames =
 	"Aircraft Carrier", "Naval Transport", "Battle Cruiser", "Cruiser", "Light Cruiser"
 ];
 
-/** How fast each unit class entrenches. */
 export let unitEntrenchRate = [0, 3, 1, 2, 2, 1, 1, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-/**
- * Road directions as power-of-2 bit masks. A hex with road value 136 has a road starting from the middle of
- * the hex going NW (128) and one going SE (8).
- */
+/** Road directions as bit masks: road value 136 is a road going NW (128) and one going SE (8). */
 export let roadType = {
 	none:0, north:1, northeast: 2, eastunused: 4, southeast:8,
 	south: 16, southwest: 32, westunused: 64, northwest: 128
@@ -52,14 +44,12 @@ export let direction = {
 	W:12, WSW:13, SW:14, SSW:15
 };
 
-/** Terrain types by name. */
 export let terrainType = {
 	Clear:0, City:1, Airfield:2, Forest:3, Bocage:4, Hill:5, Mountain:6, Sand:7,
 	Swamp:8, Ocean:9, River:10, Fortification:11, Port:12, Stream:13, Escarpment:14,
 	impassableRiver:15, Rough:16
 };
 
-/** Display names of terrainType. */
 export let terrainNames =
 [
 	"Clear", "City", "Airfield", "Forest", "Bocage", "Hill", "Mountain", "Sand",
@@ -73,35 +63,28 @@ export let terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 
 /** The cap terrain puts on initiative, by terrainType (99: no cap). */
 export let terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99, 99, 99, 3, 1 ];
 
-/** The scenario's ground conditions, which pick the movement table. */
 export let groundCondition = { dry:0, frozen: 1, mud: 2 };
-/** Display names of groundCondition. */
 export let groundConditionNames = [ "Dry", "Frozen", "Mud" ];
-/** The two sides. */
 export let playerSide = { axis: 0, allies: 1 };
 
-/** Display names of the sides. */
 export let sideNames =
 [
 	"Axis",
 	"Allies"
 ];
 
-/** Movement methods by name: the rows of the movement tables. */
 export let movMethod = {
 	tracked: 0, halfTracked: 1, wheeled: 2, leg: 3, towed: 4, air: 5,
 	deepnaval: 6, costal: 7, allTerrainTracked: 8, amphibious: 9, naval: 10,
 	allTerrainLeg: 11
 };
 
-/** Display names of movMethod. */
 export let movMethodNames =
 [
 	"Tracked", "Half Tracked", "Wheeled", "Leg", "Towed", "Air", "Deep Naval",
 	"Costal", "All Terrain", "Amphibious", "Naval", "Mountain Leg"
 ];
 
-/** Display names of a scenario's outcomes. */
 export let outcomeNames: { [outcome: string]: string } = {
 	"lose": "Defeat",
 	"victory": "Victory",
@@ -112,10 +95,7 @@ export let outcomeNames: { [outcome: string]: string } = {
 /** How a unit is carried: by sea, by air transport, or by air dropped. */
 export let embarkType = { none: 0, naval: 1, airmobile: 2, airborne: 3 };
 
-/**
- * The movement cost tables of a ground condition: a row per movMethod, a cost per terrainType and the road
- * last. 254 stops the move (the hex can be entered), 255 can't be entered.
- */
+/** Movement costs on dry ground: a row per movMethod, a cost per terrainType, the road last. 254 stops, 255 bars. */
 export let movTableDry =
 [
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
@@ -170,7 +150,6 @@ export let movTableMud =
 ];
 
 
-/** Who plays a player. */
 export let playerType = {
 	humanLocal: 0,
 	humanNetwork: 1,
@@ -202,7 +181,6 @@ export interface AIConfig {
 	unitClassKillValue: number[];
 }
 
-/** The settings of the original's AI. */
 export let aiDefaultConfig: AIConfig = {
 	minReinforceStrength: 4,
 	minAmmo: 2,
@@ -225,7 +203,6 @@ export let aiDefaultConfig: AIConfig = {
 	unitClassKillValue: [0, 50, 25, 30, 10, 10, 5, 150, 150, 10, 50, 100, 100, 150, 50, 50, 50, 100, 150, 50, 50, 50]
 };
 
-/** The prestige a capture gives. */
 export let prestigeGains = {
 	flagCapture: 50,
 	objectiveCapture: 150
@@ -246,7 +223,6 @@ export let scoreGains = {
 	resupply: -10 //per action
 };
 
-/** Leaders by name, with what each does. */
 export let leaderType = {
 	//Class Leaders
 	mechanizedVeteran: 		1, 	//Air Defence unit may move and fire in the same turn.
@@ -285,7 +261,6 @@ export let leaderType = {
 	superiorManeuver:		33	//The unit may bypass enemy units’ zones of control.
 };
 
-/** The prestige, turns and score a difficulty changes. */
 export interface DifficultyModifier {
 	startPrestige: number;
 	turnPrestige: number;
@@ -300,15 +275,12 @@ export let difficultyModifiers: { [difficulty: number]: DifficultyModifier } = {
 	2: { startPrestige: 0.5, turnPrestige: 0.25, extraTurns: 1.5, scoreCoef: 0.5 }	//operational
 };
 
-/** The experience cap of a unit. */
 export let UNIT_MAX_EXPERIENCE = 500;
 /** The share of losses at which a unit starts to retreat. */
 export let UNIT_RETREAT_THRESHOLD = 0.6;
 /** The multiplier PG2 applies to the unit costs defined in the equipment. */
 export let CURRENCY_MULTIPLIER = 12;
-/** What an upgrade's cost is multiplied by. */
 export let UPGRADE_PENALTY = 1.2;
-/** What an overstrength reinforcement's cost is multiplied by. */
 export let OVERSTRENGTH_PENALTY = 1.2;
 /** The start prestige of a scenario played outside a campaign. */
 export let SCENARIO_START_PRESTIGE = 2000;

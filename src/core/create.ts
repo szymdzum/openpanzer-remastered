@@ -11,7 +11,6 @@ import { computeSight } from "./sight";
 import type { EquipmentTable, GameState, Ruleset, ScenarioData, Sight, UnitId, World } from "./types";
 import { emptySight, unitIndex } from "./world";
 
-/** The inputs of a world that aren't state; see World. */
 export interface WorldOptions {
 	rules?: Ruleset;		//classicRules
 	noFOW?: boolean;

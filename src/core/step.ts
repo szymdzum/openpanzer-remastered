@@ -42,7 +42,6 @@ export function check(w: World, cmd: Command): Refusal | null {
 	return handler.check(w, cmd);
 }
 
-/** The result of step: the world and the events after the command, or the refusal. */
 export type Stepped = { ok: true; world: World; events: GameEvent[] } | { ok: false; refusal: Refusal };
 
 /** Checks `cmd`, then plays it: the world after it (`w` stays as it was) and what happened, in order. */
@@ -54,10 +53,7 @@ export function step(w: World, cmd: Command): Stepped {
 	return { ok: true, world: finishDraft(d), events: d.events };
 }
 
-/**
- * The result of begin: the world then, the events so far and the checkpoint, null when the command is done;
- * or the refusal.
- */
+/** The result of begin: the world, the events so far and the checkpoint (null when done), or the refusal. */
 export type Begun = { ok: true; world: World; events: GameEvent[]; checkpoint: Checkpoint | null } | { ok: false; refusal: Refusal };
 
 /** Plays `cmd` up to its first checkpoint (a move or an attack: the screen animates it there), the others whole. */
@@ -72,17 +68,13 @@ export function begin(w: World, cmd: Command): Begun {
 	return { ok: true, world: finishDraft(d), events: d.events, checkpoint };
 }
 
-/** The result of resume: the world and the events since the checkpoint, and the next one (null when done). */
 export interface Resumed {
 	world: World;
 	events: GameEvent[];
 	checkpoint: Checkpoint | null;
 }
 
-/**
- * Goes on from a checkpoint to the next one. `w` is the world at the checkpoint, or the game's since (a unit
- * the selection put back aboard meanwhile).
- */
+/** Goes on from a checkpoint to the next one. `w` is the world at the checkpoint, or the game's since. */
 export function resume(w: World, cp: Checkpoint): Resumed {
 	const d = beginDraft(w);
 	const checkpoint = resumeFrom(d, cp);
