@@ -166,7 +166,7 @@ export function heldUntil(beats: Beat[], events: GameEvent[]): Map<UnitId, numbe
 //The hex slot that holds the unit in a world, null when none does
 function slotOf(w: World, id: UnitId, u: UnitState | null): { hex: number; key: "unit" | "air" } | null {
 	if (u === null || u.row < 0) return null;
-	const hex = u.row * w.state.map.cols + u.col, h = w.state.map.hexes[hex];
+	const hex = hexIndex(w, u.row, u.col), h = w.state.map.hexes[hex];
 	return h.unit === id ? { hex, key: "unit" } : h.air === id ? { hex, key: "air" } : null;
 }
 

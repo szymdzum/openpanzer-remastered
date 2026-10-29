@@ -4,7 +4,7 @@
 //the objectives taken or lost, the automatic resupplies and the reinforcements of a turn's start; then it writes them
 //as the window's five reports, under the turn's summary. Plain functions, tested on hand-built worlds
 import type { EventOf, GameEvent } from "../../core/events";
-import { sideOf, unitById } from "../../core/world";
+import { hexIndex, sideOf, unitById } from "../../core/world";
 import type { Position, UnitId, World } from "../../core/types";
 import { leaderDescriptions } from "../../legacy/prototypes";
 import { terrainNames, terrainType, unitClass } from "../../core/tables";
@@ -154,7 +154,7 @@ const unitWords = (w: World, u: { id: UnitId, eqid: number, isCore: boolean }): 
 
 //Where a unit fought from: the hex's name and its terrain when it isn't clear, and the hex
 function placeOf(w: World, p: Position): string {
-	const h = w.data.hexes[p.row * w.state.map.cols + p.col];
+	const h = w.data.hexes[hexIndex(w, p.row, p.col)];
 	const parts = [h.name, h.terrain !== terrainType.Clear ? terrainNames[h.terrain] : ""].filter((s) => s !== "");
 	return (parts.length > 0 ? parts.join(" ") + " " : "") + `(${p.row},${p.col})`;
 }
@@ -207,7 +207,7 @@ function leaderEntry(w: World, l: TurnLog["leaders"][number]): LogEntry {
 }
 
 function objectiveEntry(w: World, o: TurnLog["objectives"][number]): LogEntry {
-	const name = w.data.hexes[o.at.row * w.state.map.cols + o.at.col].name;
+	const name = w.data.hexes[hexIndex(w, o.at.row, o.at.col)].name;
 	return { sprite: null, icon: "objective", destroyed: false, at: o.at,
 		words: [o.ours ? "Captured objective " : "Lost objective ", { b: name }, ` at (${o.at.row},${o.at.col}).`] };
 }

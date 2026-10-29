@@ -5,7 +5,7 @@
 //the path the one the move takes, the targets the attack cells.
 import type { Command } from "../../core/command";
 import { attackableUnit, attackCells, canFireThisTurn } from "../../core/attack";
-import { adjacent } from "../../core/geometry";
+import { adjacent, samePlace } from "../../core/geometry";
 import { isBridgeForSide, moveRange, movesLeftThisTurn, shortestPath, terrainCost, unitMoveRange } from "../../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../../core/types";
 import { isAir, isGround, unitUsesAmmo } from "../../core/units";
@@ -81,8 +81,6 @@ export interface Path {
 export type Click = { command: Command } | { select: UnitId | null };
 
 const STOP = 254;
-const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-
 //What the side shown's unit can still do this turn; only the current player's units show it
 function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove" | "canFire" | "noAmmo" | "done"> {
 	if (!own || u.owner !== w.state.turn.currentPlayer) return { canMove: false, canFire: false, noAmmo: false, done: false };
@@ -165,13 +163,13 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 	const at = { row: u.row, col: u.col };
 	if (!canOrder(w, u)) return { unit: u.id, at, range: [], area: [], unseen: [], outline: [], zones: [], targets: [] };
 	const range = moveRange(w, u), side = sideOf(w, u);
-	const area = range.filter((c) => c.canMove && !same(c, at)).map((c) => ({ row: c.row, col: c.col }));
+	const area = range.filter((c) => c.canMove && !samePlace(c, at)).map((c) => ({ row: c.row, col: c.col }));
 	//(round the hexes it can stop on and its own, as the old map tinted only those: not a friend's or an enemy's hex it
 	//only passes)
 	const outline = range.length === 0 ? [] : outlineOf(w, [at, ...area]);
 	const targets: Position[] = [];
 	for (const c of attackCells(w, u))
-		if (!targets.some((t) => same(t, c))) targets.push({ row: c.row, col: c.col });
+		if (!targets.some((t) => samePlace(t, c))) targets.push({ row: c.row, col: c.col });
 	//(an aircraft is stopped by an enemy aircraft only, in canPassInto, and the side can't know where one hides:
 	//the fog says it all, no hatching)
 	const unseen = isAir(w, u) ? [] : area.filter((c) => !isSpotted(w, hexIndex(w, c.row, c.col), side));
@@ -221,7 +219,7 @@ const isMounted = (u: UnitState) => u.isMounted && u.transport !== null;
 //The path the move to a hex of the area would take (the move command's own: the shortest path through the
 //move range), null for a hex outside the area
 export function pathOf(w: World, sel: Selection | null, to: Position): Path | null {
-	if (sel === null || !sel.area.some((c) => same(c, to))) return null;
+	if (sel === null || !sel.area.some((c) => samePlace(c, to))) return null;
 	const u = unitById(w, sel.unit), side = sideOf(w, u);
 	const steps = shortestPath(u, to, sel.range);
 	if (steps.length < 2) return null;
@@ -233,11 +231,11 @@ export function pathOf(w: World, sel: Selection | null, to: Position): Path | nu
 //A click on a hex: an attack on a target there, a move to a hex of the area, else the unit the layer shows
 //there selected when the side shown sees it, or none
 export function clickOn(w: World, sel: Selection | null, at: Position, airMode: boolean): Click {
-	if (sel !== null && sel.targets.some((c) => same(c, at))) {
+	if (sel !== null && sel.targets.some((c) => samePlace(c, at))) {
 		const target = attackableUnit(w, unitById(w, sel.unit), hexIndex(w, at.row, at.col), airMode);
 		if (target !== null) return { command: { type: "attack", unit: sel.unit, target: target.id } };
 	}
-	if (sel !== null && sel.area.some((c) => same(c, at))) return { command: { type: "move", unit: sel.unit, to: at } };
+	if (sel !== null && sel.area.some((c) => samePlace(c, at))) return { command: { type: "move", unit: sel.unit, to: at } };
 	const u = unitAt(w, hexIndex(w, at.row, at.col), airMode);
 	return { select: u !== null && isShown(w, u) ? u.id : null };
 }

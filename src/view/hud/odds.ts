@@ -3,6 +3,7 @@
 //as the core counts them before the attack (combatResult, src/core/combat.ts: the support fire its side sees included,
 //no dice drawn). Plain functions, tested on hand-built worlds (test/view-odds.test.ts)
 import { attackableUnit } from "../../core/attack";
+import { samePlace } from "../../core/geometry";
 import { combatResult } from "../../core/combat";
 import type { Position, World } from "../../core/types";
 import { hexIndex, sideOf, unitById } from "../../core/world";
@@ -21,11 +22,9 @@ export interface Glance {
 	theirs: LossChip;
 }
 
-const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-
 //The glance over a hovered hex of the selected unit's targets, null on any other hex
 export function glanceOf(w: World, sel: Selection | null, at: Position | null, airMode: boolean): Glance | null {
-	if (sel === null || at === null || !sel.targets.some((c) => same(c, at))) return null;
+	if (sel === null || at === null || !sel.targets.some((c) => samePlace(c, at))) return null;
 	const atk = unitById(w, sel.unit)!, def = attackableUnit(w, atk, hexIndex(w, at.row, at.col), airMode);
 	if (def === null) return null;
 	const cr = combatResult(w, atk, def, false, null);
