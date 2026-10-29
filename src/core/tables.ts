@@ -70,7 +70,7 @@ export let terrainNames =
 //Clear, City, Airfield, Forest, Bocage, Hill, Mountain, Sand, Swamp, Ocean, River, Fortification, Port, Stream, Escarpment, impassableRiver, Rough, Roads
 /** The entrenchment each terrainType gives, by terrainType. */
 export let terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 0, 2 ];
-/** The initiative each terrainType gives (99: none), by terrainType. */
+/** The cap terrain puts on initiative, by terrainType (99: no cap). */
 export let terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99, 99, 99, 3, 1 ];
 
 /** The scenario's ground conditions, which pick the movement table. */

@@ -34,7 +34,7 @@ export interface World {
 	//The fog of war off (uiSettings.noFOW): every hex is spotted
 	readonly noFOW: boolean;
 	//The side the screen shows (game.spotSide), -1 for none. An input as noFOW is, not state; the rules
-	//don't read it (#75)
+	//don't read it: the end of turn hides the units this side didn't see (#75)
 	readonly spotSide: number;
 	//Units an attack destroyed whose removal hasn't run yet (they stay in the unit list until the cleanup
 	//after the attack, as in the original): they can't fire or be fired on. Empty between steps
