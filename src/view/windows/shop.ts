@@ -1,8 +1,7 @@
-//The equipment window's view model (Equipment, #348): what the old window showed and did (updateEquipmentWindow,
-//updateEquipmentCosts, UIBuilder.showEquipmentCosts, equipmentWindowButtons), on the core. The person picks a class,
-//a country of their side and a model in service this year, its transport where one carries it, and buys it new,
-//upgrades the unit chosen to it, or sells that unit; each with its price and the core's refusal. From the core's
-//World and nothing else
+//The equipment window's view model, from the core's World and nothing else (the original game's is in
+//reference/src/uibuilder.js: updateEquipmentWindow, showEquipmentCosts). The person picks a class, a country of their
+//side and a model in service this year, its transport where one carries it, and buys it new, upgrades the unit
+//chosen to it, or sells that unit; each with its price and the core's refusal.
 import type { Command } from "../../core/command";
 import { asUnit, coreAt, coreUnitOf } from "../../core/commands/common";
 import { sellCost, unitCost, upgradeCost } from "../../core/costs";
@@ -20,8 +19,8 @@ import { type ListUnit, unitListOf } from "../hud/unitlist";
 //The unit the window works on: one on the map, or a core unit off it by its place in the core list (the reserve)
 export type Target = { unit: UnitId } | { index: number };
 
-//What the old window sorts by (UIBuilder.unitstats' sort keys), the card's four first. Close defence is closedef here: the
-//old window's "closeddef" (uibuilder.ts:153) is no model's key, so its list didn't sort by it
+//The sort keys of UIBuilder.unitstats, the card's four first. Close defence is closedef here: the
+//original's "closeddef" (reference/src/uibuilder.js:54) is no model's key, so its list didn't sort by it
 export const SORTS = [
 	{ key: "cost", label: "Cost" }, { key: "softatk", label: "Soft atk" }, { key: "hardatk", label: "Hard atk" },
 	{ key: "grounddef", label: "Defence" }, { key: "ammo", label: "Ammo" }, { key: "gunrange", label: "Range" },
@@ -32,7 +31,7 @@ export const SORTS = [
 export type SortKey = typeof SORTS[number]["key"];
 
 //What the person has picked in the window. transport: -1 none picked yet (the unit's own, when it has one), -2 none
-//on purpose (its button pressed again), else the eqid, as the old window kept it
+//on purpose (its button pressed again), else the eqid
 export interface ShopChoice {
 	target: Target | null;
 	uclass: number;
@@ -43,7 +42,7 @@ export interface ShopChoice {
 	reverse: boolean;
 }
 
-//The classes the window sells, in the old window's order (UIBuilder.eqClassButtons)
+//The classes the window sells, in the order of UIBuilder.eqClassButtons
 const CLASSES = [unitClass.infantry, unitClass.tank, unitClass.recon, unitClass.antiTank, unitClass.artillery, unitClass.airDefence,
 	unitClass.fighter, unitClass.tacticalBomber];
 const CLASS_NAMES: Partial<Record<number, string>> = { [unitClass.antiTank]: "Anti-tank", [unitClass.airDefence]: "Anti-air",
@@ -129,8 +128,7 @@ const shopClass = (uclass: number) => uclass === unitClass.flak ? unitClass.airD
 const yearOf = (w: World) => new Date(w.state.scenario.date).getFullYear();
 const inService = (e: EquipmentEntry, year: number) => e.yearavailable <= year && e.yearexpired >= year;
 
-//The country's models of a class in service this year, sorted as the old window sorted them (ties by eqid; reversed,
-//both ways)
+//The country's models of a class in service this year, sorted by the stat (ties by eqid; reversed, both ways)
 function modelsOf(w: World, country: number, uclass: number, sort: SortKey, reverse: boolean): number[] {
 	const indexes = w.state.equipment.indexes[country + 1];
 	const list = indexes === undefined ? undefined : indexes.unitclass[String(uclass)];
@@ -154,7 +152,7 @@ function targetOf(w: World, p: PlayerState, t: Target | null): OffMapUnit | null
 }
 
 //The transport picked: the unit's own until another is (when the model can ride one), none where none carries the
-//model; and the transports that carry it, in service, of the country, sorted as the models are (the old window did)
+//model; and the transports that carry it, in service, of the country, sorted as the models are
 function transportsOf(w: World, choice: ShopChoice, country: number, picked: number): { transport: number, list: number[] } {
 	const eqid = choice.eqid;
 	if (!isTransportable(w, eqid) && !(picked > 0)) return { transport: picked, list: [] };
@@ -167,7 +165,7 @@ const STAT_ROWS: [string, keyof EquipmentEntry][] = [["Soft attack", "softatk"],
 	["Naval attack", "navalatk"], ["Ground def", "grounddef"], ["Air def", "airdef"], ["Close def", "closedef"], ["Ranged def", "rangedefmod"],
 	["Initiative", "initiative"], ["Range", "gunrange"], ["Movement", "movpoints"], ["Spotting", "spotrange"], ["Fuel", "fuel"], ["Ammo", "ammo"]];
 
-//(a range of 0 is 1, as the old window showed it)
+//(a range of 0 is shown as 1)
 const statOf = (e: EquipmentEntry, k: keyof EquipmentEntry) => k === "gunrange" ? Math.max(1, e[k]) : e[k] as number;
 const textOf = (k: keyof EquipmentEntry, v: number) => k === "fuel" && v === 0 ? "—" : String(v);
 
@@ -188,14 +186,14 @@ function compareOf(e: EquipmentEntry, t: EquipmentEntry | null): Compare[] {
 	});
 }
 
-//What riding does, said once: infantry attacked on its transport gets off and fights on foot, unless surprised (combat.ts)
+//What riding does, said once: infantry attacked on its transport gets off and fights on foot unless surprised
+//(combat.ts)
 function ruleOf(e: EquipmentEntry): string {
 	const off = e.uclass === unitClass.infantry ? "; attacked, it fights on foot unless surprised" : "";
 	return `Mounted, it moves and defends as its transport and can't attack${off}. Def: ground · air · close.`;
 }
 
-//"Need 40 more prestige to upgrade": the old window's words when the price is over the prestige; else the core's
-//refusal of the command
+//"Need 40 more prestige to upgrade" when the price is over the prestige; else the core's refusal of the command
 function refusalOf(w: World, cmd: Command, cost: number, prestige: number, verb: string): string | null {
 	if (cost > prestige) return `Need ${cost - prestige} more prestige to ${verb}`;
 	const r = check(w, cmd);
@@ -212,7 +210,7 @@ interface Pricing {
 	year: number;
 }
 
-//Why the old window didn't sell the model: the unit picked is of a class it doesn't sell, the model is out of service, a
+//Why the model isn't sold: the unit picked is of a class it doesn't sell, the model is out of service, a
 //campaign buys only its own country's
 function notSold({ w, unit, eqid, year }: Pricing): string | null {
 	const e = w.equipment[eqid], campaign = w.state.campaign;
@@ -222,7 +220,7 @@ function notSold({ w, unit, eqid, year }: Pricing): string | null {
 }
 
 //Buy new: the model and its transport, unless it isn't sold (the unit picked is of a class the window doesn't sell,
-//the model is out of service, a campaign buys only its own country's), as the old window priced it
+//the model is out of service, a campaign buys only its own country's)
 function buyOf(c: Pricing): ShopAction {
 	const { w, p, eqid, transport } = c;
 	if (eqid === -1) return { cost: 0, refusal: "Pick a model", command: null };
@@ -256,7 +254,7 @@ function sellOf(c: Pricing): ShopAction | null {
 	return { cost: sellCost(w, asUnit(unit)), refusal: r === null ? null : reasonOf(r), command };
 }
 
-//The old window's eight classes, each its own tab
+//The eight classes, each its own tab
 const TABS: ClassTab[] = CLASSES.map((c) => ({ uclass: c, label: CLASS_NAMES[c] ?? unitClassNames[c], icon: classIcon(c)! }));
 
 function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model {
@@ -265,7 +263,7 @@ function modelOf(w: World, eqid: number, sort: SortKey, current: number): Model 
 	return { eqid, name: e.name, year: e.yearavailable, cost: unitCost(w, eqid), stat, sprite: e.icon, current: eqid === current };
 }
 
-//The model picked, with its stats on foot and on the transport picked, and what riding does where a transport carries it
+//The model picked, with its stats on foot and on the transport picked, and what riding does where one carries it
 function pickedOf(e: EquipmentEntry | null, eqid: number, t: EquipmentEntry | null, rides: boolean): Shop["picked"] {
 	if (e === null) return null;
 	return { eqid, name: e.name, line: tagsOf(e, null).map((x) => x.text).join(" · ") + " · in service from " + e.yearavailable,
@@ -284,7 +282,7 @@ function transportList(w: World, list: number[], transport: number): Transport[]
 	return [none, ...list.map((t) => transportOf(w, t, t === transport))];
 }
 
-//(the unit's own transport until another is picked, as the old window preselected it)
+//(the unit's own transport until another is picked)
 function presetOf(w: World, unit: OffMapUnit | null, choice: ShopChoice): number {
 	const keeps = unit !== null && unit.transport !== null && choice.transport === -1 && (choice.eqid === -1 || isTransportable(w, choice.eqid));
 	return keeps ? unit.transport!.eqid : choice.transport;
@@ -293,7 +291,7 @@ function presetOf(w: World, unit: OffMapUnit | null, choice: ShopChoice): number
 //"1st Pz IIA" on the map, "Pz IIA" in the reserve
 const targetName = (w: World, unit: OffMapUnit, target: Target) => ("unit" in target ? ordinal(target.unit) + " " : "") + w.equipment[unit.eqid].name;
 
-//The window as the person has it, on their turn; null on a program's, where the old window didn't open
+//The window as the person has it, on their turn; null on a program's turn
 export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	if (!isYourTurn(w)) return null;
 	const p = w.state.players[w.state.turn.currentPlayer], countries = sideCountries(w, p.side);
@@ -314,8 +312,8 @@ export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	};
 }
 
-//The window opened on a unit: its class, its country and its own model picked (a click on it in the old list); on
-//none, the tank class of the player's country
+//The window opened on a unit: its class, its country and its own model picked; on none, the tank class of the
+//player's country
 export function choiceFor(w: World, target: Target | null): ShopChoice {
 	const base: ShopChoice = { target: null, uclass: unitClass.tank, country: 0, eqid: -1, transport: -1, sort: "cost", reverse: false };
 	if (!isYourTurn(w)) return base;
@@ -326,9 +324,8 @@ export function choiceFor(w: World, target: Target | null): ShopChoice {
 	return { ...base, target, uclass: CLASSES.includes(uclass) ? uclass : unitClass.tank, country, eqid: unit.eqid };
 }
 
-//The unit list in the window (the old list above it, #512): the person's units on the map, each by its id, or while
-//deploying their reserve, each by its core list place; the one the window works on pressed. A card pressed makes its
-//unit the one to upgrade
+//The person's units on the map, each by its id, or while deploying their reserve, each by its core list place; the
+//one the window works on pressed. A card pressed makes its unit the one to upgrade
 export interface ShopUnits {
 	reserve: boolean;
 	units: ListUnit[];

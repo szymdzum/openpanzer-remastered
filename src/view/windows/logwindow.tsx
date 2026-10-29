@@ -1,7 +1,6 @@
-//The turn report (CombatLog, #348): the full window of the turn's five reports under its summary, over a scrim as the
-//other windows, opened with the short report's Turn report. An entry pressed brings its hex to the middle of the map, as the old log's lines did. Briefing
-//shows the scenario's description; the close button, Continue or Esc closes it. What it says is the view model's
-//(src/view/windows/log.ts).
+//The turn report: the turn's five reports under its summary, over a scrim, opened with the short report's Turn
+//report. An entry pressed brings its hex to the middle of the map. Briefing shows the scenario's description; the
+//close button, Continue or Esc closes it. What it says is the view model's (log.ts).
 import { Button } from "../components/button";
 import { Icon } from "../components/icon";
 import type { LogEntry, Words } from "./log";

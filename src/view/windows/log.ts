@@ -1,8 +1,7 @@
-//The turn report's view model (CombatLog, #348): the old combat log (src/legacy/combatlog.ts, src/uicombatlog.ts) kept from the
-//steps' events instead of the game's objects. From the person's end of turn to their next one, it gathers what the
-//side shown's units did in each fight (their totals, as CombatLog.addCombatEnd added them up), the leaders they won,
-//the objectives taken or lost, the automatic resupplies and the reinforcements of a turn's start; then it writes them
-//as the window's five reports, under the turn's summary. Plain functions, tested on hand-built worlds
+//The turn report's view model, kept from the steps' events. From the person's end of turn to their next one it gathers
+//what the side shown's units did in each fight (totals per unit), the leaders won, the objectives taken or lost, the
+//automatic resupplies and the reinforcements; then it writes them as the window's five reports under the turn's
+//summary. Plain functions, tested on hand-built worlds
 import type { EventOf, GameEvent } from "../../core/events";
 import { hexIndex, sideOf, unitById } from "../../core/world";
 import type { Position, UnitId, World } from "../../core/types";
@@ -15,7 +14,6 @@ import { type EnemyTurn, turnReportOf } from "../turn";
 import { ordinal } from "../hud/unitcard";
 import { NAVAL_ICON } from "../hud/unitlist";
 
-//A unit's fights this turn, added up
 interface Fought {
 	id: UnitId;
 	eqid: number;
@@ -52,14 +50,12 @@ export const emptyLog = (): TurnLog => ({ combat: [], resupply: [], reinforce: [
 
 type Fighter = EventOf<"fight">["attacker"];
 
-//A unit as the log keeps it, from the world where it is (null: gone, or not the side shown's)
+//Null when the unit is gone or isn't the side shown's
 function loggedOf(w: World, id: UnitId): Logged | null {
 	const u = unitById(w, id);
 	return u === null || sideOf(w, u) !== w.spotSide ? null : { id, eqid: u.eqid, isCore: u.isCore, at: at(u) };
 }
 
-//One side of a fight added to its unit's totals: what it lost, what the other lost to it, its experience and its
-//entrenchment; an assault, a defence or a support fire
 function addFighter(log: Fought[], f: Fighter, other: Fighter, role: "assaults" | "defends" | "supports", core: boolean): Fought[] {
 	const old = log.find((u) => u.id === f.unit);
 	const base: Fought = old ?? { id: f.unit, eqid: f.eqid, isCore: core, at: at(f), strength: 0, losses: 0, kills: 0, xp: 0, entrenchLost: 0,
@@ -78,7 +74,7 @@ function fought(log: TurnLog, before: World, e: EventOf<"fight">): TurnLog {
 	return { ...log, combat };
 }
 
-//A leader won (its class's comes with it, Leaders.getUnitClassLeader)
+//A leader won comes with its class's leader (Leaders.getUnitClassLeader)
 function led(log: TurnLog, after: World, e: EventOf<"leader">): TurnLog {
 	const u = loggedOf(after, e.unit);
 	if (u === null) return log;
@@ -86,7 +82,7 @@ function led(log: TurnLog, after: World, e: EventOf<"leader">): TurnLog {
 	return { ...log, leaders: [...log.leaders, { ...u, leader: e.leader, classLeader: after.rules.classLeaders[uclass] }] };
 }
 
-//An objective taken: by the side shown, or from it (Map.captureHex logs every objective)
+//Taken by the side shown, or from it (Map.captureHex logs every objective)
 function captured(log: TurnLog, after: World, e: EventOf<"captured">): TurnLog {
 	if (!e.objective) return log;
 	const u = unitById(after, e.unit);
@@ -94,14 +90,12 @@ function captured(log: TurnLog, after: World, e: EventOf<"captured">): TurnLog {
 	return { ...log, objectives: [...log.objectives, { at: at(e.at), ours, prestige: e.prestige }] };
 }
 
-//A step's events added to the log: before and after, the worlds around the step
 export function logStep(log: TurnLog, before: World, after: World, events: GameEvent[]): TurnLog {
 	return events.reduce((l, e) => e.type === "fight" ? fought(l, before, e) : e.type === "leader" ? led(l, after, e)
 		: e.type === "captured" ? captured(l, after, e) : l, log);
 }
 
-//A turn's start (the screen's turnEvents): the side shown's automatic resupplies, with the ammo and fuel they left,
-//and its reinforcements that arrived
+//At a turn's start (the screen's turnEvents): the resupplies keep the ammo and fuel they left
 export function logTurnStart(log: TurnLog, w: World, events: GameEvent[]): TurnLog {
 	let next = log;
 	for (const e of events) {
@@ -117,14 +111,14 @@ export function logTurnStart(log: TurnLog, w: World, events: GameEvent[]): TurnL
 
 //---- The window
 
-//A sentence of an entry: its words, the numbers in bold
+//The numbers of a sentence are in bold
 export type Words = (string | { b: string })[];
 
 export interface LogEntry {
 	sprite: string | null;
 	icon: IconName | null; //an objective's flag in place of a sprite
 	words: Words;
-	destroyed: boolean; //a unit of the side lost: its line in critical, as the old log wrote it in red
+	destroyed: boolean; //a unit of the side lost: its line in critical
 	at: Position;
 }
 
@@ -147,19 +141,19 @@ export interface CombatLogView {
 	campaign: boolean;
 }
 
-//The sprite a log line shows: a ship's generic one past the air transports (the old log's line)
+//A ship (a class past the air transports) shows the generic naval sprite
 const spriteOf = (w: World, eqid: number) => w.equipment[eqid].uclass > unitClass.airTransport ? NAVAL_ICON : w.equipment[eqid].icon;
 const unitWords = (w: World, u: { id: UnitId, eqid: number, isCore: boolean }): Words =>
 	[u.isCore ? "Core " : "Auxiliary ", { b: ordinal(u.id) + " " + w.equipment[u.eqid].name }];
 
-//Where a unit fought from: the hex's name and its terrain when it isn't clear, and the hex
+//The hex's name, its terrain when it isn't clear, and the hex
 function placeOf(w: World, p: Position): string {
 	const h = w.data.hexes[hexIndex(w, p.row, p.col)];
 	const parts = [h.name, h.terrain !== terrainType.Clear ? terrainNames[h.terrain] : ""].filter((s) => s !== "");
 	return (parts.length > 0 ? parts.join(" ") + " " : "") + `(${p.row},${p.col})`;
 }
 
-//What it did most: supported, assaulted or defended (UICombatLog.buildCombatSummary)
+//What it did most (reference/src/uicombatlog.js buildCombatSummary)
 function actionOf(u: Fought): string {
 	if (u.assaults >= u.defends || u.supports >= u.defends) return u.supports >= u.assaults ? "gave fire support from" : "assaulted from";
 	return "defended";
@@ -214,7 +208,7 @@ function objectiveEntry(w: World, o: TurnLog["objectives"][number]): LogEntry {
 
 const byCore = (a: Fought, b: Fought) => a.isCore === b.isCore ? a.id - b.id : a.isCore ? -1 : 1;
 
-//The window of the person's player, null when no person plays here
+//Null when no person plays here
 export function combatLogOf(w: World, log: TurnLog, enemy: EnemyTurn): CombatLogView | null {
 	const r = turnReportOf(w, enemy), you = yourPlayer(w);
 	if (r === null || you === null) return null;

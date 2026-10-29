@@ -1,6 +1,6 @@
-//The save and load window as signals (SaveLoad, #349): the cloud id field (its value and placeholder, which the cloud saves
-//write their progress and errors into, as they wrote the old #cloudid), the last file saved, the load error, and the
-//last cloud saves kept in the settings. The saves and loads are the host's; a game loaded closes the start menu.
+//The save and load window as signals: the cloud id field (its value and placeholder, which the cloud saves write
+//their progress and errors into), the last file saved, the load error, and the last cloud saves kept in the settings.
+//The saves and loads are the host's; a game loaded closes the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { World } from "../../core/types";
 import type { CloudReport } from "../../app/storage";
@@ -21,7 +21,7 @@ type SaveLoadInputs = {
 	download?: (name: string, text: string) => void,
 };
 
-//The field the old window prefilled: the last cloud save's id
+//The field is prefilled with the last cloud save's id
 const lastCloudId = () => uiSettings.lastCloudSave.length > 0 ? uiSettings.lastCloudSave[uiSettings.lastCloudSave.length - 1].id : "";
 
 export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) {
@@ -42,7 +42,6 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 			recent: cloudRows(lastCloudSave.value) };
 	});
 
-	//A game loaded: the start menu closed, the game shown under it
 	const loaded = () => {
 		loadError.value = "";
 		menu.value = MENU_CLOSED;
@@ -85,7 +84,6 @@ export function createSaveLoad({ host, world, menu, download }: SaveLoadInputs) 
 			cloudId.value = id;
 		},
 
-		//OK: the start menu, the load error gone
 		closeSaveLoad() {
 			loadError.value = "";
 			menu.value = menuBack();

@@ -1,8 +1,8 @@
-//The equipment window (Equipment, #348): buy new units and upgrade or sell the one chosen, opened with B or the rail's
-//Buy and upgrade. From the top: the title, the country button and the prestige; the person's units, a card pressed the
-//one to upgrade (the old unit list above the window, #512); the class tabs; the sort and the
-//models in service; the picked model's stats on foot and mounted, and its transports with what each gives; the action
-//bar with the prices. What it says and why a button is off is the view model's (src/view/windows/shop.ts).
+//The equipment window: buy new units and upgrade or sell the one chosen, opened with B or the rail's Buy and
+//upgrade. From the top: the title, the country button and the prestige; the person's units, a card pressed the one to
+//upgrade; the class tabs; the sort and the models in service; the picked model's stats on foot and mounted, and its
+//transports with what each gives; the action bar with the prices. What it says and why a button is off is the view
+//model's (shop.ts).
 import { Fragment } from "preact";
 import { Button } from "../components/button";
 import { Icon, Mark } from "../components/icon";
@@ -14,7 +14,7 @@ import type { Store } from "../store/store";
 import { SegmentedControl, TabPanel, Tabs } from "../components/tabs";
 import { Card, frameStyle } from "../hud/unitstrip";
 
-//The units on the map, or the reserve while deploying, as the old list over the window showed them
+//The units on the map, or the reserve while deploying
 function Units({ list, store }: { list: ShopUnits, store: Pick<Store, "shopUnit" | "side"> }) {
 	const side = store.side.value === 1 ? "allied" : "axis";
 	return (
@@ -26,7 +26,7 @@ function Units({ list, store }: { list: ShopUnits, store: Pick<Store, "shopUnit"
 	);
 }
 
-//The card's four sorts as its segmented control, the old window's others in a list beside it
+//The first four sorts are the segmented control, the others a list beside it
 const SHOWN = SORTS.slice(0, 4), OTHERS = SORTS.slice(4);
 
 function Tools({ shop, store }: { shop: Shop, store: Pick<Store, "shopReverse" | "shopSort"> }) {
@@ -95,7 +95,7 @@ function transportName(t: Transport): string {
 	return `${t.name}, ${t.ground}, ${g.cost} prestige, ${g.moves} moves, ${g.fuel === 0 ? "no fuel" : `fuel ${g.fuel}`}, defence ${g.def}`;
 }
 
-//The transports that carry the model, each a row with what it gives; the one picked, pressed again, is none (the old window)
+//The one picked, pressed again, is none
 function Transports({ shop, store }: { shop: Shop, store: Pick<Store, "shopTransport"> }) {
 	return (
 		<fieldset id="eqTransportList" class="transport" aria-label="Transport">
@@ -140,7 +140,6 @@ function Detail({ shop, store }: { shop: Shop, store: Pick<Store, "shopTransport
 	);
 }
 
-//A price worth showing: none for a button that has nothing to price
 const priced = (a: { cost: number }) => a.cost > 0 ? a.cost : undefined;
 
 function Actions({ shop, store }: { shop: Shop, store: Pick<Store, "shopAct"> }) {

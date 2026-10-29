@@ -1,9 +1,8 @@
-//The start menu (StartMenu, NewGame, #349): the old start menu's main window over its six photographs, which fade one
-//into the next as the old slideshow did (still with reduced motion). Its buttons, in the old order: New Game, which
-//opens the panel of Campaigns, Scenarios and Tutorial above them, Settings, Save / Load and Continue Game; the old
-//logo's version and links, and its credits. What each button does is the store's (src/view/windows/menus.ts); Esc closes the
-//start menu, as the old Options did. It opens with the first scenario and from the game menu's Options. The campaign's
-//and the scenario's windows take the main window's place over the photographs.
+//The start menu: the main window over six photographs, which fade one into the next (with reduced motion the first
+//stays still). Its buttons: New Game, which opens the panel of Campaigns, Scenarios and Tutorial above them,
+//Settings, Save / Load and Continue Game; the logo's version and links, and the credits. What each button does is the
+//store's (menus.ts); Esc closes the start menu. It opens with the first scenario and from the game menu's Options. The
+//campaign's and the scenario's windows take the main window's place over the photographs.
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { VERSION } from "../../app/settings";
 import { Button } from "../components/button";
@@ -26,7 +25,7 @@ function Entries({ store, entries }: { store: Pick<Store, "startMenu">, entries:
 	));
 }
 
-//The main window: the focus on its first button whenever it opens or its New Game panel does, the menu being keyboard-first
+//The focus goes to its first button whenever the window or its New Game panel opens: the menu is keyboard-first
 function MainWindow({ store, newGame }: { store: Pick<Store, "startMenu">, newGame: boolean }) {
 	const ref = useRef<HTMLDialogElement>(null);
 	useLayoutEffect(() => { ref.current!.querySelector<HTMLButtonElement>("button:enabled:not([aria-disabled=\"true\"])")!.focus(); }, [newGame]);

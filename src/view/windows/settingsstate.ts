@@ -1,8 +1,7 @@
-//The settings window as signals (Settings, #349): the old list's values in uiSettings, changed there as the old window
-//changed them; each is a signal (src/view/uisettings.ts), so what they change on the new UI follows at once (the
-//interface's width and scale, the map's scale, the plaques and marks; the world the fog of war is read from is read
-//again). Its OK saves them on the host, applies the interface scale a switch suggested, reloads the page when a switch
-//needs it, and goes back to the start menu.
+//The settings window as signals: the values in uiSettings, changed there; each is a signal (src/view/uisettings.ts),
+//so what they change follows at once (the interface's width and scale, the map's scale, the plaques and marks; the
+//world the fog of war is read from is read again). Its OK saves them on the host, applies the interface scale a
+//switch suggested, reloads the page when a switch needs it, and goes back to the start menu.
 import { computed, type Signal, signal } from "@preact/signals";
 import type { GameHost } from "../../app/host";
 import { uiSettings } from "../../app/settings";
@@ -45,7 +44,7 @@ export function createSettings({ host, menu, refresh, reload }: SettingsInputs) 
 		//The interface's scale and width as the page applies them (src/view/screen.tsx), and the map's scale
 		uiScale: setting.uiScale, uiWidth: setting.uiSize, scale: setting.zoomLevel,
 
-		//A slider moved: applied at once, as the old window's buttons applied it
+		//A slider moved: applied at once
 		slide(key: SliderSetting["key"], v: number) {
 			if (key === "uiScale") suggested.value = null;
 			uiSettings[key] = v;

@@ -1,7 +1,6 @@
-//The save and load window over the start menu (SaveLoad, #349), with what the old #smState had, in its order: Save to Disk
-//and Load from Disk with the last file saved; Cloud Save and Cloud Load, the cloud save's id, the last three cloud saves
-//(a click puts a save's id in the field, an empty row clears it) and the error of a file that didn't load; OK. Esc
-//closes the start menu, as the old Options did.
+//The save and load window over the start menu: Save to Disk and Load from Disk with the last file saved; Cloud Save
+//and Cloud Load, the cloud save's id, the last three cloud saves (a click puts a save's id in the field, an empty row
+//clears it) and the error of a file that didn't load; OK. Esc closes the start menu.
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "../components/button";
 import { Input } from "../components/controls";

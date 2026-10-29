@@ -1,28 +1,26 @@
-//A new campaign and a new scenario (CampaignSelect, ScenarioSelect, #349): what the old start menu's campaign and
-//scenario windows show of the game's lists (src/uibuilder.ts buildStartMenu, src/ui.ts startMenuButton). Plain
-//TypeScript on the lists it is given (campaignlist.js, scenariolist.js) and the settings' AI sides.
+//What the campaign and scenario windows show of the game's lists. Plain TypeScript on the lists it is given
+//(campaignlist.js, scenariolist.js) and the settings' AI sides.
 import type { World } from "../../core/types";
 import { countryNames, difficultyType } from "../../legacy/prototypes";
 import { sideNames } from "../../core/tables";
 import type { Nation } from "../components/icon";
 import { nationOf } from "../store/model";
 
-//The difficulties of a campaign, in the old menu's order; Tactical is picked at first
+//Tactical is picked at first
 export const DIFFICULTIES: { value: number, name: string }[] = [
 	{ value: difficultyType.historical, name: "Historical" }, { value: difficultyType.tactical, name: "Tactical" },
 	{ value: difficultyType.operational, name: "Operational" }];
 export const FIRST_DIFFICULTY = difficultyType.tactical;
 
-//What the old difficulty help button wrote in the campaign's description
+//Shown in the campaign's description when the difficulty help button is pressed
 export const DIFFICULTY_HELP = "Historical - Highest difficulty<br>Tactical - Medium difficulty +20% starting prestige, +10% starting prestige per turn, +20% extra turns, -20% score.<br>Operational - Lowest difficulty + 50% starting prestige, +25% starting prestige per turn, +50% extra turns. -50% score";
 
-//A row of a list: its index in the game's list, and its title
+//The id is the row's index in the game's list
 export interface PickRow {
 	id: string;
 	title: string;
 }
 
-//The campaign list's titles, in its order
 export function campaignRows(list: CampaignListEntry[]): PickRow[] {
 	return list.map((c, i) => ({ id: String(i), title: c.title }));
 }
@@ -39,7 +37,7 @@ export interface CampaignView {
 	country: string;
 	nation: Nation | null;
 	scenarios: number;
-	//the list's starting prestige, as the old window showed it (not the difficulty's)
+	//the list's starting prestige (not the difficulty's)
 	prestige: number;
 	//its description, HTML
 	description: string;
@@ -50,7 +48,7 @@ export function campaignView(list: CampaignListEntry[], index: number): Campaign
 	return { title: c.title, country, nation: nationOf(country), scenarios: c.scenarios, prestige: c.prestige, description: c.desc };
 }
 
-//The scenario list's groups, under the headers of the list (its entries of one element), each scenario by its name
+//The groups sit under the list's headers (its entries of one element)
 export function scenarioGroups(list: ScenarioListEntry[]): { name?: string, rows: PickRow[] }[] {
 	const groups: { name?: string, rows: PickRow[] }[] = [];
 	list.forEach((e, i) => {
@@ -94,7 +92,7 @@ export function scenarioView(list: ScenarioListEntry[], index: number, isAI: num
 	return { title: e[1], description: e[2], sides };
 }
 
-//A scenario picked: its players' AI settings kept, a truthy one made 1 (the tutorial's 2), as the old window did
+//A scenario picked: its players' AI settings kept, a truthy one made 1 (the tutorial's 2)
 export function settleAI(list: ScenarioListEntry[], index: number, isAI: number[]) {
 	const e = list[index] as Exclude<ScenarioListEntry, [string]>;
 	for (const p of [...e[3], ...e[4]])
