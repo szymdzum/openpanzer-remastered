@@ -37,6 +37,22 @@ export function experienceBonus(u: UnitState): number {
 	return (u.experience / 100) >> 0;
 }
 
+//What initiative gives in a fight (the "initiative" step): the side with more, the attacker on a tie, gets
+//INITIATIVE_DEFENCE more defence and its lead in attack, up to INITIATIVE_MAX_ATTACK. lead: the attacker's initiative
+//less the defender's (First Strike makes its side's lead positive)
+export const INITIATIVE_DEFENCE = 4, INITIATIVE_MAX_ATTACK = 4;
+
+export interface InitiativeEdge {
+	attacker: boolean; //the side it goes to: the attacker, else the defender
+	defence: number;
+	attack: number;
+}
+
+export function initiativeEdge(lead: number): InitiativeEdge {
+	const attacker = lead >= 0;
+	return { attacker, defence: INITIATIVE_DEFENCE, attack: Math.min(INITIATIVE_MAX_ATTACK, attacker ? lead : -lead) };
+}
+
 //A step that applies a leader's bonus to the side that has it
 function leaderStep(name: string, leader: number, run: (f: Fight, atk: boolean, def: boolean) => void): CombatStep {
 	return { name, run: (f) => run(f, hasLeader(f.world, f.atk, leader), hasLeader(f.world, f.def, leader)) };
@@ -237,12 +253,13 @@ export const classicCombat: CombatStep[] = [
 		let diff = f.aData.initiative - f.dData.initiative;
 		if (hasLeader(w, f.atk, leaderType.firstStrike)) diff = Math.abs(diff);
 		if (hasLeader(w, f.def, leaderType.firstStrike)) diff = -Math.abs(diff);
-		if (diff >= 0) {
-			add(f, "initiative", "attacker", "adv", 4);
-			add(f, "initiative", "attacker", "aav", Math.min(4, diff));
+		const edge = initiativeEdge(diff);
+		if (edge.attacker) {
+			add(f, "initiative", "attacker", "adv", edge.defence);
+			add(f, "initiative", "attacker", "aav", edge.attack);
 		} else {
-			add(f, "initiative", "defender", "ddv", 4);
-			add(f, "initiative", "defender", "dav", Math.min(4, -diff));
+			add(f, "initiative", "defender", "ddv", edge.defence);
+			add(f, "initiative", "defender", "dav", edge.attack);
 		}
 	} },
 	{ name: "rugged defense", run(f) {

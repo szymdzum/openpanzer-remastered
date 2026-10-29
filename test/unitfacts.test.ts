@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { canFireThisTurn } from "../src/core/attack";
 import {
 	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentAgainst, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
-	experienceBonus, riding
+	experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, riding
 } from "../src/core/combat";
 import { fullMoves, movesLeftThisTurn, unitMoveRange } from "../src/core/movement";
 import { step, type Stepped } from "../src/core/step";
@@ -259,4 +259,23 @@ test("The weak defence is the lowest of ground, air and close defence, when it i
 	//the game's own: the Pz IIA and the Infanterie are weak at close quarters
 	const { w } = one({ eqid: PZ_IIA });
 	expect([weakDefences(w.equipment[PZ_IIA]), weakDefences(w.equipment[INFANTERIE])]).toEqual([["closedef"], ["closedef"]]);
+});
+
+test("Initiative: the side with more, the attacker on a tie, gets 4 more defence and its lead in attack, up to 4 (#37)", () => {
+	expect([0, 3, 7, -2, -9].map(initiativeEdge)).toEqual([{ attacker: true, defence: 4, attack: 0 }, { attacker: true, defence: 4, attack: 3 },
+		{ attacker: true, defence: 4, attack: 4 }, { attacker: false, defence: 4, attack: 2 }, { attacker: false, defence: 4, attack: 4 }]);
+	expect([INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK]).toEqual([4, 4]);
+	//what the attack does: a Pz IIA on a 7TP, each way, as initiativeEdge has it
+	const edge = (atk: number, def: number) => {
+		const w = handWorld({ rows: 6, cols: 8, units: [{ eqid: atk, owner: 0, row: 2, col: 2 }, { eqid: def, owner: 1, row: 2, col: 3 }] });
+		const record: Contribution[] = [];
+		attackResult(w, unitById(w, 0), unitById(w, 1), null, record);
+		const lead = w.equipment[atk].initiative - w.equipment[def].initiative;
+		return [lead, record.filter((c) => c.name === "initiative").map((c) => [c.side, c.field, c.after - c.before])];
+	};
+	for (const [atk, def] of [[PZ_IIA, TP7], [TP7, PZ_IIA], [PZ_IIA, PIECHOTA], [PIECHOTA, PZ_IIA]]) {
+		const [lead, steps] = edge(atk, def), e = initiativeEdge(lead as number);
+		const side = e.attacker ? "attacker" : "defender";
+		expect(steps).toEqual([[side, e.attacker ? "adv" : "ddv", e.defence], ...e.attack > 0 ? [[side, e.attacker ? "aav" : "dav", e.attack]] : []]);
+	}
 });
