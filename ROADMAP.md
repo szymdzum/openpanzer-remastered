@@ -62,14 +62,15 @@ docs/ui/PLAN.md). No rule changes.
 - [ ] What the port lost or shows wrong: the high resolution map and units (#462), ships shown as
       trains (#359), horses with an engine's sound (#511)
 
-## 3. Promises kept ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/3))
+## 3. Promises kept ✅ ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/3))
 
 What the manual and the code promise works ([docs/MECHANICS.md](docs/MECHANICS.md)). There is
 one game, the remaster (#53): where the code and the manual differ, the manual wins. Before the
 AI is tuned, since these change combat.
 
-- [ ] Weather (#1), suppression (#2), leader abilities (#3), recon and ZOC (#4), initiative and
-      terrain (#14), the manual's numbers (#18)
+- [x] Weather that changes (#591) and what it does (#1), suppression (#2), leader abilities (#3;
+      overwatch can't come up and waits in Later, #599), recon and ZOC (#4), initiative and terrain
+      (#14), air ZOC and initiative's modifiers (#18)
 
 ## 4. Remastered AI ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/7))
 
@@ -91,6 +92,7 @@ Each discussed in its issue before any code.
 
 - [ ] Units fighting together (#9, #10), air superiority (#11), supply lines (#12),
       snowballing (#13), optional turn limit (#49), recon and hidden strength (#50)
+- [ ] Artillery in contact fires only at its neighbour and gives no support fire (#602)
 - [ ] Scenarios with more than one solution (#52)
 
 ## 6. Platforms and content ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/5))
