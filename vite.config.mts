@@ -114,7 +114,7 @@ export default defineConfig({
 				"src/view/hud/odds.ts", "src/view/map/attackdraw.ts", "src/view/hud/results.ts",
 				"src/view/beats.ts", "src/view/player.ts", "src/view/map/motiondraw.ts", "src/view/hud/unitcard.ts", "src/view/hud/unitlist.ts", "src/view/windows/shop.ts", "src/view/windows/shopstate.ts", "src/view/windows/log.ts", "src/view/windows/dossier.ts",
 				"src/view/windows/menus.ts", "src/view/windows/newgame.ts", "src/view/windows/newgamestate.ts",
-				"src/view/windows/settings.ts", "src/view/windows/settingsstate.ts", "src/view/windows/saveload.ts", "src/view/windows/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/map/layers.ts"],
+				"src/view/windows/settings.ts", "src/view/windows/settingsstate.ts", "src/view/windows/saveload.ts", "src/view/windows/saveloadstate.ts", "src/view/theme.ts", "src/view/html.ts", "src/view/uisettings.ts", "src/view/stable.ts", "src/view/map/layers.ts", "src/view/map/aidebug.ts", "src/view/map/aidebugdraw.ts"],
 			exclude: ["src/core/types.ts", "src/core/state.ts", "src/core/command.ts", "src/core/events.ts", "src/core/controller.ts", "src/app/screen.ts"], //types only
 			reporter: ["text", "html", "json-summary"],
 			//Per file, today's coverage rounded down: a change may raise it, not lower it. When a file's

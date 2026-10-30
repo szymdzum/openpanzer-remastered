@@ -270,3 +270,21 @@ test("A map smaller than the screen sits in its middle, and a click finds the he
 	await act(() => { s.dispatchEvent(new MouseEvent("mousemove", { clientX: hexCentre(4, 4).x + left, clientY: hexCentre(4, 4).y + top, bubbles: true })); });
 	expect(store.hover.value).toEqual({ row: 4, col: 4 });
 });
+
+test("Behind ?aidebug the map draws the AI's layer and shows its legend; without it, neither (#611)", async () => {
+	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: 140, owner: 0, row: 2, col: 2 }, { eqid: 273, owner: 1, row: 5, col: 5 }] },
+		undefined, { spotSide: 0 });
+	const store = createStore({ ...hostOf(w).host, aiKnowledge: () => null }, { sound: () => {}, still: () => true, aiDebug: true });
+	store.refresh();
+	render(<MapView store={store} />);
+	await frame();
+	expect(document.querySelector(".pm-aidebug")!.textContent).toContain("AI debug: Influence, Allies");
+	const before = drawn;
+	await act(() => store.shortcut({ menu: "aiLayer" }));
+	await frame();
+	expect(drawn).toBeGreaterThan(before);
+	expect(document.querySelector(".pm-aidebug")!.textContent).toContain("AI debug: Front, Allies");
+	cleanup();
+	await mapOf(w);
+	expect(document.querySelector(".pm-aidebug")).toBeNull();
+});

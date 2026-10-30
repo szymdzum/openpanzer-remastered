@@ -442,3 +442,20 @@ test("On the page, the AI's capture of the last objective reports the AI's side 
 	expect(g.gameEnded).toBe(true);
 	expect(pageResultOf(g.host.world()!, g.session.ended, g.gameEnded, person)).toMatchObject({ kind: "capture", winner: 0 });
 }, 60_000);
+
+//The remastered AI plays the remaster's rules: the host hands its knowledge of a side to the debug overlay (#611)
+test("The game host gives the remastered AI's knowledge of the side it plays, none of a side it doesn't (#611)", async () => {
+	uiSettings.classicRules = false;
+	Rng.seed(611);
+	const g = headlessGame((game) => nullScreen(game));
+	expect(g.host.aiKnowledge(0)).toBeNull();
+	g.host.startScenario("drpzop01.xml", "", [1, 1, 1, 1]);
+	await until(() => loaded(g, null), "drpzop01.xml");
+	const m = g.scenario.map, start = m.turn;
+	for (let tick = 0; tick < 5000 && m.turn < start + 1 && !g.gameEnded; tick++) g.host.processTurn();
+	expect([g.rules, ...[0, 1].map((side) => g.host.aiKnowledge(side)?.view.side)]).toEqual(["remaster", 0, 1]);
+	uiSettings.classicRules = true;
+	g.host.startScenario("drpzop01.xml", "", [0, 1, 1, 1]);
+	await until(() => loaded(g, null), "drpzop01.xml");
+	expect(g.host.aiKnowledge(1)).toBeNull();
+}, 60_000);

@@ -18,6 +18,7 @@ import { type Frame, MapLayers } from "./layers";
 import { drawPreview } from "./attackdraw";
 import { SHEETS } from "../beats";
 import { drawMotion } from "./motiondraw";
+import { drawAIOverlay } from "./aidebugdraw";
 import type { Store } from "../store/store";
 import { TOKENS } from "../tokens";
 
@@ -57,7 +58,7 @@ function underStatusBar(scroller: HTMLElement): number {
 	return Math.max(0, bar.getBoundingClientRect().bottom - scroller.getBoundingClientRect().top) + TOKENS.px["space-1"];
 }
 
-type PainterReads = Pick<Store, "clickHex" | "deployment" | "fog" | "ghost" | "glance" | "hexGrid" | "hoverHex" |
+type PainterReads = Pick<Store, "aiLayers" | "clickHex" | "deployment" | "fog" | "ghost" | "glance" | "hexGrid" | "hoverHex" |
 	"marks" | "motion" | "overview" | "path" | "plaques" | "results" | "scale" | "selection" | "strategic" | "support" |
 	"units" | "world">;
 //Draws the store's map on the canvas, at most once a frame, and takes the pointer on the layer over it. Attached
@@ -92,7 +93,8 @@ class Painter {
 		const watch = effect(() => {
 			//(read: a change to any of them draws again)
 			void [s.world.value, s.units.value, s.selection.value, s.path.value, s.scale.value, s.fog.value, s.support.value, s.plaques.value,
-				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.glance.value, s.results.value, s.motion.value, s.marks.value];
+				s.overview.value, s.deployment.value, s.ghost.value, s.hexGrid.value, s.glance.value, s.results.value, s.motion.value, s.marks.value,
+				s.aiLayers.value];
 			this.request();
 		});
 		const redraw = () => this.request();
@@ -181,14 +183,18 @@ class Painter {
 		this.layers.draw(c, this.frame(w, vp));
 	}
 
-	//The scene, the attack cursor and a retreat's trail over it, then the beat playing (a moving unit, a shot, an
-	//explosion); neither of the last on the strategic map
+	//The scene, the AI's debug overlay when on (?aidebug), the attack cursor and a retreat's trail over it, then the beat
+	//playing (a moving unit, a shot, an explosion); none of the last on the strategic map
 	frame(w: World, vp: Viewport): Frame {
 		const s = this.store, images = (f: string) => this.image(f), scene = this.scene(w, this.size(1));
-		const results = s.results.peek(), motion = s.motion.peek();
+		const results = s.results.peek(), motion = s.motion.peek(), ai = s.aiLayers.peek();
 		if (s.strategic.peek()) return { scene, vp, images, over: null, motion: null };
 		const preview = { glance: s.glance.peek(), trail: results === null ? null : results.trail };
-		return { scene, vp, images, over: (c) => drawPreview(c, vp, preview), motion: motion === null ? null : (c) => drawMotion(c, vp, motion, images) };
+		const over = (c: CanvasRenderingContext2D) => {
+			if (ai !== null) drawAIOverlay(c, vp, ai, w.state.map.rows, w.state.map.cols);
+			drawPreview(c, vp, preview);
+		};
+		return { scene, vp, images, over, motion: motion === null ? null : (c) => drawMotion(c, vp, motion, images) };
 	}
 
 	image(file: string): ReturnType<Images> {
@@ -235,21 +241,22 @@ function mapSize(w: World | null, terrain: Picture | null, scale: number): { wid
 }
 
 //What sits over the map at its hexes, placed from where the map is on the screen
-function Overlays({ store, view, scale }: { store: Pick<Store, "faded" | "ghost" | "pins" | "results">, view: View, scale: number }) {
+function Overlays({ store, view, scale }: { store: Pick<Store, "aiLayers" | "faded" | "ghost" | "pins" | "results">, view: View, scale: number }) {
 	const vp = { x: view.x, y: view.y, width: 0, height: 0, scale, dpr: 1 };
 	const at = (p: Position) => toScreen(hexCentre(p.row, p.col), vp);
-	const ghost = store.ghost.value, results = store.results.value;
+	const ghost = store.ghost.value, results = store.results.value, ai = store.aiLayers.value;
 	const half = TOKENS.px["hex-h"] / 2 * scale, side = TOKENS.px["hex-w"] / 2 * scale;
 	return (
 		<>
 			<Pins pins={store.pins.value} where={(p) => { const c = at(p); return { x: c.x, y: c.y - half }; }} />
 			{ghost !== null && <PlaceTag ghost={ghost} at={at(ghost)} gap={side + 6} />}
 			{results !== null && <ResultMarks results={results} where={at} half={half} gone={store.faded} />}
+			{ai !== null && <AILegend lines={ai.legend} />}
 		</>
 	);
 }
 
-type MapViewReads = Pick<Store, "clickHex" | "deployment" | "dockHeight" | "faded" | "fog" | "ghost" | "glance" |
+type MapViewReads = Pick<Store, "aiLayers" | "clickHex" | "deployment" | "dockHeight" | "faded" | "fog" | "ghost" | "glance" |
 	"hexGrid" | "hoverHex" | "lookAt" | "marks" | "motion" | "overview" | "path" | "pins" | "plaques" | "results" |
 	"scale" | "selection" | "strategic" | "support" | "units" | "world">;
 export function MapView({ store }: { store: MapViewReads }) {
@@ -281,6 +288,16 @@ export function MapView({ store }: { store: MapViewReads }) {
 			</div>
 			<Overlays store={store} view={view} scale={scale} />
 		</div>
+	);
+}
+
+//The AI's debug overlay's legend: the layer, the side, where its knowledge comes from, the keys
+function AILegend({ lines }: { lines: string[] }) {
+	return (
+		<output class="pm-aidebug" aria-live="polite">
+			<b>{lines[0]}</b>
+			{lines.slice(1).map((l) => <span key={l}>{l}</span>)}
+		</output>
 	);
 }
 

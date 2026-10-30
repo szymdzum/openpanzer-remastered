@@ -152,6 +152,13 @@ stream. The arena's player `remastered` plays it; `npm run -s play -- analysis` 
 | `supply` | `ground`, `air`, `sea`: the hexes to the nearest city, airfield and port of the side's, where it resupplies and reinforces in full (src/core/supply.ts) |
 | `units` | per own unit, the threat on its hex, its distance to supply, its points to the objectives |
 
+- **The debug overlay** (src/view/map/aidebug.ts and aidebugdraw.ts, #611): the page opened with `?aidebug` draws
+  the maps over the map. V cycles the layers (influence, front, sectors, ground and air threat, the distance for
+  the selected unit's movement method, supply, the enemies known with their confidence, off), X the side, the AI's
+  by default. It reads the remastered AI's own knowledge when it plays the side (its memory: the host's
+  `aiKnowledge`), else perceives and analyses the world without memory, once a world; the legend says which.
+  It may show what the person's side doesn't see.
+
 ### 3. Commander: strategy
 
 Sets a posture per objective (attack, hold, delay), picks the main effort (the weakest sector on
