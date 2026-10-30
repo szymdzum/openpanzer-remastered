@@ -13,7 +13,8 @@ import {
 import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import type { CombatResult, Contribution, UnitId, UnitState, World } from "./types";
-import { hexIndex, isSpotted, sideOf } from "./world";
+import { hexIndex, sideOf } from "./world";
+import { seesUnit } from "./sight";
 
 export interface SupportShot {
 	unit: UnitId;
@@ -41,7 +42,7 @@ export interface AttackEstimate {
 function seenSupport(w: World, atk: UnitState, def: UnitState): UnitState[] {
 	if (atk.isSurprised) return [];
 	const side = sideOf(w, atk);
-	return supportFireUnits(w, atk, def).filter((s) => isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted);
+	return supportFireUnits(w, atk, def).filter((s) => seesUnit(w, s, side));
 }
 
 //As fight.ts leaves it: facing the attacker unless on a bridge of its side, off its transport when infantry.

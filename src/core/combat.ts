@@ -10,13 +10,14 @@ import { leaderType, roadType, terrainInitiative, terrainType, UNIT_MAX_EXPERIEN
 import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";
-import { adjacent, distance } from "./geometry";
+import { distance } from "./geometry";
 import { firingStrength } from "./weathereffects";
 import type {
 	CombatResult, CombatStep, CombatValues, Contribution, Fight, Side, UnitState, World
 } from "./types";
 import { hasLeader, isAir, isCloseCombatTerrain, isGone, isGround, isSea } from "./units";
-import { airUnitAt, currentEqid, groundUnitAt, hexIndex, isRiding, isSpotted, onMap, sideOf, unitData } from "./world";
+import { currentEqid, hexIndex, isRiding, sideOf, unitData } from "./world";
+import { seesUnit, unitsNear } from "./sight";
 
 function change(f: Fight, name: string, side: Side, field: keyof CombatValues, value: number) {
 	const before = f.values[field];
@@ -397,17 +398,8 @@ function experience(f: Fight) {
 function hasCombatLeader(w: World, u: UnitState, leader: number): boolean {
 	if (hasLeader(w, u, leader)) return true;
 	return w.rules.allLeaderAbilities && (leader === leaderType.resilience || leader === leaderType.skilledGroundAttack)
-		&& hasSupportNear(w, u);
+		&& unitsNear(w, u).some((o) => !isGone(w, o) && sideOf(w, o) === sideOf(w, u) && hasLeader(w, o, leaderType.combatSupport));
 }
-
-function hasSupportNear(w: World, u: UnitState): boolean {
-	if (u.row < 0) return false;
-	return [{ row: u.row, col: u.col }, ...adjacent(u.row, u.col)].some((c) => onMap(w, c.row, c.col)
-		&& [groundUnitAt(w, hexIndex(w, c.row, c.col)), airUnitAt(w, hexIndex(w, c.row, c.col))].some((o) => supports(w, o, u)));
-}
-
-const supports = (w: World, other: UnitState | null, u: UnitState) => other !== null && other.id !== u.id && !isGone(w, other)
-	&& sideOf(w, other) === sideOf(w, u) && hasLeader(w, other, leaderType.combatSupport);
 
 //Beyond 4 the attack over the defense counts at 2/5.
 function killFraction(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState): number {
@@ -494,7 +486,7 @@ export function combatResult(w: World, atk: UnitState, def: UnitState, withHidde
 	const support = atk.isSurprised ? [] : supportFireUnits(w, atk, def);
 	for (const s of support) {
 		const cr = attackResult(w, s, atk, rng);
-		if (isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted) {
+		if (seesUnit(w, s, side)) {
 			if (record !== null) record.push({ name: "support fire", side: "defender", field: "losses", before: seen.losses, after: seen.losses + cr.kills });
 			seen.losses += cr.kills; //the support's kills are the attacker's losses
 			seen.suppressed += cr.defSuppress;

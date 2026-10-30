@@ -15,6 +15,7 @@ import { adjacent, distance } from "./geometry";
 import type { Position, UnitId, UnitState, World } from "./types";
 import { canEntrench, isAir, isCloseCombatTerrain, isEnemy, isGround } from "./units";
 import { hexIndex, isSpotted, playerOf, sideOf, unitAt, unitData } from "./world";
+import { spotsUnit } from "./sight";
 
 /** An enemy unit the AI attacks this turn; losses: the strength it expects it to lose so far. */
 export interface EnemyUnit {
@@ -113,7 +114,7 @@ function targetScore(s: Scorer, u: UnitState, target: UnitState, isPotential: bo
 function targetHexScore(s: Scorer, u: UnitState, target: UnitState, score: number): number {
 	const targetHex = hexIndex(s.w, target.row, target.col);
 	if (s.w.state.map.hexes[targetHex].victorySide !== -1) score += 350;
-	if (!isSpotted(s.w, targetHex, sideOf(s.w, u))) score *= s.config.unspottedFactor;
+	if (!spotsUnit(s.w, target, sideOf(s.w, u))) score *= s.config.unspottedFactor;
 	return score;
 }
 

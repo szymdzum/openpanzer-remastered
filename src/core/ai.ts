@@ -20,7 +20,8 @@ import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
 import type { MoveCell, Position, UnitState, World } from "./types";
 import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
-import { groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
+import { groundUnitAt, hexIndex, onMap, sideOf, unitData } from "./world";
+import { seesUnit } from "./sight";
 
 export interface AIControllerOptions {
 	config?: AIConfig;	//the settings of the rules the game plays by (w.rules.ai) when not given
@@ -357,7 +358,7 @@ const CONTACT = 3;
 function nearSeenEnemy(w: World, u: UnitState, range: number): boolean {
 	const side = sideOf(w, u);
 	return w.state.units.some((other) => sideOf(w, other) !== side && distance(u.row, u.col, other.row, other.col) <= range
-		&& (isSpotted(w, hexIndex(w, other.row, other.col), side) || other.tempSpotted));
+		&& seesUnit(w, other, side));
 }
 
 function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
@@ -365,7 +366,7 @@ function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 	return adjacent(cell.row, cell.col).some((c) => {
 		if (!onMap(w, c.row, c.col)) return false;
 		const hex = hexIndex(w, c.row, c.col), other = groundUnitAt(w, hex);
-		return other !== null && sideOf(w, other) !== side && (isSpotted(w, hex, side) || other.tempSpotted);
+		return other !== null && sideOf(w, other) !== side && seesUnit(w, other, side);
 	});
 }
 

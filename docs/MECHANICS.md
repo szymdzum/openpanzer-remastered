@@ -198,7 +198,8 @@ then assault, then overrun with tanks.
 ## Spotting
 
 Each unit spots its equipment's spot range around it (+2 elite recon veteran leader, +1
-skilled reconnaissance). The spotting moves with the unit: the hexes it leaves are no longer
+skilled reconnaissance). In the remaster's rules Forest Camouflage hides a unit in a forest from all but the
+enemies next to it (#3). The spotting moves with the unit: the hexes it leaves are no longer
 spotted by it (`setSpotRange`, in `moveUnit`), so an enemy seen on the way can disappear again.
 Units newly spotted or that fire stay visible until the end of the round (`tempSpotted`), even
 on hexes no one spots.
@@ -269,8 +270,16 @@ still reinforce.
   - **Combat Support**: a friendly unit on the unit's hex or next to it fights as if it had Resilience
     (-2 to the kill fraction against it) and Skilled Ground Attack (+4 attack for an aircraft on a ground
     target); the unit itself doesn't.
+  - **Forest Camouflage**: a ground unit with it in a forest is seen only by an enemy on its hex or next to
+    it: the hex shows (no fog gives it away), the unit doesn't, to the screen, the AI and the move alike
+    (`seesUnit`, `spotsUnit` in src/core/sight.ts). An enemy that comes next to it spots it for the round,
+    as any newly spotted unit; one that fires shows itself the same way.
+  - **Influence**: an upgrade costs half its price (rounded down). Neither the manual nor the original says how
+    much "reduced" is.
   - **Skilled Interceptor** has nothing to lift: a fighter already fires in support against every enemy
     aircraft that attacks next to it, as often as its ammo lasts (`supportFireUnits`).
+  - **Overwatch** (reaction fire on an enemy that moves into range) has no effect yet: it needs a step of
+    its own in the move's flow (#599).
 
   Neither terrain ability makes a hex dearer than its own terrain (a river on frozen ground is cheaper than
   rough for wheels).

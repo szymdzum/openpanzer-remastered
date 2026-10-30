@@ -11,7 +11,8 @@ import { playerSide, playerType } from "./tables";
 import type { Controller, Order, Played, ViewEvent } from "./controller";
 import type { Position, UnitId, UnitState, World } from "./types";
 import { isInAttackRange } from "./attack";
-import { hexIndex, isSpotted, unitAt, unitById } from "./world";
+import { hexIndex, unitAt, unitById } from "./world";
+import { spotsUnit } from "./sight";
 
 //The units the tutorial picks by their starting hexes when it joins the game.
 const NAMED = { recon: [8, 12], legioninf: [4, 2], pz2a: [9, 6], ssinf1: [8, 6], ssinf2: [9, 5], ssinf3: [9, 4], arty: [8, 4],
@@ -236,7 +237,7 @@ function inReach(w: World, u: UnitState, target: UnitId | null): boolean {
 
 function enemySeenOn(w: World, at: Position, player: number): boolean {
 	const hex = hexIndex(w, at.row, at.col), there = unitAt(w, hex, false);
-	return there !== null && there.owner !== player && isSpotted(w, hex, w.state.players[player].side);
+	return there !== null && there.owner !== player && spotsUnit(w, there, w.state.players[player].side);
 }
 
 function onMap(w: World, id: UnitId | null): UnitState | null {

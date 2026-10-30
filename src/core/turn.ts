@@ -15,7 +15,8 @@ import type { GameEvent } from "./events";
 import { reinforcementDeployPosition } from "./movement";
 import type { Draft, OffMapUnit, UnitId, UnitState, ScenarioOutcome, World } from "./types";
 import { canEntrench, sideHasUnits } from "./units";
-import { hexIndex, isSpotted, sideOf, unitData } from "./world";
+import { hexIndex, sideOf, unitData } from "./world";
+import { spotsUnit } from "./sight";
 
 //Unit.unitEndTurn: entrenchment, the movement points and the turn's flags back, and a unit its enemy
 //no longer sees hidden again; fortifications stay seen once seen
@@ -32,7 +33,7 @@ export function unitEndTurn(d: Draft, id: UnitId) {
 //The enemy side spots the unit's hex. Deliberate (#75): the original asked the side the screen showed, so that
 //side's own units stayed seen in the fog for good once they had fired
 function seenByEnemy(w: World, u: UnitState): boolean {
-	return isSpotted(w, hexIndex(w, u.row, u.col), ~sideOf(w, u) & 1);
+	return spotsUnit(w, u, ~sideOf(w, u) & 1);
 }
 
 //The levels the unit's terrain gives at once: a unit that can entrench gets them at its first end of turn
