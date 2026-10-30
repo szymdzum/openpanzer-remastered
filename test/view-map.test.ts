@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import { deployWorld, handWorld, type HandUnit } from "./coreworld";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
 import { worldOf } from "../src/legacy/mirror";
-import { classicRules } from "../src/core/rules";
+import { classicRules, remasterRules } from "../src/core/rules";
 import { step } from "../src/core/step";
 import { attackCells } from "../src/core/attack";
 import { adjacent } from "../src/core/geometry";
@@ -250,6 +250,14 @@ test("Enemy zone bars sit on the area's edges facing a seen enemy whose zone end
 	expect(isSeen(hidden, 4, 3)).toBe(true);
 	expect(pathOf(hidden, hsel, { row: 4, col: 3 })!.stop).toBe(true);
 	expect(hsel.zones).toEqual([]);
+});
+
+test("An aircraft's zone bars face the enemy aircraft in the remaster rules (#18)", () => {
+	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: ME_109, owner: 0, row: 4, col: 1 }, { eqid: ME_109, owner: 1, row: 4, col: 3 }] },
+		undefined, { spotSide: 0, rules: remasterRules });
+	const sel = selectionOf(w, 0)!;
+	expect(sel.zones.length).toBeGreaterThan(0);
+	for (const e of sel.zones) expect(adjacent(e.row, e.col)[e.side]).toEqual({ row: 4, col: 3 });
 });
 
 test("The area's hexes the side doesn't see are hatched, not tinted: the move may run into an ambush", () => {

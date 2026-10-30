@@ -112,14 +112,23 @@ then assault, then overrun with tanks.
   the points (254 in the tables: mountains, rivers...) takes any left, at least one, and ends the
   move (#205): it uses all of them, in points and fuel (#214).
 - **Zone of control**: every unit except aircraft controls its 6 adjacent hexes, ships and
-  fortifications included (`setZOCRange`). Entering a hex the mover's side spots that is in the
+  fortifications included (`setZOCRange`), and only ground units feel it. Entering a hex the mover's side spots that is in the
   enemy's ZOC stops the move (`getMoveRange`), whether or not the side sees the unit casting the
   zone: a hidden enemy's zone stops it too, as in the original (#282), so the move range can end
   next to a unit the player doesn't see. A hex the side doesn't spot doesn't stop it. The hex costs
-  its terrain, and the unit has no points left (#214). Air units ignore ZOC. In the remaster's rules
+  its terrain, and the unit has no points left (#214). Air units ignore it. In the remaster's rules
   a recon unit ignores it, as the manual says (#4): it pays the hex's terrain cost and goes on (its
   split movement stays), and a hidden enemy still surprises it. The AI's moves, the path and the
   preview all read the same move range.
+- **Air zone of control**: "surface units' zones of control affect only surface units and air units'
+  zones of control affect only air units" (manual, Zone of Control). In the classic rules aircraft
+  cast none and ignore it. In the remaster's rules (#18) the six hexes round an enemy aircraft the
+  mover's side sees stop an aircraft as a ground zone stops a ground unit: it can fly onto such a hex
+  (one point of fuel, as any hex) and has no moves left, but not on through it; it can start in a zone
+  and leave it, and fly round. An aircraft the side doesn't see casts none (unlike a hidden ground
+  unit's zone, #282). Ground units don't feel an air zone and aircraft don't feel a ground one. The
+  zone is worked out from the aircraft next to the hex when the move range is made (`inAirZoc`), not
+  kept in the hexes' zone counters, so the saved game and the harness' snapshots don't change.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
   attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
   ground unit), whatever the screen's air mode shows.
@@ -401,6 +410,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Bad weather reduces spotting | Classic rules: spot range only from equipment and leaders. The remaster's halve it (#1) |
 | Bad weather reduces supply and replacements; snow doubles fuel | Classic rules: neither. The remaster's halve the supply out of towns in rain or snow and double the fuel on frozen ground (#1) |
 | The weather changes with the area and the month; storm fronts last days; no rain or snow in North Africa | The classic rules keep the start weather; the remaster changes it each round by weather zone and month, in fronts (#591) |
+| Air units have their own zone of control, which only air units feel | Classic rules: aircraft cast no zone and ignore it. The remaster's rules follow the manual (#18) |
 | Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience | Equipment only in the classic rules; the remaster caps it with the defender's terrain (#14). Experience still doesn't change it (it gives +1 av and dv per level instead) |
