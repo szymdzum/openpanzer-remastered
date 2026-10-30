@@ -1,6 +1,7 @@
 //The view model of a turn's start: the short turn report (as the original game's UICombatLog.buildTurnInfo: objectives
-//left, turns left to each outcome, prestige and the next turn's, the ground), what the enemy's turn did to the side
-//shown, the unit the turn starts on, the program's turn in progress counted in units. Only the World and the events
+//left, turns left to each outcome, prestige and the next turn's, the weather and the ground), what the enemy's turn
+//did to the side shown, the unit the turn starts on, the program's turn in progress counted in units. Only the World
+//and the events
 import type { EventOf, GameEvent } from "../core/events";
 import type { UnitId, World } from "../core/types";
 import { sideOf, unitById, unitData } from "../core/world";
@@ -60,6 +61,7 @@ export interface TurnReport {
 	tiers: Tier[];
 	prestige: string;
 	next: number; //the prestige the next turn gives
+	weather: Condition;
 	ground: Condition;
 	enemy: EnemyLine[]; //"All quiet on this front" when nothing happened
 	campaign: boolean; //a campaign's scenario: its dossier
@@ -97,13 +99,13 @@ export function turnReportOf(w: World, enemy: EnemyTurn): TurnReport | null {
 	if (you === null) return null;
 	const s = w.state.scenario, turn = w.state.turn.turn, { open, tiers } = outcomes(w);
 	const lead = open.length === 0 ? null : { left: open[0].left, name: open[0].name };
-	const lastOne = open.length > 0 ? open[open.length - 1] : null;
+	const lastOne = open.length > 0 ? open[open.length - 1] : null, status = statusOf(w);
 	return {
 		label: dateOf(s.date) + " · " + w.data.name, title: `Turn ${turn} of ${s.maxTurns}`, objectives: w.state.objectives[you.side].length,
 		lead, others: open.slice(1).map((o) => o.left + " " + o.name).join(" · "),
 		last: lastOne !== null && lastOne.left === 1 ? "Take them this turn for " + forOutcome(lastOne.name) : null,
 		past: Math.min(1, (turn - 0.5) / s.maxTurns), tiers, prestige: prestigeText(you.prestige), next: you.prestigePerTurn[turn + 1] || 0,
-		ground: statusOf(w).ground, enemy: enemyLines(enemy), campaign: w.state.campaign !== null,
+		weather: status.weather, ground: status.ground, enemy: enemyLines(enemy), campaign: w.state.campaign !== null,
 		briefing: { title: w.data.name, html: w.data.description },
 	};
 }

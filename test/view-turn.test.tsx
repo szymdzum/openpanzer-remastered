@@ -28,10 +28,11 @@ function world(turn = 4, current = 0, units = smallGameUnits, change: (s: Return
 	return worldOf(smallGame(units, saved).scenario, null, { spotSide: 0, noFOW: false, rules: classicRules });
 }
 
-test("The short report: date and scenario, the turn, objectives left, turns to each outcome with its track, prestige and ground (#346)", () => {
+test("The short report: date and scenario, the turn, objectives left, turns to each outcome with its track, prestige, weather and ground (#346, #591)", () => {
 	const r = turnReportOf(world(), quietTurn())!;
 	expect(r).toMatchObject({ label: "22 Jun 1941 · Ciechanow", title: "Turn 4 of 17", objectives: 1, lead: { left: 10, name: "Brilliant" },
-		others: "12 Victory · 14 Tactical", last: null, prestige: "3,056", next: 5, ground: { icon: "dry", word: "Dry" }, campaign: false,
+		others: "12 Victory · 14 Tactical", last: null, prestige: "3,056", next: 5,
+		weather: { icon: "fair", word: "Fair" }, ground: { icon: "dry", word: "Dry" }, campaign: false,
 		enemy: [{ tone: "muted", text: "All quiet on this front" }], briefing: { title: "Ciechanow", html: "" } });
 	expect(r.past).toBeCloseTo(3.5 / 17);
 	expect(r.tiers).toEqual([{ label: "B", at: 13 / 17, gone: false }, { label: "V", at: 15 / 17, gone: false }, { label: "T", at: 1, gone: false }]);
