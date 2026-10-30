@@ -130,6 +130,14 @@ export interface Ruleset {
 	weatherLimitsSupply: boolean;
 	//On frozen ground a ground unit burns two fuel a movement point (#1): false in the classic rules, one
 	snowDoublesFuel: boolean;
+	//A die that misses the kill by up to SUPPRESSION_BAND suppresses its strength point instead: it doesn't fire
+	//for the rest of the combat, the support fire's suppression lasts the attacker's whole combat and a defender
+	//with at least its strength suppressed falls back; Overwhelming Attack turns suppression into kills (#2).
+	//False in the classic rules, where nothing is suppressed
+	suppression: boolean;
+	//A tactical bomber's suppression, and that of a unit with Shock Tactics, lasts the attacking player's turn
+	//(UnitState.suppressed, #2): false in the classic rules
+	continuedSuppression: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }
@@ -222,8 +230,10 @@ export interface Fight {
 	readonly dEntrenchIntact: boolean;
 	isCloseCombat: boolean;
 	readonly values: CombatValues;
-	//The strength points each side fires with, a die each: the unit's strength but in bad weather
+	//The strength points each side fires with, a die each: the unit's strength but the suppressed and in bad weather
 	readonly firing: Record<Side, number>;
+	//The points each side has suppressed as the exchange starts: the support fire's on the attacker, the turn's
+	readonly suppressed: Record<Side, number>;
 	readonly result: CombatResult;
 	readonly record: Contribution[] | null;
 	readonly rng: RngStream | null;	//the game's stream, null for the estimate
@@ -257,6 +267,7 @@ export interface AttackStart {
 	defender: UnitId;
 	atkStrength: number;
 	defStrength: number;
+	defSuppressed: number;	//the defender's points suppressed when the shots are fired: it falls back on its strength
 }
 
 /** Where a move or an attack waits for the screen to animate it; a program goes on at once. */

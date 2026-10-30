@@ -30,9 +30,9 @@ export function grounded(w: World, u: UnitState): boolean {
 	return isAir(w, u) || uclass === unitClass.flak || uclass === unitClass.airDefence;
 }
 
-/** The strength points a unit fires with: half of them, rounded up, when the weather hinders it (ships sail on). */
-export function firingStrength(w: World, u: UnitState): number {
-	return w.rules.weatherLimitsCombat && !isSea(w, u) && hinders(w, u) ? Math.ceil(u.strength / 2) : u.strength;
+/** The strength points a unit fires of `points`: half, rounded up, when the weather hinders it (ships sail on). */
+export function firingStrength(w: World, u: UnitState, points: number): number {
+	return w.rules.weatherLimitsCombat && !isSea(w, u) && hinders(w, u) ? Math.ceil(points / 2) : points;
 }
 
 /** A spotting range in this weather: half of it, rounded down but at least 1, when the weather hinders the unit. */

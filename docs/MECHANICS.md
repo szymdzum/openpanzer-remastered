@@ -22,6 +22,40 @@ other unit. A weak unit hits weakly: strength 4 deals about 40% of what strength
   `kills = (5 * clamp(kF + 21 - threshold, 1, 19) * strength + 50) / 100`, an integer division:
   the expected kills of the dice, rounded (#90).
 
+**Suppression** (the remaster's rules, #2, src/core/combat.ts). The manual: "Each non-suppressed
+strength point makes an individual attack"; "Suppressed strength points are not available during the
+attack. Most suppression lasts only for the duration of a single combat, but tactical bombers can
+suppress units for the player's entire turn [...] Defending units whose suppression number is greater
+than or equal to their current strength, retreat, surrender, or are destroyed." The classic rules
+suppress nothing (`atkSuppress` and `defSuppress` stay 0).
+
+- The same die, one draw: a roll (with kF) at or above the threshold kills, one up to 4 below it
+  (`SUPPRESSION_BAND`) suppresses the point, lower misses. At kF 0 a tank kills on 15-20 (30%) and
+  suppresses on 11-14 (20%); artillery, at threshold 19, kills on 19-20 (10%) and suppresses on 15-18
+  (20%). The estimate: `suppressed = (5 × (clamp(kF + 25 - threshold, 1, 19) - clamp(kF + 21 -
+  threshold, 1, 19)) × strength + 50) / 100`, 2 of 10 when no chance is clamped. A die that only hits
+  on a 20 suppresses nothing.
+- The exchange is simultaneous, as the kills are: the points suppressed in it don't change its
+  return fire. What a unit had suppressed before it (the support fire's, a turn's) doesn't fire: the
+  combat step `suppressed`, before `weather`, takes them off the firing strength, and the weather
+  halves what is left ("Each non-suppressed strength point [...] is also halved by rain or snow").
+- Support fire ("Defensive Artillery fire suppresses for the attacking unit's entire combat"): the
+  attacker fires with its strength less what the guns killed and suppressed, and "if all the attacking
+  unit's strength points are destroyed or suppressed by defensive fire, the attack is broken off"
+  (`isBrokenOff`: the `attackStopped` event, as when its losses stop it).
+- After the attack a defender whose suppressed points (of this combat, and the turn's) are at least
+  its strength falls back, or surrenders with nowhere to go, against the attackers whose losses make it
+  retreat (ground on ground, not artillery, tactical bombers or fortifications): the `pinned` event,
+  and the results' line says "pinned down".
+- Continued suppression ("All points of suppression that a tactical bomber inflicts on another unit in
+  a turn lasts for the attacking player's entire turn"; Shock Tactics, "Any suppression which the unit
+  inflicts on an enemy unit will last the entire player turn"): what a tactical bomber or a unit with
+  Shock Tactics suppresses in its own attack (not in support, not firing back) stays on the unit
+  (`UnitState.suppressed`, at most its strength) and doesn't fire in its later combats, until the turn
+  ends. The field is written only while it is non-zero, so a classic game's state and save don't change.
+- The attack cursor adds the expected suppression to each side's chip: "−2 +1s", the support fire's
+  included on the attacker's.
+
 **Which values fight.** Every unit has a target type: soft (infantry, trucks), hard (tanks),
 air or naval. The attacker uses its attack against the defender's target type (soft, hard, air
 or naval attack). Each side defends with ground defense (air defense against aircraft).
@@ -210,6 +244,10 @@ still reinforce.
   move range, spotting, entrenchment and kill rolls, e.g. aggressive attack +4 av +2 dv, first
   strike makes initiative always favor the unit, overwhelming attack +2 kF and +1 kill,
   resilience -2 kF for the enemy, aggressive maneuver +1 move.
+- Overwhelming attack ("an indeterminate number of the suppression points it would otherwise inflict
+  converted to kills") in the remaster's rules (#2): +2 kF, and half the suppression it inflicts,
+  rounded up, becomes kills instead of the classic +1 (3 suppressed: 2 more kills, 1 suppressed).
+  Shock tactics makes the unit's suppression last the turn (Combat, Suppression).
 - The original's roll never picks the last two leaders of a class's list (infiltration tactics and
   liberator for the ground classes, fire discipline for the guns, first strike for the fighters): only
   a scenario gives them. The remaster's rules (#78): any of the list can come up.
@@ -429,6 +467,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | The weather changes with the area and the month; storm fronts last days; no rain or snow in North Africa | The classic rules keep the start weather; the remaster changes it each round by weather zone and month, in fronts (#591) |
 | Air units have their own zone of control, which only air units feel | Classic rules: aircraft cast no zone and ignore it. The remaster's rules follow the manual (#18) |
 | Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
+| Strength points are suppressed in combat: they don't fire; tactical bombers' (and Shock Tactics') suppression lasts the turn; a defender suppressed at its strength retreats or surrenders; support fire's suppression can break an attack off | Classic rules: no suppression (`atkSuppress`, `defSuppress` always 0), Overwhelming Attack +1 kill, Shock Tactics nothing. The remaster's rules follow the manual (#2) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience, plus a random factor; zero for an attacker that is surprised or meets a rugged defense | Equipment only in the classic rules. The remaster's rules follow the manual: the defender's terrain caps it (#14), +1 per experience level, a random 0 to 2 each, zero for the surprised or rugged-hit attacker (#18; the numbers are the project's, the manual gives none) |
 | An AT unit that moved suffers a penalty to initiative and attack when it attacks | Only its range defense is lost (tank killer exempt), in both rules; the manual gives no number (#18) |

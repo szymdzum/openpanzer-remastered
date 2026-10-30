@@ -306,18 +306,26 @@ export const classicCombat: CombatStep[] = [
 		if (!canFire(w, f.def, f.atk))
 			f.result.defcanfire = false;
 	} },
+	{ name: "suppressed", run(f) {
+		//the suppressed points don't fire, then the weather halves the others
+		strengthIn(f, "suppressed", "attacker", Math.max(0, f.firing.attacker - f.suppressed.attacker));
+		if (f.result.defcanfire) strengthIn(f, "suppressed", "defender", Math.max(0, f.firing.defender - f.suppressed.defender));
+	} },
 	{ name: "weather", run(f) {
 		//the strength points that fire, a die each: fewer in bad weather (the dice drawn too)
-		strengthIn(f, "attacker", firingStrength(f.world, f.atk));
-		if (f.result.defcanfire) strengthIn(f, "defender", firingStrength(f.world, f.def));
+		strengthIn(f, "weather", "attacker", firingStrength(f.world, f.atk, f.firing.attacker));
+		if (f.result.defcanfire) strengthIn(f, "weather", "defender", firingStrength(f.world, f.def, f.firing.defender));
 	} },
 ];
 
-function strengthIn(f: Fight, side: Side, strength: number) {
+function strengthIn(f: Fight, name: string, side: Side, strength: number) {
 	const before = f.firing[side];
 	f.firing[side] = strength;
-	if (f.record !== null && before !== strength) f.record.push({ name: "weather", side, field: "strength", before, after: strength });
+	if (f.record !== null && before !== strength) f.record.push({ name, side, field: "strength", before, after: strength });
 }
+
+/** The points of a unit suppressed for the rest of the turn. */
+export const suppressedFor = (u: UnitState): number => u.suppressed ?? 0;
 
 function newResult(): CombatResult {
 	return { kills: 0, losses: 0, atkSuppress: 0, defSuppress: 0, atkExpGained: 0, defExpGained: 0, defcanfire: true,
@@ -326,10 +334,11 @@ function newResult(): CombatResult {
 
 /**
  * An attack of atk on def alone (GameRules.calculateAttackResults). rng: the game's stream, which the dice
- * draw from; null for the estimate, which draws nothing. record: what each step changed.
+ * draw from; null for the estimate, which draws nothing. record: what each step changed. supportSuppressed:
+ * the attacker's points the support fire suppressed.
  */
 export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngStream | null,
-	record: Contribution[] | null = null): CombatResult {
+	record: Contribution[] | null = null, supportSuppressed = 0): CombatResult {
 	const aAir = isAir(w, atk), dAir = isAir(w, def);
 	const aHex = hexIndex(w, atk.row, atk.col), dHex = hexIndex(w, def.row, def.col);
 	//an air unit fights over clear terrain
@@ -342,7 +351,7 @@ export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngS
 		distance: distance(atk.row, atk.col, def.row, def.col),
 		aEntrenchIntact: isEntrenchmentIntact(w, def, atk, aTerrain), dEntrenchIntact: isEntrenchmentIntact(w, atk, def, dTerrain),
 		isCloseCombat: false, values: { aav: 0, adv: 0, dav: 0, ddv: 0 }, firing: { attacker: atk.strength, defender: def.strength },
-		result: newResult(), record, rng,
+		suppressed: { attacker: suppressedFor(atk) + supportSuppressed, defender: suppressedFor(def) }, result: newResult(), record, rng,
 	};
 	for (const s of w.rules.combat) s.run(f);
 	resolve(f, rng);
@@ -352,10 +361,14 @@ export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngS
 function resolve(f: Fight, rng: RngStream | null) {
 	const { world: w, atk, def, values: v, result: cr } = f;
 	const name = rng ? "dice" : "estimate";
-	cr.kills = combatKills(w, v.aav, v.ddv, atk, def, f.firing.attacker, rng);
+	const fired = combatHits(w, v.aav, v.ddv, atk, def, f.firing.attacker, rng);
+	cr.kills = fired.kills;
+	cr.defSuppress = fired.suppressed;
 	if (f.record !== null) f.record.push({ name, side: "attacker", field: "kills", before: 0, after: cr.kills });
 	if (cr.defcanfire) {
-		cr.losses = combatKills(w, v.dav, v.adv, def, atk, f.firing.defender, rng);
+		const back = combatHits(w, v.dav, v.adv, def, atk, f.firing.defender, rng);
+		cr.losses = back.kills;
+		cr.atkSuppress = back.suppressed;
 		if (f.record !== null) f.record.push({ name, side: "defender", field: "losses", before: 0, after: cr.losses });
 	}
 	//a tank overruns a destroyed defender next to it
@@ -395,27 +408,54 @@ function hitThreshold(w: World, atk: UnitState, def: UnitState): number {
 		|| (isSea(w, atk) && !isSea(w, def)) ? 19 : 15;
 }
 
-//A die per strength point that fires, or the expected number with rng null, rounded once as PG2's integer
-//division rounds it (Deliberate #90: rounding again came out half a point high). Overwhelming attack kills one more.
-function combatKills(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, firing: number,
-	rng: RngStream | null): number {
-	const kF = killFraction(w, atkval, defval, atk, def);
-	const threshold = hitThreshold(w, atk, def);
-	let kills = rng === null ? Math.floor((5 * Math.min(19, Math.max(1, kF + 21 - threshold)) * firing + 50) / 100)
-		: rolledKills(rng, kF, threshold, firing);
-	if (hasLeader(w, atk, leaderType.overwhelmingAttack)) kills += 1;
-	return kills;
+/** In the remaster's rules a die that misses the hit threshold by up to this suppresses its strength point. */
+const SUPPRESSION_BAND = 4;
+
+interface Hits {
+	kills: number;
+	suppressed: number;
 }
 
-//A die per strength point: 1 always misses, 20 always hits, the others hit from threshold - kF
-function rolledKills(rng: RngStream, kF: number, threshold: number, strength: number): number {
-	let kills = 0;
+//A die per strength point that fires, or the expected numbers with rng null
+function combatHits(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, firing: number,
+	rng: RngStream | null): Hits {
+	const kF = killFraction(w, atkval, defval, atk, def);
+	const threshold = hitThreshold(w, atk, def), band = w.rules.suppression ? SUPPRESSION_BAND : 0;
+	const hits = rng === null ? expectedHits(kF, threshold, band, firing) : rolledHits(rng, kF, threshold, band, firing);
+	return hasLeader(w, atk, leaderType.overwhelmingAttack) ? overwhelming(w, hits) : hits;
+}
+
+//One more kill in the classic rules; in the remaster's, as the leader's description says, suppression turned
+//into kills: half of it, rounded up
+function overwhelming(w: World, h: Hits): Hits {
+	if (!w.rules.suppression) return { kills: h.kills + 1, suppressed: h.suppressed };
+	const converted = Math.ceil(h.suppressed / 2);
+	return { kills: h.kills + converted, suppressed: h.suppressed - converted };
+}
+
+//A die's chance in 20 to reach threshold: 20 always does, 1 never
+const chance = (kF: number, threshold: number) => Math.min(19, Math.max(1, kF + 21 - threshold));
+
+//The dice expected at a chance in 20, rounded once as PG2's integer division rounds it (Deliberate #90:
+//rounding again came out half a point high)
+const expected = (twentieths: number, firing: number) => Math.floor((5 * twentieths * firing + 50) / 100);
+
+function expectedHits(kF: number, threshold: number, band: number, firing: number): Hits {
+	const kill = chance(kF, threshold);
+	return { kills: expected(kill, firing), suppressed: expected(chance(kF, threshold - band) - kill, firing) };
+}
+
+//A die per strength point, one draw each: 1 always misses, 20 always hits, the others kill from threshold - kF
+//and suppress in the band below it
+function rolledHits(rng: RngStream, kF: number, threshold: number, band: number, strength: number): Hits {
+	const hits = { kills: 0, suppressed: 0 };
 	for (let i = 0; i < strength; i++) {
 		let roll = rollDice(rng, 1, 20);
 		if (roll > 1 && roll < 20) roll += kF;
-		if (roll >= threshold) kills++;
+		if (roll >= threshold) hits.kills++;
+		else if (roll >= threshold - band) hits.suppressed++;
 	}
-	return kills;
+	return hits;
 }
 
 /** A random integer from min to max, both included: one draw from the stream. */
@@ -433,21 +473,29 @@ export function rollDice(rng: RngStream, min: number, max: number): number {
 export function combatResult(w: World, atk: UnitState, def: UnitState, withHiddenUnits: boolean, rng: RngStream | null,
 	record: Contribution[] | null = null): CombatResult {
 	const side = sideOf(w, atk);
-	let realLosses = 0, evalLosses = 0;
+	const real = { losses: 0, suppressed: 0 }, seen = { losses: 0, suppressed: 0 };
 	const support = atk.isSurprised ? [] : supportFireUnits(w, atk, def);
 	for (const s of support) {
 		const cr = attackResult(w, s, atk, rng);
 		if (isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted) {
-			if (record !== null) record.push({ name: "support fire", side: "defender", field: "losses", before: evalLosses, after: evalLosses + cr.kills });
-			evalLosses += cr.kills; //the support's kills are the attacker's losses
+			if (record !== null) record.push({ name: "support fire", side: "defender", field: "losses", before: seen.losses, after: seen.losses + cr.kills });
+			seen.losses += cr.kills; //the support's kills are the attacker's losses
+			seen.suppressed += cr.defSuppress;
 		}
-		realLosses += cr.kills;
+		real.losses += cr.kills;
+		real.suppressed += cr.defSuppress;
 	}
 
-	const cr = attackResult(w, atk, def, rng, record);
-	const losses = withHiddenUnits ? realLosses + cr.losses : Math.min(evalLosses + cr.losses, atk.strength);
-	if (!withHiddenUnits) cr.kills = Math.min(cr.kills, def.strength);
-	cr.losses = losses;
+	const fire = withHiddenUnits ? real : seen;
+	const cr = attackResult(w, atk, def, rng, record, fire.suppressed);
+	cr.losses += fire.losses;
+	cr.atkSuppress += fire.suppressed;
+	if (!withHiddenUnits) {
+		cr.kills = Math.min(cr.kills, def.strength);
+		cr.losses = Math.min(cr.losses, atk.strength);
+		cr.defSuppress = Math.min(cr.defSuppress, def.strength - cr.kills);
+		cr.atkSuppress = Math.min(cr.atkSuppress, atk.strength - cr.losses);
+	}
 	return cr;
 }
 
@@ -534,10 +582,32 @@ export function isLossOverRetreatThreshold(strength: number, oldStrength: number
 	return (oldStrength - strength) / oldStrength >= UNIT_RETREAT_THRESHOLD - (10 - oldStrength) / 2 / 10;
 }
 
-/** Ground against ground, not by artillery, a tactical bomber or a fortification. */
-export function shouldDefenderRetreat(w: World, atk: UnitState, def: UnitState, oldStrength: number): boolean {
+//Ground against ground, not by artillery, a tactical bomber or a fortification
+function forcesRetreat(w: World, atk: UnitState, def: UnitState): boolean {
 	const uclass = unitData(w, atk).uclass;
 	if (!isGround(w, atk) || !isGround(w, def)) return false;
-	if (uclass === unitClass.artillery || uclass === unitClass.tacticalBomber || uclass === unitClass.fortification) return false;
-	return isLossOverRetreatThreshold(def.strength, oldStrength);
+	return uclass !== unitClass.artillery && uclass !== unitClass.tacticalBomber && uclass !== unitClass.fortification;
+}
+
+/** Ground against ground, not by artillery, a tactical bomber or a fortification. */
+export function shouldDefenderRetreat(w: World, atk: UnitState, def: UnitState, oldStrength: number): boolean {
+	return forcesRetreat(w, atk, def) && isLossOverRetreatThreshold(def.strength, oldStrength);
+}
+
+/**
+ * In the remaster's rules a defender with at least its strength suppressed falls back, or surrenders, after an
+ * attack whose losses would make it retreat.
+ */
+export function isPinned(w: World, atk: UnitState, def: UnitState, suppressed: number): boolean {
+	return w.rules.suppression && forcesRetreat(w, atk, def) && suppressed >= def.strength;
+}
+
+/** In the remaster's rules the support fire breaks the attack off when it destroyed or suppressed all its points. */
+export function isBrokenOff(w: World, atk: UnitState, supportSuppressed: number): boolean {
+	return w.rules.suppression && suppressedFor(atk) + supportSuppressed >= atk.strength;
+}
+
+/** The suppression a unit inflicts in its attack lasts the turn: a tactical bomber's, a Shock Tactics unit's. */
+export function continuesSuppression(w: World, u: UnitState): boolean {
+	return w.rules.continuedSuppression && (unitData(w, u).uclass === unitClass.tacticalBomber || hasLeader(w, u, leaderType.shockTactics));
 }

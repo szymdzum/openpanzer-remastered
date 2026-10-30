@@ -55,6 +55,8 @@ export type GameEvent =
 	| { type: "dismounted"; unit: UnitId }
 	| { type: "leader"; unit: UnitId; leader: number }
 	| { type: "destroyed"; unit: UnitId; at: Position }
+	//The defender's suppressed points were at least its strength: it falls back, or surrenders (the remaster's rules)
+	| { type: "pinned"; unit: UnitId; suppressed: number }
 	//The defender fell back after the attack: a move without its cost (path and visible as moved's)
 	| { type: "retreated"; unit: UnitId; from: Position; to: Position; path: PathStep[]; visible: boolean }
 	//The defender had nowhere to retreat to
