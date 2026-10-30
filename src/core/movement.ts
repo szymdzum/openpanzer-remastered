@@ -118,8 +118,9 @@ export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
  * neighbour one ring nearer, its exit cost the entry plus the terrain cost, lowered when another neighbour
  * is cheaper. A hex is in reach when the points left pay for it; a hex that uses all the points (STOP) takes
  * any left, at least one. An enemy zone of control the unit's side sees stops it (STOP) on a hex it can pay
- * for. An air unit moves at cost 1 a hex, over its side's aircraft and around the enemy's it sees, as far
- * as its points take it. The updates go in list order, as in the original, so a tie resolves as it did.
+ * for, unless it is a recon unit in the rules where recon ignores it. An air unit moves at cost 1 a hex, over
+ * its side's aircraft and around the enemy's it sees, as far as its points take it. The updates go in list
+ * order, as in the original, so a tie resolves as it did.
  */
 export function moveRange(w: World, u: UnitState): MoveCell[] {
 	if (u.hasMoved) return [];
@@ -189,8 +190,7 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	for (let i = 0; i < c.length; i++) slot[c[i].row * cols + c[i].col] = i + 1;
 	for (const cell of c) if (cell.range > 0) cell.cin = -1; //not reached yet (relax)
 
-	const s: StepRules = { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range,
-		groundOrSea: isGround(w, u) || isSea(w, u) };
+	const s = stepRules(w, u, range, side);
 	const near: number[] = [];
 	try {
 		for (let r = 0; r <= range; r++)
@@ -199,6 +199,11 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 	} finally {
 		for (const cell of c) slot[cell.row * cols + cell.col] = 0;
 	}
+}
+
+function stepRules(w: World, u: UnitState, range: number, side: number): StepRules {
+	return { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range,
+		groundOrSea: isGround(w, u) || isSea(w, u), ignoresZoc: w.rules.reconIgnoresZoc && unitData(w, u).uclass === unitClass.recon };
 }
 
 //Steps to the neighbours as far or farther (not always right: a path can turn back), only from the unit's
@@ -217,6 +222,7 @@ interface StepRules {
 	enemySide: number;
 	range: number;
 	groundOrSea: boolean;	//not air: an air unit's range has no costs
+	ignoresZoc: boolean;
 }
 
 function step(w: World, from: MoveCell, to: MoveCell, s: StepRules) {
@@ -224,7 +230,7 @@ function step(w: World, from: MoveCell, to: MoveCell, s: StepRules) {
 	const other = groundUnitAt(w, hex);
 	const visible = seen(w, hex, s.side, other);
 	const terrain = enterCost(w, hex, s);
-	to.cost = visible && terrain < STOP && isZOC(w, hex, s.enemySide) ? STOP : terrain;
+	to.cost = !s.ignoresZoc && visible && terrain < STOP && isZOC(w, hex, s.enemySide) ? STOP : terrain;
 	relax(from, to);
 	if (affordable(to.cin, terrain, s.range)) reach(w, to, other, visible, s);
 }
