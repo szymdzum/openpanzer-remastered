@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Command, Refusal } from "../src/core/command";
-import { aiController } from "../src/core/ai";
+import { aiControllerFor } from "../src/core/remastered/controller";
 import { createWorld } from "../src/core/create";
 import type { GameEvent } from "../src/core/events";
 import { equipmentCountries, newGame, stateEquipment } from "../src/core/newgame";
@@ -49,7 +49,7 @@ export async function newSave(file: string, humanSides: number[], seed: number, 
 		data: created.data, state: created.state, report: [] };
 }
 
-const aiFor = (type: number, player: number) => type === playerType.aiLocal ? aiController(player) : null;
+const aiFor = (type: number, player: number, w: World) => type === playerType.aiLocal ? aiControllerFor(w, player) : null;
 
 //The game of a save: the world, the session with the AI's controllers, the person's side shown. fresh:
 //a new game, whose first player, the AI, starts its turn there as the screen's does (#292); otherwise a

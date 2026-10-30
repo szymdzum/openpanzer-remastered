@@ -6,7 +6,7 @@
 // #520), never the UI, the page, game.ts or storage.ts; the next two do the same for the files of the
 // running game (src/app/: the host, the screen interface, the screen that shows nothing, the loader and
 // the save), and keep every file of src/app/ from importing the UI (src/view/). The two after them keep
-// the core (src/core/ and its commands) from importing anything outside itself, and the last of them the
+// the core (src/core/ and its folders) from importing anything outside itself, and the last of them the
 // UI (src/view/) from importing anything but the core and src/app/, and src/legacy/ for types only. The
 // react and jsx-a11y plugins check the JSX of the UI's components (src/view/**/*.tsx, Preact).
 {
@@ -145,7 +145,8 @@
 		},
 		{
 			"files": [
-				"src/core/commands/*.ts"
+				"src/core/commands/*.ts",
+				"src/core/remastered/*.ts"
 			],
 			"rules": {
 				"no-restricted-imports": [

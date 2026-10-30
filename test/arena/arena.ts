@@ -6,6 +6,7 @@
 //(startSession's fresh, #292; the old game's AI ended it at once when it started a new scenario).
 import { JSDOM } from "jsdom";
 import { aiController } from "../../src/core/ai";
+import { remasteredController } from "../../src/core/remastered/controller";
 import type { Controller } from "../../src/core/controller";
 import { createWorld } from "../../src/core/create";
 import { rulesetNamed } from "../../src/core/rules";
@@ -19,13 +20,17 @@ import { playerType } from "../../src/core/tables";
 import { setupOf } from "../corefiles";
 import { FIRST_GENERAL, generalController } from "./general";
 
-//Who can play a side: a name and its controller (general1: the first general, #236, for a comparison)
-const CONTROLLERS = { ai: aiController, general: generalController, general1: (p: number) => generalController(p, FIRST_GENERAL) } satisfies
-	Record<string, (player: number) => Controller>;
+//Who can play a side: a name and its controller (general1: the first general, #236, for a comparison; remastered:
+//the remastered AI, #409, whatever the rules)
+const CONTROLLERS = { ai: aiController, remastered: remasteredController, general: generalController,
+	general1: (p: number) => generalController(p, FIRST_GENERAL) } satisfies Record<string, (player: number) => Controller>;
 
 export type Player = keyof typeof CONTROLLERS;
 
 export const isPlayer = (name: string): name is Player => Object.prototype.hasOwnProperty.call(CONTROLLERS, name);
+
+/** Whether the player is a general (general.ts), whose orders the core should never refuse. */
+export const isGeneral = (player: Player): boolean => player.startsWith("general");
 
 export interface Match {
 	file: string;
@@ -140,7 +145,7 @@ function ordered(match: Match, sides: SideResult[], w: World, a: Extract<Advance
 	if (a.refusal !== null) {
 		const by = w.state.players[a.player].side;
 		sides[by].refused++;
-		if (process.env.ARENA_DEBUG && match.sides[by] !== "ai")
+		if (process.env.ARENA_DEBUG && isGeneral(match.sides[by]))
 			process.stderr.write(`${match.file} seed ${match.seed} turn ${w.state.turn.turn}: ${JSON.stringify(a.order)} refused, ${a.refusal.reason}\n`);
 	}
 	return "command" in a.order ? 1 : 0;

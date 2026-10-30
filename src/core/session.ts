@@ -41,8 +41,9 @@ export type SessionEnd =
 	| { kind: "turnLimit"; side: number }
 	| { kind: "stuck"; reason: string };
 
-//The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial); null when no program plays it
-export type ControllerFor = (type: number, player: number) => Controller | null;
+//The controller of a player of a type (Game.setupPlayers: the AI, the scripted tutorial) in the world it joins; null
+//when no program plays it
+export type ControllerFor = (type: number, player: number, w: World) => Controller | null;
 
 export interface Session {
 	world: World;
@@ -102,7 +103,7 @@ export function startSession(w: World, controllerFor: ControllerFor, options: Se
 }
 
 function join(s: Session, player: number, type: number) {
-	const c = s.controllers[player] = isProgram(type) ? s.controllerFor(type, player) : null;
+	const c = s.controllers[player] = isProgram(type) ? s.controllerFor(type, player, s.world) : null;
 	if (c === null) return;
 	const played = c.join(s.world);
 	s.world = played.world;

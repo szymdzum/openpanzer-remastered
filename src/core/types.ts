@@ -140,6 +140,9 @@ export interface Ruleset {
 	continuedSuppression: boolean;
 	//Every leader ability does what its description says (#3): false in the classic rules, where some do nothing
 	allLeaderAbilities: boolean;
+	//The computer player is the remastered AI (remastered/controller.ts, #409): false in the classic rules, where
+	//it is the classic one (ai.ts)
+	remasteredAI: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

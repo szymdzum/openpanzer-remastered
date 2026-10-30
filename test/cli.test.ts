@@ -410,3 +410,16 @@ test("In the classic rules the CLI tells no suppression (#601)", () => {
 	const { before, after, events } = attackWhere(classicRules, (es) => es.some((e) => e.type === "fight"));
 	expect(describe(after, before, AXIS, events).join("\n")).not.toMatch(/suppress|pinned/);
 });
+test("The analysis shows a side's maps from what it sees, as text and as data (#610)", async () => {
+	const file = tmpGame(), call = caller(file);
+	await call("new drpzop01.xml --seed 1");
+	const axis = await call("analysis");
+	expect(axis).toMatch(/^the analysis of the Axis, turn 1 \(no memory/);
+	expect(axis).toContain("objectives to take, the weakest held first (5): ");
+	expect(axis).toContain("objectives to hold (2): 1,10 ");
+	expect(await call("analysis --side 1")).toMatch(/^the analysis of the Allies/);
+	await expect(call("analysis --side 2")).rejects.toThrow("--side is 0 or 1");
+	const data = (await run(parseArgs(["analysis", "--json"]), file)).data as { side: number; influence: { own: number[] } };
+	expect(data.side).toBe(0);
+	expect(data.influence.own).toHaveLength(32 * 37);
+}, 60_000);

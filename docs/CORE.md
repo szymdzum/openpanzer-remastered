@@ -67,6 +67,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `tutorial.ts` | the scripted tutorial as a controller: its script of turns 1 to 5 as data, the hand-over after them |
 | `session.ts` | a game played headless: the controllers, the turns in the old game's order, the end of the game |
 | `commands/` | the handlers, `check` and `run` of each command type (`move.ts`: move and attack, `supply.ts`, `transport.ts`, `undo.ts`, `units.ts`: deploy, buy, upgrade, disband, sell; `turn.ts`: the end of turn) |
+| `remastered/` | the remastered AI (#409): `perception.ts` what a side sees and remembers, `analysis.ts` and `fields.ts` its maps, `controller.ts` the controller, for now the classic AI's commands with the analysis beside them, and `aiControllerFor`, the AI of the rules a game plays by |
 
 The core imports nothing outside `src/core/`, types included: no UI module, no object of the old
 engine (the linter checks it).

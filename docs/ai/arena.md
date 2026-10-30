@@ -12,6 +12,7 @@ ARENA_SEEDS=20 ARENA_FILES=drpzop01.xml,dr9fr03.xml npm run arena
 ARENA_SUITE=1 ARENA_SEED_FROM=101 npm run arena      # seeds 101-140, where changes are tuned (Comparing two runs)
 ARENA_MATCHUPS=ai-ai,general-general npm run arena   # axis-allies; ai-ai,general-ai,ai-general by default
 ARENA_MATCHUPS=general1-ai,general-ai npm run arena  # the first general (#236) beside the general (#605)
+ARENA_MATCHUPS=remastered-general npm run arena      # the remastered AI (#409) against the general, whatever the rules
 JOBS=2 npm run arena                                 # the processes playing the games, 3 by default
 ARENA_OUT=/tmp/arena.json npm run arena              # every game's result as JSON
 ARENA_DEBUG=1 npm run arena                          # prints any order of the general's the core refused
@@ -118,7 +119,9 @@ objective", the differences of the 0/1 indicators, in points). The first objecti
 over the games where the side took one in both runs. Lost per objective, a ratio of sums each run,
 gets the delta method again: each game's linearised term (lostᵢ − R·takenᵢ) / mean(taken), after
 less before, gives the standard error. A difference whose interval contains 0 is **noise**, one that
-doesn't **differs**; the last line counts those. The planning time is printed, not judged. Pairing
+doesn't **differs**; the last line counts those, the line before it the games that came out the same in
+both runs but for the time. `--as remastered=ai` names a player as another in both runs before they are
+paired: the remastered AI's games against the classic AI's (#610). The planning time is printed, not judged. Pairing
 the games takes most of the noise out: the same seed gives both runs the same weather and dice
 until the change moves them apart.
 

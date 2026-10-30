@@ -23,18 +23,19 @@ import { applyData, checkedDifference, gameInputs, stepWorld, unitObject, worldO
 import { beginDraft, finishDraft } from "../core/draft";
 import { destroyUnits } from "../core/fight";
 import { unitById } from "../core/world";
-import { aiController } from "../core/ai";
+import { aiControllerFor } from "../core/remastered/controller";
 import { tutorialController } from "../core/tutorial";
 import type { Command } from "../core/command";
 import type { Controller, Order, ViewEvent } from "../core/controller";
 import type { GameEvent } from "../core/events";
 import { endTurn, nextOrder, type Session, startSession, type StartedTurn } from "../core/session";
+import type { World } from "../core/types";
 import type { Game } from "./game";
 import { game as running } from "./running";
 import type { Unit } from "../legacy/unit";
 
-function controllerFor(type: number, player: number): Controller | null {
-	if (type === playerType.aiLocal) return aiController(player);
+function controllerFor(type: number, player: number, w: World): Controller | null {
+	if (type === playerType.aiLocal) return aiControllerFor(w, player);
 	if (type === playerType.aiScripted) return tutorialController(player);
 	return null;
 }
@@ -87,7 +88,7 @@ export const coreDriver: AIDriver = {
 		const game = running;
 		if (game.session === null) return;
 		const s = synced(game);
-		const c = controllerFor(s.world.state.players[player.id].type, player.id);
+		const c = controllerFor(s.world.state.players[player.id].type, player.id, s.world);
 		s.controllers[player.id] = c;
 		if (c === null) return;
 		const played = c.join(s.world);

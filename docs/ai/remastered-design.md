@@ -2,7 +2,8 @@
 
 A proposal: how the remaster's own computer opponent could be built if it were designed today,
 next to the classic one rather than instead of it. foundations.md has the theory behind it,
-how-it-plays.md and weak-attacker.md the AI it would sit beside. Nothing here is built yet.
+how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
+analysis, with the controller as a wrapper of the classic one ("Built: perception and analysis" below).
 
 ## What the core already gives
 
@@ -121,6 +122,35 @@ Computed once per turn and cached:
 
 Every layer above reads them. A debug overlay draws them over the game's map (a heatmap, the
 front, the planned axes), to see what the AI is thinking.
+
+### Built: perception and analysis (#610)
+
+In src/core/remastered/. The remaster's rules choose the remastered AI (`Ruleset.remasteredAI`,
+`aiControllerFor`; the classic rules the classic `aiController`, with nothing computed). It passes every
+call to the classic AI and returns what it returns, so it plays the classic AI's games; in each of its
+turns' `plan` it perceives and analyses beside them, without changing the world or drawing from any
+stream. The arena's player `remastered` plays it; `npm run -s play -- analysis` prints a side's maps
+(docs/CLI.md).
+
+- **`perceive`** (perception.ts): the side's units, the enemies it sees now (`seesUnit`), and every enemy
+  it knows of as a `Sighting` (where, what, its strength, the turn last seen, a confidence). Seen: 1; out of
+  sight, halved each of the side's turns (`FADE`: it may have made a whole move since) and forgotten below
+  0.1 (`FORGET_BELOW`, after three turns), or at once when its last hex is in sight without it or the
+  side's attack destroyed it. The list is the next turn's memory, the controller's (docs/STATE.md D6): a
+  loaded game starts with none. The maps read the enemy only through it (#17 by construction).
+- **`analyse`** (analysis.ts, fields.ts), by hex index, once a turn; the terrain's costs and the distance
+  fields cached while the ground and the objectives stay:
+
+| Map | What |
+|---|---|
+| a unit's strike | the hexes it reaches next turn with a whole move, on the terrain's cost alone (units, zones of control and bridges aside; a hex that stops the move entered with any point left), and its gun's range beyond them. Artillery fires from where it stands; a unit riding its transport doesn't fire after a move |
+| `influence` | `own` and `enemy`: each ground unit with an attack spreads its strength (an enemy's × its confidence) over its strike, falling off linearly with the distance to 1/(radius + 1) at the edge (aircraft and ships draw no front); `balance`, own less enemy |
+| `front` | the hexes both sides reach where the balance is within 10% of their sum (`FRONT_BAND`) or changes sign to a neighbour |
+| `sectors` | each objective to take with both sides' mean influence within 2 hexes (`SECTOR_RADIUS`), the weakest held first; weak at half the mean enemy influence over them or less (`WEAK_SHARE`) |
+| `threat` | `ground` and `air`: the enemy strength that can strike a ground unit (a soft or hard attack) or an aircraft (an air attack) on the hex next turn |
+| `distance` | per movement method of the side's units, the movement points to the nearest objective to take and to hold; a hex that stops the move counts 6 (`STOP_COST`, about a turn's march) |
+| `supply` | `ground`, `air`, `sea`: the hexes to the nearest city, airfield and port of the side's, where it resupplies and reinforces in full (src/core/supply.ts) |
+| `units` | per own unit, the threat on its hex, its distance to supply, its points to the objectives |
 
 ### 3. Commander: strategy
 

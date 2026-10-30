@@ -1,6 +1,6 @@
 //Two arena runs compared (#604): the games paired by scenario, matchup and seed, and each measure's paired
 //difference, after less before, with its 95% interval. A difference whose interval contains 0 is noise.
-import type { GameResult, Match } from "./arena";
+import type { GameResult, Match, Player } from "./arena";
 import { type Interval, isNoise, mean, pairedDifference, pairedRatioDifference, sum } from "./stats";
 import { row } from "./table";
 
@@ -21,6 +21,19 @@ export function pairGames(before: readonly GameResult[], after: readonly GameRes
 		throw new Error(`the runs played different matches: ${listed(onlyBefore)} only before, ${listed(onlyAfter)} only after`);
 	return [...b].map(([k, g]) => ({ before: g, after: a.get(k) as GameResult }));
 }
+
+/** The games with the players renamed (`as`: a name to the one to show), to pair one player's games with another's. */
+export function playedAs(games: readonly GameResult[], as: ReadonlyMap<string, Player>): GameResult[] {
+	const named = (p: Player) => as.get(p) ?? p;
+	return games.map((g) => ({ ...g, match: { ...g.match, sides: [named(g.match.sides[0]), named(g.match.sides[1])] },
+		sides: [{ ...g.sides[0], player: named(g.sides[0].player) }, { ...g.sides[1], player: named(g.sides[1].player) }] }));
+}
+
+//A game's result but for the time it took, which is the machine's
+const untimed = (g: GameResult) => JSON.stringify({ ...g, ms: 0, sides: g.sides.map((x) => ({ ...x, turnMs: x.turnMs.length })) });
+
+/** The pairs whose games came out the same in both runs, the time aside. */
+export const sameGames = (pairs: readonly Pair[]): number => pairs.filter((p) => untimed(p.before) === untimed(p.after)).length;
 
 //A measure of a side in a game, null where the game doesn't say (no objective taken: no first turn)
 interface Measure {
@@ -44,8 +57,8 @@ const HEADER = ["side (player)", "measure", "before", "after", "after - before (
 
 /** The comparison of two runs as markdown, a table per scenario and matchup; throws when they can't be paired. */
 export function compare(before: readonly GameResult[], after: readonly GameResult[]): string[] {
-	const groups = new Map<string, Pair[]>();
-	for (const p of pairGames(before, after)) {
+	const groups = new Map<string, Pair[]>(), all = pairGames(before, after);
+	for (const p of all) {
 		const k = `${p.before.match.file}, ${p.before.match.sides.join(" vs ")}`;
 		groups.set(k, [...groups.get(k) || [], p]);
 	}
@@ -59,7 +72,7 @@ export function compare(before: readonly GameResult[], after: readonly GameResul
 			out.push(...rows.map(row));
 		}
 	}
-	out.push("", `${real} differences beyond the noise`);
+	out.push("", `${sameGames(all)} of ${all.length} games the same in both runs but for the time`, `${real} differences beyond the noise`);
 	return out;
 }
 
