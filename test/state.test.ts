@@ -83,6 +83,21 @@ test("A unit's turn-long suppression is saved and read back only while it has so
 	expect(again.map.getUnits().some((u) => "suppressed" in u)).toBe(false);
 });
 
+//The remaster's Devastating Fire and Fire Discipline (#3): fields only while true, so a classic game's save has none
+test("A unit's Devastating Fire shot and Fire Discipline half point are saved and read back only while set (#3)", async () => {
+	const r = await restored("drpzop01-t0.json.gz");
+	const { fromData } = await import("../src/legacy/state");
+	const classic = r.toData(r.scenario, r.game);
+	expect(JSON.stringify(classic)).not.toMatch(/firedOnce|halfAmmo/);
+	const saved = structuredClone(classic);
+	Object.assign(saved.state.units[0], { firedOnce: true, halfAmmo: true });
+	const loaded = r.toData(fromData(saved, r.game), r.game);
+	expect(loaded).toEqual(saved);
+	expect(Object.keys(loaded.state.units[0]).slice(-2)).toEqual(["firedOnce", "halfAmmo"]);
+	const again = fromData(classic, r.game);
+	expect(again.map.getUnits().some((u) => "firedOnce" in u || "halfAmmo" in u)).toBe(false);
+});
+
 //The AI plays the same 2 turns (the same seed) on the fixture and on fromData of its state: the
 //same states after every step
 test.each(fixtures("engine"))("fromData's scenario of %s plays as the one it was read from", async (name) => {
@@ -198,6 +213,8 @@ test("savedAs sees what toData would of every field it reads", async () => {
 	for (const k of Object.keys(saved.state.units[0]).filter((x) => !["id", "row", "col", "transport"].includes(x)))
 		sees("the unit's " + k, change(u, k));
 	sees("the unit's suppression", change(u, "suppressed"));
+	sees("the unit's Devastating Fire shot", change(u, "firedOnce"));
+	sees("the unit's Fire Discipline half point", change(u, "halfAmmo"));
 	sees("the unit's id", change(u, "id"));
 	sees("the unit's hex", () => { const h = u.getHex(); u.setHex(m.map[0][0]); return () => u.setHex(h); });
 	sees("the unit's transport", change(mounted.transport, "fuel"));

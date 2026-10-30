@@ -197,6 +197,8 @@ function toHQ(w: World, c: CoreUnit): OffMapUnit {
 	Object.assign(u, { isMounted: false, carrier: 0, hasMoved: false, hasFired: false, hasResupplied: false,
 		strength: Math.max(u.strength, 10), ammo: e.ammo, fuel: e.fuel, moveLeft: e.movpoints, entrenchment: 0, hits: 0 });
 	delete u.suppressed;
+	delete u.firedOnce;
+	delete u.halfAmmo;
 	if (u.transport !== null && w.equipment[u.transport.eqid] !== undefined)
 		Object.assign(u.transport, { ammo: w.equipment[u.transport.eqid].ammo, fuel: w.equipment[u.transport.eqid].fuel });
 	return u;

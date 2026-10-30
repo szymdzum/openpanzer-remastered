@@ -24,6 +24,7 @@ export function unitEndTurn(d: Draft, id: UnitId) {
 	entrench(d, u);
 	u.moveLeft = d.equipment[u.eqid].movpoints;
 	u.hasMoved = u.hasFired = u.hasResupplied = u.isSurprised = u.hasOverstrength = false;
+	delete u.firedOnce;
 	u.hits = 0;
 	if (unitData(d, u).uclass !== unitClass.fortification && u.row >= 0 && !seenByEnemy(d, u)) u.tempSpotted = false;
 }

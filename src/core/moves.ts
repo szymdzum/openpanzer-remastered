@@ -7,13 +7,15 @@
  */
 
 import { leaderType, playerType, prestigeGains, scoreGains } from "./tables";
-import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer, writeUnit } from "./draft";
+import {
+	addScore, changeUnit, emit, playerAt, relocate, spotOff, spotOn, writeHex, writeObjectives, writePlayer, writeUnit
+} from "./draft";
 import type { PathStep } from "./events";
 import { directionTo } from "./geometry";
 import { canPassInto, disembarkPositions, movesInPhases, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
-import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
+import { canCapture, hasLeader, hasLeaderAbility, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isRiding, isSpotted, unitById } from "./world";
 import { fuelPerPoint } from "./weathereffects";
 
@@ -28,8 +30,9 @@ type MoveCells = readonly { row: number; col: number; cost: number }[];
 /**
  * Map.moveUnit: moves a unit along the cheapest path through `cells` (the cells the player was shown; its
  * move range when null). It stops before a hidden enemy (surprised, unless a leader sees it coming), takes
- * the hex at the end, pays the path's cost, faces where it went and spots. A human's move can be undone
- * when it spotted nothing new and wasn't surprised (D5); a retreat never can: its player didn't make it.
+ * the hex at the end, pays the path's cost, faces where it went and spots. A unit with Mechanized Veteran
+ * moved on its transport gets off it and may still fire. A human's move can be undone when it spotted nothing
+ * new and wasn't surprised (D5); a retreat never can: its player didn't make it.
  */
 export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | null, retreat = false): MoveOutcome {
 	const start = unitById(d, id);
@@ -47,9 +50,26 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | 
 	const win = last.row === to.row && last.col === to.col && capturer ? capture(d, id, last, undo) : false;
 	payMove(d, writeUnit(d, id), walked.cost, walked.stopped);
 	const spotted = relocate(d, id, last, (u) => { u.facing = directionTo(start.row, start.col, last.row, last.col); });
+	if (!retreat && walked.surprise === null && unloadsToFire(d, start)) spotted.push(...unloadToFire(d, id, start.hasFired));
 	if (walked.surprise !== null) emit(d, { type: "surprised", unit: id, at: walked.surprise });
 	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && undoable ? undo : null;
 	return { surprise: walked.surprise, win };
+}
+
+//A unit on its transport keeps its shot with Mechanized Veteran ("Air Defence unit may move and fire in the same
+//turn"): the class leader of the gun, not of the transport it is now.
+const unloadsToFire = (d: Draft, u: UnitState) => isRiding(u) && hasLeaderAbility(d, { ...u, isMounted: false },
+	leaderType.mechanizedVeteran);
+
+//Off its transport at the end of the move, with the shot it had before: the enemies its own spotting finds
+function unloadToFire(d: Draft, id: UnitId, hadFired: boolean): UnitId[] {
+	const u = writeUnit(d, id);
+	u.hasFired = hadFired;
+	spotOff(d, u);
+	u.isMounted = false;
+	const spotted = spotOn(d, u);
+	emit(d, { type: "unmounted", unit: id });
+	return spotted;
 }
 
 //A path cost from this one up stops the move: a hex that uses all the points, or a zone of control.

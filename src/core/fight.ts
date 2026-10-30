@@ -11,7 +11,7 @@
  * attack, which decides an overrun, draws nothing.
  */
 
-import { scoreGains, UNIT_MAX_EXPERIENCE } from "./tables";
+import { leaderType, scoreGains, UNIT_MAX_EXPERIENCE } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { attackableUnit, supportFireUnits } from "./attack";
 import {
@@ -24,7 +24,7 @@ import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import { moveUnit } from "./moves";
 import type { AttackStart, CombatResult, Contribution, Draft, Position, UnitId, UnitState, World } from "./types";
-import { isAir, sideHasUnits } from "./units";
+import { hasLeaderAbility, isAir, sideHasUnits } from "./units";
 import { currentEqid, hexIndex, sideOf, unitById } from "./world";
 
 //A unit that gained an experience level gets a leader when its roll (its level to 10) is above this.
@@ -118,14 +118,24 @@ function suppress(u: UnitState, points: number) {
 }
 
 //Unit.fire: it shows on the map from now on even in fog. Only its own attack (not a support or return shot,
-//not an overrun) ends its firing for the turn.
-function fire(u: UnitState, attacking: boolean) {
+//not an overrun) ends its firing for the turn, the second one with Devastating Fire.
+function fire(w: World, u: UnitState, attacking: boolean) {
 	u.tempSpotted = true;
-	u.ammo--;
+	spendAmmo(w, u);
 	if (attacking) {
-		u.hasFired = true;
+		if (hasLeaderAbility(w, u, leaderType.devastatingFire) && !u.firedOnce) u.firedOnce = true;
+		else u.hasFired = true;
 		u.hasOverstrength = true;
 	}
+}
+
+//A point a shot; with Fire Discipline half a point: the first half is kept in halfAmmo, the second takes the point.
+function spendAmmo(w: World, u: UnitState) {
+	if (!hasLeaderAbility(w, u, leaderType.fireDiscipline)) u.ammo--;
+	else if (u.halfAmmo) {
+		delete u.halfAmmo;
+		u.ammo--;
+	} else u.halfAmmo = true;
 }
 
 /** Applies a resolved fight (Map.attackUnit): the undo is gone, and the two face each other. */
@@ -159,11 +169,11 @@ export function applyFight(d: Draft, f: FightResolution) {
 //The shot, the suppression of the attacker's that lasts the turn, the return fire
 function shoot(d: Draft, f: FightResolution, atk: UnitState, def: UnitState) {
 	const cr = f.result;
-	fire(atk, !f.support && !f.overrun);
+	fire(d, atk, !f.support && !f.overrun);
 	hit(def, cr.kills);
 	if (!f.support && cr.defSuppress > 0 && continuesSuppression(d, atk)) suppress(def, cr.defSuppress);
 	if (cr.defcanfire && !f.support) {
-		fire(def, false);
+		fire(d, def, false);
 		hit(atk, cr.losses);
 	}
 }

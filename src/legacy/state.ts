@@ -119,7 +119,12 @@ function sameTransport(t: Transport | null, y: UnitState["transport"]): boolean 
 
 function sameCounts(u: Unit, x: UnitState): boolean {
 	return x.strength === u.strength && x.moveLeft === u.moveLeft && x.ammo === u.ammo && x.fuel === u.fuel && x.hits === u.hits
-		&& x.experience === u.experience && (x.suppressed ?? 0) === (u.suppressed ?? 0);
+		&& x.experience === u.experience && sameRemasterCounts(u, x);
+}
+
+//The remaster's fields a unit holds only when set: absent counts as 0 or false
+function sameRemasterCounts(u: Unit, x: UnitState): boolean {
+	return (x.suppressed ?? 0) === (u.suppressed ?? 0) && !!x.firedOnce === !!u.firedOnce && !!x.halfAmmo === !!u.halfAmmo;
 }
 
 function sameStanding(u: Unit, x: UnitState): boolean {
@@ -249,6 +254,8 @@ export function offMapUnit(u: OffMapUnit): OffMapUnit {
 		facing: u.facing, flag: u.flag, isCore: u.isCore, isMounted: u.isMounted, hasMoved: u.hasMoved, hasFired: u.hasFired,
 		hasResupplied: u.hasResupplied, hasOverstrength: u.hasOverstrength, isSurprised: u.isSurprised, tempSpotted: u.tempSpotted,
 		...(u.suppressed ? { suppressed: u.suppressed } : {}),
+		...(u.firedOnce ? { firedOnce: true } : {}),
+		...(u.halfAmmo ? { halfAmmo: true } : {}),
 	};
 }
 
@@ -443,6 +450,10 @@ export function setUnitFields(u: Unit, s: OffMapUnit) {
 	u.leader = s.leader;
 	if (s.suppressed) u.suppressed = s.suppressed;
 	else delete u.suppressed;
+	if (s.firedOnce) u.firedOnce = true;
+	else delete u.firedOnce;
+	if (s.halfAmmo) u.halfAmmo = true;
+	else delete u.halfAmmo;
 }
 
 //The units in their order with their ids, through the map's own placing (MapBoard.place gives a
