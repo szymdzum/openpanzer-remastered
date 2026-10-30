@@ -20,13 +20,14 @@ interface View {
 type Formatters = { [K in GameEvent["type"]]?: (e: Extract<GameEvent, { type: K }>, v: View) => string };
 
 //A unit in a fight, as the core's event has it or the screen's combat log saw it (cli/fightlog.ts)
-type FighterView = Pick<Fighter, "unit" | "eqid" | "side" | "row" | "col"> & { before: { strength: number }; after: { strength: number } };
+type FighterView = Pick<Fighter, "unit" | "eqid" | "side" | "row" | "col"> & { before: { strength: number }; after: { strength: number }; suppressed?: number };
 
 //A fight: its attacker, its defender, whether it was support fire
 export interface FightView { support: boolean; attacker: FighterView; defender: FighterView }
 
 const fighter = (w: World, f: FighterView) =>
-	`${SIDES[f.side]} ${w.equipment[f.eqid].name} #${f.unit} @${cell(f)} ${f.before.strength}->${Math.max(0, f.after.strength)}`;
+	`${SIDES[f.side]} ${w.equipment[f.eqid].name} #${f.unit} @${cell(f)} ${f.before.strength}->${Math.max(0, f.after.strength)}`
+	+ (f.suppressed ? `, ${f.suppressed} suppressed` : "");
 
 //A fight the side was in, by its units or its own support fire, as text; how: rugged defense, overrun
 function fightText(w: World, side: number, f: FightView, how = ""): string {
@@ -47,7 +48,11 @@ function moved(e: Extract<GameEvent, { type: "moved" }>, v: View): string {
 
 const how = (r: CombatResult) => (r.isRugged ? " (rugged defense)" : "") + (r.isOverrun ? " (overrun)" : "");
 
-const fight = (e: Extract<GameEvent, { type: "fight" }>, v: View) => fightText(v.after, v.side, e, how(e.result));
+//The points suppressed in the attack itself: a support shot's don't count (src/core/fight.ts shoot)
+const suppressedIn = (e: Extract<GameEvent, { type: "fight" }>): FightView => e.support ? e
+	: { ...e, attacker: { ...e.attacker, suppressed: e.result.atkSuppress }, defender: { ...e.defender, suppressed: e.result.defSuppress } };
+
+const fight = (e: Extract<GameEvent, { type: "fight" }>, v: View) => fightText(v.after, v.side, suppressedIn(e), how(e.result));
 
 function captured(e: Extract<GameEvent, { type: "captured" }>, v: View): string {
 	const what = e.objective ? " (OBJECTIVE)" : e.flag ? " (flag)" : "";
@@ -65,6 +70,7 @@ const FORMAT: Formatters = {
 	spotted: (e, v) => ifMine(v, e.unit, `${v.name(e.unit)} spotted ${e.units.map(v.name).join(", ")}`),
 	victory: (e) => `VICTORY of ${SIDES[e.side]} by ${e.kind}`,
 	destroyed: (e, v) => `${v.name(e.unit)} destroyed at ${cell(e.at)}`,
+	pinned: (e, v) => `${v.name(e.unit)} pinned down (${e.suppressed} suppressed)`,
 	retreated: (e, v) => `${v.name(e.unit)} retreated from ${cell(e.from)} to ${cell(e.to)}`,
 	surrendered: (e, v) => `${v.name(e.unit)} surrendered at ${cell(e.at)}`,
 	attackStopped: (e, v) => `${v.name(e.unit)}'s attack stopped`,

@@ -6,7 +6,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import { endHumanTurn, isHumanTurn, newSave, open, playCommand, readGameFile, world, writeGameFile } from "../cli/game";
 import { map, status } from "../cli/board";
-import { attackers, targets } from "../cli/combat";
+import { attackers, estimateLine, targets } from "../cli/combat";
 import { knownWorld, seen } from "../cli/known";
 import { moves } from "../cli/units";
 import { pageResultOf, parseArgs } from "../cli/commands";
@@ -17,6 +17,11 @@ import { CombatLog } from "../src/legacy/combatlog";
 import type { Unit } from "../src/legacy/unit";
 import { sideOf, unitById } from "../src/core/world";
 import { terrainNames, terrainType } from "../src/core/tables";
+import { classicRules, remasterRules } from "../src/core/rules";
+import { step } from "../src/core/step";
+import type { GameEvent } from "../src/core/events";
+import type { Ruleset, World } from "../src/core/types";
+import { type HandUnit, handWorld } from "./coreworld";
 
 const AXIS = 0;
 const seenEnemies = (g: ReturnType<typeof open>) =>
@@ -257,7 +262,7 @@ test("Attackers list every hex a unit can attack the target from after a move, n
 	const call = caller(tmpGame());
 	await call("new drpzop01.xml --seed 1");
 	await call("move 1 0,15");
-	expect(await call("attackers 14")).toContain("#3 SS Infanterie @1,12 on #14 Bunker @2,15 from 2,14: kills 5, losses 0, surrenders; also from 3,14, 1,15");
+	expect(await call("attackers 14")).toContain("#3 SS Infanterie @1,12 on #14 Bunker @2,15 from 2,14: kills 5, losses 0, suppresses 1, suppressed 1, surrenders; also from 3,14, 1,15");
 }, 60_000);
 
 test("On the page, an enemy attack that costs only the attacker, and the side's support fire, are reported as fights (#307)", async () => {
@@ -352,3 +357,56 @@ test("A game saved before the objectives at the start were kept plays on: status
 	expect((await call("status")).split("\n")[0]).toContain("turn 1/17");
 	expect(await call("end")).toContain("turn 2/17, Axis to play");
 }, 60_000);
+
+//---- Suppression (#601)
+
+const PZ_IIA = 140, INFANTERIE = 115;
+
+//A Pz IIA (unit 0) next to an Infanterie (unit 1) on an open map, the dice of a seed
+const duel = (rules: Ruleset, seed = 1, defender: Partial<HandUnit> = {}): World => {
+	const w = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 3, col: 3 },
+		{ eqid: INFANTERIE, owner: 1, row: 3, col: 4, ...defender }] },
+		undefined, { rules, noFOW: true });
+	w.state.rng = { game: seed, ai: 1 };
+	return w;
+};
+
+//The attack of the tank on the infantry with the first seed whose events pass the test
+function attackWhere(rules: Ruleset, holds: (events: GameEvent[]) => boolean, defender: Partial<HandUnit> = {}) {
+	for (let seed = 1; seed < 300; seed++) {
+		const w = duel(rules, seed, defender), r = step(w, { type: "attack", unit: 0, target: 1 });
+		if ("refusal" in r) throw new Error(r.refusal.reason);
+		if (holds(r.events)) return { before: w, after: r.world, events: r.events };
+	}
+	throw new Error("no seed");
+}
+
+test("The CLI's estimate tells the expected suppression (#601)", () => {
+	const [e] = targets(duel(remasterRules), AXIS, 0).estimates;
+	//the tank's fire suppresses 2 of the 10 points, the infantry's none (test/suppression.test.ts)
+	expect(e).toMatchObject({ kills: 2, losses: 1, suppress: 2, suppressed: 0 });
+	expect(estimateLine(duel(remasterRules), e)).toBe("#1 Infanterie @3,4 from 3,3: kills 2, losses 1, suppresses 2, holds");
+	const none = targets(duel(classicRules), AXIS, 0).estimates[0];
+	expect(none).toMatchObject({ suppress: 0, suppressed: 0 });
+	expect(estimateLine(duel(classicRules), none)).not.toContain("suppress");
+});
+
+test("A fight line tells the strength suppressed (#601)", () => {
+	const { before, after, events } = attackWhere(remasterRules, (es) => es.some((e) => e.type === "fight" && e.result.defSuppress > 0));
+	const lines = describe(after, before, AXIS, events).filter((l) => l.startsWith("attack:"));
+	expect(lines).toHaveLength(1);
+	expect(lines[0]).toMatch(/Allies Infanterie #1 @3,4 10->\d+, [1-9]\d* suppressed/);
+});
+
+test("The CLI tells a pinned unit falling back (#601)", () => {
+	const { before, after, events } = attackWhere(remasterRules, (es) => es.some((e) => e.type === "pinned"), { suppressed: 10 });
+	const text = describe(after, before, AXIS, events);
+	//the 10 it had and the 2 this attack added
+	expect(text.filter((l) => l.includes("pinned"))).toEqual(["Allies #1 Infanterie pinned down (12 suppressed)"]);
+	expect(text.some((l) => l.startsWith("Allies #1 Infanterie retreated from 3,4 to "))).toBe(true);
+});
+
+test("In the classic rules the CLI tells no suppression (#601)", () => {
+	const { before, after, events } = attackWhere(classicRules, (es) => es.some((e) => e.type === "fight"));
+	expect(describe(after, before, AXIS, events).join("\n")).not.toMatch(/suppress|pinned/);
+});
