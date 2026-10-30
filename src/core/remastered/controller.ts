@@ -61,6 +61,21 @@ export function remasteredController(player: number): RemasteredController {
 	};
 }
 
+/** What a side knows and makes of the map: its perception and analysis. */
+export interface Knowledge {
+	view: SideView;
+	analysis: Analysis;
+}
+
+/** The last perception and analysis of the side by the remastered controller that plays one of its players, if any. */
+export function knowledgeOf(controllers: readonly (Controller | null)[], side: number): Knowledge | null {
+	for (const c of controllers) {
+		const r = c !== null && "analysis" in c ? c as RemasteredController : null;
+		if (r !== null && r.view !== null && r.analysis !== null && r.view.side === side) return { view: r.view, analysis: r.analysis };
+	}
+	return null;
+}
+
 /** The computer player of the rules the world plays by: the remastered AI, or the classic one. */
 export function aiControllerFor(w: World, player: number): Controller {
 	return w.rules.remasteredAI ? remasteredController(player) : aiController(player);

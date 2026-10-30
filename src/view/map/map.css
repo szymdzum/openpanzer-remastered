@@ -45,4 +45,27 @@
 			flex-direction: column;
 		}
 	}
+
+	/* the AI's debug overlay's legend (?aidebug, aidebug.ts): the layer and side, where the knowledge comes from, the keys,
+	   bottom left over the map, letting the pointer through */
+	.pm-aidebug {
+		position: absolute;
+		inset-block-end: var(--space-3);
+		inset-inline-start: var(--space-3);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		padding: var(--space-2) var(--space-3);
+		background: var(--panel-raised);
+		border: 1px solid var(--line-strong);
+		border-radius: var(--radius-paper);
+		color: var(--ink);
+		font-family: var(--font-mono);
+		font-size: var(--type-note-size);
+		pointer-events: none;
+
+		& span {
+			color: var(--ink-muted);
+		}
+	}
 }

@@ -30,6 +30,7 @@ import { ScenarioLoader } from "./loader";
 import { endCampaignScenario, scenarioEnded } from "../core/campaign";
 import { attackerSide, turnLimitOutcome, turnLimitResult } from "../core/turn";
 import type { SessionEnd } from "../core/session";
+import { type Knowledge, knowledgeOf } from "../core/remastered/controller";
 import type { World } from "../core/types";
 import { setEngineContext, touched } from "../legacy/context";
 import { defined } from "../legacy/util";
@@ -457,6 +458,13 @@ export class GameHost {
 	world(): World | null {
 		const g = this.game;
 		return g.session === null ? null : rulesWorld(g.scenario, g, gameInputs(g));
+	}
+
+	//What the remastered AI playing the side perceived and made of the map at its last turn, for the debug overlay
+	//(src/view/map/aidebug.ts, #611): null when it plays none of the side's players
+	aiKnowledge(side: number): Knowledge | null {
+		const s = this.game.session;
+		return s === null ? null : knowledgeOf(s.controllers, side);
 	}
 
 	//A number in [0, 1) of the cosmetic stream, for the screen's sprite and sound picks: never the game's or the

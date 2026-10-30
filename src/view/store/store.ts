@@ -8,6 +8,7 @@ import { isAir } from "../../core/units";
 import { unitById } from "../../core/world";
 import type { GameHost } from "../../app/host";
 import { neighbourUnit } from "./model";
+import { type AIDebug, aiOverlay, aiSide, nextLayer } from "../map/aidebug";
 import type { MenuKey, Shortcut } from "../shortcuts";
 import { createShopState } from "../windows/shopstate";
 import type { Stage } from "../player";
@@ -23,10 +24,14 @@ import { createTurn } from "./storeturn";
 import { createNotes } from "./storenotes";
 
 /** The game host's world, the person's commands and victories; the start menu's new games are absent in the tests. */
-export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "cosmetic" | "startTutorial">> & NewGameHost & SettingsHost & SaveLoadHost;
+export type StoreHost = Pick<GameHost, "world" | "command" | "won"> & Partial<Pick<GameHost, "aiKnowledge" | "cosmetic" | "startTutorial">> & NewGameHost
+	& SettingsHost & SaveLoadHost;
 
-/** The step's page plus the reload some settings need and the saved game's download; the tests: silence and motion. */
-export type Page = Pick<Stage, "sound" | "still"> & { reload?: () => void, download?: (name: string, text: string) => void };
+/**
+ * The step's page plus the reload some settings need, the saved game's download and the AI's debug overlay (?aidebug);
+ * the tests: silence and motion.
+ */
+export type Page = Pick<Stage, "sound" | "still"> & { reload?: () => void, download?: (name: string, text: string) => void, aiDebug?: boolean };
 const QUIET_PAGE: Page = { sound: () => {}, still: () => false };
 
 export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
@@ -84,6 +89,14 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 
 	const shops = createShopState({ world, deploying: map.deployment, selected, select, pickReserve: map.pick, look, dispatch });
 
+	//The AI's debug overlay: off (null) unless the page asked for it, then its first layer on the AI's side
+	const aiDebug = signal<AIDebug | null>(page.aiDebug ? { layer: nextLayer(null), side: null } : null);
+	const aiLayers = computed(() => aiOverlay(world.value, aiDebug.value, selected.value, (side) => host.aiKnowledge ? host.aiKnowledge(side) : null));
+	//(its keys change nothing while it is off or no game plays)
+	const debugged = (change: (d: AIDebug, w: World) => AIDebug) => {
+		if (aiDebug.value !== null && world.value !== null) aiDebug.value = change(aiDebug.value, world.value);
+	};
+
 	//The windows over a scrim: the keys are theirs
 	const modal = computed(() => turn.asking.value !== null || turn.combatLog.value !== null || turn.dossier.value !== null);
 
@@ -97,6 +110,8 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		labels: () => map.showLabels(false),
 		next: () => cycle(1),
 		previous: () => cycle(-1),
+		aiLayer: () => debugged((d) => ({ ...d, layer: nextLayer(d.layer) })),
+		aiSide: () => debugged((d, w) => ({ ...d, side: ~(d.side ?? aiSide(w)) & 1 })),
 		//Escape closes the turn report, else deselects the unit, else opens Options
 		escape: () => {
 			if (turn.banner.value) turn.banner.value = false;
@@ -106,7 +121,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 	};
 
 	return {
-		...core, ...step, ...notes, ...map, ...card, ...turn, showing: step.showing as ReadonlySignal<boolean>, showStep, toggleAir, railOpen,
+		...core, ...step, ...notes, ...map, ...card, ...turn, showing: step.showing as ReadonlySignal<boolean>, showStep, toggleAir, railOpen, aiLayers,
 		...shops, menu, ...newGame, ...settings, ...saveLoad,
 
 		//A button of the start menu: its window, or the game (the tutorial starts on the host)

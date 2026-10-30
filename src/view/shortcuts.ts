@@ -4,14 +4,16 @@
 import type { ActionKey } from "./store/model";
 
 //The rail's buttons and the map's keys: I, B, H, A, Z, L, the next and previous unit, Escape; Options, the start menu,
-//is the rail's button and Escape's with no unit selected
-export type MenuKey = "inspect" | "buy" | "hex" | "air" | "zoom" | "options" | "labels" | "next" | "previous" | "escape";
+//is the rail's button and Escape's with no unit selected. V and X are the AI's debug overlay's (?aidebug, #611): its
+//next layer and its other side, nothing without it
+export type MenuKey = "inspect" | "buy" | "hex" | "air" | "zoom" | "options" | "labels" | "next" | "previous" | "escape" | "aiLayer" | "aiSide";
 
 export type Shortcut = { menu: MenuKey } | { unit: ActionKey };
 
 const KEYS: Record<string, Shortcut> = {
 	KeyI: { menu: "inspect" }, KeyB: { menu: "buy" }, KeyH: { menu: "hex" }, KeyA: { menu: "air" }, KeyZ: { menu: "zoom" },
 	KeyL: { menu: "labels" }, KeyN: { menu: "next" }, KeyP: { menu: "previous" },
+	KeyV: { menu: "aiLayer" }, KeyX: { menu: "aiSide" },
 	KeyM: { unit: "mount" }, KeyE: { unit: "embark" }, KeyS: { unit: "resupply" }, KeyR: { unit: "reinforce" },
 	KeyO: { unit: "overstrength" }, KeyU: { unit: "undo" },
 };

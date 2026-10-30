@@ -38,7 +38,8 @@ function downloadOn(page: Document) {
 }
 
 export function newScreen(host: ScreenHost, root: HTMLElement): Screen {
-	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location), download: downloadOn(root.ownerDocument) });
+	const store = createStore(host, { sound: pageSounds(), still, reload: location.reload.bind(location), download: downloadOn(root.ownerDocument),
+		aiDebug: new URLSearchParams(root.ownerDocument.location.search).has("aidebug") });
 	const { refresh } = store;
 	//The interface's scale and width as the settings say, on the page's root: every rem scales from its font size, and the
 	//windows sized by the interface width take it (base.css, screen.css)
