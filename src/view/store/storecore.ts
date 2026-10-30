@@ -76,6 +76,12 @@ export function createCore(host: CoreHost, hooks: CoreHooks) {
 		selected: selected as ReadonlySignal<UnitId | null>, lookAt: lookAt as ReadonlySignal<Position | null>,
 
 		pickUnit, look,
+
+		//A new scenario's start: nothing looked at, no refusal shown
+		reset() {
+			lookAt.value = null;
+			refused.value = null;
+		},
 	};
 }
 

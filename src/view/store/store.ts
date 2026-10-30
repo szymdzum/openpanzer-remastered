@@ -128,8 +128,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		},
 
 		//A new scenario's start: every open message dropped, its OK not run (#405), the last step's beats stopped, and the
-		//last game's enemy turn not reported (#466)
+		//last game's enemy turn not reported (#466), its looked-at hex, refusal, combat line and chips gone (#566)
 		clear() {
+			core.reset();
 			notes.notes.value = [];
 			turn.reset();
 			step.stop();
