@@ -32,7 +32,7 @@ test("The short report: date and scenario, the turn, objectives left, turns to e
 	const r = turnReportOf(world(), quietTurn())!;
 	expect(r).toMatchObject({ label: "22 Jun 1941 · Ciechanow", title: "Turn 4 of 17", objectives: 1, lead: { left: 10, name: "Brilliant" },
 		others: "12 Victory · 14 Tactical", last: null, prestige: "3,056", next: 5,
-		weather: { icon: "fair", word: "Fair" }, ground: { icon: "dry", word: "Dry" }, campaign: false,
+		weather: { icon: "fair", word: "Fair", note: "Weather" }, ground: { icon: "dry", word: "Dry", note: "Ground" }, campaign: false,
 		enemy: [{ tone: "muted", text: "All quiet on this front" }], briefing: { title: "Ciechanow", html: "" } });
 	expect(r.past).toBeCloseTo(3.5 / 17);
 	expect(r.tiers).toEqual([{ label: "B", at: 13 / 17, gone: false }, { label: "V", at: 15 / 17, gone: false }, { label: "T", at: 1, gone: false }]);

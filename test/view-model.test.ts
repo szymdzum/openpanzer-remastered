@@ -20,7 +20,7 @@ function world(units = smallGameUnits, current = 0): World {
 
 test("The status bar's side, turn and prestige are the current player's and the person's (#346)", () => {
 	expect(statusOf(world())).toEqual({ turn: 1, maxTurns: 10, side: 0, sideName: "Axis", country: "Germany", nation: "de", date: "22 Jun 1941",
-		weather: { icon: "fair", word: "Fair" }, ground: { icon: "dry", word: "Dry" }, rules: "Classic", prestige: 120, yourTurn: true });
+		weather: { icon: "fair", word: "Fair", note: "Weather" }, ground: { icon: "dry", word: "Dry", note: "Ground" }, rules: "Classic", prestige: 120, yourTurn: true });
 	//On the AI's turn: its side and country, and the prestige of the person who plays the side shown
 	const theirs = world(smallGameUnits, 1);
 	expect(statusOf(theirs)).toMatchObject({ side: 1, sideName: "Allies", country: "Russia", nation: "su", prestige: 120, yourTurn: false });
@@ -44,6 +44,21 @@ test("The status bar shows the scenario's date, weather and ground, and the rule
 	expect(statusOf(nobody)).toMatchObject({ side: -1, sideName: "", country: "", nation: null, yourTurn: false });
 	expect([dateOf("1944-12-31T23:00:00.000Z"), prestigeText(3056), prestigeText(120), prestigeText(1234567), prestigeText(-1500)])
 		.toEqual(["01 Jan 1945", "3,056", "120", "1,234,567", "-1,500"]);
+});
+
+test("The weather's and the ground's tooltips say what they do in the remaster's rules (#1)", () => {
+	const at = (rules: typeof classicRules, atmospheric: number, ground: number) => {
+		const saved = smallGameData();
+		Object.assign(saved.state.scenario, { atmospheric, ground });
+		const s = statusOf(worldOf(smallGame(smallGameUnits, saved).scenario, null, { spotSide: 0, noFOW: false, rules }));
+		return [s.weather.note, s.ground.note];
+	};
+	expect(at(remasterRules, 2, 1)).toEqual(["Rain: aircraft and air defence can't fire, ground units fire with half their strength, every unit"
+		+ " spots half as far, units out of their side's towns get half the supply and replacements",
+	"Frozen: ground units burn two fuel a movement point"]);
+	expect(at(remasterRules, 1, 0)).toEqual(["Overcast: aircraft fire with half their strength and spot half as far", "Ground"]);
+	expect(at(remasterRules, 0, 2)).toEqual(["Fair: no effect", "Ground"]);
+	expect(at(classicRules, 3, 1)).toEqual(["Weather", "Ground"]);
 });
 
 test("End turn is only the person's, on their turn", () => {

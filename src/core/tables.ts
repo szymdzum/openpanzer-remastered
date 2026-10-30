@@ -65,6 +65,8 @@ export let terrainEntrenchment = [ 0, 3, 0, 2, 2, 1, 2, 0, 0, 0, 0, 4, 1, 0, 0, 
 export let terrainInitiative = [ 99, 1, 99, 3, 3, 5, 1, 99, 2, 99, 99, 3, 5, 99, 99, 99, 3, 1 ];
 
 export let groundCondition = { dry:0, frozen: 1, mud: 2 };
+/** The atmospheric weather, scenario.atmospheric. */
+export let weatherType = { fair: 0, overcast: 1, rain: 2, snow: 3 };
 export let groundConditionNames = [ "Dry", "Frozen", "Mud" ];
 export let playerSide = { axis: 0, allies: 1 };
 

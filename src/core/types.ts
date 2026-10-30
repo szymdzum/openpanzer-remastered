@@ -111,6 +111,18 @@ export interface Ruleset {
 	//The weather changes at each new round, by the scenario's weather zone and month (weather.ts, #591), as the
 	//manual has it: false in the classic rules, where the scenario's start weather lasts to the end
 	weatherChanges: boolean;
+	//Rain and snow halve the strength points a ground unit fires with, overcast an aircraft's, and in rain and
+	//snow aircraft and air defence don't fire at all (weathereffects.ts, #1): false in the classic rules, where
+	//the weather changes nothing in a fight
+	weatherLimitsCombat: boolean;
+	//Overcast, rain and snow halve an aircraft's spotting range, rain and snow everybody's (#1): false in the
+	//classic rules
+	weatherLimitsSpotting: boolean;
+	//Rain and snow halve the supply and replacements of a unit out of a city, port or airfield of its side (#1):
+	//false in the classic rules
+	weatherLimitsSupply: boolean;
+	//On frozen ground a ground unit burns two fuel a movement point (#1): false in the classic rules, one
+	snowDoublesFuel: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }
@@ -180,7 +192,7 @@ export type Side = "attacker" | "defender";
 export interface Contribution {
 	name: string;
 	side: Side;
-	field: keyof CombatValues | "kills" | "losses";
+	field: keyof CombatValues | "kills" | "losses" | "strength";
 	before: number;
 	after: number;
 }
@@ -203,6 +215,8 @@ export interface Fight {
 	readonly dEntrenchIntact: boolean;
 	isCloseCombat: boolean;
 	readonly values: CombatValues;
+	//The strength points each side fires with, a die each: the unit's strength but in bad weather
+	readonly firing: Record<Side, number>;
 	readonly result: CombatResult;
 	readonly record: Contribution[] | null;
 }
