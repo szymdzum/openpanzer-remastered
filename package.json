@@ -20,6 +20,7 @@
 		"play": "TZ=Europe/Warsaw node --import ./cli/register.mjs cli/play.ts",
 		"play:live": "OPENPANZER_CLI=1 vite",
 		"arena": "ARENA=1 TZ=Europe/Warsaw vitest run test/arena.test.ts -t 'The AI arena'",
+		"arena:compare": "node --import ./cli/register.mjs test/arena/compare-cli.ts",
 		"lint": "oxlint --type-aware --deny-warnings src test cli docs/ui/live",
 		"stylelint": "stylelint \"src/view/**/*.css\" \"docs/ui/live/*.css\"",
 		"gate": "npm run -s check && npm run -s lint && npm run -s stylelint && npm run -s fallow && npm run -s test:coverage",
