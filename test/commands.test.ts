@@ -389,3 +389,22 @@ test("A command for another player's unit is refused, and changes nothing (#545)
 	}
 	expect(state()).toBe(before);
 });
+
+test("A move whose cells leave the unit's move range, or of a unit that has moved, is refused (#545)", () => {
+	const inf = unitAt(3, 3), far = { row: 10, col: 3 };
+	const range = GameRules.getMoveRange(map, inf);
+	//A chain of adjacent free cells to a hex far beyond the unit's reach, each costing nothing
+	const free = Array.from({ length: 7 }, (_, i) => ({ row: 4 + i, col: 3, cost: 0 }));
+	expect(refusal({ type: "move", unit: inf.id, to: far, cells: free })).toBe("not the unit's move range");
+	const dearer = range.map((c) => ({ ...c, cost: c.cost - 1 }));
+	expect(refusal({ type: "move", unit: inf.id, to: reachable(inf), cells: dearer })).toBe("not the unit's move range");
+
+	//A cell without a cost, next to the unit that has moved
+	execute(scenario, { type: "move", unit: inf.id, to: reachable(inf) });
+	expect(inf.hasMoved).toBe(true);
+	const { row, col } = inf.getPos(), next = { row: row + 1, col };
+	expect(refusal({ type: "move", unit: inf.id, to: next, cells: [next] as Cell[] })).toBe("not the unit's move range");
+	expect(refusal({ type: "move", unit: inf.id, to: far, cells: free })).toBe("not the unit's move range");
+	expect(refusal({ type: "move", unit: inf.id, to: next, cells: range })).toBe("not the unit's move range");
+	expect(refusal({ type: "move", unit: inf.id, to: next })).toBe("can't get there");
+});
