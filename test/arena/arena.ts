@@ -17,10 +17,11 @@ import type { RulesetName, World } from "../../src/core/types";
 import { sideOf } from "../../src/core/world";
 import { playerType } from "../../src/core/tables";
 import { setupOf } from "../corefiles";
-import { generalController } from "./general";
+import { FIRST_GENERAL, generalController } from "./general";
 
-//Who can play a side: a name and its controller
-const CONTROLLERS = { ai: aiController, general: generalController } satisfies Record<string, (player: number) => Controller>;
+//Who can play a side: a name and its controller (general1: the first general, #236, for a comparison)
+const CONTROLLERS = { ai: aiController, general: generalController, general1: (p: number) => generalController(p, FIRST_GENERAL) } satisfies
+	Record<string, (player: number) => Controller>;
 
 export type Player = keyof typeof CONTROLLERS;
 
@@ -139,7 +140,7 @@ function ordered(match: Match, sides: SideResult[], w: World, a: Extract<Advance
 	if (a.refusal !== null) {
 		const by = w.state.players[a.player].side;
 		sides[by].refused++;
-		if (process.env.ARENA_DEBUG && match.sides[by] === "general")
+		if (process.env.ARENA_DEBUG && match.sides[by] !== "ai")
 			process.stderr.write(`${match.file} seed ${match.seed} turn ${w.state.turn.turn}: ${JSON.stringify(a.order)} refused, ${a.refusal.reason}\n`);
 	}
 	return "command" in a.order ? 1 : 0;
