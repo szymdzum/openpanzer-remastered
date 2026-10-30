@@ -1,7 +1,7 @@
 //The store: the view model (model.ts) carried to the components as computed signals of the world, which the screen
 //refreshes after each step and view event, so a component renders again only when what it reads changed. Made of the
 //parts storecore, storestep, storemap, storecard, storeturn, storenotes and the start menu's windows; here the keys.
-import { type ReadonlySignal, signal } from "@preact/signals";
+import { computed, type ReadonlySignal, signal } from "@preact/signals";
 import type { GameEvent } from "../../core/events";
 import type { World } from "../../core/types";
 import { isAir } from "../../core/units";
@@ -84,6 +84,9 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 
 	const shops = createShopState({ world, deploying: map.deployment, selected, select, pickReserve: map.pick, look, dispatch });
 
+	//The windows over a scrim: the keys are theirs
+	const modal = computed(() => turn.asking.value !== null || turn.combatLog.value !== null || turn.dossier.value !== null);
+
 	const menuKeys: Record<MenuKey, () => void> = {
 		inspect: () => { card.infoShown.value = !card.infoShown.value; },
 		buy: () => shops.toggleShop(),
@@ -119,6 +122,7 @@ export function createStore(host: StoreHost, page: Page = QUIET_PAGE) {
 		},
 
 		shortcut(sc: Shortcut) {
+			if (modal.value) return;
 			if ("unit" in sc) card.unitKey(sc.unit);
 			else menuKeys[sc.menu]();
 		},
