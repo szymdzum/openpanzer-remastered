@@ -152,6 +152,9 @@ export class GameHost {
 		delete g.scenario;
 		g.scenario = null;
 		g.session = null;
+		//No game plays until the next scenario or save loads: a step still shown ends into nothing
+		g.gameStarted = false;
+		this.stopShowing();
 	}
 
 	//A person's player is the default; the others get a handler

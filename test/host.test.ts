@@ -333,6 +333,29 @@ test("A program's next action waits for the screen's shown, and only the last re
 		.toEqual(["player " + first.id, "player " + m.getPlayers().find((p) => p !== first)!.id]);
 }, 60_000);
 
+//The scenario that replaces another is empty until its files arrive (a restore from a save does the same through
+//cleanup): the step the screen still shows then ends into a host with no game to go on with
+test("A step still shown when a new scenario starts is dropped: the host waits for the new scenario (#550)", async () => {
+	uiSettings.classicRules = true;
+	uiSettings.isAI = [1, 1, 1, 1];
+	Rng.seed(550);
+	const held: (() => void)[] = [];
+	const g = headlessGame((game) => {
+		const screen = nullScreen(game);
+		return { ...screen, step(cmd, done, shown) { screen.step(cmd, done, () => { held.push(shown); }); } };
+	});
+	g.host.newScenario("drpzop01.xml");
+	await until(() => loaded(g, null), "drpzop01.xml");
+	g.host.processTurn();
+	expect([held.length, g.host.showing], "a step held by the screen").toEqual([1, true]);
+	const first = g.scenario;
+	g.host.newScenario("drpzop01.xml");
+	expect([g.scenario === first, g.gameStarted, g.host.showing], "the old game is gone").toEqual([false, false, false]);
+	expect(() => held.shift()!(), "the old step ends before the files arrive").not.toThrow();
+	g.host.goOn();
+	await until(() => loaded(g, first), "the new scenario");
+}, 60_000);
+
 //A look at a hex the program asks for is shown, and its next action waits for it as for a unit it picks
 test("A program's look at a hex is shown on the screen and waited for (#375)", async () => {
 	const views: string[] = [];
