@@ -49,6 +49,7 @@ export const classicRules: Ruleset = {
 	captureNeedsObjectives: false,
 	unmountsWithoutTransport: false,
 	mountedGunsDontCapture: false,
+	checksTheShop: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -74,6 +75,8 @@ export const remasterRules: Ruleset = {
 	unmountsWithoutTransport: true,
 	//A mounted gun doesn't capture: its own class is tested, not its transport's (#544)
 	mountedGunsDontCapture: true,
+	//Buy and upgrade offer only what the equipment window did, for the AI too (#444)
+	checksTheShop: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

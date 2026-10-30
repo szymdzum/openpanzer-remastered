@@ -13,17 +13,17 @@ import { leaderMoves, moveRange, pathTo, shortestPath, unitMoveRange } from "../
 import { attackCells } from "../src/core/attack";
 import { resupplyValue } from "../src/core/supply";
 import { captureAt } from "../src/core/moves";
-import { classicRules, moveCosts } from "../src/core/rules";
+import { classicRules, moveCosts, remasterRules } from "../src/core/rules";
 import { cellsInRange, distance, isPartialEdge } from "../src/core/geometry";
 import { spotCells } from "../src/core/sight";
 import { hexIndex, isSpotted, isZOC, unitById } from "../src/core/world";
-import { begin, resume, step, type Stepped } from "../src/core/step";
+import { begin, check, resume, step, type Stepped } from "../src/core/step";
 import { arriveReinforcements, outcome } from "../src/core/turn";
 import { mapSize } from "../src/core/newgame";
-import type { Contribution, UnitState, World } from "../src/core/types";
+import type { Contribution, Ruleset, UnitState, World } from "../src/core/types";
 import type { Command } from "../src/core/command";
 import { createWorld } from "../src/core/create";
-import { type HandUnit, handWorld } from "./coreworld";
+import { type HandUnit, handWorld, reserveUnit } from "./coreworld";
 import { deployedAs } from "../src/core/commands/units";
 import type { OffMapUnit } from "../src/core/state";
 import { Equipment } from "../src/legacy/equipment";
@@ -734,7 +734,6 @@ test("A unit bought outside a campaign gets the other side's average experience,
 //original set it for a submarine defender, then overwrote it with the ground defense (#88)
 test("A ship attacking a submarine defends with its close defense, as a ship a submarine attacks does (#88)", async () => {
 	const { equipmentOf } = await import("./coreworld");
-	const { remasterRules } = await import("../src/core/rules");
 	const DESTROYER = 129, SUBMARINE = 1863;
 	const defense = (rules: typeof classicRules, atk: number, def: number) => {
 		const w = handWorld({ rows: 6, cols: 6, terrain: () => terrainType.Ocean, units: [
@@ -759,7 +758,6 @@ test("A ship attacking a submarine defends with its close defense, as a ship a s
 //keep its roll; in the remaster's every leader of the list can come up, by a single draw as before
 test("In the remaster rules a unit can win any leader of its class's list, the last two included (#78)", async () => {
 	const { newLeader } = await import("../src/core/fight");
-	const { remasterRules } = await import("../src/core/rules");
 	for (const rules of [classicRules, remasterRules]) {
 		const w = handWorld({ rows: 2, cols: 2, units: [] }, undefined, { rules });
 		rules.leaders.forEach((list, uclass) => {
@@ -801,4 +799,63 @@ test("A reserve unit deploys as deployedAs says: a ground unit on the ocean emba
 	const r = step(w, { type: "deploy", index: 0, to: { row: 1, col: 2 } });
 	if (r.ok === false) throw new Error(r.refusal.reason);
 	expect(unitById(r.world, r.world.state.map.hexes[hexIndex(w, 1, 2)].unit!)!.carrier).toBe(sea.carrier);
+});
+
+test("Buying or upgrading to a model the shop doesn't offer is refused: older, another country's in a campaign, out of service (#444)", () => {
+	const PZ_IIIE = 142, PZ_IVD = 148, PZ_IIIJ = 144;
+	const world = (rules: Ruleset) => {
+		const w = handWorld({ rows: 6, cols: 6, units: [{ eqid: PZ_IIIE, owner: 0, row: 2, col: 2 }, { eqid: TP7, owner: 1, row: 5, col: 5 }] },
+			undefined, { rules });
+		w.data.hexes[0].deployment = 0;
+		w.data.hexes[34].deployment = 1;
+		w.state.players[0].prestige = 10000;
+		w.state.players[0].core.push({ reserve: reserveUnit(PZ_IIIE) });
+		return w;
+	};
+	const dated = (w: World, date: string): World => ({ ...w, state: { ...w.state, scenario: { ...w.state.scenario, date } } });
+	const reason = (w: World, cmd: Command) => {
+		const r = check(w, cmd);
+		return r === null ? null : r.reason;
+	};
+	const upgrade = (eqid: number): Command => ({ type: "upgrade", unit: 0, eqid, transport: -1 });
+	const undeployed = (eqid: number): Command => ({ type: "upgradeUndeployed", index: 0, eqid, transport: -1 });
+	const buy = (eqid: number, transport = -1): Command => ({ type: "buy", eqid, transport });
+	const base = world(remasterRules);
+
+	//1939: a dearer model of the unit's country is offered; a cheaper, older one, the same one, another country's
+	//and a model not yet built aren't
+	expect(reason(base, upgrade(PZ_IVD))).toBeNull();
+	expect(reason(base, undeployed(PZ_IVD))).toBeNull();
+	expect(reason(base, upgrade(PZ_IIA))).toBe("nothing to upgrade");
+	expect(reason(base, undeployed(PZ_IIA))).toBe("nothing to upgrade");
+	expect(reason(base, upgrade(PZ_IIIE))).toBe("nothing to upgrade");
+	expect(reason(base, upgrade(TP7))).toBe("not the same country");
+	expect(reason(base, upgrade(PZ_IIIJ))).toBe("out of service");
+	expect(reason(base, undeployed(PZ_IIIJ))).toBe("out of service");
+	expect(reason(base, buy(PZ_IVD))).toBeNull();
+	expect(reason(base, buy(PZ_IIIJ))).toBe("out of service");
+	expect(reason(base, buy(PZ_IVD, 2820))).toBe("out of service");
+	expect(reason(base, { type: "upgrade", unit: 0, eqid: PZ_IVD, transport: 2820 })).toBe("out of service");
+
+	//1941: the Pz IIA is out of service
+	const later = dated(base, "1941-06-22T00:00:00.000Z");
+	expect(reason(later, buy(PZ_IIA))).toBe("out of service");
+	expect(reason(later, buy(PZ_IVD))).toBeNull();
+
+	//In a campaign only the campaign player is held to its country's models, not the AI's countries
+	const country = +base.equipment[PZ_IVD].country - 1;
+	const campaign = { ...base, state: { ...base.state, campaign: { country } as NonNullable<World["state"]["campaign"]> } };
+	expect(reason(campaign, buy(PZ_IVD))).toBeNull();
+	expect(reason(campaign, buy(TP7))).toBe("not your country's");
+	const ai = { ...campaign, state: { ...campaign.state, turn: { ...campaign.state.turn, currentPlayer: 1 } } };
+	ai.state.players[1].prestige = 10000;
+	expect(reason(ai, buy(TP7))).toBeNull();
+	expect(reason(ai, buy(PZ_IVD))).toBeNull();
+
+	//The classic rules check only the prestige (kept)
+	const classic = world(classicRules);
+	for (const cmd of [upgrade(PZ_IIA), upgrade(TP7), upgrade(PZ_IIIJ), buy(PZ_IIIJ), buy(PZ_IVD, 2820)]) expect(reason(classic, cmd), cmd.type).not.toBe("out of service");
+	expect(reason(classic, buy(PZ_IIIJ))).toBeNull();
+	expect(reason(classic, upgrade(PZ_IIA))).toBeNull();
+	expect(reason(dated(classic, "1941-06-22T00:00:00.000Z"), buy(PZ_IIA))).toBeNull();
 });

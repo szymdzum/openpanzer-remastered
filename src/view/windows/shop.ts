@@ -4,6 +4,7 @@
 //chosen to it, or sells that unit; each with its price and the core's refusal.
 import type { Command } from "../../core/command";
 import { asUnit, coreAt, coreUnitOf } from "../../core/commands/common";
+import { buyRefusal, inService } from "../../core/commands/units";
 import { sellCost, unitCost, upgradeCost } from "../../core/costs";
 import { check } from "../../core/step";
 import type { OffMapUnit, PlayerState, UnitId, World } from "../../core/types";
@@ -126,15 +127,14 @@ export function sideCountries(w: World, side: number): number[] {
 const shopClass = (uclass: number) => uclass === unitClass.flak ? unitClass.airDefence : uclass;
 
 const yearOf = (w: World) => new Date(w.state.scenario.date).getFullYear();
-const inService = (e: EquipmentEntry, year: number) => e.yearavailable <= year && e.yearexpired >= year;
 
 //The country's models of a class in service this year, sorted by the stat (ties by eqid; reversed, both ways)
 function modelsOf(w: World, country: number, uclass: number, sort: SortKey, reverse: boolean): number[] {
 	const indexes = w.state.equipment.indexes[country + 1];
 	const list = indexes === undefined ? undefined : indexes.unitclass[String(uclass)];
-	const year = yearOf(w), order = reverse ? -1 : 1;
+	const order = reverse ? -1 : 1;
 	const value = (eqid: number) => w.equipment[eqid][sort];
-	return (list || []).filter((eqid) => w.equipment[eqid] !== undefined && inService(w.equipment[eqid], year)).sort((a, b) => {
+	return (list || []).filter((eqid) => w.equipment[eqid] !== undefined && inService(w, eqid)).sort((a, b) => {
 		const va = value(a), vb = value(b);
 		return va < vb ? -order : va > vb ? order : (a - b) * order;
 	});
@@ -207,16 +207,14 @@ interface Pricing {
 	unit: OffMapUnit | null;
 	eqid: number;
 	transport: number;
-	year: number;
 }
 
-//Why the model isn't sold: the unit picked is of a class it doesn't sell, the model is out of service, a
-//campaign buys only its own country's
-function notSold({ w, unit, eqid, year }: Pricing): string | null {
-	const e = w.equipment[eqid], campaign = w.state.campaign;
+//Why the model isn't sold: the unit picked is of a class it doesn't sell, or the core's offer (out of service, a
+//campaign's other country's)
+function notSold({ w, p, unit, eqid, transport }: Pricing): string | null {
 	if (unit !== null && !CLASSES.includes(shopClass(w.equipment[unit.eqid].uclass))) return "Not sold for this unit's class";
-	if (!inService(e, year)) return "Out of service";
-	return campaign !== null && campaign.country !== +e.country - 1 ? "Not your country's" : null;
+	const r = buyRefusal(w, p, eqid, transport);
+	return r === null ? null : reasonOf(r);
 }
 
 //Buy new: the model and its transport, unless it isn't sold (the unit picked is of a class the window doesn't sell,
@@ -298,11 +296,11 @@ export function shopOf(w: World, choice: ShopChoice): Shop | null {
 	const country = countries[choice.country] ?? p.country, name = countryName(w, country);
 	const unit = targetOf(w, p, choice.target), target = unit === null ? null : choice.target;
 	const { transport, list } = transportsOf(w, choice, country, presetOf(w, unit, choice));
-	const year = yearOf(w), pricing: Pricing = { w, p, target, unit, eqid: choice.eqid, transport, year };
+	const pricing: Pricing = { w, p, target, unit, eqid: choice.eqid, transport };
 	const upgrade = upgradeOf(pricing), buy = buyOf(pricing);
 	const model = choice.eqid > 0 ? w.equipment[choice.eqid] : null, rides = model !== null && transport > 0 ? w.equipment[transport] : null;
 	return {
-		title: name + " · " + MONTH_NAMES[new Date(w.state.scenario.date).getMonth()] + " " + year,
+		title: name + " · " + MONTH_NAMES[new Date(w.state.scenario.date).getMonth()] + " " + yearOf(w),
 		country: { name, nation: nationOf(name), many: countries.length > 1 }, prestige: prestigeText(p.prestige), tabs: TABS,
 		uclass: choice.uclass, sort: choice.sort, reverse: choice.reverse,
 		models: modelsOf(w, country, choice.uclass, choice.sort, choice.reverse).map((m) => modelOf(w, m, choice.sort, unit === null ? -1 : unit.eqid)),

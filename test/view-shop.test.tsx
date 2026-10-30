@@ -164,7 +164,7 @@ test("A reserve unit is upgraded and sold off the map by its core list place; in
 	const campaign = world((x) => { x.state.campaign = { country: 7 } as never; });
 	expect(shopOf(campaign, choiceFor(campaign, { unit: 2 }))!.sell).toBeNull();
 	expect(shopOf(campaign, { ...base, eqid: PZ_IIIE })!.buy.refusal).toBeNull();
-	const other = world((x) => { x.state.campaign = { country: 3 } as never; });
+	const other = world((x) => { x.state.campaign = { country: 3 } as never; x.state.players[0].country = 3; });
 	expect(shopOf(other, { ...base, eqid: PZ_IIIE })!.buy).toEqual({ cost: 0, refusal: "Not your country's", command: null });
 	//an enemy unit, or one gone: nothing to work on
 	expect(shopOf(w, { ...base, target: { unit: 3 } })!.target).toBeNull();

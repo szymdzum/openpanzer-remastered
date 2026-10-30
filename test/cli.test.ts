@@ -200,15 +200,14 @@ test("In the remaster rules a bomber attacks a ground unit from the next hex too
 test("A unit with no air attack can't attack an aircraft next to it, as on the screen; in the remaster rules the core refuses it too (#285)", async () => {
 	const call = caller(tmpGame());
 	await call("new drpzop01.xml --side 1 --seed 1");
-	//the Me-109B-2 #78 over 2,20, after the Axis's first turn: the machine guns at 1,21 can hit it, the
-	//infantry next to it (#5 at 1,19) and below it (#15) have no air attack
+	//the Me-109B-2 #78 over 15,12, after the Axis's first turn: the machine guns at 16,14 can hit it, the
+	//infantry under it (#64) has no air attack
 	const by = await call("attackers 78");
-	expect(by).toContain("#7 7,92mm wz.08 @1,21 on #78 Me-109B-2 @2,20 from 1,21");
-	expect(by).not.toContain("#5 ");
-	expect(by).not.toContain("#15 ");
-	expect(await call("targets 5")).not.toContain("#78 ");
-	expect(await call("check attack 5 78")).toBe("refused: not a target from here");
-	expect(await call("attack 5 78")).toBe("refused: not a target from here");
+	expect(by).toContain("#67 7,92mm wz.08 @16,14 on #78 Me-109B-2 @15,12 from 14,13");
+	expect(by).not.toContain("#64 ");
+	expect(await call("targets 64")).not.toContain("#78 ");
+	expect(await call("check attack 64 78")).toBe("refused: not a target from here");
+	expect(await call("attack 64 78")).toBe("refused: not a target from here");
 }, 60_000);
 
 test("The capture of the last objective ends the game: status says who won and how, and nothing plays on (#311)", async () => {
