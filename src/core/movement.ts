@@ -14,6 +14,7 @@ import { hasLeader, isAir, isGround, isSea, isTrain, unitUsesFuel } from "./unit
 import {
 	airUnitAt, fuelOf, groundUnitAt, hexIndex, isSpotted, isZOC, movesLeft, onMap, playerOf, sideOf, unitData
 } from "./world";
+import { fuelPerPoint } from "./weathereffects";
 
 //The road column of the movement tables, after the terrains.
 const ROAD = 17;
@@ -32,12 +33,13 @@ export function leaderMoves(w: World, u: UnitState): number {
 
 /**
  * The most hexes a unit can move, terrain aside: its moves left and the leaders' extra hex, no more
- * than its fuel (so a move never ends below 0 fuel). A towed gun without transport (not a fortification) moves 1.
+ * than its fuel pays for (so a move never ends below 0 fuel). A towed gun without transport (not a fortification)
+ * moves 1.
  */
 export function unitMoveRange(w: World, u: UnitState): number {
 	let range = movesLeft(w, u) + leaderMoves(w, u);
-	const ud = unitData(w, u);
-	if (unitUsesFuel(w, u) && fuelOf(u) < range) range = fuelOf(u);
+	const ud = unitData(w, u), paid = Math.floor(fuelOf(u) / fuelPerPoint(w, u));
+	if (unitUsesFuel(w, u) && paid < range) range = paid;
 	if (ud.movmethod === movMethod.towed && u.transport === null && range === 0 && ud.uclass !== unitClass.fortification)
 		range = 1;
 	return range;
@@ -60,7 +62,7 @@ export function movesLeftThisTurn(w: World, u: UnitState): number {
  */
 export function fullMoves(w: World, u: UnitState): number | null {
 	if (u.carrier > 0 || isAir(w, u) || !unitUsesFuel(w, u)) return null;
-	const perMove = unitData(w, u).movpoints + leaderMoves(w, u);
+	const perMove = (unitData(w, u).movpoints + leaderMoves(w, u)) * fuelPerPoint(w, u);
 	return perMove > 0 ? Math.floor(fuelOf(u) / perMove) : null;
 }
 

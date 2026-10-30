@@ -6,11 +6,12 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
+import { respot } from "./draft";
 import { nextRandom } from "./random";
-import { groundCondition } from "./tables";
+import { groundCondition, weatherType } from "./tables";
 import type { Draft } from "./types";
 
-const FAIR = 0, OVERCAST = 1, RAIN = 2, SNOW = 3;
+const { fair: FAIR, overcast: OVERCAST, rain: RAIN, snow: SNOW } = weatherType;
 
 /**
  * A weather zone's chances in percent per round, by month (January first). front: a fair sky clouds over;
@@ -51,7 +52,7 @@ export function changeWeather(d: Draft) {
 	//only there, so a winter month in the Pacific doesn't snow
 	const storming = s.ground === groundCondition.frozen ? SNOW : RAIN;
 	const atmospheric = nextWeather(s.atmospheric, roll, climate.front[month], climate.storm[month], storming);
-	if (atmospheric !== s.atmospheric) d.state.scenario = { ...s, atmospheric };
+	if (atmospheric !== s.atmospheric) respot(d, () => { d.state.scenario = { ...s, atmospheric }; });
 }
 
 //The weather a roll in [0, 100) leads to, one step at a time. A storm keeps its rain or snow until it eases

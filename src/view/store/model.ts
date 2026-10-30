@@ -6,13 +6,14 @@ import { check } from "../../core/step";
 import type { PlayerState, UnitId, UnitState, World } from "../../core/types";
 import { hexIndex, isSpotted, sideOf, unitById } from "../../core/world";
 import { countryNames } from "../../legacy/prototypes";
-import { groundConditionNames, playerType, sideNames, unitClass } from "../../core/tables";
+import { groundCondition, groundConditionNames, playerType, sideNames, unitClass } from "../../core/tables";
 import type { IconName, Nation } from "../components/icon";
 
-/** The weather or the ground, as the status bar shows it. */
+/** The weather or the ground, as the status bar shows it; note: what it does, its tooltip. */
 export interface Condition {
 	icon: IconName;
 	word: string;
+	note: string;
 }
 
 export interface Status {
@@ -56,9 +57,25 @@ const NATIONS: Record<string, Nation> = { "Germany": "de", "Afrika Korps": "de",
 	"United Kingdom": "gb", "USA": "us", "U.S. Army": "us", "U.S. Marines": "us", "France": "fr" };
 
 //Indexed by scenario.atmospheric and scenario.ground
-const WEATHER: Condition[] = [{ icon: "fair", word: "Fair" }, { icon: "overcast", word: "Overcast" }, { icon: "rain", word: "Rain" },
-	{ icon: "snow", word: "Snow" }];
-const GROUND: Condition[] = (["dry", "frozen", "mud"] as const).map((icon, i) => ({ icon, word: groundConditionNames[i] }));
+const WEATHER: Pick<Condition, "icon" | "word">[] = [{ icon: "fair", word: "Fair" }, { icon: "overcast", word: "Overcast" },
+	{ icon: "rain", word: "Rain" }, { icon: "snow", word: "Snow" }];
+const GROUND = (["dry", "frozen", "mud"] as const).map((icon, i) => ({ icon, word: groundConditionNames[i] }));
+
+const STORM = "aircraft and air defence can't fire, ground units fire with half their strength, every unit spots half as"
+	+ " far, units out of their side's towns get half the supply and replacements";
+//What each weather does in the remaster's rules (src/core/weathereffects.ts)
+const WEATHER_NOTES = ["Fair: no effect", "Overcast: aircraft fire with half their strength and spot half as far",
+	"Rain: " + STORM, "Snow: " + STORM];
+
+function weatherOf(w: World): Condition {
+	const s = w.state.scenario;
+	return { ...WEATHER[s.atmospheric], note: w.rules.weatherLimitsCombat ? WEATHER_NOTES[s.atmospheric] : "Weather" };
+}
+
+function groundOf(w: World): Condition {
+	const s = w.state.scenario, frozen = s.ground === groundCondition.frozen && w.rules.snowDoublesFuel;
+	return { ...GROUND[s.ground], note: frozen ? "Frozen: ground units burn two fuel a movement point" : "Ground" };
+}
 
 export const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MONTHS = MONTH_NAMES.map((m) => m.slice(0, 3));
@@ -100,7 +117,7 @@ export function statusOf(w: World): Status {
 	const p = currentPlayer(w), you = yourPlayer(w), s = w.state.scenario;
 	const side = p === null ? -1 : p.side, country = countryOf(w, p);
 	return { turn: w.state.turn.turn, maxTurns: s.maxTurns, side, sideName: side < 0 ? "" : sideNames[side], country,
-		nation: nationOf(country), date: dateOf(s.date), weather: WEATHER[s.atmospheric], ground: GROUND[s.ground],
+		nation: nationOf(country), date: dateOf(s.date), weather: weatherOf(w), ground: groundOf(w),
 		rules: w.rules.name === "classic" ? "Classic" : "Remaster", prestige: you === null ? null : you.prestige, yourTurn: isYourTurn(w) };
 }
 

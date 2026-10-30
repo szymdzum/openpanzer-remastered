@@ -11,6 +11,7 @@ import { adjacent } from "./geometry";
 import type { Supply, UnitState, World } from "./types";
 import { isAir, isGround, isSea } from "./units";
 import { groundUnitAt, hexIndex, onMap, playerOf, sideOf, unitData } from "./world";
+import { weatherSupplyDivisor } from "./weathereffects";
 
 export function adjacentEnemies(w: World, u: UnitState): number {
 	const side = sideOf(w, u);
@@ -75,8 +76,9 @@ export function canReinforce(w: World, u: UnitState, overstrength = false): bool
 }
 
 /**
- * What a resupply gives: all that's missing for air and naval units, otherwise / 1.3 outside a city, / 1.5
- * with one or two enemies around, / 3 with more, at least 1 ammo and 1 fuel of what is missing. isTurnStart:
+ * What a resupply gives: all that's missing for air and naval units, otherwise / 1.3 outside a city, / 2 more in
+ * rain or snow out of a town of its side (weathereffects.ts), / 1.5 with one or two enemies around, / 3 with more,
+ * at least 1 ammo and 1 fuel of what is missing. isTurnStart:
  * the automatic resupply at a turn's start, only in a city with no enemy around.
  */
 export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supply {
@@ -96,7 +98,7 @@ export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supp
 	const inCity = isInCity(w, u);
 	if (isTurnStart && (enemies > 0 || !inCity)) return supply(0, 0, 0, 0);
 
-	const divisor = supplyDivisor(inCity, enemies);
+	const divisor = supplyDivisor(inCity, enemies, weatherSupplyDivisor(w, u));
 	ammo = atLeastOne(ammo / divisor[0] / divisor[1]);
 	fuel = atLeastOne(fuel / divisor[0] / divisor[1]);
 	tAmmo = tAmmo / divisor[0] / divisor[1];
@@ -110,12 +112,12 @@ export function isInCity(w: World, u: UnitState): boolean {
 
 /** The two divisions of resupplyValue where u stands; none for air and naval units, which get all they are missing. */
 export function resupplyDivisors(w: World, u: UnitState): [number, number] {
-	return isAir(w, u) || isSea(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u));
+	return isAir(w, u) || isSea(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u), weatherSupplyDivisor(w, u));
 }
 
 /** The same for reinforceValue: air units get all of it, the others (ships too) are divided as on the ground. */
 export function reinforceDivisors(w: World, u: UnitState): [number, number] {
-	return isAir(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u));
+	return isAir(w, u) ? [1, 1] : supplyDivisor(isInCity(w, u), adjacentEnemies(w, u), weatherSupplyDivisor(w, u));
 }
 
 //At least 1 when anything is missing, 0 when nothing is: else a full unit goes over its maximum (#95).
@@ -123,9 +125,9 @@ function atLeastOne(share: number): number {
 	return share > 0 ? Math.max(1, share) : 0;
 }
 
-//Applied one after the other: outside a city, then by the enemies around.
-function supplyDivisor(inCity: boolean, enemies: number): [number, number] {
-	return [inCity ? 1 : 1.3, enemies > 2 ? 3 : enemies > 0 ? 1.5 : 1];
+//Applied one after the other: outside a city (and the weather's), then by the enemies around.
+function supplyDivisor(inCity: boolean, enemies: number, weather: number): [number, number] {
+	return [(inCity ? 1 : 1.3) * weather, enemies > 2 ? 3 : enemies > 0 ? 1.5 : 1];
 }
 
 function supply(ammo: number, fuel: number, transportAmmo: number, transportFuel: number): Supply {

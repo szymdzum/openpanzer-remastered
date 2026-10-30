@@ -11,6 +11,7 @@ import { cellsInRange, distance } from "./geometry";
 import type { Position, UnitState, World } from "./types";
 import { hasLeader, isAir, isEnemy, isGone } from "./units";
 import { ammoOf, currentEqid, hexIndex, isSpotted, sideOf, unitAt, unitData } from "./world";
+import { grounded } from "./weathereffects";
 
 /** The gun range in hexes, plus a marksman's; a gun range of 0 fires at the neighbours. */
 export function unitAttackRange(w: World, u: UnitState): number {
@@ -20,9 +21,12 @@ export function unitAttackRange(w: World, u: UnitState): number {
 	return range;
 }
 
-/** Whether u can fire on target, range aside: an air target only for a unit with an air attack. */
+/**
+ * Whether u can fire on target, range aside: an air target only for a unit with an air attack, nothing for one the
+ * weather grounds.
+ */
 export function canFire(w: World, u: UnitState, target: UnitState): boolean {
-	if (isGone(w, u) || ammoOf(u) <= 0 || isGone(w, target) || !isEnemy(w, u, target)) return false;
+	if (isGone(w, u) || ammoOf(u) <= 0 || isGone(w, target) || !isEnemy(w, u, target) || grounded(w, u)) return false;
 	return !(isAir(w, target) && !firesOnAircraft(unitData(w, u)));
 }
 

@@ -11,6 +11,7 @@ import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";
 import { distance } from "./geometry";
+import { firingStrength } from "./weathereffects";
 import type {
 	CombatResult, CombatStep, CombatValues, Contribution, Fight, Side, UnitState, World
 } from "./types";
@@ -291,7 +292,18 @@ export const classicCombat: CombatStep[] = [
 		if (!canFire(w, f.def, f.atk))
 			f.result.defcanfire = false;
 	} },
+	{ name: "weather", run(f) {
+		//the strength points that fire, a die each: fewer in bad weather (the dice drawn too)
+		strengthIn(f, "attacker", firingStrength(f.world, f.atk));
+		if (f.result.defcanfire) strengthIn(f, "defender", firingStrength(f.world, f.def));
+	} },
 ];
+
+function strengthIn(f: Fight, side: Side, strength: number) {
+	const before = f.firing[side];
+	f.firing[side] = strength;
+	if (f.record !== null && before !== strength) f.record.push({ name: "weather", side, field: "strength", before, after: strength });
+}
 
 function newResult(): CombatResult {
 	return { kills: 0, losses: 0, atkSuppress: 0, defSuppress: 0, atkExpGained: 0, defExpGained: 0, defcanfire: true,
@@ -315,7 +327,8 @@ export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngS
 		aRoad: w.data.hexes[aHex].road, dRoad: w.data.hexes[dHex].road,
 		distance: distance(atk.row, atk.col, def.row, def.col),
 		aEntrenchIntact: isEntrenchmentIntact(w, def, atk, aTerrain), dEntrenchIntact: isEntrenchmentIntact(w, atk, def, dTerrain),
-		isCloseCombat: false, values: { aav: 0, adv: 0, dav: 0, ddv: 0 }, result: newResult(), record,
+		isCloseCombat: false, values: { aav: 0, adv: 0, dav: 0, ddv: 0 }, firing: { attacker: atk.strength, defender: def.strength },
+		result: newResult(), record,
 	};
 	for (const s of w.rules.combat) s.run(f);
 	resolve(f, rng);
@@ -325,10 +338,10 @@ export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngS
 function resolve(f: Fight, rng: RngStream | null) {
 	const { world: w, atk, def, values: v, result: cr } = f;
 	const name = rng ? "dice" : "estimate";
-	cr.kills = combatKills(w, v.aav, v.ddv, atk, def, rng);
+	cr.kills = combatKills(w, v.aav, v.ddv, atk, def, f.firing.attacker, rng);
 	if (f.record !== null) f.record.push({ name, side: "attacker", field: "kills", before: 0, after: cr.kills });
 	if (cr.defcanfire) {
-		cr.losses = combatKills(w, v.dav, v.adv, def, atk, rng);
+		cr.losses = combatKills(w, v.dav, v.adv, def, atk, f.firing.defender, rng);
 		if (f.record !== null) f.record.push({ name, side: "defender", field: "losses", before: 0, after: cr.losses });
 	}
 	//a tank overruns a destroyed defender next to it
@@ -368,13 +381,14 @@ function hitThreshold(w: World, atk: UnitState, def: UnitState): number {
 		|| (isSea(w, atk) && !isSea(w, def)) ? 19 : 15;
 }
 
-//A die per strength point, or the expected number with rng null, rounded once as PG2's integer division
-//rounds it (Deliberate #90: rounding again came out half a point high). Overwhelming attack kills one more.
-function combatKills(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, rng: RngStream | null): number {
+//A die per strength point that fires, or the expected number with rng null, rounded once as PG2's integer
+//division rounds it (Deliberate #90: rounding again came out half a point high). Overwhelming attack kills one more.
+function combatKills(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState, firing: number,
+	rng: RngStream | null): number {
 	const kF = killFraction(w, atkval, defval, atk, def);
 	const threshold = hitThreshold(w, atk, def);
-	let kills = rng === null ? Math.floor((5 * Math.min(19, Math.max(1, kF + 21 - threshold)) * atk.strength + 50) / 100)
-		: rolledKills(rng, kF, threshold, atk.strength);
+	let kills = rng === null ? Math.floor((5 * Math.min(19, Math.max(1, kF + 21 - threshold)) * firing + 50) / 100)
+		: rolledKills(rng, kF, threshold, firing);
 	if (hasLeader(w, atk, leaderType.overwhelmingAttack)) kills += 1;
 	return kills;
 }

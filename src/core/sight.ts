@@ -11,13 +11,14 @@ import { adjacent, cellsInRange } from "./geometry";
 import type { Position, Sight, UnitState, World } from "./types";
 import { hasLeader, isAir } from "./units";
 import { emptySight, hexIndex, onMap, sideOf, unitData } from "./world";
+import { weatherSpotRange } from "./weathereffects";
 
-/** How many hexes the unit spots: its equipment's range, plus its recon leaders'. */
+/** How many hexes the unit spots: its equipment's range, plus its recon leaders', less in bad weather. */
 export function unitSpotRange(w: World, u: UnitState): number {
 	let range = unitData(w, u).spotrange;
 	if (hasLeader(w, u, leaderType.eliteReconVeteran)) range += 2;
 	if (hasLeader(w, u, leaderType.skilledReconnaissance)) range += 1;
-	return range;
+	return weatherSpotRange(w, u, range);
 }
 
 /** The hexes in a unit's zone of control: its neighbours on the map; none for an air unit or a unit on no hex. */

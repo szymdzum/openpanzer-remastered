@@ -22,8 +22,8 @@ export function StatusBar({ store }: { store: StatusBarReads }) {
 				<span class="pm-sep" />
 				<span class="cell"><span class="pm-label">Turn</span>{store.turn.value}</span>
 				<span class="cell">{store.date.value}</span>
-				{weather !== null && <span class="cell" title="Weather"><Icon name={weather.icon} size="sm" />{weather.word}</span>}
-				{ground !== null && <span class="cell" title="Ground"><Icon name={ground.icon} size="sm" />{ground.word}</span>}
+				{weather !== null && <span class="cell" title={weather.note}><Icon name={weather.icon} size="sm" />{weather.word}</span>}
+				{ground !== null && <span class="cell" title={ground.note}><Icon name={ground.icon} size="sm" />{ground.word}</span>}
 				<span class="cell" title="The rules this game plays"><span class="pm-label">Rules</span>{store.rules.value}</span>
 				<span class="grow" />
 				{prestige !== null && <span class="cell pm-prestige" title="Prestige"><Icon name="prestige" size="sm" />{prestige}</span>}

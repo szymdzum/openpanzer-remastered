@@ -15,6 +15,7 @@ import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState,
 import { winsByCapture } from "./turn";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isRiding, isSpotted, unitById, unitData } from "./world";
+import { fuelPerPoint } from "./weathereffects";
 
 /** What a move came to: the hex a hidden enemy stopped it before (null: none), and whether it won by capture. */
 export interface MoveOutcome {
@@ -117,12 +118,13 @@ function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 
 //A transport's fuel and all its points (it can't fire after), or the unit's own (no fuel on a carrier).
 function burn(d: Draft, u: UnitState, used: number) {
+	const fuel = used * fuelPerPoint(d, u);
 	if (isRiding(u)) {
 		u.hasFired = true;
-		if (usesFuel(d.equipment[u.transport.eqid])) u.transport.fuel -= used;
+		if (usesFuel(d.equipment[u.transport.eqid])) u.transport.fuel -= fuel;
 		u.moveLeft = 0;
 	} else {
-		if (unitUsesFuel(d, u) && u.carrier === 0) u.fuel -= used;
+		if (unitUsesFuel(d, u) && u.carrier === 0) u.fuel -= fuel;
 		u.moveLeft -= used;
 	}
 }

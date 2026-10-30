@@ -187,6 +187,13 @@ export function changeUnit(d: Draft, id: UnitId, change: (u: UnitState) => void)
 	quietSightOn(d, u);
 }
 
+/** Changes what every unit spots (the weather): their spotting off and on around the change, no unit marked seen. */
+export function respot(d: Draft, change: () => void) {
+	for (const u of d.state.units) countCells(d, d.sight.spot, u, spotCells(d, u), -1);
+	change();
+	for (const u of d.state.units) countCells(d, d.sight.spot, u, spotCells(d, u), 1);
+}
+
 //A unit's sight on, the counters alone: no unit marked seen
 function quietSightOn(d: Draft, u: UnitState) {
 	countCells(d, d.sight.zoc, u, zocCells(d, u), 1);

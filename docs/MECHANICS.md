@@ -125,6 +125,11 @@ then assault, then overrun with tanks.
   ground unit), whatever the screen's air mode shows.
 - Recon can split its movement over several moves in a turn, until a hex stops it.
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
+- On frozen ground the remaster's rules (#1) burn two fuel a movement point for ground units (on
+  their transport's fuel when mounted), as the manual says: "when the ground is covered with snow,
+  all ground units pay double fuel costs [...] snow does not reduce the distance that a unit can
+  move". The range is what the fuel pays for, and a full move costs twice the fuel. Aircraft and
+  ships pay as before. The classic rules burn one fuel a point on any ground.
 - A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank
   and air defense have to stay in place to fire (`Unit.move`).
 
@@ -135,6 +140,13 @@ skilled reconnaissance). The spotting moves with the unit: the hexes it leaves a
 spotted by it (`setSpotRange`, in `moveUnit`), so an enemy seen on the way can disappear again.
 Units newly spotted or that fire stay visible until the end of the round (`tempSpotted`), even
 on hexes no one spots.
+
+In the remaster's rules (#1) bad weather halves the range, as the manual says: "Air units' spotting
+range is halved by overcast and inclement weather. Other units' spotting ranges are halved when it
+is raining or snowing." Half rounded down, at least 1 (`weatherSpotRange`, src/core/weathereffects.ts),
+after the leaders' bonus; an aircraft with All Weather Combat spots as in fair weather. When the
+weather changes at a new round every unit's spotting is counted again, so the fog, the AI's view and
+the unit card follow.
 
 ## Supply and reinforcement
 
@@ -148,6 +160,12 @@ still reinforce.
   Reinforcement: only air units do, naval units are divided like ground units. Air units
   resupply and reinforce next to an airfield, naval units in a port (#19: the original had it
   backwards, its ships took supplies anywhere at sea and never in port).
+- In the remaster's rules (#1), in rain or snow a ground unit (or a ship, for replacements) out of a
+  city, port or airfield its side holds gets half again, resupply and replacements alike: the
+  first divisor is 2.6 outside a city, 2 in an enemy's city (`weatherSupplyDivisor`). The manual:
+  "If it is raining or snowing and a unit is not in a friendly city, port, or airfield, the unit
+  gets less supply", "Bad weather and desert terrain also reduce replacements"; it gives no number,
+  so the remaster halves. The desert's reduction isn't modelled.
 - At turn start, units in a city with no adjacent enemy are resupplied automatically, and so are
   ships in a port and aircraft at an airfield that didn't act.
 - Reinforcing costs prestige, by the unit's cost per strength point.
@@ -203,10 +221,31 @@ still reinforce.
 
 ## Weather
 
-Only the ground condition has an effect: mud and frozen ground change the movement costs
-(`Scenario` sets the movement table, scenario.ts). The atmospheric weather (fair, overcast,
-rain, snow) is shown in the status bar and the turn report but changes nothing in combat,
-movement or spotting (`//TODO Weather` in `calculateAttackResults`).
+The ground condition changes the movement costs: mud and frozen ground have their own movement
+tables (`Scenario` sets the movement table, scenario.ts); in the remaster's rules frozen ground also
+doubles the fuel (Movement). The status bar and the turn report show the weather and the ground,
+their tooltips what they do. In the classic rules the atmospheric weather (fair, overcast, rain,
+snow) changes nothing in combat, movement or spotting (`//TODO Weather` in the original's
+`calculateAttackResults`).
+
+**What the weather does** in the remaster's rules (#1, src/core/weathereffects.ts), as the manual
+says: "The number of strength points used for attack is also halved by rain or snow for ground
+troops and by overcast weather for air units (air units may not attack in rain or snow)" and
+"During rain or snow storms aircraft and air defense cannot attack":
+
+- Rain and snow halve the strength points a ground unit fires with, overcast an aircraft's: half
+  rounded up, so a unit always fires with at least one. Every unit that fires in a fight counts:
+  the attacker, the defender firing back and a support unit (the manual's "used for attack" read
+  as every shot). Ships fire whole. The combat step `weather` comes last and records the change
+  (`field: "strength"`); the estimate and the attack cursor follow. Each strength point that fires
+  is a die, so fewer dice are drawn from the game stream: the halving can't keep their number.
+- In rain and snow aircraft and air defence (the flak and air defence classes) don't fire at all
+  (`grounded`, through `canFire`): no targets to attack (the map, the AI and the core's check of an
+  attack all read `attackCells`), no fire back and no support fire. An aircraft or a gun attacked
+  still defends with its defence values.
+- Spotting and supply: see their sections.
+- An air unit with the leader All Weather Combat ("The air unit is not affected by weather
+  conditions") ignores all of it: it attacks and spots as in fair weather.
 
 In the classic rules the scenario's start weather lasts to the end. In the remaster's (#591) it
 changes, as the manual says: "Weather is randomly determined based on actual weather conditions for
@@ -358,8 +397,9 @@ The manual describes rules the code doesn't have (or a different version of them
 
 | Manual | Code |
 |--------|------|
-| Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
-| Bad weather reduces spotting | Spot range only from equipment and leaders |
+| Rain and snow halve ground attacks; overcast halves air attacks; no air or air defence attacks in rain or snow | Classic rules: no effect of the atmospheric weather at all. The remaster's rules follow the manual (#1) |
+| Bad weather reduces spotting | Classic rules: spot range only from equipment and leaders. The remaster's halve it (#1) |
+| Bad weather reduces supply and replacements; snow doubles fuel | Classic rules: neither. The remaster's halve the supply out of towns in rain or snow and double the fuel on frozen ground (#1) |
 | The weather changes with the area and the month; storm fronts last days; no rain or snow in North Africa | The classic rules keep the start weather; the remaster changes it each round by weather zone and month, in fronts (#591) |
 | Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |

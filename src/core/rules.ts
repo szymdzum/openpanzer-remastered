@@ -53,6 +53,10 @@ export const classicRules: Ruleset = {
 	checksTheShop: false,
 	reconIgnoresZoc: false,
 	weatherChanges: false,
+	weatherLimitsCombat: false,
+	weatherLimitsSpotting: false,
+	weatherLimitsSupply: false,
+	snowDoublesFuel: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -87,6 +91,13 @@ export const remasterRules: Ruleset = {
 	reconIgnoresZoc: true,
 	//The weather changes from round to round, in fronts that last, by the area and the month (#591)
 	weatherChanges: true,
+	//What the weather does, as the manual says: rain and snow halve the strength a ground unit fires with and
+	//keep aircraft and air defence from firing, overcast halves an aircraft's; bad weather halves spotting and the
+	//supply out of towns; snow on the ground (frozen) doubles a move's fuel. All Weather Combat ignores it (#1)
+	weatherLimitsCombat: true,
+	weatherLimitsSpotting: true,
+	weatherLimitsSupply: true,
+	snowDoublesFuel: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)
