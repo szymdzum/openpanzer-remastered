@@ -10,6 +10,7 @@ import { unitById } from "../src/core/world";
 import { terrainType } from "../src/core/tables";
 import { selectionOf } from "../src/view/map/mapview";
 import { glanceOf } from "../src/view/hud/odds";
+import { remasterRules } from "../src/core/rules";
 
 const PZ_IIA = 140, TP7 = 273, PIECHOTA = 270, WZ97 = 264;
 
@@ -25,7 +26,8 @@ test("Over a target the cursor shows the old cursor's two numbers: your losses w
 		experience: 200 }];
 	const w = hand([...piechota, { eqid: WZ97, owner: 1, row: 5, col: 5 }], { "4,4": terrainType.City });
 	const cr = combatResult(w, unitById(w, 0)!, unitById(w, 1)!, false, null);
-	expect(glance(w)).toEqual({ at: { row: 4, col: 4 }, yours: { side: 0, loss: cr.losses }, theirs: { side: 1, loss: cr.kills } });
+	expect(glance(w)).toEqual({ at: { row: 4, col: 4 }, yours: { side: 0, loss: cr.losses, suppressed: cr.atkSuppress },
+		theirs: { side: 1, loss: cr.kills, suppressed: cr.defSuppress } });
 	//the gun behind the target fires first: without it, the attacker loses less
 	const alone = hand(piechota, { "4,4": terrainType.City });
 	expect(glance(alone)!.yours.loss).toBeLessThan(cr.losses);
@@ -44,4 +46,12 @@ test("Off a target, on the enemy's turn or with no unit selected there is no cur
 	expect(glanceOf(gone, selectionOf(w, 0), { row: 4, col: 4 }, false)).toBe(null);
 	w.state.turn.currentPlayer = 1;
 	expect(glanceOf(w, selectionOf(w, 0), { row: 4, col: 4 }, false)).toBe(null);
+});
+
+test("In the remaster's rules the chips add the points each side would have suppressed (#2)", () => {
+	const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4 }] },
+		undefined, { spotSide: 0, rules: remasterRules });
+	const cr = combatResult(w, unitById(w, 0)!, unitById(w, 1)!, false, null), g = glance(w)!;
+	expect(cr.defSuppress).toBeGreaterThan(0);
+	expect(g).toMatchObject({ yours: { suppressed: cr.atkSuppress }, theirs: { side: 1, loss: cr.kills, suppressed: cr.defSuppress } });
 });

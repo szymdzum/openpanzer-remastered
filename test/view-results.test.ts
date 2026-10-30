@@ -6,14 +6,15 @@ import { handWorld, type HandUnit } from "./coreworld";
 import { adjacent } from "../src/core/geometry";
 import { step } from "../src/core/step";
 import type { Command } from "../src/core/command";
-import type { World } from "../src/core/types";
+import type { Ruleset, World } from "../src/core/types";
+import { remasterRules } from "../src/core/rules";
 import { terrainType } from "../src/core/tables";
 import { resultsOf } from "../src/view/hud/results";
 
 const PZ_38T = 136, PZ_IIA = 140, INFANTERIE = 115, LEFH18 = 92, TP7 = 273, PIECHOTA = 270, WZ97 = 264;
 
-function hand(units: HandUnit[], terrain: Record<string, number> = {}): World {
-	return handWorld({ rows: 10, cols: 10, units, terrain: (r, c) => terrain[r + "," + c] || terrainType.Clear }, undefined, { spotSide: 0 });
+function hand(units: HandUnit[], terrain: Record<string, number> = {}, rules?: Ruleset): World {
+	return handWorld({ rows: 10, cols: 10, units, terrain: (r, c) => terrain[r + "," + c] || terrainType.Clear }, undefined, { spotSide: 0, rules });
 }
 
 //The command played with the dice of a seed: the results the map shows
@@ -82,6 +83,14 @@ test("A surrender with nowhere to go, a destroyed defender, and a shelling from 
 	expect(far.chips).toEqual([{ at: { row: 4, col: 1 }, loss: 0, note: null },
 		{ at: { row: 4, col: 4 }, loss: far.chips[1].loss, note: "entrenched 2 → 1" }]);
 	expect(far.news).toEqual({ name: "10.5 leFH18", text: "shelled the 7TP · −" + far.chips[1].loss + ", no return fire" });
+});
+
+test("A defender pinned down by suppression: the line says so when it falls back or surrenders (#2)", () => {
+	const pinned: HandUnit[] = [{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, suppressed: 10 }];
+	expect(play(hand(pinned, {}, remasterRules))!.news.text).toBe("drove the 38 Piechota out of the clear · pinned down, it fell back one hex");
+	const boxed = hand([...pinned, ...adjacent(4, 4).filter((c) => !(c.row === 4 && c.col === 3)).map((c) => ({ eqid: PIECHOTA, owner: 1, ...c }))],
+		{}, remasterRules);
+	expect(play(boxed)!.news.text).toBe("forced the 38 Piechota to surrender · pinned down, it had nowhere to fall back");
 });
 
 test("Support fire that stops the attack: the stamp over the attacker, its losses in the line", () => {

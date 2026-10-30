@@ -47,9 +47,14 @@ function drawTrail(c: CanvasRenderingContext2D, vp: Viewport, from: Position, to
 	strokeLine(c, vp, MAP["map-paper-raised"], 2, 4, [3, 3]);
 }
 
-//The loss typed on its side's colour (0 when none); returns the chip's width
+//The loss (0 when none), then the points suppressed: "−2 +1s"
+function chipText(ch: LossChip): string {
+	return (ch.loss === 0 ? "0" : "−" + ch.loss) + (ch.suppressed > 0 ? " +" + ch.suppressed + "s" : "");
+}
+
+//The chip typed on its side's colour; returns its width
 function chip(c: CanvasRenderingContext2D, ch: LossChip, x: number, y: number): number {
-	const text = ch.loss === 0 ? "0" : "−" + ch.loss;
+	const text = chipText(ch);
 	c.font = "bold 12px " + TOKENS.fonts.mono;
 	const w = Math.ceil(c.measureText(text).width) + 8;
 	c.fillStyle = sideColour(ch.side);

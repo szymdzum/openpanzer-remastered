@@ -58,6 +58,7 @@ interface Combat {
 	destroyed: EventOf<"destroyed">[];
 	retreat: EventOf<"retreated"> | undefined;
 	surrender: EventOf<"surrendered"> | undefined;
+	pinned: boolean; //it fell back, or surrendered, with its strength suppressed
 }
 
 function combatOf(events: GameEvent[]): Combat {
@@ -66,7 +67,7 @@ function combatOf(events: GameEvent[]): Combat {
 	const stopped = find(events, "attackStopped");
 	const attacker = main !== null ? main.attacker.unit : stopped !== undefined ? stopped.unit : support.length > 0 ? support[0].defender.unit : null;
 	return { main, support, attacker, stopped: stopped !== undefined, destroyed: events.filter((e): e is EventOf<"destroyed"> => e.type === "destroyed"),
-		retreat: find(events, "retreated"), surrender: find(events, "surrendered") };
+		retreat: find(events, "retreated"), surrender: find(events, "surrendered"), pinned: find(events, "pinned") !== undefined };
 }
 
 //The name of a unit from the worlds before and after the step (a destroyed one is only in the first)
@@ -146,7 +147,8 @@ function rugged({ before, c, m, name, aLoss }: Fought): Told | null {
 
 function surrendered({ c, name, target }: Fought): Told | null {
 	return c.surrender === undefined ? null
-		: told(c.surrender.at, "Surrendered", null, "bad", name, "forced the " + target + " to surrender · it had nowhere to fall back");
+		: told(c.surrender.at, "Surrendered", null, "bad", name, "forced the " + target + " to surrender · "
+			+ (c.pinned ? "pinned down, " : "") + "it had nowhere to fall back");
 }
 
 //The defender destroyed, else the attacker
@@ -158,7 +160,8 @@ function destroyed({ c, m, name, target, aLoss, dLoss }: Fought): Told | null {
 
 function retreated({ before, c, m, name, target }: Fought): Told | null {
 	return c.retreat === undefined ? null : told(c.retreat.to, "Retreat", null, "warn", name,
-		"drove the " + target + " out of the " + placeOf(before, at(m.defender)) + " · it fell back one hex");
+		"drove the " + target + " out of the " + placeOf(before, at(m.defender)) + " · " + (c.pinned ? "pinned down, " : "")
+		+ "it fell back one hex");
 }
 
 //No stamp: the plain exchange, or a shot from range
