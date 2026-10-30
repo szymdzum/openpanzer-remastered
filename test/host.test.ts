@@ -379,6 +379,23 @@ test("The screen that shows nothing tells the host the victories a move and an a
 	expect([game.uiMessageClicked, closed]).toEqual([true, true]);
 });
 
+//victoriesOf can list two ends for one result; the game ends once, with the first, or a campaign would advance twice.
+//(A real move can't both capture and be surprised: a surprise stops it short of its hex.)
+test("A step that finds a capture's victory and an elimination's tells the host the first only (#552)", () => {
+	const ended: string[] = [];
+	const host = Object.assign(Object.create(GameHost.prototype) as GameHost, {
+		ended(e: { side: number; how: string }) { ended.push(e.how + " " + e.side); } });
+	const attack = { retreatMove: null as null, victorySides: [1] };
+	host.won({ move: {}, victorySide: 0, surprise: { attack } } as never);
+	expect(ended.splice(0)).toEqual(["capture 0"]);
+	host.won({ move: {}, victorySide: -1, surprise: { attack } } as never);
+	expect(ended.splice(0)).toEqual(["elimination 1"]);
+	host.won({ attacking: {}, retreatMove: { isVictorySide: 0 }, victorySides: [1] } as never);
+	expect(ended.splice(0)).toEqual(["capture 0"]);
+	host.won(null as never);
+	expect(ended).toEqual([]);
+});
+
 test("The screen's sprite and sound picks come from the cosmetic stream: the dice and the AI's draws don't move (#347)", () => {
 	Rng.seed(347);
 	const g = headlessGame(noting([]));

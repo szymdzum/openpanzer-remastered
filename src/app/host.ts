@@ -477,10 +477,11 @@ export class GameHost {
 		});
 	}
 
-	//Told in the order victoriesOf gives, once the screen has shown the step
+	//The first victory victoriesOf gives, once the screen has shown the step: a game ends once, however many
+	//ends one step finds (Deliberate #552)
 	won(result: ResultOf<CommandType>) {
-		for (const end of victoriesOf(result))
-			this.ended(end);
+		const [end] = victoriesOf(result);
+		if (end !== undefined) this.ended(end);
 	}
 
 	//Refused while a person can't play (personRefusal). The end of turn ends their turn (personEndTurn), the
