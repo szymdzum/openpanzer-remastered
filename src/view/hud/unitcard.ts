@@ -243,7 +243,8 @@ export function unitCardOf(w: World, id: UnitId): UnitCard | null {
 		condition, resupply: short && canResupply(w, u), chips: line.chips,
 		hits: hitsOf(own), holds: holdsOf(w, self, own),
 		initiative: { value: own.initiative, tip: "In a fight the side with more initiative, the attacker on a tie, gets +" + INITIATIVE_DEFENCE
-			+ " defence and its lead in attack, up to +" + INITIATIVE_MAX_ATTACK },
+			+ " defence and its lead in attack, up to +" + INITIATIVE_MAX_ATTACK
+			+ (w.rules.terrainLimitsInitiative ? "; the defender's terrain caps both sides' initiative" : "") },
 		fires: unitAttackRange(w, self), sees: unitSpotRange(w, self), bonuses: bonusesOf(w, u),
 		value: unitCost(w, u.eqid, u.transport === null ? undefined : u.transport.eqid), band: bandOf(w, u), next, line,
 	};

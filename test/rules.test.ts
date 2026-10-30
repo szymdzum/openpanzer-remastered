@@ -4,15 +4,16 @@
 import { expect, test, vi } from "vitest";
 import { readFixture, restoreState } from "./contracts";
 
-test("The remaster's rules are the classic ones but for the AI's play, who attacks whom, where a side deploys, when it is eliminated, the leaders it wins, the turn limit, who wins by capture, what an upgrade does to a mounted unit whether a mounted gun captures and what the shop offers, under their own name (#53, #235, #285, #302, #115, #78, #256, #91, #546, #544, #444)", async () => {
+test("The remaster's rules are the classic ones but for the AI's play, who attacks whom, where a side deploys, when it is eliminated, the leaders it wins, the turn limit, who wins by capture, what an upgrade does to a mounted unit whether a mounted gun captures, what the shop offers and whether terrain caps initiative, under their own name (#53, #235, #285, #302, #115, #78, #256, #91, #546, #544, #444, #14)", async () => {
 	const { classicRules, remasterRules, rulesetNamed } = await import("../src/core/rules");
 	expect(remasterRules.name).toBe("remaster");
 	expect({ ...remasterRules, name: "classic", ai: classicRules.ai, airAttacksNextHex: false, checkTargets: false,
 		deployOnOwnTowns: false, waitingUnitsFight: false, wholeLeaderList: false, defenderHoldsOut: false,
-		captureNeedsObjectives: false, unmountsWithoutTransport: false, mountedGunsDontCapture: false, checksTheShop: false }).toEqual(classicRules);
+		captureNeedsObjectives: false, unmountsWithoutTransport: false, mountedGunsDontCapture: false, checksTheShop: false, terrainLimitsInitiative: false }).toEqual(classicRules);
 	expect([remasterRules.airAttacksNextHex, remasterRules.checkTargets, remasterRules.deployOnOwnTowns, remasterRules.waitingUnitsFight,
 		remasterRules.wholeLeaderList, remasterRules.defenderHoldsOut, remasterRules.captureNeedsObjectives,
-		remasterRules.unmountsWithoutTransport, remasterRules.mountedGunsDontCapture, remasterRules.checksTheShop]).toEqual([true, true, true, true, true, true, true, true, true, true]);
+		remasterRules.unmountsWithoutTransport, remasterRules.mountedGunsDontCapture, remasterRules.checksTheShop, remasterRules.terrainLimitsInitiative])
+		.toEqual([true, true, true, true, true, true, true, true, true, true, true]);
 	expect(remasterRules.ai.config).toBe(classicRules.ai.config);
 	expect([rulesetNamed("remaster"), rulesetNamed("classic"), rulesetNamed(undefined), rulesetNamed("pg2")])
 		.toEqual([remasterRules, classicRules, classicRules, classicRules]);

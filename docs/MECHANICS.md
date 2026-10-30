@@ -45,7 +45,11 @@ or naval attack). Each side defends with ground defense (air defense against air
 | Leaders | see Leaders |
 
 **Initiative** compares the two units' equipment initiative. The higher side (attacker on a
-tie) gets +4 defense and +min(4, difference) attack. In practice: it takes fewer losses.
+tie) gets +4 defense and +min(4, difference) attack. In practice: it takes fewer losses. The
+remaster's rules (#14) cap both units' initiative with the defender's terrain
+(`terrainInitiative`: city 1, forest 3, hill 5, clear none...) before comparing, as the manual
+says ("the terrain of the defending unit"): in a city or forest a fast tank loses its edge, and
+the attacker, winning ties, keeps +4 defense. The classic rules use the equipment's alone.
 
 **Who can attack whom.** A unit fires on an enemy it sees within its gun range (range 0 is the
 next hex), if it can start an attack on it: only a unit with an air attack fires on an aircraft
@@ -330,6 +334,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Bad weather reduces spotting | Spot range only from equipment and leaders |
 | Recon ignores zone of control | ZOC stops every ground unit; recon only has split movement |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
+| Initiative comes from equipment, terrain and experience | Equipment only in the classic rules; the remaster caps it with the defender's terrain (#14). Experience still doesn't change it (it gives +1 av and dv per level instead) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
 | Units over 1000 experience always get a leader | Always at the cap (500) |
 | Retreat above 60% losses | 60% at strength 10, less for weaker units |

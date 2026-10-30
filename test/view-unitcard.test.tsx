@@ -7,6 +7,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { germanyPoland, handWorld, type HandUnit } from "./coreworld";
 import { INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, rangeDefence } from "../src/core/combat";
 import { weakDefences } from "../src/core/equipment";
+import { remasterRules } from "../src/core/rules";
 import { step } from "../src/core/step";
 import type { World } from "../src/core/types";
 import { leaderDescriptions } from "../src/legacy/prototypes";
@@ -140,6 +141,9 @@ test("What entrenchment does and the rules' tooltips are the core's: street figh
 	expect(city.bonuses).toEqual([{ text: "+2 entrenched", to: "defence", tip: city.condition[3].sayTip }]);
 	expect(city.initiative.tip).toBe(`In a fight the side with more initiative, the attacker on a tie, gets +${INITIATIVE_DEFENCE} defence and its `
 		+ `lead in attack, up to +${INITIATIVE_MAX_ATTACK}`);
+	const remaster = cardOf(handWorld({ rows: 6, cols: 6, units: [{ eqid: INFANTERIE, owner: 0, row: 2, col: 2 }] }, undefined,
+		{ spotSide: 0, rules: remasterRules }), 0);
+	expect(remaster.initiative.tip).toBe(city.initiative.tip + "; the defender's terrain caps both sides' initiative");
 	expect(city.holds[2].tip).toBe("Its defence when infantry attacks it in a city, forest, mountain or fortification hex");
 	//a gun that reaches past its neighbours gets all of its range defence from there to its range
 	const gun = dug({ eqid: A_WZ13 }, terrainType.Clear), g = germanyPoland[A_WZ13];
