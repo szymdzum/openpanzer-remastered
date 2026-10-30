@@ -14,6 +14,7 @@ import { hasLeader, isAir, isGround, isSea, isTrain, unitUsesFuel } from "./unit
 import {
 	airUnitAt, fuelOf, groundUnitAt, hexIndex, isSpotted, isZOC, movesLeft, onMap, playerOf, sideOf, unitData
 } from "./world";
+import { seesUnit } from "./sight";
 import { fuelPerPoint } from "./weathereffects";
 
 //The road column of the movement tables, after the terrains.
@@ -127,9 +128,9 @@ export function isBridgeForSide(w: World, hex: number, side: number): boolean {
 	return isBridge(w.equipment, bridge.eqid);
 }
 
-//Whether the side sees what's on the hex: the hex is spotted, or the unit fired from hiding.
+//Whether the side sees what's on the hex: the unit there (seesUnit), the hex when none.
 function seen(w: World, hex: number, side: number, unit: UnitState | null): boolean {
-	return isSpotted(w, hex, side) || (unit !== null && unit.tempSpotted);
+	return unit === null ? isSpotted(w, hex, side) : seesUnit(w, unit, side);
 }
 
 /**

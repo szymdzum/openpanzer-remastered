@@ -5,8 +5,9 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { CURRENCY_MULTIPLIER, UPGRADE_PENALTY } from "./tables";
+import { CURRENCY_MULTIPLIER, leaderType, UPGRADE_PENALTY } from "./tables";
 import type { UnitState, World } from "./types";
+import { hasLeaderAbility } from "./units";
 import { unitData } from "./world";
 
 /** The price of a unit and its transport (an eqid of 0 or less, or none, for nothing). */
@@ -17,7 +18,10 @@ export function unitCost(w: World, eqid?: number, transportId?: number): number 
 	return cost;
 }
 
-/** The price of upgrading `u` to `upgradeId` with `transportId` (-1: none), less its worth; a change costs more. */
+/**
+ * The price of upgrading `u` to `upgradeId` with `transportId` (-1: none), less its worth; a change costs more.
+ * Influence halves a price to pay, in the rules where every leader ability works.
+ */
 export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transportId?: number): number {
 	let ncost: number;
 	if (upgradeId > 0)
@@ -32,7 +36,9 @@ export function upgradeCost(w: World, u: UnitState, upgradeId?: number, transpor
 			: unitCost(w, -1, transportId) * UPGRADE_PENALTY;
 
 	const ocost = u.transport !== null && transportId !== -1 ? unitCost(w, u.eqid, u.transport.eqid) : unitCost(w, u.eqid, -1);
-	return (ncost + tcost - ocost) >> 0;
+	const cost = (ncost + tcost - ocost) >> 0;
+	//"at reduced prestige point cost": neither the manual nor the original says how much less
+	return cost > 0 && hasLeaderAbility(w, u, leaderType.influence) ? cost >> 1 : cost;
 }
 
 /** The price of a strength point of what the unit currently is. */

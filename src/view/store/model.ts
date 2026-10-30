@@ -4,7 +4,8 @@
 import type { Command, Refusal } from "../../core/command";
 import { check } from "../../core/step";
 import type { PlayerState, UnitId, UnitState, World } from "../../core/types";
-import { hexIndex, isSpotted, sideOf, unitById } from "../../core/world";
+import { sideOf, unitById } from "../../core/world";
+import { spotsUnit } from "../../core/sight";
 import { countryNames } from "../../legacy/prototypes";
 import { groundCondition, groundConditionNames, playerType, sideNames, unitClass } from "../../core/tables";
 import type { IconName, Nation } from "../components/icon";
@@ -168,7 +169,7 @@ export function stillToAct(names: string[]): string {
 
 /** One rule for the map and the unit info (#483): its own, on a hex it spots, or fired from hiding; none if no side. */
 export function isShown(w: World, u: UnitState): boolean {
-	return sideOf(w, u) === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide));
+	return sideOf(w, u) === w.spotSide || u.tempSpotted || (w.spotSide >= 0 && spotsUnit(w, u, w.spotSide));
 }
 
 export function shownUnit(w: World, id: UnitId): UnitState | null {

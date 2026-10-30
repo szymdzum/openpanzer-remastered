@@ -18,7 +18,8 @@
 
 import { difficultyModifiers, movMethod, outcomeNames, unitClass } from "./tables";
 import type { GameEvent } from "./events";
-import { spotCells, zocCells } from "./sight";
+import { distance } from "./geometry";
+import { isCamouflaged, spotCells, zocCells } from "./sight";
 import type {
 	CoreUnit, Draft, GameState, HexState, OffMapUnit, PlayerState, Position, Sight, UnitId, UnitState, World
 } from "./types";
@@ -142,17 +143,21 @@ export function spotOn(d: Draft, u: UnitState): UnitId[] {
 	const side = sideOf(d, u), spotted: UnitId[] = [];
 	for (const c of spotCells(d, u)) {
 		const hex = c.row * d.state.map.cols + c.col;
-		if (!isSpotted(d, hex, side)) {
-			const other = unitAt(d, hex, false);
-			if (other !== null && sideOf(d, other) !== side) {
-				spotted.push(other.id);
-				writeUnit(d, other.id).tempSpotted = true;
-			}
+		const other = unitAt(d, hex, false);
+		if (other !== null && sideOf(d, other) !== side && newlySpotted(d, u, other, hex)) {
+			spotted.push(other.id);
+			writeUnit(d, other.id).tempSpotted = true;
 		}
 		if (side < 2) d.sight.spot[side][hex]++;
 	}
 	if (spotted.length) emit(d, { type: "spotted", unit: u.id, units: spotted });
 	return spotted;
+}
+
+//On a hex its side didn't spot yet; a unit Forest Camouflage hides only from next to it, once a round
+function newlySpotted(d: Draft, by: UnitState, other: UnitState, hex: number): boolean {
+	if (!isCamouflaged(d, other)) return !isSpotted(d, hex, sideOf(d, by));
+	return !other.tempSpotted && distance(by.row, by.col, other.row, other.col) <= 1;
 }
 
 function countCells(d: Draft, counts: [Uint16Array, Uint16Array], u: UnitState, cells: Position[], by: number) {

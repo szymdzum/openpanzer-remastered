@@ -10,7 +10,8 @@ import { movMethod, terrainType, unitClass } from "./tables";
 import { playerAt } from "./draft";
 import { cellsInRange } from "./geometry";
 import type { World } from "./types";
-import { isSpotted, sideOf, unitById } from "./world";
+import { sideOf, unitById } from "./world";
+import { seesUnit } from "./sight";
 
 type Kind = "ground" | "air" | "sea";
 
@@ -39,7 +40,7 @@ function nearSeenEnemy(w: World, side: number, hex: number): boolean {
 		const at = c.row * cols + c.col, h = w.state.map.hexes[at];
 		return [h.unit, h.air].some((id) => {
 			const u = id === null ? null : unitById(w, id);
-			return u !== null && sideOf(w, u) !== side && (isSpotted(w, at, side) || u.tempSpotted);
+			return u !== null && sideOf(w, u) !== side && seesUnit(w, u, side);
 		});
 	});
 }

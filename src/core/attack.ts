@@ -10,7 +10,8 @@ import { canStartAttackOn } from "./equipment";
 import { cellsInRange, distance } from "./geometry";
 import type { Position, UnitState, World } from "./types";
 import { hasLeader, isAir, isEnemy, isGone } from "./units";
-import { ammoOf, currentEqid, hexIndex, isSpotted, sideOf, unitAt, unitData } from "./world";
+import { ammoOf, currentEqid, hexIndex, sideOf, unitAt, unitData } from "./world";
+import { seesUnit } from "./sight";
 import { grounded } from "./weathereffects";
 
 /** The gun range in hexes, plus a marksman's; a gun range of 0 fires at the neighbours. */
@@ -52,15 +53,14 @@ export function canInitiateAttack(w: World, u: UnitState, target: UnitState): bo
 
 /** The unit of a hex u can attack (Hex.getAttackableUnit): the one shown in airMode first, then the other. */
 export function attackableUnit(w: World, u: UnitState, hex: number, airMode: boolean): UnitState | null {
-	const spotted = isSpotted(w, hex, sideOf(w, u));
 	const first = unitAt(w, hex, airMode);
-	if (canTarget(w, u, first, spotted)) return first;
+	if (canTarget(w, u, first)) return first;
 	const second = unitAt(w, hex, !airMode);
-	return second !== first && canTarget(w, u, second, spotted) ? second : null;
+	return second !== first && canTarget(w, u, second) ? second : null;
 }
 
-function canTarget(w: World, u: UnitState, target: UnitState | null, spotted: boolean): boolean {
-	return target !== null && (spotted || target.tempSpotted) && canInitiateAttack(w, u, target);
+function canTarget(w: World, u: UnitState, target: UnitState | null): boolean {
+	return target !== null && seesUnit(w, target, sideOf(w, u)) && canInitiateAttack(w, u, target);
 }
 
 /**
@@ -108,7 +108,7 @@ export function isInAttackRange(w: World, u: UnitState, target: UnitState): bool
 /** Whether target is one of attackCells' targets of u where it stands, whether u can still fire or not. */
 export function isTargetFrom(w: World, u: UnitState, target: UnitState): boolean {
 	if (!isInAttackRange(w, u, target)) return false;
-	if (!canTarget(w, u, target, isSpotted(w, hexIndex(w, target.row, target.col), sideOf(w, u)))) return false;
+	if (!canTarget(w, u, target)) return false;
 	const below = u.row === target.row && u.col === target.col;
 	return below || isAir(w, target) || hitsGroundAnywhere(w, isAir(w, u), unitAttackRange(w, u));
 }

@@ -6,11 +6,11 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType } from "./tables";
+import { leaderType, terrainType } from "./tables";
 import { adjacent, cellsInRange } from "./geometry";
 import type { Position, Sight, UnitState, World } from "./types";
-import { hasLeader, isAir } from "./units";
-import { emptySight, hexIndex, onMap, sideOf, unitData } from "./world";
+import { hasLeader, hasLeaderAbility, isAir } from "./units";
+import { airUnitAt, emptySight, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitData } from "./world";
 import { weatherSpotRange } from "./weathereffects";
 
 /** How many hexes the unit spots: its equipment's range, plus its recon leaders', less in bad weather. */
@@ -44,4 +44,39 @@ export function computeSight(w: World): Sight {
 		for (const c of spotCells(w, u)) sight.spot[side][hexIndex(w, c.row, c.col)]++;
 	}
 	return sight;
+}
+
+/**
+ * Whether the side spots the unit where it stands: it spots its hex, but a unit hidden by Forest Camouflage only
+ * from next to it.
+ */
+export function spotsUnit(w: World, u: UnitState, side: number): boolean {
+	if (!isSpotted(w, hexIndex(w, u.row, u.col), side)) return false;
+	return w.noFOW || !isCamouflaged(w, u) || unitsNear(w, u).some((o) => sideOf(w, o) === side);
+}
+
+/** Whether the side sees the unit: it spots it, or the unit was spotted or fired this round (tempSpotted). */
+export function seesUnit(w: World, u: UnitState, side: number): boolean {
+	return spotsUnit(w, u, side) || u.tempSpotted;
+}
+
+/**
+ * Whether Forest Camouflage hides the unit: a ground unit with it in a forest ("cannot be spotted by enemy units
+ * unless they move adjacent to it"), in the rules where every leader ability works.
+ */
+export function isCamouflaged(w: World, u: UnitState): boolean {
+	return w.rules.allLeaderAbilities && u.row >= 0 && w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.Forest
+		&& !isAir(w, u) && hasLeaderAbility(w, u, leaderType.forestCamouflage);
+}
+
+/** The other units on u's hex (the one above or below it) and on the hexes next to it; none for a unit on no hex. */
+export function unitsNear(w: World, u: UnitState): UnitState[] {
+	if (u.row < 0) return [];
+	const near: UnitState[] = [];
+	for (const c of [{ row: u.row, col: u.col }, ...adjacent(u.row, u.col)]) {
+		if (!onMap(w, c.row, c.col)) continue;
+		const hex = hexIndex(w, c.row, c.col);
+		for (const o of [groundUnitAt(w, hex), airUnitAt(w, hex)]) if (o !== null && o.id !== u.id) near.push(o);
+	}
+	return near;
 }

@@ -9,6 +9,7 @@ import { isBridgeForSide, moveRange, movesInPhases, movesLeftThisTurn, shortestP
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../../core/types";
 import { isAir, isGround, unitUsesAmmo } from "../../core/units";
 import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../../core/world";
+import { seesUnit, spotsUnit } from "../../core/sight";
 import { canOrder, isShown } from "../store/model";
 
 export interface Marker {
@@ -98,7 +99,7 @@ export function unitsToAct(w: World): UnitState[] {
 function markerOf(w: World, u: UnitState): Marker {
 	const own = sideOf(w, u) === w.spotSide;
 	return { strength: u.strength, own, ...readiness(w, u, own), bars: Math.min(Math.floor(u.experience / 100), 5),
-		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && isSpotted(w, hexIndex(w, u.row, u.col), w.spotSide)) };
+		entrenchment: u.entrenchment, hits: u.hits, revealed: !own && !(w.spotSide >= 0 && spotsUnit(w, u, w.spotSide)) };
 }
 
 function mapUnit(w: World, u: UnitState, top: boolean, shared: boolean, airMode: boolean, selected: UnitId | null): MapUnit {
@@ -178,7 +179,7 @@ function zoneEdges(w: World, u: UnitState, range: MoveCell[]): Edge[] {
 		adjacent(c.row, c.col).forEach((n, k) => {
 			if (!onMap(w, n.row, n.col)) return;
 			const hex = hexIndex(w, n.row, n.col), other = air ? airUnitAt(w, hex) : groundUnitAt(w, hex);
-			if (other !== null && sideOf(w, other) !== side && (isSpotted(w, hex, side) || other.tempSpotted))
+			if (other !== null && sideOf(w, other) !== side && seesUnit(w, other, side))
 				edges.push({ row: c.row, col: c.col, side: k });
 		});
 	}

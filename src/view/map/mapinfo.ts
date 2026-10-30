@@ -3,6 +3,7 @@
 import { attackableUnit, supportFireUnits } from "../../core/attack";
 import type { Position, World } from "../../core/types";
 import { hexIndex, isSpotted, sideOf, unitById } from "../../core/world";
+import { seesUnit } from "../../core/sight";
 import type { Selection } from "./mapview";
 
 //The hexes the side shown doesn't see, by hex index (row * cols + col): 1 under the fog. Null without fog:
@@ -29,7 +30,7 @@ export function supportOf(w: World, sel: Selection | null, hover: Position | nul
 	const atk = unitById(w, sel.unit), side = sideOf(w, atk);
 	const target = attackableUnit(w, atk, hexIndex(w, hover.row, hover.col), airMode);
 	if (target === null || atk.isSurprised) return null;
-	const guns = supportFireUnits(w, atk, target).filter((s) => isSpotted(w, hexIndex(w, s.row, s.col), side) || s.tempSpotted)
+	const guns = supportFireUnits(w, atk, target).filter((s) => seesUnit(w, s, side))
 		.map((s) => ({ row: s.row, col: s.col }));
 	return guns.length === 0 ? null : { attacker: sel.at, target: { row: hover.row, col: hover.col }, guns };
 }
