@@ -501,6 +501,91 @@ What it says:
   the general's against the AI, so a gap includes the other side's play (the general defends better
   than the AI, and attacks better in most scenarios).
 
+## The remastered AI, the staff's first part (#616), 30 October 2026
+
+The remastered AI with its staff (remastered-design.md, "Built: the staff"): the garrisons of the objectives in the
+enemy's reach (#5), the occupation of an objective its attack emptied (#312), and the classic plan of the other units
+made again after every attack, so none of its orders is refused. Remaster rules, the suite, 40 seeds a scenario and
+side. Tuned on seeds 101-140 (the first version was kept: nothing was changed after it), accepted on seeds 1-40,
+against the classic AI on main at 2fdf5c2 in the same seats:
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_OUT=before.json npm run arena    # ai-ai, general-ai, ai-general
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-ai,general-remastered,remastered-general ARENA_OUT=after-a.json npm run arena
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=ai-remastered ARENA_OUT=after-b.json npm run arena
+npm run arena:compare -- before.json after-a.json --as remastered=ai
+jq '[.[] | select(.match.sides == ["ai","ai"])]' before.json > before-ai-ai.json
+npm run arena:compare -- before-ai-ai.json after-b.json --as remastered=ai
+```
+
+`--as remastered=ai` renames the remastered AI in both seats, so remastered-ai and ai-remastered both pair with
+ai-ai: they go in two runs (a run can't hold the same match twice). The measures of the remastered AI's side, the
+classic AI's value before, after the arrow, where the paired difference is beyond the noise ("same": noise). Orders
+refused fell to 0 in every scenario and seat:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | taken 1.2 → 2.6, lost per objective 13.3 → 6.8, held 2.9 → 3.3 | taken 0.9 → 5.1, lost per objective 12.2 → 3.7, held 2.8 → 4.1, units lost 11.3 → 18.6 |
+| | allies defend | held 4.1 → 4.6, taken 0.3 → 0.6 | same (held 3.8 → 4.2, units lost 29.0 → 29.7) |
+| Bzura | allies attack | held 4.7 → 6.7, taken 6.5 → 5.8 | taken 6.3 → 8.2, held 4.9 → 6.8, units lost 5.2 → 6.6 |
+| | axis defend | held 4.3 → 5.1 | held 5.3 → 6.3, retaken 6.5 → 7.7, units lost 13.4 → 15.7 |
+| Indochina | axis attack | taken 0.7 → 1.0, held 0.9 → 1.5, units lost 14.6 → 18.0 | taken 0.15 → 1.65, lost per objective 102 → 9.9 |
+| | allies defend | held 4.1 → 4.7, units lost 5.7 → 4.4 | held 3.7 → 4.5, units lost 14.5 → 11.0 |
+| Zitadelle | axis attack | taken 0.9 → 3.3, held 1.8 → 3.4, lost per objective 55 → 15 | wins 0 → 5 of 40, taken 1.0 → 4.4, lost per objective 48.9 → 12.0, units lost 47.7 → 52.3 |
+| | allies defend | held 4.2 → 5.2, units lost 48.1 → 34.8 | held 4.7 → 5.9, units lost 56.1 → 32.5 |
+| Uman | axis attack | wins 1 → 36 of 40, taken 0.9 → 3.9, units lost 13.9 → 9.2 | wins 1 → 40 of 40, taken 1.1 → 4.2, lost per objective 16.4 → 3.2 |
+| | allies defend | held 3.5 → 4.2, taken 0.45 → 0.75 | wins 10 → 28 of 40, held 0.35 → 1.2 |
+| Battleaxe | allies attack | wins 12 → 29 of 40, units lost 21.6 → 11.6, taken 6.9 → 5.9 | wins 27 → 38 of 40, units lost 14.3 → 10.1 |
+| | axis defend | wins 28 → 39 of 40, held 2.1 → 3.6 | held 3.7 → 5.4, units lost 28.5 → 20.0, retaken 5.1 → 1.9 |
+| Taman | allies attack | wins 21 → 39 of 40, taken 1.4 → 2.1, units lost 21.9 → 13.3 | wins 0 → 18 of 40, taken 0.05 → 1.8, held 1.05 → 2.4 |
+| | axis defend | held 0.7 → 1.2, units lost 29.0 → 32.1 | **wins 21 → 12 of 40**, units lost 26.7 → 30.6 |
+| Luttich | allies attack | wins 1 → 21 of 40, taken 1.9 → 4.6, lost per objective 27.9 → 8.5 | wins 0 → 5 of 40, taken 0.2 → 5.4, held 1.15 → 3.25 |
+| | axis defend | held 3.0 → 5.0, units lost 32.5 → 19.7 | held 2.8 → 4.2, units lost 34.0 → 30.0, taken 2.2 → 3.2 |
+
+Against the classic AI, both sides, the remastered AI wins 432 of the 640 games (67.5%; the classic AI in the
+same seats won 320 of 640 by construction), the classic AI 208. Per side and scenario, its wins: Ostpreussen 0 and
+40 of 40 (the axis can't win there, #256), Bzura 40 and 1, Indochina 0 and 40, Zitadelle 2 and 40, Uman 36 and 39,
+Battleaxe 39 and 29, Taman 26 and 39, Luttich 40 and 21 (axis first).
+
+The targets of remastered-design.md ("What done looks like", against the general): met in 24 of 29. The attacker's
+objectives taken and lost per objective are met in every scenario, the defender's held at the end in every one.
+Not met: the defender's units lost in Ostpreussen (29.7, target 22.3), Bzura (15.7, worse than the classic 13.4:
+it holds and retakes more, 6.3 held and 7.7 retaken against 5.3 and 6.5, and loses units doing it), Indochina (11.0,
+target 9.4, from 14.5) and Luttich (30.0, target 26.2, from 34.0); and Taman's defence, 12 wins of 40 against the
+classic AI's 21 (target 31). That one is at the noise's edge (−22.5 points, −44.8 to −0.2) and didn't show on the
+tuning seeds (19 and 19 of 40), but the remastered defender loses more units there in both sets (+3.9, +4.2): on
+the smallest, most crowded map the plan made again after every attack throws more units into the fight. Without the
+garrisons it does the same (14 of 40): it is the replanning, not the garrison.
+
+The planning time of the remastered AI, all its turns on the suite (both seats against the classic AI and the
+general), seeds 1-40, on the machine that ran them:
+
+| Scenario | ms a turn | 95th percentile | worst | a game, mean | a game, worst |
+| --- | --- | --- | --- | --- | --- |
+| Ostpreussen | 33 | 72 | 138 | 0.9 s | 1.5 s |
+| Bzura | 12 | 25 | 88 | 0.5 s | 0.9 s |
+| Indochina | 12 | 27 | 56 | 0.3 s | 0.6 s |
+| Zitadelle | 154 | 404 | 525 | 3.1 s | 5.2 s |
+| Uman | 170 | 416 | 659 | 2.1 s | 3.8 s |
+| Battleaxe | 30 | 62 | 97 | 0.8 s | 1.5 s |
+| Taman | 57 | 145 | 240 | 1.0 s | 1.9 s |
+| Luttich | 210 | 576 | 809 | 2.8 s | 5.1 s |
+
+Within the budget (2 s a turn, 10 s a game): the plan made again after every attack is about ten times the classic
+AI's planning (Zitadelle 15.6 ms a turn), and its worst turn, 0.8 s in Luttich, leaves room for the search of step 4.
+The games, both sides played, take 0.3 to 5.2 s.
+
+What it says:
+
+- **Most of the gain is the attacker's.** With every order on the world as it is, the units the classic plan sent
+  against a target already destroyed attack the next one, and a unit beside an objective just emptied walks in: the
+  remastered attacker takes 2 to 4 times the objectives against the general in Ostpreussen, Zitadelle, Uman and
+  Luttich, for a quarter to a third of the units lost per objective, and wins Uman every time.
+- **The defender holds more objectives at the end in every scenario** and loses fewer units in five of eight; it
+  wins Uman's defence 28 of 40 (10 before). Its garrisons stay on the objectives, so it counterattacks less: in
+  Battleaxe it takes back 1.9 against 5.1.
+- **No order refused** (17 to 98 a game before).
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the
