@@ -20,8 +20,7 @@ import { unitCheck } from "./common";
 export const undo: CommandHandler<CommandOf<"undo">> = {
 	check(w, cmd) {
 		const slot = w.state.turn.undoable;
-		return unitCheck(w, cmd.unit, (u) => slot !== null && slot.unit === u.id && u.owner === w.state.turn.currentPlayer,
-			"can't undo");
+		return unitCheck(w, cmd.unit, (u) => slot !== null && slot.unit === u.id, "can't undo");
 	},
 	run(d, cmd) {
 		const slot = d.state.turn.undoable, before = slot.before;

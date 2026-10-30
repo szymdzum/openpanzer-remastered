@@ -146,8 +146,10 @@ export const buy: CommandHandler<CommandOf<"buy">> = {
 //A unit on the map, paid by its player; its undo is gone
 export const upgrade: CommandHandler<CommandOf<"upgrade">> = {
 	check(w, cmd) {
+		const refusal = unitCheck(w, cmd.unit);
+		if (refusal !== null) return refusal;
 		const u = unitById(w, cmd.unit);
-		return u === null ? refuse("no such unit") : upgradeCheck(w, u, playerAt(w, u.owner).prestige, cmd);
+		return upgradeCheck(w, u, playerAt(w, u.owner).prestige, cmd);
 	},
 	run(d, cmd) {
 		const player = playerAt(d, unitById(d, cmd.unit).owner).id;

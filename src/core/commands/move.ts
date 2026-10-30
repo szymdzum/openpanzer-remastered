@@ -27,6 +27,7 @@ export const move: CommandHandler<CommandOf<"move">> = {
 	check(w, cmd) {
 		const u = unitById(w, cmd.unit);
 		if (u === null || u.row < 0) return refuse("no such unit");
+		if (u.owner !== w.state.turn.currentPlayer) return refuse("not your unit");
 		if (!onMap(w, cmd.to.row, cmd.to.col)) return refuse("can't get there");
 		if (!canEndMoveOn(w, u, cmd.to)) return refuse("the hex is taken");
 		const path = cmd.cells !== undefined ? shortestPath(u, cmd.to, cellsOf(cmd.cells)) : pathTo(w, u, cmd.to);
