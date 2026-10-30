@@ -3,14 +3,14 @@
 //the game's dice, the player's pace and picks (src/view/player.ts) on fake timers, and a beat drawn on the canvas
 //(src/view/map/motiondraw.ts)
 import { afterEach, expect, test, vi } from "vitest";
-import { handWorld, type HandUnit } from "./coreworld";
+import { equipmentOf, germanyPoland, handWorld, type HandUnit } from "./coreworld";
 import { adjacent, directionTo } from "../src/core/geometry";
 import { step } from "../src/core/step";
 import type { Command } from "../src/core/command";
 import type { World } from "../src/core/types";
 import { directionToRadians } from "../src/legacy/prototypes";
 import { uiSettings } from "../src/app/settings";
-import { playerType, terrainType } from "../src/core/tables";
+import { movMethod, playerType, terrainType } from "../src/core/tables";
 import { type Beat, beatsFor, SHEETS } from "../src/view/beats";
 import type { Viewport } from "../src/view/map/canvas";
 import { hexCentre } from "../src/view/map/hexgrid";
@@ -55,6 +55,23 @@ test("A move: the unit along its path with its move method's sound; a move the s
 	w.state.turn.currentPlayer = 1;
 	w.state.players[1].type = playerType.aiLocal;
 	expect(beats(w, { type: "move", unit: 1, to: { row: 9, col: 7 } })).toEqual([]);
+});
+
+//The sounds a move plays, by the first file of each: track, htrack, leg, naval
+const moveSound = (w: World, to: { row: number; col: number }) => {
+	const [move] = beats(w, { type: "move", unit: 0, to });
+	return move.kind === "move" ? move.sounds[0].replace("resources/sounds/move/", "").replace(".wav", "") : move.kind;
+};
+
+test("A deep naval ground unit at sea moves with the wake's sound; a train on land still moves with tracks (#359)", () => {
+	const AA_CRUISER = 1001, ocean = equipmentOf([0]);
+	const sea = handWorld({ rows: 10, cols: 10, units: [{ eqid: AA_CRUISER, owner: 0, row: 4, col: 3 }], terrain: () => terrainType.Ocean },
+		ocean, { spotSide: 0 });
+	expect(moveSound(sea, { row: 2, col: 3 })).toBe("naval");
+	//(a train: a tank's data with the deep naval movement, on a port hex, the one land the deep naval table crosses)
+	const rails = { ...germanyPoland, 9001: { ...germanyPoland[PZ_IIA], movmethod: movMethod.deepnaval, movpoints: 9 } };
+	const land = handWorld({ rows: 10, cols: 10, units: [{ eqid: 9001, owner: 0, row: 4, col: 3 }], terrain: () => terrainType.Port }, rails, { spotSide: 0 });
+	expect(moveSound(land, { row: 2, col: 3 })).toBe("track");
 });
 
 test("An attack: the support gun fires, then the attacker, then the defender firing back, each facing its target with its class's strip and sound", () => {

@@ -179,6 +179,14 @@ test("The edges the old window had: a train on rails, a fort with no ordinal tha
 	expect([fort.sub, fort.fires, fort.holds[2].tip]).toEqual(["Fortification", 1, "Its defence when infantry attacks it, anywhere: it is a fortification"]);
 });
 
+test("A deep naval ground unit at sea reads as naval, on land as a rail road (#359)", () => {
+	const pz = germanyPoland[PZ_IIA], odd = { ...germanyPoland, 9001: { ...pz, movmethod: movMethod.deepnaval } };
+	const on = (terrain: number) => handWorld({ rows: 6, cols: 6, terrain: () => terrain, units: [{ eqid: 9001, owner: 0, row: 1, col: 1 }] }, odd,
+		{ spotSide: 0 });
+	expect(cardOf(on(terrainType.Ocean), 0).tags[1].text).toBe("Deep Naval");
+	expect(cardOf(on(terrainType.Port), 0).tags[1].text).toBe("Rail road");
+});
+
 test("The screen keeps the dock's height in the store, for the map to scroll past (#441, #453)", async () => {
 	//(jsdom lays nothing out and has no ResizeObserver: one that reports at once, a dock 180px tall)
 	let watching = 0;
