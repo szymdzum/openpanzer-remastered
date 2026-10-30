@@ -84,7 +84,7 @@ The program learns what the screen shows a person, no more:
 | `map [R0-R1 C0-C1] [--zoc]` | two characters a hex: the terrain, the unit (yours in capitals); `--zoc` marks the seen enemies' zones of control |
 | `hex R,C` | terrain, road, owner, objective, deployment, the units there, who of yours can attack the enemy on it |
 | `moves ID` | the hexes in reach with the move's cost (the points and the fuel it pays), the ones in a zone of control and the ones that take every point left |
-| `targets ID [--from R,C]` | what the unit can attack, from where it stands or after a move: kills, losses, support fire (who), rugged defense, overrun, destroyed / retreats / surrenders |
+| `targets ID [--from R,C]` | what the unit can attack, from where it stands or after a move: kills, losses, the points it suppresses and has suppressed (the remaster's rules; `suppress`, `suppressed` in `--json`, #601), support fire (who), rugged defense, overrun, destroyed / retreats / surrenders (pinned down counts) |
 | `attackers ID\|R,C` | the units that can hit a target this turn, now or from the best hex they can move to, then every other hex they can attack it from (#308) |
 | `supply` | the units short of ammo, fuel or strength, and what a resupply or a reinforcement gives where they stand, at what cost |
 | `shop [CLASS]`, `reserve` | what can be bought (the purchase screen's list: the country's equipment in service this year) with its transports; the units waiting to deploy and the free deployment hexes (in the remaster's rules, for a side with none, its free cities, airfields and ports away from the enemy, #302) |

@@ -2,11 +2,11 @@
 //dice), the support fire it counted, what the attack would do, from where a unit stands or a hex it can
 //move to first, and which units can hit a target this turn
 import { attackableUnit, attackCells, canInitiateAttack, supportFireUnits, unitAttackRange } from "../src/core/attack";
-import { combatResult, shouldDefenderRetreat } from "../src/core/combat";
+import { combatResult, isPinned, shouldDefenderRetreat, suppressedFor } from "../src/core/combat";
 import { distance } from "../src/core/geometry";
 import { moveRange, retreatPosition } from "../src/core/movement";
 import { check, step } from "../src/core/step";
-import type { MoveCell, Position, UnitState, World } from "../src/core/types";
+import type { CombatResult, MoveCell, Position, UnitState, World } from "../src/core/types";
 import { isAir } from "../src/core/units";
 import { ammoOf, hexIndex, sideOf, unitById } from "../src/core/world";
 import { cell, knownWorld, label } from "./known";
@@ -17,6 +17,8 @@ export interface Estimate {
 	from: string;
 	kills: number;
 	losses: number;
+	suppress: number;		//the target's points the attack suppresses (the remaster's rules; 0 in the classic)
+	suppressed: number;		//the attacker's points the target's fire suppresses
 	support: string[];
 	rugged: boolean;
 	overrun: boolean;
@@ -24,10 +26,13 @@ export interface Estimate {
 	attackerDestroyed: boolean;
 }
 
-//What the kills do to the defender: destroy it, make it retreat, or surrender with nowhere to go
-function outcomeOf(w: World, atk: UnitState, def: UnitState, kills: number): Estimate["outcome"] {
-	if (def.strength - kills <= 0) return "destroyed";
-	if (!shouldDefenderRetreat(w, atk, { ...def, strength: def.strength - kills }, def.strength)) return "holds";
+//What the kills and the suppression do to the defender: destroy it, make it retreat (pinned down too),
+//or surrender with nowhere to go
+function outcomeOf(w: World, atk: UnitState, def: UnitState, cr: CombatResult): Estimate["outcome"] {
+	const left = { ...def, strength: def.strength - cr.kills };
+	if (left.strength <= 0) return "destroyed";
+	const pinned = isPinned(w, atk, left, suppressedFor(def) + cr.defSuppress);
+	if (!pinned && !shouldDefenderRetreat(w, atk, left, def.strength)) return "holds";
 	return retreatPosition(w, def) === null ? "surrenders" : "retreats";
 }
 
@@ -35,8 +40,9 @@ function outcomeOf(w: World, atk: UnitState, def: UnitState, kills: number): Est
 export function estimate(w: World, atk: UnitState, def: UnitState): Estimate {
 	const cr = combatResult(w, atk, def, false, null);
 	return { attacker: atk.id, target: def.id, from: cell(atk), kills: cr.kills, losses: cr.losses,
+		suppress: cr.defSuppress, suppressed: cr.atkSuppress,
 		support: supportFireUnits(w, atk, def).map((s) => label(w, s)), rugged: cr.isRugged, overrun: cr.isOverrun,
-		outcome: outcomeOf(w, atk, def, cr.kills), attackerDestroyed: cr.losses >= atk.strength };
+		outcome: outcomeOf(w, atk, def, cr), attackerDestroyed: cr.losses >= atk.strength };
 }
 
 const NOTES: ((e: Estimate) => string)[] = [
@@ -46,9 +52,13 @@ const NOTES: ((e: Estimate) => string)[] = [
 	(e) => e.support.length ? `support fire from ${e.support.join("; ")}` : "",
 ];
 
+//The numbers of an estimate: the suppression only when there is some
+const figures = (e: Estimate) => [`kills ${e.kills}`, `losses ${e.losses}`, e.suppress ? `suppresses ${e.suppress}` : "",
+	e.suppressed ? `suppressed ${e.suppressed}` : ""].filter(Boolean).join(", ");
+
 export function estimateLine(w: World, e: Estimate): string {
 	const t = unitById(w, e.target);
-	return [`${t ? label(w, t) : "#" + e.target} from ${e.from}: kills ${e.kills}, losses ${e.losses}, ${e.outcome}`,
+	return [`${t ? label(w, t) : "#" + e.target} from ${e.from}: ${figures(e)}, ${e.outcome}`,
 		...NOTES.map((n) => n(e)).filter(Boolean)].join(", ");
 }
 
@@ -58,8 +68,9 @@ export interface AttackerEstimate extends Estimate {
 }
 
 //Another hex an attacker can attack from: its estimate only when it differs from the best's
-const sameAs = (a: Estimate, b: Estimate) => a.kills === b.kills && a.losses === b.losses && a.outcome === b.outcome;
-const otherHex = (best: Estimate) => (e: Estimate) => sameAs(e, best) ? e.from : `${e.from} (kills ${e.kills}, losses ${e.losses}, ${e.outcome})`;
+const sameAs = (a: Estimate, b: Estimate) => a.kills === b.kills && a.losses === b.losses && a.suppress === b.suppress
+	&& a.suppressed === b.suppressed && a.outcome === b.outcome;
+const otherHex = (best: Estimate) => (e: Estimate) => sameAs(e, best) ? e.from : `${e.from} (${figures(e)}, ${e.outcome})`;
 
 export function attackerLine(w: World, e: AttackerEstimate): string {
 	const u = unitById(w, e.attacker), also = e.also.map(otherHex(e));
