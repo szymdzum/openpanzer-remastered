@@ -49,6 +49,8 @@ function upgradeUnit(w: World, u: OffMapUnit, eqid: number, transport: number, d
 		if (transport > 0) u.transport = newTransport(w, transport);
 	} else {
 		u.transport = null;
+		//Kept bug (#546) in the classic rules: the unit stays mounted with no transport
+		if (w.rules.unmountsWithoutTransport) u.isMounted = false;
 	}
 	u.ammo = w.equipment[u.eqid].ammo;
 	u.fuel = w.equipment[u.eqid].fuel;
