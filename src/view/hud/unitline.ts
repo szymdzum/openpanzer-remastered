@@ -84,7 +84,7 @@ function entrenchGauge(w: World, u: UnitState): LineGauge {
 }
 
 function chipsOf(w: World, u: UnitState): LineChip[] {
-	const moves = movesLeftThisTurn(w, u), fires = canFireThisTurn(w, u);
+	const moves = movesLeftThisTurn(w, u), fires = canFireThisTurn(u);
 	const chips: LineChip[] = isRiding(u) ? [{ icon: "mount", count: null, unit: null, words: "Riding", tone: null }] : [];
 	const unit = moves === 1 ? "move" : "moves";
 	chips.push(moves > 0 ? { icon: "arrow-right", count: moves, unit, words: plural(moves, "move left", "moves left"), tone: "ok" }

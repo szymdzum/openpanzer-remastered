@@ -3,7 +3,7 @@
 //fuel pays for, the moves left, the shot, what riding a transport means, the resupply, what the entrenchment and the
 //experience add in a fight. Each is checked against what the step and the attack actually do
 import { expect, test } from "vitest";
-import { canFire, canFireThisTurn, firesOnAircraft } from "../src/core/attack";
+import { attackCells, canFire, canFireThisTurn, firesOnAircraft } from "../src/core/attack";
 import {
 	attackResult, defenderEqid, dismountsWhenAttacked, entrenchmentCountsTwiceAgainst, entrenchmentFacts,
 	entrenchmentAttacking, experienceBonus, INITIATIVE_DEFENCE, INITIATIVE_MAX_ATTACK, initiativeEdge, isCloseCombat, rangeDefence, riding
@@ -93,19 +93,27 @@ test("The moves left this turn are the move range's reach, none once the unit ha
 	expect(left({ eqid: FLAK36 })).toEqual([1, 1]);
 });
 
-test("A unit can fire this turn until it fires or rides its transport, with ammo, when what it is now uses ammo (#37)", () => {
-	const fires = fact(canFireThisTurn);
+test("A unit can fire this turn until it fires or rides its transport, with ammo left, its transport's when mounted (#37)", () => {
+	const fires = fact((_w, u) => canFireThisTurn(u));
 	expect(fires({ eqid: PZ_IIA })).toBe(true);
 	expect(fires({ eqid: PZ_IIA, ammo: 1 })).toBe(true);
 	expect(fires({ eqid: PZ_IIA, hasMoved: true })).toBe(true); //moving on its own tracks keeps its shot
 	expect(fires({ eqid: PZ_IIA, hasFired: true })).toBe(false);
 	expect(fires({ eqid: PZ_IIA, ammo: 0 })).toBe(false);
-	//mounted, the transport's ammo: a horse-drawn wagon has none to use
+	//mounted, the transport's ammo: a horse-drawn wagon has none
 	expect(fires({ eqid: INFANTERIE, transport: truck(), isMounted: true })).toBe(true);
 	expect(fires({ eqid: INFANTERIE, ammo: 6, transport: truck(55, 0), isMounted: true })).toBe(false);
 	expect(fires({ eqid: INFANTERIE, transport: { eqid: PFERDEWAGEN, ammo: 0, fuel: 0 }, isMounted: true })).toBe(false);
-	//what doesn't use ammo has no shot, whatever the count says
-	expect(fires({ eqid: INFANTERIE, transport: { eqid: PFERDEWAGEN, ammo: 1, fuel: 0 }, isMounted: true })).toBe(false);
+});
+
+test("A unit on a carrier with ammo of its own can fire whenever the map offers it targets (#547)", () => {
+	const { w, u } = one({ eqid: PZ_IIA, carrier: TRANSPORTSCHIFFE }, [{ eqid: TP7, owner: 1, row: 2, col: 3 }]);
+	expect(w.equipment[TRANSPORTSCHIFFE].ammo).toBe(0);
+	expect(u.ammo).toBeGreaterThan(0);
+	expect(attackCells(w, u)).not.toHaveLength(0);
+	expect(canFireThisTurn(u)).toBe(true);
+	const fired = { ...u, hasFired: true };
+	expect([attackCells(w, fired).length, canFireThisTurn(fired)]).toEqual([0, false]);
 });
 
 test("Riding: a move burns the transport's fuel, not the unit's, uses all its points and its shot (#37)", () => {
@@ -115,7 +123,7 @@ test("Riding: a move burns the transport's fuel, not the unit's, uses all its po
 	expect(riding(w, before)).toMatchObject({ transport: OPEL_BLITZ, fuel: 55 });
 	const moved = unitById(played(step(w, { type: "move", unit: 0, to: { row: 2, col: 3 } })).world, 0);
 	expect(moved).toMatchObject({ hasFired: true, hasMoved: true, fuel: before.fuel, transport: { fuel: 55 - 2 } }); //wheels: 2 a clear hex
-	expect([canFireThisTurn(w, moved), movesLeftThisTurn(w, moved)]).toEqual([false, 0]);
+	expect([canFireThisTurn(moved), movesLeftThisTurn(w, moved)]).toEqual([false, 0]);
 	//on foot, it moves on its own points and keeps its shot
 	const { w: foot } = one({ eqid: INFANTERIE, transport: truck() }, [{ eqid: TP7, owner: 1, row: 5, col: 7 }]);
 	expect([isRiding(unitById(foot, 0)), riding(foot, unitById(foot, 0))]).toEqual([false, null]);

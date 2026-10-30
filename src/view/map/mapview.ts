@@ -81,8 +81,8 @@ function readiness(w: World, u: UnitState, own: boolean): Pick<Marker, "canMove"
 	if (!own || u.owner !== w.state.turn.currentPlayer) return { canMove: false, canFire: false, noAmmo: false, done: false };
 	const canMove = movesLeftThisTurn(w, u) > 0;
 	const fires = !u.hasFired && unitUsesAmmo(w, u);
-	const canFire = canFireThisTurn(w, u);
-	return { canMove, canFire, noAmmo: fires && !canFire, done: !canMove && !fires };
+	const canFire = canFireThisTurn(u);
+	return { canMove, canFire, noAmmo: fires && !canFire, done: !canMove && !fires && !canFire };
 }
 
 //The current player's units that can still do something this turn: move, or fire at a target in range (the core's
