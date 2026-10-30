@@ -122,6 +122,21 @@ function initiativeIn(f: Fight, initiative: number): number {
 	return f.world.rules.terrainLimitsInitiative ? Math.min(initiative, terrainInitiative[f.dTerrain]) : initiative;
 }
 
+function isRugged(f: Fight): boolean {
+	return f.distance === 1 && f.dEntrenchIntact && isRuggedDefense(f.world, f.atk, f.def);
+}
+
+//The attacker's initiative less the defender's in the remaster's rules (#18): the equipment's and a point per
+//experience level, capped by the terrain, and a random 0 to 2 for each side. The attacker's draw comes first,
+//then the defender's, always both, from the game stream, where the initiative step runs: before the fight's dice.
+//The estimate takes the mean, 1, for each and draws nothing. An attacker that is surprised or meets a rugged
+//defense has initiative 0, its draw included.
+function modifiedLead(f: Fight): number {
+	const aDraw = f.rng === null ? 1 : rollDice(f.rng, 0, 2), dDraw = f.rng === null ? 1 : rollDice(f.rng, 0, 2);
+	const attacker = f.atk.isSurprised || isRugged(f) ? 0 : initiativeIn(f, f.aData.initiative + experienceBonus(f.atk)) + aDraw;
+	return attacker - (initiativeIn(f, f.dData.initiative + experienceBonus(f.def)) + dDraw);
+}
+
 /** The steps of an attack, in the order GameRules.calculateAttackResults applies them. */
 export const classicCombat: CombatStep[] = [
 	{ name: "infantry dismounts", run(f) {
@@ -262,7 +277,7 @@ export const classicCombat: CombatStep[] = [
 	} },
 	{ name: "initiative", run(f) {
 		const w = f.world;
-		let diff = initiativeIn(f, f.aData.initiative) - initiativeIn(f, f.dData.initiative);
+		let diff = w.rules.initiativeModifiers ? modifiedLead(f) : initiativeIn(f, f.aData.initiative) - initiativeIn(f, f.dData.initiative);
 		if (hasLeader(w, f.atk, leaderType.firstStrike)) diff = Math.abs(diff);
 		if (hasLeader(w, f.def, leaderType.firstStrike)) diff = -Math.abs(diff);
 		const edge = initiativeEdge(diff);
@@ -276,8 +291,7 @@ export const classicCombat: CombatStep[] = [
 	} },
 	{ name: "rugged defense", run(f) {
 		//an entrenched defender next to the attacker, or a surprised attacker: no defense, half attack
-		if (f.distance === 1 && f.dEntrenchIntact && isRuggedDefense(f.world, f.atk, f.def))
-			f.result.isRugged = true;
+		if (isRugged(f)) f.result.isRugged = true;
 		if (!f.atk.isSurprised && !f.result.isRugged) return;
 		const name = f.atk.isSurprised ? "surprised" : "rugged defense";
 		const side: Side = f.atk.isSurprised ? "attacker" : "defender";
@@ -328,7 +342,7 @@ export function attackResult(w: World, atk: UnitState, def: UnitState, rng: RngS
 		distance: distance(atk.row, atk.col, def.row, def.col),
 		aEntrenchIntact: isEntrenchmentIntact(w, def, atk, aTerrain), dEntrenchIntact: isEntrenchmentIntact(w, atk, def, dTerrain),
 		isCloseCombat: false, values: { aav: 0, adv: 0, dav: 0, ddv: 0 }, firing: { attacker: atk.strength, defender: def.strength },
-		result: newResult(), record,
+		result: newResult(), record, rng,
 	};
 	for (const s of w.rules.combat) s.run(f);
 	resolve(f, rng);

@@ -143,7 +143,8 @@ test("What entrenchment does and the rules' tooltips are the core's: street figh
 		+ `lead in attack, up to +${INITIATIVE_MAX_ATTACK}`);
 	const remaster = cardOf(handWorld({ rows: 6, cols: 6, units: [{ eqid: INFANTERIE, owner: 0, row: 2, col: 2 }] }, undefined,
 		{ spotSide: 0, rules: remasterRules }), 0);
-	expect(remaster.initiative.tip).toBe(city.initiative.tip + "; the defender's terrain caps both sides' initiative");
+	expect(remaster.initiative.tip).toBe(city.initiative.tip + "; the defender's terrain caps both sides' initiative"
+		+ ". Each experience level adds 1, a random 0 to 2 is added for each side, and an attacker that is surprised or meets a rugged defense has none");
 	expect(city.holds[2].tip).toBe("Its defence when infantry attacks it in a city, forest, mountain or fortification hex");
 	//a gun that reaches past its neighbours gets all of its range defence from there to its range
 	const gun = dug({ eqid: A_WZ13 }, terrainType.Clear), g = germanyPoland[A_WZ13];

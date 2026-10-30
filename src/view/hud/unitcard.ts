@@ -244,7 +244,9 @@ export function unitCardOf(w: World, id: UnitId): UnitCard | null {
 		hits: hitsOf(own), holds: holdsOf(w, self, own),
 		initiative: { value: own.initiative, tip: "In a fight the side with more initiative, the attacker on a tie, gets +" + INITIATIVE_DEFENCE
 			+ " defence and its lead in attack, up to +" + INITIATIVE_MAX_ATTACK
-			+ (w.rules.terrainLimitsInitiative ? "; the defender's terrain caps both sides' initiative" : "") },
+			+ (w.rules.terrainLimitsInitiative ? "; the defender's terrain caps both sides' initiative" : "")
+			+ (w.rules.initiativeModifiers ? ". Each experience level adds 1, a random 0 to 2 is added for each side, "
+				+ "and an attacker that is surprised or meets a rugged defense has none" : "") },
 		fires: unitAttackRange(w, self), sees: unitSpotRange(w, self), bonuses: bonusesOf(w, u),
 		value: unitCost(w, u.eqid, u.transport === null ? undefined : u.transport.eqid), band: bandOf(w, u), next, line,
 	};

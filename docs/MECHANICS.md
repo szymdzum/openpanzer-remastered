@@ -51,6 +51,23 @@ remaster's rules (#14) cap both units' initiative with the defender's terrain
 says ("the terrain of the defending unit"): in a city or forest a fast tank loses its edge, and
 the attacker, winning ties, keeps +4 defense. The classic rules use the equipment's alone.
 
+The remaster's rules (#18) add the rest of the manual's Initiative section ("determined by the equipment
+used in battle, the terrain ... and the experience of the units. It is also adjusted by a random
+factor ... If a tactical surprise or rugged defense occurs, the attacker's initiative is zero"):
+- a unit's initiative is the equipment's plus 1 per experience level (experience / 100, floored), the
+  defender's terrain cap coming after, so a city still caps everyone at 1;
+- plus a random 0, 1 or 2 for each side (the manual gives no numbers: these are small on purpose),
+  two draws from the game stream in every fight, the attacker's first, in the initiative step,
+  before the fight's dice (support fire fights draw theirs too). The attack preview draws nothing and
+  takes the mean, 1, for each side;
+- an attacker that is surprised, or meets a rugged defense, has initiative 0 (the draw included), so
+  the defender gets the edge when it has any. The `rugged defense` step still wipes the attacker's
+  defense and halves its attack, in both rules. A First Strike leader still decides the side after
+  all of this.
+An anti-tank unit that moved and attacks has no range defense (the attacker's `adv`), unless it has
+the tank killer leader, in both rules; the manual's "penalty to initiative and attack value" for a
+moved AT unit has no number and is not applied beyond that.
+
 **Who can attack whom.** A unit fires on an enemy it sees within its gun range (range 0 is the
 next hex), if it can start an attack on it: only a unit with an air attack fires on an aircraft
 (`canInitiateAttack`). On the screen an aircraft of range 1 hits a ground unit only on the hex below
@@ -413,7 +430,8 @@ The manual describes rules the code doesn't have (or a different version of them
 | Air units have their own zone of control, which only air units feel | Classic rules: aircraft cast no zone and ignore it. The remaster's rules follow the manual (#18) |
 | Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
-| Initiative comes from equipment, terrain and experience | Equipment only in the classic rules; the remaster caps it with the defender's terrain (#14). Experience still doesn't change it (it gives +1 av and dv per level instead) |
+| Initiative comes from equipment, terrain and experience, plus a random factor; zero for an attacker that is surprised or meets a rugged defense | Equipment only in the classic rules. The remaster's rules follow the manual: the defender's terrain caps it (#14), +1 per experience level, a random 0 to 2 each, zero for the surprised or rugged-hit attacker (#18; the numbers are the project's, the manual gives none) |
+| An AT unit that moved suffers a penalty to initiative and attack when it attacks | Only its range defense is lost (tank killer exempt), in both rules; the manual gives no number (#18) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
 | Units over 1000 experience always get a leader | Always at the cap (500) |
 | Retreat above 60% losses | 60% at strength 10, less for weaker units |
