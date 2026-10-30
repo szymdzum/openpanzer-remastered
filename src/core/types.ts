@@ -95,6 +95,10 @@ export interface Ruleset {
 	//The terrain of the defender's hex caps the initiative of both sides in a fight (terrainInitiative, #14),
 	//as the PG2 manual has it: false in the classic rules, where only the equipment's counts
 	terrainLimitsInitiative: boolean;
+	//Initiative in a fight also counts a point per experience level, a random 0 to 2 for each side, and is zero
+	//for an attacker that is surprised or meets a rugged defense (#18), as the manual has it: false in the
+	//classic rules, where only the equipment's counts
+	initiativeModifiers: boolean;
 	//An upgrade to equipment no transport carries takes a mounted unit off its transport (#546): false in the
 	//classic rules, where it stays mounted with no transport
 	unmountsWithoutTransport: boolean;
@@ -222,6 +226,7 @@ export interface Fight {
 	readonly firing: Record<Side, number>;
 	readonly result: CombatResult;
 	readonly record: Contribution[] | null;
+	readonly rng: RngStream | null;	//the game's stream, null for the estimate
 }
 
 export interface CombatStep {
