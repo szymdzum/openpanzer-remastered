@@ -471,6 +471,27 @@ test.each(["equipment-country-0.json", "equipment-country-31.json"])(
 		}
 	});
 
+//#551: a save from a file or the cloud that doesn't load leaves the last game's local save, as a campaign's
+//next scenario that doesn't load does (#64)
+test("A file save that fails to load keeps the last game's save (#551)", async () => {
+	const game = await freshGame();
+	await startState(game, "pc1indi.xml");
+	const saved = await exportGame();
+	game.state.save();
+	const { MAJOR_VERSION } = await import("../src/app/settings");
+	const key = "openpanzer-game-" + MAJOR_VERSION, kept = localStorage.getItem(key);
+	expect(kept).not.toBeNull();
+	const shown = failedLoads(game);
+	const restore = failRequests("equipment-country-0.json", "error");
+	try {
+		expect(game.state.restoreFromString(saved)).toBe(true);
+		await until(() => shown.length > 0, "the load to fail", 5000);
+		expect(localStorage.getItem(key)).toBe(kept);
+	} finally {
+		restore();
+	}
+});
+
 //#93: the save the game writes at a turn's start (the local save) is written once that turn's
 //reinforcements have arrived, so a reload during the turn has them (they arrive only once)
 test("The turn-start save has the reinforcements that arrived that turn (#93)", async () => {

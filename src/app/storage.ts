@@ -249,7 +249,8 @@ export class GameState {
 			if (read === null)
 				return false;
 
-			Game.cleanup();
+			//(keepSave: the loaded game replaces the save, a load that fails keeps it, #64)
+			Game.cleanup(true);
 			loadGameState(read, Game.setupGameState.bind(Game));
 			return true;
 		}
