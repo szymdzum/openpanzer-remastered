@@ -5,11 +5,11 @@
 import type { EventOf, Fighter, GameEvent, PathStep } from "../core/events";
 import { directionTo } from "../core/geometry";
 import type { Position, UnitId, UnitState, World } from "../core/types";
-import { isTrain } from "../core/units";
 import { isBridgeForSide } from "../core/movement";
 import { hexIndex, unitById } from "../core/world";
 import { unitClass } from "../core/tables";
 import { at, seen } from "./hud/results";
+import { isTrainOnLand } from "./movekind";
 
 //A sprite strip: its frames side by side, each width pixels wide
 export interface Sheet {
@@ -79,12 +79,12 @@ export const SHEETS: Sheet[] = [...EXPLOSIONS, ...GUN, ...SMALL_GUN];
 //A unit as it is after the step, or as it was before it when the step took it off the map
 const unitIn = (before: World, after: World, id: UnitId) => unitById(after, id) || unitById(before, id);
 
-//A unit moving along a path it was seen on, with its move method's sound (a train's are the tracks')
+//A unit moving along a path it was seen on, with its move method's sound (a train's on land are the tracks')
 function moveBeat(before: World, after: World, id: UnitId, path: PathStep[]): Beat | null {
 	const u = unitIn(before, after, id);
 	if (u === null) return null;
 	const e = after.equipment[u.isMounted && u.transport !== null ? u.transport.eqid : u.eqid];
-	const sounds = isTrain(after, u) ? TRACKS : MOVE_SOUNDS[e.movmethod];
+	const sounds = isTrainOnLand(after, u) ? TRACKS : MOVE_SOUNDS[e.movmethod];
 	return { kind: "move", unit: id, icon: e.icon, path, sounds };
 }
 

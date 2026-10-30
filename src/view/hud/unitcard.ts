@@ -20,6 +20,7 @@ import { leaderType, movMethod, movMethodNames, terrainNames, terrainType, unitC
 import type { IconName, Nation } from "../components/icon";
 import { classIcon, countryName, nationOf, shownUnit } from "../store/model";
 import { type LeaderLine, leadersOf } from "./unitinfo";
+import { isAtSea } from "../movekind";
 import { type CardLine, type LineChip, type LineGauge, unitLineOf } from "./unitline";
 
 /** The line is the card hidden, the default. */
@@ -103,16 +104,17 @@ export function ordinal(id: number): string {
 	return id + "th";
 }
 
-//A train is a ground unit on rails (uclass up to air defence with naval movement)
-function moveName(e: EquipmentEntry): string {
-	return e.uclass <= unitClass.airDefence && e.movmethod === movMethod.deepnaval ? "Rail road" : movMethodNames[e.movmethod];
+//A train is a ground unit on rails (uclass up to air defence with naval movement), unless it stands at sea (`onRails`)
+function moveName(e: EquipmentEntry, onRails: boolean): string {
+	return onRails && e.uclass <= unitClass.airDefence && e.movmethod === movMethod.deepnaval ? "Rail road" : movMethodNames[e.movmethod];
 }
 
-export function tagsOf(e: EquipmentEntry, core: boolean | null): CardTag[] {
+/** The unit's tags; `onRails` false where a deep naval ground unit stands at sea (a ship, #359). */
+export function tagsOf(e: EquipmentEntry, core: boolean | null, onRails = true): CardTag[] {
 	const tags: CardTag[] = [
 		{ text: unitClassNames[e.uclass], icon: classIcon(e.uclass), core: false },
 		{ text: unitTypeNames[e.target] + " target", icon: null, core: false },
-		{ text: moveName(e), icon: null, core: false },
+		{ text: moveName(e, onRails), icon: null, core: false },
 	];
 	if (core !== null) tags.push({ text: core ? "Core" : "Auxiliary", icon: null, core });
 	return tags;
@@ -238,7 +240,7 @@ export function unitCardOf(w: World, id: UnitId): UnitCard | null {
 	const country = countryName(w, u.flag - 1);
 	return {
 		unit: id, name: own.name, nation: nationOf(country), sub: subOf(order + unitClassNames[own.uclass], country),
-		tags: tagsOf(own, u.isCore).slice(1), stars, xp: u.experience + " XP",
+		tags: tagsOf(own, u.isCore, !isAtSea(w, u)).slice(1), stars, xp: u.experience + " XP",
 		toNextStar: stars >= MAX_STARS ? 1 : (u.experience % XP_STAR) / XP_STAR, leaders: leadersOf(w, u.leader, own.uclass),
 		condition, resupply: short && canResupply(w, u), chips: line.chips,
 		hits: hitsOf(own), holds: holdsOf(w, self, own),
