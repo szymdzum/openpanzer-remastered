@@ -74,6 +74,14 @@ test("A deep naval ground unit at sea moves with the wake's sound; a train on la
 	expect(moveSound(land, { row: 2, col: 3 })).toBe("track");
 });
 
+test("A horse-drawn transport moves with the legs' sound; a truck still with the half-track's (#511)", () => {
+	const HORSE = 1788, equipment = { ...germanyPoland, ...equipmentOf([10]) };
+	const towed = (transport: number) => handWorld({ rows: 10, cols: 10, units: [{ eqid: LEFH18, owner: 0, row: 4, col: 3, isMounted: true,
+		transport: { eqid: transport, ammo: 0, fuel: transport === HORSE ? 0 : 30 } }] }, equipment, { spotSide: 0 });
+	expect(moveSound(towed(HORSE), { row: 2, col: 3 })).toBe("leg");
+	expect(moveSound(towed(157), { row: 2, col: 3 })).toBe("htrack");
+});
+
 test("An attack: the support gun fires, then the attacker, then the defender firing back, each facing its target with its class's strip and sound", () => {
 	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 9, entrenchment: 4, experience: 200 },
 		{ eqid: WZ97, owner: 1, row: 5, col: 5 }], { "4,4": terrainType.City });
