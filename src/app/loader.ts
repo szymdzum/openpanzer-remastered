@@ -44,6 +44,7 @@ export class ScenarioLoader {
 			let url;
 
 			scen = scenarioObject;
+			const requested = scenarioObject;
 			url = scenarioPath + scen.file;
 			if (this.noCache)
 				url += "?_=" + new Date().getTime();
@@ -51,59 +52,75 @@ export class ScenarioLoader {
 			xmlHttp.onload = function() {
 				if (xmlHttp.readyState === 4) {
 					if (xmlHttp.status === 200 || xmlHttp.status === 0)
-						parseScenario(xmlHttp.responseXML);
+						parseScenario(requested, xmlHttp.responseXML);
 					else
-						parseScenario(null);
+						parseScenario(requested, null);
 				}
 			}
-			xmlHttp.onerror = xmlHttp.onabort = loadFailed;
+			xmlHttp.onerror = xmlHttp.onabort = () => loadFailed(requested);
 			xmlHttp.open("GET", url, true);
 			xmlHttp.send(null);
 		}
 
-		function parseScenario(xmlData: Document) {
-			if (xmlData == null || !parseMapHeader(xmlData))
-				loadFailed();
+		//A scenario asked for after this one replaced it: what arrives for this one is dropped
+		function isCurrent(requested: Scenario) {
+			return requested === scen;
+		}
+
+		function parseScenario(requested: Scenario, xmlData: Document) {
+			if (!isCurrent(requested))
+				return;
+			if (xmlData == null || !parseMapHeader(requested, xmlData))
+				loadFailed(requested);
 		}
 
 		//The equipment set (its country names are the game's from now on), then the map image
-		function parseMapHeader(xmlData: Document) {
+		function parseMapHeader(requested: Scenario, xmlData: Document) {
 			const mapHeader = xmlData.getElementsByTagName("map")[0];
 			if (!mapHeader)
 				return false;
 			const eqp = mapHeader.getAttribute("eqp");
 			if (eqp) {
-				scen.eqp = eqp;
+				requested.eqp = eqp;
 				Equipment.name = eqp;
 			}
-			loadMapImage(xmlData, mapHeader.getAttribute("image"));
+			loadMapImage(requested, xmlData, mapHeader.getAttribute("image"));
 			return true;
 		}
 
-		function loadFailed() {
-			scen.isLoaded = false;
-			scen.onLoadFinished();
+		function loadFailed(requested: Scenario) {
+			if (!isCurrent(requested))
+				return;
+			requested.isLoaded = false;
+			requested.onLoadFinished();
 		}
 
 		//The scenario's rows and cols are only an upper limit: the map image's size gives the map's
-		function loadMapImage(xmlData: Document, src: string) {
+		function loadMapImage(requested: Scenario, xmlData: Document, src: string) {
+			const failed = () => loadFailed(requested);
 			const img = new Image();
 			img.src = src;
 			img.onload = function() {
+				if (!isCurrent(requested))
+					return;
 				const players = playerCountries(xmlData).concat(ScenarioLoader.coreCountries()
 					.map((country) => ({ country, supportCountries: [] as number[] })));
 				const imageSize: [number, number] = [img.width, img.height];
 				//(a file that doesn't load fails the load, #367)
 				Equipment.addPlayersEquipment(players, function() {
-					if (--Equipment.equipmentToLoad) //called after each file
+					//(the files of a replaced scenario still come in: they don't count for the new one's)
+					if (!isCurrent(requested) || --Equipment.equipmentToLoad) //called after each file
 						return;
 					//(then the files of the units' equipment its countries don't have, #286; the file is read once,
 					//for them and the game)
 					const file = readScenarioFile(xmlData);
-					Equipment.addUnitsEquipment(fileEquipment(file), () => ScenarioLoader.build(scen, file, imageSize), loadFailed);
-				}, loadFailed);
+					Equipment.addUnitsEquipment(fileEquipment(file), () => {
+						if (isCurrent(requested))
+							ScenarioLoader.build(requested, file, imageSize);
+					}, failed);
+				}, failed);
 			}
-			img.onerror = loadFailed;
+			img.onerror = failed;
 		}
 
 		function playerCountries(xmlData: Document) {
