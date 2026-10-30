@@ -119,7 +119,7 @@ What it says:
 
 The general is a first version: a measuring stick for tempo and losses, not yet a strong player.
 Making it hold back a reserve, concentrate on one sector and defend from depth would make it a
-harder bar for the AI changes of milestone "3. Promises kept" (#232-#236, #5, #6).
+harder bar for the remastered AI (milestone "4. Remastered AI": #232-#236, #5, #6).
 
 ## The remaster's AI: an attacker leaves its holes (#235), 24 October 2026
 
