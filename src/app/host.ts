@@ -529,9 +529,11 @@ export class GameHost {
 
 	//What follows is the campaign's next scenario or the main menu
 	ended(end: SessionEnd) {
-		if (end.kind === "victory")
+		if (end.kind === "victory") {
+			//The screen plays outside the session: its victory is recorded as the session's end (#391)
+			this.game.session.ended = end;
 			this.victory(end.side, endTypes[end.how]);
-		else if (end.kind === "turnLimit")
+		} else if (end.kind === "turnLimit")
 			this.turnLimit(end.side);
 	}
 
