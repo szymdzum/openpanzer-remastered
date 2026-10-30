@@ -44,12 +44,11 @@ the AI crashes (#100, #101).
 - [x] Fixes to the original, one at a time with the replay difference as evidence, checked
       against the PG2 rules (Luis Guzman's PG2 file specs): ships in ports (#19), reinforce and
       resupply in one turn (#20), AI prestige (#15, #21, #22), mud table (#23), combat log
-      (#24, #28), tooltips (#25), gunrange (#26), attack end handler (#29); the legacy
-      leftovers Campaign.isLoaded (#27) and implicit globals (#34) stay open outside the milestones
+      (#24, #28), tooltips (#25), gunrange (#26), attack end handler (#29), implicit globals (#34)
 - [x] Cloud saves off until the game has its own (the bundle's used its author's token); the
       game's own are in milestone 6 (#33)
-- [ ] 2d. Constructor functions to classes where the load order allows it, which removes the
-      `new (X as unknown as XConstructor)` casts (#30, outside the milestones)
+- [x] 2d. No `new (X as unknown as XConstructor)` casts left: the core replaced the constructor
+      functions (#30)
 
 ## 2. Readable ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/2))
 
@@ -59,7 +58,9 @@ docs/ui/PLAN.md). No rule changes.
 - [x] Attack preview (#7) and tooltips that explain combat (#35), unit cycling and end turn
       warning (#8), move path (#32), undo (#36), unit info (#37), sharp on HiDPI (#31), the war
       room look (#39)
-- [ ] The smallest text at 10px (#400), tablets (#350)
+- [ ] The smallest text at 10px (#400), the map fitted to the screen (#501), tablets (#350)
+- [ ] What the port lost or shows wrong: the high resolution map and units (#462), ships shown as
+      trains (#359), horses with an engine's sound (#511)
 
 ## 3. Promises kept ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/3))
 
@@ -80,7 +81,7 @@ measured in the arena (#46). The playtests' findings are sub-issues of the steps
 - [ ] The staff and its doctrines (#410): defend objectives (#5), withdraw and finish off (#6),
       artillery and air before the assault (#233, #234, #259), not mounted in the enemy's reach (#315)
 - [ ] The commander (#411): the main effort (#258), the turn clock (#232), the taken hex held
-      (#312), the reinforcements in the plan (#94)
+      (#312), the reinforcements in the plan (#94), the attacker and defender roles (#353)
 - [ ] Tactical search (#412), the LLM general (#45)
 - [ ] Tuning, difficulty that changes the AI (#16, #413)
 
@@ -95,13 +96,14 @@ Each discussed in its issue before any code.
 ## 6. Platforms and content ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/5))
 
 - [ ] Offline, desktop and mobile from one build, saves across devices (#48)
-- [ ] Polish campaigns: September 1939 and Maczek's road (#44)
+- [ ] Polish campaigns: September 1939 and Maczek's road (#44); victory turns a player can
+      reach without reading the scenario file (#270)
 - [ ] Scenario editor (#47), custom battles (#63), playing a friend (#67)
 - [ ] Soundtrack (#40), sound effects (#41), ambience and volume (#42)
 
 ## Later ([milestone](https://github.com/szymdzum/openpanzer-remastered/milestone/6))
 
-Ideas for after the port, not planned yet: who beats whom (#51), victory conditions on the map
+Ideas for after the port, not planned yet: panning with the keys (#561), who beats whom (#51), victory conditions on the map
 (#62), the campaign's branches (#57), railroads (#362), deploying under an aircraft (#66), a
 better tutorial (#38), upscaled maps and units (#43; the assets have no license of their own:
 fine for a free, non-commercial remaster, ask before app stores).
