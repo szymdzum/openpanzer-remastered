@@ -111,3 +111,43 @@ test("A scenario whose file fails to load tells the load failed (#551)", async (
 		restore();
 	}
 });
+//At once, or once the first one's equipment files are being loaded
+test.each(["at once", "while the first one's equipment loads"])("A second scenario picked before the first arrives loads only the second, %s (#551)", async (when) => {
+	const game = await freshGame();
+	const { ScenarioLoader } = await import("../src/app/loader");
+	const { Equipment } = await import("../src/legacy/equipment");
+	const real = ScenarioLoader.build, built: string[][] = [];
+	ScenarioLoader.build = (scen, file, size) => { built.push([scen.file, file.image]); real(scen, file, size); };
+	const second = () => game.newScenario("drpzop01.xml");
+	if (when !== "at once") {
+		const add = Equipment.addPlayersEquipment.bind(Equipment);
+		Equipment.addPlayersEquipment = (...args: Parameters<typeof add>) => {
+			Equipment.addPlayersEquipment = add;
+			add(...args);
+			second();
+		};
+	}
+	game.newScenario("pc1indi.xml");
+	if (when === "at once")
+		second();
+	await until(() => game.gameStarted && game.scenario.isLoaded, "the second scenario to load");
+	await new Promise((r) => setTimeout(r, 200)); //the first one's files come in
+	expect(built.map(([f]) => f)).toEqual(["drpzop01.xml"]); //(not built twice)
+	expect(built[0][1], "the second scenario's own map").toBe("resources/maps/images/map_12.png");
+	expect([game.scenario.file, game.scenario.isLoaded, game.gameEnded]).toEqual(["drpzop01.xml", true, false]);
+});
+
+test("A first scenario whose file fails after a second was picked doesn't fail the second (#551)", async () => {
+	const game = await freshGame();
+	const shown = failedLoads(game);
+	const restore = failRequests("pc1indi.xml", "error");
+	try {
+		game.newScenario("pc1indi.xml");
+		game.newScenario("drpzop01.xml");
+		await until(() => game.gameStarted && game.scenario.isLoaded, "the second scenario to load");
+		await new Promise((r) => setTimeout(r, 50));
+		expect([shown, game.scenario.file, game.gameEnded]).toEqual([[], "drpzop01.xml", false]);
+	} finally {
+		restore();
+	}
+});
