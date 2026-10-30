@@ -89,7 +89,7 @@ The program learns what the screen shows a person, no more:
 | `supply` | the units short of ammo, fuel or strength, and what a resupply or a reinforcement gives where they stand, at what cost |
 | `shop [CLASS]`, `reserve` | what can be bought (the purchase screen's list: the country's equipment in service this year) with its transports; the units waiting to deploy and the free deployment hexes (in the remaster's rules, for a side with none, its free cities, airfields and ports away from the enemy, #302) |
 | `report` | the enemy's last turn as the side saw it |
-| `analysis [--side 0\|1]` | the remastered AI's maps of a side, yours by default (docs/ai/remastered-design.md, "Built: perception and analysis"): the front, the objectives to take with the weak sectors, the own units under threat, the enemies seen, the objectives with the supply; `--json` every map, by hex. A call has no AI's memory: the side knows only the enemies it sees now |
+| `analysis [--side 0\|1]` | the remastered AI's maps of a side, yours by default (docs/ai/remastered-design.md, "Built: perception and analysis"): the front, the objectives to take with the weak sectors, the own units under threat, the enemies seen, the objectives with the supply, and the garrisons its staff would set on the objectives in the enemy's reach (#616); `--json` every map, by hex, and the garrisons. A call has no AI's memory: the side knows only the enemies it sees now |
 | `check ACTION` | whether an action is allowed, or the core's reason, without playing it; beside "allowed", that a unit moving on its transport can't attack or unmount after the move |
 
 The actions are the core's commands (src/legacy/commands.ts): `move`, `attack`, `mount`, `unmount`,

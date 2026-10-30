@@ -3,7 +3,8 @@
 A proposal: how the remaster's own computer opponent could be built if it were designed today,
 next to the classic one rather than instead of it. foundations.md has the theory behind it,
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
-analysis, with the controller as a wrapper of the classic one ("Built: perception and analysis" below).
+analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
+plan made again after every attack, the garrisons and the occupation of an emptied objective ("Built: the staff").
 
 ## What the core already gives
 
@@ -126,11 +127,10 @@ front, the planned axes), to see what the AI is thinking.
 ### Built: perception and analysis (#610)
 
 In src/core/remastered/. The remaster's rules choose the remastered AI (`Ruleset.remasteredAI`,
-`aiControllerFor`; the classic rules the classic `aiController`, with nothing computed). It passes every
-call to the classic AI and returns what it returns, so it plays the classic AI's games; in each of its
-turns' `plan` it perceives and analyses beside them, without changing the world or drawing from any
-stream. The arena's player `remastered` plays it; `npm run -s play -- analysis` prints a side's maps
-(docs/CLI.md).
+`aiControllerFor`; the classic rules the classic `aiController`, with nothing computed). In each of its
+turns' `plan` it perceives and analyses, without changing the world or drawing from any stream; its staff
+reads them ("Built: the staff" below). The arena's player `remastered` plays it; `npm run -s play -- analysis`
+prints a side's maps and the garrisons its staff would set (docs/CLI.md).
 
 - **`perceive`** (perception.ts): the side's units, the enemies it sees now (`seesUnit`), and every enemy
   it knows of as a `Sighting` (where, what, its strength, the turn last seen, a confidence). Seen: 1; out of
@@ -186,6 +186,36 @@ Operations outlive a turn: an offensive is a plan over several turns, which a st
 carry out. They are the controller's memory (docs/STATE.md D6), rebuilt deterministically when a
 game is loaded. Each has a deadline from the turn clock, after which it attacks with what it has
 instead of waiting for every unit (Hearts of Iron IV's slow battle plans).
+
+### Built: the staff (#616)
+
+In src/core/remastered/staff.ts, called by the controller (controller.ts); the remaster's rules only, the classic
+AI and its rules untouched (the contracts and verify play them).
+
+- **Operations** (`Operation`): a kind, a target hex, the units held, a deadline turn and a reason, the design's
+  explanation ("garrison 15,12: enemy 2 hexes away"). They are the controller's memory (docs/STATE.md D6), kept
+  between its turns and reviewed at each order: one ends when its deadline passes, a unit of it is gone, or (a
+  garrison) its objective is lost or no longer threatened. A loaded game starts with none and plans them again.
+- **One owner per unit.** The units the operations hold are left out of the classic plan (`planTurn`'s `held`,
+  src/core/ai.ts): no move, attack, resupply or reinforcement of theirs comes from it. The purchases and the
+  deployment stay the classic ones.
+- **Replanning.** The classic plan of the free units is made again on the world as it is after every attack (its
+  result can't be foreseen), after every order of the staff's, and when its next command fails `check`; a command
+  that fails on a plan just made is dropped. No order the core refuses is given. The first plan of a turn keeps its
+  AI-stream draws in the world as the classic AI's does; the plans made again during the turn draw from where it left
+  the stream (`next` returns no world), the same numbers each time. The staff draws nothing.
+- **Garrison** (#5): an objective of the side's that a ground enemy the side knows of (seen or remembered, #17)
+  can reach within two of its moves (hex distance, `GARRISON_TURNS`) gets one: the player's ground unit on it, else
+  the best of its infantry, anti-tank, tanks and recon that can get there within two moves: strength, +3 for
+  infantry and anti-tank, -3 a hex. It marches there first in the turn (in its transport when that goes nearer), never
+  leaves the hex while the operation lasts (three turns, then weighed again), fires from it when the estimate
+  (estimate.ts) gives more kills than losses and the support fire doesn't stop it, and is resupplied or reinforced
+  there once the classic plan is done. A garrison destroyed or gone is replaced at the next order.
+- **Occupy** (#312): after an attack of the side's, if the target's hex is an objective to take and now empty, the
+  player's ground unit that reaches it this turn and can capture (infantry first, then the strongest) moves in before
+  anything else, and is held to the turn's end.
+
+Measured in arena.md, "The remastered AI, the staff's first part (#616)".
 
 ### 5. Tactics: execution
 
