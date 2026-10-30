@@ -4,7 +4,8 @@
 import { afterEach, expect, test } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact";
 import { smallGame, smallGameData, smallGameUnits } from "./smallgame";
-import { deployWorld } from "./coreworld";
+import { deployWorld, handWorld } from "./coreworld";
+import { step } from "../src/core/step";
 import { worldOf } from "../src/legacy/mirror";
 import { classicRules } from "../src/core/rules";
 import type { GameEvent } from "../src/core/events";
@@ -174,4 +175,24 @@ test("A new scenario or a loaded game starts with a quiet enemy turn: the last g
 	store.clear();
 	expect(store.enemy.value).toEqual(quietTurn());
 	expect(turnReportOf(w, store.enemy.value)!.enemy.map((l) => l.text)).toEqual(["All quiet on this front"]);
+});
+
+test("Disbanding the selected unit drops the selection, and the next unit shortcut no longer throws (#565)", () => {
+	let w = handWorld({ rows: 6, cols: 6, units: [{ eqid: 140, owner: 0, row: 2, col: 2 }, { eqid: 140, owner: 0, row: 3, col: 3 }] });
+	const store = createStore({
+		world: () => w,
+		command: (cmd) => {
+			const r = step(w, cmd);
+			if ("refusal" in r) return { ok: false, refusal: r.refusal };
+			w = r.world;
+			return { ok: true, result: { events: r.events } } as never;
+		},
+		won: () => {},
+	});
+	store.refresh();
+	store.select(0);
+	expect(store.dispatch({ type: "disband", unit: 0 })).toBeNull();
+	expect(store.selected.value).toBeNull();
+	expect(() => store.shortcut({ menu: "next" })).not.toThrow();
+	expect(store.selected.value).toBeNull();
 });
