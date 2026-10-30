@@ -98,7 +98,7 @@ export default defineConfig({
 		include: ["test/**/*.test.ts", "test/**/*.test.tsx"],
 		testTimeout: 60_000, //a state replays a few thousand rule calls: seconds, more on a loaded machine
 		//npm run test:coverage: what the tests run of the engine (coverage/index.html), every module
-		//but the page's (dom) and the entry (main), of the new core (src/core/ and its commands) and of
+		//but the page's (dom) and the entry (main), of the new core (src/core/ and its folders) and of
 		//the UI's components, view model and screen (src/view/)
 		coverage: {
 			provider: "v8",
@@ -106,7 +106,7 @@ export default defineConfig({
 				"src/legacy/leaders.ts", "src/legacy/visibility.ts", "src/legacy/board.ts", "src/legacy/selection.ts", "src/legacy/undo.ts", "src/legacy/scenario.ts", "src/app/loader.ts", "src/legacy/campaign.ts", "src/app/game.ts",
 				"src/app/storage.ts", "src/legacy/equipment.ts", "src/legacy/combatlog.ts", "src/legacy/prototypes.ts", "src/app/settings.ts", "src/legacy/commands.ts",
 				"src/legacy/context.ts", "src/legacy/util.ts", "src/legacy/state.ts", "src/app/save.ts", "src/legacy/mirror.ts", "src/app/driver.ts", "src/app/start.ts", "src/app/host.ts", "src/app/nullscreen.ts",
-				"src/core/*.ts", "src/core/commands/*.ts",
+				"src/core/*.ts", "src/core/commands/*.ts", "src/core/remastered/*.ts",
 				"src/view/**/*.tsx", "src/view/store/model.ts", "src/view/store/store.ts", "src/view/store/storecore.ts", "src/view/store/storestep.ts", "src/view/store/storemap.ts",
 				"src/view/store/storecard.ts", "src/view/store/storeturn.ts", "src/view/store/storenotes.ts", "src/view/map/hexgrid.ts", "src/view/map/mapview.ts",
 				"src/view/map/mapdraw.ts", "src/view/map/mapinfo.ts", "src/view/map/canvas.ts", "src/view/map/overlays.ts", "src/view/map/strategic.ts",

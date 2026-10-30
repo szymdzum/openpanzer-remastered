@@ -11,6 +11,7 @@ import type { Position, RulesetName, World } from "../src/core/types";
 import { isAir } from "../src/core/units";
 import { hexIndex, onMap, sideOf, unitById } from "../src/core/world";
 import { unitClassNames } from "../src/core/tables";
+import { analysisOf } from "./analysis";
 import { hex, map, reserve, shop, status } from "./board";
 import { attackerLine, attackers, estimateLine, isTarget, targets } from "./combat";
 import { knownWorld, SIDES, seen } from "./known";
@@ -55,6 +56,8 @@ Look (your side's view: enemies only where you see them)
   reserve                            units waiting to deploy, free deployment hexes
   report                             what the enemy's last turn did, as you saw it
   check ACTION...                    whether an action is allowed, without playing it
+  analysis [--side 0|1]              the remastered AI's maps of a side (yours by default): the front, the weak
+                                     sectors, the threatened units, the objectives; --json all of them
 
 Act
   move ID R,C | attack ID TARGET|R,C | mount ID | unmount ID | resupply ID | reinforce ID [--over]
@@ -244,6 +247,13 @@ function attackersAnswer(c: Call): Answer {
 	return answer(a.estimates.length ? a.estimates.map((e) => attackerLine(knownWorld(c.w, c.side), e)) : [a.note], a);
 }
 
+function analysisAnswer(c: Call): Answer {
+	const side = c.flags.has("side") ? intOf(c.flags.get("side") as string, "a side, 0 or 1") : c.side;
+	if (side !== 0 && side !== 1) throw new UsageError(`--side is 0 or 1, got ${side}`);
+	const a = analysisOf(c.w, side);
+	return answer(a.lines, a.data);
+}
+
 function reportAnswer(c: Call): Answer {
 	const lines = c.front.report();
 	return answer(lines.length ? lines : ["nothing to report"]);
@@ -277,6 +287,7 @@ const ON_GAME: { [verb: string]: (c: Call) => Answer | Promise<Answer> } = {
 	shop: (c) => answer(shop(c.w, c.side, classOf(c.x[1]))),
 	reserve: (c) => answer(reserve(c.w, c.side)),
 	report: reportAnswer,
+	analysis: analysisAnswer,
 	check: checkAnswer,
 	end: endAnswer,
 	...Object.fromEntries(Object.keys(COMMANDS).map((verb) => [verb, actAnswer])),

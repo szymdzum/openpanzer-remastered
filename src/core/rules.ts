@@ -62,6 +62,7 @@ export const classicRules: Ruleset = {
 	suppression: false,
 	continuedSuppression: false,
 	allLeaderAbilities: false,
+	remasteredAI: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -119,6 +120,9 @@ export const remasterRules: Ruleset = {
 	//Every leader ability does what its description says; the original's game left 12 of the 33 without an
 	//effect (#3)
 	allLeaderAbilities: true,
+	//The computer player is the remastered AI, which plays the classic one's commands while it learns to read
+	//the map: what its side sees and remembers, the front, the threat, the distances and the supply (#610)
+	remasteredAI: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

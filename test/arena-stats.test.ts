@@ -1,8 +1,8 @@
 //The arena's statistics and its comparison of two runs (#604, test/arena/): the intervals on known values,
 //and the pairing of the games, on made-up results (no game played).
 import { describe, expect, test } from "vitest";
-import type { GameResult, SideResult } from "./arena/arena";
-import { compare, pairGames } from "./arena/compare";
+import type { GameResult, Player, SideResult } from "./arena/arena";
+import { compare, pairGames, playedAs } from "./arena/compare";
 import { isNoise, meanInterval, pairedDifference, pairedRatioDifference, percentile, ratioInterval, tQuantile, wilson } from "./arena/stats";
 import { plusMinus, share } from "./arena/table";
 
@@ -65,7 +65,7 @@ describe("The arena's 95% intervals (#604)", () => {
 	});
 });
 
-const side = (player: "ai" | "general", unitsLost: number): SideResult => ({ player, firstObjectiveTurn: 5, objectivesTaken: 1,
+const side = (player: Player, unitsLost: number): SideResult => ({ player, firstObjectiveTurn: 5, objectivesTaken: 1,
 	objectivesHeld: 2, unitsLost, unitsDestroyed: 3, refused: 0, turnMs: [10, 20] });
 
 function game(seed: number, lost: number, file = "drpzop01.xml"): GameResult {
@@ -78,13 +78,24 @@ describe("Two arena runs compared (#604)", () => {
 
 	test("A run compared with itself differs in nothing", () => {
 		const out = compare(run, run);
-		expect(out[out.length - 1]).toBe("0 differences beyond the noise");
+		expect(out.slice(-2)).toEqual(["10 of 10 games the same in both runs but for the time", "0 differences beyond the noise"]);
 		expect(out.join("\n")).toContain("|  | units lost | 5.90 | 5.90 | 0.00 (0.00 to 0.00) | noise |");
 	});
 
 	test("A loss every game more is a difference beyond the noise", () => {
 		const out = compare(run, run.map((g) => game(g.match.seed, g.sides[0].unitsLost + 1)));
 		expect(out.join("\n")).toContain("|  | units lost | 5.90 | 6.90 | +1.00 (1.00 to 1.00) | **differs** |");
+	});
+
+	test("A player's games compared with another's as that player: the same games but for the time (#610)", () => {
+		const as = (g: GameResult): GameResult => ({ ...g, match: { ...g.match, sides: ["remastered", "general"] }, ms: 7,
+			sides: [{ ...g.sides[0], player: "remastered", turnMs: [1, 2] }, g.sides[1]] });
+		const other = run.map(as);
+		expect(() => compare(run, other)).toThrow(/different matches/);
+		const out = compare(run, playedAs(other, new Map([["remastered", "ai"]])));
+		expect(out.slice(-2)).toEqual(["10 of 10 games the same in both runs but for the time", "0 differences beyond the noise"]);
+		const lost = playedAs(run.map((g) => as(game(g.match.seed, g.sides[0].unitsLost + (g.match.seed === 3 ? 1 : 0)))), new Map([["remastered", "ai"]]));
+		expect(compare(run, lost).slice(-2)[0]).toBe("9 of 10 games the same in both runs but for the time");
 	});
 
 	test("The games are paired by scenario, matchup and seed, in any order", () => {

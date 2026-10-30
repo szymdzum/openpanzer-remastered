@@ -7,7 +7,7 @@
 //one in a worker process
 import fs from "node:fs";
 import { expect, test } from "vitest";
-import { type GameResult, isPlayer, type Match, type Player, playMatch } from "./arena/arena";
+import { type GameResult, isGeneral, isPlayer, type Match, type Player, playMatch } from "./arena/arena";
 import { playMatches } from "./arena/pool";
 import { HEADER, PLANNING_HEADER, planning, row, summary } from "./arena/table";
 
@@ -58,7 +58,7 @@ test.runIf(!!env.ARENA)("The AI arena", async () => {
 	out.push(`\n${all.length} games on ${jobs} processes in ${Math.round((performance.now() - t0) / 1000)} s`);
 	if (env.ARENA_OUT) fs.writeFileSync(env.ARENA_OUT, JSON.stringify(all, null, 1));
 	fs.writeSync(2, out.join("\n") + "\n"); //(past Vitest, which keeps a passing test's console)
-	expect(all.every((g) => g.sides.every((x) => x.player === "ai" || x.refused === 0)), "the general's orders are all allowed").toBe(true);
+	expect(all.every((g) => g.sides.every((x) => !isGeneral(x.player) || x.refused === 0)), "the general's orders are all allowed").toBe(true);
 }, 7_200_000);
 
 //A scenario's tables: the measures, then the planning time, a part per matchup
