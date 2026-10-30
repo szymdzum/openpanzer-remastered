@@ -38,7 +38,13 @@ function recorder() {
 }
 
 const vp: Viewport = { x: 10, y: 20, width: 600, height: 400, scale: 2, dpr: 2 };
-const glance = { at: { row: 4, col: 4 }, yours: { side: 0, loss: 6 }, theirs: { side: 1, loss: 0 } };
+const glance = { at: { row: 4, col: 4 }, yours: { side: 0, loss: 6, suppressed: 0 }, theirs: { side: 1, loss: 0, suppressed: 0 } };
+
+test("A chip adds the points its side would have suppressed (#2)", () => {
+	const { ctx, ops } = recorder();
+	drawPreview(ctx, vp, { glance: { ...glance, yours: { side: 0, loss: 0, suppressed: 1 }, theirs: { side: 1, loss: 2, suppressed: 3 } }, trail: null });
+	expect(ops.filter((o) => o.op === "fillText").map((o) => o.args[0])).toEqual(["0 +1s", "−2 +3s"]);
+});
 
 test("Over a target: the brass crosshair, your loss on your side's colour, theirs on theirs (0 for none), nothing else (#441)", () => {
 	const { ctx, ops } = recorder();

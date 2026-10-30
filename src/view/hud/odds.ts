@@ -1,6 +1,7 @@
 //The attack cursor's view model: over the target the pointer is on, the two numbers the original game's cursor shows
 //(generateAttackCursor, reference/src/render.js), the attacker's losses and the target's, as combatResult counts them
-//before the attack (the support fire its side sees included, no dice drawn). Tested in test/view-odds.test.ts
+//before the attack (the support fire its side sees included, no dice drawn), and the points each would have
+//suppressed (the remaster's rules, #2). Tested in test/view-odds.test.ts
 import { attackableUnit } from "../../core/attack";
 import { samePlace } from "../../core/geometry";
 import { combatResult } from "../../core/combat";
@@ -8,10 +9,11 @@ import type { Position, World } from "../../core/types";
 import { hexIndex, sideOf, unitById } from "../../core/world";
 import type { Selection } from "../map/mapview";
 
-/** A side's loss, shown in its side's colour. */
+/** A side's loss and its suppressed points, shown in its side's colour. */
 export interface LossChip {
 	side: number;
 	loss: number;
+	suppressed: number;
 }
 
 /** The crosshair over the pointed target: your loss, theirs. */
@@ -27,5 +29,6 @@ export function glanceOf(w: World, sel: Selection | null, at: Position | null, a
 	const atk = unitById(w, sel.unit)!, def = attackableUnit(w, atk, hexIndex(w, at.row, at.col), airMode);
 	if (def === null) return null;
 	const cr = combatResult(w, atk, def, false, null);
-	return { at: { row: at.row, col: at.col }, yours: { side: sideOf(w, atk), loss: cr.losses }, theirs: { side: sideOf(w, def), loss: cr.kills } };
+	return { at: { row: at.row, col: at.col }, yours: { side: sideOf(w, atk), loss: cr.losses, suppressed: cr.atkSuppress },
+		theirs: { side: sideOf(w, def), loss: cr.kills, suppressed: cr.defSuppress } };
 }
