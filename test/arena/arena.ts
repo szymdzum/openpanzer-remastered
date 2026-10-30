@@ -4,7 +4,9 @@
 //
 //The first player starts and plays its first turn, its purchases and deployment included, as in the game
 //(startSession's fresh, #292; the old game's AI ended it at once when it started a new scenario).
+import { JSDOM } from "jsdom";
 import { aiController } from "../../src/core/ai";
+import type { Controller } from "../../src/core/controller";
 import { createWorld } from "../../src/core/create";
 import { rulesetNamed } from "../../src/core/rules";
 import { newGame } from "../../src/core/newgame";
@@ -17,7 +19,12 @@ import { playerType } from "../../src/core/tables";
 import { setupOf } from "../corefiles";
 import { generalController } from "./general";
 
-export type Player = "ai" | "general";
+//Who can play a side: a name and its controller
+const CONTROLLERS = { ai: aiController, general: generalController } satisfies Record<string, (player: number) => Controller>;
+
+export type Player = keyof typeof CONTROLLERS;
+
+export const isPlayer = (name: string): name is Player => Object.prototype.hasOwnProperty.call(CONTROLLERS, name);
 
 export interface Match {
 	file: string;
@@ -36,6 +43,7 @@ export interface SideResult {
 	unitsLost: number;
 	unitsDestroyed: number;			//the enemy's
 	refused: number;			//its orders the core refused (the AI plans its turn at its start, #94)
+	turnMs: number[];			//the time spent in its controller's calls, each turn (machine-dependent)
 }
 
 export interface GameResult {
@@ -49,39 +57,81 @@ export interface GameResult {
 	ms: number;
 }
 
+//A game being played: its session and what each side did so far
+interface Play {
+	match: Match;
+	s: Session;
+	sides: [SideResult, SideResult];
+	owners: Map<number, number>;	//unit id -> side, for the units an event names after they are gone
+	clock: number[];		//by player id: the ms spent in its controller in its turn so far
+	orders: number;
+	endedSide: number;		//the side of the last turn ended
+}
+
 //Plays one game to its end: a victory, or the last turn of every player
 export function playMatch(match: Match): GameResult {
 	const t0 = performance.now();
-	const s = sessionOf(match);
-	const sides: [SideResult, SideResult] = [side(match.sides[0]), side(match.sides[1])];
+	const clock: number[] = [];
+	const s = sessionOf(match, clock);
+	const g: Play = { match, s, sides: [side(match.sides[0]), side(match.sides[1])], owners: new Map(), clock, orders: 0,
+		endedSide: -1 };
 	const maxTurns = Math.min(match.turns || Infinity, s.world.state.scenario.maxTurns);
-	const owners = new Map<number, number>();	//unit id -> side, for the units an event names after they are gone
-	let orders = 0, endedSide = -1;
-	remember(s.world, owners);
+	remember(s.world, g.owners);
 	for (let n = 0; n < 200_000 && s.ended === null && s.world.state.turn.turn <= maxTurns; n++) {
 		const turn = s.world.state.turn.turn;
 		const a = advance(s);
 		if (a.kind === "ended") break;
-		if (a.kind === "order") orders += ordered(match, sides, s.world, a);
-		else endedSide = s.world.state.players[a.player].side;
-		tally(sides, owners, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
-		remember(s.world, owners);
+		took(g, a, turn);
 	}
+	//A victory ends the turn it came in; a turn never played (past the last) isn't timed
+	if (s.ended !== null && s.ended.kind !== "turnLimit") turnPlayed(g, s.world.state.turn.currentPlayer);
 	const held = objectivesHeld(s.world);
-	sides[0].objectivesHeld = held[0];
-	sides[1].objectivesHeld = held[1];
-	return { match, turns: Math.min(s.world.state.turn.turn, maxTurns), ...endOf(s, endedSide), sides, orders,
-		ms: Math.round(performance.now() - t0) };
+	g.sides[0].objectivesHeld = held[0];
+	g.sides[1].objectivesHeld = held[1];
+	return { match, turns: Math.min(s.world.state.turn.turn, maxTurns), ...endOf(s, g.endedSide), sides: g.sides,
+		orders: g.orders, ms: Math.round(performance.now() - t0) };
 }
 
-//The scenario started as the game starts it, every player the AI or the general
-function sessionOf(match: Match): Session {
-	const setup = { ...setupOf(match.file, { game: match.seed, ai: match.seed + 7919 }), rules: rulesetNamed(match.rules || "remaster") };
+function took(g: Play, a: Exclude<Advance, { kind: "ended" }>, turn: number) {
+	if (a.kind === "order") g.orders += ordered(g.match, g.sides, g.s.world, a);
+	else {
+		g.endedSide = g.s.world.state.players[a.player].side;
+		turnPlayed(g, a.player);
+	}
+	tally(g.sides, g.owners, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
+	remember(g.s.world, g.owners);
+}
+
+function turnPlayed(g: Play, player: number) {
+	g.sides[g.s.world.state.players[player].side].turnMs.push(Math.round((g.clock[player] || 0) * 100) / 100);
+	g.clock[player] = 0;
+}
+
+let parser: DOMParser | null = null;
+//The page's XML parser under Vitest, jsdom's in a worker process (worker.ts): jsdom's either way
+const xmlParser = (): DOMParser => parser ??= typeof DOMParser !== "undefined" ? new DOMParser() : new new JSDOM().window.DOMParser();
+
+//The scenario started as the game starts it, every player a program, each timed
+function sessionOf(match: Match, clock: number[]): Session {
+	const rng = { game: match.seed, ai: match.seed + 7919 };
+	const setup = { ...setupOf(match.file, rng, null, undefined, [], xmlParser()), rules: rulesetNamed(match.rules || "remaster") };
 	const created = newGame(setup);
 	for (const p of created.state.players) p.type = playerType.aiLocal;
 	const world = createWorld(created, setup.equipment, { spotSide: -1, rules: setup.rules });
-	const controllerOf = (p: number) => match.sides[world.state.players[p].side] === "general" ? generalController(p) : aiController(p);
+	const controllerOf = (p: number) => timed(CONTROLLERS[match.sides[world.state.players[p].side]](p), clock);
 	return startSession(world, (_type, p) => controllerOf(p), { fresh: true, localSide: -1 });
+}
+
+//A controller whose calls add the time they take to its player's clock
+function timed(c: Controller, clock: number[]): Controller {
+	const time = <T>(call: () => T): T => {
+		const t0 = performance.now();
+		const r = call();
+		clock[c.player] = (clock[c.player] || 0) + performance.now() - t0;
+		return r;
+	};
+	return { player: c.player, join: (w) => time(() => c.join(w)), startTurn: (w) => time(() => c.startTurn(w)),
+		plan: (w) => time(() => c.plan(w)), next: (w) => time(() => c.next(w)) };
 }
 
 //An order played: 1 for a command; a refused one counted against its side
@@ -122,7 +172,8 @@ function endOf(s: Session, endedSide: number): Pick<GameResult, "end" | "winner"
 }
 
 function side(player: Player): SideResult {
-	return { player, firstObjectiveTurn: null, objectivesTaken: 0, objectivesHeld: 0, unitsLost: 0, unitsDestroyed: 0, refused: 0 };
+	return { player, firstObjectiveTurn: null, objectivesTaken: 0, objectivesHeld: 0, unitsLost: 0, unitsDestroyed: 0, refused: 0,
+		turnMs: [] };
 }
 
 function remember(w: World, owners: Map<number, number>) {
@@ -134,39 +185,4 @@ export function objectivesHeld(w: World): [number, number] {
 	for (const h of w.state.map.hexes)
 		if (h.victorySide !== -1 && h.owner !== -1) held[w.state.players[h.owner < w.state.players.length ? h.owner : 0].side]++;
 	return held;
-}
-
-//A matchup's games summed up per side, as a markdown table row each
-export function summary(results: GameResult[]): string[] {
-	const rows: string[] = [];
-	for (const s of [0, 1]) {
-		const r = results.map((g) => g.sides[s]);
-		const wins = results.filter((g) => g.winner === s).length;
-		const firsts = r.map((x) => x.firstObjectiveTurn).filter((t): t is number => t !== null);
-		const taken = sum(r.map((x) => x.objectivesTaken)), lost = sum(r.map((x) => x.unitsLost));
-		const ratings = results.filter((g) => g.winner === s).map((g) => g.rating);
-		rows.push([
-			`${s === 0 ? "axis" : "allies"} (${r[0].player})`,
-			`${wins}/${results.length}`,
-			ratings.length ? count(ratings) : "-",
-			firsts.length ? `${(sum(firsts) / firsts.length).toFixed(1)} (${firsts.length}/${results.length})` : "never",
-			(taken / results.length).toFixed(1),
-			(sum(r.map((x) => x.objectivesHeld)) / results.length).toFixed(1),
-			(lost / results.length).toFixed(1),
-			(sum(r.map((x) => x.unitsDestroyed)) / results.length).toFixed(1),
-			taken ? (lost / taken).toFixed(1) : "-",
-			(sum(r.map((x) => x.refused)) / results.length).toFixed(1),
-		].join(" | "));
-	}
-	return rows;
-}
-
-function sum(xs: number[]): number {
-	return xs.reduce((a, b) => a + b, 0);
-}
-
-function count(xs: string[]): string {
-	const n = new Map<string, number>();
-	for (const x of xs) n.set(x, (n.get(x) || 0) + 1);
-	return [...n].map(([k, v]) => `${v} ${k}`).join(", ");
 }

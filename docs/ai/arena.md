@@ -7,20 +7,49 @@ give the same games, so a difference in the numbers is the change's (#46).
 
 ```sh
 npm run arena                                        # Panzer-Verbaende Ostpreussen, 10 seeds a matchup
+ARENA_SUITE=1 npm run arena                          # the suite (below), 40 seeds a matchup
 ARENA_SEEDS=20 ARENA_FILES=drpzop01.xml,dr9fr03.xml npm run arena
+ARENA_MATCHUPS=ai-ai,general-general npm run arena   # axis-allies; ai-ai,general-ai,ai-general by default
+JOBS=2 npm run arena                                 # the processes playing the games, 3 by default
 ARENA_OUT=/tmp/arena.json npm run arena              # every game's result as JSON
 ARENA_DEBUG=1 npm run arena                          # prints any order of the general's the core refused
 ARENA_RULES=classic npm run arena                    # the classic rules; the remaster's by default (#53)
+npm run arena:compare -- before.json after.json      # two ARENA_OUT files compared, game by game
 ```
 
 The AI's changes go into the remaster's rules (#53, src/core/rules.ts): a change is measured by the
 arena on the remaster's rules before and after it, and `ARENA_RULES=classic` gives the classic AI the
 contracts pin, for a comparison.
 
-It is a Vitest test (test/arena.test.ts) that runs only with `ARENA=1`, which the script sets. A
-game takes a second or two; the default run, 4 matchups of 10 games, about two minutes. One short
-game of the general against the AI always runs in `npm test`, so the general keeps working as the
-core changes.
+It is a Vitest test (test/arena.test.ts) that runs only with `ARENA=1`, which the script sets. The
+games are played on `JOBS` node processes at once (test/arena/pool.ts, each a test/arena/worker.ts):
+a game depends only on its match (scenario, sides, seed, rules), so it comes out the same in any
+process and in any order, and the results are reported in the matches' order. A game takes a
+fraction of a second to a second and a half; the suite, 3 matchups of 40 games on 8 scenarios,
+about 3 minutes with `JOBS=3` (960 games in 184 s on the owner's laptop; `general-general` adds a
+fourth matchup). Two short games always run in `npm test`: the general against the AI, so the general
+keeps working as the core changes, and a game played both in a worker process and in Vitest's,
+which must come out the same but for the time.
+
+## The suite (#604)
+
+Eight scenarios, four with the axis attacking and four with the allies attacking (the side with more
+objectives to take at the start, #256), on small and large maps, from 1939 to 1944:
+
+| Scenario | Attacker | Map, units | Why |
+|---|---|---|---|
+| Panzer-Verbaende Ostpreussen (drpzop01.xml) | axis, 5 to take against 2 | 32×37, 78 | the reference since #46: the AI as a slow attacker |
+| Bzura Counterattack (fw82.xml) | allies, 6 against 3 | 34×41, 34 | scenario reinforcements (21 German units on turns 9 and 11), the Polish counterattack, 28 turns |
+| Liberation of Indo China (pc1long.xml) | axis, 3 against 2 | 25×41, 37 | sea and ports, and a side with no deployment hexes (France, #302) |
+| Zitadelle (cm3kursk.xml) | axis, 5 against 1 | 39×44, 159 | the largest map (39×44) with 159 units, and the slowest game: the time budget's reference (remastered-design.md, "Time budget") |
+| Uman Encirclement (lah_it_08.xml) | axis, 4 against 1 | 32×37, 178 | the most units at the start, 1941 in the east, and a defender without deployment hexes |
+| Operation Battleaxe (it12baxe.xml) | allies, 5 against 1 | 33×43, 59 | the desert: who wins changes from game to game in every matchup |
+| Taman Bridgehead: Krymskaya (dragrom06.xml) | allies, 2 against 1 | 18×19, 90 | the smallest map: a crowded front, where either side wins (19 to 21 in AI vs AI) |
+| Operation Luttich (drlutt26.xml) | allies, 4 against 1 | 39×44, 76 | the west in 1944, a short game (12 turns) on a large map: the attack takes objectives in nearly every game and almost never wins |
+
+Each was picked after 6 seeds of every matchup, among scenarios whose games don't all end the same
+way or in a couple of turns. In some the same side wins nearly every game (the defender, as the remaster's
+rules make it); the other measures still move from game to game.
 
 ## The games
 
@@ -43,12 +72,54 @@ thing differs from a game on the screen:
 | Measure | What it says |
 |---|---|
 | wins | games won: a capture of every objective, the enemy wiped out, or the turn limit's outcome (the defender that held out, #256) |
-| first objective, turn (games) | the mean turn of the side's first capture of an objective, over the games where it took one |
+| victory levels | the victory level of each game the side won (src/core/turn.ts victoryRating) |
+| took an objective | the games where the side took at least one objective |
+| first objective, turn | the mean turn of the side's first capture of an objective, over the games where it took one |
 | objectives taken | captures of objectives per game, retaking included |
 | held at the end | objectives the side holds after the last turn |
 | units lost, destroyed | per game |
 | lost per objective | units lost per objective taken: the price of its gains |
 | orders refused | orders the core refused: the AI plans its whole turn at its start, and some orders no longer fit the map when their turn comes (a hex taken, a target out of range) |
+
+The table has the measures of the side's player in a matchup, over its games, each with its 95%
+interval (test/arena/stats.ts), so a number reads as real or as noise:
+
+- **A share of games** (wins, "took an objective": the games where it took one): `k/n (lo-hi%)`,
+  Wilson's score interval, which stays inside 0-100% and holds for 0 or n of n.
+- **A mean** (first objective, the objectives taken and held, units lost and destroyed, orders
+  refused): `m ±h`, h = t·s/√n, Student's t with n − 1 degrees of freedom (a table up to 30, the
+  Cornish-Fisher expansion above). The first objective's mean is over the games where the side took one.
+- **Lost per objective**, a ratio of sums R = Σ lost / Σ taken over the games: the delta method,
+  SE = √(Σ(lostᵢ − R·takenᵢ)² / (n(n − 1))) / mean(taken), h = t·SE.
+
+The intervals are closed formulas: no draw of any kind, so a run says the same every time.
+
+## The planning time (#604)
+
+The time each side's controller spends in its calls (join, startTurn, plan, next) in each of its
+turns, measured around them in the arena (test/arena/arena.ts, `timed`): for the AI its purchases,
+deployment, plan and orders, for the general its orders. A table per scenario gives, per matchup and
+side, the turns timed, the mean ms a turn, the 95th percentile (nearest rank) and the worst turn;
+ARENA_OUT keeps every turn's ms per side (`turnMs`). The ms are the machine's, never part of a
+game's result: the determinism test and the comparison leave them out of every judgement. The
+design's budget is 2 seconds of planning a turn on the suite's largest scenario, Zitadelle
+(remastered-design.md, "Time budget").
+
+## Comparing two runs (#604)
+
+`npm run arena:compare -- before.json after.json` (test/arena/compare.ts) reads two ARENA_OUT files
+and pairs their games by scenario, matchup, seed and last turn; it refuses two runs that didn't play
+the same matches (the rules may differ: the classic against the remaster's). For each scenario,
+matchup and side it prints each measure before and after, and the paired difference, after less
+before, with its 95% interval: mean ± t·s/√n of the games' differences (for wins and "took an
+objective", the differences of the 0/1 indicators, in points). The first objective's difference is
+over the games where the side took one in both runs. Lost per objective, a ratio of sums each run,
+gets the delta method again: each game's linearised term (lostᵢ − R·takenᵢ) / mean(taken), after
+less before, gives the standard error. A difference whose interval contains 0 is **noise**, one that
+doesn't **differs**; the last line counts those. The planning time is printed, not judged. Pairing
+the games takes most of the noise out: the same seed gives both runs the same weather and dice
+until the change moves them apart.
+
 
 ## The scripted general (#236)
 

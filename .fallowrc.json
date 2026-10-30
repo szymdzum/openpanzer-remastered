@@ -7,6 +7,8 @@
 	"entry": ["src/main.ts", "test/**/*.test.ts", "test/**/*.test.tsx", "cli/play.ts", "cli/register.mjs", "cli/page.ts",
 		// the new UI's end-to-end test, run with node (npm run e2e)
 		"test/e2e/game.ts",
+		// the arena's worker processes (test/arena/pool.ts) and its comparison (npm run arena:compare)
+		"test/arena/worker.ts", "test/arena/compare-cli.ts",
 		// run by hand with node: docs/ui's tokens, card list, gallery and renders
 		"scripts/ui-design.mjs",
 		// stylelint's two rules of our own, which .stylelintrc.json loads
