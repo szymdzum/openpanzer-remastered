@@ -183,7 +183,8 @@ then assault, then overrun with tanks.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
   attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
   ground unit), whatever the screen's air mode shows.
-- Recon can split its movement over several moves in a turn, until a hex stops it.
+- Recon can split its movement over several moves in a turn, until a hex stops it (and, in the remaster's
+  rules, a unit with Recon Movement, #3).
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
 - On frozen ground the remaster's rules (#1) burn two fuel a movement point for ground units (on
   their transport's fuel when mounted), as the manual says: "when the ground is covered with snow,
@@ -251,6 +252,16 @@ still reinforce.
 - The original's roll never picks the last two leaders of a class's list (infiltration tactics and
   liberator for the ground classes, fire discipline for the guns, first strike for the fighters): only
   a scenario gives them. The remaster's rules (#78): any of the list can come up.
+- The original reads 21 of the 33 abilities; the other 12 only have a description. The remaster's rules
+  give them the effect their description says (#3, the flag `allLeaderAbilities`):
+  - **Alpine Training**: forest and mountain cost what clear terrain does when the unit moves.
+  - **Bridging**: a river (not an impassable one) costs what rough terrain does.
+  - **Superior Maneuver**: an enemy zone of control doesn't stop the unit, as it doesn't stop recon (#4);
+    a hidden enemy still surprises it.
+  - **Recon Movement**: the unit splits its move over several moves in a turn, as recon does.
+
+  Neither terrain ability makes a hex dearer than its own terrain (a river on frozen ground is cheaper than
+  rough for wheels).
 
 ## Prestige and victory
 

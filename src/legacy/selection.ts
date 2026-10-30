@@ -20,11 +20,11 @@
  */
 
 import { type Cell, type extendedCell } from "./prototypes";
-import { unitClass } from "../core/tables";
 import { GameRules, type GameRulesModule, rulesOver } from "./gamerules";
 import { engineContext } from "./context";
 import { createWorld } from "../core/create";
 import { unitById } from "../core/world";
+import { movesInPhases } from "../core/movement";
 import type { AttackResult, Executed, MoveResult } from "./commands";
 import type { Command, CommandType } from "../core/command";
 import type { GameMap, ReinforceResults } from "./map";
@@ -210,13 +210,13 @@ export class MapSelection {
 	}
 
 	//The retreated unit's move and attack hexes as the old retreat's move showed them: with the move's
-	//points spent (Unit.move: a mounted unit's all of them; done unless a recon unit with points left),
+	//points spent (Unit.move: a mounted unit's all of them; done unless it moves in phases with points left),
 	//which the retreat gave back after. Asked of the game's world with the unit so, made for them alone (the
 	//old engine wrote the points into the unit and back)
 	retreatRanges(u: Unit) {
 		const w = engineContext.world(), s = unitById(w, u.id), spent = { ...s };
 		if (spent.isMounted && spent.transport !== null) spent.moveLeft = 0;
-		if (u.unitData().uclass !== unitClass.recon || spent.moveLeft <= 0) spent.hasMoved = spent.hasOverstrength = true;
+		if (!movesInPhases(w, s) || spent.moveLeft <= 0) spent.hasMoved = spent.hasOverstrength = true;
 		const state = { ...w.state, units: w.state.units.map((x) => x === s ? spent : x) };
 		const moved = createWorld({ data: w.data, state }, w.equipment, { spotSide: w.spotSide, noFOW: w.noFOW, rules: w.rules,
 			destroyed: w.destroyed });

@@ -26,6 +26,37 @@ function costsOf(w: World, movmethod: number): number[] {
 	return moveCosts(w.rules, w.state.scenario.ground, movmethod);
 }
 
+//The costs u moves at: with Alpine Training forest and mountain cost what clear terrain does, with Bridging a
+//river what rough terrain does, where every leader ability works; neither makes a hex dearer.
+function unitCosts(w: World, u: UnitState): number[] {
+	const costs = costsOf(w, unitData(w, u).movmethod);
+	if (!w.rules.allLeaderAbilities || u.leader === -1) return costs;
+	const alpine = hasLeader(w, u, leaderType.alpineTraining), bridging = hasLeader(w, u, leaderType.bridging);
+	if (!alpine && !bridging) return costs;
+	const own = costs.slice();
+	const as = (terrain: number, like: number) => { own[terrain] = Math.min(costs[terrain], costs[like]); };
+	if (alpine) {
+		as(terrainType.Forest, terrainType.Clear);
+		as(terrainType.Mountain, terrainType.Clear);
+	}
+	if (bridging) as(terrainType.River, terrainType.Rough);
+	return own;
+}
+
+//Recon where the rules let it through (#4), a unit with Superior Maneuver where every leader ability works.
+function ignoresZoc(w: World, u: UnitState): boolean {
+	return (w.rules.reconIgnoresZoc && unitData(w, u).uclass === unitClass.recon)
+		|| (w.rules.allLeaderAbilities && hasLeader(w, u, leaderType.superiorManeuver));
+}
+
+/**
+ * Whether the unit may split its move into several in a turn while it has points left: a recon unit, and a
+ * unit with Recon Movement where every leader ability works.
+ */
+export function movesInPhases(w: World, u: UnitState): boolean {
+	return unitData(w, u).uclass === unitClass.recon || (w.rules.allLeaderAbilities && hasLeader(w, u, leaderType.reconMovement));
+}
+
 /** The hexes the unit's leaders add to its moves: Aggressive Tank Maneuver and Aggressive Maneuver, one each. */
 export function leaderMoves(w: World, u: UnitState): number {
 	return (hasLeader(w, u, leaderType.aggressiveTankManeuver) ? 1 : 0) + (hasLeader(w, u, leaderType.aggressiveManeuver) ? 1 : 0);
@@ -120,9 +151,9 @@ export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
  * neighbour one ring nearer, its exit cost the entry plus the terrain cost, lowered when another neighbour
  * is cheaper. A hex is in reach when the points left pay for it; a hex that uses all the points (STOP) takes
  * any left, at least one. An enemy zone of control the unit's side sees stops it (STOP) on a hex it can pay
- * for, unless it is a recon unit in the rules where recon ignores it. An air unit moves at cost 1 a hex, over
- * its side's aircraft and around the enemy's it sees, as far as its points take it; in the rules with an air
- * zone of control, a hex next to an enemy aircraft it sees is a STOP. The updates go in list
+ * for, unless the unit ignores zones of control (recon, Superior Maneuver, by the rules). An air unit moves at
+ * cost 1 a hex, over its side's aircraft and around the enemy's it sees, as far as its points take it; in the
+ * rules with an air zone of control, a hex next to an enemy aircraft it sees is a STOP. The updates go in list
  * order, as in the original, so a tie resolves as it did.
  */
 export function moveRange(w: World, u: UnitState): MoveCell[] {
@@ -224,8 +255,8 @@ function expand(w: World, u: UnitState, c: MoveCell[], range: number, side: numb
 }
 
 function stepRules(w: World, u: UnitState, range: number, side: number): StepRules {
-	return { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u), side, enemySide: ~side & 1, range,
-		groundOrSea: isGround(w, u) || isSea(w, u), ignoresZoc: w.rules.reconIgnoresZoc && unitData(w, u).uclass === unitClass.recon };
+	return { costs: unitCosts(w, u), train: isTrain(w, u), side, enemySide: ~side & 1, range,
+		groundOrSea: isGround(w, u) || isSea(w, u), ignoresZoc: ignoresZoc(w, u) };
 }
 
 //Steps to the neighbours as far or farther (not always right: a path can turn back), only from the unit's
@@ -273,8 +304,7 @@ function reach(w: World, to: MoveCell, other: UnitState | null, visible: boolean
 
 /** What entering a hex costs u in its terrain (the road's, a bridge's), zone of control aside. */
 export function terrainCost(w: World, u: UnitState, cell: Position): number {
-	return enterCost(w, hexIndex(w, cell.row, cell.col), { costs: costsOf(w, unitData(w, u).movmethod), train: isTrain(w, u),
-		side: sideOf(w, u) });
+	return enterCost(w, hexIndex(w, cell.row, cell.col), { costs: unitCosts(w, u), train: isTrain(w, u), side: sideOf(w, u) });
 }
 
 //Trains can't use roads, bridges are roads for their side.

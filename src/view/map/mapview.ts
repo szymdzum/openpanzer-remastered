@@ -5,11 +5,10 @@
 import type { Command } from "../../core/command";
 import { attackableUnit, attackCells, canFireThisTurn } from "../../core/attack";
 import { adjacent, samePlace } from "../../core/geometry";
-import { isBridgeForSide, moveRange, movesLeftThisTurn, shortestPath, terrainCost, unitMoveRange } from "../../core/movement";
+import { isBridgeForSide, moveRange, movesInPhases, movesLeftThisTurn, shortestPath, terrainCost, unitMoveRange } from "../../core/movement";
 import type { MoveCell, PathCell, Position, UnitId, UnitState, World } from "../../core/types";
 import { isAir, isGround, unitUsesAmmo } from "../../core/units";
 import { airUnitAt, groundUnitAt, hexIndex, isSpotted, onMap, sideOf, unitAt, unitById, unitData } from "../../core/world";
-import { unitClass } from "../../core/tables";
 import { canOrder, isShown } from "../store/model";
 
 export interface Marker {
@@ -196,13 +195,13 @@ function lastCost(w: World, u: UnitState, end: Position & { cost: number }, befo
 
 //What the move to the path's end leaves (src/core/moves.ts payMove): the points it uses, whether an enemy zone
 //stops it there, the moves left (none for a transport, which uses them all, or a hex that stops the move), and
-//whether a recon unit with moves left can move again
+//whether a unit that moves in phases (recon) with moves left can move again
 function moveOutcome(w: World, u: UnitState, steps: PathCell[]): { used: number; zone: boolean; left: number; again: boolean } {
 	const before = steps.slice(1, -1).reduce((sum, c) => sum + c.cost, 0);
 	const end = steps[steps.length - 1];
 	const { used, zone } = lastCost(w, u, end, before);
 	const left = isMounted(u) || end.cost >= STOP ? 0 : Math.max(u.moveLeft - used, 0);
-	return { used, zone, left, again: unitData(w, u).uclass === unitClass.recon && left > 0 };
+	return { used, zone, left, again: movesInPhases(w, u) && left > 0 };
 }
 
 const isMounted = (u: UnitState) => u.isMounted && u.transport !== null;

@@ -6,15 +6,15 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType, playerType, prestigeGains, scoreGains, unitClass } from "./tables";
+import { leaderType, playerType, prestigeGains, scoreGains } from "./tables";
 import { addScore, changeUnit, emit, playerAt, relocate, writeHex, writeObjectives, writePlayer, writeUnit } from "./draft";
 import type { PathStep } from "./events";
 import { directionTo } from "./geometry";
-import { canPassInto, disembarkPositions, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
+import { canPassInto, disembarkPositions, movesInPhases, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
 import { canCapture, hasLeader, unitUsesFuel, usesFuel } from "./units";
-import { hexIndex, isRiding, isSpotted, unitById, unitData } from "./world";
+import { hexIndex, isRiding, isSpotted, unitById } from "./world";
 import { fuelPerPoint } from "./weathereffects";
 
 /** What a move came to: the hex a hidden enemy stopped it before (null: none), and whether it won by capture. */
@@ -104,12 +104,12 @@ function newUndo(u: UnitState): UndoState {
 }
 
 //Unit.move: a transport uses all its points and can't fire after; so does a hex that stops the move (#214).
-//A recon unit with points left can move again; a unit leaving its carrier is off it for good.
+//A unit that moves in phases (recon) with points left can move again; a unit leaving its carrier is off it for good.
 function payMove(d: Draft, u: UnitState, cost: number, stopped: boolean) {
 	u.entrenchment = 0;
 	burn(d, u, cost);
 	if (stopped) u.moveLeft = 0;
-	if (unitData(d, u).uclass !== unitClass.recon || u.moveLeft <= 0) {
+	if (!movesInPhases(d, u) || u.moveLeft <= 0) {
 		u.hasMoved = true;
 		u.hasOverstrength = true;
 	}
