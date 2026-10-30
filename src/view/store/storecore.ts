@@ -49,8 +49,9 @@ export function createCore(host: CoreHost, hooks: CoreHooks) {
 		const r = host.command(cmd);
 		hooks.answered();
 		refresh();
-		//(a command played had a world to start from: with none, no game is playing and the host refuses it)
-		if (r.ok) hooks.played(before!, r.result);
+		//(a command played had a world to start from: with none, no game is playing and the host refuses it. The end of turn
+		//has no step of its own: the program's turn it started may be showing its first one)
+		if (r.ok && cmd.type !== "endTurn") hooks.played(before!, r.result);
 		refused.value = "refusal" in r ? reasonOf(r.refusal) : null;
 		return refused.value;
 	};

@@ -154,3 +154,29 @@ test("End turn, a unit key or a context menu button sent while the person's step
 	await act(() => { store.dispatch({ type: "endTurn" }); });
 	expect(sent.map((c) => c.type)).toEqual(["attack", "endTurn"]);
 });
+
+test("End turn leaves the program's first step playing: the map waits for its beats (#564)", async () => {
+	let w: World = handWorld({ rows: 10, cols: 10, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 3 },
+		{ eqid: PIECHOTA, owner: 1, row: 4, col: 4, strength: 9 }] }, undefined, { spotSide: 0 });
+	const holder: { store?: ReturnType<typeof createStore> } = {};
+	const host: StoreHost = {
+		world: () => w,
+		command: () => {
+			//(the host ends the person's turn and plays the program's first attack, shown through the screen before it returns)
+			const before = w, attack = { type: "attack", unit: 1, target: 0 } as const;
+			const r = step(w, attack);
+			if ("refusal" in r) return { ok: false, refusal: r.refusal };
+			w = r.world;
+			holder.store!.showStep(before, r.events, () => {});
+			return { ok: true, result: null } as ReturnType<StoreHost["command"]>;
+		},
+		won: () => {},
+	};
+	const store = holder.store = createStore(host);
+	store.refresh();
+	await act(() => { store.dispatch({ type: "endTurn" }); });
+	await act(() => { vi.advanceTimersByTime(1); });
+	expect([store.showing.value, store.shown.value !== null, store.motion.value !== null]).toEqual([true, true, true]);
+	await act(() => { vi.advanceTimersByTime(10000); });
+	expect([store.showing.value, store.shown.value, store.motion.value]).toEqual([false, null, null]);
+});
