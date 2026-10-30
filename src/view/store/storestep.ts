@@ -77,9 +77,11 @@ export function createStep(core: Pick<Core, "world">, host: Partial<Pick<GameHos
 			results.value = null;
 		},
 
-		//The beats stopped (a new scenario's start)
+		//The beats stopped, and the last game's chips and line gone (a new scenario's start)
 		stop() {
 			player.stop();
+			results.value = null;
+			news.value = null;
 			shown.value = null;
 			showing.value = false;
 		},

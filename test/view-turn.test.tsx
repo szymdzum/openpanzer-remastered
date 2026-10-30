@@ -177,6 +177,20 @@ test("A new scenario or a loaded game starts with a quiet enemy turn: the last g
 	expect(turnReportOf(w, store.enemy.value)!.enemy.map((l) => l.text)).toEqual(["All quiet on this front"]);
 });
 
+test("A new scenario or a loaded game starts with no looked-at hex, combat line, refusal or loss chips from the last game (#566)", () => {
+	const w = world();
+	const store = createStore({ world: () => w, command: () => ({ ok: false, refusal: { reason: "not your turn" } }), won: () => {} });
+	store.refresh();
+	store.look({ row: 5, col: 5 });
+	const news = { name: "Pz IV", text: "destroyed the T-26 · −2" };
+	store.results.value = { chips: [{ at: { row: 5, col: 5 }, loss: 2 } as never], stamp: null, trail: null, news };
+	store.dispatch({ type: "endTurn" });
+	expect(store.refused.value).not.toBeNull();
+	store.news.value = news;
+	store.clear();
+	expect([store.lookAt.value, store.news.value, store.results.value, store.refused.value]).toEqual([null, null, null, null]);
+});
+
 test("Disbanding the selected unit drops the selection, and the next unit shortcut no longer throws (#565)", () => {
 	let w = handWorld({ rows: 6, cols: 6, units: [{ eqid: 140, owner: 0, row: 2, col: 2 }, { eqid: 140, owner: 0, row: 3, col: 3 }] });
 	const store = createStore({
