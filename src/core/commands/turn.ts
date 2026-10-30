@@ -8,7 +8,7 @@
 
 import type { CommandOf } from "../command";
 import { scoreGains } from "../tables";
-import { addScore, emit, writePlayer } from "../draft";
+import { addScore, emit, writePlayer, writeUnit } from "../draft";
 import { resupplyValue } from "../supply";
 import type { CommandHandler, Draft } from "../types";
 import { reachedTurnLimit, unitEndTurn } from "../turn";
@@ -57,6 +57,11 @@ function newRound(d: Draft) {
 	}
 }
 
+//The suppression that lasts the turn (continued suppression) ends with the turn of the player who inflicted it
+function liftSuppression(d: Draft) {
+	for (const u of d.state.units) if (u.suppressed !== undefined) delete writeUnit(d, u.id).suppressed;
+}
+
 //Actions.endTurn: the time of day, then the player's end of turn, the undo gone, the next player (by
 //id, the first after the last); a new round, its weather first, when it is the first. turnLimit: the side that ended
 //played its last turn. Never refused
@@ -66,6 +71,7 @@ export const endTurn: CommandHandler<CommandOf<"endTurn">> = {
 	},
 	run(d) {
 		const t = d.state.turn, ended = t.currentPlayer, side = d.state.players[ended].side;
+		liftSuppression(d);
 		nextTimeOfDay(d);
 		playerEndTurn(d, ended);
 		t.undoable = null;

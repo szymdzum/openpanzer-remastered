@@ -119,7 +119,7 @@ function sameTransport(t: Transport | null, y: UnitState["transport"]): boolean 
 
 function sameCounts(u: Unit, x: UnitState): boolean {
 	return x.strength === u.strength && x.moveLeft === u.moveLeft && x.ammo === u.ammo && x.fuel === u.fuel && x.hits === u.hits
-		&& x.experience === u.experience;
+		&& x.experience === u.experience && (x.suppressed ?? 0) === (u.suppressed ?? 0);
 }
 
 function sameStanding(u: Unit, x: UnitState): boolean {
@@ -248,6 +248,7 @@ export function offMapUnit(u: OffMapUnit): OffMapUnit {
 		experience: u.experience, entrenchment: u.entrenchment, entrenchTicks: u.entrenchTicks, leader: u.leader,
 		facing: u.facing, flag: u.flag, isCore: u.isCore, isMounted: u.isMounted, hasMoved: u.hasMoved, hasFired: u.hasFired,
 		hasResupplied: u.hasResupplied, hasOverstrength: u.hasOverstrength, isSurprised: u.isSurprised, tempSpotted: u.tempSpotted,
+		...(u.suppressed ? { suppressed: u.suppressed } : {}),
 	};
 }
 
@@ -440,6 +441,8 @@ export function setUnitFields(u: Unit, s: OffMapUnit) {
 	u.entrenchment = s.entrenchment;
 	u.entrenchTicks = s.entrenchTicks;
 	u.leader = s.leader;
+	if (s.suppressed) u.suppressed = s.suppressed;
+	else delete u.suppressed;
 }
 
 //The units in their order with their ids, through the map's own placing (MapBoard.place gives a

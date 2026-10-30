@@ -138,7 +138,7 @@ core's sight always equals `computeSight` of its state (D10).
 animate after the step: `moved` (the path, each hex seen by the enemy or not, the cost), `surprised`,
 `spotted`, `captured` (flag, objective, prestige, score, win), `victory` (capture, elimination),
 `fight` (a support shot or the attack: both units before and after, the dice's result and the
-combat steps' record, #118), `attackStopped`, `dismounted`, `leader`, `destroyed`, `retreated`,
+combat steps' record, #118), `attackStopped`, `dismounted`, `leader`, `destroyed`, `pinned` (#2), `retreated`,
 `surrendered`, `resupplied`, `reinforced`, `mounted`, `unmounted`, `embarked`, `disembarked`,
 `undone`, `deployed`, `bought`, `upgraded`, `disbanded`, `sold`; the turn's `turnEnded`,
 `turnStarted`, `turnLimit` and `arrived` (below).

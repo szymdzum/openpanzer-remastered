@@ -14,7 +14,10 @@
 import { scoreGains, UNIT_MAX_EXPERIENCE } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { attackableUnit, supportFireUnits } from "./attack";
-import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
+import {
+	attackResult, continuesSuppression, dismountsWhenAttacked, isBrokenOff, isLossOverRetreatThreshold, isPinned, shouldDefenderRetreat,
+	suppressedFor
+} from "./combat";
 import { addScore, beginDraft, changeUnit, emit, finishDraft, playerAt, removeUnit, spotOff, spotOn, writeUnit } from "./draft";
 import type { Fighter, FighterState } from "./events";
 import { directionTo } from "./geometry";
@@ -45,12 +48,13 @@ export interface FightResolution {
 
 /**
  * Resolves atk firing on def, drawing from rng; reads only. support: a support fire shot (it doesn't count
- * as the unit's attack, no return fire); overrun: the defender destroyed without a shot back.
+ * as the unit's attack, no return fire); overrun: the defender destroyed without a shot back; suppressed: the
+ * attacker's points the support fire suppressed.
  */
 export function resolveFight(w: World, atk: UnitState, def: UnitState, rng: RngStream, support: boolean,
-	overrun: boolean): FightResolution {
+	overrun: boolean, suppressed = 0): FightResolution {
 	const record: Contribution[] = [];
-	const result = attackResult(w, atk, def, rng, record);
+	const result = attackResult(w, atk, def, rng, record, suppressed);
 	//Mounted infantry gets off its transport when attacked, unless it was surprised moving
 	const dismount = dismountsWhenAttacked(w, def);
 	if (overrun) {
@@ -107,6 +111,12 @@ function hit(u: UnitState, losses: number) {
 	if (u.entrenchment > 0) u.entrenchment--;
 }
 
+//Points that don't fire for the rest of the turn, at most its strength
+function suppress(u: UnitState, points: number) {
+	const total = Math.min(u.strength, suppressedFor(u) + points);
+	if (total > 0) u.suppressed = total;
+}
+
 //Unit.fire: it shows on the map from now on even in fog. Only its own attack (not a support or return shot,
 //not an overrun) ends its firing for the turn.
 function fire(u: UnitState, attacking: boolean) {
@@ -137,18 +147,25 @@ export function applyFight(d: Draft, f: FightResolution) {
 	}
 	atk.experience = Math.round(atk.experience + +cr.atkExpGained);
 	def.experience = Math.round(def.experience + +cr.defExpGained);
-	fire(atk, !f.support && !f.overrun);
-	hit(def, cr.kills);
-	if (cr.defcanfire && !f.support) {
-		fire(def, false);
-		hit(atk, cr.losses);
-	}
+	shoot(d, f, atk, def);
 	score(d, atk, def, cr);
 	attacker.after = fighterState(atk);
 	defender.after = fighterState(def);
 	emit(d, { type: "fight", support: f.support, attacker, defender, result: cr, record: f.record });
 	gainLeader(d, f.attacker, f.atkLeader);
 	gainLeader(d, f.defender, f.defLeader);
+}
+
+//The shot, the suppression of the attacker's that lasts the turn, the return fire
+function shoot(d: Draft, f: FightResolution, atk: UnitState, def: UnitState) {
+	const cr = f.result;
+	fire(atk, !f.support && !f.overrun);
+	hit(def, cr.kills);
+	if (!f.support && cr.defSuppress > 0 && continuesSuppression(d, atk)) suppress(def, cr.defSuppress);
+	if (cr.defcanfire && !f.support) {
+		fire(def, false);
+		hit(atk, cr.losses);
+	}
 }
 
 //Not on a bridge of its side.
@@ -171,26 +188,38 @@ function gainLeader(d: Draft, id: UnitId, leader: number) {
 	emit(d, { type: "leader", unit: id, leader });
 }
 
-function fight(d: Draft, atk: UnitId, def: UnitId, support: boolean, overrun: boolean) {
-	applyFight(d, resolveFight(d, unitById(d, atk), unitById(d, def), d.rng, support, overrun));
+function fight(d: Draft, atk: UnitId, def: UnitId, support: boolean, overrun: boolean, suppressed = 0): FightResolution {
+	const f = resolveFight(d, unitById(d, atk), unitById(d, def), d.rng, support, overrun, suppressed);
+	applyFight(d, f);
+	return f;
+}
+
+//The support fire on the attacker, gun by gun while it has strength left: the points it suppressed
+function supportFire(d: Draft, attacker: UnitId, defender: UnitId): number {
+	let suppressed = 0;
+	for (const s of supportFireUnits(d, unitById(d, attacker), unitById(d, defender)).map((u) => u.id)) {
+		if (unitById(d, attacker).strength <= 0) break;
+		suppressed += fight(d, s, attacker, true, false).result.defSuppress;
+	}
+	return suppressed;
 }
 
 /**
  * Actions.resolveAttack: the support fire on the attacker unless it was surprised or will overrun (the
- * estimate says so), then the attack unless the attacker is destroyed or its losses stopped it.
+ * estimate says so), then the attack unless the attacker is destroyed, its losses stopped it or, in the
+ * remaster's rules, the support fire left it no point that isn't suppressed.
  */
 export function resolveAttack(d: Draft, attacker: UnitId, defender: UnitId): AttackStart {
 	const atk = unitById(d, attacker), def = unitById(d, defender);
-	const start: AttackStart = { attacker, defender, atkStrength: atk.strength, defStrength: def.strength };
+	const start: AttackStart = { attacker, defender, atkStrength: atk.strength, defStrength: def.strength, defSuppressed: 0 };
 	const estimate = attackResult(d, atk, def, null);
-	if (!atk.isSurprised && !estimate.isOverrun)
-		for (const s of supportFireUnits(d, atk, def).map((u) => u.id)) {
-			if (unitById(d, attacker).strength <= 0) break;
-			fight(d, s, attacker, true, false);
-		}
+	const suppressed = !atk.isSurprised && !estimate.isOverrun ? supportFire(d, attacker, defender) : 0;
 	const strength = unitById(d, attacker).strength;
-	const stopped = isLossOverRetreatThreshold(strength, start.atkStrength);
-	if (strength > 0 && !stopped) fight(d, attacker, defender, false, estimate.isOverrun);
+	const stopped = isLossOverRetreatThreshold(strength, start.atkStrength) || isBrokenOff(d, unitById(d, attacker), suppressed);
+	if (strength > 0 && !stopped) {
+		const carried = suppressedFor(unitById(d, defender));
+		start.defSuppressed = carried + fight(d, attacker, defender, false, estimate.isOverrun, suppressed).result.defSuppress;
+	}
 	if (stopped) {
 		writeUnit(d, attacker).hasFired = true;
 		emit(d, { type: "attackStopped", unit: attacker });
@@ -226,23 +255,31 @@ export function destroyUnits(d: Draft, units: readonly UnitState[]) {
 }
 
 /**
- * After the cleanup: the defender retreats on big losses or surrenders with nowhere to go, a side with no
- * unit left loses. When both have none the game ends once, as outcome() says: the axis checked first, the
- * allies win (Deliberate #92: the original told a victory for each side).
+ * After the cleanup: the defender retreats on big losses, or pinned down by suppression in the remaster's
+ * rules, or surrenders with nowhere to go; a side with no unit left loses. When both have none the game ends
+ * once, as outcome() says: the axis checked first, the allies win (Deliberate #92: the original told a victory
+ * for each side).
  */
 export function endAttack(d: Draft, start: AttackStart, atk: UnitState | null) {
 	const def = unitById(d, start.defender);
-	if (atk !== null && def !== null && shouldDefenderRetreat(d, atk, def, start.defStrength)) {
-		const to = retreatPosition(d, def);
-		if (to !== null) {
-			retreatTo(d, def.id, to);
-		} else {
-			removeUnit(d, def.id, true);
-			emit(d, { type: "surrendered", unit: def.id, at: { row: def.row, col: def.col } });
-		}
+	if (atk !== null && def !== null) {
+		const pinned = isPinned(d, atk, def, start.defSuppressed);
+		if (pinned) emit(d, { type: "pinned", unit: def.id, suppressed: start.defSuppressed });
+		if (pinned || shouldDefenderRetreat(d, atk, def, start.defStrength)) fallBack(d, def);
 	}
 	const side = [0, 1].find((x) => !sideHasUnits(d, x));
 	if (side !== undefined) emit(d, { type: "victory", side: ~side & 1, kind: "elimination" });
+}
+
+//The retreat, or the surrender with nowhere to go
+function fallBack(d: Draft, def: UnitState) {
+	const to = retreatPosition(d, def);
+	if (to !== null) {
+		retreatTo(d, def.id, to);
+	} else {
+		removeUnit(d, def.id, true);
+		emit(d, { type: "surrendered", unit: def.id, at: { row: def.row, col: def.col } });
+	}
 }
 
 function destroy(d: Draft, u: UnitState) {

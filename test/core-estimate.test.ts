@@ -38,7 +38,7 @@ test("A tank next to a weak enemy overruns it: the defender destroyed, no suppor
 test("A rugged defense is certain before the attack, the gun the side sees fires first and counts in the losses (CombatOdds)", () => {
 	const e = estimate(rugged());
 	expect(e.result).toMatchObject({ kills: 0, losses: 5, isRugged: true, defcanfire: true });
-	expect(e.support).toEqual([{ unit: 2, losses: 1 }]);
+	expect(e.support).toEqual([{ unit: 2, losses: 1, suppressed: 0 }]);
 	expect([e.stopped, e.fate]).toEqual([false, null]);
 	expect(e.record.map((c) => c.name)).toEqual(expect.arrayContaining(["city", "entrenchment", "infantry entrenched in close terrain",
 		"rugged defense"]));

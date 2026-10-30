@@ -94,6 +94,7 @@ interface UnitState {
 	hasOverstrength: boolean;
 	isSurprised: boolean;
 	tempSpotted: boolean;		//lost today (#84)
+	suppressed?: number;		//the remaster's continued suppression (#2): only while non-zero
 }
 
 type OffMapUnit = Omit<UnitState, "id" | "row" | "col">;	//a unit not on the map has no id (D1)

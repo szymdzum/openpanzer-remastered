@@ -7,7 +7,9 @@
  */
 
 import { supportFireUnits } from "./attack";
-import { attackResult, dismountsWhenAttacked, isLossOverRetreatThreshold, shouldDefenderRetreat } from "./combat";
+import {
+	attackResult, dismountsWhenAttacked, isBrokenOff, isLossOverRetreatThreshold, isPinned, shouldDefenderRetreat, suppressedFor
+} from "./combat";
 import { directionTo } from "./geometry";
 import { isBridgeForSide, retreatPosition } from "./movement";
 import type { CombatResult, Contribution, UnitId, UnitState, World } from "./types";
@@ -16,6 +18,7 @@ import { hexIndex, isSpotted, sideOf } from "./world";
 export interface SupportShot {
 	unit: UnitId;
 	losses: number;
+	suppressed: number;
 }
 
 /** What happens to the defender after the attack; it surrenders when it has nowhere to retreat, null: it holds. */
@@ -49,10 +52,11 @@ function defenderAfter(w: World, atk: UnitState, def: UnitState, kills: number):
 	return { ...def, strength: def.strength - kills, facing, isMounted: dismount ? false : def.isMounted };
 }
 
-function fateOf(w: World, atk: UnitState, def: UnitState, kills: number): DefenderFate {
-	if (kills >= def.strength) return "destroyed";
-	const after = defenderAfter(w, atk, def, kills);
-	if (!shouldDefenderRetreat(w, atk, after, def.strength)) return null;
+function fateOf(w: World, atk: UnitState, def: UnitState, result: CombatResult): DefenderFate {
+	if (result.kills >= def.strength) return "destroyed";
+	const after = defenderAfter(w, atk, def, result.kills);
+	const pinned = isPinned(w, atk, after, suppressedFor(def) + result.defSuppress);
+	if (!pinned && !shouldDefenderRetreat(w, atk, after, def.strength)) return null;
 	return retreatPosition(w, after) === null ? "surrenders" : "retreats";
 }
 
@@ -66,11 +70,15 @@ export function estimateAttack(w: World, atk: UnitState, def: UnitState): Attack
 		const overrun = { ...result, kills: def.strength, losses: 0, defcanfire: false };
 		return { result: overrun, record, support: [], stopped: false, fate: "destroyed" };
 	}
-	const support = seenSupport(w, atk, def).map((s) => ({ unit: s.id, losses: attackResult(w, s, atk, null).kills }));
+	const support = seenSupport(w, atk, def).map((s): SupportShot => {
+		const r = attackResult(w, s, atk, null);
+		return { unit: s.id, losses: r.kills, suppressed: r.defSuppress };
+	});
 	const left = Math.max(0, atk.strength - support.reduce((n, s) => n + s.losses, 0));
-	const stopped = left <= 0 || isLossOverRetreatThreshold(left, atk.strength);
-	const result = attackResult(w, { ...atk, strength: left }, def, null, record);
+	const suppressed = support.reduce((n, s) => n + s.suppressed, 0), weakened = { ...atk, strength: left };
+	const stopped = left <= 0 || isLossOverRetreatThreshold(left, atk.strength) || isBrokenOff(w, weakened, suppressed);
+	const result = attackResult(w, weakened, def, null, record, suppressed);
 	result.kills = Math.min(result.kills, def.strength);
 	result.losses = Math.min(result.losses, left);
-	return { result, record, support, stopped, fate: stopped ? null : fateOf(w, atk, def, result.kills) };
+	return { result, record, support, stopped, fate: stopped ? null : fateOf(w, atk, def, result) };
 }

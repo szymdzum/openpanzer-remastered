@@ -59,6 +59,8 @@ export const classicRules: Ruleset = {
 	weatherLimitsSpotting: false,
 	weatherLimitsSupply: false,
 	snowDoublesFuel: false,
+	suppression: false,
+	continuedSuppression: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -106,6 +108,13 @@ export const remasterRules: Ruleset = {
 	weatherLimitsSpotting: true,
 	weatherLimitsSupply: true,
 	snowDoublesFuel: true,
+	//Suppression, as the manual says: "Each non-suppressed strength point makes an individual attack". A die that
+	//misses the kill by up to 4 suppresses its point; the support fire's suppressed points don't fire in the attack,
+	//which is broken off when it left none; a defender with at least its strength suppressed falls back or
+	//surrenders; Overwhelming Attack turns half its suppression, rounded up, into kills (#2)
+	suppression: true,
+	//A tactical bomber's suppression, and a Shock Tactics unit's, lasts the attacking player's whole turn (#2)
+	continuedSuppression: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

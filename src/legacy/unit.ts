@@ -89,6 +89,7 @@ export class Unit {
 	declare entrenchment: number;
 	declare entrenchTicks: number;
 	declare leader: number;
+	declare suppressed?: number; //set only while some points are suppressed for the turn (the remaster's rules)
 
 	declare getHex: () => Hex | null;
 	declare setHex: (h: Hex | null) => void;

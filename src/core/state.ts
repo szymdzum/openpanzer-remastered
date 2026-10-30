@@ -113,6 +113,7 @@ export interface UnitState {
 	hasOverstrength: boolean;
 	isSurprised: boolean;
 	tempSpotted: boolean;		//lost by today's save (#84)
+	suppressed?: number;		//the points that don't fire for the rest of the turn (Ruleset.continuedSuppression); absent when none
 }
 
 export interface TransportState {
