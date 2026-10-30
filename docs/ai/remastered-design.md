@@ -18,18 +18,60 @@ how-it-plays.md and weak-attacker.md the AI it would sit beside. Nothing here is
 ## What done looks like
 
 The remastered AI replaces the classic one in the remaster's rules once it meets these, measured
-in the arena (arena.md) on the scenario suite of step 0, 40 seeds a scenario and side. The numbers
-are first targets, set from the 24 October baseline on Panzer-Verbaende Ostpreussen (arena.md),
-and are set again for each scenario once step 0 has measured the classic AI on the whole suite.
+in the arena (arena.md) on the scenario suite of step 0, 40 seeds a scenario and side, accepted on
+seeds 1-40 after being tuned on 101-140. The targets are set from the 30 October baseline
+(arena.md, #606) by one rule, for the AI on a side facing the general:
 
-| Measure | Classic AI today (Ostpreussen, Germany attacking) | Target |
-|---|---|---|
-| First objective, as the attacker | turn 9.3 of 17 (the scripted general: 4.5) | turn 6 or earlier |
-| Units lost per objective taken, as the attacker | 6.4 (the general: 3.5) | 5 or fewer |
-| Objectives taken, as the attacker | 2.1 of 5 | 3 or more |
-| Holding out against the general, as the defender | Poland 12 of 20 | no worse |
-| Orders the core refused | 33 a game | none: it replans after every order |
-| Wins against the classic AI, both sides | | more than half, on the suite as a whole, and no scenario worse beyond its noise |
+- The **main measure** is wins when the AI's win rate on that side is 10% to 90%. Otherwise it is,
+  for the attacker (the side with more objectives to take at the start), the objectives taken and
+  the units lost per objective; for the defender, the objectives held at the end and the units lost.
+  (An attacker that hasn't taken every objective loses at the turn limit, #256, so the win rate says
+  nothing in most scenarios.)
+- The **target** is at least halfway from the classic AI's value to the general's, where the general
+  is better, and no worse than the classic AI beyond the noise where the classic AI is better.
+- The classic AI's value is the AI on that side against the general, the general's the general on
+  that side against the AI (a different opponent, so a rough bar).
+
+| Scenario | Side | Measure | Classic AI | General | Target |
+|---|---|---|---|---|---|
+| Ostpreussen | axis attacks | objectives taken | 0.9 | 2.0 | 1.5 or more |
+| | | lost per objective | 12.2 | 2.2 | 7.2 or fewer |
+| | allies defend | held at the end | 3.8 | 4.3 | 4.1 or more |
+| | | units lost | 28.9 | 15.7 | 22.3 or fewer |
+| Bzura | allies attack | objectives taken | 6.3 | 7.2 | 6.8 or more |
+| | | lost per objective | 0.8 | 1.3 | no worse than 0.8 |
+| | axis defend | held at the end | 5.3 | 4.1 | no worse than 5.3 |
+| | | units lost | 13.4 | 8.1 | 10.8 or fewer |
+| Indochina | axis attack | objectives taken | 0.1 | 0.8 | 0.5 or more |
+| | | lost per objective | 102 | 7.4 | 55 or fewer (too noisy: 6 games) |
+| | allies defend | held at the end | 3.7 | 3.0 | no worse than 3.7 |
+| | | units lost | 14.5 | 4.3 | 9.4 or fewer |
+| Zitadelle | axis attack | objectives taken | 1.0 | 1.5 | 1.3 or more |
+| | | lost per objective | 48.9 | 19.1 | 34 or fewer |
+| | allies defend | held at the end | 4.7 | 4.1 | no worse than 4.7 |
+| | | units lost | 56.1 | 41.1 | 48.6 or fewer |
+| Uman | axis attack | objectives taken | 1.1 | 4.2 | 2.7 or more |
+| | | lost per objective | 16.4 | 1.6 | 9.0 or fewer |
+| | allies defend | wins (of 40) | 10 | 39 | 25 or more |
+| Battleaxe | allies attack | wins (of 40) | 27 | 0 | no worse than 27 |
+| | axis defend | held at the end | 3.7 | 0.7 | no worse than 3.7 |
+| | | units lost | 28.5 | 19.4 | 24.0 or fewer |
+| Taman | allies attack | objectives taken | 0.1 | 1.4 | 0.8 or more |
+| | | lost per objective | 539 | 9.0 | too noisy: 2 games; read the objectives taken |
+| | axis defend | wins (of 40) | 21 | 40 | 31 or more |
+| Luttich | allies attack | objectives taken | 0.2 | 3.4 | 1.8 or more |
+| | | lost per objective | 241 | 12.2 | 127 or fewer (wide: 7 games) |
+| | axis defend | held at the end | 2.8 | 3.9 | 3.4 or more |
+| | | units lost | 34.0 | 18.4 | 26.2 or fewer |
+
+"No worse beyond the noise" is read with `arena:compare`: the paired difference's interval must not
+lie on the worse side of 0. The suite-wide targets stay:
+
+- Wins against the classic AI, on both sides: more than half of the games on the suite as a whole,
+  and no scenario worse beyond its noise.
+- Orders the core refused: none (the classic AI: 17 to 98 a game, #606).
+- Planning time within the time budget below: the classic AI plans a turn on Zitadelle in 15.6 ms
+  (95th percentile 36 ms, worst 121 ms).
 
 Strength isn't the only aim (industry-research.md, "Fun, cheating and difficulty"): the AI has to
 look like a general of the time. Each of these is a puzzle test on a hand-built map (Tests below)
@@ -198,8 +240,8 @@ reinforces, and how far each unit is from one. The staff reads it:
 A budget in nodes keeps the AI deterministic; the time it takes is checked against these:
 
 - **A turn on a laptop**, in the Web Worker, on the suite's largest scenario: within 2 seconds of
-  planning, the animations aside. The classic AI's planning time is measured in step 0 as the
-  reference.
+  planning, the animations aside. The classic AI's planning time on Zitadelle, measured in step 0
+  (arena.md, #606): 15.6 ms a turn, 95th percentile 36 ms, worst 121 ms.
 - **A whole game in the arena** within 10 seconds, so a run of the suite (step 0) fits in a few
   minutes, as `npm run arena` does today with the classic AI (a game in 1-2 seconds).
 - The search (step 4) gets a node budget fixed per difficulty, chosen so the turn stays within

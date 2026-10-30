@@ -9,6 +9,7 @@ give the same games, so a difference in the numbers is the change's (#46).
 npm run arena                                        # Panzer-Verbaende Ostpreussen, 10 seeds a matchup
 ARENA_SUITE=1 npm run arena                          # the suite (below), 40 seeds a matchup
 ARENA_SEEDS=20 ARENA_FILES=drpzop01.xml,dr9fr03.xml npm run arena
+ARENA_SUITE=1 ARENA_SEED_FROM=101 npm run arena      # seeds 101-140, where changes are tuned (Comparing two runs)
 ARENA_MATCHUPS=ai-ai,general-general npm run arena   # axis-allies; ai-ai,general-ai,ai-general by default
 ARENA_MATCHUPS=general1-ai,general-ai npm run arena  # the first general (#236) beside the general (#605)
 JOBS=2 npm run arena                                 # the processes playing the games, 3 by default
@@ -121,6 +122,10 @@ doesn't **differs**; the last line counts those. The planning time is printed, n
 the games takes most of the noise out: the same seed gives both runs the same weather and dice
 until the change moves them apart.
 
+**Tune on one set of seeds, accept on another.** A change's weights and choices are tuned on seeds
+101-140 (`ARENA_SEED_FROM=101`), and it is accepted on the suite's seeds 1-40, which it has never
+been tuned on: the acceptance isn't measured on the games it was fitted to.
+
 
 ## The scripted general (#236)
 
@@ -147,7 +152,8 @@ ever refused: the arena checks that. Its moves are deterministic: no draw of its
 
 The first version (player `general1`, `FIRST_GENERAL` in general.ts, for a comparison) had no plan
 beyond the order at hand. Player `general` adds four parts on top (`Doctrine`, test/arena/doctrine.ts
-for what it reads of the map), each a hand-built test in test/arena-general.test.ts:
+for what it reads of the map), each a hand-built test in test/arena-general.test.ts. It was tuned on seeds 1-16 of the suite,
+which the rule in "Comparing two runs" now keeps for acceptance:
 
 - **One sector at a time.** An attacker picks the objective to take where its own strength within
   10 hexes, less half the enemy's strength within 4 of it and twice its force's mean distance, is
@@ -193,7 +199,309 @@ units the first general sent to the nearest one. As a defender it wins as often 
 general (in most scenarios the defender already wins every game) and holds as many objectives.
 Its counterattacks are rarer, so it takes fewer back and loses fewer units.
 
+## Baseline of step 0, 30 October 2026 (#606)
+
+The classic AI on the whole suite (#604), the remaster's rules after milestone 3's mechanics, on
+main at c3193de (#608, with the stronger general). 40 seeds (1-40) a matchup, 960 games in 211 s.
+Run again, it gives the same games: `arena:compare` of two runs showed 0 differences beyond the noise.
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_OUT=/tmp/arena-606-baseline.json npm run arena
+```
+
+The side with more objectives to take at the start is the attacker (#256): axis in Ostpreussen,
+Indochina, Zitadelle and Uman, allies in Bzura, Battleaxe, Taman and Luttich. The tables as
+printed, one per scenario, with the planning time after each:
+
+#### drpzop01.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 32/40 (65-90%) | 9.4 ±1.2 | 1.2 ±0.3 | 2.9 ±0.3 | 15.7 ±1.7 | 19.0 ±1.4 | 13.3 ±3.5 | 28.4 ±3.4 |
+| allies (ai) | 40/40 (91-100%) | 40 tactical | 9/40 (12-38%) | 13.1 ±2.8 | 0.3 ±0.2 | 4.1 ±0.3 | 19.0 ±1.4 | 15.7 ±1.7 | 69.0 ±45.9 | 14.3 ±1.8 |
+| ends: 40× limit; 303 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 0/40 (0-9%) | - | 39/40 (87-100%) | 7.5 ±0.9 | 2.0 ±0.4 | 3.2 ±0.2 | 4.4 ±0.8 | 28.9 ±2.1 | 2.2 ±0.5 | 0.0 ±0.0 |
+| allies (ai) | 40/40 (91-100%) | 40 tactical | 20/40 (35-65%) | 11.7 ±1.3 | 0.8 ±0.3 | 3.8 ±0.2 | 28.9 ±2.1 | 4.4 ±0.8 | 36.2 ±13.8 | 8.4 ±1.3 |
+| ends: 40× limit; 526 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 26/40 (50-78%) | 10.6 ±1.4 | 0.9 ±0.3 | 2.8 ±0.3 | 11.3 ±1.3 | 15.7 ±1.2 | 12.2 ±3.9 | 35.4 ±3.5 |
+| allies (general) | 40/40 (91-100%) | 40 tactical | 7/40 (9-32%) | 14.1 ±2.5 | 0.2 ±0.1 | 4.3 ±0.3 | 15.7 ±1.2 | 11.3 ±1.3 | 89.7 ±62.6 | 0.0 ±0.0 |
+| ends: 40× limit; 380 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, drpzop01.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 680 | 8.2 | 12.6 | 44.9 |
+| allies (ai) | 680 | 4.0 | 6.1 | 22.6 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 680 | 24.9 | 49.9 | 86.6 |
+| allies (ai) | 680 | 2.5 | 3.9 | 5.0 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 680 | 7.6 | 10.9 | 13.1 |
+| allies (general) | 680 | 10.6 | 18.5 | 63.5 |
+
+#### fw82.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 40/40 (91-100%) | 40 tactical | 40/40 (91-100%) | 8.3 ±1.4 | 4.8 ±0.5 | 4.3 ±0.5 | 14.9 ±1.3 | 5.6 ±0.9 | 3.1 ±0.4 | 9.8 ±1.5 |
+| allies (ai) | 0/40 (0-9%) | - | 40/40 (91-100%) | 1.0 ±0.0 | 6.5 ±0.5 | 4.7 ±0.5 | 5.6 ±0.9 | 14.9 ±1.3 | 0.9 ±0.2 | 16.2 ±2.2 |
+| ends: 40× limit; 231 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 40/40 (91-100%) | 40 tactical | 40/40 (91-100%) | 8.3 ±0.9 | 4.5 ±0.4 | 4.1 ±0.4 | 8.1 ±1.0 | 5.2 ±0.8 | 1.8 ±0.2 | 0.0 ±0.0 |
+| allies (ai) | 0/40 (0-9%) | - | 40/40 (91-100%) | 1.0 ±0.0 | 6.3 ±0.5 | 4.9 ±0.4 | 5.2 ±0.8 | 8.1 ±1.0 | 0.8 ±0.2 | 16.0 ±2.3 |
+| ends: 40× limit; 260 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 40/40 (91-100%) | 40 tactical | 40/40 (91-100%) | 8.9 ±1.4 | 6.5 ±0.6 | 5.3 ±0.5 | 13.4 ±1.3 | 9.8 ±1.1 | 2.1 ±0.3 | 18.3 ±2.3 |
+| allies (general) | 0/40 (0-9%) | - | 40/40 (91-100%) | 1.0 ±0.0 | 7.2 ±0.6 | 3.7 ±0.5 | 9.8 ±1.1 | 13.4 ±1.3 | 1.3 ±0.2 | 0.0 ±0.0 |
+| ends: 40× limit; 215 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, fw82.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 1120 | 1.9 | 3.7 | 6.6 |
+| allies (ai) | 1120 | 4.0 | 5.4 | 15.2 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 1120 | 2.7 | 8.7 | 19.5 |
+| allies (ai) | 1120 | 4.5 | 6.1 | 20.9 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 1120 | 1.8 | 3.5 | 5.0 |
+| allies (general) | 1120 | 4.4 | 11.9 | 23.3 |
+
+#### pc1long.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 21/40 (37-67%) | 8.7 ±1.2 | 0.7 ±0.2 | 0.9 ±0.3 | 14.6 ±1.4 | 5.7 ±1.2 | 20.9 ±6.3 | 6.7 ±1.0 |
+| allies (ai) | 40/40 (91-100%) | 29 tactical, 9 victory, 2 briliant | 39/40 (87-100%) | 6.8 ±0.8 | 1.8 ±0.2 | 4.1 ±0.3 | 5.7 ±1.2 | 14.6 ±1.4 | 3.1 ±0.8 | 15.8 ±2.2 |
+| ends: 1× capture t15, 23× limit, 1× capture t10, 4× capture t9, 1× capture t5, 3× capture t12, 1× capture t7, 2× capture t13, 3× capture t11, 1× capture t8; 129 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 0/40 (0-9%) | - | 22/40 (40-69%) | 10.0 ±1.4 | 0.8 ±0.2 | 1.3 ±0.3 | 5.5 ±0.9 | 14.5 ±1.4 | 7.4 ±2.4 | 0.0 ±0.0 |
+| allies (ai) | 40/40 (91-100%) | 33 tactical, 4 briliant, 3 victory | 35/40 (74-95%) | 8.1 ±1.2 | 1.5 ±0.3 | 3.7 ±0.3 | 14.5 ±1.4 | 5.5 ±0.9 | 9.8 ±2.4 | 4.7 ±1.0 |
+| ends: 27× limit, 2× capture t7, 3× capture t15, 1× capture t8, 2× capture t6, 1× capture t9, 2× capture t12, 1× capture t17, 1× capture t11; 183 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 6/40 (7-29%) | 12.5 ±2.0 | 0.1 ±0.1 | 1.9 ±0.1 | 15.3 ±0.8 | 4.3 ±0.7 | 102.0 ±80.2 | 6.5 ±1.2 |
+| allies (general) | 40/40 (91-100%) | 40 tactical | 6/40 (7-29%) | 13.5 ±4.2 | 0.2 ±0.2 | 3.0 ±0.1 | 4.3 ±0.7 | 15.3 ±0.8 | 21.3 ±16.5 | 0.0 ±0.0 |
+| ends: 40× limit; 165 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, pc1long.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 567 | 3.5 | 6.7 | 12.8 |
+| allies (ai) | 567 | 2.8 | 4.2 | 8.0 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 599 | 8.3 | 17.8 | 30.1 |
+| allies (ai) | 595 | 2.0 | 3.9 | 5.2 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 680 | 3.0 | 6.3 | 11.5 |
+| allies (general) | 680 | 4.7 | 10.6 | 20.0 |
+
+#### cm3kursk.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 34/40 (71-93%) | 16.8 ±0.8 | 0.9 ±0.1 | 1.8 ±0.1 | 47.8 ±2.0 | 48.1 ±1.6 | 54.6 ±8.5 | 76.3 ±5.7 |
+| allies (ai) | 40/40 (91-100%) | 40 tactical | 3/40 (3-20%) | 17.7 ±6.3 | 0.1 ±0.1 | 4.2 ±0.1 | 48.1 ±1.6 | 47.8 ±2.0 | 641.7 ±728.7 | 29.3 ±1.8 |
+| ends: 40× limit; 833 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 0/40 (0-9%) | - | 22/40 (40-69%) | 10.8 ±1.4 | 1.5 ±0.5 | 1.3 ±0.5 | 29.2 ±2.1 | 56.1 ±4.6 | 19.1 ±6.1 | 0.0 ±0.0 |
+| allies (ai) | 40/40 (91-100%) | 17 briliant, 21 tactical, 2 victory | 33/40 (68-91%) | 10.3 ±1.3 | 1.2 ±0.3 | 4.7 ±0.5 | 56.1 ±4.6 | 29.2 ±2.1 | 46.7 ±11.7 | 26.2 ±2.2 |
+| ends: 3× capture t8, 20× limit, 3× capture t5, 1× capture t17, 2× capture t9, 1× capture t15, 1× capture t4, 1× capture t12, 2× capture t10, 2× capture t7, 1× capture t11, 1× capture t13, 2× capture t6; 1823 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 0/40 (0-9%) | - | 36/40 (77-96%) | 14.3 ±0.6 | 1.0 ±0.1 | 1.9 ±0.2 | 47.7 ±1.7 | 41.1 ±1.4 | 48.9 ±6.8 | 98.2 ±6.1 |
+| allies (general) | 40/40 (91-100%) | 40 tactical | 3/40 (3-20%) | 18.3 ±7.2 | 0.1 ±0.1 | 4.1 ±0.2 | 41.1 ±1.4 | 47.7 ±1.7 | 548.7 ±628.2 | 0.0 ±0.0 |
+| ends: 40× limit; 1609 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, cm3kursk.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 800 | 15.6 | 34.9 | 43.4 |
+| allies (ai) | 800 | 15.2 | 36.2 | 48.1 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 575 | 99.9 | 250.7 | 729.1 |
+| allies (ai) | 574 | 16.3 | 40.1 | 121.2 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 800 | 15.4 | 29.5 | 33.3 |
+| allies (general) | 800 | 57.0 | 142.1 | 185.9 |
+
+#### lah_it_08.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 1/40 (0-13%) | 1 tactical | 20/40 (35-65%) | 8.1 ±1.5 | 0.9 ±0.4 | 1.5 ±0.4 | 13.9 ±3.4 | 50.3 ±9.4 | 15.0 ±6.4 | 67.9 ±10.9 |
+| allies (ai) | 39/40 (87-100%) | 26 tactical, 13 briliant | 18/40 (31-60%) | 4.3 ±1.7 | 0.5 ±0.2 | 3.5 ±0.4 | 50.3 ±9.4 | 13.9 ±3.4 | 111.8 ±57.7 | 17.2 ±3.1 |
+| ends: 26× limit, 11× capture t2, 1× capture t4, 1× capture t3, 1× capture t11; 407 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 30/40 (60-86%) | 14 victory, 16 tactical | 40/40 (91-100%) | 1.4 ±0.2 | 4.2 ±0.2 | 4.7 ±0.2 | 6.8 ±0.7 | 75.1 ±3.2 | 1.6 ±0.2 | 0.0 ±0.0 |
+| allies (ai) | 10/40 (14-40%) | 10 tactical | 15/40 (24-53%) | 8.1 ±1.1 | 0.5 ±0.3 | 0.3 ±0.2 | 75.1 ±3.2 | 6.8 ±0.7 | 143.1 ±66.9 | 17.8 ±2.3 |
+| ends: 3× capture t8, 8× capture t9, 3× capture t12, 3× capture t10, 10× limit, 5× capture t11, 4× capture t13, 4× capture t14; 1446 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 1/40 (0-13%) | 1 tactical | 27/40 (52-80%) | 10.3 ±0.7 | 1.1 ±0.3 | 2.0 ±0.3 | 18.4 ±1.4 | 60.5 ±2.8 | 16.4 ±5.2 | 95.3 ±4.6 |
+| allies (general) | 39/40 (87-100%) | 39 tactical | 3/40 (3-20%) | 12.0 ±2.5 | 0.1 ±0.1 | 3.0 ±0.3 | 60.5 ±2.8 | 18.4 ±1.4 | 807.3 ±925.9 | 0.0 ±0.0 |
+| ends: 39× limit, 1× capture t14; 1021 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, lah_it_08.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 404 | 21.4 | 27.9 | 34.2 |
+| allies (ai) | 403 | 10.6 | 23.0 | 27.9 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 465 | 108.9 | 205.0 | 249.9 |
+| allies (ai) | 435 | 9.7 | 21.3 | 29.7 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 560 | 22.4 | 29.9 | 34.4 |
+| allies (general) | 559 | 42.5 | 98.9 | 128.0 |
+
+#### it12baxe.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 28/40 (55-82%) | 28 tactical | 39/40 (87-100%) | 5.6 ±0.3 | 4.0 ±0.7 | 2.1 ±0.5 | 27.1 ±1.8 | 21.6 ±2.6 | 6.8 ±1.1 | 21.6 ±3.0 |
+| allies (ai) | 12/40 (18-45%) | 5 victory, 2 tactical, 5 briliant | 40/40 (91-100%) | 3.0 ±0.1 | 6.9 ±0.5 | 3.9 ±0.5 | 21.6 ±2.6 | 27.1 ±1.8 | 3.1 ±0.5 | 27.6 ±2.2 |
+| ends: 28× limit, 4× capture t16, 1× capture t23, 3× capture t12, 1× capture t20, 1× capture t22, 1× capture t14, 1× capture t13; 387 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 13/40 (20-48%) | 13 tactical | 20/40 (35-65%) | 14.7 ±2.2 | 1.0 ±0.4 | 0.7 ±0.4 | 19.4 ±0.9 | 14.3 ±1.5 | 19.4 ±8.1 | 0.0 ±0.0 |
+| allies (ai) | 27/40 (52-80%) | 15 briliant, 9 victory, 3 tactical | 40/40 (91-100%) | 6.1 ±0.5 | 5.3 ±0.3 | 5.3 ±0.4 | 14.3 ±1.5 | 19.4 ±0.9 | 2.7 ±0.3 | 26.1 ±2.3 |
+| ends: 13× limit, 3× capture t12, 2× capture t17, 4× capture t11, 1× capture t23, 1× capture t15, 2× capture t16, 1× capture t24, 1× capture t18, 3× capture t20, 1× capture t19, 2× capture t13, 2× capture t14, 3× capture t10, 1× capture t25; 375 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 40/40 (91-100%) | 39 tactical, 1 victory | 40/40 (91-100%) | 8.4 ±1.1 | 5.1 ±0.6 | 3.7 ±0.5 | 28.5 ±1.9 | 14.5 ±1.5 | 5.6 ±0.7 | 26.8 ±3.8 |
+| allies (general) | 0/40 (0-9%) | - | 40/40 (91-100%) | 3.0 ±0.4 | 6.4 ±0.8 | 2.3 ±0.5 | 14.5 ±1.5 | 28.5 ±1.9 | 2.3 ±0.4 | 0.0 ±0.0 |
+| ends: 37× limit, 2× capture t24, 1× capture t19; 579 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, it12baxe.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 892 | 6.3 | 10.9 | 14.6 |
+| allies (ai) | 892 | 5.1 | 9.8 | 12.8 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 739 | 10.9 | 23.5 | 51.7 |
+| allies (ai) | 738 | 5.1 | 8.8 | 10.6 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 992 | 4.5 | 8.0 | 12.5 |
+| allies (general) | 989 | 15.0 | 35.4 | 56.2 |
+
+#### dragrom06.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 19/40 (33-63%) | 19 tactical | 5/40 (5-26%) | 12.8 ±4.1 | 0.1 ±0.1 | 0.7 ±0.3 | 29.0 ±2.0 | 21.9 ±2.1 | 232.2 ±200.2 | 17.9 ±2.5 |
+| allies (ai) | 21/40 (37-67%) | 7 tactical, 11 victory, 3 briliant | 31/40 (62-88%) | 12.1 ±0.9 | 1.4 ±0.3 | 2.3 ±0.3 | 21.9 ±2.1 | 29.0 ±2.0 | 15.6 ±3.9 | 28.0 ±2.8 |
+| ends: 18× limit, 4× capture t16, 7× capture t13, 4× capture t14, 4× capture t15, 1× capture t11, 2× capture t12; 325 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 40/40 (91-100%) | 40 tactical | 0/40 (0-9%) | never | 0.0 ±0.0 | 1.9 ±0.1 | 12.8 ±1.6 | 26.9 ±2.4 | - | 0.0 ±0.0 |
+| allies (ai) | 0/40 (0-9%) | - | 2/40 (1-17%) | 15.5 ±6.4 | 0.1 ±0.1 | 1.1 ±0.1 | 26.9 ±2.4 | 12.8 ±1.6 | 539.0 ±763.1 | 17.4 ±2.5 |
+| ends: 40× limit; 486 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 21/40 (37-67%) | 21 tactical | 8/40 (10-35%) | 11.0 ±2.4 | 0.3 ±0.2 | 0.9 ±0.3 | 26.7 ±2.1 | 12.4 ±1.6 | 106.9 ±73.3 | 18.3 ±2.3 |
+| allies (general) | 19/40 (33-63%) | 5 tactical, 8 briliant, 6 victory | 27/40 (52-80%) | 10.4 ±1.1 | 1.4 ±0.4 | 2.1 ±0.3 | 12.4 ±1.6 | 26.7 ±2.1 | 9.0 ±2.8 | 0.0 ±0.0 |
+| ends: 3× capture t15, 21× limit, 3× capture t9, 1× capture t11, 2× capture t16, 5× capture t13, 1× capture t14, 2× capture t12, 2× capture t10; 650 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, dragrom06.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 594 | 11.2 | 21.3 | 29.6 |
+| allies (ai) | 593 | 6.9 | 10.1 | 14.0 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 640 | 20.4 | 43.5 | 53.3 |
+| allies (ai) | 640 | 6.9 | 10.6 | 14.3 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 574 | 11.2 | 21.1 | 29.2 |
+| allies (general) | 574 | 31.0 | 53.6 | 81.8 |
+
+#### drlutt26.xml, 40 seeds, remaster rules
+
+| side (player) | wins | victory levels | took an objective | first objective, turn | objectives taken | held at the end | units lost | destroyed | lost per objective | orders refused |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 39/40 (87-100%) | 39 tactical | 27/40 (52-80%) | 10.1 ±0.8 | 0.8 ±0.2 | 3.0 ±0.3 | 32.5 ±1.6 | 52.2 ±2.7 | 39.4 ±10.3 | 65.2 ±3.9 |
+| allies (ai) | 1/40 (0-13%) | 1 victory | 39/40 (87-100%) | 5.7 ±0.7 | 1.9 ±0.3 | 2.0 ±0.3 | 52.2 ±2.7 | 32.5 ±1.6 | 27.9 ±5.5 | 25.6 ±2.3 |
+| ends: 37× limit, 1× capture t12, 1× capture t10, 1× capture t11; 681 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **general vs ai** |  |  |  |  |  |  |  |  |  |  |
+| axis (general) | 40/40 (91-100%) | 40 tactical | 2/40 (1-17%) | 9.5 ±19.1 | 0.1 ±0.1 | 3.9 ±0.1 | 18.4 ±1.3 | 48.1 ±2.3 | 369.0 ±517.8 | 0.0 ±0.0 |
+| allies (ai) | 0/40 (0-9%) | - | 7/40 (9-32%) | 8.0 ±3.2 | 0.2 ±0.1 | 1.1 ±0.1 | 48.1 ±2.3 | 18.4 ±1.3 | 240.8 ±183.1 | 19.9 ±2.2 |
+| ends: 40× limit; 1214 ms a game |  |  |  |  |  |  |  |  |  |  |
+| **ai vs general** |  |  |  |  |  |  |  |  |  |  |
+| axis (ai) | 40/40 (91-100%) | 39 tactical, 1 victory | 38/40 (83-99%) | 7.0 ±0.7 | 2.2 ±0.4 | 2.8 ±0.3 | 34.0 ±1.8 | 41.7 ±2.0 | 15.4 ±2.4 | 61.0 ±4.3 |
+| allies (general) | 0/40 (0-9%) | - | 40/40 (91-100%) | 2.0 ±0.1 | 3.4 ±0.4 | 2.2 ±0.3 | 41.7 ±2.0 | 34.0 ±1.8 | 12.2 ±1.6 | 0.0 ±0.0 |
+| ends: 39× limit, 1× capture t10; 1487 ms a game |  |  |  |  |  |  |  |  |  |  |
+
+Planning time, drlutt26.xml: the ms each side's controller took a turn
+
+| side (player) | turns | ms a turn | 95th percentile | worst |
+| --- | --- | --- | --- | --- |
+| **ai vs ai** |  |  |  |  |
+| axis (ai) | 477 | 27.5 | 39.0 | 50.2 |
+| allies (ai) | 475 | 13.7 | 25.4 | 32.8 |
+| **general vs ai** |  |  |  |  |
+| axis (general) | 480 | 80.7 | 162.8 | 300.2 |
+| allies (ai) | 480 | 12.1 | 20.6 | 76.6 |
+| **ai vs general** |  |  |  |  |
+| axis (ai) | 478 | 27.0 | 39.1 | 56.8 |
+| allies (general) | 477 | 81.6 | 213.3 | 266.2 |
+
+960 games on 3 processes in 211 s
+
+
+What it says:
+
+- **As an attacker the AI is weakest in the scenarios where it must cross a front.** Against the
+  general's defence it takes 0.1 to 1.1 objectives a game in Ostpreussen, Indochina, Zitadelle, Uman,
+  Taman and Luttich, where the general attacking takes 0.8 to 4.2 (Luttich 3.4 against 0.2, Uman 4.2
+  against 1.1), and it loses far more units for each objective (Ostpreussen 12.2 against 2.2). It
+  attacks better than the general in two: Battleaxe (it wins 27 of 40 as the allies, the general none)
+  and Bzura (it loses fewer units per objective, 0.8 against 1.3; it takes fewer, 6.3 against 7.2).
+- **As a defender it holds out but loses more units, and falls apart in two scenarios.** It holds
+  out in every game against the general's attack in Ostpreussen, Bzura, Indochina, Zitadelle, Battleaxe
+  and Luttich. It holds as many objectives at the end as the general defending, or more, except in
+  Ostpreussen (3.8 against 4.3) and Luttich (2.8 against 3.9), but it loses more units in every
+  scenario (Luttich 34.0 against 18.4, Bzura 13.4 against 8.1). Against the general attacking, its Uman defence wins 10 of 40 (the general's wins 39 of 40
+  against the AI's attack) and holds 0.3 objectives at the end; in Taman it wins 21 of 40 (the
+  general's 40).
+- **The win rate carries no signal in five scenarios.** The remaster's rule (#256) makes an attacker
+  that hasn't taken every objective lose at the turn limit, so the defender wins every game of the
+  AI against the general in Ostpreussen, Bzura, Indochina, Zitadelle and Luttich, and the attacker
+  wins none (0/40 in each). Read the objectives taken and the lost per objective for the attacker, the
+  objectives held at the end and the units lost for the defender. Uman (attacker) is the same:
+  1 win in 40. The win rate does carry signal in Uman as the defender, in Taman and in Battleaxe.
+  Where a side took objectives in few games (the AI attacking in Taman, Luttich and Indochina),
+  "lost per objective" has an interval wider than its value: read the objectives taken.
+- **The AI wastes orders:** 17 to 98 a game (Zitadelle 98.2 as the axis against the general, Uman
+  95.3, Luttich 61 to 65), the general none. The AI plans its turn at its start (#94).
+- **The time budget is far off.** The classic AI plans a turn on Zitadelle, the largest scenario, in
+  15.6 ms on average (the axis; 15.2 the allies), 95th percentile 36 ms, worst 121 ms. A game of
+  Zitadelle takes 0.8 s of AI against AI (the general makes it 1.6 to 1.8 s with its own
+  planning, 57 to 100 ms a turn). The budget of 2 s a turn and 10 s a game leaves about 100 times the
+  classic AI's turn.
+- **The numbers move with the opponent:** the AI's value on a side is its play against the general,
+  the general's against the AI, so a gap includes the other side's play (the general defends better
+  than the AI, and attacks better in most scenarios).
+
 ## Baseline, 24 October 2026
+
+Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the
+first general. History: the numbers to read are the 30 October baseline above.
 
 Panzer-Verbaende Ostpreussen (drpzop01.xml): Germany (axis) attacks, Poland (allies) defends. Of
 the 7 objectives Germany holds 2 at the start and has 5 to take; Poland has Germany's 2 to take.
