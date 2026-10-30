@@ -95,6 +95,9 @@ export interface Ruleset {
 	//An upgrade to equipment no transport carries takes a mounted unit off its transport (#546): false in the
 	//classic rules, where it stays mounted with no transport
 	unmountsWithoutTransport: boolean;
+	//A mounted anti-tank, flak, artillery or air-defence unit can't capture a hex (#544): false in the classic
+	//rules, where the class tested is its transport's, so it can
+	mountedGunsDontCapture: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }
