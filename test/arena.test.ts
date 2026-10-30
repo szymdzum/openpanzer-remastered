@@ -1,9 +1,10 @@
 //The AI arena (#46, test/arena/): games played headless, the AI against the AI and against the scripted
 //general (#236), and what each side achieved. Off unless ARENA=1 (a few minutes): `npm run arena` prints
 //the tables docs/ai/arena.md keeps, every measure with its 95% interval, and the time each side planned a turn.
-//ARENA_SUITE=1 plays the suite (#604); ARENA_FILES (comma separated), ARENA_SEEDS and ARENA_MATCHUPS pick the
-//games, ARENA_RULES the rules (remaster, or classic: #53), JOBS the processes; ARENA_OUT writes every game's
-//result as JSON. One game always runs, to keep the general playing, and one in a worker process
+//ARENA_SUITE=1 plays the suite (#604); ARENA_FILES (comma separated), ARENA_SEEDS (how many), ARENA_SEED_FROM (the
+//first, 1 by default) and ARENA_MATCHUPS pick the games, ARENA_RULES the rules (remaster, or classic: #53), JOBS the
+//processes; ARENA_OUT writes every game's result as JSON. One game always runs, to keep the general playing, and
+//one in a worker process
 import fs from "node:fs";
 import { expect, test } from "vitest";
 import { type GameResult, isPlayer, type Match, type Player, playMatch } from "./arena/arena";
@@ -44,7 +45,7 @@ function matchups(): [Player, Player][] {
 
 test.runIf(!!env.ARENA)("The AI arena", async () => {
 	const files = env.ARENA_FILES ? env.ARENA_FILES.split(",") : env.ARENA_SUITE ? SUITE : ["drpzop01.xml"];
-	const seeds = Array.from({ length: +(env.ARENA_SEEDS || (env.ARENA_SUITE ? 40 : 10)) }, (_, i) => i + 1);
+	const seeds = Array.from({ length: +(env.ARENA_SEEDS || (env.ARENA_SUITE ? 40 : 10)) }, (_, i) => i + +(env.ARENA_SEED_FROM || 1));
 	const rules = env.ARENA_RULES === "classic" ? "classic" : "remaster";
 	const sides = matchups(), jobs = +(env.JOBS || 3);
 	const matches = files.flatMap((file) => sides.flatMap((s) => seeds.map((seed): Match => ({ file, sides: s, seed, rules }))));
