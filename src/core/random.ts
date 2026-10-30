@@ -1,7 +1,7 @@
 /**
- * Rng: the random numbers, in streams. The game stream: the combat dice (GameRules.rollDice), the leaders
- * and the prototypes a scenario awards. The AI stream: the AI's purchases and scores. The cosmetic stream:
- * the UI's sprite and sound picks and its debug dossier.
+ * Rng: the random numbers, in streams. The game stream: the combat dice (GameRules.rollDice), the leaders,
+ * the prototypes a scenario awards and the remaster's weather. The AI stream: the AI's purchases and scores. The
+ * cosmetic stream: the UI's sprite and sound picks and its debug dossier.
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html

@@ -108,6 +108,9 @@ export interface Ruleset {
 	//An enemy zone of control doesn't stop a recon unit, as the manual says (#4): false in the classic rules,
 	//where it stops every ground unit
 	reconIgnoresZoc: boolean;
+	//The weather changes at each new round, by the scenario's weather zone and month (weather.ts, #591), as the
+	//manual has it: false in the classic rules, where the scenario's start weather lasts to the end
+	weatherChanges: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

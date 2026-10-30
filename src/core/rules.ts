@@ -52,6 +52,7 @@ export const classicRules: Ruleset = {
 	mountedGunsDontCapture: false,
 	checksTheShop: false,
 	reconIgnoresZoc: false,
+	weatherChanges: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -84,6 +85,8 @@ export const remasterRules: Ruleset = {
 	//A recon unit enters an enemy zone of control for the hex's cost and moves on; a hidden enemy still
 	//surprises it (#4)
 	reconIgnoresZoc: true,
+	//The weather changes from round to round, in fronts that last, by the area and the month (#591)
+	weatherChanges: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

@@ -57,6 +57,7 @@ The derived parts are a cache beside the state, never saved; a step rebuilds the
 | `state.ts` | the state's and the data's types: `GameState`, `UnitState`, `ScenarioData`, `SavedGame`... (types) |
 | `command.ts` | `Command`, `CommandType`, `CommandOf` and `Refusal`: the player's actions as plain data (types) |
 | `tables.ts` | the enums and tables the rules read: unit classes, terrain, movement tables, leaders, scores, prices, `aiDefaultConfig` (Nicu Pavel's `prototypes.js`, split) |
+| `weather.ts` | the weather's change at a new round in the remaster's rules, by weather zone and month (#591) |
 | `random.ts` | the random streams (`Rng`, `nextRandom`): the game's, the AI's and the cosmetic one |
 | `fight.ts` | an attack: each shot resolved then applied, the attack's finish (destroyed, retreat, surrender, elimination), the surprise attack |
 | `moves.ts` | a move: the path walked, the surprise, the capture, the fuel and points, the undo it leaves |
@@ -193,16 +194,16 @@ command plays as with nothing selected.
 `step(world, { type: "endTurn" })` is Actions.endTurn without the AI: the time of day (a day later
 after the day's last turn, the date counted in local time as the old engine counts it), the player's
 end of turn (the turn played, the prestige the scenario gives for the next turn, the score), the
-undo gone, the next player by id. When the first player is next, a new round: the turn counter, and
-each unit in the list's order gets off its transport (spotting again, marking what it sees), takes
+undo gone, the next player by id. When the first player is next, a new round: the turn counter, in
+the remaster's rules the weather (`weather.ts`, one draw from the game stream, #591), and each unit in the list's order gets off its transport (spotting again, marking what it sees), takes
 the turn start's resupply (in a city with no enemy around; #95 kept) and ends its turn
 (`unitEndTurn`: entrenchment, its points and flags back, and hidden again unless its enemy sees its
 hex; #75: the old game asked the side the screen showed, so that side's units stayed seen for good
 once they had fired, and the AI kept shooting at them in the fog). Events: `turnEnded` (the prestige), `unmounted`, `resupplied`,
 `turnStarted` (turn, date, time of day), and `turnLimit` when the side that ended has played its
 last turn. The game ends there only for a side that plays on this screen (Game's local side): that
-is the session's to decide, as the side shown is. The ground and the weather don't change during a
-scenario; the move costs follow `state.scenario.ground` through the ruleset's tables.
+is the session's to decide, as the side shown is. The ground doesn't change during a scenario, nor
+the weather in the classic rules; the move costs follow `state.scenario.ground` through the ruleset's tables.
 
 **The reinforcements are a step of their own:** `arriveReinforcements(world)` (turn.ts) places the
 current player's reinforcements due by this turn, by turn then as listed, each on its hex or the

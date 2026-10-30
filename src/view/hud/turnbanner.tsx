@@ -40,7 +40,9 @@ export function TurnBanner({ store }: { store: Pick<Store, "briefing" | "openDos
 				<div class="cell obj"><span class="pm-label">Objectives</span><span class="n">{report.objectives}<span class="u"> left</span></span></div>
 				<TurnsToWin report={report} />
 				<div class="cell"><span class="pm-label">Prestige</span><span class="n pm-prestige">{report.prestige}<span class="u"> +{report.next} next</span></span></div>
-				<div class="cell"><span class="pm-label">Ground</span><span class="n sm"><Icon name={report.ground.icon} size="sm" />{report.ground.word}</span></div>
+				<div class="cell"><span class="pm-label">Weather</span>
+					<span class="n sm"><Icon name={report.weather.icon} size="sm" />{report.weather.word}</span>
+					<span class="n sm"><Icon name={report.ground.icon} size="sm" />{report.ground.word}</span></div>
 			</div>
 			<div class="ft">
 				<span class="pm-label">Enemy turn</span>

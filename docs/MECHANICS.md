@@ -205,8 +205,33 @@ still reinforce.
 
 Only the ground condition has an effect: mud and frozen ground change the movement costs
 (`Scenario` sets the movement table, scenario.ts). The atmospheric weather (fair, overcast,
-rain, snow) is shown in the status bar and the turn summary but changes nothing in combat,
+rain, snow) is shown in the status bar and the turn report but changes nothing in combat,
 movement or spotting (`//TODO Weather` in `calculateAttackResults`).
+
+In the classic rules the scenario's start weather lasts to the end. In the remaster's (#591) it
+changes, as the manual says: "Weather is randomly determined based on actual weather conditions for
+the area and month of the year in which a battle occurs. [...] Storm fronts can last for a number of
+days and have the possibility of generating only overcast weather or becoming rainstorms or
+snowstorms. It never rains or snows in North Africa." (src/core/weather.ts)
+
+- The first turn plays the scenario's start weather. Each new round after it, before the turn
+  start's resupply, one draw from the game stream may move the sky one step: fair to overcast,
+  overcast to a storm or back to fair, a storm back to overcast.
+- The chances come from the scenario's weather zone (its `latitude`) and the round's month. The
+  zones, from the scenarios that use them: 0 North Africa (the desert, also East Africa and a few
+  Pacific scenarios), 1 the Mediterranean and the Balkans (Sicily, Salerno, Crete, Greece), 2 western
+  and central Europe (Normandy, the Ardennes, Market Garden), 3 Russia and eastern Europe
+  (Barbarossa, Kursk, Stalingrad).
+- A front comes (fair to overcast) with 4-25% a round, by zone and month, least in a southern summer;
+  an overcast sky turns to a storm with 10-50% and clears with 30%; a storm eases with 40%, so it
+  lasts 2-3 rounds on average. The summer is fair more than half of the time, the winter and the
+  east's spring and autumn a third stormy.
+- A storm is snow on frozen ground, rain otherwise, and keeps its kind until it eases. The
+  scenarios set frozen ground for their winters (33 of the 35 that start in snow), never in the
+  Pacific, which shares the zones with Europe: so the month doesn't decide it. The
+  desert zone never turns overcast into a storm: no rain or snow there (a desert scenario that starts
+  in rain clears in time).
+- The ground stays as the scenario sets it.
 
 ## Tactics
 
@@ -335,6 +360,7 @@ The manual describes rules the code doesn't have (or a different version of them
 |--------|------|
 | Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
 | Bad weather reduces spotting | Spot range only from equipment and leaders |
+| The weather changes with the area and the month; storm fronts last days; no rain or snow in North Africa | The classic rules keep the start weather; the remaster changes it each round by weather zone and month, in fronts (#591) |
 | Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience | Equipment only in the classic rules; the remaster caps it with the defender's terrain (#14). Experience still doesn't change it (it gives +1 av and dv per level instead) |

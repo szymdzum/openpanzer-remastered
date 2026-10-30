@@ -15,6 +15,7 @@ import { reachedTurnLimit, unitEndTurn } from "../turn";
 import { unitById } from "../world";
 import { refill } from "./supply";
 import { setMounted } from "./transport";
+import { changeWeather } from "../weather";
 
 //Player.endTurn: the turn played, the prestige the scenario gives for the next turn (turn 1's at the
 //start), the score for the turn
@@ -57,7 +58,7 @@ function newRound(d: Draft) {
 }
 
 //Actions.endTurn: the time of day, then the player's end of turn, the undo gone, the next player (by
-//id, the first after the last); a new round when it is the first. turnLimit: the side that ended
+//id, the first after the last); a new round, its weather first, when it is the first. turnLimit: the side that ended
 //played its last turn. Never refused
 export const endTurn: CommandHandler<CommandOf<"endTurn">> = {
 	check() {
@@ -71,6 +72,8 @@ export const endTurn: CommandHandler<CommandOf<"endTurn">> = {
 		t.currentPlayer = ended + 1 < d.state.players.length ? ended + 1 : 0;
 		if (t.currentPlayer === 0) {
 			t.turn++;
+			//The new round's weather, before its resupply: the round's only draw from the game stream here
+			if (d.rules.weatherChanges) changeWeather(d);
 			newRound(d);
 		}
 		const s = d.state.scenario;
