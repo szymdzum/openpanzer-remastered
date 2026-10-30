@@ -9,6 +9,8 @@ import { reinforceValue } from "../src/core/supply";
 import { isTransportable } from "../src/core/units";
 import { Equipment } from "../src/legacy/equipment";
 import { aiDefaultConfig, unitClass } from "../src/core/tables";
+import { classicRules, remasterRules } from "../src/core/rules";
+import type { Ruleset } from "../src/core/types";
 import { smallGameData } from "./smallgame";
 
 //The small game with a free deployment hex for the Soviet side, at 10,9
@@ -114,4 +116,23 @@ test("The AI buys no units while its side has no free deployment hex (#287)", ()
 	expect(played.world.state.players[1].prestige).toBe(prestige);
 	expect(played.world.state.players[1].core).toEqual([]);
 	expect(boughtWith(prestige).bought.length).toBeGreaterThan(0);
+});
+
+//The original's AI checks only when a model is built (reference/src/ai.js:571), so in the classic rules it buys models
+//already out of service; in the remaster's the shop is checked and it never sends a buy the check refuses (#444)
+test("The remaster's AI buys nothing out of service, the classic AI still does (#444)", () => {
+	const bought = (rules: Ruleset) => {
+		const saved = withDeployment();
+		saved.state.scenario.date = "1944-06-22T00:00:00.000Z";
+		saved.state.players[1].prestige = 20000;
+		saved.state.turn.currentPlayer = 1;
+		const w = createWorld(saved, Equipment.equipment, { rules });
+		const events = aiController(1, { config: aiDefaultConfig }).startTurn(w).events;
+		return events.filter((e): e is Extract<GameEvent, { type: "bought" }> => e.type === "bought");
+	};
+	const expired = (b: { eqid: number; transport: number }) => [b.eqid, b.transport].some((e) => e > 0 && Equipment.equipment[e].yearexpired < 1944);
+	const classic = bought(classicRules), remaster = bought(remasterRules);
+	expect(classic.some(expired)).toBe(true);
+	expect(remaster.length).toBeGreaterThan(0);
+	expect(remaster.filter(expired)).toEqual([]);
 });

@@ -217,11 +217,11 @@ function pickTransport(b: Buying, eqid: number, prestige: number): number {
 }
 
 //Whether it buys it now; if not, buyUnits drops it from this purchase's list: too dear for what is
-//left, outside its price range, deep naval, not yet built.
+//left, outside its price range, deep naval, not yet built (out of service too, where the shop is checked).
 function canBuy(w: World, eqid: number, prestige: number, config: AIConfig, year: number): boolean {
 	const cost = unitCost(w, eqid), e = w.equipment[eqid];
 	return !(cost > prestige || cost > config.maxUnitCost || cost < config.minUnitCost || e.movmethod === movMethod.deepnaval
-		|| e.yearavailable > year);
+		|| e.yearavailable > year || (w.rules.checksTheShop && e.yearexpired < year));
 }
 
 interface AIUnit {

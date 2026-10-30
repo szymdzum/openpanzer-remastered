@@ -17,6 +17,7 @@ function upgradedGun(rules: Ruleset) {
 		{ eqid: 273, owner: 1, row: 3, col: 6 },
 	] }, undefined, { rules, noFOW: true });
 	w.state.players[0].prestige = 5000;
+	w.state.scenario.date = "1944-06-01T00:00:00.000Z"; //(the Marder III H is in service)
 	const r = step(w, { type: "upgrade", unit: 0, eqid: MARDER_III_H, transport: 0 });
 	if (r.ok === false) throw new Error(r.refusal.reason);
 	return { world: r.world, unit: r.world.state.units[0] };

@@ -98,6 +98,10 @@ export interface Ruleset {
 	//A mounted anti-tank, flak, artillery or air-defence unit can't capture a hex (#544): false in the classic
 	//rules, where the class tested is its transport's, so it can
 	mountedGunsDontCapture: boolean;
+	//Buy and upgrade refuse what the equipment window never offered (#444): a model out of service, an older or
+	//other country's one, the campaign player's other countries' models. False in the classic rules, which check
+	//only the prestige
+	checksTheShop: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }

@@ -10,7 +10,7 @@ import { movMethod, terrainType, unitClass } from "../tables";
 import { sellCost, unitCost, upgradeCost } from "../costs";
 import { deploymentHexes } from "../deployment";
 import { changeUnit, emit, place, removeUnit, writePlayer } from "../draft";
-import type { CoreUnit, Draft, CommandHandler, OffMapUnit, World } from "../types";
+import type { CoreUnit, Draft, CommandHandler, OffMapUnit, PlayerState, World } from "../types";
 import { isAir, isTransportable } from "../units";
 import { hexIndex, onMap, unitById } from "../world";
 import { asUnit, coreAt, coreUnitOf, currentPlayer, playerAt, refuse, unitCheck } from "./common";
@@ -29,11 +29,42 @@ function sameClass(w: World, u: OffMapUnit, eqid: number): boolean {
 	return oldClass === newClass;
 }
 
+/** Whether the model is in service on the scenario's date. */
+export function inService(w: World, eqid: number): boolean {
+	const year = new Date(w.state.scenario.date).getFullYear(), e = w.equipment[eqid];
+	return e.yearavailable <= year && e.yearexpired >= year;
+}
+
+/**
+ * Why the equipment window doesn't sell the model (with the transport) to the player: out of service on the scenario's
+ * date, or, for the campaign's own player, not of the campaign's country (the AI's countries in a campaign are free).
+ */
+export function buyRefusal(w: World, player: PlayerState, eqid: number, transport: number): Refusal | null {
+	if (!inService(w, eqid) || (transport > 0 && !inService(w, transport))) return refuse("out of service");
+	const campaign = w.state.campaign;
+	return campaign !== null && campaign.country === player.country && player.country !== +w.equipment[eqid].country - 1
+		? refuse("not your country's") : null;
+}
+
+/**
+ * Why the equipment window doesn't upgrade the unit that way: another country's model, out of service, or no
+ * dearer than the unit (a downgrade, or nothing to change).
+ */
+export function upgradeRefusal(w: World, u: OffMapUnit, eqid: number, transport: number): Refusal | null {
+	if (eqid > 0 && eqid !== u.eqid) {
+		if (+w.equipment[eqid].country !== +w.equipment[u.eqid].country) return refuse("not the same country");
+		if (!inService(w, eqid)) return refuse("out of service");
+	}
+	if (transport > 0 && !inService(w, transport)) return refuse("out of service");
+	return upgradeCost(w, asUnit(u), eqid, transport) > 0 ? null : refuse("nothing to upgrade");
+}
+
 //Player.upgradeUnit's tests
 function upgradeCheck(w: World, u: OffMapUnit, prestige: number, cmd: { eqid: number; transport: number }): Refusal | null {
 	if (!known(w, cmd.eqid) || !known(w, cmd.transport)) return refuse("no such equipment");
 	if (upgradeCost(w, asUnit(u), cmd.eqid, cmd.transport) > prestige) return refuse("not enough prestige");
-	return sameClass(w, u, cmd.eqid) ? null : refuse("not the same class");
+	if (!sameClass(w, u, cmd.eqid)) return refuse("not the same class");
+	return w.rules.checksTheShop ? upgradeRefusal(w, u, cmd.eqid, cmd.transport) : null;
 }
 
 function newTransport(w: World, eqid: number): OffMapUnit["transport"] {
@@ -123,6 +154,10 @@ export const buy: CommandHandler<CommandOf<"buy">> = {
 	check(w, cmd) {
 		if (!(cmd.eqid > 0) || !known(w, cmd.eqid) || !known(w, cmd.transport)) return refuse("no such equipment");
 		if (unitCost(w, cmd.eqid, cmd.transport) > currentPlayer(w).prestige) return refuse("not enough prestige");
+		if (w.rules.checksTheShop) {
+			const offer = buyRefusal(w, currentPlayer(w), cmd.eqid, cmd.transport);
+			if (offer !== null) return offer;
+		}
 		const air = w.equipment[cmd.eqid].movmethod === movMethod.air;
 		return deployHexesOf(w, cmd.eqid).some((hex) => freeFor(w, hex, air)) ? null : refuse("no free deployment hex");
 	},
