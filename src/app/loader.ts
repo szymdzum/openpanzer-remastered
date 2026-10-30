@@ -56,6 +56,7 @@ export class ScenarioLoader {
 						parseScenario(null);
 				}
 			}
+			xmlHttp.onerror = xmlHttp.onabort = loadFailed;
 			xmlHttp.open("GET", url, true);
 			xmlHttp.send(null);
 		}
