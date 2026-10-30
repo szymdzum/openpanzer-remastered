@@ -51,6 +51,7 @@ export const classicRules: Ruleset = {
 	unmountsWithoutTransport: false,
 	mountedGunsDontCapture: false,
 	checksTheShop: false,
+	reconIgnoresZoc: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -80,6 +81,9 @@ export const remasterRules: Ruleset = {
 	mountedGunsDontCapture: true,
 	//Buy and upgrade offer only what the equipment window did, for the AI too (#444)
 	checksTheShop: true,
+	//A recon unit enters an enemy zone of control for the hex's cost and moves on; a hidden enemy still
+	//surprises it (#4)
+	reconIgnoresZoc: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

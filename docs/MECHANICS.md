@@ -116,7 +116,10 @@ then assault, then overrun with tanks.
   enemy's ZOC stops the move (`getMoveRange`), whether or not the side sees the unit casting the
   zone: a hidden enemy's zone stops it too, as in the original (#282), so the move range can end
   next to a unit the player doesn't see. A hex the side doesn't spot doesn't stop it. The hex costs
-  its terrain, and the unit, recon included, has no points left (#214). Air units ignore ZOC.
+  its terrain, and the unit has no points left (#214). Air units ignore ZOC. In the remaster's rules
+  a recon unit ignores it, as the manual says (#4): it pays the hex's terrain cost and goes on (its
+  split movement stays), and a hidden enemy still surprises it. The AI's moves, the path and the
+  preview all read the same move range.
 - Moving into a hidden enemy is a surprise: the combat goes badly and the move ends. The mover
   attacks the hidden unit of its own kind that stopped it (an aircraft the aircraft, a tank the
   ground unit), whatever the screen's air mode shows.
@@ -332,7 +335,7 @@ The manual describes rules the code doesn't have (or a different version of them
 |--------|------|
 | Rain and snow halve ground attacks; no air attacks in overcast, rain or snow | No effect of the atmospheric weather at all |
 | Bad weather reduces spotting | Spot range only from equipment and leaders |
-| Recon ignores zone of control | ZOC stops every ground unit; recon only has split movement |
+| Recon ignores zone of control | Classic rules: ZOC stops every ground unit; recon only has split movement. The remaster's rules follow the manual (#4) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience | Equipment only in the classic rules; the remaster caps it with the defender's terrain (#14). Experience still doesn't change it (it gives +1 av and dv per level instead) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |

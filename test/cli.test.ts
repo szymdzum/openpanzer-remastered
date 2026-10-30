@@ -126,7 +126,8 @@ test("An enemy the side doesn't see can't be attacked by its id: the answer is a
 
 test("The moves are the screen's move range, and a move's check agrees with them (#279)", async () => {
 	const call = caller(tmpGame());
-	await call("new drpzop01.xml --seed 1");
+	await call("new drpzop01.xml --seed 1 --rules classic");
+	//(the classic rules: the remaster's recon ignores a zone of control)
 	//the Psw 231(8) at 1,10: 2,14 is spotted and in the hidden bunker's zone of control (2,15), which stops
 	//a move there, as the screen's range has it: 2,15 isn't in reach
 	const range = await call("moves 1");
