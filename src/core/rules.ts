@@ -48,6 +48,7 @@ export const classicRules: Ruleset = {
 	defenderHoldsOut: false,
 	captureNeedsObjectives: false,
 	unmountsWithoutTransport: false,
+	mountedGunsDontCapture: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -71,6 +72,8 @@ export const remasterRules: Ruleset = {
 	//A defender that had no objective to take at the start doesn't win by retaking one it lost (#91)
 	captureNeedsObjectives: true,
 	unmountsWithoutTransport: true,
+	//A mounted gun doesn't capture: its own class is tested, not its transport's (#544)
+	mountedGunsDontCapture: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

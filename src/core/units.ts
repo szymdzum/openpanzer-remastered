@@ -87,7 +87,8 @@ export function canEntrench(w: World, u: UnitState): boolean {
 /** Whether the unit can capture a hex: air units and mounted guns can't. */
 export function canCapture(w: World, u: UnitState): boolean {
 	if (isAir(w, u)) return false;
-	const uclass = unitData(w, u).uclass;
+	//Kept bug (#544) in the classic rules: a mounted gun's class is its transport's, so it can capture
+	const uclass = unitData(w, u, w.rules.mountedGunsDontCapture).uclass;
 	return !(u.isMounted && (uclass === unitClass.antiTank || uclass === unitClass.flak
 		|| uclass === unitClass.artillery || uclass === unitClass.airDefence));
 }
