@@ -1,10 +1,9 @@
 // @vitest-environment node
 //The remastered AI's perception and analysis (src/core/remastered/, #610): what a side sees and remembers of the
 //enemy, and the maps it reads (influence, front, threat, distances, supply), on hand-built maps; and its
-//controller, which plays the classic AI's commands while it computes them
+//controller, which computes them at each of its turns
 import { JSDOM } from "jsdom";
 import { expect, test } from "vitest";
-import { aiController } from "../src/core/ai";
 import type { Controller } from "../src/core/controller";
 import { createWorld } from "../src/core/create";
 import { distance } from "../src/core/geometry";
@@ -144,7 +143,7 @@ test("the supply map is 0 on the side's own city and grows away from it (#610)",
 });
 
 //A few turns of Panzer-Verbaende Ostpreussen played by two controllers of each side: every order given
-function orders(make: (player: number) => Controller, turns = 3): { orders: unknown[]; state: unknown } {
+function orders(make: (player: number) => Controller, turns = 3): { orders: unknown[] } {
 	const setup = { ...setupOf("drpzop01.xml", { game: 5, ai: 5 + 7919 }, null, undefined, [], new new JSDOM().window.DOMParser()),
 		rules: remasterRules };
 	const created = newGame(setup);
@@ -157,21 +156,18 @@ function orders(make: (player: number) => Controller, turns = 3): { orders: unkn
 		if (a.kind === "ended") break;
 		given.push(a.kind === "order" ? a.order : { end: a.player, started: a.started?.commands });
 	}
-	return { orders: given, state: s.world.state };
+	return { orders: given };
 }
 
-test("the remastered controller plays the classic AI's commands (#610)", () => {
+//The commands it gives are no longer the classic AI's (#616): test/remastered-staff.test.ts
+test("the remastered controller analyses each of its turns (#610)", () => {
 	const made: ReturnType<typeof remasteredController>[] = [];
 	const remastered = orders((p) => {
 		const c = remasteredController(p);
 		made.push(c);
 		return c;
 	});
-	const classic = orders((p) => aiController(p));
 	expect(remastered.orders.length).toBeGreaterThan(50);
-	expect(remastered.orders).toEqual(classic.orders);
-	expect(remastered.state).toEqual(classic.state);
-	//and it analysed its turns beside them
 	expect(made.every((c) => c.analysis !== null && c.view !== null)).toBe(true);
 }, 60_000);
 

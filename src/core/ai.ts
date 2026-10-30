@@ -373,7 +373,8 @@ function nearSeenEnemy(w: World, u: UnitState, range: number): boolean {
 		&& seesUnit(w, other, side));
 }
 
-function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
+/** Whether the hex is next to an enemy ground unit the unit's side sees. */
+export function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
 	const side = sideOf(w, u);
 	return adjacent(cell.row, cell.col).some((c) => {
 		if (!onMap(w, c.row, c.col)) return false;
