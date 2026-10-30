@@ -164,7 +164,7 @@ test("End turn leaves the program's first step playing: the map waits for its be
 		command: () => {
 			//(the host ends the person's turn and plays the program's first attack, shown through the screen before it returns)
 			const before = w, attack = { type: "attack", unit: 1, target: 0 } as const;
-			const r = step(w, attack);
+			const r = step({ ...w, state: { ...w.state, turn: { ...w.state.turn, currentPlayer: 1 } } }, attack);
 			if ("refusal" in r) return { ok: false, refusal: r.refusal };
 			w = r.world;
 			holder.store!.showStep(before, r.events, () => {});

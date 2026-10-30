@@ -462,14 +462,14 @@ test("A retreat leaves nothing to undo, and an undo takes back only the current 
 	}
 	expect(seed).toBeLessThan(500);
 	expect(r!.world.state.turn.undoable).toBeNull();
-	expect(step(r!.world, { type: "undo", unit: 1 })).toEqual({ ok: false, refusal: { reason: "can't undo" } });
+	expect(step(r!.world, { type: "undo", unit: 1 })).toEqual({ ok: false, refusal: { reason: "not your unit" } });
 
 	//A move's undo, then the other player's turn: not theirs to take back
 	const apart = handWorld({ rows: 8, cols: 8, units: [{ eqid: PZ_IIA, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 0, col: 7 }] });
 	const moved = played(step(apart, { type: "move", unit: 0, to: { row: 5, col: 1 } }));
 	expect(moved.world.state.turn.undoable).toMatchObject({ unit: 0 });
 	const otherTurn = { ...moved.world, state: { ...moved.world.state, turn: { ...moved.world.state.turn, currentPlayer: 1 } } };
-	expect(step(otherTurn, { type: "undo", unit: 0 })).toEqual({ ok: false, refusal: { reason: "can't undo" } });
+	expect(step(otherTurn, { type: "undo", unit: 0 })).toEqual({ ok: false, refusal: { reason: "not your unit" } });
 });
 
 test("A move onto an enemy flag takes it, and the undo gives it back", () => {

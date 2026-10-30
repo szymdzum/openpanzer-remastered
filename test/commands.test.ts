@@ -363,3 +363,29 @@ test("An upgrade check refuses where the old engine's upgrade did nothing, and c
 		expect(state()).toBe(before);
 	}
 });
+
+test("A command for another player's unit is refused, and changes nothing (#545)", () => {
+	const foe = unitAt(7, 7), mine = unitAt(3, 3);
+	foe.transport = new Transport(Equipment.getCountryEquipmentByClass(unitClass.groundTransport, 20)[0]);
+	players[0].prestige = players[1].prestige = 1000;
+	const before = state();
+	const commands: Command[] = [
+		{ type: "move", unit: foe.id, to: reachable(foe) },
+		{ type: "move", unit: foe.id, to: reachable(foe), cells: GameRules.getMoveRange(map, foe) },
+		{ type: "attack", unit: foe.id, target: mine.id },
+		{ type: "disband", unit: foe.id },
+		{ type: "upgrade", unit: foe.id, eqid: foe.eqid, transport: -1 },
+		{ type: "resupply", unit: foe.id },
+		{ type: "reinforce", unit: foe.id },
+		{ type: "mount", unit: foe.id },
+		{ type: "unmount", unit: foe.id },
+		{ type: "embark", unit: foe.id },
+		{ type: "disembark", unit: foe.id },
+		{ type: "undo", unit: foe.id },
+	];
+	for (const cmd of commands) {
+		expect(refusal(cmd), cmd.type).toBe("not your unit");
+		expect(execute(scenario, cmd).ok, cmd.type).toBe(false);
+	}
+	expect(state()).toBe(before);
+});

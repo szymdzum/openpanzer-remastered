@@ -106,7 +106,6 @@ test("A plain exchange has its line and no stamp; a move with nothing to tell, n
 test("A combat the side shown doesn't see isn't told", () => {
 	//(the enemy's two units far from the side's only one, out of its sight)
 	const w = hand([{ eqid: PZ_IIA, owner: 0, row: 0, col: 0 }, { eqid: TP7, owner: 1, row: 8, col: 8 }, { eqid: PZ_IIA, owner: 1, row: 8, col: 7 }]);
-	w.state.turn.currentPlayer = 1;
 	w.state.units[2].owner = 0;
 	expect(play(w, 1, { type: "attack", unit: 2, target: 1 })).toBe(null);
 });

@@ -15,10 +15,11 @@ export function refuse(reason: string): Refusal {
 	return { reason };
 }
 
-//A unit in the unit list that passes rule (if given), or the refusal
+//A unit in the unit list that is the current player's and passes rule (if given), or the refusal
 export function unitCheck(w: World, id: number, rule?: (u: UnitState) => boolean, reason?: string): Refusal | null {
 	const u = unitById(w, id);
 	if (u === null) return refuse("no such unit");
+	if (u.owner !== w.state.turn.currentPlayer) return refuse("not your unit");
 	return !rule || rule(u) ? null : refuse(reason);
 }
 
