@@ -92,6 +92,9 @@ export interface Ruleset {
 	//(turn.ts winsByCapture, #91), as PG2 gives every side victory hexes of its own to take: false in the
 	//classic rules, where a defender that had none wins by retaking the one it lost
 	captureNeedsObjectives: boolean;
+	//The terrain of the defender's hex caps the initiative of both sides in a fight (terrainInitiative, #14),
+	//as the PG2 manual has it: false in the classic rules, where only the equipment's counts
+	terrainLimitsInitiative: boolean;
 	//An upgrade to equipment no transport carries takes a mounted unit off its transport (#546): false in the
 	//classic rules, where it stays mounted with no transport
 	unmountsWithoutTransport: boolean;

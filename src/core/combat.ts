@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { leaderType, roadType, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD, unitClass, unitEntrenchRate, unitType } from "./tables";
+import { leaderType, roadType, terrainInitiative, terrainType, UNIT_MAX_EXPERIENCE, UNIT_RETREAT_THRESHOLD, unitClass, unitEntrenchRate, unitType } from "./tables";
 import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";
@@ -114,6 +114,11 @@ export function rangeDefence(mod: number, apart: number, defenderRange: number):
 //Anti-tank that moved has no range defense, unless a tank killer
 function attackerRangeDefense(f: Fight): boolean {
 	return !(f.aData.uclass === unitClass.antiTank && f.atk.hasMoved && !hasLeader(f.world, f.atk, leaderType.tankKiller));
+}
+
+//A unit's initiative in a fight: the defender's terrain caps both sides', as the manual's unit statistics say
+function initiativeIn(f: Fight, initiative: number): number {
+	return f.world.rules.terrainLimitsInitiative ? Math.min(initiative, terrainInitiative[f.dTerrain]) : initiative;
 }
 
 /** The steps of an attack, in the order GameRules.calculateAttackResults applies them. */
@@ -256,7 +261,7 @@ export const classicCombat: CombatStep[] = [
 	} },
 	{ name: "initiative", run(f) {
 		const w = f.world;
-		let diff = f.aData.initiative - f.dData.initiative;
+		let diff = initiativeIn(f, f.aData.initiative) - initiativeIn(f, f.dData.initiative);
 		if (hasLeader(w, f.atk, leaderType.firstStrike)) diff = Math.abs(diff);
 		if (hasLeader(w, f.def, leaderType.firstStrike)) diff = -Math.abs(diff);
 		const edge = initiativeEdge(diff);

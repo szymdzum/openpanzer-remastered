@@ -47,6 +47,7 @@ export const classicRules: Ruleset = {
 	wholeLeaderList: false,
 	defenderHoldsOut: false,
 	captureNeedsObjectives: false,
+	terrainLimitsInitiative: false,
 	unmountsWithoutTransport: false,
 	mountedGunsDontCapture: false,
 	checksTheShop: false,
@@ -72,6 +73,8 @@ export const remasterRules: Ruleset = {
 	defenderHoldsOut: true,
 	//A defender that had no objective to take at the start doesn't win by retaking one it lost (#91)
 	captureNeedsObjectives: true,
+	//The defender's terrain caps both sides' initiative: a fast tank loses its edge in a city or a forest (#14)
+	terrainLimitsInitiative: true,
 	unmountsWithoutTransport: true,
 	//A mounted gun doesn't capture: its own class is tested, not its transport's (#544)
 	mountedGunsDontCapture: true,
