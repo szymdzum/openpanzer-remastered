@@ -18,7 +18,7 @@ import { moveRange } from "./movement";
 import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
-import type { MoveCell, Position, UnitState, World } from "./types";
+import type { MoveCell, Position, UnitId, UnitState, World } from "./types";
 import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
 import { groundUnitAt, hexIndex, onMap, sideOf, unitData } from "./world";
 import { seesUnit } from "./sight";
@@ -245,16 +245,28 @@ interface Planning {
 	stayShare: number;
 }
 
-//Artillery, fortifications, air and naval combat units go first, each given another pass (reinforce,
-//resupply, move, attack) until it can do nothing more. A unit that did nothing in its first pass
-//scores its moves again in the next (new draws: it may move then).
-function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number) {
+/** A turn's classic plan: its commands in order, the world with the AI stream after its draws, the prestige left. */
+export interface ClassicPlan {
+	world: World;
+	queue: Command[];
+	prestigeLeft: number;
+}
+
+const NO_UNITS: ReadonlySet<UnitId> = new Set();
+
+/**
+ * The classic plan of the player's turn, `held` left out: the units another planner orders (the remastered AI's
+ * staff). Artillery, fortifications, air and naval combat units go first, each given another pass (reinforce,
+ * resupply, move, attack) until it can do nothing more. A unit that did nothing in its first pass scores its moves
+ * again in the next (new draws: it may move then).
+ */
+export function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number, held = NO_UNITS): ClassicPlan {
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
 	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side) };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
-		if (u.owner !== player) continue;
+		if (u.owner !== player || held.has(u.id)) continue;
 		const a: AIUnit = { u, noAttack: false, noMove: false, noReinforce: false, noResupply: false, didAttack: false, didMove: false,
 			didResupplyReinforce: false, didMount: false, newPosition: null };
 		if (actsFirst(w, u)) units.unshift(a);
