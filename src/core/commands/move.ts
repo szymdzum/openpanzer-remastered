@@ -5,13 +5,13 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import type { CommandOf } from "../command";
+import type { CommandOf, Refusal } from "../command";
 import { emit } from "../draft";
 import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../fight";
 import { isInAttackRange, isTargetFrom } from "../attack";
-import { canEndMoveOn, pathTo, shortestPath } from "../movement";
+import { canEndMoveOn, moveRange, pathTo, shortestPath } from "../movement";
 import { moveUnit } from "../moves";
-import type { Checkpoint, CommandHandler, Draft, Position } from "../types";
+import type { Checkpoint, CommandHandler, Draft, Position, UnitState, World } from "../types";
 import { playerAt, refuse, unitCheck } from "./common";
 import { onMap, unitById } from "../world";
 
@@ -20,6 +20,18 @@ import { onMap, unitById } from "../world";
 
 type PathCells = readonly { row: number; col: number; cost: number }[];
 const cellsOf = (cells: Position[]) => cells as unknown as PathCells;
+
+//Every cell given is a cell of the range, at the same cost (a unit that has moved has none)
+function withinRange(range: readonly PathCells[number][], cells: PathCells): boolean {
+	return cells.every((c) => range.some((r) => r.row === c.row && r.col === c.col && r.cost === c.cost));
+}
+
+function pathCheck(w: World, u: UnitState, cmd: CommandOf<"move">): Refusal | null {
+	if (cmd.cells === undefined) return pathTo(w, u, cmd.to).length === 0 ? refuse("can't get there") : null;
+	const cells = cellsOf(cmd.cells);
+	if (!withinRange(moveRange(w, u), cells)) return refuse("not the unit's move range");
+	return shortestPath(u, cmd.to, cells).length === 0 ? refuse("can't get there") : null;
+}
 
 //To a hex the unit can reach and stop on (#74): along the cells given (the move range the player was
 //shown), or its move range now. Then the surprise attack, the capture's victory, the attack's finish
@@ -30,8 +42,7 @@ export const move: CommandHandler<CommandOf<"move">> = {
 		if (u.owner !== w.state.turn.currentPlayer) return refuse("not your unit");
 		if (!onMap(w, cmd.to.row, cmd.to.col)) return refuse("can't get there");
 		if (!canEndMoveOn(w, u, cmd.to)) return refuse("the hex is taken");
-		const path = cmd.cells !== undefined ? shortestPath(u, cmd.to, cellsOf(cmd.cells)) : pathTo(w, u, cmd.to);
-		return path.length === 0 ? refuse("can't get there") : null;
+		return pathCheck(w, u, cmd);
 	},
 	run(d, cmd) {
 		finishFrom(d, moveFirst(d, cmd));
