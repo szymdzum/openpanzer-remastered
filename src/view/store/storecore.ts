@@ -26,7 +26,13 @@ export function createCore(host: CoreHost, hooks: CoreHooks) {
 	//The layer shown: the air layer when true
 	const airMode = signal(false);
 
-	const refresh = () => { world.value = host.world(); };
+	//A unit that left the world (destroyed, sold, disbanded) is no longer selected
+	const refresh = () => {
+		const w = host.world();
+		world.value = w;
+		const id = selected.peek();
+		if (w !== null && id !== null && unitById(w, id) === null) selected.value = null;
+	};
 
 	//A person's command sent to the host. A played one shows its step, then its victories are told; refused, the reason
 	//comes back, which the status bar shows until the next command
