@@ -97,3 +97,17 @@ test.each([["equipment-country-0.json", "error"], ["equipment-country-31.json", 
 			restore();
 		}
 	});
+
+test("A scenario whose file fails to load tells the load failed (#551)", async () => {
+	const game = await freshGame();
+	const shown = failedLoads(game);
+	const restore = failRequests("pc1indi.xml", "error");
+	try {
+		game.newScenario("pc1indi.xml");
+		await until(() => shown.length > 0, "the load to fail", 5000);
+		expect(shown).toEqual(["pc1indi.xml"]);
+		expect([game.scenario.isLoaded, game.gameEnded]).toEqual([false, true]);
+	} finally {
+		restore();
+	}
+});
