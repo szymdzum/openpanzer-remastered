@@ -201,3 +201,23 @@ test("End turn ends at once when no unit can still act; the question counts one 
 	expect(stillToAct(["Pz IIA"])).toBe("1 unit can still move or fire: Pz IIA. End the turn?");
 	expect(stillToAct(["a", "b", "c", "d", "e", "f", "g", "h"])).toBe("8 units can still move or fire: a, b, c, d, e, f and 2 more. End the turn?");
 });
+
+test("A shortcut does nothing while End turn's question, the turn report or the dossier is open (#567)", async () => {
+	const w = handWorld({ rows: 10, cols: 10, units: UNITS }, undefined, { spotSide: 0 });
+	//(a campaign's state: the dossier is the campaign's)
+	const { store, sent } = railOf({ ...w, state: { ...w.state, campaign: { country: w.state.players[0].country } as never } });
+	await act(() => { store.clickHex({ row: 4, col: 3 }); });
+	const info = store.infoShown.value;
+	const windows: [string, () => void, () => void][] = [
+		["the question", () => store.askEndTurn(), () => store.answerEndTurn(false)],
+		["the turn report", () => store.openLog(), () => store.closeLog()],
+		["the dossier", () => store.openDossier(), () => store.closeDossier()],
+	];
+	for (const [name, open, close] of windows) {
+		await act(() => { open(); });
+		for (const code of ["KeyU", "KeyS", "KeyH", "KeyA", "KeyZ", "KeyN", "KeyI"]) await key(code);
+		expect([name, sent, store.hexGrid.value, store.airMode.value, store.strategic.value, store.selected.value, store.infoShown.value])
+			.toEqual([name, [], false, false, false, 0, info]);
+		await act(() => { close(); });
+	}
+});
