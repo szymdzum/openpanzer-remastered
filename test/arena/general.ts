@@ -10,7 +10,8 @@
 //     or onto its own objectives left empty (a defender); aircraft short of fuel back to an airfield.
 //     A ground unit on an objective its side holds never leaves it: it fires from there.
 //It sees what its side sees (fog of war) and asks the core whether an order is allowed (check) before
-//it gives it, so the session never refuses it.
+//it gives it, so the session never refuses it. Its doctrine (#605, Doctrine, docs/ai/arena.md) adds an
+//attacker's sector and reserve, garrisons and withdrawals, and the attacker's sense of time.
 import type { Command } from "../../src/core/command";
 import { terrainType, unitClass } from "../../src/core/tables";
 import { aiController } from "../../src/core/ai";
@@ -20,23 +21,59 @@ import type { Controller } from "../../src/core/controller";
 import { distance } from "../../src/core/geometry";
 import { moveRange } from "../../src/core/movement";
 import { check } from "../../src/core/step";
+import { attackerSide } from "../../src/core/turn";
 import type { MoveCell, Position, UnitState, World } from "../../src/core/types";
 import { canMount, isAir, isGround, unitUsesFuel } from "../../src/core/units";
-import { groundUnitAt, hexIndex, isSpotted, sideOf, unitById, unitData } from "../../src/core/world";
+import { groundUnitAt, hexIndex, sideOf, unitById, unitData } from "../../src/core/world";
+import { brokeThrough, enemyGround, GARRISON_TURNS, inReach, isLate, pickReserve, pickSector, rearScore, SECTOR_RADIUS, seen,
+	WORN } from "./doctrine";
 
 //What the general weighs: an attack is worth its expected kills less this much per expected loss
 const LOSS_WEIGHT = 0.7;
 //A target is chosen only when its units together expect at least this much (kills less losses)
 const TARGET_MIN = 1.5;
+//A defender's units are its line: a loss weighs as much as a kill (it counterattacks only when the estimate favours it)
+const DEFENCE_LOSS_WEIGHT = 1;
+//In the last turns the attacker pays more for the objectives still in reach
+const LATE_LOSS_WEIGHT = 0.4;
+//A target in the way of the sector's attack is worth this much more
+const SECTOR_TARGET_BONUS = 1;
+//A reserve unit is sent to a threatened objective before a unit this many hexes nearer
+const RESERVE_PREFERENCE = 3;
+//A unit this many turns of its moves from an objective to take goes for it, the sector or not: it is already there
+const LOCAL_TURNS = 2;
+//A garrison is sent this many strength points stronger before one a hex nearer
+const STRENGTH_PER_HEX = 3;
+//The units beside an objective the enemy can reach this turn: a garrison alone is overrun
+const SUPPORTS = 2;
+//An enemy beside an objective of its side's is worth this much more to strike: it would take it next
+const THREAT_TARGET_BONUS = 2;
 
 type Role = "attack" | "defend";
 
-export function generalController(player: number): Controller {
+/** What the general does beyond its first version (#605): each part can be left out. */
+export interface Doctrine {
+	sector: boolean;	//an attacker sends its units to one objective at a time
+	reserve: boolean;	//a share of the mobile units held back, out of the enemy's reach
+	depth: boolean;		//garrisons on the objectives in the enemy's reach, worn-down units withdrawn, careful counterattacks
+	clock: boolean;		//the start's attacker attacks to the end, and in the last turns commits everything
+}
+
+const FULL: Doctrine = { sector: true, reserve: true, depth: true, clock: true };
+
+/** The first general (#236), for a comparison: none of the doctrine. */
+export const FIRST_GENERAL: Doctrine = { sector: false, reserve: false, depth: false, clock: false };
+
+export function generalController(player: number, doctrine: Doctrine = FULL): Controller {
 	const ai = aiController(player);
 	let considered = new Set<string>();	//"phase:unit" already decided this turn
 	let focus: number | null = null;	//the target being fired on
 	let pending: Command | null = null;	//the attack after a move to its hex
 	let ranges = new Map<number, MoveCell[]>(), rangesOf: World | null = null;	//the move ranges of a world
+	let sector: Position | null = null;	//the objective the attack goes for, until it falls
+	let reserve = new Set<number>(), reserved = false;	//the units held back, chosen once
+	let sends = new Map<number, number>();	//by objective (hex): the units still to send there this turn
+	let contactsOf: World | null = null, contactList: Position[] = [];	//the objectives in contact, of a world
 	return {
 		player,
 		join: (w) => ai.join(w),
@@ -45,6 +82,9 @@ export function generalController(player: number): Controller {
 			considered = new Set();
 			focus = null;
 			pending = null;
+			sends = new Map();
+			if (doctrine.sector) sector = sectorOf(w);
+			if (doctrine.reserve) reserve = reserveOf(w);
 			return w;
 		},
 		next(w) {
@@ -70,7 +110,12 @@ export function generalController(player: number): Controller {
 			pending = null;
 			if (check(w, cmd) === null) return cmd;
 		}
-		return supplyOrder(w) || attackOrder(w) || moveOrder(w);
+		return supplyOrder(w) || (doctrine.depth ? garrisonOrder(w) : null) || attackOrder(w) || fallBackOrder(w) || moveOrder(w);
+	}
+
+	//The doctrine's moves before the others: a worn-down unit's withdrawal, the reserve's
+	function fallBackOrder(w: World): Command | null {
+		return (doctrine.depth ? withdrawOrder(w) : null) || (doctrine.reserve ? reserveOrder(w) : null);
 	}
 
 	//Once per unit and phase in a turn: the general never gives the same order twice
@@ -130,10 +175,6 @@ export function generalController(player: number): Controller {
 			&& distance(u.row, u.col, e.row, e.col) <= range).length;
 	}
 
-	function seen(w: World, u: UnitState, side: number): boolean {
-		return isSpotted(w, hexIndex(w, u.row, u.col), side) || u.tempSpotted;
-	}
-
 	//The next attack on the target being fired on, else on the next target
 	function attackOrder(w: World): Command | null {
 		const t = focus === null ? null : unitById(w, focus);
@@ -181,14 +222,15 @@ export function generalController(player: number): Controller {
 			losses += a.losses;
 		}
 		const onObjective = w.state.map.hexes[hexIndex(w, t.row, t.col)].victorySide !== -1 ? 2 : 0;
-		return Math.min(kills, t.strength) - LOSS_WEIGHT * losses + onObjective;
+		return Math.min(kills, t.strength) - lossWeight(w) * losses + onObjective + doctrineBonus(w, t);
 	}
 
 	//The next attack on t in the order of arms: artillery, aircraft, then the rest; the cheapest of a kind
 	function bestAttack(w: World, t: UnitState): Attack | null {
-		const all = attacksOn(w, t).filter((a) => a.kills >= 1 && a.kills - LOSS_WEIGHT * a.losses > 0);
+		const k = lossWeight(w);
+		const all = attacksOn(w, t).filter((a) => a.kills >= 1 && score(a, k) > 0);
 		if (all.length === 0) return null;
-		all.sort((a, b) => armOrder(w, a.unit) - armOrder(w, b.unit) || (b.kills - LOSS_WEIGHT * b.losses) - (a.kills - LOSS_WEIGHT * a.losses));
+		all.sort((a, b) => armOrder(w, a.unit) - armOrder(w, b.unit) || score(b, k) - score(a, k));
 		return all[0];
 	}
 
@@ -212,19 +254,27 @@ export function generalController(player: number): Controller {
 	//u's best attack on t: from where it stands, or (not a garrison, not artillery that can fire from
 	//where it is) from a hex it can move to
 	function attackOf(w: World, u: UnitState, t: UnitState): Attack | null {
-		if (u.hasFired || u.ammo <= 0 || considered.has("attack:" + u.id)) return null;
+		if (!canFire(w, u)) return null;
 		const here = attackFrom(w, u, t, null);
-		if (u.hasMoved || garrison(w, u) || (here !== null && unitData(w, u).uclass === unitClass.artillery)) return here;
-		return attackAfterMove(w, u, t, here);
+		return firesInPlace(w, u, here) ? here : attackAfterMove(w, u, t, here);
+	}
+
+	function canFire(w: World, u: UnitState): boolean {
+		return !u.hasFired && u.ammo > 0 && !considered.has("attack:" + u.id) && !withdrawing(w, u);
+	}
+
+	//A unit that fires from where it stands: moved, holding its hex, in reserve, or artillery in range
+	function firesInPlace(w: World, u: UnitState, here: Attack | null): boolean {
+		return u.hasMoved || holding(w, u) || reserve.has(u.id) || (here !== null && unitData(w, u).uclass === unitClass.artillery);
 	}
 
 	//u's best attack on t from the hexes it can move to, or best when none beats it
 	function attackAfterMove(w: World, u: UnitState, t: UnitState, best: Attack | null): Attack | null {
-		const range = unitAttackRange(w, u);
+		const range = unitAttackRange(w, u), k = lossWeight(w);
 		for (const c of rangeOf(w, u)) {
 			if (!c.canMove || (c.row === u.row && c.col === u.col) || distance(c.row, c.col, t.row, t.col) > range) continue;
 			const a = attackFrom(w, u, t, { row: c.row, col: c.col });
-			if (a !== null && (best === null || score(a) > score(best))) best = a;
+			if (a !== null && (best === null || score(a, k) > score(best, k))) best = a;
 		}
 		return best;
 	}
@@ -238,10 +288,10 @@ export function generalController(player: number): Controller {
 	}
 
 	function moveOrder(w: World): Command | null {
-		const side = w.state.players[player].side, role = roleOf(w, side);
+		const side = w.state.players[player].side, role = roleNow(w, side);
 		const toTake = w.state.objectives[side], toHold = w.state.objectives[~side & 1];
 		for (const u of own(w)) {
-			if (u.hasMoved || garrison(w, u) || !once("move", u)) continue;
+			if (u.hasMoved || holding(w, u) || !once("move", u)) continue;
 			const cells = rangeOf(w, u).filter((c) => c.canMove && !(c.row === u.row && c.col === u.col));
 			if (cells.length === 0) continue;
 			const cmd = isAir(w, u) ? airMove(w, u, cells) : groundMove(w, u, cells, role, toTake, toHold);
@@ -265,17 +315,27 @@ export function generalController(player: number): Controller {
 	}
 
 	function groundMove(w: World, u: UnitState, cells: Position[], role: Role, toTake: Position[], toHold: Position[]): Command | null {
-		if (!isGround(w, u)) return null;
+		if (!isGround(w, u) || reserve.has(u.id)) return null;
 		const empty = cells.find((c) => toTake.some((o) => o.row === c.row && o.col === c.col));
 		if (empty !== undefined) return { type: "move", unit: u.id, to: empty };
-		if (role === "defend") {
-			const unheld = cells.filter((c) => toHold.some((o) => o.row === c.row && o.col === c.col)
-				&& groundUnitAt(w, hexIndex(w, c.row, c.col)) === null);
-			return unheld.length > 0 ? { type: "move", unit: u.id, to: unheld[0] } : null;
-		}
+		if (role === "defend") return defendMove(w, u, cells, toHold);
 		//(worn down units stay back)
 		if (u.strength <= 4 || toTake.length === 0) return null;
-		return mountFirst(w, u) || advance(w, u, cells, toTake);
+		return mountFirst(w, u) || advance(w, u, cells, goalOf(w, u, toTake));
+	}
+
+	//A defender's unit moves only onto an objective of its side's left empty
+	function defendMove(w: World, u: UnitState, cells: Position[], toHold: Position[]): Command | null {
+		const unheld = cells.filter((c) => toHold.some((o) => o.row === c.row && o.col === c.col)
+			&& groundUnitAt(w, hexIndex(w, c.row, c.col)) === null);
+		return unheld.length > 0 ? { type: "move", unit: u.id, to: unheld[0] } : null;
+	}
+
+	//The nearest objective to take, or the sector for a unit not already near one
+	function goalOf(w: World, u: UnitState, toTake: Position[]): Position {
+		const s = sector, near = nearest(u, toTake);
+		const local = distance(u.row, u.col, near.row, near.col) <= LOCAL_TURNS * unitData(w, u).movpoints;
+		return s !== null && !local && toTake.some((o) => same(o, s)) ? s : near;
 	}
 
 	//Infantry mounts its transport while no enemy is near; it moves at the next call, mounted
@@ -287,10 +347,8 @@ export function generalController(player: number): Controller {
 		return mount;
 	}
 
-	//Toward the nearest objective to take, the nearest hex to it, cover preferred; artillery keeps
-	//out of the enemy's reach
-	function advance(w: World, u: UnitState, cells: Position[], toTake: Position[]): Command | null {
-		const target = nearest(u, toTake);
+	//Toward the objective, the nearest hex to it, cover preferred; artillery keeps out of the enemy's reach
+	function advance(w: World, u: UnitState, cells: Position[], target: Position): Command | null {
 		const now = distance(u.row, u.col, target.row, target.col);
 		const artillery = unitData(w, u).uclass === unitClass.artillery;
 		let best: Position | null = null, bestScore = -Infinity;
@@ -317,8 +375,177 @@ export function generalController(player: number): Controller {
 		return best;
 	}
 
-	function score(a: Attack): number {
-		return a.kills - LOSS_WEIGHT * a.losses;
+	//With the sense of time, the side that had more objectives to take at the start attacks to the end: it wins
+	//only by taking them all. A defender attacks while it has more to retake than the enemy has left to take
+	function roleNow(w: World, side: number): Role {
+		return doctrine.clock && attackerSide(w) === side ? "attack" : roleOf(w, side);
+	}
+
+	function lossWeight(w: World): number {
+		const role = roleNow(w, w.state.players[player].side);
+		if (doctrine.depth && role === "defend") return DEFENCE_LOSS_WEIGHT;
+		return doctrine.clock && role === "attack" && isLate(w) ? LATE_LOSS_WEIGHT : LOSS_WEIGHT;
+	}
+
+	//More for a target in the way of the sector's attack, more still for one beside an objective of its side's
+	function doctrineBonus(w: World, t: UnitState): number {
+		const s = sector, sectorBonus = s !== null && distance(t.row, t.col, s.row, s.col) <= SECTOR_RADIUS ? SECTOR_TARGET_BONUS : 0;
+		return sectorBonus + (contacts(w).some((o) => distance(t.row, t.col, o.row, o.col) <= 1) ? THREAT_TARGET_BONUS : 0);
+	}
+
+	//A worn-down unit that holds nothing keeps its moves to fall back
+	function withdrawing(w: World, u: UnitState): boolean {
+		return doctrine.depth && isGround(w, u) && u.strength <= WORN && !holding(w, u);
+	}
+
+	//The attacker's objective until it falls; none for a defender, nor in the last turns (every objective then)
+	function sectorOf(w: World): Position | null {
+		const side = w.state.players[player].side, toTake = w.state.objectives[side];
+		if (roleNow(w, side) !== "attack" || (doctrine.clock && isLate(w))) return null;
+		const s = sector;
+		if (s !== null && toTake.some((o) => same(o, s))) return s;
+		return pickSector(own(w).filter((u) => isGround(w, u)), enemyGround(w, side), toTake);
+	}
+
+	//An attacker's reserve, chosen at its first turn, for good once the sector's attack broke through or the last turns
+	//came; a defender holds its line with every unit
+	function reserveOf(w: World): Set<number> {
+		const side = w.state.players[player].side, enemies = enemyGround(w, side);
+		if (roleNow(w, side) !== "attack") return new Set();
+		if (!reserved) {
+			reserved = true;
+			reserve = pickReserve(w, own(w), enemies);
+		}
+		if ((doctrine.clock && isLate(w)) || (sector !== null && brokeThrough(enemies, sector))) return new Set();
+		return new Set([...reserve].filter((id) => unitById(w, id) !== null));
+	}
+
+	//An objective of its side's in the enemy's reach gets a garrison, the nearest unit that can go there (a
+	//reserve's first), and once the enemy is a move away SUPPORTS units beside it: a line the enemy must break first
+	function garrisonOrder(w: World): Command | null {
+		const side = w.state.players[player].side, enemies = enemyGround(w, side);
+		for (const o of w.state.objectives[~side & 1]) {
+			const cmd = sendOne(w, o, side, enemies) ? garrisonMove(w, o) : null;
+			if (cmd !== null) return cmd;
+		}
+		return null;
+	}
+
+	//Whether o, an objective of its side's in the enemy's reach, still needs a unit sent this turn (counted)
+	function sendOne(w: World, o: Position, side: number, enemies: readonly UnitState[]): boolean {
+		const hex = hexIndex(w, o.row, o.col), held = groundUnitAt(w, hex);
+		if ((held !== null && sideOf(w, held) !== side) || !inReach(w, enemies, o, GARRISON_TURNS)) return false;
+		if (!sends.has(hex)) sends.set(hex, (held === null ? 1 : 0) + (inReach(w, enemies, o) ? supportsWanted(w, o, enemies) : 0));
+		const left = sends.get(hex) as number;
+		sends.set(hex, left - 1);
+		return left > 0;
+	}
+
+	//SUPPORTS beside it, more while the enemy around it is stronger than its own units there (a unit is 10 points)
+	function supportsWanted(w: World, o: Position, enemies: readonly UnitState[]): number {
+		const around = (us: readonly UnitState[], r: number) => us.filter((u) => distance(u.row, u.col, o.row, o.col) <= r);
+		const strength = (us: readonly UnitState[]) => us.reduce((a, u) => a + u.strength, 0);
+		const mine = around(own(w).filter((u) => isGround(w, u)), 2);
+		const beside = mine.filter((u) => distance(u.row, u.col, o.row, o.col) === 1).length;
+		return Math.max(SUPPORTS - beside, Math.ceil((strength(around(enemies, 3)) - strength(mine)) / 10));
+	}
+
+	//The objectives of its side's in the enemy's reach (GARRISON_TURNS), once per world
+	function contacts(w: World): Position[] {
+		if (contactsOf !== w) {
+			const side = w.state.players[player].side, enemies = enemyGround(w, side);
+			contactsOf = w;
+			contactList = doctrine.depth && roleNow(w, side) === "attack" ? w.state.objectives[~side & 1].filter((o) => inReach(w, enemies, o, GARRISON_TURNS)) : [];
+		}
+		return contactList;
+	}
+
+	//A garrison, or (the doctrine's depth) a unit beside an objective in the enemy's reach: it holds its hex
+	function holding(w: World, u: UnitState): boolean {
+		return garrison(w, u) || (doctrine.depth && isGround(w, u) && contacts(w).some((o) => distance(u.row, u.col, o.row, o.col) === 1));
+	}
+
+	function garrisonMove(w: World, o: Position): Command | null {
+		const free = own(w).filter((u) => isGround(w, u) && !u.hasMoved && !holding(w, u) && !considered.has("move:" + u.id)
+			&& unitData(w, u).uclass !== unitClass.artillery);
+		const cost = (u: UnitState) => distance(u.row, u.col, o.row, o.col) - (reserve.has(u.id) ? RESERVE_PREFERENCE : 0)
+			- u.strength / STRENGTH_PER_HEX;
+		free.sort((a, b) => cost(a) - cost(b) || a.id - b.id);
+		for (const u of free) {
+			const to = toward(w, u, o);
+			const cmd: Command | null = to === null ? null : { type: "move", unit: u.id, to };
+			if (cmd === null || check(w, cmd) !== null) continue;
+			once("move", u);
+			reserve.delete(u.id);
+			return cmd;
+		}
+		return null;
+	}
+
+	//The hex of u's move range nearest to o, when nearer than u is
+	function toward(w: World, u: UnitState, o: Position): Position | null {
+		let best: Position | null = null, d = distance(u.row, u.col, o.row, o.col);
+		for (const c of rangeOf(w, u)) {
+			const dc = distance(c.row, c.col, o.row, o.col);
+			if (c.canMove && dc < d) {
+				best = { row: c.row, col: c.col };
+				d = dc;
+			}
+		}
+		return best;
+	}
+
+	function withdrawOrder(w: World): Command | null {
+		const side = w.state.players[player].side, enemies = enemyGround(w, side);
+		for (const u of own(w)) {
+			if (!withdrawing(w, u) || u.hasMoved || !inReach(w, enemies, u) || !once("move", u)) continue;
+			const cmd = allowedMove(w, u, bestHex(w, u, (c) => rearScore(w, side, enemies, c)));
+			if (cmd !== null) return cmd;
+		}
+		return null;
+	}
+
+	//The reserve waits out of the enemy's reach, near the sector or else the objectives it holds
+	function reserveOrder(w: World): Command | null {
+		const side = w.state.players[player].side, enemies = enemyGround(w, side);
+		for (const u of own(w)) {
+			const cmd = reserve.has(u.id) && !u.hasMoved && once("move", u) ? allowedMove(w, u, holdHex(w, u, side, enemies)) : null;
+			if (cmd !== null) return cmd;
+		}
+		return null;
+	}
+
+	function holdHex(w: World, u: UnitState, side: number, enemies: readonly UnitState[]): Position | null {
+		const anchor = sector ?? nearestOf(u, [...w.state.objectives[~side & 1], ...w.state.objectives[side]]);
+		if (anchor === null) return null;
+		return bestHex(w, u, (c) => (inReach(w, enemies, c) ? -100 : 0) - distance(c.row, c.col, anchor.row, anchor.col));
+	}
+
+	//A move of u to the hex, when there is one and the core allows it
+	function allowedMove(w: World, u: UnitState, to: Position | null): Command | null {
+		const cmd: Command | null = to === null ? null : { type: "move", unit: u.id, to };
+		return cmd !== null && check(w, cmd) === null ? cmd : null;
+	}
+
+	//The hex of u's move range that scores best, when better than where u stands
+	function bestHex(w: World, u: UnitState, value: (c: Position) => number): Position | null {
+		let best: Position | null = null, bestValue = value(u);
+		for (const c of rangeOf(w, u)) {
+			const v = c.canMove ? value(c) : -Infinity;
+			if (v > bestValue) {
+				best = { row: c.row, col: c.col };
+				bestValue = v;
+			}
+		}
+		return best;
+	}
+
+	function nearestOf(u: UnitState, cells: Position[]): Position | null {
+		return cells.length === 0 ? null : nearest(u, cells);
+	}
+
+	function score(a: Attack, k: number): number {
+		return a.kills - k * a.losses;
 	}
 }
 
@@ -343,3 +570,5 @@ interface Attack {
 	kills: number;
 	losses: number;
 }
+
+const same = (a: Position, b: Position) => a.row === b.row && a.col === b.col;

@@ -10,6 +10,7 @@ npm run arena                                        # Panzer-Verbaende Ostpreus
 ARENA_SUITE=1 npm run arena                          # the suite (below), 40 seeds a matchup
 ARENA_SEEDS=20 ARENA_FILES=drpzop01.xml,dr9fr03.xml npm run arena
 ARENA_MATCHUPS=ai-ai,general-general npm run arena   # axis-allies; ai-ai,general-ai,ai-general by default
+ARENA_MATCHUPS=general1-ai,general-ai npm run arena  # the first general (#236) beside the general (#605)
 JOBS=2 npm run arena                                 # the processes playing the games, 3 by default
 ARENA_OUT=/tmp/arena.json npm run arena              # every game's result as JSON
 ARENA_DEBUG=1 npm run arena                          # prints any order of the general's the core refused
@@ -26,7 +27,7 @@ games are played on `JOBS` node processes at once (test/arena/pool.ts, each a te
 a game depends only on its match (scenario, sides, seed, rules), so it comes out the same in any
 process and in any order, and the results are reported in the matches' order. A game takes a
 fraction of a second to a second and a half; the suite, 3 matchups of 40 games on 8 scenarios,
-about 3 minutes with `JOBS=3` (960 games in 184 s on the owner's laptop; `general-general` adds a
+about 3.5 minutes with `JOBS=3` (960 games in 211 s on the owner's laptop; `general-general` adds a
 fourth matchup). Two short games always run in `npm test`: the general against the AI, so the general
 keeps working as the core changes, and a game played both in a worker process and in Vitest's,
 which must come out the same but for the time.
@@ -140,8 +141,57 @@ same and only the play differs. Then, one order at a time, on the world as the l
    of fuel fly back to an airfield. A ground unit on an objective its side holds never leaves it.
 
 It sees what its side sees, and asks the core (`check`) before every order, so no order of its is
-ever refused: the arena checks that. It has no plan beyond the order at hand: no sense of time, no
-withdrawal, no reserve.
+ever refused: the arena checks that. Its moves are deterministic: no draw of its own.
+
+### Its doctrine (#605)
+
+The first version (player `general1`, `FIRST_GENERAL` in general.ts, for a comparison) had no plan
+beyond the order at hand. Player `general` adds four parts on top (`Doctrine`, test/arena/doctrine.ts
+for what it reads of the map), each a hand-built test in test/arena-general.test.ts:
+
+- **One sector at a time.** An attacker picks the objective to take where its own strength within
+  10 hexes, less half the enemy's strength within 4 of it and twice its force's mean distance, is
+  best, and keeps it until it falls. A unit within two turns' move of another objective to take still
+  goes for that one; the others go for the sector, and a target near the sector is worth more.
+- **A reserve.** At its first turn an attacker holds back a fifth of its mobile units (ground, not
+  artillery, 4 moves or more), the furthest from the enemy. They wait out of the enemy's reach near
+  the sector and fire only from where they stand. They go where an objective is threatened first,
+  and all of them join the attack once no enemy is left within 4 hexes of the sector or in the last
+  turns. A defender keeps no reserve: in the suite holding a fifth of its units back lost it objectives.
+- **Defence from depth.** An objective of its side's that the enemy can reach within two turns gets
+  a garrison: the nearest unit that can go there, a reserve's or a stronger one first. Once the enemy
+  is a move away, more units go beside it (two, more while the enemy around it is stronger). An
+  attacker's units beside such an objective hold their hexes: the attacker's few objectives are
+  its rear. A unit worn down to 4 that holds nothing doesn't fire. It falls back out of the enemy's
+  reach, to a town of its side if it can, and is reinforced there. A defender attacks only when the
+  estimate gives more kills than losses (losses weigh 1, the attacker's 0.7), and an enemy beside
+  one of its objectives is worth more to strike.
+- **A sense of time.** The side that had more objectives to take at the start attacks to the end: the
+  remaster's outcome makes it lose unless it takes them all (#256). The first general took the role
+  from the objectives left, and an attacker that had taken a few turned defender. In the last third
+  of the turns the attacker drops the sector for the nearest objective and commits the reserve. It
+  also pays more for them: losses weigh 0.4.
+
+Measured on the suite against the classic AI, both sides, the same 40 seeds a scenario, with
+`general1` and `general` (`npm run arena:compare`). Only the differences beyond the noise are named:
+
+| Scenario | The general attacking | The general defending |
+|---|---|---|
+| Ostpreussen | fewer units lost (8.0 to 4.4), lost per objective 4.2 to 2.2 | no difference |
+| Bzura | allies: 7.2 objectives taken against 4.7, lost per objective 2.1 to 1.4, fewer held at the end (4.9 to 3.7) | no difference |
+| Indochina | took one in 22 games against 8 (the first later, turn 10.4 against 8.2, over more games), held 1.3 against 0.5, lost per objective 38 to 7.4 | fewer taken back, fewer units lost |
+| Zitadelle | took one in 22 games against 1, held 1.3 against 0.03, more units lost (29 against 21): Germany's one objective fell in 39 of 40 games, now in 20 | fewer units lost |
+| Uman | wins 30 of 40 against 13, first objective earlier, 4.2 taken against 3.4, lost per objective 3.0 to 1.6 | more units lost |
+| Battleaxe | allies: 6.4 taken against 5.3, fewer held at the end (3.3 to 2.3) | fewer taken back, fewer units lost |
+| Taman | took one in 27 games against 34, fewer units lost; wins and objectives taken the same | fewer units lost |
+| Luttich | fewer units lost, lost per objective 14.7 to 12.2 | fewer taken back, more units lost |
+
+As an attacker it is stronger in most scenarios: it takes more objectives or the same for fewer
+units. In Bzura and Battleaxe it takes more and holds fewer at the end: the objectives change
+hands more often. In Taman it takes its first objective in fewer games, as the sector holds back
+units the first general sent to the nearest one. As a defender it wins as often as the first
+general (in most scenarios the defender already wins every game) and holds as many objectives.
+Its counterattacks are rarer, so it takes fewer back and loses fewer units.
 
 ## Baseline, 24 October 2026
 
