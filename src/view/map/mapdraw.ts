@@ -8,6 +8,7 @@
 //markers and the path's ring are drawn at screen points.
 import { addEdge, addHex, addHexesInView, atMap, atScreen, fillHexes, nearView, sideColour, strokeLine, toScreen, type Viewport, withAlpha } from "./canvas";
 import { hexCentre, type Point } from "./hexgrid";
+import { drawWhole, scaleOf, type Sized, sizeOf } from "./imagecache";
 import type { Plaque, Support } from "./mapinfo";
 import type { Marker, MapUnit, Path, Selection } from "./mapview";
 import type { Deployment, Ghost } from "./deploy";
@@ -19,7 +20,7 @@ import { TOKENS } from "../tokens";
 const MAP = TOKENS.map, PX = TOKENS.px;
 
 export interface Scene {
-	terrain: CanvasImageSource | null;
+	terrain: Sized | null;
 	size: { width: number; height: number }; //the map's, in its own pixels: nothing is drawn past it
 	rows: number;
 	cols: number;
@@ -40,7 +41,7 @@ export interface Scene {
 }
 
 //A sprite strip or the bridge by its file, null until it has loaded
-export type Images = (file: string) => (CanvasImageSource & { width: number; height: number }) | null;
+export type Images = (file: string) => Sized | null;
 
 //The bridge drawn instead of a ground unit on a bridge of its side
 export const BRIDGE = "resources/units/images/bridg.png";
@@ -192,7 +193,7 @@ export const SPRITE_RAISE = 8;
 function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, images: Images) {
 	const img = images(u.bridge ? BRIDGE : u.icon);
 	if (img === null) return;
-	const w = img.width / 9, h = img.height, o = hexCentre(u.row, u.col);
+	const k = scaleOf(img), size = sizeOf(img), w = size.width / 9, h = size.height, o = hexCentre(u.row, u.col);
 	const mirror = u.facing > 8, frame = mirror ? 16 - u.facing : u.facing;
 	const x = Math.floor(o.x - w / 2), y = Math.floor(o.y - h / 2 - SPRITE_RAISE - (u.lifted ? LIFT : 0));
 	c.save();
@@ -208,7 +209,7 @@ function drawSprite(c: CanvasRenderingContext2D, vp: Viewport, u: MapUnit, image
 		c.scale(-1, 1);
 		c.translate(-(x + w / 2), 0);
 	}
-	c.drawImage(img, w * frame, 0, w, h, x, y, w, h);
+	c.drawImage(img, w * k * frame, 0, w * k, h * k, x, y, w, h);
 	c.restore();
 }
 
@@ -407,7 +408,7 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 	begin(c, scene, vp);
 	//(the strategic map shrinks the terrain: smoothed, not pixelated; then only its chips and objectives)
 	c.imageSmoothingEnabled = scene.strategic !== null;
-	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
+	if (scene.terrain !== null) drawWhole(c, scene.terrain);
 	if (scene.strategic !== null) {
 		drawStrategic(c, vp, scene.strategic, images(scene.strategic.flags));
 		c.restore();
@@ -423,7 +424,7 @@ export function drawMap(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport,
 //with, so it doesn't matter that the ground was drawn on another canvas. Not for the strategic map
 export function drawGround(c: CanvasRenderingContext2D, scene: Scene, vp: Viewport) {
 	begin(c, scene, vp);
-	if (scene.terrain !== null) c.drawImage(scene.terrain, 0, 0);
+	if (scene.terrain !== null) drawWhole(c, scene.terrain);
 	drawGroundMarks(c, scene, vp);
 	c.restore();
 }
