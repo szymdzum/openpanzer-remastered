@@ -61,6 +61,7 @@ export const classicRules: Ruleset = {
 	snowDoublesFuel: false,
 	suppression: false,
 	continuedSuppression: false,
+	allLeaderAbilities: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
 
@@ -115,6 +116,9 @@ export const remasterRules: Ruleset = {
 	suppression: true,
 	//A tactical bomber's suppression, and a Shock Tactics unit's, lasts the attacking player's whole turn (#2)
 	continuedSuppression: true,
+	//Every leader ability does what its description says; the original's game left 12 of the 33 without an
+	//effect (#3)
+	allLeaderAbilities: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the
 	//enemy, the side that must take objectives gets none of the bonus for staying, the defender all of
 	//it (#235)

@@ -138,6 +138,8 @@ export interface Ruleset {
 	//A tactical bomber's suppression, and that of a unit with Shock Tactics, lasts the attacking player's turn
 	//(UnitState.suppressed, #2): false in the classic rules
 	continuedSuppression: boolean;
+	//Every leader ability does what its description says (#3): false in the classic rules, where some do nothing
+	allLeaderAbilities: boolean;
 	//How the computer player plays (ai.ts)
 	ai: AIRules;
 }
