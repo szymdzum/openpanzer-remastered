@@ -21,6 +21,7 @@ import { outcomeNames, playerType, sideNames } from "../src/core/tables";
 import { touched } from "../src/legacy/context";
 import { turnLimitOutcome } from "../src/core/turn";
 import { Rng } from "../src/core/random";
+import { pageResultOf } from "../cli/commands";
 
 fakeMapImages();
 
@@ -429,3 +430,15 @@ test("The screen's sprite and sound picks come from the cosmetic stream: the dic
 	expect([Rng.game.state, Rng.ai.state]).toEqual([game, ai]);
 	expect(Rng.cosmetic.state).not.toBe(cosmetic);
 });
+
+test("On the page, the AI's capture of the last objective reports the AI's side as the winner (#391)", async () => {
+	const told: string[][] = [];
+	//(the person plays the Allies, the AI the Axis: it takes the last objective as it is played on the page)
+	const g = await remasterScenario("dragrom10.xml", [1, 0], told);
+	const person = 1;
+	g.host.playShown({ type: "move", unit: 1, to: { row: 5, col: 6 } }, () => undefined);
+	expect(g.gameEnded).toBe(false);
+	g.host.playShown({ type: "move", unit: 2, to: { row: 6, col: 11 } }, () => undefined);
+	expect(g.gameEnded).toBe(true);
+	expect(pageResultOf(g.host.world()!, g.session.ended, g.gameEnded, person)).toMatchObject({ kind: "capture", winner: 0 });
+}, 60_000);
