@@ -5,16 +5,17 @@ import { directionToRadians } from "../../legacy/prototypes";
 import { atMap, type Viewport } from "./canvas";
 import { hexCentre } from "./hexgrid";
 import { type Images, SPRITE_RAISE } from "./mapdraw";
+import { scaleOf, sizeOf } from "./imagecache";
 import type { Motion } from "../player";
 
 //A sprite strip has nine facings from south to north; the other seven are the strip's mirrored. Its centre a little
 //above the point, as the map draws a unit on its hex
 function blitUnit(c: CanvasRenderingContext2D, img: NonNullable<ReturnType<Images>>, at: { x: number; y: number }, facing: number) {
-	const frameW: number = img.width / 9, frameH: number = img.height, flip = facing > 8;
+	const k = scaleOf(img), size = sizeOf(img), frameW = size.width / 9, frameH = size.height, flip = facing > 8;
 	c.save();
 	c.translate(Math.floor(at.x), Math.floor(at.y - SPRITE_RAISE));
 	if (flip) c.scale(-1, 1);
-	c.drawImage(img, frameW * (flip ? 16 - facing : facing), 0, frameW, frameH, -frameW / 2, -frameH / 2, frameW, frameH);
+	c.drawImage(img, frameW * k * (flip ? 16 - facing : facing), 0, frameW * k, frameH * k, -frameW / 2, -frameH / 2, frameW, frameH);
 	c.restore();
 }
 

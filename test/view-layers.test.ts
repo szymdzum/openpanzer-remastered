@@ -6,6 +6,7 @@
 import { expect, test } from "vitest";
 import { type Frame, LAYER_BUDGET, MapLayers } from "../src/view/map/layers";
 import type { Images, Scene } from "../src/view/map/mapdraw";
+import type { Sized } from "../src/view/map/imagecache";
 
 type Fake = { width: number; height: number; getContext: () => CanvasRenderingContext2D };
 
@@ -30,7 +31,7 @@ function fakeCanvas(name: string, log: string[], width = 0, height = 0): Fake {
 	return canvas;
 }
 
-const terrain = { name: "terrain", width: 600, height: 500 } as unknown as CanvasImageSource;
+const terrain = { name: "terrain", width: 600, height: 500 } as unknown as Sized;
 const sprite = { name: "sprite", width: 540, height: 50 } as unknown as ReturnType<Images>;
 const images: Images = () => sprite;
 const beat = (c: CanvasRenderingContext2D) => { c.drawImage(sprite as CanvasImageSource, 0, 0); };

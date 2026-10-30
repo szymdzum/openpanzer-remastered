@@ -60,7 +60,7 @@ const images: Images = (file) => file === "" ? null : sprite;
 function scene(w = handWorld({ rows: 10, cols: 10, units: [{ eqid: 140, owner: 0, row: 4, col: 1, entrenchment: 2, hits: 1, experience: 120 },
 	{ eqid: 273, owner: 1, row: 4, col: 4 }, { eqid: 273, owner: 1, row: 3, col: 1, facing: 12 }] }, undefined, { spotSide: 0 })): Scene {
 	const selection = selectionOf(w, 0);
-	return { terrain: sprite as CanvasImageSource, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: false, units: mapUnits(w, false, 0), selection,
+	return { terrain: sprite, size: { width: 600, height: 600 }, rows: 10, cols: 10, grid: false, units: mapUnits(w, false, 0), selection,
 		path: pathOf(w, selection, { row: 4, col: 3 }), fog: null, support: null, plaques: [], strategic: null, deploy: null, ghost: null };
 }
 

@@ -13,6 +13,7 @@ import { Icon } from "../components/icon";
 import { cellAt, gridSize, hexCentre, type Point } from "./hexgrid";
 import { fitViewport, toScreen, type Viewport } from "./canvas";
 import type { Images, Scene } from "./mapdraw";
+import { ImageCache, type Picture, sizeOf } from "./imagecache";
 import { flagStrip } from "./mapinfo";
 import { type Frame, MapLayers } from "./layers";
 import { drawPreview } from "./attackdraw";
@@ -22,33 +23,8 @@ import { drawAIOverlay } from "./aidebugdraw";
 import type { Store } from "../store/store";
 import { TOKENS } from "../tokens";
 
-type Picture = HTMLImageElement;
-
 //Where the map is on the screen (the screen's top left corner in the map's screen pixels) and its size there
 type View = Point & { width: number; height: number };
-
-//The map's images by file: the terrain and the sprite strips, loaded once, then drawn
-class ImageCache {
-	declare images: Map<string, Picture>;
-	declare loaded: () => void;
-
-	constructor(loaded: () => void) {
-		this.images = new Map();
-		this.loaded = loaded;
-	}
-
-	//The image when it has loaded, else null and its load started (a file that fails stays not drawn)
-	get(file: string): Picture | null {
-		const img = this.images.get(file);
-		if (img !== undefined) return img.complete && img.width > 0 ? img : null;
-		const fresh = new Image();
-		fresh.onload = this.loaded;
-		fresh.src = file;
-		this.images.set(file, fresh);
-		return null;
-	}
-}
-
 
 //The strategic map fits the map under the status bar, so no objective hides behind it: the bar's foot from the
 //map's top, and a little air, 0 without a bar
@@ -236,7 +212,7 @@ function firstOwnUnit(w: World): Position | null {
 //grid's until it has loaded, at the map's scale
 function mapSize(w: World | null, terrain: Picture | null, scale: number): { width: number; height: number } {
 	if (w === null) return { width: 0, height: 0 };
-	const size = terrain !== null ? terrain : gridSize(w.state.map.rows, w.state.map.cols);
+	const size = terrain !== null ? sizeOf(terrain) : gridSize(w.state.map.rows, w.state.map.cols);
 	return { width: size.width * scale, height: size.height * scale };
 }
 
