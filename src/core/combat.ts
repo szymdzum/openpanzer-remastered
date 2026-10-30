@@ -10,13 +10,13 @@ import { leaderType, roadType, terrainInitiative, terrainType, UNIT_MAX_EXPERIEN
 import { nextRandom, type RngStream } from "./random";
 import { canFire, supportFireUnits, unitAttackRange } from "./attack";
 import { ignoresEntrenchment } from "./equipment";
-import { distance } from "./geometry";
+import { adjacent, distance } from "./geometry";
 import { firingStrength } from "./weathereffects";
 import type {
 	CombatResult, CombatStep, CombatValues, Contribution, Fight, Side, UnitState, World
 } from "./types";
-import { hasLeader, isAir, isCloseCombatTerrain, isGround, isSea } from "./units";
-import { currentEqid, hexIndex, isRiding, isSpotted, sideOf, unitData } from "./world";
+import { hasLeader, isAir, isCloseCombatTerrain, isGone, isGround, isSea } from "./units";
+import { airUnitAt, currentEqid, groundUnitAt, hexIndex, isRiding, isSpotted, onMap, sideOf, unitData } from "./world";
 
 function change(f: Fight, name: string, side: Side, field: keyof CombatValues, value: number) {
 	const before = f.values[field];
@@ -224,7 +224,7 @@ export const classicCombat: CombatStep[] = [
 	}),
 	{ name: "skilled ground attack", run(f) {
 		const w = f.world;
-		if (isAir(w, f.atk) && hasLeader(w, f.atk, leaderType.skilledGroundAttack) && isGround(w, f.def))
+		if (isAir(w, f.atk) && isGround(w, f.def) && hasCombatLeader(w, f.atk, leaderType.skilledGroundAttack))
 			add(f, "skilled ground attack", "attacker", "aav", 4);
 	} },
 	{ name: "artillery defender", run(f) {
@@ -392,12 +392,29 @@ function experience(f: Fight) {
 	if (def.experience + cr.defExpGained > UNIT_MAX_EXPERIENCE) cr.defExpGained = UNIT_MAX_EXPERIENCE - def.experience;
 }
 
+//The unit's leader, or Resilience and Skilled Ground Attack lent by a friend with Combat Support on its hex or next
+//to it, in the rules where every leader ability works
+function hasCombatLeader(w: World, u: UnitState, leader: number): boolean {
+	if (hasLeader(w, u, leader)) return true;
+	return w.rules.allLeaderAbilities && (leader === leaderType.resilience || leader === leaderType.skilledGroundAttack)
+		&& hasSupportNear(w, u);
+}
+
+function hasSupportNear(w: World, u: UnitState): boolean {
+	if (u.row < 0) return false;
+	return [{ row: u.row, col: u.col }, ...adjacent(u.row, u.col)].some((c) => onMap(w, c.row, c.col)
+		&& [groundUnitAt(w, hexIndex(w, c.row, c.col)), airUnitAt(w, hexIndex(w, c.row, c.col))].some((o) => supports(w, o, u)));
+}
+
+const supports = (w: World, other: UnitState | null, u: UnitState) => other !== null && other.id !== u.id && !isGone(w, other)
+	&& sideOf(w, other) === sideOf(w, u) && hasLeader(w, other, leaderType.combatSupport);
+
 //Beyond 4 the attack over the defense counts at 2/5.
 function killFraction(w: World, atkval: number, defval: number, atk: UnitState, def: UnitState): number {
 	let kF = atkval - defval;
 	if (kF > 4) kF = 4 + (2 * kF - 8) / 5; //PG2 formula
 	if (hasLeader(w, atk, leaderType.overwhelmingAttack)) kF += 2;
-	if (hasLeader(w, def, leaderType.resilience)) kF -= 2;
+	if (hasCombatLeader(w, def, leaderType.resilience)) kF -= 2;
 	return kF;
 }
 

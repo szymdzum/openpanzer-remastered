@@ -40,6 +40,14 @@ export function hasLeader(w: World, u: UnitState, leader: number): boolean {
 	return w.rules.classLeaders[unitData(w, u).uclass] === leader;
 }
 
+/**
+ * hasLeader for an ability the original game read nowhere: only in the rules where every leader ability works
+ * (Ruleset.allLeaderAbilities).
+ */
+export function hasLeaderAbility(w: World, u: UnitState, leader: number): boolean {
+	return w.rules.allLeaderAbilities && hasLeader(w, u, leader);
+}
+
 export function isEnemy(w: World, u: UnitState, target: UnitState): boolean {
 	return sideOf(w, u) !== sideOf(w, target);
 }

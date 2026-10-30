@@ -90,6 +90,8 @@ export class Unit {
 	declare entrenchTicks: number;
 	declare leader: number;
 	declare suppressed?: number; //set only while some points are suppressed for the turn (the remaster's rules)
+	declare firedOnce?: boolean; //set only while Devastating Fire's first attack is spent (the remaster's rules)
+	declare halfAmmo?: boolean; //set only while Fire Discipline spent half an ammo point (the remaster's rules)
 
 	declare getHex: () => Hex | null;
 	declare setHex: (h: Hex | null) => void;

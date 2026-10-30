@@ -192,7 +192,8 @@ then assault, then overrun with tanks.
   move". The range is what the fuel pays for, and a full move costs twice the fuel. Aircraft and
   ships pay as before. The classic rules burn one fuel a point on any ground.
 - A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank
-  and air defense have to stay in place to fire (`Unit.move`).
+  and air defense have to stay in place to fire (`Unit.move`). In the remaster's rules Mechanized
+  Veteran gets the unit off its transport at the end of the move with its shot (#3).
 
 ## Spotting
 
@@ -259,6 +260,17 @@ still reinforce.
   - **Superior Maneuver**: an enemy zone of control doesn't stop the unit, as it doesn't stop recon (#4);
     a hidden enemy still surprises it.
   - **Recon Movement**: the unit splits its move over several moves in a turn, as recon does.
+  - **Devastating Fire**: the unit may attack twice a turn; its first attack leaves `firedOnce` on it until
+    the turn ends.
+  - **Fire Discipline**: half an ammo point a shot, its attacks and its return fire alike: the first half
+    leaves `halfAmmo` on it, the second takes the point. A resupply that adds ammo fills the half too.
+  - **Mechanized Veteran** (the air defence's class leader): a unit moved on its transport gets off it at the
+    end of the move (not after a surprise) and keeps its shot; without it the move uses the shot.
+  - **Combat Support**: a friendly unit on the unit's hex or next to it fights as if it had Resilience
+    (-2 to the kill fraction against it) and Skilled Ground Attack (+4 attack for an aircraft on a ground
+    target); the unit itself doesn't.
+  - **Skilled Interceptor** has nothing to lift: a fighter already fires in support against every enemy
+    aircraft that attacks next to it, as often as its ammo lasts (`supportFireUnits`).
 
   Neither terrain ability makes a hex dearer than its own terrain (a river on frozen ground is cheaper than
   rough for wheels).

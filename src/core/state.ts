@@ -114,6 +114,8 @@ export interface UnitState {
 	isSurprised: boolean;
 	tempSpotted: boolean;		//lost by today's save (#84)
 	suppressed?: number;		//the points that don't fire for the rest of the turn (Ruleset.continuedSuppression); absent when none
+	firedOnce?: boolean;		//Devastating Fire's first attack of the turn is spent (Ruleset.allLeaderAbilities); absent when not
+	halfAmmo?: boolean;		//Fire Discipline spent half of an ammo point (Ruleset.allLeaderAbilities); absent when not
 }
 
 export interface TransportState {

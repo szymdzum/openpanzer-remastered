@@ -25,6 +25,7 @@ function resupplyUnit(d: Draft, id: UnitId, s: Supply) {
 export function refill(d: Draft, id: UnitId, s: Supply) {
 	const u = writeUnit(d, id);
 	u.ammo += s.ammo;
+	if (s.ammo > 0) delete u.halfAmmo;
 	u.fuel += s.fuel;
 	if (u.transport !== null) {
 		u.transport.ammo += s.transportAmmo;

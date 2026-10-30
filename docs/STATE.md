@@ -95,6 +95,8 @@ interface UnitState {
 	isSurprised: boolean;
 	tempSpotted: boolean;		//lost today (#84)
 	suppressed?: number;		//the remaster's continued suppression (#2): only while non-zero
+	firedOnce?: boolean;		//the remaster's Devastating Fire spent its first attack this turn (#3): only while true
+	halfAmmo?: boolean;		//the remaster's Fire Discipline spent half an ammo point (#3): only while true
 }
 
 type OffMapUnit = Omit<UnitState, "id" | "row" | "col">;	//a unit not on the map has no id (D1)
