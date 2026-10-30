@@ -213,8 +213,15 @@ export class GameState {
 				}
 			} else {
 				//Falsy objects (a null campaign) are not saved
-				if (localStorage && object)
-					localStorage.setItem(key, JSON.stringify(object));
+				if (localStorage && object) {
+					try {
+						localStorage.setItem(key, JSON.stringify(object));
+					} catch (e) {
+						//A full storage (QuotaExceededError) must not stop a load or a turn halfway: the game goes on
+						//unsaved, with no message, which would wait for a click in the middle of the turn
+						console.warn("Cannot save " + key, e);
+					}
+				}
 			}
 		}
 

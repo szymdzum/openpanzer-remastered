@@ -654,3 +654,25 @@ test("The turn limit's end is told once and the combat log stays closed over it,
 		expect(screen, name).toEqual([save.state.campaign === null ? "turn limit" : "outcome"]);
 	}
 }, 60_000);
+
+//The scenario's first save comes before it is shown; the end of a turn saves again
+test("A save that doesn't fit in the storage is warned on the console and the game goes on (#553)", async () => {
+	const game = await freshGame();
+	const full = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+		throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+	});
+	const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+	try {
+		const showScenario = vi.spyOn(game.host.screen, "showScenario");
+		await startState(game, "drpzop01.xml");
+		expect(showScenario, "the scenario is shown").toHaveBeenCalled();
+		expect(warn, "the failure is told").toHaveBeenCalled();
+		warn.mockClear();
+		expect(() => game.state.save()).not.toThrow();
+		expect(() => game.state.saveSettings()).not.toThrow();
+		expect(warn).toHaveBeenCalledTimes(2);
+	} finally {
+		full.mockRestore();
+		warn.mockRestore();
+	}
+});
