@@ -119,7 +119,8 @@ export function canEndMoveOn(w: World, u: UnitState, cell: Position): boolean {
  * is cheaper. A hex is in reach when the points left pay for it; a hex that uses all the points (STOP) takes
  * any left, at least one. An enemy zone of control the unit's side sees stops it (STOP) on a hex it can pay
  * for, unless it is a recon unit in the rules where recon ignores it. An air unit moves at cost 1 a hex, over
- * its side's aircraft and around the enemy's it sees, as far as its points take it. The updates go in list
+ * its side's aircraft and around the enemy's it sees, as far as its points take it; in the rules with an air
+ * zone of control, a hex next to an enemy aircraft it sees is a STOP. The updates go in list
  * order, as in the original, so a tie resolves as it did.
  */
 export function moveRange(w: World, u: UnitState): MoveCell[] {
@@ -133,26 +134,39 @@ export function moveRange(w: World, u: UnitState): MoveCell[] {
 		if (!isPartialEdge(p.row, p.col, rows, cols, lastRowPartial, lastColPartial))
 			c.push(moveCell(p.row, p.col, distance(u.row, u.col, p.row, p.col)));
 
-	if (isAir(w, u)) {
-		const allowed: MoveCell[] = [];
-		for (const cell of c) {
-			const hex = hexIndex(w, cell.row, cell.col);
-			if (!seen(w, hex, side, airUnitAt(w, hex)) || canMoveInto(w, u, cell)) cell.canMove = true;
-			else if (canPassInto(w, u, cell)) cell.canPass = true; //over its side's aircraft
-			else continue;
-			cell.cost = 1; //no terrain cost in the air
-			allowed.push(cell);
-		}
-		return withinSteps(w, u, allowed, range);
-	}
+	if (isAir(w, u)) return withinSteps(w, u, c.filter((cell) => airCell(w, u, cell, side)), range);
 
 	c.push(moveCell(u.row, u.col, 0));
 	expand(w, u, c, range, side);
 	return c.filter((cell) => cell.canPass || cell.canMove);
 }
 
+//Sets what an aircraft can do on a cell of its range (stop on it, or pass over its side's aircraft) and its cost;
+//false when it can do neither.
+function airCell(w: World, u: UnitState, cell: MoveCell, side: number): boolean {
+	const hex = hexIndex(w, cell.row, cell.col);
+	if (!seen(w, hex, side, airUnitAt(w, hex)) || canMoveInto(w, u, cell)) cell.canMove = true;
+	else if (canPassInto(w, u, cell)) cell.canPass = true;
+	else return false;
+	cell.cost = w.rules.airZoc && inAirZoc(w, hex, side) ? STOP : 1; //no terrain cost in the air
+	return true;
+}
+
+//Whether an enemy aircraft the side sees is next to the hex: its zone of control, which only aircraft feel.
+function inAirZoc(w: World, hex: number, side: number): boolean {
+	const { rows, cols } = w.state.map, row = Math.floor(hex / cols), col = hex % cols;
+	for (let n = 0; n < 6; n++) {
+		const r = neighbourRow(row, col, n), c = neighbourCol(col, n);
+		if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+		const other = airUnitAt(w, r * cols + c);
+		if (other !== null && sideOf(w, other) !== side && seen(w, r * cols + c, side, other)) return true;
+	}
+	return false;
+}
+
 //The cells a path through them reaches from u's hex in range steps or less, in their order: an air unit
-//flies around the aircraft it can't pass, which can cost more points than the hex's distance.
+//flies around the aircraft it can't pass, which can cost more points than the hex's distance, and stops on
+//a hex in an enemy aircraft's zone of control (STOP), going no farther through it.
 function withinSteps(w: World, u: UnitState, cells: MoveCell[], range: number): MoveCell[] {
 	const cols = w.state.map.cols;
 	const slot = scratch(w);
@@ -162,21 +176,27 @@ function withinSteps(w: World, u: UnitState, cells: MoveCell[], range: number): 
 	let ring: Position[] = [u];
 	try {
 		for (let r = 1; r <= range && ring.length > 0; r++) {
-			const next: MoveCell[] = [];
-			for (const from of ring) {
-				neighbours(w, from, slot, near);
-				for (const j of near)
-					if (steps[j] < 0) {
-						steps[j] = r;
-						next.push(cells[j]);
-					}
-			}
-			ring = next;
+			ring = reachFromRing(w, ring, cells, slot, steps, r, near);
 		}
 	} finally {
 		for (const cell of cells) slot[cell.row * cols + cell.col] = 0;
 	}
 	return cells.filter((_, i) => steps[i] > 0);
+}
+
+//The cells ring's cells reach at step r for the first time, which a path can go on from: not a hex that stops it.
+function reachFromRing(w: World, ring: Position[], cells: MoveCell[], slot: Int32Array, steps: Int32Array, r: number,
+	near: number[]): MoveCell[] {
+	const next: MoveCell[] = [];
+	for (const from of ring) {
+		neighbours(w, from, slot, near);
+		for (const j of near)
+			if (steps[j] < 0) {
+				steps[j] = r;
+				if (cells[j].cost < STOP) next.push(cells[j]);
+			}
+	}
+	return next;
 }
 
 function moveCell(row: number, col: number, range: number): MoveCell {

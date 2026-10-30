@@ -17,6 +17,7 @@ const remasterFlags = [
 	"checksTheShop", //#444
 	"terrainLimitsInitiative", //#14
 	"reconIgnoresZoc", //#4
+	"airZoc", //#18
 	"weatherChanges", //#591
 ] as const;
 

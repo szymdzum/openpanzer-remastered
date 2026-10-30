@@ -52,6 +52,7 @@ export const classicRules: Ruleset = {
 	mountedGunsDontCapture: false,
 	checksTheShop: false,
 	reconIgnoresZoc: false,
+	airZoc: false,
 	weatherChanges: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
@@ -85,6 +86,9 @@ export const remasterRules: Ruleset = {
 	//A recon unit enters an enemy zone of control for the hex's cost and moves on; a hidden enemy still
 	//surprises it (#4)
 	reconIgnoresZoc: true,
+	//An aircraft stops next to an enemy aircraft its side sees, as a ground unit does next to an enemy one;
+	//ground units and aircraft still ignore each other's zone (#18)
+	airZoc: true,
 	//The weather changes from round to round, in fronts that last, by the area and the month (#591)
 	weatherChanges: true,
 	//An attacker's units don't stay glued to their hexes for the entrenchment they dug: away from the

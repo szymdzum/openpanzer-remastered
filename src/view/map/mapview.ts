@@ -169,16 +169,16 @@ export function selectionOf(w: World, id: UnitId | null): Selection | null {
 }
 
 //The edges of the move range where an enemy zone of control ends the move (a hex that stops it, though its
-//terrain doesn't) facing an enemy the unit's side sees: ground and naval units cast a zone, aircraft none.
-//A hidden enemy's zone ends the move too, as in the original (#282), but has no enemy to face: no bar there,
-//the path's stop square still says the move stops
+//terrain doesn't) facing an enemy the unit's side sees: a ground or naval enemy's zone on ground units, an
+//aircraft's on aircraft. A hidden enemy's zone ends the move too, as in the original (#282), but has no
+//enemy to face: no bar there, the path's stop square still says the move stops
 function zoneEdges(w: World, u: UnitState, range: MoveCell[]): Edge[] {
-	const side = sideOf(w, u), edges: Edge[] = [];
+	const side = sideOf(w, u), air = isAir(w, u), edges: Edge[] = [];
 	for (const c of range) {
 		if (c.cost < STOP || terrainCost(w, u, c) >= STOP) continue;
 		adjacent(c.row, c.col).forEach((n, k) => {
 			if (!onMap(w, n.row, n.col)) return;
-			const hex = hexIndex(w, n.row, n.col), other = groundUnitAt(w, hex);
+			const hex = hexIndex(w, n.row, n.col), other = air ? airUnitAt(w, hex) : groundUnitAt(w, hex);
 			if (other !== null && sideOf(w, other) !== side && (isSpotted(w, hex, side) || other.tempSpotted))
 				edges.push({ row: c.row, col: c.col, side: k });
 		});

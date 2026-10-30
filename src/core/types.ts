@@ -108,6 +108,9 @@ export interface Ruleset {
 	//An enemy zone of control doesn't stop a recon unit, as the manual says (#4): false in the classic rules,
 	//where it stops every ground unit
 	reconIgnoresZoc: boolean;
+	//An enemy aircraft the side sees stops an aircraft that comes next to it, as the manual says (#18): false in
+	//the classic rules, where aircraft cast no zone of control and ignore it
+	airZoc: boolean;
 	//The weather changes at each new round, by the scenario's weather zone and month (weather.ts, #591), as the
 	//manual has it: false in the classic rules, where the scenario's start weather lasts to the end
 	weatherChanges: boolean;
