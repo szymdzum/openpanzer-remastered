@@ -13,67 +13,25 @@ import { newGame } from "../src/core/newgame";
 import { aiControllerFor, remasteredController } from "../src/core/remastered/controller";
 import { classicRules, remasterRules } from "../src/core/rules";
 import { type Advance, advance, type Session, startSession } from "../src/core/session";
-import { check, step } from "../src/core/step";
+import { check } from "../src/core/step";
 import { playerType } from "../src/core/tables";
-import type { Position, RulesetName, UnitState, World } from "../src/core/types";
+import type { RulesetName, UnitState, World } from "../src/core/types";
 import { hexIndex, unitById } from "../src/core/world";
 import { setupOf } from "./corefiles";
-import { germanyPoland, type HandUnit, handWorld } from "./coreworld";
+import type { HandUnit } from "./coreworld";
+import { playOneTurn, position, world } from "./staffworld";
 
 const INFANTERIE = 115, PZ_IVD = 148, PIECHOTA = 270, TP7 = 273;
-
-//A hand-built 12 x 16 map of the remaster's rules, everything in sight, seeded: `own` are Germany's objectives
-//(Poland's to take), `enemy` Poland's (Germany's to take)
-function world(units: HandUnit[], own: Position[], enemy: Position[] = [], seed = 3): World {
-	const w = handWorld({ rows: 12, cols: 16, units }, germanyPoland, { rules: remasterRules, noFOW: true });
-	w.state.rng = { game: seed, ai: seed + 7919 };
-	const mark = (at: Position, owner: number) => {
-		w.state.map.hexes[hexIndex(w, at.row, at.col)] = { ...w.state.map.hexes[hexIndex(w, at.row, at.col)], victorySide: ~owner & 1, owner };
-		w.state.objectives[~owner & 1].push(at);
-	};
-	for (const at of own) mark(at, 0);
-	for (const at of enemy) mark(at, 1);
-	return w;
-}
-
-interface Turn {
-	world: World;
-	commands: Command[];
-	refused: number;
-}
-
-//One turn of player 0 by the controller: its plan, then its orders played one by one, as the session plays them
-function playTurn(c: Controller, w: World, between: (w: World, n: number) => World = (x) => x): Turn {
-	let now = c.plan(w);
-	const commands: Command[] = [];
-	let refused = 0;
-	for (let n = 0; n < 500; n++) {
-		now = between(now, n);
-		const o = c.next(now);
-		if (o === null) break;
-		if (!("command" in o)) continue;
-		commands.push(o.command);
-		const r = step(now, o.command);
-		if (r.ok) now = r.world;
-		else refused++;
-	}
-	return { world: now, commands, refused };
-}
-
-const position = (w: World, id: number): Position => {
-	const u = unitById(w, id) as UnitState;
-	return { row: u.row, col: u.col };
-};
 
 test("the remastered AI garrisons an objective in the enemy's reach (#616, #5)", () => {
 	//Germany's objective on 5,3, its tank four hexes east of it, Poland's objective to take three hexes further; a 7TP
 	//two of its moves from Germany's. The classic AI marches on Poland's objective and leaves its own empty
 	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 7 }, { eqid: TP7, owner: 1, row: 5, col: 11 }];
 	const w = world(units, [{ row: 5, col: 3 }], [{ row: 4, col: 10 }]);
-	const classic = playTurn(aiController(0), w);
+	const classic = playOneTurn(aiController(0), w);
 	expect(position(classic.world, 0)).not.toEqual({ row: 5, col: 3 });
 	const c = remasteredController(0);
-	const remastered = playTurn(c, w);
+	const remastered = playOneTurn(c, w);
 	expect(position(remastered.world, 0)).toEqual({ row: 5, col: 3 });
 	expect(c.operations).toMatchObject([{ kind: "garrison", at: { row: 5, col: 3 }, units: [0], reason: "garrison 5,3: enemy 8 hexes away" }]);
 });
@@ -82,9 +40,9 @@ test("a garrison doesn't leave its objective to attack (#616, #5)", () => {
 	//A tank on Germany's objective, a worn-down Polish infantry two hexes off: the classic AI goes for it
 	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 5, col: 5, strength: 3 }];
 	const w = world(units, [{ row: 5, col: 3 }], [{ row: 5, col: 12 }]);
-	const classic = playTurn(aiController(0), w);
+	const classic = playOneTurn(aiController(0), w);
 	expect(position(classic.world, 0)).not.toEqual({ row: 5, col: 3 });
-	const remastered = playTurn(remasteredController(0), w);
+	const remastered = playOneTurn(remasteredController(0), w);
 	expect(position(remastered.world, 0)).toEqual({ row: 5, col: 3 });
 	expect(remastered.commands.filter((cmd) => cmd.type === "move" || cmd.type === "attack")).toEqual([]);
 });
@@ -94,9 +52,9 @@ test("a garrison fires from its objective when the estimate gives more kills tha
 	//classic AI drives for it; the garrison hits the infantry without leaving its hex
 	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 3 }, { eqid: PIECHOTA, owner: 1, row: 6, col: 3, strength: 4 }];
 	const w = world(units, [{ row: 5, col: 3 }], [{ row: 5, col: 8 }]);
-	const classic = playTurn(aiController(0), w);
+	const classic = playOneTurn(aiController(0), w);
 	expect(classic.commands).not.toContainEqual({ type: "attack", unit: 0, target: 1 });
-	const remastered = playTurn(remasteredController(0), w);
+	const remastered = playOneTurn(remasteredController(0), w);
 	expect(remastered.commands).toContainEqual({ type: "attack", unit: 0, target: 1 });
 	expect(position(remastered.world, 0)).toEqual({ row: 5, col: 3 });
 });
@@ -109,7 +67,7 @@ test("an objective whose garrison was destroyed gets a new one the same turn (#6
 	const w = world(units, [{ row: 5, col: 3 }], [{ row: 5, col: 14 }]);
 	const c = remasteredController(0);
 	const lost = (x: World, n: number) => n === 0 ? without(x, 0) : x;
-	const turn = playTurn(c, w, lost);
+	const turn = playOneTurn(c, w, lost);
 	expect(turn.commands[0]).toEqual({ type: "move", unit: 1, to: { row: 5, col: 3 } });
 	expect(c.operations).toMatchObject([{ kind: "garrison", at: { row: 5, col: 3 }, units: [1] }]);
 });
@@ -130,11 +88,11 @@ test("the remastered AI moves onto an enemy objective it just emptied (#616, #31
 		{ eqid: PIECHOTA, owner: 1, row: 5, col: 8, strength: 2 }];
 	const objective = { row: 5, col: 8 };
 	const w = world(units, [], [objective, { row: 1, col: 14 }]);
-	const classic = playTurn(aiController(0), w);
+	const classic = playOneTurn(aiController(0), w);
 	expect(classic.commands).toContainEqual({ type: "attack", unit: 1, target: 2 });
 	expect(unitById(classic.world, 2)).toBeNull();
 	expect(classic.world.state.map.hexes[hexIndex(w, 5, 8)].unit).toBeNull();
-	const remastered = playTurn(remasteredController(0), w);
+	const remastered = playOneTurn(remasteredController(0), w);
 	const hex = remastered.world.state.map.hexes[hexIndex(w, 5, 8)];
 	expect(hex.owner).toBe(0);
 	expect((unitById(remastered.world, hex.unit as number) as UnitState).owner).toBe(0);
@@ -145,7 +103,7 @@ test("a unit the staff holds gets no order from the classic plan (#616)", () => 
 		{ eqid: TP7, owner: 1, row: 5, col: 10 }];
 	const w = world(units, [], [{ row: 5, col: 14 }]);
 	const all = planTurn(w, 0, w.rules.ai.config, 0).queue;
-	const free = planTurn(w, 0, w.rules.ai.config, 0, new Set([0])).queue;
+	const free = planTurn(w, 0, w.rules.ai.config, 0, { held: new Set([0]) }).queue;
 	expect(all.some((cmd) => "unit" in cmd && cmd.unit === 0)).toBe(true);
 	expect(free.some((cmd) => "unit" in cmd && cmd.unit === 0)).toBe(false);
 	expect(free.length).toBeGreaterThan(0);
@@ -155,7 +113,7 @@ test("with no objective in reach and no attack the remastered AI gives the class
 	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 2, col: 2 }, { eqid: PZ_IVD, owner: 0, row: 3, col: 2 },
 		{ eqid: TP7, owner: 1, row: 10, col: 15 }];
 	const w = world(units, [], [{ row: 8, col: 12 }]);
-	const classic = playTurn(aiController(0), w), remastered = playTurn(remasteredController(0), w);
+	const classic = playOneTurn(aiController(0), w), remastered = playOneTurn(remasteredController(0), w);
 	expect(remastered.commands.length).toBeGreaterThan(0);
 	expect(remastered.commands).toEqual(classic.commands);
 	expect(remastered.world.state).toEqual(classic.world.state);

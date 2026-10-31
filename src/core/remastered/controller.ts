@@ -14,6 +14,7 @@ import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
 import { perceive, type Sighting, type SideView } from "./perception";
+import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
 import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type ThreatenedObjective,
 	threatenedObjectives, withGarrisons } from "./staff";
 
@@ -33,6 +34,7 @@ interface TurnMemory {
 	attacked: Position | null;
 	pending: Command | null;
 	supplied: Set<UnitId>;
+	mounted: Set<UnitId>;	//the units on their transports at the turn's start
 	orders: number;
 }
 
@@ -40,13 +42,18 @@ interface TurnMemory {
 //real turn's (Zitadelle's biggest army gives about 300)
 const MAX_ORDERS = 2000;
 
-const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(), orders: 0 });
+const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
+	mounted: new Set(), orders: 0 });
+
+const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cmd];
 
 /**
  * The remastered AI. Its staff's operations hold some units over turns (a garrison on each objective in the enemy's
- * reach, a unit onto an objective its attack emptied); the classic plan (src/core/ai.ts) orders the rest, made
- * again on the world as it is after every attack, every order of the staff's and every order the core would
- * refuse: it gives none that `check` refuses. Its purchases and deployment are the classic AI's.
+ * reach, a unit onto an objective its attack emptied), it resupplies units before contact and ends no ride in the
+ * enemy's reach but near an objective. The classic plan
+ * (src/core/ai.ts) orders the rest, made again on the world as it is after every attack, every order of the staff's
+ * and every order the core would refuse: it gives none that `check` refuses. Its purchases and deployment are the
+ * classic AI's.
  *
  * The staff draws from no random stream. The classic plan draws from the AI's: the turn's first plan keeps its
  * draws in the world, as the classic AI's does; the plans made again during the turn can't hand a world back
@@ -73,8 +80,10 @@ export function remasteredController(player: number): RemasteredController {
 	const sideOfPlayer = (w: World) => w.state.players[player].side;
 	//The operations that go on and the garrisons the threatened objectives still lack
 	const review = (w: World) => setOperations(withGarrisons(w, player, liveOperations(w, sideOfPlayer(w), operations, threats), threats));
+	const classicPlan = (w: World) => planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige,
+		{ held, ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis) });
 	const replan = (w: World) => {
-		turn.queue = planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, held).queue;
+		turn.queue = classicPlan(w).queue;
 		turn.fresh = true;
 		turn.stale = false;
 	};
@@ -91,18 +100,30 @@ export function remasteredController(player: number): RemasteredController {
 		}
 	}
 
-	//The staff's orders before the classic plan's: the move after a mount, onto an objective just emptied, a march
+	//The staff's orders before the classic plan's, in this order: the move or attack after a mount or a move, onto an
+	//objective just emptied, off a transport in the enemy's reach, a garrison's march, a resupply before contact
+	const sources: ((w: World, a: Analysis) => Command[] | null)[] = [
+		(w) => one(occupyOrder(w)),
+		(w, a) => {
+			review(w);
+			return one(unmountOrder(w, a, player, held, turn.mounted));
+		},
+		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a)),
+		(w, a) => one(resupplyOrder(w, a, player, held)),
+	];
+
 	function staffFirst(w: World): Command | null {
 		const pending = turn.pending;
 		turn.pending = null;
 		if (pending !== null && check(w, pending) === null) return pending;
-		const occupy = occupyOrder(w);
-		if (occupy !== null) return occupy;
-		review(w);
-		const march = garrisonMarch(w, operations);
-		if (march === null) return null;
-		turn.pending = march.length > 1 ? march[1] : null;
-		return march[0];
+		if (analysis === null) return null;
+		for (const source of sources) {
+			const cmds = source(w, analysis);
+			if (cmds === null) continue;
+			turn.pending = cmds.length > 1 ? cmds[1] : null;
+			return cmds[0];
+		}
+		return null;
 	}
 
 	function occupyOrder(w: World): Command | null {
@@ -162,8 +183,9 @@ export function remasteredController(player: number): RemasteredController {
 			analysis = analyse(w, view, cache);
 			threats = threatenedObjectives(w, view, analysis.objectives.hold);
 			turn = newTurn();
+			for (const u of w.state.units) if (u.owner === player && u.isMounted) turn.mounted.add(u.id);
 			review(w);
-			const planned = planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, held);
+			const planned = classicPlan(w);
 			turn.queue = planned.queue;
 			turn.fresh = true;
 			turn.stale = false;
