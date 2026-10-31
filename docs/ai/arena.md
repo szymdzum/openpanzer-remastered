@@ -749,6 +749,91 @@ What it says:
 - **The concentration on one sector (#233, #258) pays only for the units far from it**: a sector pull for every unit
   took objectives from the attacker.
 
+## The remastered AI, the air doctrine (#619), 31 October 2026
+
+The staff's air doctrine (remastered-design.md, "Built: the air doctrine"): its aircraft supplied on their airfields,
+and for a side that assaults air superiority and the bombers on the assault's target and the guns covering it, each
+strike scored with the support fire it meets; a fighter beside each bomber in the enemy fighters' reach; the classic
+plan's air attacks held to the same rule and its aircraft kept within the fuel that brings them back. Before: the
+assault doctrine (#618, main at 5570466); after: this, the same seats, remaster rules, both runs `remastered`, with the
+new measure "aircraft lost" (#619) in both:
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-general,general-remastered,remastered-ai,ai-remastered ARENA_OUT=after.json npm run arena
+npm run arena:compare -- before.json after.json
+```
+
+Tuned on seeds 101-140, switching parts off one at a time and on one at a time (Zitadelle, Battleaxe and Luttich, where
+the first versions did worse), then on seeds 1-40 to find the cause of what the acceptance showed:
+
+- **The staff holding every aircraft**, with its own hexes to wait on half a move from the fight, out of the enemy air
+  defence's reach: the defenders lost far more units (Zitadelle's allies 35.7 → 52.0 a game against the general) and
+  held fewer objectives (Zitadelle 5.7 → 4.9, Battleaxe's axis 5.5 → 4.2), whatever part was switched off; with the
+  classic plan flying the aircraft the staff has no order for, the loss went away. The staff now holds none, as the
+  assault holds no ground unit.
+- **The side that defends hunting and striking with the staff** cost it units and objectives (Zitadelle's allies +6 to
+  +17 units lost, Battleaxe's axis 0.3 to 0.9 fewer held); its aircraft fly with the classic plan, held to the strikes'
+  rule.
+- **Strikes on any enemy**, not only the assault's target, took the attackers objectives (Luttich's allies 4.80 → 3.92
+  against the general); **the classic plan's aircraft kept out of the enemy air defence's reach** cost Zitadelle's
+  attack its wins (10 → 2 of 40); **the aircraft short of fuel or ammunition flown home** cost Battleaxe's defender 0.9
+  objectives held. All three are left out.
+- **Air superiority** carries Zitadelle's attack (without it, 15 → 4 wins of 40 on seeds 1-40) and costs Luttich's
+  (with it alone, 5 → 1). Hunting only the enemy's fighters, only aircraft that threaten the sector or the bombers, only
+  aircraft not worn down, or only while the enemy's air is at least half the side's: none kept both.
+
+The remastered AI's side, before (#618) and after, where the paired difference is beyond the noise ("same": noise on
+every measure but the aircraft lost). Orders refused stayed 0:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | held 3.00 → 3.52, units lost 13.6 → 11.1, aircraft lost 1.27 → 0.75 | aircraft lost 2.45 → 0.88 |
+| | allies defend | same | aircraft lost 2.00 → 1.90 |
+| Bzura | allies attack | same | same (wins 7 → 4 of 40) |
+| | axis defend | same | same |
+| Indochina | axis attack | same | units lost 13.2 → 11.8, aircraft lost 3.13 → 2.45 |
+| | allies defend | same | same |
+| Zitadelle | axis attack | aircraft lost 4.75 → 3.88, destroyed 56.4 → 60.7 | **taken 5.58 → 4.60**, aircraft lost 5.78 → 4.53 (wins 15 → 11 of 40, same) |
+| | allies defend | same | lost per objective 30 → 37 (held 5.63 → 5.55, units lost 36.9 → 41.3, same) |
+| Uman | axis attack | aircraft lost 0.17 → 0 | same |
+| | allies defend | same | same (wins 29 → 28 of 40) |
+| Battleaxe | allies attack | taken 7.0 → 6.1 (wins 24 → 25, same) | aircraft lost 4.22 → 2.95, destroyed 16.8 → 20.9 |
+| | axis defend | destroyed 22.8 → 25.6 | same |
+| Taman | allies attack | **wins 40 → 36 of 40** | aircraft lost 1.93 → 1.20 |
+| | axis defend | held 2.17 → 1.70, units lost 20.6 → 24.4 | held 1.38 → 0.68, units lost 25.1 → 30.0 (wins 28 → 21 of 40, same) |
+| Luttich | allies attack | **wins 17 → 6 of 40**, held 3.9 → 3.15, units lost 35.5 → 39.8 | **wins 5 → 1 of 40**, taken 4.67 → 4.03, lost per objective 9.4 → 11.0 |
+| | axis defend | same | aircraft lost 1.80 → 1.35 |
+
+Against the general one scenario and side is worse beyond the noise on its main measure: Luttich's attack, 5 → 1 wins
+of 40 (−10 points, −19.7 to −0.3), at the noise's edge; within the noise on the tuning seeds (4 → 2) and on seeds
+41-80, played to check (3 → 2, −13.9 to 8.9; Zitadelle's attack 14 → 11, in the noise too). The owner's call, as #629.
+
+Aircraft lost against the general, a game, before → after: Ostpreussen 2.45 → 0.88 (axis), 2.00 → 1.90 (allies);
+Bzura 0 and 0; Indochina 3.13 → 2.45 and 0.78 → 0.78; Zitadelle 5.78 → 4.53 and 1.75 → 2.85 (in the noise); Uman 0.10
+→ 0.03 and 0.70 → 0.60; Battleaxe 3.52 → 2.95 and 4.22 → 2.95; Taman 3.42 → 3.63 and 1.93 → 1.20; Luttich 1.80 → 1.35
+and 5.20 → 5.17 (axis first, then allies).
+
+Against the classic AI, both sides: 428 of 640 games (441 after #618). Its wins by scenario, axis then allies:
+Ostpreussen 0 and 40, Bzura 40 and 3, Indochina 0 and 40, Zitadelle 8 and 40, Uman 38 and 39, Battleaxe 39 and 25,
+Taman 34 and 36, Luttich 40 and 6.
+
+The targets of remastered-design.md against the general: 23 of 29 (24 after #618). Luttich's defender loses 26.7 units
+(target 26.2; 25.4 before, in the noise); the other five not met as before: Ostpreussen's defender (held 4.08, target
+4.1; units lost 30.3, target 22.3), the defender's units lost in Bzura (12.3, target 10.8) and Indochina (11.1, target
+9.4), and Taman's defence (21 wins of 40, target 31).
+
+The planning time of the remastered AI, all its turns, seeds 1-40: Zitadelle 149 ms a turn (95th percentile 360, worst
+543), the worst turn of the suite 844 ms (Luttich), the slowest game 5.1 s: within the budget.
+
+What it says:
+
+- **Fewer aircraft lost** in most scenarios (Ostpreussen's axis a third of them, Battleaxe's allies two thirds): the
+  strikes the support fire would make lose more than they kill aren't flown, by the staff or the classic plan.
+- **The air's gain doesn't reach the ground**: the measures of the objectives move little, and against the classic AI
+  Luttich's attack wins far less. The aircraft that survive don't take hexes; where the AI turns its fighters on the
+  enemy's aircraft, the ground loses their support. Which strikes and hunts pay is a question for the commander's
+  plan (#411), which knows where the battle is decided.
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the
