@@ -112,6 +112,14 @@ test("the threat map counts the enemy's reach next turn, ground and air apart (#
 	expect(air.threat.ground[at(w, { row: 1, col: 1 })]).toBe(10);
 });
 
+test("the air threat map ignores enemy units that can't fire at aircraft (#633)", () => {
+	//Eqid 90 has an air attack value but is not among the units that start an attack on an aircraft; the fighter is
+	const w = world([{ eqid: PZ_IIA, owner: 0, row: 1, col: 1 }, { eqid: 90, owner: 1, row: 5, col: 8 }], 12, 16, { noFOW: true });
+	const a = analysed(w);
+	expect(sum(a.threat.air)).toBe(0);
+	expect(sum(a.threat.ground)).toBeGreaterThan(0);
+});
+
 test("the distance to an objective follows the terrain's cost for the movement method (#610)", () => {
 	//Clear but for a forest across column 4; the objective to take on 1,7
 	const w0 = handWorld({ rows: 3, cols: 8, terrain: (_r, c) => c === 4 ? terrainType.Forest : terrainType.Clear,
