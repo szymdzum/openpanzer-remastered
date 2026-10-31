@@ -586,6 +586,83 @@ What it says:
   Battleaxe it takes back 1.9 against 5.1.
 - **No order refused** (17 to 98 a game before).
 
+## The remastered AI, the staff's second part (#617), 31 October 2026
+
+The staff's resupply before contact and its rides out of the enemy's reach (#315) (remastered-design.md, "Built:
+the staff"). Before: the staff's first part (#616, main at 365ca1d); after: this, in the same seats, the suite,
+remaster rules, seeds 1-40, both runs `remastered` (no `--as`):
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-ai,general-remastered,remastered-general ARENA_OUT=after-a.json npm run arena
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=ai-remastered ARENA_OUT=after-b.json npm run arena
+npm run arena:compare -- before-a.json after-a.json
+```
+
+Tried and left out, each switched off in turn (seeds 101-140 to tune, 1-40 to find the cause of what the first
+acceptance showed):
+
+- **Withdrawing a worn-down unit to reinforce** (#6). It saved units, but a defender held fewer objectives at the end
+  and won fewer games: Battleaxe's axis held 4.7 against the general instead of 5.2 without it and won 28 of 40
+  against the classic AI instead of 34, Luttich's 3.6 instead of 4.05, Uman's allies won 16 to 24 of 40 instead of
+  28. For an attacker it cost the objectives it went for (Battleaxe's allies: 9 of 40 wins instead of 35, in the first
+  version). Neither sparing the units within 4 hexes of an objective nor those on the front made it neutral.
+- **Finishing off a weak enemy first** (#6). Luttich's attacking allies won 11 of 40 against the classic AI with it,
+  22 without; Taman's 7 of 40 against the general, 14 without; a defender that did it lost more units (Zitadelle's
+  allies 44 instead of 38).
+- **Rides kept strictly out of reach** cost Taman's attacking allies their wins against the general (7 of 40, 24
+  without the rule) and Uman's defence (16, 22 without): on a crowded map nearly every hex near the fight is in reach,
+  and the units came too late. A ride may now end in reach within 2 hexes of an objective. The rule is what saves the
+  attacker's units: without it Ostpreussen's axis lost 17 units against the general instead of 12, Zitadelle's 54
+  instead of 46.
+
+The remastered AI's side, before (#616) and after, where the paired difference is beyond the noise ("same": noise
+on every measure):
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | units lost 17.4 → 14.1 | units lost 18.6 → 13.3, lost per objective 3.7 → 2.7, held 4.1 → 3.7 |
+| | allies defend | same | same |
+| Bzura | allies attack | same | same |
+| | axis defend | held 5.1 → 5.9, units lost 14.1 → 12.1 | units lost 15.7 → 13.3 |
+| Indochina | axis attack | taken 1.0 → 1.3, lost per objective 17.5 → 13.7 | units lost 16.3 → 14.8 |
+| | allies defend | same | same |
+| Zitadelle | axis attack | same | units lost 52.3 → 42.7, lost per objective 12.0 → 9.1 |
+| | allies defend | same | same |
+| Uman | axis attack | same | units lost 13.7 → 11.3, lost per objective 3.2 → 2.6 |
+| | allies defend | **units lost 40.6 → 51.2** | same (wins 28 and 28 of 40) |
+| Battleaxe | allies attack | same | same |
+| | axis defend | same | same |
+| Taman | allies attack | **lost per objective 6.3 → 7.8** (units lost 13.3 → 15.7) | same |
+| | axis defend | wins 26 → 35 of 40, held 1.2 → 2.05, units lost 32.1 → 22.4 | wins 12 → 27 of 40 (#623), units lost 30.6 → 24.9 |
+| Luttich | allies attack | same | same |
+| | axis defend | same | units lost 30.0 → 25.8 |
+
+Against the general no scenario and side is worse on its main measure (remastered-design.md, "What done looks
+like"). Against the classic AI two are, both on the units lost: Uman's defence (held at the end 4.2 → 3.65, in the
+noise) and Taman's attack (it takes as many, 2.1 → 2.0): the rides that end near an objective, in the enemy's reach, on the two most
+crowded maps.
+
+Against the classic AI, both sides: 437 of 640 games (432 after #616). Its wins by scenario, axis then allies:
+Ostpreussen 0 and 40, Bzura 40 and 0, Indochina 0 and 40, Zitadelle 2 and 40, Uman 38 and 40, Battleaxe 34 and 31,
+Taman 35 and 39, Luttich 40 and 18.
+
+The targets of remastered-design.md against the general: 24 of 29, as after #616. Now met: Luttich's defender loses
+25.8 units (target 26.2). Not met: Ostpreussen's defender (held 3.95, target 4.1, within the noise of 4.15 before;
+units lost 29.2, target 22.3), the defender's units lost in Bzura (13.3, target 10.8, from 15.7) and Indochina (12.4,
+target 9.4), and Taman's defence, 27 wins of 40 (target 31; 12 after #616 and 21 for the classic AI, #623).
+
+The planning time of the remastered AI, all its turns, seeds 1-40: Zitadelle 169 ms a turn (95th percentile 407,
+worst 570), the worst turn of the suite 820 ms (Luttich), the slowest game 6.0 s: within the budget.
+
+What it says:
+
+- **The attacker keeps its guns and infantry off their trucks where the enemy overruns them** (#315) and loses fewer
+  units for as many objectives: a quarter fewer in Ostpreussen, Zitadelle and Uman against the general.
+- **Taman's defence wins again** (27 of 40 against the general, 12 after #616): the defender's guns and infantry
+  aren't caught on their transports by the attack on the smallest map (#623).
+- The withdrawal and the finishing off need the commander's postures (#411): which units are the line, which the
+  reserve, when an attack is worth a unit.
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the
