@@ -11,7 +11,7 @@ import { distance } from "../geometry";
 import { terrainType, unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
 import { isAir, isSea } from "../units";
-import { currentEqid, hexIndex } from "../world";
+import { currentEqid, hexIndex, unitData } from "../world";
 import { around, costField, eachNeighbour, reached, stepField, terrainCosts, UNREACHED } from "./fields";
 import type { Sighting, SideView } from "./perception";
 
@@ -43,10 +43,13 @@ export interface DistanceField {
 	hold: Uint16Array;
 }
 
-/** The hexes from each hex to the nearest of the side's cities (ground), airfields (air) and ports (sea). */
+/**
+ * The hexes from each hex to the nearest of the side's cities (ground), ports (sea) and, for an aircraft, the
+ * airfields flying its player's country and the carriers of its player (`air`, by player: supply.ts).
+ */
 export interface SupplyMap {
 	ground: Uint16Array;
-	air: Uint16Array;
+	air: ReadonlyMap<number, Uint16Array>;
 	sea: Uint16Array;
 }
 
@@ -208,8 +211,8 @@ export function fieldTo(w: World, cache: AnalysisCache, movmethod: number, targe
 	return cached(cache, `field ${ground} ${movmethod} ${hexes.join()}`, () => costField(w, costs, hexes));
 }
 
-//Where the side's units resupply and reinforce in full: ground units in a city, aircraft on an airfield (or next
-//to it), ships in a port, each of its side's (supply.ts)
+//Where the side's units resupply and reinforce in full: ground units in a city, aircraft on an airfield of their
+//player's country (or next to it) or a carrier of their player, ships in a port (supply.ts)
 function supplyMap(w: World, side: number): SupplyMap {
 	const ofTerrain = (terrain: number) => {
 		const hexes: number[] = [];
@@ -218,12 +221,24 @@ function supplyMap(w: World, side: number): SupplyMap {
 		});
 		return stepField(w, hexes);
 	};
-	return { ground: ofTerrain(terrainType.City), air: ofTerrain(terrainType.Airfield), sea: ofTerrain(terrainType.Port) };
+	const air = new Map<number, Uint16Array>();
+	for (const p of w.state.players) {
+		if (p.side !== side) continue;
+		const hexes: number[] = [];
+		w.state.map.hexes.forEach((h, i) => {
+			if (w.data.hexes[i].terrain === terrainType.Airfield && h.flag === p.country) hexes.push(i);
+		});
+		for (const u of w.state.units)
+			if (u.owner === p.id && unitData(w, u).uclass === unitClass.carrier) hexes.push(hexIndex(w, u.row, u.col));
+		air.set(p.id, stepField(w, hexes));
+	}
+	return { ground: ofTerrain(terrainType.City), air, sea: ofTerrain(terrainType.Port) };
 }
 
 function unitAnalysis(w: World, u: UnitState, threat: Threat, supply: SupplyMap, fields: readonly DistanceField[]): UnitAnalysis {
 	const hex = hexIndex(w, u.row, u.col), air = isAir(w, u);
 	const field = fields.find((f) => f.movmethod === w.equipment[currentEqid(u)].movmethod);
-	return { id: u.id, threat: (air ? threat.air : threat.ground)[hex], supply: (air ? supply.air : isSea(w, u) ? supply.sea : supply.ground)[hex],
+	const supplyField = air ? supply.air.get(u.owner) : isSea(w, u) ? supply.sea : supply.ground;
+	return { id: u.id, threat: (air ? threat.air : threat.ground)[hex], supply: supplyField ? supplyField[hex] : UNREACHED,
 		take: field ? field.take[hex] : UNREACHED, hold: field ? field.hold[hex] : UNREACHED };
 }

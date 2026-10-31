@@ -150,6 +150,34 @@ test("the supply map is 0 on the side's own city and grows away from it (#610)",
 	expect(a.units).toMatchObject([{ id: 0, supply: 3 }]);
 });
 
+function airfields(w: World, flags: [Position, number][], owner = 0) {
+	for (const [p, flag] of flags) {
+		w.data.hexes[at(w, p)].terrain = terrainType.Airfield;
+		w.state.map.hexes[at(w, p)].owner = owner;
+		w.state.map.hexes[at(w, p)].flag = flag;
+	}
+}
+
+test("an aircraft's supply distance counts only the airfields it can resupply at (#634)", () => {
+	//Player 0 is German (country 7); an allied player 2 of its side owns the near airfield, which flies Italy's flag
+	const w = world([{ eqid: P11C, owner: 0, row: 3, col: 3 }], 12, 16);
+	w.state.players.push({ ...w.state.players[0], id: 2, country: 9 });
+	airfields(w, [[{ row: 3, col: 5 }, 9]], 2);
+	airfields(w, [[{ row: 10, col: 3 }, 7]]);
+	const a = analysed(w);
+	expect(a.units).toMatchObject([{ id: 0, supply: distance(3, 3, 10, 3) }]);
+	expect(a.supply.air.get(0)?.[at(w, { row: 3, col: 5 })]).toBe(distance(3, 5, 10, 3));
+	expect(a.supply.air.get(2)?.[at(w, { row: 3, col: 5 })]).toBe(0);
+});
+
+test("a ground unit's supply distance still counts the side's cities (#634)", () => {
+	const w = world([{ eqid: PZ_IIA, owner: 0, row: 3, col: 3 }], 12, 16);
+	w.data.hexes[at(w, { row: 3, col: 7 })].terrain = terrainType.City;
+	w.state.map.hexes[at(w, { row: 3, col: 7 })].owner = 0;
+	airfields(w, [[{ row: 3, col: 4 }, 7]]);
+	expect(analysed(w).units).toMatchObject([{ id: 0, supply: 4 }]);
+});
+
 //A few turns of Panzer-Verbaende Ostpreussen played by two controllers of each side: every order given
 function orders(make: (player: number) => Controller, turns = 3): { orders: unknown[] } {
 	const setup = { ...setupOf("drpzop01.xml", { game: 5, ai: 5 + 7919 }, null, undefined, [], new new JSDOM().window.DOMParser()),
