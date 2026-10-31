@@ -244,6 +244,7 @@ interface Planning {
 	prestigeLeft: number;
 	stayShare: number;
 	ridesTo: ((u: UnitState, cell: Position) => boolean) | null;
+	pullTo: ((u: UnitState) => readonly Position[]) | null;
 }
 
 /** A turn's classic plan: its commands in order, the world with the AI stream after its draws, the prestige left. */
@@ -259,6 +260,8 @@ export interface PlanOptions {
 	//Whether a move on the unit's transport may end on the cell; when not given, any cell but one next to an enemy
 	//ground unit the side sees
 	ridesTo?: (u: UnitState, cell: Position) => boolean;
+	//The objectives a unit's moves are pulled to; when not given, the side's objectives to take
+	pullTo?: (u: UnitState) => readonly Position[];
 }
 
 const NO_UNITS: ReadonlySet<UnitId> = new Set();
@@ -274,7 +277,7 @@ export function planTurn(w: World, player: number, config: AIConfig, prestigeLef
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
 	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side),
-		ridesTo: options.ridesTo || null };
+		ridesTo: options.ridesTo || null, pullTo: options.pullTo || null };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
 		if (u.owner !== player || held.has(u.id)) continue;
@@ -349,7 +352,8 @@ function moveUnit(t: Planning, a: AIUnit) {
 	const moving = !(a.didMove || a.didResupplyReinforce);
 	const cells = moving ? ridden(t, u, moveRange(s.w, u)) : [];
 	const mounted = moving ? mountedCells(s.w, u, cells, t.ridesTo) : [];
-	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted, t.stayShare);
+	const pull = t.pullTo === null ? s.plan.objectives : t.pullTo(u);
+	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, { cells, mounted, pull }, t.stayShare);
 	if (to === null) {
 		a.noMove = true;
 		return;
@@ -400,17 +404,24 @@ export function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean
 	});
 }
 
+//Where a unit may move: its move range, the hexes only its transport reaches, and the objectives that pull it
+interface MoveChoice {
+	cells: MoveCell[];
+	mounted: MoveCell[];
+	pull: readonly Position[];
+}
+
 //The best scored hex of the move range, then of the hexes only its transport reaches (mounted); null
 //when none beats staying. The objective it nears counts less for an air unit (0.3) and not for a ship.
 //A hex under -2000 (taken) skips attackPotential, so its draws too. A hex is scored for the unit
 //standing there, not its transport: it gets off it at the round's end.
-function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number)
-	: { cell: Position; mounted: boolean } | null {
-	let best = stayScore(s, u, stayShare);
+function bestMove(s: Scorer, u: UnitState, choice: MoveChoice, stayShare: number): { cell: Position; mounted: boolean } | null {
+	const { cells, mounted, pull } = choice;
+	let best = stayScore(s, u, stayShare, pull);
 	const nearing = isSea(s.w, u) ? 0 : isAir(s.w, u) ? 0.3 : 1;
 	let bestCell: MoveCell | null = null;
 	for (const c of [...cells, ...mounted]) {
-		const objective = nearing === 0 ? 0 : nearing === 1 ? objectiveScore(s, c).score : objectiveScore(s, c).score * nearing;
+		const objective = nearing === 0 ? 0 : nearing === 1 ? objectiveScore(s, c, pull).score : objectiveScore(s, c, pull).score * nearing;
 		let score = cellScore(s, u, c, c.canMove) + objective;
 		if (score < -2000) continue;
 		score += attackPotential(s, u, c);
@@ -425,10 +436,10 @@ function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[
 //Away from the enemy an attacker's unit keeps only a share of its entrenchment's worth: the holes it
 //dug far from the front don't hold it back (#235); in contact it keeps them all, to hold the line it
 //reached.
-function stayScore(s: Scorer, u: UnitState, stayShare: number): number {
+function stayScore(s: Scorer, u: UnitState, stayShare: number, pull: readonly Position[]): number {
 	const pos = { row: u.row, col: u.col };
 	let score = cellScore(s, u, pos, true);
-	if (isGround(s.w, u)) score += objectiveScore(s, pos).score;
+	if (isGround(s.w, u)) score += objectiveScore(s, pos, pull).score;
 	const share = stayShare === 1 || nearSeenEnemy(s.w, u, CONTACT) ? 1 : stayShare;
 	score += u.entrenchment * s.config.entrenchmentScore * share;
 	return score + attackPotential(s, u, pos);

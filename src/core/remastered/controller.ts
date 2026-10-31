@@ -13,6 +13,7 @@ import { check } from "../step";
 import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
+import { assaultOrder, losesMore, pullTo, withAssault } from "./assault";
 import { perceive, type Sighting, type SideView } from "./perception";
 import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
 import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type ThreatenedObjective,
@@ -34,6 +35,7 @@ interface TurnMemory {
 	attacked: Position | null;
 	pending: Command | null;
 	supplied: Set<UnitId>;
+	scouted: Set<UnitId>;	//the recon units the assault sent forward
 	mounted: Set<UnitId>;	//the units on their transports at the turn's start
 	orders: number;
 }
@@ -43,7 +45,7 @@ interface TurnMemory {
 const MAX_ORDERS = 2000;
 
 const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
-	mounted: new Set(), orders: 0 });
+	scouted: new Set(), mounted: new Set(), orders: 0 });
 
 const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cmd];
 
@@ -78,10 +80,15 @@ export function remasteredController(player: number): RemasteredController {
 		if (changed) turn.stale = true;
 	};
 	const sideOfPlayer = (w: World) => w.state.players[player].side;
-	//The operations that go on and the garrisons the threatened objectives still lack
-	const review = (w: World) => setOperations(withGarrisons(w, player, liveOperations(w, sideOfPlayer(w), operations, threats), threats));
-	const classicPlan = (w: World) => planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige,
-		{ held, ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis) });
+	//The operations that go on, the garrisons the threatened objectives still lack and the assault
+	const review = (w: World, a: Analysis) => setOperations(withAssault(w, a, cache, player,
+		withGarrisons(w, player, liveOperations(w, sideOfPlayer(w), operations, threats), threats)));
+	const assault = () => operations.find((op) => op.kind === "assault");
+	const classicPlan = (w: World) => {
+		const op = assault();
+		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
+			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
+	};
 	const replan = (w: World) => {
 		turn.queue = classicPlan(w).queue;
 		turn.fresh = true;
@@ -94,22 +101,27 @@ export function remasteredController(player: number): RemasteredController {
 		for (;;) {
 			const cmd = turn.queue.shift();
 			if (cmd === undefined) return null;
-			if ("unit" in cmd && held.has(cmd.unit)) continue;
+			if (("unit" in cmd && held.has(cmd.unit)) || losesMore(w, cmd)) continue;
 			if (check(w, cmd) === null) return cmd;
 			if (!turn.fresh) replan(w);
 		}
 	}
 
 	//The staff's orders before the classic plan's, in this order: the move or attack after a mount or a move, onto an
-	//objective just emptied, off a transport in the enemy's reach, a garrison's march, a resupply before contact
+	//objective just emptied, off a transport in the enemy's reach, a garrison's march, a resupply before contact, the
+	//assault's
 	const sources: ((w: World, a: Analysis) => Command[] | null)[] = [
 		(w) => one(occupyOrder(w)),
 		(w, a) => {
-			review(w);
+			review(w, a);
 			return one(unmountOrder(w, a, player, held, turn.mounted));
 		},
 		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a)),
 		(w, a) => one(resupplyOrder(w, a, player, held)),
+		(w, a) => {
+			const op = assault();
+			return op === undefined ? null : assaultOrder(w, a, cache, op, player, held, turn.scouted)?.commands ?? null;
+		},
 	];
 
 	function staffFirst(w: World): Command | null {
@@ -184,7 +196,7 @@ export function remasteredController(player: number): RemasteredController {
 			threats = threatenedObjectives(w, view, analysis.objectives.hold);
 			turn = newTurn();
 			for (const u of w.state.units) if (u.owner === player && u.isMounted) turn.mounted.add(u.id);
-			review(w);
+			review(w, analysis);
 			const planned = classicPlan(w);
 			turn.queue = planned.queue;
 			turn.fresh = true;
