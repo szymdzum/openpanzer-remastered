@@ -33,7 +33,7 @@ export interface Operation {
 }
 
 /** An objective of the side's the enemy can reach soon, and why the staff thinks so. */
-export interface Threat {
+export interface ThreatenedObjective {
 	at: Position;
 	reason: string;
 }
@@ -57,8 +57,8 @@ const samePosition = (a: Position, b: Position) => a.row === b.row && a.col === 
 const isOn = (u: UnitState, at: Position) => u.row === at.row && u.col === at.col;
 
 /** The side's objectives a ground enemy it knows of (seen or remembered, #17) can reach within GARRISON_TURNS moves. */
-export function threatenedObjectives(w: World, view: SideView, held: readonly Position[]): Threat[] {
-	const out: Threat[] = [];
+export function threatenedObjectives(w: World, view: SideView, held: readonly Position[]): ThreatenedObjective[] {
+	const out: ThreatenedObjective[] = [];
 	for (const at of held) {
 		let nearest = Infinity;
 		for (const s of view.enemies) {
@@ -80,7 +80,7 @@ const isAlive = (w: World, id: UnitId) => {
  * The operations that go on: their units alive, their deadline not passed, a garrison's objective still the side's
  * and still threatened.
  */
-export function liveOperations(w: World, side: number, ops: readonly Operation[], threats: readonly Threat[]): Operation[] {
+export function liveOperations(w: World, side: number, ops: readonly Operation[], threats: readonly ThreatenedObjective[]): Operation[] {
 	const turn = w.state.turn.turn;
 	return ops.filter((op) => turn <= op.until && op.units.every((id) => isAlive(w, id))
 		&& (op.kind !== "garrison" || (heldBy(w, op.at) === side && threats.some((t) => samePosition(t.at, op.at)))));
@@ -100,7 +100,7 @@ export function heldUnits(ops: readonly Operation[]): Set<UnitId> {
 }
 
 /** A garrison for each threatened objective that has none, the operations given first. */
-export function withGarrisons(w: World, player: number, ops: readonly Operation[], threats: readonly Threat[]): Operation[] {
+export function withGarrisons(w: World, player: number, ops: readonly Operation[], threats: readonly ThreatenedObjective[]): Operation[] {
 	const out = [...ops], held = heldUnits(ops), turn = w.state.turn.turn;
 	for (const t of threats) {
 		if (out.some((op) => op.kind === "garrison" && samePosition(op.at, t.at))) continue;

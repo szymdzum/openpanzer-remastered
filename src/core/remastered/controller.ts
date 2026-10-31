@@ -14,7 +14,7 @@ import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
 import { perceive, type Sighting, type SideView } from "./perception";
-import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type Threat,
+import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type ThreatenedObjective,
 	threatenedObjectives, withGarrisons } from "./staff";
 
 /** The remastered controller, with what it made of its last turn (null before it planned one) and its operations. */
@@ -57,7 +57,7 @@ const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attac
 export function remasteredController(player: number): RemasteredController {
 	const classic = aiController(player), cache: AnalysisCache = new Map(), destroyed = new Set<UnitId>();
 	let memory: readonly Sighting[] = [], view: SideView | null = null, analysis: Analysis | null = null;
-	let operations: Operation[] = [], threats: Threat[] = [], held = new Set<UnitId>(), turn = newTurn();
+	let operations: Operation[] = [], threats: ThreatenedObjective[] = [], held = new Set<UnitId>(), turn = newTurn();
 	let target: UnitId | null = null;
 	//An enemy its last attack took off the map was seen destroyed
 	const watch = (w: World) => {
