@@ -93,7 +93,7 @@ export function analyse(w: World, view: SideView, cache: AnalysisCache = new Map
 	const balance = own.influence.map((x, h) => x - enemy.influence[h]);
 	const influence = { own: own.influence, enemy: enemy.influence, balance };
 	const objectives = { take: w.state.objectives[view.side], hold: heldObjectives(w, view.side) };
-	const distanceFields = fieldsOf(w, view.own, objectives, cache, costsOf);
+	const distanceFields = fieldsOf(w, view.own, objectives, cache);
 	const supply = supplyMap(w, view.side), threat = { ground: enemy.ground, air: enemy.air };
 	return { side: view.side, turn: view.turn, influence, front: frontOf(w, influence), sectors: sectorsOf(w, influence, objectives.take),
 		threat, objectives, distance: distanceFields, supply, units: view.own.map((u) => unitAnalysis(w, u, threat, supply, distanceFields)) };
@@ -189,14 +189,17 @@ function heldObjectives(w: World, side: number): Position[] {
 }
 
 //A distance field per movement method of the side's units, kept while the objectives and the ground stay
-function fieldsOf(w: World, own: readonly UnitState[], objectives: Analysis["objectives"], cache: AnalysisCache,
-	costsOf: (movmethod: number) => Uint8Array): DistanceField[] {
+function fieldsOf(w: World, own: readonly UnitState[], objectives: Analysis["objectives"], cache: AnalysisCache): DistanceField[] {
 	const methods = [...new Set(own.map((u) => w.equipment[currentEqid(u)].movmethod))];
-	const field = (movmethod: number, targets: readonly Position[]) => {
-		const hexes = targets.map((p) => hexIndex(w, p.row, p.col));
-		return cached(cache, `field ${w.state.scenario.ground} ${movmethod} ${hexes.join()}`, () => costField(w, costsOf(movmethod), hexes));
-	};
-	return methods.map((movmethod) => ({ movmethod, take: field(movmethod, objectives.take), hold: field(movmethod, objectives.hold) }));
+	return methods.map((movmethod) => ({ movmethod, take: fieldTo(w, cache, movmethod, objectives.take),
+		hold: fieldTo(w, cache, movmethod, objectives.hold) }));
+}
+
+/** The movement points from each hex to the nearest of `targets` for a movement method, cached by the ground. */
+export function fieldTo(w: World, cache: AnalysisCache, movmethod: number, targets: readonly Position[]): Uint16Array {
+	const hexes = targets.map((p) => hexIndex(w, p.row, p.col)), ground = w.state.scenario.ground;
+	const costs = cached(cache, `costs ${ground} ${movmethod}`, () => terrainCosts(w, movmethod));
+	return cached(cache, `field ${ground} ${movmethod} ${hexes.join()}`, () => costField(w, costs, hexes));
 }
 
 //Where the side's units resupply and reinforce in full: ground units in a city, aircraft on an airfield (or next

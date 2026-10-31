@@ -8,10 +8,10 @@ import type { Position, UnitState, World } from "../src/core/types";
 import { hexIndex, unitById } from "../src/core/world";
 import { germanyPoland, type HandUnit, handWorld } from "./coreworld";
 
-//A hand-built 12 x 16 map of the remaster's rules, everything in sight, seeded: `own` are Germany's objectives
-//(Poland's to take), `enemy` Poland's (Germany's to take)
-export function world(units: HandUnit[], own: Position[], enemy: Position[] = [], seed = 3): World {
-	const w = handWorld({ rows: 12, cols: 16, units }, germanyPoland, { rules: remasterRules, noFOW: true });
+//A hand-built 12 x 16 map of the remaster's rules, everything in sight unless `fog`, seeded: `own` are Germany's
+//objectives (Poland's to take), `enemy` Poland's (Germany's to take)
+export function world(units: HandUnit[], own: Position[], enemy: Position[] = [], seed = 3, fog = false): World {
+	const w = handWorld({ rows: 12, cols: 16, units }, germanyPoland, { rules: remasterRules, noFOW: !fog });
 	w.state.rng = { game: seed, ai: seed + 7919 };
 	const mark = (at: Position, owner: number) => {
 		w.state.map.hexes[hexIndex(w, at.row, at.col)] = { ...w.state.map.hexes[hexIndex(w, at.row, at.col)], victorySide: ~owner & 1, owner };
