@@ -4,7 +4,8 @@ A proposal: how the remaster's own computer opponent could be built if it were d
 next to the classic one rather than instead of it. foundations.md has the theory behind it,
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
 analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
-plan made again after every attack, the garrisons and the occupation of an emptied objective ("Built: the staff").
+plan made again after every attack, the garrisons and the occupation of an emptied objective, the resupply before
+contact and the rides out of reach ("Built: the staff").
 
 ## What the core already gives
 
@@ -215,7 +216,22 @@ AI and its rules untouched (the contracts and verify play them).
   player's ground unit that reaches it this turn and can capture (infantry first, then the strongest) moves in before
   anything else, and is held to the turn's end.
 
-Measured in arena.md, "The remastered AI, the staff's first part (#616)".
+The second part (#617), in rear.ts, ahead of the classic plan after the garrisons' marches: an unmount, a resupply.
+
+- **Resupply before contact**: a unit with a third of its ammunition or fuel or less (half the fuel for aircraft)
+  where no ground enemy reaches next turn (aircraft: no air threat) resupplies instead of advancing.
+- **Rides out of reach** (#315): `planTurn`'s `ridesTo` keeps the classic plan's moves on a transport (a mount, or a
+  unit already mounted) off the hexes a ground enemy the side knows of reaches next turn (its influence, analysis.ts;
+  aircraft aside, they reach nearly everywhere), but for those within 2 hexes of an objective (`RIDE_TO_OBJECTIVE`:
+  arriving in time decides it); the garrisons' rides too. A unit that starts its turn on its transport within reach
+  gets off it first. Without `ridesTo` the classic plan rides as before.
+- **Tried and left out** (#6, measured in arena.md): withdrawing a worn-down unit to reinforce saved units but lost
+  objectives and games for a defender (Battleaxe, Luttich, Uman) and its attacks for an attacker, whatever spared the
+  units near the objectives or on the front; finishing off a weak enemy first cost an attacker its wins (Luttich,
+  Taman) and a defender its units. Both wait for the commander's postures (#411).
+
+The staff draws nothing in either part. The planning and the measures: arena.md, "The remastered AI, the staff's
+first part (#616)" and "the staff's second part (#617)".
 
 ### 5. Tactics: execution
 

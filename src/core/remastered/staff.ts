@@ -130,8 +130,8 @@ function garrisonFor(w: World, player: number, at: Position, held: ReadonlySet<U
 	return best;
 }
 
-//A unit of the player's on the map that no operation holds and that can still move this turn
-const isFree = (u: UnitState, player: number, held: ReadonlySet<UnitId>) => u.owner === player && u.row >= 0 && !held.has(u.id)
+/** A unit of the player's on the map that no operation holds and that can still move this turn. */
+export const isFree = (u: UnitState, player: number, held: ReadonlySet<UnitId>) => u.owner === player && u.row >= 0 && !held.has(u.id)
 	&& !u.hasMoved;
 
 //The ground units that fight for a hex: not artillery, air defence or transports, which can't hold one
@@ -157,20 +157,20 @@ function garrisonScore(w: World, u: UnitState, hexes: number): number {
  * The next march of a garrison not yet on its objective: onto it, else as near as its move takes it, in its
  * transport when that goes further (a mount, then the move). Null when no garrison has a move to make.
  */
-export function garrisonMarch(w: World, ops: readonly Operation[]): Command[] | null {
+export function garrisonMarch(w: World, ops: readonly Operation[], rides: Rides): Command[] | null {
 	for (const op of ops) {
 		if (op.kind !== "garrison") continue;
 		const u = unitById(w, op.units[0]);
 		if (u === null || isOn(u, op.at) || u.hasMoved) continue;
-		const march = marchTo(w, u, op.at);
+		const march = marchTo(w, u, op.at, rides);
 		if (march !== null) return march;
 	}
 	return null;
 }
 
 //The move nearest the objective, if it brings the unit nearer; the mount first when it rides
-function marchTo(w: World, u: UnitState, at: Position): Command[] | null {
-	const way = wayTo(w, u, at);
+function marchTo(w: World, u: UnitState, at: Position, rides: Rides): Command[] | null {
+	const way = wayTo(w, u, at, rides);
 	if (way === null || distanceTo(way.cell, at) >= distance(u.row, u.col, at.row, at.col)) return null;
 	const move: Command = { type: "move", unit: u.id, to: { row: way.cell.row, col: way.cell.col } };
 	const first: Command = way.ride ? { type: "mount", unit: u.id } : move;
@@ -179,9 +179,9 @@ function marchTo(w: World, u: UnitState, at: Position): Command[] | null {
 }
 
 //The hex nearest the objective the unit can stop on, on foot or in its transport when that goes nearer
-function wayTo(w: World, u: UnitState, at: Position): { cell: MoveCell; ride: boolean } | null {
+function wayTo(w: World, u: UnitState, at: Position, rides: Rides): { cell: MoveCell; ride: boolean } | null {
 	const onFoot = nearestCell(moveRange(w, u), at);
-	const mounted = canMount(w, u) && !u.isMounted ? nearestCell(mountedCells(w, u), at) : null;
+	const mounted = canMount(w, u) && !u.isMounted ? nearestCell(mountedCells(w, u, rides), at) : null;
 	if (mounted !== null && (onFoot === null || distanceTo(mounted, at) < distanceTo(onFoot, at))) return { cell: mounted, ride: true };
 	return onFoot === null ? null : { cell: onFoot, ride: false };
 }
@@ -199,9 +199,13 @@ function nearestCell(cells: readonly MoveCell[], at: Position): MoveCell | null 
 	return best;
 }
 
-//The hexes its transport takes it to, but not next to an enemy the side sees: it would stand there in its truck
-function mountedCells(w: World, u: UnitState): MoveCell[] {
-	return moveRange(w, { ...u, isMounted: true }).filter((c) => !nextToSeenEnemy(w, u, c));
+/** Whether a move on the unit's transport may end on the cell. */
+export type Rides = (u: UnitState, cell: Position) => boolean;
+
+//The hexes its transport takes it to where it may end the ride (`rides`), and not next to an enemy the side sees: it
+//would stand there in its truck
+function mountedCells(w: World, u: UnitState, rides: Rides): MoveCell[] {
+	return moveRange(w, { ...u, isMounted: true }).filter((c) => !nextToSeenEnemy(w, u, c) && rides(u, c));
 }
 
 /**

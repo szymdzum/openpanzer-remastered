@@ -243,6 +243,7 @@ interface Planning {
 	queue: Command[];
 	prestigeLeft: number;
 	stayShare: number;
+	ridesTo: ((u: UnitState, cell: Position) => boolean) | null;
 }
 
 /** A turn's classic plan: its commands in order, the world with the AI stream after its draws, the prestige left. */
@@ -252,18 +253,28 @@ export interface ClassicPlan {
 	prestigeLeft: number;
 }
 
+/** What another planner (the remastered AI's staff) changes in the classic plan. */
+export interface PlanOptions {
+	held?: ReadonlySet<UnitId>;	//the units it orders, which the plan leaves out
+	//Whether a move on the unit's transport may end on the cell; when not given, any cell but one next to an enemy
+	//ground unit the side sees
+	ridesTo?: (u: UnitState, cell: Position) => boolean;
+}
+
 const NO_UNITS: ReadonlySet<UnitId> = new Set();
 
 /**
- * The classic plan of the player's turn, `held` left out: the units another planner orders (the remastered AI's
- * staff). Artillery, fortifications, air and naval combat units go first, each given another pass (reinforce,
- * resupply, move, attack) until it can do nothing more. A unit that did nothing in its first pass scores its moves
- * again in the next (new draws: it may move then).
+ * The classic plan of the player's turn, with what another planner changes in it (`options`). Artillery,
+ * fortifications, air and naval combat units go first, each given another pass (reinforce, resupply, move, attack)
+ * until it can do nothing more. A unit that did nothing in its first pass scores its moves again in the next (new
+ * draws: it may move then).
  */
-export function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number, held = NO_UNITS): ClassicPlan {
+export function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number, options: PlanOptions = {}): ClassicPlan {
+	const held = options.held || NO_UNITS;
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
-	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side) };
+	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side),
+		ridesTo: options.ridesTo || null };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
 		if (u.owner !== player || held.has(u.id)) continue;
@@ -336,8 +347,8 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const moving = !(a.didMove || a.didResupplyReinforce);
-	const cells = moving ? moveRange(s.w, u) : [];
-	const mounted = moving ? mountedCells(s.w, u, cells) : [];
+	const cells = moving ? ridden(t, u, moveRange(s.w, u)) : [];
+	const mounted = moving ? mountedCells(s.w, u, cells, t.ridesTo) : [];
 	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted, t.stayShare);
 	if (to === null) {
 		a.noMove = true;
@@ -358,10 +369,16 @@ function moveUnit(t: Planning, a: AIUnit) {
 //The hexes a ground unit reaches only in its transport (a towed gun's whole range): the AI drives its
 //guns and infantry up in their trucks (#82). None for a unit without one or already mounted, and none
 //next to an enemy ground unit the side sees: it would stand there in its truck until the round ends.
-function mountedCells(w: World, u: UnitState, cells: MoveCell[]): MoveCell[] {
+function mountedCells(w: World, u: UnitState, cells: MoveCell[], ridesTo: Planning["ridesTo"]): MoveCell[] {
 	if (u.isMounted || !canMount(w, u)) return [];
 	return moveRange(w, { ...u, isMounted: true }).filter((m) => !cells.some((c) => c.row === m.row && c.col === m.col)
-		&& !nextToSeenEnemy(w, u, m));
+		&& !nextToSeenEnemy(w, u, m) && (ridesTo === null || ridesTo(u, m)));
+}
+
+//The move range of a unit already on its transport, but for the cells another planner keeps it from riding to
+function ridden(t: Planning, u: UnitState, cells: MoveCell[]): MoveCell[] {
+	const ridesTo = t.ridesTo;
+	return ridesTo === null || !u.isMounted ? cells : cells.filter((c) => (c.row === u.row && c.col === u.col) || ridesTo(u, c));
 }
 
 //Within this distance of a seen enemy a unit is in contact: what one move of the enemy reaches.
