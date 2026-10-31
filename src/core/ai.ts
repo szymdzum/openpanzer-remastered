@@ -245,6 +245,7 @@ interface Planning {
 	stayShare: number;
 	ridesTo: ((u: UnitState, cell: Position) => boolean) | null;
 	pullTo: ((u: UnitState) => readonly Position[]) | null;
+	fliesTo: ((u: UnitState, cell: Position) => boolean) | null;
 }
 
 /** A turn's classic plan: its commands in order, the world with the AI stream after its draws, the prestige left. */
@@ -262,6 +263,8 @@ export interface PlanOptions {
 	ridesTo?: (u: UnitState, cell: Position) => boolean;
 	//The objectives a unit's moves are pulled to; when not given, the side's objectives to take
 	pullTo?: (u: UnitState) => readonly Position[];
+	//Whether an aircraft's move may end on the cell; when not given, any cell of its range
+	fliesTo?: (u: UnitState, cell: Position) => boolean;
 }
 
 const NO_UNITS: ReadonlySet<UnitId> = new Set();
@@ -277,7 +280,7 @@ export function planTurn(w: World, player: number, config: AIConfig, prestigeLef
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
 	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side),
-		ridesTo: options.ridesTo || null, pullTo: options.pullTo || null };
+		ridesTo: options.ridesTo || null, pullTo: options.pullTo || null, fliesTo: options.fliesTo || null };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
 		if (u.owner !== player || held.has(u.id)) continue;
@@ -350,7 +353,7 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const moving = !(a.didMove || a.didResupplyReinforce);
-	const cells = moving ? ridden(t, u, moveRange(s.w, u)) : [];
+	const cells = moving ? flown(t, u, ridden(t, u, moveRange(s.w, u))) : [];
 	const mounted = moving ? mountedCells(s.w, u, cells, t.ridesTo) : [];
 	const pull = t.pullTo === null ? s.plan.objectives : t.pullTo(u);
 	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, { cells, mounted, pull }, t.stayShare);
@@ -383,6 +386,12 @@ function mountedCells(w: World, u: UnitState, cells: MoveCell[], ridesTo: Planni
 function ridden(t: Planning, u: UnitState, cells: MoveCell[]): MoveCell[] {
 	const ridesTo = t.ridesTo;
 	return ridesTo === null || !u.isMounted ? cells : cells.filter((c) => (c.row === u.row && c.col === u.col) || ridesTo(u, c));
+}
+
+//The move range of an aircraft, but for the cells another planner keeps it from flying to
+function flown(t: Planning, u: UnitState, cells: MoveCell[]): MoveCell[] {
+	const fliesTo = t.fliesTo;
+	return fliesTo === null || !isAir(t.s.w, u) ? cells : cells.filter((c) => fliesTo(u, c));
 }
 
 //Within this distance of a seen enemy a unit is in contact: what one move of the enemy reaches.

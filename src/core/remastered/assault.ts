@@ -56,10 +56,12 @@ const LATE_SHARE = 1 / 3;
 //The attackers in the order they go in: tanks, the anti-tank guns as the second line, then infantry and recon
 const WAVES: readonly (readonly number[])[] = [[unitClass.tank], [unitClass.antiTank], [unitClass.infantry, unitClass.recon]];
 
-const samePosition = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-const classOf = (w: World, u: UnitState) => unitData(w, u, true).uclass;
-const hexOf = (w: World, p: Position) => hexIndex(w, p.row, p.col);
-const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) ? u : { ...u, row: at.row, col: at.col };
+export const samePosition = (a: Position, b: Position): boolean => a.row === b.row && a.col === b.col;
+/** The class of what the unit is, not of its transport. */
+export const classOf = (w: World, u: UnitState): number => unitData(w, u, true).uclass;
+export const hexOf = (w: World, p: Position): number => hexIndex(w, p.row, p.col);
+/** The unit as if it stood on the hex. */
+export const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) ? u : { ...u, row: at.row, col: at.col };
 
 /**
  * Whether the side assaults: the side attacking (#256), or one with more objectives to take than the enemy, as a
@@ -200,15 +202,25 @@ const isGunOn = (w: World, u: UnitState, at: Position) => isArtillery(w, u)
  */
 export function assaultOrder(w: World, a: Analysis, cache: AnalysisCache, op: Operation, player: number, held: ReadonlySet<UnitId>,
 	scouted: Set<UnitId>): AssaultOrder | null {
-	const b = battleOf(w, a, cache, op, player, held, scouted);
-	return reconOrder(b) ?? fireOrder(b) ?? gunsForward(b, freeGround(w, player, held));
+	return assaultFireOrder(w, a, cache, op, player, held, scouted) ?? assaultAttackOrder(w, a, cache, op, player, held, scouted);
 }
 
-//The artillery's fire, then the armour's attack, on the target the armour strikes best
-function fireOrder(b: Battle): AssaultOrder | null {
-	const main = b.targets.length === 0 ? null : mainTarget(b);
-	return artilleryOrder(b, main) ?? attackOrder(b, main);
+/** The assault's orders before the air strikes (air.ts): the recon's move, the artillery's fire. */
+export function assaultFireOrder(w: World, a: Analysis, cache: AnalysisCache, op: Operation, player: number, held: ReadonlySet<UnitId>,
+	scouted: Set<UnitId>): AssaultOrder | null {
+	const b = battleOf(w, a, cache, op, player, held, scouted);
+	return reconOrder(b) ?? artilleryOrder(b, mainOf(b));
 }
+
+/** The assault's orders after the air strikes: the armour's attack, the guns brought forward. */
+export function assaultAttackOrder(w: World, a: Analysis, cache: AnalysisCache, op: Operation, player: number,
+	held: ReadonlySet<UnitId>, scouted: Set<UnitId>): AssaultOrder | null {
+	const b = battleOf(w, a, cache, op, player, held, scouted);
+	return attackOrder(b, mainOf(b)) ?? gunsForward(b, freeGround(w, player, held));
+}
+
+//The target the armour strikes best, when it has one
+const mainOf = (b: Battle) => b.targets.length === 0 ? null : mainTarget(b);
 
 //A recon unit of the group moves where it sees most of the sector it doesn't see yet, once a turn, before anything
 //else: its move is phased, the classic plan may move it again after
@@ -340,11 +352,13 @@ function mainTarget(b: Battle): { target: UnitState; strikes: Strike[] } | null 
 	return strikes.length === 0 ? null : { target: t, strikes };
 }
 
-//The enemy guns that would fire in support of the target: its artillery against a ground attacker beside it, its air
-//defence against an aircraft over it
-function coveringGuns(b: Battle, t: UnitState): UnitState[] {
-	return b.w.state.units.filter((g) => g.row >= 0 && g.id !== t.id && sideOf(b.w, g) === sideOf(b.w, t) && seesUnit(b.w, g, b.side)
-		&& isCover(b.w, g) && distance(g.row, g.col, t.row, t.col) <= unitAttackRange(b.w, g) + 1);
+/**
+ * The enemy guns the side sees that would fire in support of the target: its artillery against a ground attacker beside
+ * it, its air defence against an aircraft over it.
+ */
+export function coveringGuns(w: World, side: number, t: UnitState): UnitState[] {
+	return w.state.units.filter((g) => g.row >= 0 && g.id !== t.id && sideOf(w, g) === sideOf(w, t) && seesUnit(w, g, side)
+		&& isCover(w, g) && distance(g.row, g.col, t.row, t.col) <= unitAttackRange(w, g) + 1);
 }
 
 const isCover = (w: World, g: UnitState) => [unitClass.artillery, unitClass.airDefence, unitClass.flak].includes(classOf(w, g));
@@ -354,7 +368,7 @@ const isCover = (w: World, g: UnitState) => [unitClass.artillery, unitClass.airD
 function artilleryOrder(b: Battle, main: { target: UnitState } | null): AssaultOrder | null {
 	const guns = b.group.filter((u) => isArtillery(b.w, u) && canFireNow(u));
 	if (guns.length === 0) return null;
-	const waves: [AssaultStep, UnitState[]][] = [["counter-battery", main === null ? [] : coveringGuns(b, main.target)],
+	const waves: [AssaultStep, UnitState[]][] = [["counter-battery", main === null ? [] : coveringGuns(b.w, b.side, main.target)],
 		["preparation", main === null ? [] : [main.target]], ["preparation", b.targets]];
 	for (const [step, targets] of waves) {
 		const strikes: Strike[] = [];

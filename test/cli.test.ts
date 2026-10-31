@@ -204,10 +204,16 @@ test("In the remaster rules a bomber attacks a ground unit from the next hex too
 }, 60_000);
 
 test("A unit with no air attack can't attack an aircraft next to it, as on the screen; in the remaster rules the core refuses it too (#285)", async () => {
-	const call = caller(tmpGame());
+	const file = tmpGame(), call = caller(file);
 	await call("new drpzop01.xml --side 1 --seed 1");
-	//the Me-109B-2 #78 over 14,12, after the Axis's first turn: the machine guns at 16,14 can hit it, the
+	//the Me-109B-2 #78 put over 14,12 after the Axis's first turn: the machine guns at 16,14 can hit it, the
 	//pioneers next to it on 15,12 (#64) have no air attack
+	const save = readGameFile(file), cols = save.state.map.cols, me109 = save.state.units.find((u) => u.id === 78);
+	if (me109 === undefined) throw new Error("no Me-109B-2 #78");
+	save.state.map.hexes[me109.row * cols + me109.col].air = null;
+	save.state.map.hexes[14 * cols + 12].air = 78;
+	Object.assign(me109, { row: 14, col: 12 });
+	fs.writeFileSync(file, JSON.stringify(save));
 	const by = await call("attackers 78");
 	expect(by).toContain("#67 7,92mm wz.08 @16,14 on #78 Me-109B-2 @14,12 from 14,13");
 	expect(by).not.toContain("#64 ");
@@ -418,6 +424,7 @@ test("The analysis shows a side's maps from what it sees, as text and as data (#
 	expect(axis).toContain("objectives to take, the weakest held first (5): ");
 	expect(axis).toContain("objectives to hold (2): 1,10 ");
 	expect(axis).toMatch(/garrisons the staff would set now: none|garrisons the staff would set now \(\d\): #\d+ .+ \(garrison /);
+	expect(axis).toMatch(/air the staff would fly now: #20 Do-17Z-1 @4,7; #22 Me-109E-3 @4,8; next order /);
 	expect(await call("analysis --side 1")).toMatch(/^the analysis of the Allies/);
 	await expect(call("analysis --side 2")).rejects.toThrow("--side is 0 or 1");
 	const data = (await run(parseArgs(["analysis", "--json"]), file)).data as { side: number; influence: { own: number[] } };

@@ -5,7 +5,8 @@ next to the classic one rather than instead of it. foundations.md has the theory
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
 analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
 plan made again after every attack, the garrisons and the occupation of an emptied objective, the resupply before
-contact and the rides out of reach ("Built: the staff"), and the assault doctrine ("Built: the assault doctrine").
+contact and the rides out of reach ("Built: the staff"), the assault doctrine ("Built: the assault doctrine") and the
+air doctrine ("Built: the air doctrine").
 
 ## What the core already gives
 
@@ -250,13 +251,15 @@ marches and the resupplies, before the classic plan.
   that reach it from where they stand. The rest go to the sector too: the classic plan's objective pull is the
   sector's for a ground unit (`planTurn`'s `pullTo`, #258), but for one within three turns of another objective to
   take (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`), as the scripted general drops its
-  sector then, and for the side defending (#256): its units hold the line while it retakes an objective. Aircraft and ships keep the classic plan (#619).
+  sector then, and for the side defending (#256): its units hold the line while it retakes an objective. Ships keep the
+  classic plan; the aircraft the air doctrine orders first (below).
 - **The order of arms**, one order at a time on the world as it is, each step only with units for it:
   1. a recon unit of the group moves where it sees most of the hexes within 4 of the sector it doesn't see yet, once a
      turn, never beside an enemy; its move is phased, the classic plan may move it again;
   2. the group's artillery fires on the enemy artillery and air defence that would cover the main target, then on the
      target, then on any enemy within 2 hexes of the sector (#234); a towed gun may take its step on foot first (the
-     core lets a unit fire after a move on foot, moves.ts; only a ride uses its shot);
+     core lets a unit fire after a move on foot, moves.ts; only a ride uses its shot); then the aircraft (the air
+     doctrine, below);
   3. the armour attacks the objective's defender, the main target: tanks, the anti-tank guns as the second line, then
      infantry and recon, each from the hex its estimate is best from;
   4. the occupation of the objective emptied is the staff's (#312): infantry first.
@@ -270,6 +273,40 @@ marches and the resupplies, before the classic plan.
 
 The staff draws nothing here either; the classic rules don't call it. The measures: arena.md, "The remastered AI, the
 assault doctrine (#618)".
+
+### Built: the air doctrine (#619)
+
+In src/core/remastered/air.ts, the staff's fourth part. Like the assault with its ground units, it holds no aircraft: it
+orders the side's fighters and bombers (tactical and level; air transports aside) first, and the classic plan flies the
+rest within its rules. Its orders come after the assault's recon and artillery and before its armour. The analysis gives
+it two more threat maps: `airDefence` (the enemy's ground units that start attacks on aircraft, over their move and
+range) and `fighters`.
+
+- **Supply first**: an aircraft on its airfield (or beside it, a carrier: supply.ts) that hasn't acted is reinforced worn
+  down to 4 (`WORN`) when the player's prestige pays a point, resupplied with a third of its fuel or ammunition or less
+  (`SHORT_SHARE`).
+- **Air superiority**, for a side that assaults: the fighters strike the enemy's fighters they can reach first, then its
+  other aircraft.
+- **Strikes on the assault's target**, for a side that assaults: the bombers, then the fighters, on the enemy on the
+  sector's objective and the guns covering it (the targets of its artillery, #233). A strike is scored with the estimate
+  (estimate.ts) and the support fire it meets: the guns and fighters the side sees, those it remembers near the strike's
+  hex weighed by its confidence (#17), and, when the aircraft stays on that hex, the attack of the enemy's air defence
+  on it next turn. It is flown when it kills at least 1 and kills − 0.7 × losses > 0 (`LOSS_WEIGHT`), for less than 30%
+  of the aircraft (`MAX_LOSS_SHARE`). A strike the support fire spoils has a free gun fire on the gun spoiling it first,
+  when that is worth it; else it isn't flown (#259). A strike that needs a move is weighed again from the hex it moved
+  to: the move may spot new guns. A spent aircraft (short, worn down, or too far from an airfield) strikes only from
+  where it stands.
+- **Cover**: a fighter that hasn't moved flies beside each bomber that has flown into the enemy fighters' reach with no
+  fighter beside it (it intercepts for it, attack.ts supportFireUnits).
+- **The classic plan flies the rest**: its aircraft's attacks are held to the strikes' rule, and its aircraft never end a
+  move where their fuel doesn't bring them back to an airfield (`planTurn`'s `fliesTo`, src/core/ai.ts).
+- **Tried and left out** (arena.md, "The remastered AI, the air doctrine (#619)"): the staff holding every aircraft, with
+  its own waiting hexes half a move from the fight, and the side that defends hunting and striking with the staff: both
+  cost the defenders units and objectives; the staff's strikes on any enemy, not only the assault's target, and the
+  classic plan's aircraft kept out of the enemy air defence's reach: both took the attackers fewer objectives; the
+  aircraft short of fuel or ammunition flown home: Battleaxe's defender held fewer objectives.
+
+The staff draws nothing here either. The measures: arena.md, "The remastered AI, the air doctrine (#619)".
 
 ### 5. Tactics: execution
 

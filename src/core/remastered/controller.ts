@@ -11,9 +11,11 @@ import type { Command } from "../command";
 import type { Controller } from "../controller";
 import { check } from "../step";
 import type { Position, UnitId, World } from "../types";
-import { unitById } from "../world";
+import { seesUnit } from "../sight";
+import { sideOf, unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
-import { assaultOrder, losesMore, pullTo, withAssault } from "./assault";
+import { airAttackWorth, airFliesTo, airStrikeOrder, isFlown, type Sky } from "./air";
+import { assaultAttackOrder, assaultFireOrder, losesMore, pullTo, withAssault } from "./assault";
 import { perceive, type Sighting, type SideView } from "./perception";
 import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
 import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type ThreatenedObjective,
@@ -38,6 +40,8 @@ interface TurnMemory {
 	scouted: Set<UnitId>;	//the recon units the assault sent forward
 	mounted: Set<UnitId>;	//the units on their transports at the turn's start
 	orders: number;
+	attacks: number;
+	airIdle: string | null;	//what the world was when the air had no order: the attacks, the enemies seen, aircraft flown
 }
 
 //Orders in one turn past which the controller ends it: a guard against a plan that would never end, far above any
@@ -45,7 +49,7 @@ interface TurnMemory {
 const MAX_ORDERS = 2000;
 
 const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
-	scouted: new Set(), mounted: new Set(), orders: 0 });
+	scouted: new Set(), mounted: new Set(), orders: 0, attacks: 0, airIdle: null });
 
 const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cmd];
 
@@ -84,10 +88,13 @@ export function remasteredController(player: number): RemasteredController {
 	const review = (w: World, a: Analysis) => setOperations(withAssault(w, a, cache, player,
 		withGarrisons(w, player, liveOperations(w, sideOfPlayer(w), operations, threats), threats)));
 	const assault = () => operations.find((op) => op.kind === "assault");
+	const skyOf = (w: World, a: Analysis): Sky | null => view === null ? null : { w, a, view, cache, player, assault: assault(), held };
 	const classicPlan = (w: World) => {
 		const op = assault();
+		const sky = analysis === null ? null : skyOf(w, analysis);
 		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
-			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
+			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis), pullTo: op === undefined ? undefined : pullTo(w, cache, op),
+			fliesTo: sky === null ? undefined : airFliesTo(sky) });
 	};
 	const replan = (w: World) => {
 		turn.queue = classicPlan(w).queue;
@@ -95,21 +102,48 @@ export function remasteredController(player: number): RemasteredController {
 		turn.stale = false;
 	};
 
+	const airWorth = (w: World, cmd: Command) => {
+		const sky = analysis === null ? null : skyOf(w, analysis);
+		return sky === null || airAttackWorth(sky, cmd);
+	};
+
+	//A classic plan's command left out: for a unit an operation holds, or an attack not worth it
+	const skipped = (w: World, cmd: Command) => ("unit" in cmd && held.has(cmd.unit)) || losesMore(w, cmd) || !airWorth(w, cmd);
+
 	//The classic plan's next command for a unit no operation holds, one `check` allows
 	function classicOrder(w: World): Command | null {
 		if (turn.stale) replan(w);
 		for (;;) {
 			const cmd = turn.queue.shift();
 			if (cmd === undefined) return null;
-			if (("unit" in cmd && held.has(cmd.unit)) || losesMore(w, cmd)) continue;
+			if (skipped(w, cmd)) continue;
 			if (check(w, cmd) === null) return cmd;
 			if (!turn.fresh) replan(w);
 		}
 	}
 
+	//The air's next order, unless the world is as it was when it last had none: no attack since, no enemy seen or lost
+	//to sight, no aircraft flown
+	function airStrikes(w: World, a: Analysis): Command[] | null {
+		const sky = skyOf(w, a);
+		if (sky === null) return null;
+		const seen = w.state.units.filter((u) => u.row >= 0 && sideOf(w, u) !== a.side && seesUnit(w, u, a.side)).length;
+		const flown = w.state.units.filter((u) => u.owner === player && u.hasMoved && isFlown(w, u)).length;
+		const now = `${turn.attacks} ${seen} ${flown}`;
+		if (turn.airIdle === now) return null;
+		const cmds = airStrikeOrder(sky);
+		turn.airIdle = cmds === null ? now : null;
+		return cmds;
+	}
+
+	const assaultStep = (order: typeof assaultFireOrder) => (w: World, a: Analysis) => {
+		const op = assault();
+		return op === undefined ? null : order(w, a, cache, op, player, held, turn.scouted)?.commands ?? null;
+	};
+
 	//The staff's orders before the classic plan's, in this order: the move or attack after a mount or a move, onto an
 	//objective just emptied, off a transport in the enemy's reach, a garrison's march, a resupply before contact, the
-	//assault's
+	//assault's recon and artillery, the air strikes, the assault's armour
 	const sources: ((w: World, a: Analysis) => Command[] | null)[] = [
 		(w) => one(occupyOrder(w)),
 		(w, a) => {
@@ -118,10 +152,9 @@ export function remasteredController(player: number): RemasteredController {
 		},
 		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a)),
 		(w, a) => one(resupplyOrder(w, a, player, held)),
-		(w, a) => {
-			const op = assault();
-			return op === undefined ? null : assaultOrder(w, a, cache, op, player, held, turn.scouted)?.commands ?? null;
-		},
+		assaultStep(assaultFireOrder),
+		airStrikes,
+		assaultStep(assaultAttackOrder),
 	];
 
 	function staffFirst(w: World): Command | null {
@@ -155,6 +188,7 @@ export function remasteredController(player: number): RemasteredController {
 		turn.orders++;
 		if (staff) turn.stale = true;
 		if (cmd.type === "attack") {
+			turn.attacks++;
 			target = cmd.target;
 			const t = unitById(w, cmd.target);
 			turn.attacked = t === null ? null : { row: t.row, col: t.col };

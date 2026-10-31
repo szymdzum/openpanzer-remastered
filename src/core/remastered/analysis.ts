@@ -6,6 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
+import { startsAirAttacks } from "../equipment";
 import { distance } from "../geometry";
 import { terrainType, unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
@@ -21,10 +22,15 @@ export interface Influence {
 	balance: Float32Array;
 }
 
-/** The enemy strength that can strike a hex next turn: a ground unit there, an aircraft there. */
+/**
+ * The enemy strength that can strike a hex next turn: a ground unit there, an aircraft there; and of the aircraft's,
+ * what starts an attack on it: the air defence on the ground and the fighters.
+ */
 export interface Threat {
 	ground: Float32Array;
 	air: Float32Array;
+	airDefence: Float32Array;
+	fighters: Float32Array;
 }
 
 /** An objective to take and the mean influence of each side around it: weak where the enemy holds it lightly. */
@@ -94,7 +100,7 @@ export function analyse(w: World, view: SideView, cache: AnalysisCache = new Map
 	const influence = { own: own.influence, enemy: enemy.influence, balance };
 	const objectives = { take: w.state.objectives[view.side], hold: heldObjectives(w, view.side) };
 	const distanceFields = fieldsOf(w, view.own, objectives, cache);
-	const supply = supplyMap(w, view.side), threat = { ground: enemy.ground, air: enemy.air };
+	const supply = supplyMap(w, view.side), threat = { ground: enemy.ground, air: enemy.air, airDefence: enemy.airDefence, fighters: enemy.fighters };
 	return { side: view.side, turn: view.turn, influence, front: frontOf(w, influence), sectors: sectorsOf(w, influence, objectives.take),
 		threat, objectives, distance: distanceFields, supply, units: view.own.map((u) => unitAnalysis(w, u, threat, supply, distanceFields)) };
 }
@@ -126,16 +132,19 @@ function strikeOf(w: World, f: Force, costsOf: (movmethod: number) => Uint8Array
 }
 
 //What the forces of a side spread on the map: their influence, and the threat they make to a ground unit and to
-//an aircraft
+//an aircraft, the air defence's and the fighters' apart
 interface Spread {
 	influence: Float32Array;
 	ground: Float32Array;
 	air: Float32Array;
+	airDefence: Float32Array;
+	fighters: Float32Array;
 }
 
 function spread(w: World, forces: readonly Force[], costsOf: (movmethod: number) => Uint8Array): Spread {
 	const n = w.state.map.rows * w.state.map.cols;
-	const maps: Spread = { influence: new Float32Array(n), ground: new Float32Array(n), air: new Float32Array(n) };
+	const maps: Spread = { influence: new Float32Array(n), ground: new Float32Array(n), air: new Float32Array(n),
+		airDefence: new Float32Array(n), fighters: new Float32Array(n) };
 	for (const f of forces) spreadForce(w, f, costsOf, maps);
 	return maps;
 }
@@ -144,13 +153,20 @@ function spread(w: World, forces: readonly Force[], costsOf: (movmethod: number)
 //distance, to a share of its strength at the strike's far edge
 function spreadForce(w: World, f: Force, costsOf: (movmethod: number) => Uint8Array, maps: Spread) {
 	const e = w.equipment[f.eqid], weight = f.strength * f.confidence, cols = w.state.map.cols;
-	const threatens = [hitsGround(e) ? maps.ground : null, e.airatk > 0 ? maps.air : null].filter((m) => m !== null);
+	const threatens = [hitsGround(e) ? maps.ground : null, e.airatk > 0 ? maps.air : null, airAttackMap(e, maps)].filter((m) => m !== null);
 	if (weight <= 0 || threatens.length === 0) return;
 	const strike = strikeOf(w, f, costsOf);
 	for (const m of threatens) for (const h of strike.hexes) m[h] += weight;
 	if (!holdsGround(e)) return;
 	for (const h of strike.hexes)
 		maps.influence[h] += weight * (1 - distance(Math.floor(h / cols), h % cols, f.row, f.col) / (strike.radius + 1));
+}
+
+//Where a force that starts attacks on aircraft adds its strength: the air defence's map for a ground unit, the
+//fighters' for a fighter (a bomber's air attack is its defence)
+function airAttackMap(e: EquipmentEntry, maps: Spread): Float32Array | null {
+	if (e.airatk <= 0 || !startsAirAttacks(e)) return null;
+	return e.uclass <= unitClass.airDefence ? maps.airDefence : e.uclass === unitClass.fighter ? maps.fighters : null;
 }
 
 //The hexes both sides reach where neither holds sway, or where the side that does changes from one hex to the next
