@@ -1,12 +1,15 @@
 //The remastered AI's maps of a side (src/core/remastered/, #610) as the command-line player shows them: the front, the
-//weak sectors, the threatened units, the enemies remembered, the objectives and the garrisons its staff would set
-//(#616). A call has no controller's memory, so the side knows only the enemies it sees now
-import { analyse, type Analysis } from "../src/core/remastered/analysis";
+//weak sectors, the threatened units, the enemies remembered, the objectives, the garrisons its staff would set (#616)
+//and its assault (#618). A call has no controller's memory, so the side knows only the enemies it sees now
+import { analyse, type Analysis, type AnalysisCache } from "../src/core/remastered/analysis";
+import { assaultOrder, battleGroup, withAssault } from "../src/core/remastered/assault";
+import { unitClassNames } from "../src/core/tables";
 import { UNREACHED } from "../src/core/remastered/fields";
 import { perceive, type SideView } from "../src/core/remastered/perception";
 import { type Operation, threatenedObjectives, withGarrisons } from "../src/core/remastered/staff";
-import type { Position, World } from "../src/core/types";
-import { unitById } from "../src/core/world";
+import type { Command } from "../src/core/command";
+import type { Position, UnitState, World } from "../src/core/types";
+import { unitById, unitData } from "../src/core/world";
 import { cell, label, positionOf, SIDES } from "./known";
 
 //How many of a list a line shows
@@ -57,16 +60,50 @@ function garrisonsOf(w: World, view: SideView, a: Analysis): Operation[] {
 const garrisonLine = (w: World, ops: readonly Operation[]) => listed(ops.map((op) =>
 	`${label(w, unitById(w, op.units[0]))} (${op.reason})`), "garrisons the staff would set now");
 
+//The assault the staff of the side's first player would set now, its battle group by class and its next order
+interface AssaultView {
+	op: Operation;
+	group: UnitState[];
+	next: { step: string; commands: Command[] } | null;
+}
+
+function assaultOf(w: World, a: Analysis, garrisons: readonly Operation[]): AssaultView | null {
+	const player = w.state.players.find((p) => p.side === a.side), cache: AnalysisCache = new Map();
+	const op = player === undefined ? undefined : withAssault(w, a, cache, player.id, []).find((o) => o.kind === "assault");
+	if (player === undefined || op === undefined) return null;
+	const held = new Set(garrisons.flatMap((g) => g.units));
+	return { op, group: battleGroup(w, cache, op.at, player.id, held), next: assaultOrder(w, a, cache, op, player.id, held, new Set()) };
+}
+
+function commandLine(w: World, cmd: Command): string {
+	const u = "unit" in cmd ? unitById(w, cmd.unit) : null, who = u === null ? "" : label(w, u);
+	if (cmd.type === "attack") return `${who} attacks ${label(w, unitById(w, cmd.target) as UnitState)}`;
+	return cmd.type === "move" ? `${who} moves to ${cell(cmd.to)}` : `${who} ${cmd.type}s`;
+}
+
+function assaultLine(w: World, view: AssaultView | null): string {
+	if (view === null) return "assault: none (no objective to take, or the side defends)";
+	const classes = new Map<string, number>();
+	for (const u of view.group) {
+		const name = unitClassNames[unitData(w, u, true).uclass];
+		classes.set(name, (classes.get(name) ?? 0) + 1);
+	}
+	const group = [...classes].map(([name, n]) => `${n} ${name}`).join(", ") || "none";
+	const next = view.next === null ? "none" : `${view.next.step}: ${view.next.commands.map((c) => commandLine(w, c)).join(", then ")}`;
+	return `assault the staff would set now: ${cell(view.op.at)} (${view.op.reason}); group of ${view.group.length} (${group}); next order ${next}`;
+}
+
 //Typed arrays as lists, for JSON
 const plain = (a: Analysis): unknown => JSON.parse(JSON.stringify(a, (_k, v: unknown) =>
 	ArrayBuffer.isView(v) ? Array.from(v as Float32Array, (x) => round(x)) : v));
 
 /** The analysis of side's maps in w, as lines and as data. */
 export function analysisOf(w: World, side: number): { lines: string[]; data: unknown } {
-	const view = perceive(w, side, []), a = analyse(w, view), garrisons = garrisonsOf(w, view, a);
+	const view = perceive(w, side, []), a = analyse(w, view), garrisons = garrisonsOf(w, view, a), assault = assaultOf(w, a, garrisons);
 	const lines = [`the analysis of the ${SIDES[side]}, turn ${a.turn} (no memory: the enemies it sees now, none remembered)`,
 		frontLine(w, a), sectorLines(a), threatenedLines(w, a), enemyLines(w, view),
 		objectiveLine(a, "objectives to take", a.objectives.take, w), objectiveLine(a, "objectives to hold", a.objectives.hold, w),
-		garrisonLine(w, garrisons)];
-	return { lines, data: { ...plain(a) as object, garrisons } };
+		garrisonLine(w, garrisons), assaultLine(w, assault)];
+	const assaultData = assault === null ? null : { ...assault.op, group: assault.group.map((u) => u.id), next: assault.next };
+	return { lines, data: { ...plain(a) as object, garrisons, assault: assaultData } };
 }

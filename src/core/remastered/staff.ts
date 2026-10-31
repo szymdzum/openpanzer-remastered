@@ -20,8 +20,8 @@ import { canCapture, canMount, isGround, unitUsesFuel } from "../units";
 import { groundUnitAt, hexIndex, unitById, unitData } from "../world";
 import type { SideView } from "./perception";
 
-/** What an operation does: hold an objective of the side's (#5), or take one the side's attack emptied (#312). */
-export type OperationKind = "garrison" | "occupy";
+/** An operation's task: hold an objective of the side's (#5), take one it emptied (#312), assault one (#618). */
+export type OperationKind = "garrison" | "occupy" | "assault";
 
 /** An operation of the staff: what it does and where, the units it holds, the last turn it holds them, and why. */
 export interface Operation {
