@@ -57,10 +57,10 @@ test("units far from the sector move toward it, not to their nearest objective (
 });
 
 test("the artillery fires before the armour attacks (#618, #234)", () => {
-	//A Pz IVD three hexes from the Polish infantry on the objective, a leFK 18 on its Opel Blitz a step out of range: the
-	//classic AI drives the gun up on its truck, which uses its shot, and the tank attacks alone
+	//A Pz IVD three hexes from the Polish infantry on the objective, a leFK 18 with its Opel Blitz, the infantry at its
+	//range: the classic AI drives the gun up on its truck, which uses its shot, and the tank attacks alone
 	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 7 },
-		{ eqid: LEFK18, owner: 0, row: 5, col: 5, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } }, { eqid: PIECHOTA, owner: 1, row: 5, col: 10 }];
+		{ eqid: LEFK18, owner: 0, row: 5, col: 6, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } }, { eqid: PIECHOTA, owner: 1, row: 5, col: 10 }];
 	const w = world(units, [], [{ row: 5, col: 10 }]);
 	const classic = playOneTurn(aiController(0), w);
 	expect(attackBy(classic.commands, 1)).toBe(-1);

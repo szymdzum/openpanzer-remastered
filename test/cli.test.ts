@@ -206,11 +206,12 @@ test("In the remaster rules a bomber attacks a ground unit from the next hex too
 test("A unit with no air attack can't attack an aircraft next to it, as on the screen; in the remaster rules the core refuses it too (#285)", async () => {
 	const call = caller(tmpGame());
 	await call("new drpzop01.xml --side 1 --seed 1");
-	//the Me-109B-2 #78 over 14,12, after the Axis's first turn: the machine guns at 16,14 can hit it, the
-	//pioneers next to it on 15,12 (#64) have no air attack
+	//the Me-109B-2 #78 over 14,12, after the Axis's first turn: the pioneers next to it on 15,12 (#64) have no air
+	//attack; the machine guns at 16,14 would hit it from 14,13, but flak can't fire after moving (#625)
 	const by = await call("attackers 78");
-	expect(by).toContain("#67 7,92mm wz.08 @16,14 on #78 Me-109B-2 @14,12 from 14,13");
+	expect(by).not.toContain("#67 ");
 	expect(by).not.toContain("#64 ");
+	expect(await call("targets 67 --from 14,13")).toContain("no target from 14,13 (it has fired, or its move used its shot)");
 	expect(await call("targets 64")).not.toContain("#78 ");
 	expect(await call("check attack 64 78")).toBe("refused: not a target from here");
 	expect(await call("attack 64 78")).toBe("refused: not a target from here");

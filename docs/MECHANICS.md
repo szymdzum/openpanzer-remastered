@@ -194,6 +194,10 @@ then assault, then overrun with tanks.
 - A unit moved in its transport (mounted) can't fire that turn: towed artillery, anti-tank
   and air defense have to stay in place to fire (`Unit.move`). In the remaster's rules Mechanized
   Veteran gets the unit off its transport at the end of the move with its shot (#3).
+- In the remaster's rules (#625) artillery and air defence (the flak class too) can't attack after any
+  move, on foot as on their transport ("artillery and air defense units can only shoot before they
+  move"), but with Mechanized Veteran; anti-tank can, with its penalty. The core's check refuses an
+  attack by a unit that already fired or has no ammo.
 
 ## Spotting
 
@@ -502,6 +506,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Strength points are suppressed in combat: they don't fire; tactical bombers' (and Shock Tactics') suppression lasts the turn; a defender suppressed at its strength retreats or surrenders; support fire's suppression can break an attack off | Classic rules: no suppression (`atkSuppress`, `defSuppress` always 0), Overwhelming Attack +1 kill, Shock Tactics nothing. The remaster's rules follow the manual (#2) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience, plus a random factor; zero for an attacker that is surprised or meets a rugged defense | Equipment only in the classic rules. The remaster's rules follow the manual: the defender's terrain caps it (#14), +1 per experience level, a random 0 to 2 each, zero for the surprised or rugged-hit attacker (#18; the numbers are the project's, the manual gives none) |
+| Artillery, air defense and anti-tank "cannot attack after moving" (Combat); Game Turns names artillery and air defense only, and the anti-tank class gets a penalty for moving and attacking | Classic rules: only a move on the transport uses the shot. The remaster's rules: artillery and air defence can't attack after any move (#625) |
 | An AT unit that moved suffers a penalty to initiative and attack when it attacks | Only its range defense is lost (tank killer exempt), in both rules; the manual gives no number (#18) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |
 | Units over 1000 experience always get a leader | Always at the cap (500) |

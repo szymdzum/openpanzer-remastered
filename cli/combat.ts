@@ -122,7 +122,7 @@ export function targets(w: World, side: number, id: number, from?: Position): { 
 	if ("refusal" in at) return { estimates: [], note: `can't get to ${cell(from)}: ${at.refusal}` };
 	const moved = unitById(at.world, id);
 	const estimates = targetsOf(at.world, moved).map((t) => estimate(at.world, moved, t));
-	return { estimates, note: estimates.length ? "" : `no target from ${cell(moved)}` + (moved.hasFired ? " (it has fired, or moved on its transport)" : "") };
+	return { estimates, note: estimates.length ? "" : `no target from ${cell(moved)}` + (moved.hasFired ? " (it has fired, or its move used its shot)" : "") };
 }
 
 //The estimate after u moves to a hex and attacks t from there, null when it can't

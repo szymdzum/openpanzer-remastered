@@ -23,6 +23,8 @@ const remasterFlags = [
 	"suppression", "continuedSuppression", //#2
 	"allLeaderAbilities", //#3
 	"remasteredAI", //#610
+	"gunsFireBeforeMoving", //#625
+	"checksFiring", //#625
 ] as const;
 
 test("The remaster's rules are the classic ones but for the AI's play and the flags of the rules it changes, under their own name (#53, #235)", async () => {

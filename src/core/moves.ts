@@ -15,7 +15,7 @@ import { directionTo } from "./geometry";
 import { canPassInto, disembarkPositions, movesInPhases, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
-import { canCapture, hasLeader, hasLeaderAbility, unitUsesFuel, usesFuel } from "./units";
+import { canCapture, firesOnlyBeforeMoving, hasLeader, hasLeaderAbility, unitUsesFuel, usesFuel } from "./units";
 import { hexIndex, isRiding, isSpotted, unitById } from "./world";
 import { fuelPerPoint } from "./weathereffects";
 
@@ -31,7 +31,8 @@ type MoveCells = readonly { row: number; col: number; cost: number }[];
  * Map.moveUnit: moves a unit along the cheapest path through `cells` (the cells the player was shown; its
  * move range when null). It stops before a hidden enemy (surprised, unless a leader sees it coming), takes
  * the hex at the end, pays the path's cost, faces where it went and spots. A unit with Mechanized Veteran
- * moved on its transport gets off it and may still fire. A human's move can be undone when it spotted nothing
+ * moved on its transport gets off it and may still fire; in the remaster rules artillery and air defence can't fire
+ * after any move. A human's move can be undone when it spotted nothing
  * new and wasn't surprised (D5); a retreat never can: its player didn't make it.
  */
 export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | null, retreat = false): MoveOutcome {
@@ -51,6 +52,7 @@ export function moveUnit(d: Draft, id: UnitId, to: Position, cells: MoveCells | 
 	payMove(d, writeUnit(d, id), walked.cost, walked.stopped);
 	const spotted = relocate(d, id, last, (u) => { u.facing = directionTo(start.row, start.col, last.row, last.col); });
 	if (!retreat && walked.surprise === null && unloadsToFire(d, start)) spotted.push(...unloadToFire(d, id, start.hasFired));
+	if (!retreat && firesOnlyBeforeMoving(d, start)) writeUnit(d, id).hasFired = true;
 	if (walked.surprise !== null) emit(d, { type: "surprised", unit: id, at: walked.surprise });
 	d.state.turn.undoable = spotted.length === 0 && !unitById(d, id).isSurprised && undoable ? undo : null;
 	return { surprise: walked.surprise, win };
