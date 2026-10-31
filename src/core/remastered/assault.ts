@@ -17,7 +17,7 @@ import { check } from "../step";
 import { unitClass } from "../tables";
 import { attackerSide } from "../turn";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
-import { canMount, isGround } from "../units";
+import { canMount, firesOnlyBeforeMoving, isGround } from "../units";
 import { ammoOf, hexIndex, isSpotted, sideOf, unitData } from "../world";
 import { type Analysis, type AnalysisCache, fieldTo, type Sector } from "./analysis";
 import { around, UNREACHED } from "./fields";
@@ -289,11 +289,11 @@ export function losesMore(w: World, cmd: Command): boolean {
 
 const canFireNow = (u: UnitState) => !u.hasFired && ammoOf(u) > 0;
 
-//A unit's best strike on the target from where it stands, or (not on its transport, whose move uses its shot) from a
-//hex it moves to: a towed gun's step on foot leaves it its shot
+//A unit's best strike on the target from where it stands, or from a hex it moves to: not on its transport, whose move
+//uses its shot, nor artillery in the remaster rules, where any move does (#625)
 function bestStrike(b: Battle, u: UnitState, t: UnitState): Strike | null {
 	const here = worthFrom(b, u, t, null);
-	return u.hasMoved || u.isMounted ? here : strikeAfterMove(b, u, t, here);
+	return u.hasMoved || u.isMounted || firesOnlyBeforeMoving(b.w, u) ? here : strikeAfterMove(b, u, t, here);
 }
 
 //The strike from the hex, when it is worth ordering

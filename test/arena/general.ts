@@ -23,7 +23,7 @@ import { moveRange } from "../../src/core/movement";
 import { check } from "../../src/core/step";
 import { attackerSide } from "../../src/core/turn";
 import type { MoveCell, Position, UnitState, World } from "../../src/core/types";
-import { canMount, isAir, isGround, unitUsesFuel } from "../../src/core/units";
+import { canMount, firesOnlyBeforeMoving, isAir, isGround, unitUsesFuel } from "../../src/core/units";
 import { groundUnitAt, hexIndex, sideOf, unitById, unitData } from "../../src/core/world";
 import { brokeThrough, enemyGround, GARRISON_TURNS, inReach, isLate, pickReserve, pickSector, rearScore, SECTOR_RADIUS, seen,
 	WORN } from "./doctrine";
@@ -252,7 +252,7 @@ export function generalController(player: number, doctrine: Doctrine = FULL): Co
 	}
 
 	//u's best attack on t: from where it stands, or (not a garrison, not artillery that can fire from
-	//where it is) from a hex it can move to
+	//where it is, nor a gun whose move uses its shot, #625) from a hex it can move to
 	function attackOf(w: World, u: UnitState, t: UnitState): Attack | null {
 		if (!canFire(w, u)) return null;
 		const here = attackFrom(w, u, t, null);
@@ -263,9 +263,11 @@ export function generalController(player: number, doctrine: Doctrine = FULL): Co
 		return !u.hasFired && u.ammo > 0 && !considered.has("attack:" + u.id) && !withdrawing(w, u);
 	}
 
-	//A unit that fires from where it stands: moved, holding its hex, in reserve, or artillery in range
+	//A unit that fires from where it stands: moved, holding its hex, in reserve, artillery in range, or a gun that
+	//can't fire after moving (#625)
 	function firesInPlace(w: World, u: UnitState, here: Attack | null): boolean {
-		return u.hasMoved || holding(w, u) || reserve.has(u.id) || (here !== null && unitData(w, u).uclass === unitClass.artillery);
+		return u.hasMoved || holding(w, u) || reserve.has(u.id) || (here !== null && unitData(w, u).uclass === unitClass.artillery)
+			|| firesOnlyBeforeMoving(w, u);
 	}
 
 	//u's best attack on t from the hexes it can move to, or best when none beats it

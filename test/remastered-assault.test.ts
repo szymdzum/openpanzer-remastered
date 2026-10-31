@@ -7,6 +7,7 @@ import { aiController, planTurn } from "../src/core/ai";
 import type { Command } from "../src/core/command";
 import { distance } from "../src/core/geometry";
 import { remasteredController } from "../src/core/remastered/controller";
+import { classicRules } from "../src/core/rules";
 import type { Position, World } from "../src/core/types";
 import { hexIndex, isSpotted } from "../src/core/world";
 import type { HandUnit } from "./coreworld";
@@ -16,6 +17,7 @@ import { playOneTurn, position, world } from "./staffworld";
 
 
 const PAK36 = 66, INFANTERIE = 115, PSW_222 = 117, PZ_IVD = 148, OPEL_BLITZ = 157, PIECHOTA = 270, LEFH18 = 92, LEFK18 = 95, WZ97 = 264;
+const SIG_PZ_I = 101;
 
 const apart = (a: Position, b: Position) => distance(a.row, a.col, b.row, b.col);
 const attacks = (cmds: readonly Command[]) => cmds.filter((c) => c.type === "attack");
@@ -58,11 +60,12 @@ test("units far from the sector move toward it, not to their nearest objective (
 
 test("the artillery fires before the armour attacks (#618, #234)", () => {
 	//A Pz IVD three hexes from the Polish infantry on the objective, a leFK 18 with its Opel Blitz, the infantry at its
-	//range: the classic AI drives the gun up on its truck, which uses its shot, and the tank attacks alone
+	//range: the classic AI of the classic rules drives the gun up on its truck, which uses its shot, and the tank
+	//attacks alone (in the remaster rules its guns fire before they move, #625)
 	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 7 },
 		{ eqid: LEFK18, owner: 0, row: 5, col: 6, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } }, { eqid: PIECHOTA, owner: 1, row: 5, col: 10 }];
 	const w = world(units, [], [{ row: 5, col: 10 }]);
-	const classic = playOneTurn(aiController(0), w);
+	const classic = playOneTurn(aiController(0), { ...w, rules: classicRules });
 	expect(attackBy(classic.commands, 1)).toBe(-1);
 	const remastered = playOneTurn(remasteredController(0), w);
 	expect(attackBy(remastered.commands, 1)).toBeGreaterThanOrEqual(0);
@@ -178,4 +181,19 @@ test("without a pull the classic plan goes for the nearest objective as before (
 	const plain = planTurn(w, 0, w.rules.ai.config, 0).queue;
 	expect(planTurn(w, 0, w.rules.ai.config, 0, { pullTo: () => w.state.objectives[0] }).queue).toEqual(plain);
 	expect(planTurn(w, 0, w.rules.ai.config, 0, { pullTo: () => [SOUTH] }).queue).not.toEqual(plain);
+});
+
+test("the remastered AI's guns don't move and then attack (#625)", () => {
+	//A 15 cm sIG on a Pz I (range 2) six hexes from the Polish infantry on the objective, a Pz IVD ahead of it: in the
+	//remaster rules a move uses the gun's shot, so it doesn't drive up to fire; it moves up for the next turn, out of
+	//the infantry's reach
+	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 7 }, { eqid: SIG_PZ_I, owner: 0, row: 5, col: 4 },
+		{ eqid: PIECHOTA, owner: 1, row: 5, col: 10 }];
+	const w = world(units, [], [{ row: 5, col: 10 }]);
+	const remastered = playOneTurn(remasteredController(0), w);
+	expect(attackBy(remastered.commands, 1)).toBe(-1);
+	expect(remastered.refused).toBe(0);
+	const target = position(w, 2), gap = (t: World) => apart(position(t, 1), target);
+	expect(gap(remastered.world)).toBeLessThan(gap(w));
+	expect(gap(remastered.world)).toBeGreaterThan(w.equipment[SIG_PZ_I].gunrange + 1);
 });

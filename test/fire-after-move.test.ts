@@ -10,10 +10,12 @@ import { classicRules, remasterRules } from "../src/core/rules";
 import { check, step } from "../src/core/step";
 import type { Position, Ruleset, World } from "../src/core/types";
 import { unitById } from "../src/core/world";
+import { aiController } from "../src/core/ai";
 import { germanyPoland, type HandUnit, handWorld } from "./coreworld";
+import { playOneTurn, world } from "./staffworld";
 
 const LEFK18 = 95, SIG_PZ_I = 101, FLAK36 = 67, FLAK38 = 64, PAK36 = 66, INFANTERIE = 115, OPEL_BLITZ = 157;
-const TP7 = 273, P11C = 280;
+const TP7 = 273, P11C = 280, PIECHOTA = 270;
 
 const hand = (units: HandUnit[], rules: Ruleset) => handWorld({ rows: 10, cols: 10, units }, germanyPoland, { rules, noFOW: true });
 
@@ -96,4 +98,17 @@ test("check refuses an attack by a unit that already fired (#625)", () => {
 	//The classic rules' check asks the distance only, as the original AI's attacks do (it attacks after its surprise
 	//attack, which already fired)
 	expect(check(hand(units, classicRules), attackOn(1))).toBeNull();
+});
+
+test("in the remaster rules the classic AI's guns fire, then move (#625)", () => {
+	//A leFK 18 with its Opel Blitz, the Polish infantry on the objective at its range: the classic plan moved it first
+	//(on its truck, toward the objective) and lost the shot
+	const units: HandUnit[] = [{ eqid: LEFK18, owner: 0, row: 5, col: 6, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } },
+		{ eqid: PIECHOTA, owner: 1, row: 5, col: 10 }];
+	const turn = playOneTurn(aiController(0), world(units, [], [{ row: 5, col: 10 }]));
+	const attack = turn.commands.findIndex((c) => c.type === "attack" && c.unit === 0);
+	const move = turn.commands.findIndex((c) => c.type === "move" && c.unit === 0);
+	expect(attack).toBeGreaterThanOrEqual(0);
+	expect(move === -1 || move > attack).toBe(true);
+	expect(turn.refused).toBe(0);
 });
