@@ -62,6 +62,8 @@ export const classicRules: Ruleset = {
 	suppression: false,
 	continuedSuppression: false,
 	allLeaderAbilities: false,
+	gunsFireBeforeMoving: false,
+	checksFiring: false,
 	remasteredAI: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
@@ -120,6 +122,11 @@ export const remasterRules: Ruleset = {
 	//Every leader ability does what its description says; the original's game left 12 of the 33 without an
 	//effect (#3)
 	allLeaderAbilities: true,
+	//Artillery and air defence can't attack after they moved, on foot as on their transport ("artillery and air
+	//defense units can only shoot before they move"), but with Mechanized Veteran; anti-tank can, with the penalty
+	//its class has. The core refuses an attack by a unit that can't fire this turn (#625)
+	gunsFireBeforeMoving: true,
+	checksFiring: true,
 	//The computer player is the remastered AI, which plays the classic one's commands while it learns to read
 	//the map: what its side sees and remembers, the front, the threat, the distances and the supply (#610)
 	remasteredAI: true,

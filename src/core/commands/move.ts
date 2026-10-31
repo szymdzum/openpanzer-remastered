@@ -8,7 +8,7 @@
 import type { CommandOf, Refusal } from "../command";
 import { emit } from "../draft";
 import { cleanUpAttack, endAttack, resolveAttack, surpriseAttack } from "../fight";
-import { isInAttackRange, isTargetFrom } from "../attack";
+import { canFireThisTurn, isInAttackRange, isTargetFrom } from "../attack";
 import { canEndMoveOn, moveRange, pathTo, shortestPath } from "../movement";
 import { moveUnit } from "../moves";
 import type { Checkpoint, CommandHandler, Draft, Position, UnitState, World } from "../types";
@@ -54,14 +54,16 @@ export function moveFirst(d: Draft, cmd: CommandOf<"move">): Checkpoint {
 	return { next: "surprise", unit: cmd.unit, surprise: moved.surprise, win: moved.win };
 }
 
-//In range, as the AI checks it, and in the remaster's rules one of the screen's targets (#285). Not
-//whether the unit can still fire: the AI attacks after a surprise attack, which already fired
+//In range, as the AI checks it, and in the remaster's rules one of the screen's targets (#285) by a unit
+//that can still fire (#625). The classic rules don't ask that: the AI attacks after a surprise attack,
+//which already fired
 export const attack: CommandHandler<CommandOf<"attack">> = {
 	check(w, cmd) {
 		const refusal = unitCheck(w, cmd.unit);
 		if (refusal !== null) return refusal;
 		const u = unitById(w, cmd.unit), target = unitById(w, cmd.target);
 		if (target === null) return refuse("no such target");
+		if (w.rules.checksFiring && !canFireThisTurn(u)) return refuse("can't fire this turn");
 		if (!isInAttackRange(w, u, target)) return refuse("out of range");
 		return !w.rules.checkTargets || isTargetFrom(w, u, target) ? null : refuse("not a target from here");
 	},

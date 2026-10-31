@@ -388,3 +388,17 @@ test("End turn warns only of the units that can still move or fire at a target i
 	//its marker still shows the shot it has
 	expect(mapUnits(w, false, null).find((u) => u.id === 1)!.marker).toMatchObject({ canMove: false, canFire: true });
 });
+
+test("the screen lists no targets for artillery that moved (#625)", () => {
+	//A 15 cm sIG on a Pz I steps into range of a 7TP: in the remaster rules the move used its shot, its marker shows none
+	const SIG_PZ_I = 101;
+	for (const rules of [remasterRules, classicRules]) {
+		const w = handWorld({ rows: 10, cols: 10, units: [{ eqid: SIG_PZ_I, owner: 0, row: 4, col: 1 }, { eqid: TP7, owner: 1, row: 4, col: 4 }] },
+			undefined, { spotSide: 0, rules });
+		const r = step(w, { type: "move", unit: 0, to: { row: 4, col: 2 } });
+		if (!("world" in r)) throw new Error("move refused");
+		const remaster = rules === remasterRules;
+		expect(selectionOf(r.world, 0)!.targets, rules.name).toEqual(remaster ? [] : [{ row: 4, col: 4 }]);
+		expect(mapUnits(r.world, false, null).find((u) => u.id === 0)!.marker.canFire, rules.name).toBe(!remaster);
+	}
+});

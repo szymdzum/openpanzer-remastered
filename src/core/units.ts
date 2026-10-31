@@ -6,7 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { movMethod, terrainType, unitClass, unitEntrenchRate } from "./tables";
+import { leaderType, movMethod, terrainType, unitClass, unitEntrenchRate } from "./tables";
 import type { UnitState, World } from "./types";
 import { ammoOf, fuelOf, sideOf, unitData } from "./world";
 
@@ -77,6 +77,17 @@ export function unitLowFuel(w: World, u: UnitState, threshold: number): boolean 
 
 export function unitLowAmmo(w: World, u: UnitState, threshold: number): boolean {
 	return unitUsesAmmo(w, u) && ammoOf(u) < threshold;
+}
+
+/**
+ * Whether a move uses the unit's shot, wherever it goes: in the remaster rules artillery and air defence (flak too),
+ * but with Mechanized Veteran. Its own class counts, not its transport's.
+ */
+export function firesOnlyBeforeMoving(w: World, u: UnitState): boolean {
+	if (!w.rules.gunsFireBeforeMoving) return false;
+	const uclass = unitData(w, u, true).uclass;
+	return (uclass === unitClass.artillery || uclass === unitClass.airDefence || uclass === unitClass.flak)
+		&& !hasLeaderAbility(w, { ...u, isMounted: false }, leaderType.mechanizedVeteran);
 }
 
 export function canMount(w: World, u: UnitState): boolean {
