@@ -19,7 +19,7 @@ import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
 import type { MoveCell, Position, UnitId, UnitState, World } from "./types";
-import { canMount, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
+import { canMount, firesOnlyBeforeMoving, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
 import { groundUnitAt, hexIndex, onMap, sideOf, unitData } from "./world";
 import { seesUnit } from "./sight";
 
@@ -268,9 +268,9 @@ const NO_UNITS: ReadonlySet<UnitId> = new Set();
 
 /**
  * The classic plan of the player's turn, with what another planner changes in it (`options`). Artillery,
- * fortifications, air and naval combat units go first, each given another pass (reinforce, resupply, move, attack)
- * until it can do nothing more. A unit that did nothing in its first pass scores its moves again in the next (new
- * draws: it may move then).
+ * fortifications, air and naval combat units go first, each given another pass (reinforce, resupply, move, attack;
+ * attack, then move, for a gun whose move uses its shot) until it can do nothing more. A unit that did nothing in
+ * its first pass scores its moves again in the next (new draws: it may move then).
  */
 export function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number, options: PlanOptions = {}): ClassicPlan {
 	const held = options.held || NO_UNITS;
@@ -288,13 +288,23 @@ export function planTurn(w: World, player: number, config: AIConfig, prestigeLef
 	}
 	while (units.length > 0) {
 		const a = units[0];
-		reinforceUnit(t, a);
-		resupplyUnit(t, a);
-		moveUnit(t, a);
-		attackUnit(t, a);
+		pass(t, a);
 		if (a.noReinforce && a.noResupply && a.noAttack && a.noMove) units.shift();
 	}
 	return { world: withAIStream(w, rng), queue: t.queue, prestigeLeft: t.prestigeLeft };
+}
+
+//A unit's pass: reinforce, resupply, move, attack; a gun whose move uses its shot attacks, then moves
+function pass(t: Planning, a: AIUnit) {
+	reinforceUnit(t, a);
+	resupplyUnit(t, a);
+	if (firesOnlyBeforeMoving(t.s.w, a.u)) {
+		attackUnit(t, a);
+		moveUnit(t, a);
+	} else {
+		moveUnit(t, a);
+		attackUnit(t, a);
+	}
 }
 
 function actsFirst(w: World, u: UnitState): boolean {
@@ -447,7 +457,7 @@ function stayScore(s: Scorer, u: UnitState, stayShare: number, pull: readonly Po
 
 function attackUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
-	if (!mayAttack(a)) {
+	if (!mayAttack(a) || (a.didMove && firesOnlyBeforeMoving(s.w, u))) {
 		a.noAttack = true;
 		return;
 	}
