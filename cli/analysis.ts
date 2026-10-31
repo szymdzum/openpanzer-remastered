@@ -1,7 +1,9 @@
 //The remastered AI's maps of a side (src/core/remastered/, #610) as the command-line player shows them: the front, the
 //weak sectors, the threatened units, the enemies remembered, the objectives, the garrisons its staff would set (#616)
-//and its assault (#618). A call has no controller's memory, so the side knows only the enemies it sees now
+//, its assault (#618) and its air plan (#619). A call has no controller's memory, so the side knows only the enemies it
+//sees now
 import { analyse, type Analysis, type AnalysisCache } from "../src/core/remastered/analysis";
+import { airState, airStrikeOrder, type Sky } from "../src/core/remastered/air";
 import { assaultOrder, battleGroup, withAssault } from "../src/core/remastered/assault";
 import { unitClassNames } from "../src/core/tables";
 import { UNREACHED } from "../src/core/remastered/fields";
@@ -93,6 +95,28 @@ function assaultLine(w: World, view: AssaultView | null): string {
 	return `assault the staff would set now: ${cell(view.op.at)} (${view.op.reason}); group of ${view.group.length} (${group}); next order ${next}`;
 }
 
+//The air plan of the staff of the side's first player now: its fighters and bombers, the spent ones, its next order
+interface AirView {
+	aircraft: ReturnType<typeof airState>;
+	next: Command[] | null;
+}
+
+function airOf(w: World, view: SideView, a: Analysis, garrisons: readonly Operation[], assault: AssaultView | null): AirView | null {
+	const player = w.state.players.find((p) => p.side === a.side);
+	if (player === undefined) return null;
+	const sky: Sky = { w, a, view, cache: new Map(), player: player.id, assault: assault?.op, held: new Set(garrisons.flatMap((g) => g.units)) };
+	const aircraft = airState(sky);
+	return aircraft.length === 0 ? null : { aircraft, next: airStrikeOrder(sky) };
+}
+
+function airLine(w: World, view: AirView | null): string {
+	if (view === null) return "air: no fighters or bombers";
+	const aircraft = view.aircraft.map((x) => `${label(w, unitById(w, x.unit))}${x.spent ? " spent" : ""}`
+		+ `${x.exposed ? " in the air defence's reach" : ""}`).join("; ");
+	const next = view.next === null ? "none (the classic plan flies the rest)" : view.next.map((c) => commandLine(w, c)).join(", then ");
+	return `air the staff would fly now: ${aircraft}; next order ${next}`;
+}
+
 //Typed arrays as lists, for JSON
 const plain = (a: Analysis): unknown => JSON.parse(JSON.stringify(a, (_k, v: unknown) =>
 	ArrayBuffer.isView(v) ? Array.from(v as Float32Array, (x) => round(x)) : v));
@@ -100,10 +124,12 @@ const plain = (a: Analysis): unknown => JSON.parse(JSON.stringify(a, (_k, v: unk
 /** The analysis of side's maps in w, as lines and as data. */
 export function analysisOf(w: World, side: number): { lines: string[]; data: unknown } {
 	const view = perceive(w, side, []), a = analyse(w, view), garrisons = garrisonsOf(w, view, a), assault = assaultOf(w, a, garrisons);
+	const air = airOf(w, view, a, garrisons, assault);
 	const lines = [`the analysis of the ${SIDES[side]}, turn ${a.turn} (no memory: the enemies it sees now, none remembered)`,
 		frontLine(w, a), sectorLines(a), threatenedLines(w, a), enemyLines(w, view),
 		objectiveLine(a, "objectives to take", a.objectives.take, w), objectiveLine(a, "objectives to hold", a.objectives.hold, w),
-		garrisonLine(w, garrisons), assaultLine(w, assault)];
+		garrisonLine(w, garrisons), assaultLine(w, assault), airLine(w, air)];
 	const assaultData = assault === null ? null : { ...assault.op, group: assault.group.map((u) => u.id), next: assault.next };
-	return { lines, data: { ...plain(a) as object, garrisons, assault: assaultData } };
+	const airData = air === null ? null : { aircraft: air.aircraft, next: air.next };
+	return { lines, data: { ...plain(a) as object, garrisons, assault: assaultData, air: airData } };
 }

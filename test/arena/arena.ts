@@ -15,6 +15,7 @@ import type { GameEvent } from "../../src/core/events";
 import { type Advance, advance, type Session, startSession } from "../../src/core/session";
 import { outcome, victoryRating } from "../../src/core/turn";
 import type { RulesetName, World } from "../../src/core/types";
+import { isAir } from "../../src/core/units";
 import { sideOf } from "../../src/core/world";
 import { playerType } from "../../src/core/tables";
 import { setupOf } from "../corefiles";
@@ -47,6 +48,7 @@ export interface SideResult {
 	objectivesTaken: number;		//captures of objectives
 	objectivesHeld: number;			//at the end
 	unitsLost: number;
+	aircraftLost: number;			//of its units lost, the aircraft: an air unit's class at its loss (#619)
 	unitsDestroyed: number;			//the enemy's
 	refused: number;			//its orders the core refused (the AI plans its turn at its start, #94)
 	turnMs: number[];			//the time spent in its controller's calls, each turn (machine-dependent)
@@ -69,6 +71,7 @@ interface Play {
 	s: Session;
 	sides: [SideResult, SideResult];
 	owners: Map<number, number>;	//unit id -> side, for the units an event names after they are gone
+	aircraft: Set<number>;		//the units that were aircraft when last seen on the map
 	clock: number[];		//by player id: the ms spent in its controller in its turn so far
 	orders: number;
 	endedSide: number;		//the side of the last turn ended
@@ -79,10 +82,10 @@ export function playMatch(match: Match): GameResult {
 	const t0 = performance.now();
 	const clock: number[] = [];
 	const s = sessionOf(match, clock);
-	const g: Play = { match, s, sides: [side(match.sides[0]), side(match.sides[1])], owners: new Map(), clock, orders: 0,
-		endedSide: -1 };
+	const g: Play = { match, s, sides: [side(match.sides[0]), side(match.sides[1])], owners: new Map(), aircraft: new Set(),
+		clock, orders: 0, endedSide: -1 };
 	const maxTurns = Math.min(match.turns || Infinity, s.world.state.scenario.maxTurns);
-	remember(s.world, g.owners);
+	remember(s.world, g);
 	for (let n = 0; n < 200_000 && s.ended === null && s.world.state.turn.turn <= maxTurns; n++) {
 		const turn = s.world.state.turn.turn;
 		const a = advance(s);
@@ -104,8 +107,8 @@ function took(g: Play, a: Exclude<Advance, { kind: "ended" }>, turn: number) {
 		g.endedSide = g.s.world.state.players[a.player].side;
 		turnPlayed(g, a.player);
 	}
-	tally(g.sides, g.owners, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
-	remember(g.s.world, g.owners);
+	tally(g, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
+	remember(g.s.world, g);
 }
 
 function turnPlayed(g: Play, player: number) {
@@ -152,18 +155,23 @@ function ordered(match: Match, sides: SideResult[], w: World, a: Extract<Advance
 }
 
 //The losses and the captures of objectives an advance's events tell
-function tally(sides: SideResult[], owners: Map<number, number>, turn: number, events: GameEvent[]) {
+function tally(g: Play, turn: number, events: GameEvent[]) {
+	const sides = g.sides;
 	for (const e of events) {
-		const by = e.type === "destroyed" || e.type === "captured" ? owners.get(e.unit) : undefined;
+		const by = e.type === "destroyed" || e.type === "captured" ? g.owners.get(e.unit) : undefined;
 		if (by === undefined) continue;
-		if (e.type === "destroyed") {
-			sides[by].unitsLost++;
-			sides[~by & 1].unitsDestroyed++;
-		} else if (e.type === "captured" && e.objective) {
+		if (e.type === "destroyed") lost(g, by, e.unit);
+		else if (e.type === "captured" && e.objective) {
 			sides[by].objectivesTaken++;
 			if (sides[by].firstObjectiveTurn === null) sides[by].firstObjectiveTurn = turn;
 		}
 	}
+}
+
+function lost(g: Play, by: number, unit: number) {
+	g.sides[by].unitsLost++;
+	if (g.aircraft.has(unit)) g.sides[by].aircraftLost++;
+	g.sides[~by & 1].unitsDestroyed++;
 }
 
 //How the game ended: a victory, stuck, or the turn limit, as the core's outcome has it (src/core/turn.ts): in
@@ -178,12 +186,18 @@ function endOf(s: Session, endedSide: number): Pick<GameResult, "end" | "winner"
 }
 
 function side(player: Player): SideResult {
-	return { player, firstObjectiveTurn: null, objectivesTaken: 0, objectivesHeld: 0, unitsLost: 0, unitsDestroyed: 0, refused: 0,
+	return { player, firstObjectiveTurn: null, objectivesTaken: 0, objectivesHeld: 0, unitsLost: 0, aircraftLost: 0, unitsDestroyed: 0, refused: 0,
 		turnMs: [] };
 }
 
-function remember(w: World, owners: Map<number, number>) {
-	for (const u of w.state.units) if (!owners.has(u.id)) owners.set(u.id, sideOf(w, u));
+//Each unit's side, and whether it is an aircraft now: a destroyed unit is gone from the world its event comes in
+function remember(w: World, g: Pick<Play, "owners" | "aircraft">) {
+	for (const u of w.state.units) {
+		if (!g.owners.has(u.id)) g.owners.set(u.id, sideOf(w, u));
+		if (u.row < 0) continue;
+		if (isAir(w, u)) g.aircraft.add(u.id);
+		else g.aircraft.delete(u.id);
+	}
 }
 
 export function objectivesHeld(w: World): [number, number] {

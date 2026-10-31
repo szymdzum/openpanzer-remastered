@@ -45,10 +45,12 @@ export function canStartAttackOn(table: EquipmentTable, eqid: number, targetEqid
 		return false;
 	if (t.target === unitType.soft && (e.attr & NO_START_SOFT_ATTACK) !== 0) return false;
 	if (t.target === unitType.hard && (e.attr & NO_START_HARD_ATTACK) !== 0) return false;
-	if (t.target === unitType.air && ((e.attr & NO_START_AIR_ATTACK) !== 0
-		|| (!airAttackers.includes(e.uclass) && (e.attr & ATTACKS_AIR) === 0)))
-		return false;
-	return true;
+	return t.target !== unitType.air || startsAirAttacks(e);
+}
+
+/** Whether the entry can start an attack on an aircraft: its class, or the attacks air bit. */
+export function startsAirAttacks(e: EquipmentEntry): boolean {
+	return (e.attr & NO_START_AIR_ATTACK) === 0 && (airAttackers.includes(e.uclass) || (e.attr & ATTACKS_AIR) !== 0);
 }
 
 export type DefenceField = "grounddef" | "airdef" | "closedef";
