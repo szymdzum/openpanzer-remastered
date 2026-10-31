@@ -129,6 +129,12 @@ until the change moves them apart.
 101-140 (`ARENA_SEED_FROM=101`), and it is accepted on the suite's seeds 1-40, which it has never
 been tuned on: the acceptance isn't measured on the games it was fitted to.
 
+**The bar is the general and the AI before the change** (since #618). A change to the remastered AI is accepted when
+no scenario and side does worse than before beyond the noise on its main measure against the scripted general
+(remastered-design.md, "What done looks like"). Its games against the classic AI are reported, and winning more than
+half of them stays the whole AI's target, but they don't block a change. The classic AI stays as an opponent and as the
+classic rules' AI; the remastered AI stops borrowing its planner in #627.
+
 
 ## The scripted general (#236)
 
@@ -662,6 +668,85 @@ What it says:
   aren't caught on their transports by the attack on the smallest map (#623).
 - The withdrawal and the finishing off need the commander's postures (#411): which units are the line, which the
   reserve, when an attack is worth a unit.
+
+## The remastered AI, the assault doctrine (#618), 31 October 2026
+
+The staff's assault (remastered-design.md, "Built: the assault doctrine"): one sector at a time, the ground units sent
+to it, and on it the recon, the artillery's fire (on the guns covering the target first), the armour's attack, the
+guns moved into range for the next turn, and no attack the estimate says loses more than it kills. Before: the staff's
+second part (#617, main at cf15dd0); after: this, the same seats, remaster rules, both runs `remastered`:
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-general,general-remastered,remastered-ai,ai-remastered ARENA_OUT=after.json npm run arena
+npm run arena:compare -- before.json after.json
+```
+
+Tuned on seeds 101-140, switching parts off (the pull to the sector, the steps one by one, the attack rule, the
+defender's assault):
+
+- **The pull to the sector for every ground unit** cost the attacker its objectives: Ostpreussen's axis took 2.2
+  against the general instead of 4.3, Bzura's allies 6.0 instead of 7.5, Luttich's 4.0 instead of 5.2. The units
+  marched past objectives the classic pull to the nearest would have taken. Now a unit within three turns of another
+  objective keeps that pull, all of them do in the last third of the turns (as the general drops its sector then), and
+  the scenario's defender never pulls its army to the objective it retakes: on seeds 1-40 its pull cost Bzura's
+  defending axis a held objective (5.70 at the end instead of 6.75), within the noise without it (6.42).
+- **The armour going for every enemy around the sector**, not only the objective's defender, cost Luttich's attacker
+  objectives (its tanks spent on the units around the hex didn't take it).
+- **Tried and left out**: an attack worth its losses when the estimate has the objective's defender retreat or
+  destroyed (no difference); infantry and recon kept out of the attack's waves (no difference).
+
+The remastered AI's side, before (#617) and after, where the paired difference is beyond the noise ("same": noise on
+every measure). Orders refused stayed 0:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | same | **lost per objective 2.74 → 3.29**, first objective turn 3.3 → 4.0 (taken 4.85 → 4.65, same) |
+| | allies defend | units lost 18.1 → 15.9 | same |
+| Bzura | allies attack | same | same (wins 2 → 7 of 40, taken 7.6 → 7.9) |
+| | axis defend | units lost 12.1 → 9.0, lost per objective 2.6 → 2.0 | first retaking turn 8.5 → 10.3 (held 6.75 → 6.42, same) |
+| Indochina | axis attack | held 1.75 → 2.38, units lost 18.1 → 13.2, lost per objective 13.7 → 8.8 | units lost 14.8 → 13.2 |
+| | allies defend | same | units lost 12.4 → 11.1 |
+| Zitadelle | axis attack | taken 2.9 → 3.5, held 3.0 → 3.7, lost per objective 16.2 → 11.4 | wins 6 → 15 of 40, taken 4.67 → 5.58, held 3.88 → 4.58 |
+| | allies defend | same | lost per objective 35 → 30 |
+| Uman | axis attack | **lost per objective 2.05 → 2.49** (units lost 8.4 → 10.1) | first objective turn 2.9 → 2.3 |
+| | allies defend | same | same (wins 28 → 29 of 40) |
+| Battleaxe | allies attack | taken 5.9 → 7.0, **units lost 10.7 → 15.4** (wins 31 → 24, same) | same (wins 36 → 38 of 40) |
+| | axis defend | taken back 3.7 → 4.6, lost per objective 7.3 → 5.7 | same |
+| Taman | allies attack | lost per objective 7.8 → 5.6, first objective turn 8.8 → 7.6 | held 2.27 → 2.60, units lost 32.5 → 27.0, lost per objective 17.5 → 13.3 (wins 15 → 24, same) |
+| | axis defend | same | same (wins 27 → 28 of 40) |
+| Luttich | allies attack | **taken 4.25 → 3.83**, first objective turn 1.85 → 1.40 | **taken 5.35 → 4.67**, units lost 51.3 → 43.9 (wins 6 → 5 of 40, lost per objective 9.6 → 9.4, same) |
+| | axis defend | taken back 1.1 → 1.3, lost per objective 17.2 → 13.4 | same |
+
+Against the general two attacker's measures are worse beyond the noise. Ostpreussen's lost per objective is at the
+noise's edge (+0.55, 0.06 to 1.04): on the tuning seeds it fell (3.2 → 2.9), and on seeds 41-80, played to check, it
+is within the noise (+0.33, -0.27 to 0.92) with 2.4 more units lost; no single part switched off brings it back (all
+the steps off: 2.72, but 0.6 fewer objectives taken). Luttich's objectives taken fall in all three seed sets (-0.38,
+-0.68, -0.42), with fewer units lost for the same price per objective: on the shortest game of the suite (12 turns)
+the attacker that doesn't throw losing attacks takes less. Its main measure by the rule of remastered-design.md (wins,
+6 of 40) is within the noise. Both are the owner's call.
+
+Against the classic AI, both sides: 441 of 640 games (437 after #617). Its wins by scenario, axis then allies:
+Ostpreussen 0 and 40, Bzura 40 and 2, Indochina 0 and 40, Zitadelle 7 and 40, Uman 38 and 40, Battleaxe 35 and 24,
+Taman 38 and 40, Luttich 40 and 17.
+
+The targets of remastered-design.md against the general: 24 of 29, as after #617, the same five not met: Ostpreussen's
+defender (held 4.00, target 4.1; units lost 30.6, target 22.3), the defender's units lost in Bzura (12.3, target 10.8)
+and Indochina (11.1, target 9.4), and Taman's defence (28 wins of 40, target 31).
+
+The planning time of the remastered AI, all its turns, seeds 1-40: Zitadelle 160 ms a turn (95th percentile 387, worst
+500; 171, 408 and 586 before), the worst turn of the suite 784 ms, the slowest game 5.3 s: within the budget.
+
+What it says:
+
+- **Zitadelle's attack wins** 15 of 40 against the general (6 before) and takes 5.6 objectives (4.7): the guns
+  brought into range of the sector and its armour on the objective's defender. Taman's attack wins 24 of 40 (15, in
+  the noise) and loses 5 units fewer.
+- **The attacker loses fewer units** for each objective in Taman, Indochina and Zitadelle (against the classic AI): the
+  attacks the estimate says lose more than they kill are no longer made. Against the classic AI, which the protocol
+  reports but doesn't judge, Uman's attack pays a little more per objective and Battleaxe's takes more objectives for
+  more units.
+- **The concentration on one sector (#233, #258) pays only for the units far from it**: a sector pull for every unit
+  took objectives from the attacker.
 
 ## Baseline, 24 October 2026
 

@@ -5,7 +5,7 @@ next to the classic one rather than instead of it. foundations.md has the theory
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
 analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
 plan made again after every attack, the garrisons and the occupation of an emptied objective, the resupply before
-contact and the rides out of reach ("Built: the staff").
+contact and the rides out of reach ("Built: the staff"), and the assault doctrine ("Built: the assault doctrine").
 
 ## What the core already gives
 
@@ -232,6 +232,44 @@ The second part (#617), in rear.ts, ahead of the classic plan after the garrison
 
 The staff draws nothing in either part. The planning and the measures: arena.md, "The remastered AI, the staff's
 first part (#616)" and "the staff's second part (#617)".
+
+### Built: the assault doctrine (#618)
+
+In src/core/remastered/assault.ts, the staff's third part: the controller asks it for an order after the garrisons'
+marches and the resupplies, before the classic plan.
+
+- **Who assaults**: the side attacking (`attackerSide`, #256), or a side with more objectives to take than the enemy
+  (a defender that lost some, #231).
+- **One sector** (#233): an `assault` operation on the objective to take the side strikes best: each free ground
+  unit's strength over 1 + the turns of its march there (on the distance fields, in its transport when that goes
+  further), less the enemy's mean influence around it (`Sector`, `ENEMY_WEIGHT`). It holds no unit. It is kept until
+  the objective is taken, its deadline passes (the turns left shared among the objectives left, `MIN_ASSAULT_TURNS`
+  at least, #232), or it is hopeless: the enemy around it outweighs what the side brings while another sector doesn't.
+  Then the staff weighs the sectors again.
+- **The battle group**: the free ground units within two turns' march of the sector (`GROUP_TURNS`), and the guns
+  that reach it from where they stand. The rest go to the sector too: the classic plan's objective pull is the
+  sector's for a ground unit (`planTurn`'s `pullTo`, #258), but for one within three turns of another objective to
+  take (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`), as the scripted general drops its
+  sector then, and for the side defending (#256): its units hold the line while it retakes an objective. Aircraft and ships keep the classic plan (#619).
+- **The order of arms**, one order at a time on the world as it is, each step only with units for it:
+  1. a recon unit of the group moves where it sees most of the hexes within 4 of the sector it doesn't see yet, once a
+     turn, never beside an enemy; its move is phased, the classic plan may move it again;
+  2. the group's artillery fires on the enemy artillery and air defence that would cover the main target, then on the
+     target, then on any enemy within 2 hexes of the sector (#234); a towed gun may take its step on foot first (the
+     core lets a unit fire after a move on foot, moves.ts; only a ride uses its shot);
+  3. the armour attacks the objective's defender, the main target: tanks, the anti-tank guns as the second line, then
+     infantry and recon, each from the hex its estimate is best from;
+  4. the occupation of the objective emptied is the staff's (#312): infantry first.
+
+  Then the guns that couldn't fire on the sector move toward a hex in range of it for the next turn, out of the
+  enemy's ground reach (on their trucks strictly), the least threatened and nearest the sector of those (#234).
+- **No attack that loses more than it kills**: the estimate counts the support fire the attacker meets in its losses
+  and gives no kills to an attack the support fire stops (estimate.ts, as the screen's preview). A strike is worth
+  ordering when it kills at least 1 and loses no more than it kills (`MIN_KILLS`); in the last third of the turns
+  (`LATE_SHARE`) an attack on an objective may cost more. The classic plan's attacks are held to the same rule.
+
+The staff draws nothing here either; the classic rules don't call it. The measures: arena.md, "The remastered AI, the
+assault doctrine (#618)".
 
 ### 5. Tactics: execution
 
