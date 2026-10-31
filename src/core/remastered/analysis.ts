@@ -6,6 +6,7 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
+import { startsAirAttacks } from "../equipment";
 import { distance } from "../geometry";
 import { terrainType, unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
@@ -140,11 +141,16 @@ function spread(w: World, forces: readonly Force[], costsOf: (movmethod: number)
 	return maps;
 }
 
+//The threat maps a force adds to: the ground's if it hits ground units, the air's if it starts attacks on aircraft
+function threatMaps(e: EquipmentEntry, maps: Spread): Float32Array[] {
+	return [hitsGround(e) ? maps.ground : null, e.airatk > 0 && startsAirAttacks(e) ? maps.air : null].filter((m) => m !== null);
+}
+
 //A force's strength, weighted by how sure the side is of it, over its strike. Its influence falls off with the
 //distance, to a share of its strength at the strike's far edge
 function spreadForce(w: World, f: Force, costsOf: (movmethod: number) => Uint8Array, maps: Spread) {
 	const e = w.equipment[f.eqid], weight = f.strength * f.confidence, cols = w.state.map.cols;
-	const threatens = [hitsGround(e) ? maps.ground : null, e.airatk > 0 ? maps.air : null].filter((m) => m !== null);
+	const threatens = threatMaps(e, maps);
 	if (weight <= 0 || threatens.length === 0) return;
 	const strike = strikeOf(w, f, costsOf);
 	for (const m of threatens) for (const h of strike.hexes) m[h] += weight;
