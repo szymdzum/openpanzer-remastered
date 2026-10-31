@@ -66,7 +66,7 @@ describe("The arena's 95% intervals (#604)", () => {
 });
 
 const side = (player: Player, unitsLost: number): SideResult => ({ player, firstObjectiveTurn: 5, objectivesTaken: 1,
-	objectivesHeld: 2, unitsLost, unitsDestroyed: 3, refused: 0, turnMs: [10, 20] });
+	objectivesHeld: 2, unitsLost, aircraftLost: 1, unitsDestroyed: 3, refused: 0, turnMs: [10, 20] });
 
 function game(seed: number, lost: number, file = "drpzop01.xml"): GameResult {
 	return { match: { file, sides: ["ai", "general"], seed, rules: "remaster" }, turns: 17, end: "turnLimit", winner: seed % 2,
@@ -85,6 +85,13 @@ describe("Two arena runs compared (#604)", () => {
 	test("A loss every game more is a difference beyond the noise", () => {
 		const out = compare(run, run.map((g) => game(g.match.seed, g.sides[0].unitsLost + 1)));
 		expect(out.join("\n")).toContain("|  | units lost | 5.90 | 6.90 | +1.00 (1.00 to 1.00) | **differs** |");
+	});
+
+	test("The aircraft lost are compared, and left out where a run didn't record them (#619)", () => {
+		const more = run.map((g) => ({ ...g, sides: [{ ...g.sides[0], aircraftLost: 2 }, g.sides[1]] as GameResult["sides"] }));
+		expect(compare(run, more).join("\n")).toContain("|  | aircraft lost | 1.00 | 2.00 | +1.00 (1.00 to 1.00) | **differs** |");
+		const old = run.map((g) => ({ ...g, sides: g.sides.map(({ aircraftLost: _, ...x }) => x) as unknown as GameResult["sides"] }));
+		expect(compare(old, run).join("\n")).toContain("|  | aircraft lost | - | - | - |  |");
 	});
 
 	test("A player's games compared with another's as that player: the same games but for the time (#610)", () => {

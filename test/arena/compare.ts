@@ -49,6 +49,8 @@ const MEASURES: Measure[] = [
 	{ name: "objectives taken", of: (g, s) => g.sides[s].objectivesTaken },
 	{ name: "held at the end", of: (g, s) => g.sides[s].objectivesHeld },
 	{ name: "units lost", of: (g, s) => g.sides[s].unitsLost },
+	//null in a run recorded before the measure (#619)
+	{ name: "aircraft lost", of: (g, s) => g.sides[s].aircraftLost ?? null },
 	{ name: "destroyed", of: (g, s) => g.sides[s].unitsDestroyed },
 	{ name: "orders refused", of: (g, s) => g.sides[s].refused },
 ];

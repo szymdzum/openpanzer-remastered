@@ -81,6 +81,7 @@ thing differs from a game on the screen:
 | objectives taken | captures of objectives per game, retaking included |
 | held at the end | objectives the side holds after the last turn |
 | units lost, destroyed | per game |
+| aircraft lost | of the units lost, the aircraft (the unit's class at its loss: an air unit), per game (#619) |
 | lost per objective | units lost per objective taken: the price of its gains |
 | orders refused | orders the core refused: the AI plans its whole turn at its start, and some orders no longer fit the map when their turn comes (a hex taken, a target out of range) |
 
@@ -89,7 +90,7 @@ interval (test/arena/stats.ts), so a number reads as real or as noise:
 
 - **A share of games** (wins, "took an objective": the games where it took one): `k/n (lo-hi%)`,
   Wilson's score interval, which stays inside 0-100% and holds for 0 or n of n.
-- **A mean** (first objective, the objectives taken and held, units lost and destroyed, orders
+- **A mean** (first objective, the objectives taken and held, units and aircraft lost, destroyed, orders
   refused): `m ±h`, h = t·s/√n, Student's t with n − 1 degrees of freedom (a table up to 30, the
   Cornish-Fisher expansion above). The first objective's mean is over the games where the side took one.
 - **Lost per objective**, a ratio of sums R = Σ lost / Σ taken over the games: the delta method,

@@ -4,9 +4,9 @@ import type { GameResult, SideResult } from "./arena";
 import { type Interval, meanInterval, percentile, ratioInterval, sum, wilson } from "./stats";
 
 export const HEADER = ["side (player)", "wins", "victory levels", "took an objective", "first objective, turn",
-	"objectives taken", "held at the end", "units lost", "destroyed", "lost per objective", "orders refused"];
+	"objectives taken", "held at the end", "units lost", "aircraft lost", "destroyed", "lost per objective", "orders refused"];
 
-const MEANS = ["objectivesTaken", "objectivesHeld", "unitsLost", "unitsDestroyed"] as const;
+const MEANS = ["objectivesTaken", "objectivesHeld", "unitsLost", "aircraftLost", "unitsDestroyed"] as const;
 
 /** A matchup's games summed up per side, a table row each (the cells of HEADER). */
 export function summary(results: GameResult[]): string[][] {
