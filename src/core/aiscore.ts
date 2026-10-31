@@ -215,12 +215,13 @@ function objectiveNearScore(uclass: number, owned: boolean): number {
 }
 
 /**
- * The nearest of the objectives to take (the first of equally near ones) and a score growing as it
- * gets closer; standing on one scores most.
+ * The nearest of the objectives (the plan's to take when not given; the first of equally near ones) and a score
+ * growing as it gets closer; standing on one scores most.
  */
-export function objectiveScore(s: Scorer, cell: Position): { cell: Position | null; score: number } {
+export function objectiveScore(s: Scorer, cell: Position, objectives: readonly Position[] = s.plan.objectives)
+	: { cell: Position | null; score: number } {
 	let best: Position | null = null, score = 0;
-	for (const o of s.plan.objectives) {
+	for (const o of objectives) {
 		const d = distance(cell.row, cell.col, o.row, o.col);
 		if (d <= 0) return { cell, score: s.config.objectiveScore + 100 };
 		if (s.config.objectiveScore / d > score) {
