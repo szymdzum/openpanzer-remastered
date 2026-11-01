@@ -748,6 +748,48 @@ What it says:
 - **The concentration on one sector (#233, #258) pays only for the units far from it**: a sector pull for every unit
   took objectives from the attacker.
 
+## The remastered AI's rides when it plays last (#626), 1 November 2026
+
+After #617 the remastered AI lost more units against the classic AI defending Uman (40.6 to 51.2 a game) and attacking
+Taman (lost per objective 6.3 to 7.8). The cause isn't units hit on their transports: every unit gets off its transport
+at the new round (src/core/commands/turn.ts), so only a player after the side in the round finds one on it. In the
+suite the axis plays first and the allies last, and the allies are never hit on a transport: in 3 seeds (101-103)
+against the classic AI none of the 166 allied units destroyed in Uman's defence, nor of the 52 in Taman's attack, was
+on one; of the 71 axis units destroyed defending Taman, 13 were, all in reach within 2 hexes of an objective. For the
+allies the ride rule only kept their guns and infantry out of the enemy's reach, and late. Taman's attack had already
+come back with #618 (lost per objective 5.6; 5.5 on main now).
+
+Tuned on seeds 101-140, the suite, each against main:
+
+- **Rides anywhere for any side no enemy plays after**: Uman's defence lost 39.0 units against the classic AI instead
+  of 53.0 and took 2.35 objectives back against the general instead of 1.63, but the attackers that play last did worse:
+  Battleaxe's allies won 34 of 40 against the general instead of 38, with more units lost, Luttich's lost 10.0 units per
+  objective instead of 8.8, Taman's lost 14.7 units against the classic AI instead of 11.1. Out of reach still pays an
+  attacker, so only a defender rides anywhere: of the defenders the change moves only Uman's beyond the noise.
+- **No exception near an objective for the side that plays first** (`RIDE_TO_OBJECTIVE` off): Taman's axis defence lost
+  18.7 units against the general instead of 22.3, but Battleaxe's held 4.85 objectives at the end instead of 5.45 (with
+  the perception below); the exception only for a ride that ends on the objective cost Zitadelle's attack its wins
+  against the general (4 of 40 instead of 13). Left as it is.
+- **Perceiving again after an order that brought new enemies into sight**, and the plan made again: Zitadelle's attack
+  won 6 of 40 against the general instead of 13, for 30-40% more planning time. Made again only when a ride the plan
+  queued ends in the new reach: nothing beyond the noise against the general, and Indochina's attack took fewer
+  objectives against the classic AI (1.15 instead of 1.45). Left out.
+
+Accepted on seeds 1-40, the suite, the four seats, before = main (9bae9c8), after = this; 960 of the 1280 games came
+out the same (every one where the remastered AI attacks or plays first). The remastered AI's side where it moved:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | allies defend | same | taken back 0.88 → 1.32, lost per objective 34.5 → 23.4 (held 3.88 → 4.00, units lost 30.2 → 31.1, same) |
+| Indochina | allies defend | first objective turn 5.5 → 4.5 | took one in 40 → 36 games, first turn 5.4 → 4.7 (held 4.38 → 4.20, units lost 11.0 → 11.5, same) |
+| Uman | allies defend | **units lost 46.2 → 32.0, lost per objective 71.1 → 34.5**, held 4.15 → 4.63, taken back 0.65 → 0.93 | taken back 1.30 → 2.50, lost per objective 56.6 → 30.0 (wins 25 → 29 of 40, held 0.93 → 1.38, units lost 73.6 → 75.0, same) |
+| Taman | allies attack | identical (units lost 11.9, lost per objective 5.5) | identical (units lost 28.1, lost per objective 15.2) |
+
+Against the general no scenario and side is worse on its main measure. Against the classic AI, both sides: 431 of 640
+games (430 before; Uman's defence 40 of 40). The targets of remastered-design.md against the general: 24 of 29, as
+before (Uman's defence 29 wins of 40, target 25). The planning time is the same: Zitadelle 157 ms a turn (95th
+percentile 380, worst 489), Uman 170 (158 before), the worst turn of the suite 771 ms (Luttich), the slowest game 3.9 s.
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the

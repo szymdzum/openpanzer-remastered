@@ -52,7 +52,7 @@ const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cm
 /**
  * The remastered AI. Its staff's operations hold some units over turns (a garrison on each objective in the enemy's
  * reach, a unit onto an objective its attack emptied), it resupplies units before contact and ends no ride in the
- * enemy's reach but near an objective. The classic plan
+ * enemy's reach but near an objective, unless it defends and no enemy plays after it in the round. The classic plan
  * (src/core/ai.ts) orders the rest, made again on the world as it is after every attack, every order of the staff's
  * and every order the core would refuse: it gives none that `check` refuses. Its purchases and deployment are the
  * classic AI's.
@@ -87,7 +87,7 @@ export function remasteredController(player: number): RemasteredController {
 	const classicPlan = (w: World) => {
 		const op = assault();
 		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
-			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
+			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis, player), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
 	};
 	const replan = (w: World) => {
 		turn.queue = classicPlan(w).queue;
@@ -116,7 +116,7 @@ export function remasteredController(player: number): RemasteredController {
 			review(w, a);
 			return one(unmountOrder(w, a, player, held, turn.mounted));
 		},
-		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a)),
+		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a, player)),
 		(w, a) => one(resupplyOrder(w, a, player, held)),
 		(w, a) => {
 			const op = assault();
