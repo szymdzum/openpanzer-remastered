@@ -1,6 +1,6 @@
 /**
  * The remastered AI's care of its units out of the fight: a unit short of ammunition or fuel resupplied before
- * contact, no ride ending in the enemy's reach but near an objective (#315).
+ * contact, no ride ending in the enemy's reach but near an objective (#315), or a defender's that plays last (#626).
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -9,6 +9,7 @@
 import type { Command } from "../command";
 import { distance } from "../geometry";
 import { check } from "../step";
+import { attackerSide } from "../turn";
 import type { Position, UnitId, UnitState, World } from "../types";
 import { canUnmount, isAir, unitUsesFuel } from "../units";
 import { hexIndex, unitById, unitData } from "../world";
@@ -29,12 +30,26 @@ export const inGroundReach = (a: Analysis, hex: number): boolean => a.influence.
 //arena, without it the attacker came too late on a crowded map and the defender's reserve too late to its objective)
 const RIDE_TO_OBJECTIVE = 2;
 
+//Every unit gets off its transport at the new round (commands/turn.ts): only an enemy that plays after the player in
+//the round finds its units on their transports
+const enemyPlaysAfter = (w: World, player: number) => w.state.players.some((p) => p.id > player
+	&& p.side !== w.state.players[player].side);
+
+const anywhere: Rides = () => true;
+
 /**
  * Where the remastered AI ends a ride: out of the reach of the enemy's ground units (#315), or near an objective.
  * Its aircraft reach nearly everywhere, so they don't count: the ride is what the enemy's tanks and guns overrun.
+ *
+ * A defender that no enemy plays after in the round rides anywhere: its units are off their transports before the
+ * enemy moves, and kept out of its reach they came late to the line (#626). An attacker keeps the rule then too: in
+ * the arena it lost fewer units for its objectives out of reach.
  */
-export const rideOutOfReach = (w: World, a: Analysis): Rides => (_u, cell) => !inGroundReach(a, hexOf(w, cell))
-	|| [...a.objectives.take, ...a.objectives.hold].some((o) => distance(o.row, o.col, cell.row, cell.col) <= RIDE_TO_OBJECTIVE);
+export function rideOutOfReach(w: World, a: Analysis, player: number): Rides {
+	if (!enemyPlaysAfter(w, player) && attackerSide(w) !== w.state.players[player].side) return anywhere;
+	return (_u, cell) => !inGroundReach(a, hexOf(w, cell))
+		|| [...a.objectives.take, ...a.objectives.hold].some((o) => distance(o.row, o.col, cell.row, cell.col) <= RIDE_TO_OBJECTIVE);
+}
 
 /** A resupply for a unit no operation holds, short of ammunition or fuel, out of the enemy's reach: before contact. */
 export function resupplyOrder(w: World, a: Analysis, player: number, held: ReadonlySet<UnitId>): Command | null {

@@ -224,7 +224,9 @@ The second part (#617), in rear.ts, ahead of the classic plan after the garrison
   unit already mounted) off the hexes a ground enemy the side knows of reaches next turn (its influence, analysis.ts;
   aircraft aside, they reach nearly everywhere), but for those within 2 hexes of an objective (`RIDE_TO_OBJECTIVE`:
   arriving in time decides it); the garrisons' rides too. A unit that starts its turn on its transport within reach
-  gets off it first. Without `ridesTo` the classic plan rides as before.
+  gets off it first. Without `ridesTo` the classic plan rides as before. Every unit gets off its transport at the new
+  round, so only an enemy that plays after the side in the round catches a ride: a defender that no enemy plays after
+  rides anywhere (#626); an attacker keeps the rule, out of reach it lost fewer units for its objectives.
 - **Tried and left out** (#6, measured in arena.md): withdrawing a worn-down unit to reinforce saved units but lost
   objectives and games for a defender (Battleaxe, Luttich, Uman) and its attacks for an attacker, whatever spared the
   units near the objectives or on the front; finishing off a weak enemy first cost an attacker its wins (Luttich,

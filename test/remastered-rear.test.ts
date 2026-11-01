@@ -59,3 +59,30 @@ test("without a ride rule the classic plan rides as before (#617)", () => {
 	expect(nowhere.some((cmd) => cmd.type === "mount")).toBe(false);
 });
 
+
+//The gun of the tests above, Poland's now, on 5,14, a Pz IVD on 5,5 and Germany's objective behind it on 5,1, Poland to
+//move: its units get off their transports at the new round, before Germany's turn. `attacker`: the side with more
+//objectives to take at the start
+function lastToMove(attacker: number): World {
+	const units: HandUnit[] = [{ eqid: PAK36, owner: 1, row: 5, col: 14, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } },
+		{ eqid: PZ_IVD, owner: 0, row: 5, col: 5 }];
+	const w = world(units, [{ row: 5, col: 1 }]);
+	w.data.startObjectives = attacker === 0 ? [2, 1] : [1, 2];
+	w.state.turn.currentPlayer = 1;
+	return w;
+}
+
+test("a defender that no enemy plays after in the round rides into the enemy's reach as the classic AI does (#626)", () => {
+	const w = lastToMove(0);
+	const classic = playOneTurn(aiController(1), w);
+	expect(unit(classic.world, 0).isMounted).toBe(true);
+	expect(apart(classic.world, 0, 1)).toBeLessThanOrEqual(5);
+	expect(playOneTurn(remasteredController(1), w).commands).toEqual(classic.commands);
+});
+
+test("an attacker that no enemy plays after in the round still ends no ride in the enemy's reach (#626)", () => {
+	const remastered = playOneTurn(remasteredController(1), lastToMove(1));
+	const gun = unit(remastered.world, 0);
+	expect(gun.isMounted && apart(remastered.world, 0, 1) <= 5).toBe(false);
+	expect(gun.col).toBeLessThan(14);
+});
