@@ -98,6 +98,23 @@ test("A unit's Devastating Fire shot and Fire Discipline half point are saved an
 	expect(again.map.getUnits().some((u) => "firedOnce" in u || "halfAmmo" in u)).toBe(false);
 });
 
+//The remaster's interception (#632): fields only while true, after every other, so a classic game's save has none
+test("a classic save has no interception fields (#632)", async () => {
+	const r = await restored("drpzop01-t0.json.gz");
+	const { fromData } = await import("../src/legacy/state");
+	r.Rng.seed(7);
+	const classic = r.toData(r.scenario, r.game);
+	await playAI(r, 3, () => expect(JSON.stringify(r.toData(r.scenario, r.game))).not.toMatch(/ntercepted/));
+	const saved = structuredClone(classic);
+	Object.assign(saved.state.units[0], { intercepted: true, wasIntercepted: true });
+	const loaded = r.toData(fromData(saved, r.game), r.game);
+	expect(loaded).toEqual(saved);
+	expect(Object.keys(loaded.state.units[0]).slice(-2)).toEqual(["intercepted", "wasIntercepted"]);
+	const again = fromData(classic, r.game);
+	expect(r.toData(again, r.game)).toEqual(classic);
+	expect(again.map.getUnits().some((u) => "intercepted" in u || "wasIntercepted" in u)).toBe(false);
+});
+
 //The AI plays the same 2 turns (the same seed) on the fixture and on fromData of its state: the
 //same states after every step
 test.each(fixtures("engine"))("fromData's scenario of %s plays as the one it was read from", async (name) => {
@@ -215,6 +232,8 @@ test("savedAs sees what toData would of every field it reads", async () => {
 	sees("the unit's suppression", change(u, "suppressed"));
 	sees("the unit's Devastating Fire shot", change(u, "firedOnce"));
 	sees("the unit's Fire Discipline half point", change(u, "halfAmmo"));
+	sees("the fighter's interception", change(u, "intercepted"));
+	sees("the aircraft's being intercepted", change(u, "wasIntercepted"));
 	sees("the unit's id", change(u, "id"));
 	sees("the unit's hex", () => { const h = u.getHex(); u.setHex(m.map[0][0]); return () => u.setHex(h); });
 	sees("the unit's transport", change(mounted.transport, "fuel"));

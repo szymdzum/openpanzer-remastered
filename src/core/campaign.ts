@@ -199,6 +199,8 @@ function toHQ(w: World, c: CoreUnit): OffMapUnit {
 	delete u.suppressed;
 	delete u.firedOnce;
 	delete u.halfAmmo;
+	delete u.intercepted;
+	delete u.wasIntercepted;
 	if (u.transport !== null && w.equipment[u.transport.eqid] !== undefined)
 		Object.assign(u.transport, { ammo: w.equipment[u.transport.eqid].ammo, fuel: w.equipment[u.transport.eqid].fuel });
 	return u;
