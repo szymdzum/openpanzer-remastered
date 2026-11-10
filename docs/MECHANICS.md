@@ -186,6 +186,10 @@ then assault, then overrun with tanks.
 - Recon can split its movement over several moves in a turn, until a hex stops it (and, in the remaster's
   rules, a unit with Recon Movement, #3).
 - Fuel limits the range of units that use it. Towed units without a transport move 1 hex.
+- In the remaster's rules (#631) an aircraft burns no fuel and its fuel doesn't limit its moves, as the
+  manual says: "Because of their operational range, air units have no fuel limits". Its ammunition
+  still runs out and comes back at an airfield or on a carrier; the unit card shows no fuel for it.
+  The classic rules burn a fuel a movement point for an aircraft too, and one out of fuel can't move.
 - On frozen ground the remaster's rules (#1) burn two fuel a movement point for ground units (on
   their transport's fuel when mounted), as the manual says: "when the ground is covered with snow,
   all ground units pay double fuel costs [...] snow does not reduce the distance that a unit can
@@ -506,6 +510,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | Strength points are suppressed in combat: they don't fire; tactical bombers' (and Shock Tactics') suppression lasts the turn; a defender suppressed at its strength retreats or surrenders; support fire's suppression can break an attack off | Classic rules: no suppression (`atkSuppress`, `defSuppress` always 0), Overwhelming Attack +1 kill, Shock Tactics nothing. The remaster's rules follow the manual (#2) |
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience, plus a random factor; zero for an attacker that is surprised or meets a rugged defense | Equipment only in the classic rules. The remaster's rules follow the manual: the defender's terrain caps it (#14), +1 per experience level, a random 0 to 2 each, zero for the surprised or rugged-hit attacker (#18; the numbers are the project's, the manual gives none) |
+| Air units have no fuel limits | Classic rules: an aircraft burns a fuel a movement point, as any unit with fuel. The remaster's rules follow the manual (#631) |
 | Artillery, air defense and anti-tank "cannot attack after moving" (Combat); Game Turns names artillery and air defense only, and the anti-tank class gets a penalty for moving and attacking | Classic rules: only a move on the transport uses the shot. The remaster's rules: artillery and air defence can't attack after any move (#625) |
 | An AT unit that moved suffers a penalty to initiative and attack when it attacks | Only its range defense is lost (tank killer exempt), in both rules; the manual gives no number (#18) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |

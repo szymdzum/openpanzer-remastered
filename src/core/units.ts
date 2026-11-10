@@ -63,8 +63,19 @@ export function usesFuel(e: EquipmentEntry): boolean {
 	return e.movmethod !== movMethod.leg && e.movmethod !== movMethod.towed && e.movmethod !== movMethod.allTerrainLeg;
 }
 
+/** An aircraft in the rules where it has no fuel limit (Ruleset.aircraftNoFuel): its fuel number is unused. */
+export function hasNoFuelLimit(w: World, e: EquipmentEntry): boolean {
+	return w.rules.aircraftNoFuel && e.movmethod === movMethod.air;
+}
+
+/** Whether equipment burns fuel when it moves in the game's rules, and its fuel limits its moves. */
+export function burnsFuel(w: World, e: EquipmentEntry): boolean {
+	return usesFuel(e) && !hasNoFuelLimit(w, e);
+}
+
+/** burnsFuel for what the unit is now: its transport when it rides. */
 export function unitUsesFuel(w: World, u: UnitState): boolean {
-	return usesFuel(unitData(w, u));
+	return burnsFuel(w, unitData(w, u));
 }
 
 export function unitUsesAmmo(w: World, u: UnitState): boolean {

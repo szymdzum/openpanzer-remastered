@@ -5,7 +5,7 @@ import { costPerStrength } from "../src/core/costs";
 import { moveRange, pathTo, terrainCost, unitMoveRange } from "../src/core/movement";
 import { canReinforce, canResupply, reinforceValue, resupplyValue } from "../src/core/supply";
 import type { MoveCell, UnitState, World } from "../src/core/types";
-import { canMount, canUnmount } from "../src/core/units";
+import { canMount, canUnmount, hasNoFuelLimit } from "../src/core/units";
 import { fuelOf, movesLeft, sideOf, unitById, unitData } from "../src/core/world";
 import { OVERSTRENGTH_PENALTY, unitClassNames } from "../src/core/tables";
 import { targetsOf } from "./combat";
@@ -25,11 +25,14 @@ const ABILITIES: [string, (w: World, u: UnitState) => boolean][] = [
 
 const DONE: [keyof UnitState, string][] = [["hasMoved", "moved"], ["hasFired", "fired"], ["hasResupplied", "supplied"]];
 
+//Fuel to show and to be short of: none for equipment with none, or with no fuel limit (an aircraft in the remaster rules)
+const carriesFuel = (w: World, e: EquipmentEntry) => e.fuel > 0 && !hasNoFuelLimit(w, e);
+
 //The unit's own ammo and fuel against its own full load, also while it is mounted or embarked: the core's
 //ammoOf and fuelOf give the transport's then, the ones a move or a fight uses (#306)
 function loadPart(w: World, u: UnitState, mine: boolean): string[] {
 	const d = own(w, u);
-	return [`ammo ${u.ammo}/${d.ammo}`, ...(mine && d.fuel > 0 ? [`fuel ${u.fuel}/${d.fuel}`] : [])];
+	return [`ammo ${u.ammo}/${d.ammo}`, ...(mine && carriesFuel(w, d) ? [`fuel ${u.fuel}/${d.fuel}`] : [])];
 }
 
 //The transport, and while mounted what it carries (its ammo when it has any, its fuel for the side's own)
@@ -37,7 +40,7 @@ function carriedPart(w: World, u: UnitState, mine: boolean): string[] {
 	if (u.transport === null) return [];
 	const t = w.equipment[u.transport.eqid];
 	if (!u.isMounted) return [`transport ${t.name}`];
-	const load = [...(t.ammo > 0 ? [`ammo ${u.transport.ammo}/${t.ammo}`] : []), ...(mine && t.fuel > 0 ? [`fuel ${u.transport.fuel}/${t.fuel}`] : [])];
+	const load = [...(t.ammo > 0 ? [`ammo ${u.transport.ammo}/${t.ammo}`] : []), ...(mine && carriesFuel(w, t) ? [`fuel ${u.transport.fuel}/${t.fuel}`] : [])];
 	return [`mounted on ${t.name}` + (load.length ? ` (${load.join(", ")})` : "")];
 }
 
@@ -72,7 +75,7 @@ function moveTo(w: World, u: UnitState, c: MoveCell): MoveTo {
 	const path = pathTo(w, u, c), last = path[path.length - 1];
 	const stops = last !== undefined && last.cost >= 254, before = last ? last.dist : 0;
 	const cost = stops ? movesLeft(w, u) : before + (last ? last.cost : 0);
-	const fuel = unitData(w, u).fuel > 0 ? fuelOf(u) - (stops ? before + stopFuel(w, u, c, before) : cost) : null;
+	const fuel = carriesFuel(w, unitData(w, u)) ? fuelOf(u) - (stops ? before + stopFuel(w, u, c, before) : cost) : null;
 	return { cell: cell(c), cost, fuelLeft: fuel, stops };
 }
 
@@ -90,11 +93,12 @@ export const moveLine = (m: MoveTo) => `${m.cell} cost ${m.cost}` + (m.fuelLeft 
 	+ (m.stops ? " (the move stops here)" : "");
 
 //A load below its full one (no fuel to carry: never short of it)
-const below = (load: { ammo: number; fuel: number }, full: EquipmentEntry) => load.ammo < full.ammo || (full.fuel > 0 && load.fuel < full.fuel);
+const below = (w: World, load: { ammo: number; fuel: number }, full: EquipmentEntry) =>
+	load.ammo < full.ammo || (carriesFuel(w, full) && load.fuel < full.fuel);
 
 //Short of strength, of its own ammo or fuel, or of its transport's while mounted
-const short = (w: World, u: UnitState) => u.strength < 10 || below(u, own(w, u))
-	|| (u.isMounted && u.transport !== null && below(u.transport, w.equipment[u.transport.eqid]));
+const short = (w: World, u: UnitState) => u.strength < 10 || below(w, u, own(w, u))
+	|| (u.isMounted && u.transport !== null && below(w, u.transport, w.equipment[u.transport.eqid]));
 
 function resupplyPart(w: World, u: UnitState): string {
 	if (!canResupply(w, u)) return "can't resupply now";

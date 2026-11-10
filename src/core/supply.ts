@@ -9,7 +9,7 @@ import { OVERSTRENGTH_PENALTY, terrainType, unitClass } from "./tables";
 import { costPerStrength } from "./costs";
 import { adjacent } from "./geometry";
 import type { Supply, UnitState, World } from "./types";
-import { isAir, isGround, isSea } from "./units";
+import { hasNoFuelLimit, isAir, isGround, isSea } from "./units";
 import { groundUnitAt, hexIndex, onMap, playerOf, sideOf, unitData } from "./world";
 import { weatherSupplyDivisor } from "./weathereffects";
 
@@ -48,16 +48,21 @@ export function canSupplyHere(w: World, u: UnitState): boolean {
 	return isSea(w, u) && w.data.hexes[hexIndex(w, u.row, u.col)].terrain === terrainType.Port;
 }
 
+//The fuel a load is short of its equipment's: none for an aircraft that has no fuel limit
+function fuelMissing(w: World, load: { fuel: number }, e: EquipmentEntry): number {
+	return hasNoFuelLimit(w, e) ? 0 : e.fuel - load.fuel;
+}
+
 /** A unit that hasn't moved, fired or resupplied, short of ammo or fuel (its own or its transport's). */
 export function canResupply(w: World, u: UnitState): boolean {
 	if (u.hasMoved || u.hasFired || u.hasResupplied) return false;
 	const own = unitData(w, u, true);
 	let needAmmo = u.ammo < own.ammo;
-	let needFuel = u.fuel < own.fuel;
+	let needFuel = fuelMissing(w, u, own) > 0;
 	if (u.transport !== null) {
 		const t = w.equipment[u.transport.eqid];
 		needAmmo = needAmmo || u.transport.ammo < t.ammo;
-		needFuel = needFuel || u.transport.fuel < t.fuel;
+		needFuel = needFuel || fuelMissing(w, u.transport, t) > 0;
 	}
 	if (!needAmmo && !needFuel) return false;
 	return canSupplyHere(w, u);
@@ -85,14 +90,14 @@ export function resupplyValue(w: World, u: UnitState, isTurnStart = false): Supp
 	if (!canResupply(w, u)) return supply(0, 0, 0, 0);
 	const own = unitData(w, u, true);
 	let ammo = own.ammo - u.ammo;
-	let fuel = own.fuel - u.fuel;
+	let fuel = fuelMissing(w, u, own);
 	if (isAir(w, u) || isSea(w, u)) return supply(ammo, fuel, 0, 0);
 
 	let tAmmo = 0, tFuel = 0;
 	if (u.transport !== null) {
 		const t = w.equipment[u.transport.eqid];
 		tAmmo = t.ammo - u.transport.ammo;
-		tFuel = t.fuel - u.transport.fuel;
+		tFuel = fuelMissing(w, u.transport, t);
 	}
 	const enemies = adjacentEnemies(w, u);
 	const inCity = isInCity(w, u);

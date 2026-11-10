@@ -64,6 +64,7 @@ export const classicRules: Ruleset = {
 	allLeaderAbilities: false,
 	gunsFireBeforeMoving: false,
 	checksFiring: false,
+	aircraftNoFuel: false,
 	remasteredAI: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
@@ -127,6 +128,9 @@ export const remasterRules: Ruleset = {
 	//its class has. The core refuses an attack by a unit that can't fire this turn (#625)
 	gunsFireBeforeMoving: true,
 	checksFiring: true,
+	//An aircraft burns no fuel and has no fuel limit ("Because of their operational range, air units have no fuel
+	//limits"); it still comes back to an airfield for ammunition (#631)
+	aircraftNoFuel: true,
 	//The computer player is the remastered AI, which plays the classic one's commands while it learns to read
 	//the map: what its side sees and remembers, the front, the threat, the distances and the supply (#610)
 	remasteredAI: true,

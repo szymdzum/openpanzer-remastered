@@ -5,7 +5,8 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/preact
 import { afterEach, expect, test } from "vitest";
 import { handWorld } from "./coreworld";
 import { step } from "../src/core/step";
-import type { World } from "../src/core/types";
+import { classicRules, remasterRules } from "../src/core/rules";
+import type { Ruleset, World } from "../src/core/types";
 import { leaderType, terrainType } from "../src/core/tables";
 import { UnitInfoPanel } from "../src/view/hud/infopanel";
 import { createStore } from "../src/view/store/store";
@@ -18,7 +19,7 @@ const PZ_IIA = 140, INFANTERIE = 115, OPEL_BLITZ = 157, ME_109 = 159, TP7 = 273,
 
 //A Pz IIA of 120 XP with a leader on a hill, dug in 4, low on fuel with one round left; infantry on its truck; a Pz IIA
 //over strength; a Messerschmitt low on fuel; a Pz IIA out of fuel; a PaK 36; a Polish tank seen
-function world(): World {
+function world(rules: Ruleset = classicRules): World {
 	return handWorld({ rows: 12, cols: 12, terrain: (r, c) => r === 2 && c === 2 ? terrainType.Hill : terrainType.Clear, units: [
 		{ eqid: PZ_IIA, owner: 0, row: 2, col: 2, experience: 120, leader: leaderType.battlefieldIntelligence, fuel: 18, ammo: 1, entrenchment: 4,
 			flag: 8 },
@@ -29,7 +30,7 @@ function world(): World {
 		{ eqid: PZ_IIA, owner: 0, row: 9, col: 6, fuel: 0, strength: 3, flag: 8 },
 		{ eqid: PAK36, owner: 0, row: 6, col: 9, flag: 8 },
 		{ eqid: TP7, owner: 1, row: 4, col: 9, flag: 16 },
-	] }, undefined, { spotSide: 0 });
+	] }, undefined, { spotSide: 0, rules });
 }
 
 const lineOf = (w: World, id: number): CardLine => unitCardOf(w, id)!.line;
@@ -79,6 +80,16 @@ test("An aircraft shows its fuel alone, with no moves; it can't dig in (#37)", (
 	expect(line.gauges.map(read)).toEqual([["Strength", null, "10", "ok"], ["Fuel", null, "18/115", "critical"],
 		["Ammo", null, "11/11", "ok"], ["Entrenched", null, "–", null]]);
 	expect(chips(line)[1]).toEqual(["target", null, "Can fire", "ok"]);
+});
+
+test("the unit card shows no fuel for an aircraft in the remaster rules (#631)", () => {
+	//as for a unit that burns none (a towed gun): "–", no bar and no full moves; its moves aren't its fuel's
+	const w = world(remasterRules), line = lineOf(w, 3);
+	expect(read(line.gauges[1])).toEqual(["Fuel", null, "–", null]);
+	expect(line.gauges[1]).toEqual(lineOf(w, 5).gauges[1]);
+	expect(chips(line)[0]).toEqual(["arrow-right", 15, "15 moves left", "ok"]);
+	//(a tank's fuel stays)
+	expect(read(lineOf(w, 0).gauges[1])).toEqual(["Fuel", "3 full moves", "18/50", "low"]);
 });
 
 test("A unit with no fuel: no full moves, and it can't move; a gun with more rounds than segments has a bar; the enemy has no chips (#37)", () => {
