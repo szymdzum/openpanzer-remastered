@@ -150,6 +150,10 @@ export interface Ruleset {
 	//An aircraft burns no fuel and its fuel doesn't limit its moves, as the manual says ("air units have no fuel
 	//limits"); its ammunition still runs out (#631). False in the classic rules, where it burns a fuel a point
 	aircraftNoFuel: boolean;
+	//Against an attacking aircraft only a fighter next to the defender fires in support, once a turn, and an attacker
+	//is intercepted once a turn, as the manual says (UnitState.intercepted, wasIntercepted, #632). False in the classic
+	//rules, where every fighter with the attacker in range fires, as often as its ammo lasts
+	interceptAdjacentOnce: boolean;
 	//The computer player is the remastered AI (remastered/controller.ts, #409): false in the classic rules, where
 	//it is the classic one (ai.ts)
 	remasteredAI: boolean;

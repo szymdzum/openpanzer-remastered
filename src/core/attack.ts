@@ -9,7 +9,7 @@ import { leaderType, unitClass } from "./tables";
 import { canStartAttackOn } from "./equipment";
 import { cellsInRange, distance } from "./geometry";
 import type { Position, UnitState, World } from "./types";
-import { hasLeader, isAir, isEnemy, isGone } from "./units";
+import { hasLeader, hasLeaderAbility, isAir, isEnemy, isGone } from "./units";
 import { ammoOf, currentEqid, hexIndex, sideOf, unitAt, unitData } from "./world";
 import { seesUnit } from "./sight";
 import { grounded } from "./weathereffects";
@@ -113,23 +113,40 @@ export function isTargetFrom(w: World, u: UnitState, target: UnitState): boolean
 	return below || isAir(w, target) || hitsGroundAnywhere(w, isAir(w, u), unitAttackRange(w, u));
 }
 
+/** Whether u's support fire on atk is an interception that counts once a turn: a fighter's, in the remaster rules. */
+export function isInterception(w: World, u: UnitState, atk: UnitState): boolean {
+	return w.rules.interceptAdjacentOnce && isAir(w, atk) && unitData(w, u).uclass === unitClass.fighter;
+}
+
+//A fighter next to the defender (above or below it too) that hasn't intercepted this turn, or has Skilled
+//Interceptor ("can intercept multiple enemy fighters"), on an attacker nobody intercepted this turn
+function canIntercept(w: World, u: UnitState, atk: UnitState, def: UnitState): boolean {
+	if (atk.wasIntercepted || distance(u.row, u.col, def.row, def.col) > 1) return false;
+	return !u.intercepted || hasLeaderAbility(w, u, leaderType.skilledInterceptor);
+}
+
+//Whether u has the attacker in its range and fires in support against it: artillery against a ground attacker,
+//flak, air defence and fighters against an air one
+function supports(w: World, u: UnitState, atk: UnitState, airAttack: boolean): boolean {
+	const ud = unitData(w, u);
+	const range = ud.gunrange === 0 ? 1 : ud.gunrange;
+	if (distance(u.row, u.col, atk.row, atk.col) > range) return false;
+	const ofClass = airAttack
+		? ud.uclass === unitClass.flak || ud.uclass === unitClass.airDefence || ud.uclass === unitClass.fighter
+		: ud.uclass === unitClass.artillery;
+	return ofClass && canFire(w, u, atk);
+}
+
 /**
  * The units that fire on the attacker when it attacks def from next to it: def's side's artillery
  * against a ground attacker, its flak, air defence and fighters against an air one. In the order of the unit list.
+ * In the remaster rules the fighters' fire is an interception: only the first that can make one (canIntercept).
  */
 export function supportFireUnits(w: World, atk: UnitState, def: UnitState): UnitState[] {
 	if (distance(atk.row, atk.col, def.row, def.col) > 1) return [];
 	const side = sideOf(w, def), airAttack = isAir(w, atk);
-	const support: UnitState[] = [];
-	for (const u of w.state.units) {
-		if (sideOf(w, u) !== side || u.id === def.id) continue;
-		const ud = unitData(w, u);
-		const range = ud.gunrange === 0 ? 1 : ud.gunrange;
-		if (distance(u.row, u.col, atk.row, atk.col) > range) continue;
-		const supports = airAttack
-			? ud.uclass === unitClass.flak || ud.uclass === unitClass.airDefence || ud.uclass === unitClass.fighter
-			: ud.uclass === unitClass.artillery;
-		if (supports && canFire(w, u, atk)) support.push(u);
-	}
-	return support;
+	const support = w.state.units.filter((u) => sideOf(w, u) === side && u.id !== def.id && supports(w, u, atk, airAttack));
+	if (!w.rules.interceptAdjacentOnce || !airAttack) return support;
+	const interceptor = support.find((u) => isInterception(w, u, atk) && canIntercept(w, u, atk, def));
+	return support.filter((u) => u === interceptor || !isInterception(w, u, atk));
 }

@@ -92,6 +92,8 @@ export class Unit {
 	declare suppressed?: number; //set only while some points are suppressed for the turn (the remaster's rules)
 	declare firedOnce?: boolean; //set only while Devastating Fire's first attack is spent (the remaster's rules)
 	declare halfAmmo?: boolean; //set only while Fire Discipline spent half an ammo point (the remaster's rules)
+	declare intercepted?: boolean; //set only while the fighter's interception of the turn is made (the remaster's rules)
+	declare wasIntercepted?: boolean; //set only while the aircraft has been intercepted this turn (the remaster's rules)
 
 	declare getHex: () => Hex | null;
 	declare setHex: (h: Hex | null) => void;

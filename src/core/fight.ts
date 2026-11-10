@@ -13,7 +13,7 @@
 
 import { leaderType, scoreGains, UNIT_MAX_EXPERIENCE } from "./tables";
 import { nextRandom, type RngStream } from "./random";
-import { attackableUnit, supportFireUnits } from "./attack";
+import { attackableUnit, isInterception, supportFireUnits } from "./attack";
 import {
 	attackResult, continuesSuppression, dismountsWhenAttacked, isBrokenOff, isLossOverRetreatThreshold, isPinned, shouldDefenderRetreat,
 	suppressedFor
@@ -210,6 +210,10 @@ function supportFire(d: Draft, attacker: UnitId, defender: UnitId): number {
 	for (const s of supportFireUnits(d, unitById(d, attacker), unitById(d, defender)).map((u) => u.id)) {
 		if (unitById(d, attacker).strength <= 0) break;
 		suppressed += fight(d, s, attacker, true, false).result.defSuppress;
+		if (isInterception(d, unitById(d, s), unitById(d, attacker))) {
+			writeUnit(d, s).intercepted = true;
+			writeUnit(d, attacker).wasIntercepted = true;
+		}
 	}
 	return suppressed;
 }

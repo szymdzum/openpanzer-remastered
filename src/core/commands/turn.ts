@@ -62,6 +62,16 @@ function liftSuppression(d: Draft) {
 	for (const u of d.state.units) if (u.suppressed !== undefined) delete writeUnit(d, u.id).suppressed;
 }
 
+//An interception a turn: the fighters' and the attackers' start again with every player's turn
+function clearInterceptions(d: Draft) {
+	for (const u of d.state.units) {
+		if (u.intercepted === undefined && u.wasIntercepted === undefined) continue;
+		const c = writeUnit(d, u.id);
+		delete c.intercepted;
+		delete c.wasIntercepted;
+	}
+}
+
 //Actions.endTurn: the time of day, then the player's end of turn, the undo gone, the next player (by
 //id, the first after the last); a new round, its weather first, when it is the first. turnLimit: the side that ended
 //played its last turn. Never refused
@@ -72,6 +82,7 @@ export const endTurn: CommandHandler<CommandOf<"endTurn">> = {
 	run(d) {
 		const t = d.state.turn, ended = t.currentPlayer, side = d.state.players[ended].side;
 		liftSuppression(d);
+		clearInterceptions(d);
 		nextTimeOfDay(d);
 		playerEndTurn(d, ended);
 		t.undoable = null;

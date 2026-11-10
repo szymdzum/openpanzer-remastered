@@ -118,6 +118,15 @@ attacker within its gun range fires at the attacker (`getSupportFireUnits`). Aga
 flak, air defense and fighters do it. Ranged attacks get no support fire. Your own artillery
 protects your units the same way.
 
+In the remaster's rules (#632) a fighter's support fire is the manual's interception: "Fighters
+adjacent to defending bombers or ground units may intercept attacking air units, but fighters may
+make only one interception per turn, and each attacking air unit may be intercepted only once per
+turn". Of the fighters with the attacker in range, only one next to the defender (over or under it
+too) fires, the first in the unit list that hasn't intercepted this turn, and not at an attacker
+already intercepted this turn (`intercepted`, `wasIntercepted`, cleared at every end of turn). Flak
+and air defense fire as before. The attack preview counts the same units. The classic rules let
+every fighter in range fire, as often as its ammo lasts.
+
 **After the combat:**
 
 - Losses come off strength. Every hit also takes 1 entrenchment level and counts toward the -2
@@ -284,8 +293,8 @@ still reinforce.
     as any newly spotted unit; one that fires shows itself the same way.
   - **Influence**: an upgrade costs half its price (rounded down). Neither the manual nor the original says how
     much "reduced" is.
-  - **Skilled Interceptor** has nothing to lift: a fighter already fires in support against every enemy
-    aircraft that attacks next to it, as often as its ammo lasts (`supportFireUnits`).
+  - **Skilled Interceptor**: the fighter intercepts as often as its ammo lasts, not once a turn (#632); an
+    attacker is still intercepted once a turn (`supportFireUnits`).
   - **Overwatch** (reaction fire on an enemy that moves into range) has no effect yet: it needs a step of
     its own in the move's flow (#599).
 
@@ -393,7 +402,8 @@ first, then reposition.
    fire, and every hit takes an entrenchment level. Shell the enemy artillery and air defense
    next to the target first, or they'll support it.
 3. **Aircraft.** Bombers on the targets the artillery softened. Enemy flak, air defense and
-   fighters in range fire at every air attack, so take them out or stay away from them.
+   fighters in range fire at every air attack, so take them out or stay away from them (in the
+   remaster's rules a fighter next to the target intercepts one attacker a turn: draw it out first).
 4. **Ground assault, weakest attacker first.** Every attack on a unit, even one that kills
    nothing, lowers its defense by 2 and its entrenchment by 1 for the next non-artillery
    attackers. The strongest unit attacks last, into the lowest defense.
@@ -511,6 +521,7 @@ The manual describes rules the code doesn't have (or a different version of them
 | An attack preview shows the expected losses | The attack cursor shows the estimated losses under each side's flag (`drawGlance`, src/view/map/attackdraw.ts; the old renderer's `generateAttackCursor` until #351, which drew it on the hex on touch screens), without support fire, rugged defense or overrun |
 | Initiative comes from equipment, terrain and experience, plus a random factor; zero for an attacker that is surprised or meets a rugged defense | Equipment only in the classic rules. The remaster's rules follow the manual: the defender's terrain caps it (#14), +1 per experience level, a random 0 to 2 each, zero for the surprised or rugged-hit attacker (#18; the numbers are the project's, the manual gives none) |
 | Air units have no fuel limits | Classic rules: an aircraft burns a fuel a movement point, as any unit with fuel. The remaster's rules follow the manual (#631) |
+| Fighters next to the defender intercept an attacking air unit: one interception a fighter a turn, one an attacker a turn | Classic rules: every fighter with the attacker in range fires, each time. The remaster's rules follow the manual (#632) |
 | Artillery, air defense and anti-tank "cannot attack after moving" (Combat); Game Turns names artillery and air defense only, and the anti-tank class gets a penalty for moving and attacking | Classic rules: only a move on the transport uses the shot. The remaster's rules: artillery and air defence can't attack after any move (#625) |
 | An AT unit that moved suffers a penalty to initiative and attack when it attacks | Only its range defense is lost (tank killer exempt), in both rules; the manual gives no number (#18) |
 | Maximum experience 600 | `UNIT_MAX_EXPERIENCE` is 500 |

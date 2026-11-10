@@ -116,6 +116,8 @@ export interface UnitState {
 	suppressed?: number;		//the points that don't fire for the rest of the turn (Ruleset.continuedSuppression); absent when none
 	firedOnce?: boolean;		//Devastating Fire's first attack of the turn is spent (Ruleset.allLeaderAbilities); absent when not
 	halfAmmo?: boolean;		//Fire Discipline spent half of an ammo point (Ruleset.allLeaderAbilities); absent when not
+	intercepted?: boolean;		//the fighter made its interception of the turn (Ruleset.interceptAdjacentOnce); absent when not
+	wasIntercepted?: boolean;	//the aircraft was intercepted this turn (Ruleset.interceptAdjacentOnce); absent when not
 }
 
 export interface TransportState {

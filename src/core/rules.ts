@@ -65,6 +65,7 @@ export const classicRules: Ruleset = {
 	gunsFireBeforeMoving: false,
 	checksFiring: false,
 	aircraftNoFuel: false,
+	interceptAdjacentOnce: false,
 	remasteredAI: false,
 	ai: { config: aiDefaultConfig, attackerEntrenchment: 1 },
 };
@@ -131,6 +132,10 @@ export const remasterRules: Ruleset = {
 	//An aircraft burns no fuel and has no fuel limit ("Because of their operational range, air units have no fuel
 	//limits"); it still comes back to an airfield for ammunition (#631)
 	aircraftNoFuel: true,
+	//Interception: "Fighters adjacent to defending bombers or ground units may intercept attacking air units, but
+	//fighters may make only one interception per turn, and each attacking air unit may be intercepted only once per
+	//turn". Flak and air defence fire in support as before (#632)
+	interceptAdjacentOnce: true,
 	//The computer player is the remastered AI, which plays the classic one's commands while it learns to read
 	//the map: what its side sees and remembers, the front, the threat, the distances and the supply (#610)
 	remasteredAI: true,

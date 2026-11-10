@@ -124,7 +124,8 @@ function sameCounts(u: Unit, x: UnitState): boolean {
 
 //The remaster's fields a unit holds only when set: absent counts as 0 or false
 function sameRemasterCounts(u: Unit, x: UnitState): boolean {
-	return (x.suppressed ?? 0) === (u.suppressed ?? 0) && !!x.firedOnce === !!u.firedOnce && !!x.halfAmmo === !!u.halfAmmo;
+	return (x.suppressed ?? 0) === (u.suppressed ?? 0) && !!x.firedOnce === !!u.firedOnce && !!x.halfAmmo === !!u.halfAmmo
+		&& !!x.intercepted === !!u.intercepted && !!x.wasIntercepted === !!u.wasIntercepted;
 }
 
 function sameStanding(u: Unit, x: UnitState): boolean {
@@ -256,6 +257,8 @@ export function offMapUnit(u: OffMapUnit): OffMapUnit {
 		...(u.suppressed ? { suppressed: u.suppressed } : {}),
 		...(u.firedOnce ? { firedOnce: true } : {}),
 		...(u.halfAmmo ? { halfAmmo: true } : {}),
+		...(u.intercepted ? { intercepted: true } : {}),
+		...(u.wasIntercepted ? { wasIntercepted: true } : {}),
 	};
 }
 
@@ -454,6 +457,10 @@ export function setUnitFields(u: Unit, s: OffMapUnit) {
 	else delete u.firedOnce;
 	if (s.halfAmmo) u.halfAmmo = true;
 	else delete u.halfAmmo;
+	if (s.intercepted) u.intercepted = true;
+	else delete u.intercepted;
+	if (s.wasIntercepted) u.wasIntercepted = true;
+	else delete u.wasIntercepted;
 }
 
 //The units in their order with their ids, through the map's own placing (MapBoard.place gives a
