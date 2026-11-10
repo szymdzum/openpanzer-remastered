@@ -147,6 +147,9 @@ export interface Ruleset {
 	//The core's check refuses an attack by a unit that can't fire this turn: it fired, or has no ammo (#625). False in
 	//the classic rules, where the original AI attacks after its surprise attack, which already fired
 	checksFiring: boolean;
+	//An aircraft burns no fuel and its fuel doesn't limit its moves, as the manual says ("air units have no fuel
+	//limits"); its ammunition still runs out (#631). False in the classic rules, where it burns a fuel a point
+	aircraftNoFuel: boolean;
 	//The computer player is the remastered AI (remastered/controller.ts, #409): false in the classic rules, where
 	//it is the classic one (ai.ts)
 	remasteredAI: boolean;

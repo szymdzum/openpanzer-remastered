@@ -15,7 +15,7 @@ import { directionTo } from "./geometry";
 import { canPassInto, disembarkPositions, movesInPhases, pathTo, shortestPath, terrainCost, unitMoveRange } from "./movement";
 import type { Draft, HexState, PathCell, Position, UndoState, UnitId, UnitState, World } from "./types";
 import { winsByCapture } from "./turn";
-import { canCapture, firesOnlyBeforeMoving, hasLeader, hasLeaderAbility, unitUsesFuel, usesFuel } from "./units";
+import { burnsFuel, canCapture, firesOnlyBeforeMoving, hasLeader, hasLeaderAbility, unitUsesFuel } from "./units";
 import { hexIndex, isRiding, isSpotted, unitById } from "./world";
 import { fuelPerPoint } from "./weathereffects";
 
@@ -143,7 +143,7 @@ function burn(d: Draft, u: UnitState, used: number) {
 	const fuel = used * fuelPerPoint(d, u);
 	if (isRiding(u)) {
 		u.hasFired = true;
-		if (usesFuel(d.equipment[u.transport.eqid])) u.transport.fuel -= fuel;
+		if (burnsFuel(d, d.equipment[u.transport.eqid])) u.transport.fuel -= fuel;
 		u.moveLeft = 0;
 	} else {
 		if (unitUsesFuel(d, u) && u.carrier === 0) u.fuel -= fuel;

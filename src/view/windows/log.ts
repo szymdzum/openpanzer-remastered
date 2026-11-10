@@ -4,6 +4,7 @@
 //summary. Plain functions, tested on hand-built worlds
 import type { EventOf, GameEvent } from "../../core/events";
 import { hexIndex, sideOf, unitById } from "../../core/world";
+import { hasNoFuelLimit } from "../../core/units";
 import type { Position, UnitId, World } from "../../core/types";
 import { leaderDescriptions } from "../../legacy/prototypes";
 import { terrainNames, terrainType, unitClass } from "../../core/tables";
@@ -182,7 +183,7 @@ function combatEntry(w: World, u: Fought): LogEntry {
 }
 
 function resupplyEntry(w: World, r: TurnLog["resupply"][number]): LogEntry {
-	const e = w.equipment[r.eqid], uses = e.fuel > 0;
+	const e = w.equipment[r.eqid], uses = e.fuel > 0 && !hasNoFuelLimit(w, e);
 	const words: Words = [...unitWords(w, r), " resupplied automatically: ammo ", { b: r.ammo + "/" + e.ammo },
 		...(uses ? [", fuel ", { b: r.fuel + "/" + e.fuel }] : []), "."];
 	return { sprite: spriteOf(w, r.eqid), icon: null, words, destroyed: false, at: r.at };
