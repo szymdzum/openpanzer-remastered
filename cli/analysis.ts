@@ -1,9 +1,10 @@
 //The remastered AI's maps of a side (src/core/remastered/, #610) as the command-line player shows them: the front, the
-//weak sectors, the threatened units, the enemies remembered, the objectives, its commander's directives with their
-//reasons (#638), the garrisons its staff would set (#616) and its assault (#618). A call has no controller's memory,
-//so the side knows only the enemies it sees now and its commander none of its last directives
+//weak sectors, the threatened units, the enemies remembered, the objectives, its turn clock and its commander's
+//directives with their reasons (#638), the garrisons its staff would set (#616) and its assault (#618). A call has no
+//controller's memory, so the side knows only the enemies it sees now and its commander none of its last directives
 import { analyse, type Analysis, type AnalysisCache } from "../src/core/remastered/analysis";
 import { assaultOrder, battleGroup } from "../src/core/remastered/assault";
+import { clockLine, clockOf } from "../src/core/remastered/clock";
 import { command } from "../src/core/remastered/commander";
 import type { Directive } from "../src/core/remastered/directives";
 import { direct, type Orders } from "../src/core/remastered/controller";
@@ -62,7 +63,7 @@ function ordersOf(w: World, view: SideView, a: Analysis, cache: AnalysisCache): 
 //Each directive on its own line: its reason is the commander's explanation
 const directiveLines = (directives: readonly Directive[]) => directives.length === 0 ? ["directives the commander would give now: none"]
 	: [`directives the commander would give now (${directives.length}):`,
-		...directives.map((d) => `  ${d.priority}. ${d.task} ${cell(d.target)} until turn ${d.until}: ${d.reason}`)];
+		...directives.map((d) => `  ${d.priority}. ${d.reason} (${d.task} ${cell(d.target)}, to turn ${d.until})`)];
 
 const garrisonLine = (w: World, ops: readonly Operation[]) => listed(ops.map((op) =>
 	`${label(w, unitById(w, op.units[0]))} (${op.reason})`), "garrisons the staff would set now");
@@ -112,7 +113,7 @@ export function analysisOf(w: World, side: number): { lines: string[]; data: unk
 	const lines = [`the analysis of the ${SIDES[side]}, turn ${a.turn} (no memory: the enemies it sees now, none remembered)`,
 		frontLine(w, a), sectorLines(a), threatenedLines(w, a), enemyLines(w, view),
 		objectiveLine(a, "objectives to take", a.objectives.take, w), objectiveLine(a, "objectives to hold", a.objectives.hold, w),
-		...directiveLines(directives), garrisonLine(w, garrisons), assaultLine(w, assault)];
+		`clock: ${clockLine(clockOf(w, side))}`, ...directiveLines(directives), garrisonLine(w, garrisons), assaultLine(w, assault)];
 	const assaultData = assault === null ? null : { ...assault.op, group: assault.group.map((u) => u.id), next: assault.next };
-	return { lines, data: { ...plain(a) as object, directives, garrisons, assault: assaultData } };
+	return { lines, data: { ...plain(a) as object, clock: clockOf(w, side), directives, garrisons, assault: assaultData } };
 }

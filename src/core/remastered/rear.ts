@@ -9,11 +9,11 @@
 import type { Command } from "../command";
 import { distance } from "../geometry";
 import { check } from "../step";
-import { attackerSide } from "../turn";
 import type { Position, UnitId, UnitState, World } from "../types";
 import { canUnmount, isAir, unitUsesFuel } from "../units";
 import { hexIndex, unitById, unitData } from "../world";
 import type { Analysis } from "./analysis";
+import { attacks } from "./clock";
 import { isFree, type Rides } from "./staff";
 
 //Short of ammunition or fuel: a third left or less, half the fuel for an aircraft, which falls when it runs out (the
@@ -46,7 +46,7 @@ const anywhere: Rides = () => true;
  * the arena it lost fewer units for its objectives out of reach.
  */
 export function rideOutOfReach(w: World, a: Analysis, player: number): Rides {
-	if (!enemyPlaysAfter(w, player) && attackerSide(w) !== w.state.players[player].side) return anywhere;
+	if (!enemyPlaysAfter(w, player) && !attacks(w, w.state.players[player].side)) return anywhere;
 	return (_u, cell) => !inGroundReach(a, hexOf(w, cell))
 		|| [...a.objectives.take, ...a.objectives.hold].some((o) => distance(o.row, o.col, cell.row, cell.col) <= RIDE_TO_OBJECTIVE);
 }

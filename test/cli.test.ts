@@ -419,8 +419,9 @@ test("The analysis shows a side's maps from what it sees, as text and as data (#
 	expect(axis).toContain("objectives to take, the weakest held first (5): ");
 	expect(axis).toContain("objectives to hold (2): 1,10 ");
 	expect(axis).toMatch(/garrisons the staff would set now: none|garrisons the staff would set now \(\d\): #\d+ .+ \((hold|delay) /);
+	expect(axis).toContain("clock: 5 objectives in 17 turns");
 	expect(axis).toMatch(/directives the commander would give now \(\d\):\n {2}1\. /);
-	expect(axis).toMatch(/\d\. assault \d+,\d+ until turn \d+: assault \d+,\d+: enemy \d+ around it, until turn \d+/);
+	expect(axis).toMatch(/\d\. assault \d+,\d+: enemy \d+ around it, until turn \d+; 5 objectives in 17 turns \(assault \d+,\d+, to turn \d+\)/);
 	expect(await call("analysis --side 1")).toMatch(/^the analysis of the Allies/);
 	await expect(call("analysis --side 2")).rejects.toThrow("--side is 0 or 1");
 	const data = (await run(parseArgs(["analysis", "--json"]), file)).data as { side: number; influence: { own: number[] } };

@@ -73,7 +73,7 @@ function isAttacker(w: World, side: number): boolean {
 
 //The share of the entrenchment bonus its units keep away from the enemy: the rules' for a side that
 //attacks, all of it for one that defends (#235).
-const stayShareOf = (w: World, side: number): number => isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
+const stayShareOf = (w: World, attacks: boolean): number => attacks ? w.rules.ai.attackerEntrenchment : 1;
 
 //The AI's stream (its state is null when the state's streams aren't seeded: Math.random). The purchases
 //and the scores draw from it, and the order of the draws is behavior.
@@ -262,6 +262,8 @@ export interface PlanOptions {
 	ridesTo?: (u: UnitState, cell: Position) => boolean;
 	//The objectives a unit's moves are pulled to; when not given, the side's objectives to take
 	pullTo?: (u: UnitState) => readonly Position[];
+	//Whether the side attacks (#235); when not given, while it has more objectives to take than the enemy
+	attacks?: boolean;
 }
 
 const NO_UNITS: ReadonlySet<UnitId> = new Set();
@@ -276,7 +278,7 @@ export function planTurn(w: World, player: number, config: AIConfig, prestigeLef
 	const held = options.held || NO_UNITS;
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
-	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side),
+	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, options.attacks ?? isAttacker(w, side)),
 		ridesTo: options.ridesTo || null, pullTo: options.pullTo || null };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {

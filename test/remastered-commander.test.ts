@@ -1,8 +1,11 @@
 // @vitest-environment node
-//The remastered AI's commander (src/core/remastered/commander.ts, #638): the directives it gives its staff and the
-//check a list of them passes; on hand-built maps
+//The remastered AI's commander (src/core/remastered/commander.ts, #638): the directives it gives its staff, the check
+//a list of them passes, its turn clock, and the staff's reserve; on hand-built maps
 import { expect, test } from "vitest";
+import { planTurn } from "../src/core/ai";
+import type { Command } from "../src/core/command";
 import { analyse, type AnalysisCache } from "../src/core/remastered/analysis";
+import { clockLine, clockOf } from "../src/core/remastered/clock";
 import { command, type CommanderMemory } from "../src/core/remastered/commander";
 import { type Directive, validateDirectives } from "../src/core/remastered/directives";
 import { remasteredController } from "../src/core/remastered/controller";
@@ -11,7 +14,9 @@ import type { Position, World } from "../src/core/types";
 import type { HandUnit } from "./coreworld";
 import { playOneTurn, position, world } from "./staffworld";
 
-const INFANTERIE = 115, PZ_IVD = 148, PIECHOTA = 270;
+const INFANTERIE = 115, PZ_IVD = 148, PIECHOTA = 270, TP7 = 273;
+
+const attacks = (cmds: readonly Command[]) => cmds.filter((c) => c.type === "attack");
 
 //Two of Poland's objectives at either end of the map, the southern one held by a worn-down infantry; Germany's tanks
 //and infantry on the western edge, three turns from either
@@ -77,7 +82,7 @@ test("the staff makes its operations from directives only (#638)", () => {
 	const own = { row: 5, col: 2 }, w = world(twoSectors, [own], [NORTH, SOUTH]);
 	const rules = remasteredController(0);
 	playOneTurn(rules, w);
-	expect(rules.operations.filter((op) => op.kind !== "reserve")).toMatchObject([{ kind: "assault", at: SOUTH }]);
+	expect(rules.operations).toMatchObject([{ kind: "assault", at: SOUTH }]);
 	const orders: Directive[] = [{ task: "delay", target: own, priority: 1, until: 3, reason: "the staff is told to" },
 		{ task: "assault", target: NORTH, priority: 2, until: 4, reason: "the staff is told to" },
 		{ task: "assault", target: { row: 6, col: 6 }, priority: 3, until: 4, reason: "not an objective" }];
@@ -97,6 +102,57 @@ test("the staff makes its operations from directives only (#638)", () => {
 	expect(silent.operations).toEqual([]);
 });
 
+test("the turn clock counts the turns left for the objectives left, by the turn limit's rule (#638, #232, #353)", () => {
+	//Germany had two objectives to take at the start and Poland none: Germany attacks to the end, even once it holds more
+	const w = world(twoSectors, [], [NORTH, SOUTH], 3, false, [2, 0]);
+	expect(clockOf(w, 0)).toEqual({ attacks: true, turnsLeft: 10, toTake: 2, behind: false, late: false });
+	expect(clockLine(clockOf(w, 0))).toBe("2 objectives in 10 turns");
+	expect(clockLine(clockOf(w, 1))).toBe("0 objectives in 10 turns: defending");
+	//Half the turns gone and nothing taken: behind schedule; one taken: on schedule again
+	expect(clockLine(clockOf(onTurn(w, 6), 0))).toBe("2 objectives in 5 turns: behind schedule");
+	const one = world(twoSectors, [NORTH], [SOUTH], 3, false, [2, 0]);
+	expect(clockOf(onTurn(one, 6), 0)).toMatchObject({ attacks: true, toTake: 1, behind: false });
+	expect(clockLine(clockOf(onTurn(one, 9), 0))).toBe("1 objective in 2 turns: the last turns");
+});
+
+test("an attacker that holds more objectives than it has left to take still plays as the attacker (#638, #353)", () => {
+	//Germany, the scenario's attacker, took one of two objectives: by the count it has fewer left to take than Poland.
+	//Its infantry dug in far from the enemy keeps its hole by the count, and leaves it by the turn limit's rule
+	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 5, col: 3, entrenchment: 5 }, { eqid: PIECHOTA, owner: 1, row: 5, col: 14 },
+		{ eqid: INFANTERIE, owner: 0, row: 2, col: 0 }, { eqid: INFANTERIE, owner: 0, row: 8, col: 0 }];
+	const w = world(units, [{ row: 2, col: 0 }, { row: 8, col: 0 }], [{ row: 5, col: 14 }], 3, false, [2, 0]);
+	const moves = (cmds: readonly Command[]) => cmds.filter((c) => c.type === "move" && c.unit === 0);
+	const byCount = planTurn(w, 0, w.rules.ai.config, 0).queue;
+	expect(moves(byCount)).toEqual([]);
+	expect(planTurn(w, 0, w.rules.ai.config, 0, { attacks: false }).queue).toEqual(byCount);
+	expect(moves(planTurn(w, 0, w.rules.ai.config, 0, { attacks: true }).queue)).toHaveLength(1);
+	expect(moves(playOneTurn(remasteredController(0), w).commands)).toHaveLength(1);
+});
+
+test("behind schedule the attacker pays for the objective as in the last turns (#638, #232)", () => {
+	//German infantry beside a 7TP entrenched on the only objective: the attack loses more than it kills
+	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 5, col: 7 }, { eqid: TP7, owner: 1, row: 5, col: 8, entrenchment: 3 }];
+	const w = world(units, [], [{ row: 5, col: 8 }], 3, false, [1, 0]);
+	expect(attacks(playOneTurn(remasteredController(0), onTurn(w, 2)).commands)).toEqual([]);
+	expect(clockOf(onTurn(w, 5), 0)).toMatchObject({ behind: true, late: false });
+	expect(attacks(playOneTurn(remasteredController(0), onTurn(w, 5)).commands)).toEqual([{ type: "attack", unit: 0, target: 1 }]);
+});
+
+test("in the last turns the attacker goes for the objectives still in reach (#638, #232)", () => {
+	//The far objective is held by one worn-down infantry, the near one by three: the commander's sector is the far one,
+	//three turns of the tank's march away. With two turns left it is the near one
+	const far = { row: 0, col: 0 }, near = { row: 10, col: 13 };
+	const units: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 9, col: 9 }, { eqid: INFANTERIE, owner: 0, row: 9, col: 8 },
+		{ eqid: PIECHOTA, owner: 1, row: 0, col: 0, strength: 1 }, { eqid: PIECHOTA, owner: 1, row: 10, col: 13 },
+		{ eqid: PIECHOTA, owner: 1, row: 10, col: 14 }, { eqid: PIECHOTA, owner: 1, row: 11, col: 13 }];
+	const w = world(units, [], [far, near], 3, false, [2, 0]);
+	const early = commanded(onTurn(w, 3));
+	expect(assaultsOf(early)).toMatchObject([{ target: far }]);
+	const late = commanded(onTurn(w, 9), early);
+	expect(assaultsOf(late)).toMatchObject([{ target: near }]);
+	expect(late[0].reason).toContain("2 objectives in 2 turns: the last turns");
+});
+
 test("the commander switches the main effort when the sector is hopeless and another is weak (#638, #629)", () => {
 	const w = world(twoSectors, [], [NORTH, SOUTH]);
 	const first = commanded(w);
@@ -107,4 +163,45 @@ test("the commander switches the main effort when the sector is hopeless and ano
 		{ eqid: PIECHOTA, owner: 1, row: 11, col: 13 }];
 	const next = onTurn(world([...twoSectors, ...south], [], [NORTH, SOUTH]), 2);
 	expect(assaultsOf(commanded(next, first))).toMatchObject([{ target: NORTH }]);
+});
+
+//Germany attacks (two objectives to take at the start): five Pz IVD in a column on the western edge, the Polish
+//infantry on the objectives in the east
+const column: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 5, col: 5 }, { eqid: PZ_IVD, owner: 0, row: 5, col: 4 },
+	{ eqid: PZ_IVD, owner: 0, row: 5, col: 3 }, { eqid: PZ_IVD, owner: 0, row: 5, col: 2 }, { eqid: PZ_IVD, owner: 0, row: 5, col: 0 },
+	{ eqid: PIECHOTA, owner: 1, row: 4, col: 13 }, { eqid: PIECHOTA, owner: 1, row: 7, col: 13 }];
+const EAST = [{ row: 4, col: 13 }, { row: 7, col: 13 }];
+
+test("the reserve stays out of the enemy's reach until committed (#638)", () => {
+	//The rules keep no reserve; a commander that asks for one behind the sector, then commits it by asking no more
+	let kept = true;
+	const c = remasteredController(0, (w, view, a, memory) => {
+		const rules = command(w, view, a, memory), effort = rules.find((d) => d.task === "assault");
+		return kept && effort !== undefined ? [...rules, { ...effort, task: "reserve", priority: rules.length + 1, reason: "a fifth held back" }] : rules;
+	});
+	const w = world(column, [], EAST, 3, false, [2, 0]);
+	const turn = playOneTurn(c, w);
+	expect(c.directives.map((d) => d.task)).toEqual(["assault", "reserve"]);
+	//A fifth of the mobile units, the furthest from the enemy
+	expect(c.operations.find((op) => op.kind === "reserve")).toMatchObject({ units: [4] });
+	const enemyReach = (t: World, id: number) => {
+		const view = perceive(t, 0, []), p = position(t, id);
+		return analyse(t, view).influence.enemy[p.row * t.state.map.cols + p.col];
+	};
+	expect(enemyReach(turn.world, 4)).toBe(0);
+	//The others go on toward the sector; the reserve follows behind them
+	const gap = (t: World, id: number) => Math.abs(position(t, id).col - 13);
+	expect(gap(turn.world, 0)).toBeLessThan(gap(w, 0));
+	expect(gap(turn.world, 4)).toBeGreaterThan(gap(turn.world, 0));
+	//Once the side's units stand by the sector, the reserve waits out of the infantry's reach while the tanks are in it
+	const close = world(column.map((u, i) => i < 4 ? { ...u, row: 3 + i, col: 10 } : i === 4 ? { ...u, col: 7 } : u), [], EAST, 3, false, [2, 0]);
+	const fight = playOneTurn(c, close);
+	expect(c.operations.find((op) => op.kind === "reserve")).toMatchObject({ units: [4] });
+	expect(enemyReach(fight.world, 4)).toBe(0);
+	expect(fight.commands.filter((cmd) => cmd.type === "attack" && cmd.unit === 4)).toEqual([]);
+	//Committed: the staff holds it no longer, and it goes with the others
+	kept = false;
+	const committed = playOneTurn(c, close);
+	expect(c.operations.some((op) => op.kind === "reserve")).toBe(false);
+	expect(gap(committed.world, 4)).toBeLessThan(gap(close, 4));
 });

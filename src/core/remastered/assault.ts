@@ -15,12 +15,11 @@ import { moveRange } from "../movement";
 import { seesUnit, unitSpotRange } from "../sight";
 import { check } from "../step";
 import { unitClass } from "../tables";
-import { attackerSide } from "../turn";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canMount, firesOnlyBeforeMoving, isGround } from "../units";
 import { ammoOf, isSpotted, sideOf, unitData } from "../world";
 import { type Analysis, type AnalysisCache, fieldTo } from "./analysis";
-import { isLate } from "./clock";
+import { attacks, clockOf, isLate, pressed } from "./clock";
 import { around } from "./fields";
 import { classOf, freeGround, hexOf, marchOf, samePosition, turnsTo } from "./march";
 import { inGroundReach } from "./rear";
@@ -55,17 +54,25 @@ const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) 
 
 /**
  * Where the classic plan pulls a ground unit: to the assault's sector (#258), but for a unit already near another
- * objective to take, which keeps the pull to the nearest, in the last turns, and for the side defending (#256): its
- * units hold the line while it retakes an objective. Aircraft and ships keep the pull to every objective.
+ * objective to take, which keeps the pull to the nearest, and for the side defending (#256): its units hold the line
+ * while it retakes an objective. In the last turns to the objectives the unit still reaches in the turns left (#232),
+ * to every one when it reaches none. Aircraft and ships keep the pull to every objective.
  */
 export function pullTo(w: World, cache: AnalysisCache, op: Operation): (u: UnitState) => readonly Position[] {
 	return (u) => {
 		const side = sideOf(w, u), all = w.state.objectives[side];
-		if (!isGround(w, u) || isLate(w) || attackerSide(w) === (~side & 1)) return all;
+		if (!isGround(w, u) || !attacks(w, side)) return all;
+		if (isLate(w)) return inReachOf(w, cache, u, all);
 		const march = marchOf(w, u), hex = hexOf(w, u);
 		const nearest = fieldTo(w, cache, march.movmethod, all)[hex], toSector = fieldTo(w, cache, march.movmethod, [op.at])[hex];
 		return nearest < toSector && nearest <= LOCAL_TURNS * march.movpoints ? all : [op.at];
 	};
+}
+
+//The objectives the unit reaches in the turns left, all of them when it reaches none
+function inReachOf(w: World, cache: AnalysisCache, u: UnitState, all: readonly Position[]): readonly Position[] {
+	const left = clockOf(w, sideOf(w, u)).turnsLeft, near = all.filter((o) => turnsTo(w, cache, u, o) <= left);
+	return near.length === 0 ? all : near;
 }
 
 //What an assault's order reads: the world, the side, the sector, its battle group and the enemies in its way
@@ -76,7 +83,8 @@ interface Battle {
 	sector: Position;
 	group: UnitState[];
 	targets: UnitState[];
-	late: boolean;
+	//The last turns, or the attack behind schedule: an attack on an objective is worth what it costs
+	pressed: boolean;
 	scouted: Set<UnitId>;
 	cells: (u: UnitState) => readonly MoveCell[];
 }
@@ -87,7 +95,7 @@ function battleOf(w: World, a: Analysis, cache: AnalysisCache, op: Operation, pl
 	const targets = w.state.units.filter((t) => t.row >= 0 && sideOf(w, t) !== side && isGround(w, t) && seesUnit(w, t, side)
 		&& distance(t.row, t.col, sector.row, sector.col) <= TARGET_RADIUS);
 	targets.sort((x, y) => distance(x.row, x.col, sector.row, sector.col) - distance(y.row, y.col, sector.row, sector.col));
-	return { w, a, side, sector, group, targets, late: isLate(w), scouted, cells: rangesOf(w) };
+	return { w, a, side, sector, group, targets, pressed: pressed(w, side), scouted, cells: rangesOf(w) };
 }
 
 /** The assault's battle group: the free ground units within GROUP_TURNS of its sector, and the guns that reach it. */
@@ -180,21 +188,24 @@ function strikeFrom(w: World, u: UnitState, t: UnitState, from: Position | null)
 const onObjective = (w: World, t: UnitState) => w.state.map.hexes[hexOf(w, t)].victorySide !== -1;
 
 /**
- * Whether an attack is worth ordering: it kills, and no more than it loses, but on an objective in the last turns,
- * where taking it is worth what it costs.
+ * Whether an attack is worth ordering: it kills, and no more than it loses, but on an objective in the last turns or
+ * behind schedule, where taking it is worth what it costs.
  */
 function isWorth(b: Battle, s: Strike): boolean {
 	if (s.kills < MIN_KILLS || s.losses >= s.unit.strength) return false;
-	return s.losses <= s.kills || (b.late && onObjective(b.w, s.target));
+	return s.losses <= s.kills || (b.pressed && onObjective(b.w, s.target));
 }
 
-/** Whether a classic plan's attack loses more than it kills by the estimate, but on an objective in the last turns. */
+/**
+ * Whether a classic plan's attack loses more than it kills by the estimate, but on an objective in the last turns or
+ * behind schedule.
+ */
 export function losesMore(w: World, cmd: Command): boolean {
 	if (cmd.type !== "attack") return false;
 	const u = w.state.units.find((x) => x.id === cmd.unit), t = w.state.units.find((x) => x.id === cmd.target);
 	if (u === undefined || t === undefined) return false;
 	const s = strikeFrom(w, u, t, null);
-	return s !== null && s.losses > s.kills && !(isLate(w) && onObjective(w, t));
+	return s !== null && s.losses > s.kills && !(pressed(w, sideOf(w, u)) && onObjective(w, t));
 }
 
 const canFireNow = (u: UnitState) => !u.hasFired && ammoOf(u) > 0;
