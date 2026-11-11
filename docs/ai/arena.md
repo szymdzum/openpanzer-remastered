@@ -133,7 +133,7 @@ been tuned on: the acceptance isn't measured on the games it was fitted to.
 no scenario and side does worse than before beyond the noise on its main measure against the scripted general
 (remastered-design.md, "What done looks like"). Its games against the classic AI are reported, and winning more than
 half of them stays the whole AI's target, but they don't block a change. The classic AI stays as an opponent and as the
-classic rules' AI; the remastered AI no longer borrows its planner (#627).
+classic rules' AI; the remastered AI no longer borrows its planner (#627) nor its purchases and deployment (#640).
 
 
 ## The scripted general (#236)
@@ -1051,6 +1051,120 @@ What it says:
 - **No draw**: the AI's stream moves only with the purchases. The classic AI and its records are untouched.
 - **A worn-down unit sparing itself (#6) pays as part of the turn's scores**, after three tries as a withdrawal.
   Finishing off a weak enemy doesn't.
+
+## The remastered AI's own purchases and deployment (#640), 11 November 2026
+
+The remastered AI buys and deploys for its commander's plan (remastered-design.md, "Built: purchases and deployment")
+instead of calling the classic `buyAndDeploy`, and draws from no random stream. The scripted general keeps the classic
+purchases (general.ts, the AI's own turn start), so the bar's armies are as they were. Before: main at 739cbc4 (the
+classic purchases and deployment); after: this; remaster rules, both runs `remastered`. ARENA_OUT now has each side's
+units bought, the prestige spent on them and the strength reinforced (`bought`, `spent`, `reinforced`).
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-general,general-remastered,remastered-ai,ai-remastered ARENA_OUT=after.json npm run arena
+npm run arena:compare -- before.json after.json
+```
+
+Tuned on seeds 101-140 against the general, each version the suite against main (a main measure worse beyond the noise
+is named):
+
+- **The first version** spread the budget over the free deployment hexes, the best model of the lacking role for each,
+  no aircraft but a few bombers for an assault, no ground unit on the ocean, every unit nearest the assault's objective.
+  Ostpreussen's attack won 22 games of 40 instead of 1; Zitadelle's 14 instead of 30 (13 952 prestige on three 21 cm
+  guns and a few Ferdinands for its 9 free hexes), Uman's defence 8 instead of 23, Luttich's defence lost 29.5 units
+  instead of 24.9, Indochina's attack took 1.7 objectives instead of 3.7.
+- **A price counted at least the budget's share for each free hex, up to 450**: Zitadelle's attack won 38, Uman's
+  defence came back within the noise. **The worth not squared** (1, 1.5): Luttich's defence lost 38 units: cheap
+  obsolete models died. **More bombers** (15% for an assault, 10% for a defender), **infantry at half the army**, **no
+  anti-tank guns**, **the artillery at 5%**: worse or no better.
+- **Indochina** was the hard one, and three things in it: Japan bought "Entrenched" infantry that never moves (a model
+  that neither moves nor rides is no longer bought: 1.4 → 2.1 objectives); its landings: the classic AI put infantry on
+  the ocean deployment hexes, and ships landed it beside the coast's objective (ground units may deploy on the ocean,
+  guns may not); and every unit went to the assault's objective. With a hex within three turns of another objective to
+  take counted to that one, as the planner pulls a unit there (`LOCAL_TURNS`), Indochina's attack took 3.9 objectives
+  with the classic purchases and 3.2 with these.
+- **The classic air budget** (30% of it for aircraft, none under 300): Luttich's defence, Bzura's and Taman's attacks
+  did better with it; Luttich's defence held fewer objectives without it.
+- **A floor of capturing units** (infantry, tanks and recon, counted by units): with fewer than 3 for each objective
+  the side still has to take, its ground purchases are infantry or tanks first. Indochina's attack took 4.45 objectives
+  instead of 3.67 on main (3.20 without it), nothing else moved. The same floor raised by how far apart the objectives
+  lie (the mean hexes to the nearest other, over 8) took 4.05 there and cost Luttich's attack wins (6 of 40) and
+  Bzura's (35 instead of 40): left out.
+
+Kept: the version above with the floor. On the tuning seeds, against main, one main measure worse beyond the noise:
+Luttich's attack won 10 games of 40 instead of 18 (main's 18 is its best set: 8 on seeds 41-80, 12 on 1-40; with no
+purchase at all it wins 9 of 40 on these seeds). Diagnosed on seeds 41-80: Indochina's attack took 4.05 objectives
+instead of 3.77 (within the noise), Luttich's defence held 3.90 instead of 4.28 (-0.38, -0.74 to -0.01; within the
+noise on 1-40 and 101-140); better: Ostpreussen's attack (15 wins of 40 instead of 1), Taman's attack (25 instead of
+15), Indochina's and Uman's defence lost fewer units.
+
+Accepted on seeds 1-40, the four seats; 39 of 1280 games came out the same. The remastered AI's side against the
+general, before and after (the bought units, the prestige spent on them and the strength reinforced a game too). Orders
+refused stayed 0:
+
+| Scenario | Side | wins | taken | held | units lost | lost per objective | bought | spent | reinforced |
+|---|---|---|---|---|---|---|---|---|---|
+| Ostpreussen | axis attacks | 0 → 14 | 6.42 → 6.63 | 4.03 → 5.80 | 12.35 → 8.38 | 1.92 → 1.26 | 7.3 → 8.1 | 2205 → 2299 | 102 → 99 |
+| | allies defend | 40 → 40 | 1.60 → 0.57 | 4.15 → 4.03 | 30.63 → 27.68 | 19.1 → 48.1 | 4.3 → 4.1 | 944 → 966 | 89 → 84 |
+| Bzura | axis defends | 40 → 40 | 6.35 → 7.33 | 6.75 → 6.47 | 9.38 → 8.82 | 1.48 → 1.20 | 3.6 → 4.7 | 925 → 996 | 115 → 116 |
+| | allies attack | 35 → 34 | 7.72 → 7.80 | 8.85 → 8.75 | 3.13 → 2.08 | 0.40 → 0.27 | 8.6 → 8.5 | 1968 → 2040 | 67 → 67 |
+| Indochina | axis attacks | 0 → 1 | 3.42 → 4.05 | 1.98 → 2.23 | 11.38 → 11.20 | 3.32 → 2.77 | 20.3 → 18.1 | 6122 → 6112 | 58 → 57 |
+| | allies defend | 40 → 40 | 1.90 → 1.82 | 4.28 → 4.40 | 9.78 → 7.88 | 5.14 → 4.32 | 4.0 → 4.3 | 887 → 922 | 61 → 53 |
+| Zitadelle | axis attacks | 29 → 39 | 6.33 → 6.33 | 5.47 → 5.97 | 50.92 → 41.33 | 8.05 → 6.53 | 25.9 → 29.3 | 12916 → 12850 | 128 → 127 |
+| | allies defend | 40 → 40 | 1.13 → 1.07 | 5.75 → 5.83 | 29.65 → 29.25 | 26.4 → 27.2 | 1.0 → 0.8 | 707 → 545 | 44 → 43 |
+| Uman | axis attacks | 40 → 40 | 4.78 → 4.60 | 5.00 → 5.00 | 9.32 → 8.60 | 1.95 → 1.87 | 4.1 → 4.7 | 1106 → 1149 | 62 → 52 |
+| | allies defend | 24 → 16 | 1.80 → 2.52 | 0.93 → 0.70 | 76.85 → 70.47 | 42.7 → 27.9 | 10.9 → 5.8 | 3830 → 2264 | 94 → 205 |
+| Battleaxe | axis defends | 40 → 40 | 1.43 → 1.45 | 5.22 → 5.35 | 14.43 → 15.30 | 10.1 → 10.6 | 2.7 → 1.0 | 662 → 360 | 99 → 108 |
+| | allies attack | 38 → 40 | 5.22 → 5.35 | 5.92 → 6.00 | 8.70 → 7.28 | 1.67 → 1.36 | 10.9 → 6.8 | 4712 → 3794 | 67 → 86 |
+| Taman | axis defends | 40 → 40 | 0.13 → 0.30 | 1.90 → 1.75 | 15.38 → 18.35 | 123 → 61 | 18.6 → 18.0 | 7460 → 7270 | 63 → 68 |
+| | allies attack | 16 → 22 | 1.88 → 1.70 | 2.38 → 2.52 | 27.18 → 24.85 | 14.5 → 14.6 | 4.6 → 6.3 | 1001 → 1069 | 82 → 75 |
+| Luttich | axis defends | 40 → 40 | 4.05 → 4.30 | 4.47 → 4.15 | 26.10 → 24.35 | 6.44 → 5.66 | 70.3 → 58.9 | 39314 → 38200 | 77 → 109 |
+| | allies attack | 12 → 13 | 5.55 → 5.60 | 3.63 → 3.63 | 42.70 → 42.23 | 7.69 → 7.54 | 2.4 → 3.0 | 731 → 758 | 51 → 49 |
+
+Against the general no main measure is worse beyond the noise. Better: Ostpreussen's attack (14 wins of 40 instead of
+0, 1.26 units lost an objective instead of 1.92), Zitadelle's (39 wins instead of 29, 9.6 units fewer), Bzura's
+defence (7.33 objectives taken back instead of 6.35), Uman's and Indochina's defence (fewer units lost). Indochina's
+attack takes 4.05 objectives instead of 3.42 (within the noise; 4.05 against 3.77 on seeds 41-80). Taman's defence
+loses 3 units more, within its main measure, the wins (40 of 40). Uman's defence, #645: 16 wins of 40 against 24
+(within the noise, -42 to +2 points), 18 against 17 on seeds 41-80: not fixed.
+
+Against the classic AI, both sides: 516 of 640 games (510 on main). Worse there: Indochina's attack holds 1.85
+objectives at the end instead of 2.50, Taman's defence 1.60 instead of 2.10 for 4.4 units more. Better: Ostpreussen's
+attack (14 wins of 40 instead of 3), Battleaxe's (38 instead of 34), Bzura's defence (6.42 taken back instead of 5.30),
+Uman's defence (28.3 units lost instead of 42.8).
+
+The targets of remastered-design.md against the general: 26 of 29, as on main. Now met: Indochina's defender loses 7.88
+units (target 9.4). No longer met: Ostpreussen's defender holds 4.03 objectives at the end (target 4.1, 4.15 on main,
+within the noise). Not met as before: Ostpreussen's defender's units lost (27.7, target 22.3) and Uman's defence (16
+wins, target 25).
+
+The planning time of the remastered AI, its turn's start included, all its turns, seeds 1-40, on a laptop loaded by
+other work (load average about 10):
+
+| Scenario | ms a turn | 95th percentile | worst | a game, mean | a game, worst |
+| --- | --- | --- | --- | --- | --- |
+| Ostpreussen | 71 | 217 | 924 | 1.2 s | 3.8 s |
+| Bzura | 11 | 30 | 131 | 0.2 s | 0.6 s |
+| Indochina | 20 | 52 | 250 | 0.3 s | 0.8 s |
+| Zitadelle | 262 | 981 | 2377 | 3.2 s | 6.9 s |
+| Uman | 132 | 388 | 920 | 0.9 s | 2.6 s |
+| Battleaxe | 51 | 104 | 585 | 0.9 s | 2.0 s |
+| Taman | 94 | 252 | 535 | 1.2 s | 2.1 s |
+| Luttich | 328 | 1152 | 3107 | 3.2 s | 9.0 s |
+
+8 of 17 510 turns took more than 2 s, all the largest armies' first turns. The run of the version without the floor,
+whose turns cost the same (the floor counts units once a turn), on the machine unloaded: Zitadelle 248 ms a turn,
+p95 902, worst 1558, no turn over 2 s, the slowest game 6.6 s. The turn's start adds a perception, an analysis and the
+commander's directives (some 10 to 30 ms on the largest maps).
+
+What it says:
+
+- **Fewer, better units where they are wanted** win the large attacks: Zitadelle's and Ostpreussen's.
+- **An attacker needs units that take hexes, by count**: with the shares by strength alone Japan bought a few strong
+  tanks and guns and took fewer objectives than with the classic AI's many cheap infantry; with three capturing units an
+  objective to take it takes more.
+- **Where it deploys** mattered as much in Indochina: its landings take the coast's objective, and units deployed
+  nearest the objective the planner pulls them to.
 
 ## Baseline, 24 October 2026
 

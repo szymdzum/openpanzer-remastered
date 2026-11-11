@@ -31,7 +31,7 @@ const withTerrain = (w: World, at: Position, terrain: number, flag = -1) => {
 };
 
 test("the remastered AI plays a turn without the classic planner (#627)", () => {
-	//No module of the remastered AI reads the classic plan: only the controller takes the classic AI, for its turn's start
+	//No module of the remastered AI reads the classic plan: only the controller names the classic AI, for the classic rules
 	const dir = path.resolve(__dirname, "../src/core/remastered");
 	const sources = fs.readdirSync(dir).map((f) => ({ f, text: fs.readFileSync(path.join(dir, f), "utf8") }));
 	expect(sources.filter((s) => /planTurn|aiscore/.test(s.text)).map((s) => s.f)).toEqual([]);
@@ -197,14 +197,14 @@ test("a unit on a naval transport is carried to its objective and lands beside i
 	expect(playOneTurn(aiController(0), near).commands.some((c) => c.type === "disembark")).toBe(false);
 });
 
-test("the AI stream moves only at the turn's start (#627)", () => {
-	//Germany's first turn of Panzer-Verbaende Ostpreussen: its purchases draw from the AI's stream, its orders don't
+test("the remastered AI never moves the AI stream (#627, #640)", () => {
+	//Germany's first turn of Panzer-Verbaende Ostpreussen: neither its purchases nor its orders draw from the AI's stream
 	const w = scenarioWorld("drpzop01.xml");
 	const stream = (x: World) => x.state.rng?.ai;
 	const c = remasteredController(0);
 	const started = c.startTurn(c.join(w).world).world;
 	expect(started.state.units.length).toBeGreaterThan(w.state.units.length);
-	expect(stream(started)).not.toBe(stream(w));
+	expect(stream(started)).toBe(stream(w));
 	let now = c.plan(started), orders = 0;
 	expect(stream(now)).toBe(stream(started));
 	for (let o = c.next(now); o !== null && orders < 500; o = c.next(now)) {

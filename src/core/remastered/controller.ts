@@ -9,17 +9,20 @@
 
 import { aiController } from "../ai";
 import type { Command } from "../command";
-import type { Controller } from "../controller";
-import { check } from "../step";
+import type { Controller, Played } from "../controller";
+import type { GameEvent } from "../events";
+import { check, step } from "../step";
 import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
 import { assaultOrder, pullTo } from "./assault";
+import { deploymentOrder } from "./deployment";
 import { assaults, attacks, pressed } from "./clock";
 import { command, type Commander } from "./commander";
 import { type Directive, type Dropped, validateDirectives } from "./directives";
 import { perceive, type Sighting, type SideView } from "./perception";
 import { newMemo, plannerOrder, type PlannerMemo } from "./planner";
+import { purchases } from "./purchases";
 import { idleSupply, resupplyOrder, rideOutOfReach, unmountOrder, urgentSupply } from "./rear";
 import { reserveMarch } from "./reserve";
 import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, holdingOperations, occupation, type Operation, standFast, withStrikes } from "./staff";
@@ -66,15 +69,15 @@ const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cm
  * (a garrison on each objective to hold, a unit onto an objective its attack emptied). It resupplies units before
  * contact and ends no ride in the enemy's reach but near an objective, unless it defends and no enemy plays after it
  * in the round. Its planner (planner.ts) orders the units no operation holds, one order at a time on the world as it
- * is: every order is asked of the core first (`check`), so it gives none the core refuses. Only its purchases and its
- * deployment are the classic AI's (src/core/ai.ts), at the turn's start.
+ * is: every order is asked of the core first (`check`), so it gives none the core refuses. At the turn's start it buys
+ * what its army lacks for the directives (purchases.ts) and deploys for them (deployment.ts).
  *
- * The commander, the staff and the planner draw from no random stream: the AI's stream moves only with the purchases.
+ * It draws from no random stream: of equal choices the first wins.
  * What it remembers (the enemies last seen, the fields that don't change, the directives, the operations) is the
  * controller's, not state (docs/STATE.md D6): a loaded game starts with none and plans the turn again.
  */
 export function remasteredController(player: number, commander: Commander = command): RemasteredController {
-	const classic = aiController(player), cache: AnalysisCache = new Map(), destroyed = new Set<UnitId>();
+	const cache: AnalysisCache = new Map(), destroyed = new Set<UnitId>();
 	let memory: readonly Sighting[] = [], view: SideView | null = null, analysis: Analysis | null = null;
 	let operations: Operation[] = [], directives: Directive[] = [], dropped: Dropped[] = [], held = new Set<UnitId>(), turn = newTurn();
 	let target: UnitId | null = null;
@@ -187,8 +190,14 @@ export function remasteredController(player: number, commander: Commander = comm
 		get operations() {
 			return operations;
 		},
-		join: (w) => classic.join(w),
-		startTurn: (w) => classic.startTurn(w),
+		join: (w) => ({ world: w, commands: [], events: [], view: [] }),
+		//The directives of the side's view before the purchases, kept for nothing: the plan asks again once they deployed
+		startTurn(w) {
+			watch(w);
+			const v = perceive(w, sideOfPlayer(w), memory.filter((s) => !destroyed.has(s.id))), a = analyse(w, v, cache);
+			const asked = commander(w, v, a, { player, directives, held, cache });
+			return muster(w, { player, view: v, analysis: a, cache, directives: validateDirectives(asked, w, a.side).directives });
+		},
 		plan(w) {
 			watch(w);
 			view = perceive(w, sideOfPlayer(w), memory.filter((s) => !destroyed.has(s.id)));
@@ -206,6 +215,33 @@ export function remasteredController(player: number, commander: Commander = comm
 			return cmd === null ? null : { command: cmd };
 		},
 	};
+}
+
+/** What the turn's start reads: the player, its side's view and maps, and its commander's directives. */
+interface Muster {
+	player: number;
+	view: SideView;
+	analysis: Analysis;
+	cache: AnalysisCache;
+	directives: readonly Directive[];
+}
+
+//The purchases for the plan, then the deployment, one unit at a time on the world as it is; each asked of the core
+function muster(w: World, m: Muster): Played {
+	let world = w;
+	const commands: Command[] = [], events: GameEvent[] = [];
+	const play = (cmd: Command) => {
+		const r = step(world, cmd);
+		if (!r.ok) return false;
+		world = r.world;
+		commands.push(cmd);
+		events.push(...r.events);
+		return true;
+	};
+	for (const p of purchases(w, m.view, m.directives, m.player)) play({ type: "buy", eqid: p.eqid, transport: p.transport });
+	for (let cmd = deploymentOrder(world, m.analysis, m.cache, m.directives, m.player); cmd !== null && play(cmd);
+		cmd = deploymentOrder(world, m.analysis, m.cache, m.directives, m.player));
+	return { world, commands, events, view: [] };
 }
 
 /** A commander's directives after the check, those it dropped, and the staff's operations for them. */

@@ -7,8 +7,8 @@ analysis ("Built: perception and analysis" below), and the staff's first part: o
 garrisons and the occupation of an emptied objective, the resupply before contact and the rides out of reach
 ("Built: the staff"), the assault doctrine ("Built: the assault doctrine"), the commander's first part: the
 directives, the turn clock, the main effort, the counterattack and the line of a hold ("Built: the commander"), and
-its own planner for the units no operation holds ("Built: the planner"): the classic AI's plan is no longer part of
-it. Only its purchases and its deployment are still the classic AI's (#640).
+its own planner for the units no operation holds ("Built: the planner"), and its own purchases and deployment ("Built:
+purchases and deployment"): it borrows nothing from the classic AI any more (#640).
 
 ## What the core already gives
 
@@ -295,7 +295,7 @@ AI and its rules untouched (the contracts and verify play them).
   unit of it is gone, or its directive is no longer given. A loaded game starts with none and plans them again.
 - **One owner per unit.** The units the operations hold are the staff's: no move, attack, resupply or reinforcement
   of theirs comes from the planner, which orders the others ("Built: the planner"). The purchases and the deployment
-  stay the classic AI's (#640).
+  are the controller's at the turn's start ("Built: purchases and deployment").
 - **One order at a time.** Every order, the staff's and the planner's, is chosen on the world as it is after the
   last one and asked of the core first (`check`): no order the core refuses is given. Neither draws from a random
   stream.
@@ -386,8 +386,8 @@ planner (#627)".
   and forgotten when a unit near it moved, fought, went or came into sight (`PlannerMemo`, the controller's, D6), so
   an order doesn't cost a look at every unit.
 - **No draw.** The planner reads no random stream: of equal choices the first unit of the list and the first hex of
-  its range win. The AI's stream now moves only with the purchases at the turn's start, and two games from the same
-  save give the same orders whatever that stream holds.
+  its range win. Nor do the purchases since #640: two games from the same save give the same orders whatever the AI's
+  stream holds.
 - **Capture.** An objective to take that stands empty as far as the side sees is taken by the free ground unit that
   reaches it this turn and can capture: infantry first, then the strongest.
 - **Fire.** A strike is the estimate's (estimate.ts): its kills, and its losses with the support fire it meets. The
@@ -466,7 +466,7 @@ What each pass of the classic plan became:
 | attack scores, a threshold by class | the estimate with its support fire, the rule of #618 |
 | the score's noise (the AI's stream) | none |
 | reinforce and resupply what did nothing | `idleSupply`, after the garrisons' |
-| purchases and deployment (`buyAndDeploy`) | still the classic AI's `startTurn` (#640) |
+| purchases and deployment (`buyAndDeploy`) | purchases.ts and deployment.ts at the turn's start (#640, "Built: purchases and deployment") |
 
 - **Tried and left out**, each measured on the tuning seeds against the general (arena.md has the numbers):
   - *Every attack before any move*, the best by the estimate's gain first: the AI destroyed more and took fewer
@@ -485,6 +485,72 @@ What each pass of the classic plan became:
   - *Finishing off a weak enemy* (#6), a strike the estimate has destroy its target worth 100 more: nothing beyond
     the noise alone, and with the worn-down unit's rule Luttich's defence lost 28.0 units instead of 24.9. The
     planner already strikes first the enemy struck this turn (`STRUCK`).
+
+### Built: purchases and deployment (#640)
+
+In src/core/remastered/: purchases.ts and deployment.ts, played by the controller's `startTurn` (controller.ts), which no
+longer calls the classic `buyAndDeploy`. At the turn's start the controller perceives and analyses the side as its plan
+does (without keeping anything: the plan perceives again once the units are on the map), asks its commander for the
+directives, then buys and deploys with commands, each asked of the core first (`check`), as a person buys them in the
+equipment window. The measures: arena.md, "The remastered AI's own purchases and deployment (#640)".
+
+- **Same resources** (#15, #16): the scenario's prestige as it is, and the classic AI's reserve: it buys with what is
+  over the rules' 1000 (`prestigeReserve`), or over what its worn-out units (strength below 4, which the planner
+  reinforces before anything else) would cost to reinforce where they stand, if more (`reserveOf`). One budget: what it
+  doesn't spend is the planner's, which reinforces from the prestige the world holds.
+- **No more than it deploys.** It buys only while a deployment hex is free for the unit (a hex's ground slot, its air
+  slot for an aircraft; in the remaster's rules the towns of a side with none, #302, by the core's `deploymentHexes`),
+  so nothing it buys waits in the reserve; the prestige it can't place now is the next turn's. The classic AI spent it
+  all at once and deployed the rest over the turns (Luttich's Germans: 72 units on the first turn, 35 of them placed).
+- **What the army lacks** (`needsOf`): a share of the army's strength for each role, against the strength it has
+  (its units on the map and waiting to deploy). Infantry 35% (it takes and holds the objectives); tanks 25% and
+  artillery 20% with an assault directive (the main effort), 15% each without; anti-tank guns 10%, plus 30% of the
+  armour's share of the enemy's known ground strength; air defence and fighters each the enemy aircraft's share of its
+  known strength, 20% at most, none while the side knows of no aircraft (#17: the enemy it saw or remembers); bombers 5%
+  for an assault. The shares are made to add up to 1. The role furthest below its share is bought next, so there is no
+  rotation: an army without artillery buys a gun first, one facing aircraft air defence.
+- **Units that take hexes, by count**: while the side has fewer infantry, tanks and recon than 3 for each objective it
+  still has to take (`CAPTURERS_PER_OBJECTIVE`: one to take it, one to hold it, one lost on the way), its ground
+  purchases are infantry or tanks first. With the shares by strength alone Japan's attack in Indochina bought a few
+  strong tanks and guns and took 0.75 objectives fewer than with the classic purchases; with the floor it takes more.
+- **Air** keeps the classic AI's rule: the rules' share of the budget for aircraft (30%, `airPrestigeRatio`), none under
+  300. Aircraft use the hexes' air slots, beside the ground units; without their share the AI fielded none where the
+  classic AI fielded several, and Indochina's and Luttich's battles went worse for it. The air budget buys the air role
+  furthest below its share: fighters against an enemy that flies, bombers for an assault.
+- **The best model of the role** (`worthOf`): the weighted sum of what the role is for (`WORTH`: a tank's hard attack,
+  an anti-tank gun's, the air defence's air attack and range, the artillery's range, the infantry's close defence),
+  squared (`WORTH_EXPONENT`: the combat result goes by the difference between attack and defence, so a point counts for
+  more on a stronger unit and a cheap weak one doesn't win on its price), over its price. The price counts at least the
+  budget's share for each free hex of its kind, up to 450 (`SLOT_PRICE_CAP`): with prestige to spare the best model up
+  to that price wins, with little the one worth most for its price, and a dearer one has to be worth its price (without
+  the cap, Zitadelle's Germans spent their 13 952 on three super-heavy guns and a few tank destroyers and won 14 games
+  of 40 instead of 30). A model that neither moves nor rides a transport is never bought (Japan's "Entrenched"
+  infantry: never at the front it was bought for).
+- **Transports** (#224): a unit a transport carries gets the fastest of the country's ground transports in service
+  that carries it and fits the prestige left (the cheapest of the fastest); a towed gun without one isn't bought.
+- **Deployment** (deployment.ts, `deploymentOrder`), one unit at a time on its best free hex, the units that hold the
+  line or lead the main effort first:
+
+| Unit | Its hex |
+|---|---|
+| infantry, anti-tank, and an assaulting side's tanks and recon | nearest the axis by its march on the distance fields: the assault's objective; but a hex within three turns of another objective to take counts its points to that one, the objective the planner would pull a unit there to (`LOCAL_TURNS`, "Built: the assault doctrine"). For a defender the axis is the objectives the commander holds (the line of a hold, #645) |
+| a defender's tanks and recon | out of the enemy's ground reach, then nearest the same objectives: they strike back |
+| artillery | out of the enemy's ground reach, in range of a hex of the front, then nearest the axis |
+| air defence, flak | out of the enemy's ground reach, where the enemy's aircraft strike most (the air threat map), then nearest the axis |
+| aircraft | nearest the axis |
+
+  A gun doesn't deploy on the ocean, where it would board a ship and couldn't fire; the other ground units may, and the
+  planner lands them (in Indochina Japan's landings are what take the coast's objective). With no directive the axis is
+  the objectives to take for a side that assaults, to hold for one that doesn't.
+- **No draw**: the AI's stream doesn't move at all in the remastered AI (of equal choices the first role, model and hex
+  win), so the classic AI's records, the contracts and verify, which never play it, are as they were.
+- **Tried and left out** (seeds 101-140 against the general, arena.md): the budget spread over the free hexes without
+  the price cap (Zitadelle's attack, above); the worth not squared (Luttich's defence lost 38 units instead of 24.9:
+  cheap obsolete models died); infantry at half the army; no anti-tank guns; bombers as a share of the ground budget
+  instead of the classic air budget (Indochina's attack took 0.5 objectives instead of 3.7); every unit nearest the
+  assault's objective only (Indochina's attack took 2.2: the landings near the other objectives went to the guns); no
+  ground unit on the ocean; the capturing floor raised by how far apart the objectives lie (Luttich's attack won 6 of 40
+  instead of 10).
 
 ### 5. Tactics: execution
 
@@ -615,9 +681,11 @@ measured:
   and garrison operations take (step 2), the commander's choice of where (step 3), and the units
   no operation holds: the remastered AI's own planner orders them since #627 ("Built: the
   planner"), and the classic plan is no longer called.
-- **What is still borrowed**: the purchases and the deployment at the turn's start, the classic
-  AI's `startTurn` (`buyAndDeploy`, src/core/ai.ts), until their own modules replace them (#640).
-  They are the only draws the remastered AI makes from the AI's stream.
+- **What is still borrowed**: nothing. The purchases and the deployment at the turn's start, the last
+  part that was the classic AI's (`buyAndDeploy`, src/core/ai.ts), are the remastered AI's own since #640
+  ("Built: purchases and deployment"), and it draws from no random stream. Its controller names the
+  classic one only to choose between them by the rules (`aiControllerFor`); the scripted general of the
+  arena keeps the classic purchases, so the bar's armies stay as they were.
 - **Memory.** The operations live in the controller between its calls, not in the state
   (docs/STATE.md D6). A loaded game rebuilds them by planning again at the start of the turn it was
   saved on, as the classic AI does today (#71): a loaded game may play differently from one played
