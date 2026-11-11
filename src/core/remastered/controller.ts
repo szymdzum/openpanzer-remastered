@@ -14,13 +14,13 @@ import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
 import { assaultOrder, losesMore, pullTo } from "./assault";
-import { assaults } from "./clock";
+import { assaults, attacks } from "./clock";
 import { command, type Commander } from "./commander";
 import { type Directive, type Dropped, validateDirectives } from "./directives";
 import { perceive, type Sighting, type SideView } from "./perception";
 import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
 import { reserveMarch } from "./reserve";
-import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, holdingOperations, occupation, type Operation, withStrikes } from "./staff";
+import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, holdingOperations, occupation, type Operation, standFast, withStrikes } from "./staff";
 
 /**
  * The remastered controller, with what it made of its last turn (null before it planned one): its commander's
@@ -55,6 +55,8 @@ const MAX_ORDERS = 2000;
 
 const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
 	scouted: new Set(), mounted: new Set(), waited: new Set(), orders: 0 });
+
+const NO_UNITS: ReadonlySet<UnitId> = new Set();
 
 const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cmd];
 
@@ -99,9 +101,10 @@ export function remasteredController(player: number, commander: Commander = comm
 	}
 	const assault = () => operations.find((op) => op.kind === "assault");
 	const classicPlan = (w: World) => {
-		const op = assault();
-		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held, attacks: assaults(w, sideOfPlayer(w)),
-			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis, player), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
+		const op = assault(), side = sideOfPlayer(w);
+		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
+			attacks: assaults(w, side), ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis, player),
+			pullTo: pullTo(w, cache, op, view === null || attacks(w, side) ? NO_UNITS : standFast(w, view, cache, player, held, directives)) });
 	};
 	const replan = (w: World) => {
 		turn.queue = classicPlan(w).queue;

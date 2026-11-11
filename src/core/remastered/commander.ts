@@ -1,15 +1,18 @@
 /**
  * The remastered AI's rule-based commander (#638): its directives from the maps and the turn clock: a hold for each
- * objective in the enemy's reach and the main effort.
+ * objective in the enemy's reach, the counterattacks and the main effort.
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { distance } from "../geometry";
+import { unitAttackRange } from "../attack";
+import { estimateAttack } from "../estimate";
+import { adjacent, distance } from "../geometry";
 import { unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
-import { canCapture } from "../units";
+import { canCapture, firesOnlyBeforeMoving, isGround } from "../units";
+import { ammoOf, onMap, unitData } from "../world";
 import type { Analysis, AnalysisCache, Sector } from "./analysis";
 import { assaults, type Clock, clockLine, clockOf, deadlineOf } from "./clock";
 import { at, type Directive } from "./directives";
@@ -36,14 +39,28 @@ const HOLD_TURNS = 2;
 const HOLD_FOR = 2;
 //An enemy influence point around a sector counts this much against an own strength point in reach
 const ENEMY_WEIGHT = 1;
+//An enemy at this strength or below is worn down (the scripted general's WORN)
+const WORN = 4;
+//A worn-down enemy this near an objective the side holds, out of its holes (this entrenchment or less), is worth a
+//defender's counterattack
+const COUNTER_RADIUS = 3;
+const OPEN_ENTRENCHMENT = 1;
+//The turns a counterattack on an objective just lost stands: its taker digs in after that
+const COUNTER_TURNS = 2;
+//A loss counts this much against a kill in a counterattack's estimate (the scripted general's LOSS_WEIGHT)
+const LOSS_WEIGHT = 0.7;
+
 /**
  * The rule-based commander's directives, the first in priority first: a hold for each of the side's objectives a
- * ground enemy can reach soon, and the main effort, one objective to assault, kept from `memory` while it goes on.
- * Pure: no random stream, nothing kept.
+ * ground enemy can reach soon, the counterattacks the estimate favours, and the main effort, one objective to assault,
+ * kept from `memory` while it goes on. It keeps no reserve: held back, a fifth of an attacker's mobile units cost it
+ * objectives on other seeds than those it was tuned on (docs/ai/arena.md). Pure: no random stream, nothing kept.
  */
 export function command(w: World, view: SideView, a: Analysis, memory: CommanderMemory): Directive[] {
-	const effort = mainEffort(w, a, memory, freeGround(w, memory.player, memory.held), clockOf(w, a.side));
-	const out = [...holds(w, view, a), ...(effort === null ? [] : [effort])];
+	const clock = clockOf(w, a.side), units = freeGround(w, memory.player, memory.held);
+	const strikes = counterattacks(w, view, a, memory, units, clock);
+	const effort = mainEffort(w, a, memory, units, clock);
+	const out = [...holds(w, view, a), ...strikes, ...(effort === null ? [] : [effort])];
 	return out.map((d, i) => d.priority === i + 1 ? d : { ...d, priority: i + 1 });
 }
 
@@ -67,6 +84,76 @@ function nearestEnemy(w: World, view: SideView, target: Position): number {
 		if (d <= HOLD_TURNS * w.equipment[s.moving].movpoints && d < nearest) nearest = d;
 	}
 	return nearest;
+}
+
+/**
+ * The counterattacks: those of the last directives that still stand, one on an objective the side held at its last
+ * directives and has lost, and, for a side that defends, one on a worn-down enemy out of its holes near an objective
+ * it holds (an attacker's units are its main effort's); a new one only when the estimate favours the units in reach.
+ */
+function counterattacks(w: World, view: SideView, a: Analysis, memory: CommanderMemory, units: readonly UnitState[], clock: Clock): Directive[] {
+	const turn = w.state.turn.turn;
+	const out = memory.directives.filter((d) => d.task === "counterattack" && d.until >= turn && enemyOn(view, d.target) !== undefined);
+	const isNew = (p: Position) => !out.some((d) => samePosition(d.target, p));
+	for (const lost of justLost(w, a, memory).filter(isNew)) {
+		const gain = favourOn(w, units, enemyOn(view, lost));
+		if (gain > 0) out.push({ task: "counterattack", target: lost, priority: 0, until: turn + COUNTER_TURNS - 1,
+			reason: `counterattack ${at(lost)}: just lost, the estimate gives ${gain.toFixed(1)} for the units in reach` });
+	}
+	for (const t of clock.attacks ? [] : view.seen.filter((x) => isWornInTheOpen(w, a, x) && isNew(x))) {
+		if (favourOn(w, units, t) > 0) out.push({ task: "counterattack", target: { row: t.row, col: t.col }, priority: 0, until: turn,
+			reason: `counterattack ${at(t)}: ${unitData(w, t).name} worn down to ${t.strength} near our objective` });
+	}
+	return out;
+}
+
+//The objectives the commander's last directives held that are now the side's to take
+function justLost(w: World, a: Analysis, memory: CommanderMemory): Position[] {
+	const toTake = w.state.objectives[a.side];
+	return memory.directives.filter((d) => (d.task === "hold" || d.task === "delay") && toTake.some((o) => samePosition(o, d.target)))
+		.map((d) => d.target);
+}
+
+const enemyOn = (view: SideView, p: Position) => view.seen.find((t) => samePosition(t, p));
+
+const isWornInTheOpen = (w: World, a: Analysis, t: UnitState) => isGround(w, t) && t.strength <= WORN && t.entrenchment <= OPEN_ENTRENCHMENT
+	&& a.objectives.hold.some((o) => distance(o.row, o.col, t.row, t.col) <= COUNTER_RADIUS);
+
+//What the estimate gives the units that can strike the enemy this turn, kills less LOSS_WEIGHT of their losses; 0
+//without a target
+function favourOn(w: World, units: readonly UnitState[], t: UnitState | undefined): number {
+	if (t === undefined) return 0;
+	let gain = 0;
+	for (const u of units) {
+		const from = strikeHex(w, u, t);
+		if (from === null) continue;
+		const e = estimateAttack(w, samePosition(u, from) ? u : { ...u, row: from.row, col: from.col }, t);
+		const losses = e.result.losses + e.support.reduce((n, s) => n + s.losses, 0);
+		gain += (e.stopped ? 0 : e.result.kills) - LOSS_WEIGHT * losses;
+	}
+	return gain;
+}
+
+//Where a unit would strike the enemy from this turn: its hex when in range, else the hex beside the enemy nearest
+//it when its move takes it there (the way and the hex's unit aside: an estimate, not an order)
+function strikeHex(w: World, u: UnitState, t: UnitState): Position | null {
+	if (u.hasFired || ammoOf(u) <= 0) return null;
+	const range = unitAttackRange(w, u), gap = distance(u.row, u.col, t.row, t.col);
+	if (gap <= range) return u;
+	const moves = !u.hasMoved && !u.isMounted && !firesOnlyBeforeMoving(w, u);
+	return moves && gap <= unitData(w, u).movpoints + range ? nearestBeside(w, u, t) : null;
+}
+
+function nearestBeside(w: World, u: Position, t: Position): Position | null {
+	let best: Position | null = null, nearest = Infinity;
+	for (const c of adjacent(t.row, t.col)) {
+		const d = distance(c.row, c.col, u.row, u.col);
+		if (onMap(w, c.row, c.col) && d < nearest) {
+			best = c;
+			nearest = d;
+		}
+	}
+	return best;
 }
 
 /**

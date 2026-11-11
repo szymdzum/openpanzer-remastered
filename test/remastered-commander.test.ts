@@ -1,6 +1,6 @@
 // @vitest-environment node
 //The remastered AI's commander (src/core/remastered/commander.ts, #638): the directives it gives its staff, the check
-//a list of them passes, its turn clock, and the staff's reserve; on hand-built maps
+//a list of them passes, its turn clock and counterattack, and the staff's line and reserve; on hand-built maps
 import { expect, test } from "vitest";
 import { planTurn } from "../src/core/ai";
 import type { Command } from "../src/core/command";
@@ -204,4 +204,70 @@ test("the reserve stays out of the enemy's reach until committed (#638)", () => 
 	const committed = playOneTurn(c, close);
 	expect(c.operations.some((op) => op.kind === "reserve")).toBe(false);
 	expect(gap(committed.world, 4)).toBeLessThan(gap(close, 4));
+});
+
+test("the commander counterattacks an objective just lost when the estimate favours it (#638, #5)", () => {
+	//Germany attacks in the east and holds an objective in the west with an infantry, a 7TP three hexes from it
+	const own = { row: 5, col: 3 };
+	const army: HandUnit[] = [{ eqid: PZ_IVD, owner: 0, row: 4, col: 5 }, { eqid: PZ_IVD, owner: 0, row: 6, col: 5 },
+		{ eqid: PZ_IVD, owner: 0, row: 5, col: 6 }, { eqid: PZ_IVD, owner: 0, row: 4, col: 6 }, { eqid: PZ_IVD, owner: 0, row: 1, col: 0 },
+		{ eqid: PIECHOTA, owner: 1, row: 4, col: 13 }, { eqid: PIECHOTA, owner: 1, row: 7, col: 13 }];
+	const held = world([...army, { eqid: INFANTERIE, owner: 0, row: 5, col: 3 }, { eqid: TP7, owner: 1, row: 8, col: 3 }], [own], EAST, 3, false, [2, 0]);
+	const c = remasteredController(0);
+	playOneTurn(c, held);
+	expect(c.directives.map((d) => d.task)).toEqual(["hold", "assault"]);
+	//Poland's turn: the 7TP, worn down to 3, stands on the objective
+	const lost = onTurn(world([...army, { eqid: TP7, owner: 1, row: 5, col: 3, strength: 3 }], [], [...EAST, own], 3, false, [2, 0]), 2);
+	const turn = playOneTurn(c, lost);
+	expect(c.directives[0]).toMatchObject({ task: "counterattack", target: own, until: 3 });
+	expect(c.directives[0].reason).toMatch(/^counterattack 5,3: just lost, the estimate gives \d+\.\d for the units in reach$/);
+	//The units in reach strike it before anything else, and the objective is Germany's again
+	expect(attacks(turn.commands)[0]).toMatchObject({ target: 7 });
+	expect(turn.world.state.map.hexes[5 * 16 + 3].owner).toBe(0);
+	//The same with worn-down infantry for an army and a fresh 7TP dug in on the objective: the estimate is against it
+	const worn = army.map((u): HandUnit => u.owner === 0 ? { ...u, eqid: INFANTERIE, strength: 2 } : u);
+	const again = remasteredController(0);
+	playOneTurn(again, world([...worn, { eqid: INFANTERIE, owner: 0, row: 5, col: 3 }, { eqid: TP7, owner: 1, row: 8, col: 3 }], [own], EAST, 3, false, [2, 0]));
+	expect(again.directives.map((d) => d.task)).toContain("hold");
+	playOneTurn(again, onTurn(world([...worn, { eqid: TP7, owner: 1, row: 5, col: 3, entrenchment: 5 }], [], [...EAST, own], 3, false, [2, 0]), 2));
+	expect(again.directives.some((d) => d.task === "counterattack")).toBe(false);
+});
+
+test("the infantry near an objective to hold stands fast instead of marching on the enemy's objective (#638)", () => {
+	//Germany defends its objective: an infantry on it and one two hexes behind it, a 7TP three hexes in front; the
+	//objective to take is far in the east. The classic plan marches the second infantry east, past the tank
+	const own = { row: 5, col: 5 };
+	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 5, col: 5 }, { eqid: INFANTERIE, owner: 0, row: 5, col: 3, entrenchment: 2 },
+		{ eqid: TP7, owner: 1, row: 5, col: 8 }, { eqid: PIECHOTA, owner: 1, row: 5, col: 14 }];
+	const w = world(units, [own], [{ row: 5, col: 14 }], 3, false, [0, 1]);
+	const east = (cmds: readonly Command[]) => cmds.some((cmd) => cmd.type === "move" && cmd.unit === 1 && cmd.to.col > own.col);
+	expect(east(planTurn(w, 0, w.rules.ai.config, 0, { held: new Set([0]) }).queue)).toBe(true);
+	const c = remasteredController(0);
+	const turn = playOneTurn(c, w);
+	expect(c.directives.map((d) => d.task)).toEqual(["hold"]);
+	expect(east(turn.commands)).toBe(false);
+	expect(position(turn.world, 1).col).toBeLessThanOrEqual(own.col);
+	//With no enemy near the objective there is no hold and no line: it marches
+	const quiet = world(units.filter((u) => u.eqid !== TP7), [own], [{ row: 5, col: 14 }], 3, false, [0, 1]);
+	expect(east(playOneTurn(remasteredController(0), quiet).commands)).toBe(true);
+});
+
+test("a defender counterattacks a worn-down enemy out of its holes near its objective (#638, #5)", () => {
+	//Germany defends its objective with an infantry on it and a Pz IVD beside it; a 7TP worn down to 3 has come up two
+	//hexes from it
+	const own = { row: 5, col: 5 }, far = { row: 5, col: 14 };
+	const units = (tank: Partial<HandUnit>): HandUnit[] => [{ eqid: INFANTERIE, owner: 0, row: 5, col: 5 }, { eqid: PZ_IVD, owner: 0, row: 4, col: 5 },
+		{ eqid: TP7, owner: 1, row: 5, col: 7, ...tank }, { eqid: PIECHOTA, owner: 1, row: 5, col: 14 }];
+	const c = remasteredController(0);
+	const turn = playOneTurn(c, world(units({ strength: 3 }), [own], [far], 3, false, [0, 1]));
+	expect(c.directives.map((d) => d.task)).toEqual(["hold", "counterattack"]);
+	expect(c.directives[1]).toMatchObject({ target: { row: 5, col: 7 }, until: 1 });
+	expect(c.directives[1].reason).toMatch(/^counterattack 5,7: .+ worn down to 3 near our objective$/);
+	expect(attacks(turn.commands)[0]).toEqual({ type: "attack", unit: 1, target: 2 });
+	expect(position(turn.world, 0)).toEqual(own);
+	//Not on a fresh one, nor on one dug in; and an attacker's units are its main effort's
+	const tasks = (w: World) => commanded(w).map((d) => d.task);
+	expect(tasks(world(units({}), [own], [far], 3, false, [0, 1]))).toEqual(["hold"]);
+	expect(tasks(world(units({ strength: 3, entrenchment: 3 }), [own], [far], 3, false, [0, 1]))).toEqual(["hold"]);
+	expect(tasks(world(units({ strength: 3 }), [own], [far], 3, false, [1, 0]))).toEqual(["hold", "assault"]);
 });

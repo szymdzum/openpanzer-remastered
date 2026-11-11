@@ -55,13 +55,16 @@ const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) 
 /**
  * Where the classic plan pulls a ground unit: to the assault's sector (#258), but for a unit already near another
  * objective to take, which keeps the pull to the nearest, and for the side defending (#256): its units hold the line
- * while it retakes an objective. In the last turns to the objectives the unit still reaches in the turns left (#232),
- * to every one when it reaches none. Aircraft and ships keep the pull to every objective.
+ * while it retakes an objective, and those of `standFast` are pulled nowhere. In the last turns to the objectives the
+ * unit still reaches in the turns left (#232), to every one when it reaches none. Aircraft and ships keep the pull to
+ * every objective.
  */
-export function pullTo(w: World, cache: AnalysisCache, op: Operation): (u: UnitState) => readonly Position[] {
+export function pullTo(w: World, cache: AnalysisCache, op: Operation | undefined, standFast: ReadonlySet<UnitId>)
+	: (u: UnitState) => readonly Position[] {
 	return (u) => {
 		const side = sideOf(w, u), all = w.state.objectives[side];
-		if (!isGround(w, u) || !attacks(w, side)) return all;
+		if (standFast.has(u.id)) return [];
+		if (!isGround(w, u) || !attacks(w, side) || op === undefined) return all;
 		if (isLate(w)) return inReachOf(w, cache, u, all);
 		const march = marchOf(w, u), hex = hexOf(w, u);
 		const nearest = fieldTo(w, cache, march.movmethod, all)[hex], toSector = fieldTo(w, cache, march.movmethod, [op.at])[hex];
