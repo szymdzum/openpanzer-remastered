@@ -2,7 +2,7 @@
 //The remastered AI's staff, part 2 (#617): a resupply before contact, no ride ending in the enemy's reach (#315); on
 //hand-built maps
 import { expect, test } from "vitest";
-import { aiController, planTurn } from "../src/core/ai";
+import { aiController } from "../src/core/ai";
 import { distance } from "../src/core/geometry";
 import { remasteredController } from "../src/core/remastered/controller";
 import type { UnitState, World } from "../src/core/types";
@@ -46,17 +46,6 @@ test("a ride may end in the enemy's reach next to an objective (#617)", () => {
 		{ eqid: TP7, owner: 1, row: 5, col: 11 }];
 	const remastered = playOneTurn(remasteredController(0), world(units, [], [{ row: 5, col: 8 }]));
 	expect(remastered.commands).toEqual([{ type: "mount", unit: 0 }, { type: "move", unit: 0, to: { row: 4, col: 6 } }]);
-});
-
-test("without a ride rule the classic plan rides as before (#617)", () => {
-	const units: HandUnit[] = [{ eqid: PAK36, owner: 0, row: 5, col: 1, transport: { eqid: OPEL_BLITZ, ammo: 0, fuel: 50 } },
-		{ eqid: TP7, owner: 1, row: 5, col: 11 }];
-	const w = world(units, [], [{ row: 5, col: 8 }]);
-	const plain = planTurn(w, 0, w.rules.ai.config, 0).queue, anywhere = planTurn(w, 0, w.rules.ai.config, 0, { ridesTo: () => true }).queue;
-	expect(plain).toEqual(anywhere);
-	expect(plain).toEqual([{ type: "mount", unit: 0 }, { type: "move", unit: 0, to: { row: 4, col: 6 } }]);
-	const nowhere = planTurn(w, 0, w.rules.ai.config, 0, { ridesTo: () => false }).queue;
-	expect(nowhere.some((cmd) => cmd.type === "mount")).toBe(false);
 });
 
 

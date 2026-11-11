@@ -133,7 +133,7 @@ been tuned on: the acceptance isn't measured on the games it was fitted to.
 no scenario and side does worse than before beyond the noise on its main measure against the scripted general
 (remastered-design.md, "What done looks like"). Its games against the classic AI are reported, and winning more than
 half of them stays the whole AI's target, but they don't block a change. The classic AI stays as an opponent and as the
-classic rules' AI; the remastered AI stops borrowing its planner in #627.
+classic rules' AI; the remastered AI no longer borrows its planner (#627).
 
 
 ## The scripted general (#236)
@@ -908,6 +908,149 @@ What it says:
   win Uman and Taman outright and hold a whole objective more in Ostpreussen, and lose two or three in Bzura and
   Indochina, where the defender has to take objectives back. No rule tried tells the two apart; standing fast is
   the part of it that costs nothing.
+
+## The remastered AI on its own planner (#627), 11 November 2026
+
+The remastered AI without the classic plan (remastered-design.md, "Built: the planner"): the units no operation holds
+get their orders from its own planner, one at a time on the world as it is, by the estimate and the distance fields,
+with no draw from any random stream. Only the purchases and the deployment are still the classic AI's (#640). Before:
+main at 8b25157 (the commander's first part, #638, with the classic plan under the staff); after: this, the same
+seats, remaster rules, both runs `remastered`:
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-general,general-remastered,remastered-ai,ai-remastered ARENA_OUT=after.json npm run arena
+npm run arena:compare -- before.json after.json
+```
+
+This one replaces a part instead of adding one, so it was built in steps on the tuning seeds (101-140, the seats
+against the general), each step the suite against main. A step is read by its main measures (remastered-design.md,
+"What done looks like"): how many are worse than main beyond the noise.
+
+- **Every attack by the estimate first, then the moves** (the first version: the best gain first, the guns before
+  the others; the moves toward the directive's objective, cover preferred). It destroyed far more and took less:
+  Ostpreussen's attack took 3.13 objectives instead of 4.95 for 32.4 units destroyed instead of 14.5, Zitadelle's won
+  2 games of 40 instead of 12, Battleaxe's 27 instead of 38, Bzura's defence held 5.83 objectives instead of 6.63.
+  A kill elsewhere counted for as much as a hex beside the objective.
+- **A unit weighs its hex and its strike together** (the classic plan's idea, on the estimate): the hex's worth, the
+  objective's pull over the distance fields and the best strike from the hex in one sum. Ostpreussen's attack took
+  4.42, but Zitadelle's still won 3 of 40 and Battleaxe's 23: the planner ordered only strikes that kill.
+- **A strike that kills nothing and loses nothing is ordered**, as the classic plan did: it wears the entrenchment
+  down for the next. Zitadelle's attack won 11 of 40, Battleaxe's 35, Indochina's took 3.50 objectives instead of 2.20
+  on main. Worse than main: the objectives held by Bzura's (5.75, 6.63 on main), Indochina's (3.45, 4.38) and
+  Battleaxe's (4.75, 5.17) defence.
+- **A defender's guns follow their objective too** (the first versions left them where they stood): Battleaxe's
+  defence held 5.08, Indochina's 3.85; Ostpreussen's and Luttich's lost more units for it (29.4 instead of 24.6, 26.9
+  instead of 22.2), as many as on main. Two measures worse than main were left: the objectives Bzura's and
+  Indochina's defence held.
+- **The pull over the fields.** The classic AI's 4000 over the hexes to the objective was too weak over the fields,
+  which count a forest or a river at more than a hex. At 6000 no main measure was worse than main (Bzura's defence
+  held 6.55, Indochina's 4.25). At 8000 and 12000 the attackers did better still and the defenders lost more units
+  (Luttich's 29.1 and 30.7 instead of 25.2 on main, Ostpreussen's 31.7 instead of 28.8). So the scenario's attacker
+  is pulled at 12000 and a defender at 6000: Zitadelle's attack won 30 games of 40 (12 on main), Bzura's 40 (15),
+  Ostpreussen's took 6.58 objectives (4.95). At 20000 Taman's attack won 6 of 40 instead of 13 and Zitadelle's 25; at
+  32000 Ostpreussen's attack won 12 of 40, its first wins in any run, and Zitadelle's 20 for 58.5 units lost
+  instead of 49.6.
+- **A worn-down unit spares itself** (#6: no attack that loses as much as it kills, its losses and the enemy's reach
+  on its hex cost it more). Against the version before it: Luttich's attack lost 7.05 units an objective instead of
+  7.86 (18 wins of 40 instead of 11, within the noise), its defence lost 24.9 units instead of 27.3, Battleaxe's 15.2
+  instead of 17.6, Bzura's held 6.85 objectives instead of 6.55, nothing worse; on seeds 41-80 nothing beyond the
+  noise either way (Uman's defence 17 wins of 40 instead of 23, within it). Kept. **Finishing off a weak enemy**
+  (#6: 100 more for a strike the estimate has destroy its target) moved nothing alone and, with the rule above, cost
+  Luttich's defence units (28.0 instead of 24.9). Left out.
+
+Tried and left out, each against the version it was tried on (seeds 101-140, the paired difference beyond the noise
+unless said):
+
+- **A unit that fired from where it stood stays there**, as in the classic plan: Bzura's attack lost 0.76 units an
+  objective instead of 0.64, and within the noise Zitadelle's took 4.38 objectives instead of 4.88, Battleaxe's won
+  31 of 40 instead of 35, Bzura's defence held 5.30 instead of 5.75. For a defender's units only: nothing beyond the
+  noise.
+- **The pull by hex distance** (the classic plan's): Zitadelle's defence lost 34.8 units instead of 28.3, Indochina's
+  attack took 2.98 objectives instead of 3.58. **The moves in the unit list's order** instead of the unit nearest its
+  objective first: Zitadelle's defence lost 34.2 units instead of 28.3.
+- **A hex weighed by every strike from it, allowed or not** (the classic plan's attack potential): by the best of
+  them, Indochina's attack took 2.98 instead of 3.58; by their sum, five main measures worse.
+- **No ground unit sent blind onto a hex where an enemy is remembered**, **aircraft heedless of the air threat**: no
+  main measure better or worse.
+- **The support fire of the guns the side doesn't see counted**, as the classic plan counted it (#17): no main
+  measure better or worse. The planner reads the estimate of what its side sees.
+- **The line that stands fast by an attacker's objectives too**: Battleaxe's attack won 26 of 40 instead of 35.
+- **Holes worth half**: Zitadelle's defence lost 39.0 units instead of 28.3. **An objective under the unit worth
+  double**: Ostpreussen's attack lost 2.23 units an objective instead of 1.83.
+- For Uman's defence, the one side still behind main on the tuning and the diagnosis seeds (below): **a defender's
+  units going only for the objectives within three turns** (Bzura's defence held 4.08 objectives instead of 6.67 on
+  main, seeds 41-80), **its holes worth double**, **its pull at 5000**: Uman's defence won 18 to 24 games of 40 with each
+  (33 on main on seeds 41-80, 25 on 101-140).
+
+Accepted on seeds 1-40, the four seats; no game came out the same (the planner moves every unit). The remastered AI's
+side, before (main) and after, the measures beyond the noise (bold: worse), with the main ones after each cell. Orders
+refused stayed 0:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | first objective turn 4.28 → 3.55, taken 2.70 → 4.22, held 3.23 → 4.60, units lost 12.80 → 9.93, destroyed 22.52 → 29.38, lost per objective 4.74 → 2.35 (wins 0 → 3, taken 2.70 → 4.22, held 3.23 → 4.60, units lost 12.80 → 9.93) | first objective turn 4.00 → 3.50, taken 5.00 → 6.42, destroyed 15.10 → 21.40, lost per objective 2.73 → 1.92 (wins 0 → 0, taken 5.00 → 6.42, held 3.75 → 4.03, units lost 13.63 → 12.35) |
+|  | allies defends | same (wins 40 → 40, taken 0.40 → 0.55, held 4.03 → 4.33, units lost 19.73 → 19.68) | same (wins 40 → 40, taken 1.25 → 1.60, held 4.10 → 4.15, units lost 28.65 → 30.63) |
+| Bzura | axis defends | lost per objective 2.21 → 1.75 (wins 40 → 40, taken 4.88 → 5.30, held 6.10 → 6.25, units lost 10.78 → 9.28) | held 6.17 → 6.75, units lost 12.40 → 9.38, lost per objective 1.82 → 1.48 (wins 40 → 40, taken 6.83 → 6.35, held 6.17 → 6.75, units lost 12.40 → 9.38) |
+|  | allies attacks | wins 9 → 35 of 40, held 6.47 → 8.78, units lost 6.85 → 3.75, **destroyed 11.05 → 7.20**, lost per objective 1.10 → 0.59 (wins 9 → 35, taken 6.20 → 6.35, held 6.47 → 8.78, units lost 6.85 → 3.75) | wins 12 → 35 of 40, held 6.92 → 8.85, units lost 5.30 → 3.13, **destroyed 6.05 → 4.47**, lost per objective 0.69 → 0.40 (wins 12 → 35, taken 7.72 → 7.72, held 6.92 → 8.85, units lost 5.30 → 3.13) |
+| Indochina | axis attacks | taken 1.25 → 2.38, held 1.77 → 2.50, units lost 13.97 → 11.20, destroyed 7.20 → 10.18, lost per objective 11.18 → 4.72 (wins 0 → 0, taken 1.25 → 2.38, held 1.77 → 2.50, units lost 13.97 → 11.20) | first objective turn 8.38 → 6.40, taken 2.05 → 3.42, destroyed 6.20 → 7.90, lost per objective 5.94 → 3.32 (wins 0 → 0, taken 2.05 → 3.42, held 2.05 → 1.98, units lost 12.18 → 11.38) |
+|  | allies defends | **first objective turn 4.60 → 5.28** (wins 40 → 40, taken 2.13 → 2.00, held 4.88 → 4.90, units lost 3.33 → 3.15) | same (wins 40 → 40, taken 1.75 → 1.90, held 4.15 → 4.28, units lost 10.97 → 9.78) |
+| Zitadelle | axis attacks | wins 12 → 27 of 40, first objective turn 8.10 → 6.15, taken 3.85 → 5.17, held 4.17 → 5.45, **destroyed 56.05 → 48.23**, lost per objective 10.29 → 7.36 (wins 12 → 27, taken 3.85 → 5.17, held 4.17 → 5.45, units lost 39.63 → 38.08) | wins 9 → 29 of 40, first objective turn 6.67 → 5.45, taken 5.28 → 6.33, held 4.22 → 5.47, **units lost 47.38 → 50.92**, **destroyed 47.45 → 42.58** (wins 9 → 29, taken 5.28 → 6.33, held 4.22 → 5.47, units lost 47.38 → 50.92) |
+|  | allies defends | took one in 21 → 35 games, taken 0.53 → 0.90, held 5.22 → 5.65, lost per objective 67.86 → 34.33 (wins 40 → 40, taken 0.53 → 0.90, held 5.22 → 5.65, units lost 35.63 → 30.90) | **destroyed 23.20 → 20.40** (wins 40 → 40, taken 1.05 → 1.13, held 5.95 → 5.75, units lost 29.18 → 29.65) |
+| Uman | axis attacks | **wins 39 → 32 of 40**, **took one in 39 → 32 games**, first objective turn 2.16 → 1.16, **held 4.88 → 4.00**, units lost 10.28 → 6.03, **destroyed 67.22 → 45.25**, lost per objective 2.62 → 1.63 (wins 39 → 32, taken 3.92 → 3.70, held 4.88 → 4.00, units lost 10.28 → 6.03) | first objective turn 2.33 → 1.32, taken 4.35 → 4.78, units lost 10.88 → 9.32, **destroyed 47.15 → 43.45**, lost per objective 2.50 → 1.95 (wins 40 → 40, taken 4.35 → 4.78, held 5.00 → 5.00, units lost 10.88 → 9.32) |
+|  | allies defends | **first objective turn 4.06 → 5.45**, **units lost 29.60 → 42.80** (wins 40 → 38, taken 0.93 → 1.13, held 4.50 → 4.03, units lost 29.60 → 42.80) | first objective turn 4.89 → 3.19, **taken 2.30 → 1.80**, **destroyed 15.45 → 13.45**, **lost per objective 31.90 → 42.69** (wins 29 → 24, taken 2.30 → 1.80, held 1.10 → 0.93, units lost 73.38 → 76.85) |
+| Battleaxe | axis defends | taken 4.47 → 5.50, held 3.20 → 4.53, units lost 25.82 → 22.00, destroyed 23.73 → 29.07, lost per objective 5.77 → 4.00 (wins 36 → 38, taken 4.47 → 5.50, held 3.20 → 4.53, units lost 25.82 → 22.00) | same (wins 40 → 40, taken 1.40 → 1.43, held 5.20 → 5.22, units lost 16.30 → 14.43) |
+|  | allies attacks | wins 23 → 34 of 40, held 4.78 → 5.60, units lost 18.50 → 13.50, lost per objective 2.67 → 1.84 (wins 23 → 34, taken 6.92 → 7.33, held 4.78 → 5.60, units lost 18.50 → 13.50) | first objective turn 3.55 → 3.17, lost per objective 2.04 → 1.67 (wins 39 → 38, taken 5.20 → 5.22, held 5.97 → 5.92, units lost 10.60 → 8.70) |
+| Taman | axis defends | took one in 8 → 17 games, taken 0.20 → 0.42, held 1.65 → 2.10, units lost 22.43 → 15.45, **destroyed 30.73 → 23.95** (wins 36 → 38, taken 0.20 → 0.42, held 1.65 → 2.10, units lost 22.43 → 15.45) | wins 33 → 40 of 40, held 1.50 → 1.90, units lost 21.38 → 15.38 (wins 33 → 40, taken 0.15 → 0.13, held 1.50 → 1.90, units lost 21.38 → 15.38) |
+|  | allies attacks | first objective turn 8.29 → 6.24, units lost 12.70 → 8.55, lost per objective 6.51 → 4.22 (wins 38 → 40, taken 1.95 → 2.02, held 2.90 → 3.00, units lost 12.70 → 8.55) | same (wins 17 → 16, taken 1.88 → 1.88, held 2.38 → 2.38, units lost 25.57 → 27.18) |
+| Luttich | axis defends | first objective turn 7.55 → 6.05, taken 1.15 → 1.57, **destroyed 54.67 → 44.48**, lost per objective 16.39 → 11.27 (wins 40 → 40, taken 1.15 → 1.57, held 4.92 → 4.83, units lost 18.85 → 17.75) | first objective turn 6.05 → 4.47, taken 2.50 → 4.05, held 3.92 → 4.47, **destroyed 55.63 → 49.65**, lost per objective 10.52 → 6.44 (wins 40 → 40, taken 2.50 → 4.05, held 3.92 → 4.47, units lost 26.30 → 26.10) |
+|  | allies attacks | wins 11 → 25 of 40, taken 3.83 → 4.45, held 3.80 → 4.40, units lost 39.67 → 32.63, lost per objective 10.37 → 7.33 (wins 11 → 25, taken 3.83 → 4.45, held 3.80 → 4.40, units lost 39.67 → 32.63) | wins 1 → 12 of 40, taken 4.78 → 5.55, held 2.65 → 3.63, **destroyed 19.75 → 16.68**, lost per objective 9.72 → 7.69 (wins 1 → 12, taken 4.78 → 5.55, held 2.65 → 3.63, units lost 46.42 → 42.70) |
+
+Against the general no main measure is worse beyond the noise on any scenario-side (17 of them better). The one
+below main on the other seeds is Uman's defence: 24 wins of 40 against 29 here (within the noise), 17 against 33 on
+seeds 41-80 (beyond it), 23 against 25 on 101-140. On the most crowded map, the defender that has to take its
+objectives back loses more units doing it; none of the rules tried for a defender (above) moved it. Bzura's attack
+takes 7.2 objectives instead of 8.0 on the tuning seeds and wins all 40 games: it holds what it took (9.0 at the end
+instead of 7.05) and has fewer to take back. #629's two measures: Ostpreussen's attack loses 1.92 units an objective
+(2.73 before; 1.85 and 1.80 on the other seeds, 2.25 and 2.62 before), Luttich's takes 5.55 objectives (4.78; 5.28
+and 5.88, 4.72 and 4.83 before).
+
+Against the classic AI, both sides: 510 of 640 games (444 on main). Its wins by scenario, axis then allies:
+Ostpreussen 3 and 40, Bzura 40 and 35, Indochina 0 and 40, Zitadelle 27 and 40, Uman 32 and 38, Battleaxe 38 and 34,
+Taman 38 and 40, Luttich 40 and 25. Worse there (the protocol reports it): Uman's attack, 32 wins of 40 instead of 39
+for far fewer units lost (6.0 instead of 10.3), and Uman's defence loses 42.8 units instead of 29.6.
+
+The targets of remastered-design.md against the general: 26 of 29 (25 on main). Now met: the defender's units lost in
+Bzura (9.38, target 10.8) and Luttich (26.1, target 26.2). No longer met: Uman's defence, 24 wins of 40 (target 25;
+29 on main). Not met as before: the defender's units lost in Ostpreussen (30.6, target 22.3) and Indochina (9.78,
+target 9.4).
+
+The planning time of the remastered AI, all its turns, seeds 1-40, on the machine that ran them:
+
+| Scenario | ms a turn | 95th percentile | worst | a game, mean | a game, worst |
+| --- | --- | --- | --- | --- | --- |
+| Ostpreussen | 49 | 134 | 326 | 1.2 s | 2.5 s |
+| Bzura | 8 | 19 | 36 | 0.3 s | 0.6 s |
+| Indochina | 15 | 40 | 105 | 0.3 s | 0.7 s |
+| Zitadelle | 213 | 710 | 1190 | 3.6 s | 6.5 s |
+| Uman | 119 | 311 | 913 | 1.6 s | 3.0 s |
+| Battleaxe | 40 | 78 | 179 | 1.1 s | 2.0 s |
+| Taman | 98 | 272 | 625 | 1.6 s | 2.8 s |
+| Luttich | 300 | 1116 | 1740 | 3.5 s | 7.0 s |
+
+Within the budget (2 s a turn, 10 s a game): Zitadelle 213 ms a turn (174 on main), the worst turn of the suite 1.74 s
+(Luttich; 0.78 s on main), the slowest game 7.0 s. The worst turns are the largest armies' first, where every unit
+weighs every hex of its move against every strike from it; the planner keeps what it found for a unit until something
+changes near it, so the turns after are cheaper.
+
+What it says:
+
+- **The classic plan is gone and the AI plays better without it**: every attacker takes more objectives or the same
+  for fewer units; Zitadelle's attack wins 29 games of 40 against the general (9 before), Bzura's 35 (12), Luttich's
+  12 (1). A unit weighs where it ends its turn and what it strikes from there in one score, on the estimate and the
+  distance fields, and the attacker's objectives pull it harder than a defender's.
+- **No draw**: the AI's stream moves only with the purchases. The classic AI and its records are untouched.
+- **A worn-down unit sparing itself (#6) pays as part of the turn's scores**, after three tries as a withdrawal.
+  Finishing off a weak enemy doesn't.
 
 ## Baseline, 24 October 2026
 

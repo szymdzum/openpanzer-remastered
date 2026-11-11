@@ -81,7 +81,7 @@ function liveOperations(w: World, ops: readonly Operation[], directives: readonl
 		&& (op.kind !== "garrison" || postures.some((d) => samePosition(d.target, op.at)))));
 }
 
-/** The units the operations hold: the classic plan leaves them out. */
+/** The units the operations hold: the planner leaves them out. */
 export function heldUnits(ops: readonly Operation[]): Set<UnitId> {
 	const held = new Set<UnitId>();
 	for (const op of ops) for (const id of op.units) held.add(id);

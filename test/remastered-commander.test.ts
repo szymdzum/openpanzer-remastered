@@ -2,7 +2,7 @@
 //The remastered AI's commander (src/core/remastered/commander.ts, #638): the directives it gives its staff, the check
 //a list of them passes, its turn clock and counterattack, and the staff's line and reserve; on hand-built maps
 import { expect, test } from "vitest";
-import { planTurn } from "../src/core/ai";
+import { aiController } from "../src/core/ai";
 import type { Command } from "../src/core/command";
 import { analyse, type AnalysisCache } from "../src/core/remastered/analysis";
 import { clockLine, clockOf } from "../src/core/remastered/clock";
@@ -122,10 +122,7 @@ test("an attacker that holds more objectives than it has left to take still play
 		{ eqid: INFANTERIE, owner: 0, row: 2, col: 0 }, { eqid: INFANTERIE, owner: 0, row: 8, col: 0 }];
 	const w = world(units, [{ row: 2, col: 0 }, { row: 8, col: 0 }], [{ row: 5, col: 14 }], 3, false, [2, 0]);
 	const moves = (cmds: readonly Command[]) => cmds.filter((c) => c.type === "move" && c.unit === 0);
-	const byCount = planTurn(w, 0, w.rules.ai.config, 0).queue;
-	expect(moves(byCount)).toEqual([]);
-	expect(planTurn(w, 0, w.rules.ai.config, 0, { attacks: false }).queue).toEqual(byCount);
-	expect(moves(planTurn(w, 0, w.rules.ai.config, 0, { attacks: true }).queue)).toHaveLength(1);
+	expect(moves(playOneTurn(aiController(0), w).commands)).toEqual([]);
 	expect(moves(playOneTurn(remasteredController(0), w).commands)).toHaveLength(1);
 });
 
@@ -241,7 +238,7 @@ test("the infantry near an objective to hold stands fast instead of marching on 
 		{ eqid: TP7, owner: 1, row: 5, col: 8 }, { eqid: PIECHOTA, owner: 1, row: 5, col: 14 }];
 	const w = world(units, [own], [{ row: 5, col: 14 }], 3, false, [0, 1]);
 	const east = (cmds: readonly Command[]) => cmds.some((cmd) => cmd.type === "move" && cmd.unit === 1 && cmd.to.col > own.col);
-	expect(east(planTurn(w, 0, w.rules.ai.config, 0, { held: new Set([0]) }).queue)).toBe(true);
+	expect(east(playOneTurn(aiController(0), w).commands)).toBe(true);
 	const c = remasteredController(0);
 	const turn = playOneTurn(c, w);
 	expect(c.directives.map((d) => d.task)).toEqual(["hold"]);

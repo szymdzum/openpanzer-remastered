@@ -23,7 +23,7 @@ import { around } from "./fields";
 import { classOf, freeGround, hexOf, marchOf, samePosition, turnsTo } from "./march";
 import { inGroundReach } from "./rear";
 import type { Operation } from "./staff";
-import { better, canFireNow, isWorth, onObjective, type Strike, strikeCommands, strikeFrom } from "./strike";
+import { better, canFireNow, isWorth, type Strike, strikeCommands, strikeFrom } from "./strike";
 
 /** The step of the assault's sequence an order belongs to. */
 export type AssaultStep = "recon" | "counter-battery" | "preparation" | "attack" | "guns forward";
@@ -160,18 +160,6 @@ function scoutCell(b: Battle, u: UnitState, unseen: readonly number[]): MoveCell
 		}
 	}
 	return best;
-}
-
-/**
- * Whether a classic plan's attack loses more than it kills by the estimate, but on an objective in the last turns or
- * behind schedule.
- */
-export function losesMore(w: World, cmd: Command): boolean {
-	if (cmd.type !== "attack") return false;
-	const u = w.state.units.find((x) => x.id === cmd.unit), t = w.state.units.find((x) => x.id === cmd.target);
-	if (u === undefined || t === undefined) return false;
-	const s = strikeFrom(w, u, t, null);
-	return s !== null && s.losses > s.kills && !(pressed(w, sideOf(w, u)) && onObjective(w, t));
 }
 
 //A unit's best strike on the target from where it stands, or from a hex it moves to: not on its transport, whose move

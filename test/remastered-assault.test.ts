@@ -3,7 +3,7 @@
 //it, and the order of arms on it: reconnaissance, artillery, the armoured attack, the infantry occupying; on
 //hand-built maps
 import { expect, test } from "vitest";
-import { aiController, planTurn } from "../src/core/ai";
+import { aiController } from "../src/core/ai";
 import type { Command } from "../src/core/command";
 import { distance } from "../src/core/geometry";
 import { remasteredController } from "../src/core/remastered/controller";
@@ -174,13 +174,6 @@ test("the assault keeps its sector across turns (#618)", () => {
 	expect(fresh.operations.find((o) => o.kind === "assault")).toMatchObject({ at: NORTH });
 	playOneTurn(c, next);
 	expect(c.operations.find((o) => o.kind === "assault")).toBe(op);
-});
-
-test("without a pull the classic plan goes for the nearest objective as before (#618)", () => {
-	const w = world(twoSectors, [], [NORTH, SOUTH]);
-	const plain = planTurn(w, 0, w.rules.ai.config, 0).queue;
-	expect(planTurn(w, 0, w.rules.ai.config, 0, { pullTo: () => w.state.objectives[0] }).queue).toEqual(plain);
-	expect(planTurn(w, 0, w.rules.ai.config, 0, { pullTo: () => [SOUTH] }).queue).not.toEqual(plain);
 });
 
 test("the remastered AI's guns don't move and then attack (#625)", () => {

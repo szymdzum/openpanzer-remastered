@@ -2,24 +2,19 @@
 //The remastered AI's staff (src/core/remastered/staff.ts, #616): one owner per unit, the operations, the plan made
 //again on the world as it is, the garrisons of the objectives in the enemy's reach (#5) and the occupation of an
 //objective its attack emptied (#312); on hand-built maps, and a few turns of Panzer-Verbaende Ostpreussen
-import { JSDOM } from "jsdom";
 import { expect, test } from "vitest";
-import { aiController, planTurn } from "../src/core/ai";
+import { aiController } from "../src/core/ai";
 import type { Command } from "../src/core/command";
 import type { Controller } from "../src/core/controller";
 import { createWorld } from "../src/core/create";
 import { distance } from "../src/core/geometry";
-import { newGame } from "../src/core/newgame";
 import { aiControllerFor, remasteredController } from "../src/core/remastered/controller";
-import { classicRules, remasterRules } from "../src/core/rules";
 import { type Advance, advance, type Session, startSession } from "../src/core/session";
 import { check } from "../src/core/step";
-import { playerType } from "../src/core/tables";
 import type { RulesetName, UnitState, World } from "../src/core/types";
 import { hexIndex, unitById } from "../src/core/world";
-import { setupOf } from "./corefiles";
 import type { HandUnit } from "./coreworld";
-import { playOneTurn, position, world } from "./staffworld";
+import { playOneTurn, position, scenarioWorld, world } from "./staffworld";
 
 const INFANTERIE = 115, PZ_IVD = 148, PIECHOTA = 270, TP7 = 273;
 
@@ -98,35 +93,8 @@ test("the remastered AI moves onto an enemy objective it just emptied (#616, #31
 	expect((unitById(remastered.world, hex.unit as number) as UnitState).owner).toBe(0);
 });
 
-test("a unit the staff holds gets no order from the classic plan (#616)", () => {
-	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 5, col: 6 }, { eqid: PZ_IVD, owner: 0, row: 3, col: 6 },
-		{ eqid: TP7, owner: 1, row: 5, col: 10 }];
-	const w = world(units, [], [{ row: 5, col: 14 }]);
-	const all = planTurn(w, 0, w.rules.ai.config, 0).queue;
-	const free = planTurn(w, 0, w.rules.ai.config, 0, { held: new Set([0]) }).queue;
-	expect(all.some((cmd) => "unit" in cmd && cmd.unit === 0)).toBe(true);
-	expect(free.some((cmd) => "unit" in cmd && cmd.unit === 0)).toBe(false);
-	expect(free.length).toBeGreaterThan(0);
-});
-
-test("with no objective in reach and no attack the remastered AI gives the classic AI's commands (#616)", () => {
-	const units: HandUnit[] = [{ eqid: INFANTERIE, owner: 0, row: 2, col: 2 }, { eqid: PZ_IVD, owner: 0, row: 3, col: 2 },
-		{ eqid: TP7, owner: 1, row: 10, col: 15 }];
-	const w = world(units, [], [{ row: 8, col: 12 }]);
-	const classic = playOneTurn(aiController(0), w), remastered = playOneTurn(remasteredController(0), w);
-	expect(remastered.commands.length).toBeGreaterThan(0);
-	expect(remastered.commands).toEqual(classic.commands);
-	expect(remastered.world.state).toEqual(classic.world.state);
-});
-
 //Panzer-Verbaende Ostpreussen's start, in the rules given, every player the AI
-function ostpreussen(rules: RulesetName = "remaster", seed = 5): World {
-	const setup = { ...setupOf("drpzop01.xml", { game: seed, ai: seed + 7919 }, null, undefined, [], new new JSDOM().window.DOMParser()),
-		rules: rules === "remaster" ? remasterRules : classicRules };
-	const created = newGame(setup);
-	for (const p of created.state.players) p.type = playerType.aiLocal;
-	return createWorld(created, setup.equipment, { spotSide: -1, rules: setup.rules });
-}
+const ostpreussen = (rules: RulesetName = "remaster") => scenarioWorld("drpzop01.xml", rules);
 
 interface Played {
 	orders: unknown[];
@@ -166,7 +134,7 @@ test("the remastered AI gives no order the core refuses (#616)", () => {
 	expect(classic.refused[0] + classic.refused[1]).toBeGreaterThan(0);
 }, 60_000);
 
-test("a garrison holds its objective and the classic plan never orders it (#616, #5)", () => {
+test("a garrison holds its objective and the planner never orders it (#616, #5)", () => {
 	const made: ReturnType<typeof remasteredController>[] = [];
 	let garrisonOrders = 0;
 	//Every order of a unit a garrison holds is the garrison's: toward its objective, or from it
