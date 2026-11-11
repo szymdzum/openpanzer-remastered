@@ -6,10 +6,9 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { isTargetFrom, unitAttackRange } from "../attack";
+import { unitAttackRange } from "../attack";
 import { nextToSeenEnemy } from "../ai";
 import type { Command } from "../command";
-import { estimateAttack } from "../estimate";
 import { distance } from "../geometry";
 import { moveRange } from "../movement";
 import { seesUnit, unitSpotRange } from "../sight";
@@ -17,13 +16,14 @@ import { check } from "../step";
 import { unitClass } from "../tables";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canMount, firesOnlyBeforeMoving, isGround } from "../units";
-import { ammoOf, isSpotted, sideOf, unitData } from "../world";
+import { isSpotted, sideOf, unitData } from "../world";
 import { type Analysis, type AnalysisCache, fieldTo } from "./analysis";
 import { attacks, clockOf, isLate, pressed } from "./clock";
 import { around } from "./fields";
 import { classOf, freeGround, hexOf, marchOf, samePosition, turnsTo } from "./march";
 import { inGroundReach } from "./rear";
 import type { Operation } from "./staff";
+import { better, canFireNow, isWorth, onObjective, type Strike, strikeCommands, strikeFrom } from "./strike";
 
 /** The step of the assault's sequence an order belongs to. */
 export type AssaultStep = "recon" | "counter-battery" | "preparation" | "attack" | "guns forward";
@@ -40,23 +40,17 @@ const GROUP_TURNS = 2;
 const TARGET_RADIUS = 2;
 //The hexes a recon unit scouts around the sector: the targets and the guns that would cover them
 const SCOUT_RADIUS = 4;
-//A loss counts this much against a kill (the scripted general's LOSS_WEIGHT)
-const LOSS_WEIGHT = 0.7;
-//An attack worth ordering kills at least this much
-const MIN_KILLS = 1;
-//A unit this few turns from another objective to take keeps the classic pull to the nearest: it is nearly there (in
-//the arena, 1 sent too many units past objectives they would have taken)
+//A unit this few turns from another objective to take goes for the nearest: it is nearly there (in the arena, 1 sent
+//too many units past objectives they would have taken)
 const LOCAL_TURNS = 3;
 //The attackers in the order they go in: tanks, the anti-tank guns as the second line, then infantry and recon
 const WAVES: readonly (readonly number[])[] = [[unitClass.tank], [unitClass.antiTank], [unitClass.infantry, unitClass.recon]];
 
-const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) ? u : { ...u, row: at.row, col: at.col };
-
 /**
- * Where the classic plan pulls a ground unit: to the assault's sector (#258), but for a unit already near another
- * objective to take, which keeps the pull to the nearest, and for the side defending (#256): its units hold the line
- * while it retakes an objective, and those of `standFast` are pulled nowhere. In the last turns to the objectives the
- * unit still reaches in the turns left (#232), to every one when it reaches none. Aircraft and ships keep the pull to
+ * The objectives that pull a unit in the planner: the assault's sector for a ground unit (#258), but for one already
+ * near another objective to take, which goes for the nearest, and for the side defending (#256): its units hold the
+ * line while it retakes an objective, and those of `standFast` are pulled nowhere. In the last turns the objectives
+ * the unit still reaches in the turns left (#232), every one when it reaches none. Aircraft and ships are pulled to
  * every objective.
  */
 export function pullTo(w: World, cache: AnalysisCache, op: Operation | undefined, standFast: ReadonlySet<UnitId>)
@@ -132,7 +126,7 @@ function fireOrder(b: Battle): AssaultOrder | null {
 }
 
 //A recon unit of the group moves where it sees most of the sector it doesn't see yet, once a turn, before anything
-//else: its move is phased, the classic plan may move it again after
+//else: its move is phased, the planner may move it again after
 function reconOrder(b: Battle): AssaultOrder | null {
 	const unseen = around(b.w, [hexOf(b.w, b.sector)], SCOUT_RADIUS).filter((h) => !isSpotted(b.w, h, b.side));
 	if (unseen.length === 0) return null;
@@ -168,37 +162,6 @@ function scoutCell(b: Battle, u: UnitState, unseen: readonly number[]): MoveCell
 	return best;
 }
 
-//An attack's estimate as the screen gives it: the support fire it meets counts in its losses, and an attack the
-//support fire stops kills nothing
-interface Strike {
-	unit: UnitState;
-	target: UnitState;
-	from: Position | null;
-	kills: number;
-	losses: number;
-}
-
-const gainOf = (s: Strike) => s.kills - LOSS_WEIGHT * s.losses;
-
-function strikeFrom(w: World, u: UnitState, t: UnitState, from: Position | null): Strike | null {
-	const at = from === null ? u : standing(u, from);
-	if (!isTargetFrom(w, at, t)) return null;
-	const e = estimateAttack(w, at, t);
-	const losses = e.result.losses + e.support.reduce((n, s) => n + s.losses, 0);
-	return { unit: u, target: t, from, kills: e.stopped ? 0 : e.result.kills, losses };
-}
-
-const onObjective = (w: World, t: UnitState) => w.state.map.hexes[hexOf(w, t)].victorySide !== -1;
-
-/**
- * Whether an attack is worth ordering: it kills, and no more than it loses, but on an objective in the last turns or
- * behind schedule, where taking it is worth what it costs.
- */
-function isWorth(b: Battle, s: Strike): boolean {
-	if (s.kills < MIN_KILLS || s.losses >= s.unit.strength) return false;
-	return s.losses <= s.kills || (b.pressed && onObjective(b.w, s.target));
-}
-
 /**
  * Whether a classic plan's attack loses more than it kills by the estimate, but on an objective in the last turns or
  * behind schedule.
@@ -211,8 +174,6 @@ export function losesMore(w: World, cmd: Command): boolean {
 	return s !== null && s.losses > s.kills && !(pressed(w, sideOf(w, u)) && onObjective(w, t));
 }
 
-const canFireNow = (u: UnitState) => !u.hasFired && ammoOf(u) > 0;
-
 //A unit's best strike on the target from where it stands, or from a hex it moves to: not on its transport, whose move
 //uses its shot, nor artillery in the remaster rules, where any move does (#625)
 function bestStrike(b: Battle, u: UnitState, t: UnitState): Strike | null {
@@ -223,7 +184,7 @@ function bestStrike(b: Battle, u: UnitState, t: UnitState): Strike | null {
 //The strike from the hex, when it is worth ordering
 function worthFrom(b: Battle, u: UnitState, t: UnitState, from: Position | null): Strike | null {
 	const s = strikeFrom(b.w, u, t, from);
-	return s !== null && isWorth(b, s) ? s : null;
+	return s !== null && isWorth(b.w, s, b.pressed) ? s : null;
 }
 
 //The best of the strikes from the hexes the unit moves to in range of the target, or `best` when none beats it
@@ -231,8 +192,7 @@ function strikeAfterMove(b: Battle, u: UnitState, t: UnitState, best: Strike | n
 	const reach = unitAttackRange(b.w, u);
 	for (const c of b.cells(u)) {
 		if (!c.canMove || samePosition(c, u) || distance(c.row, c.col, t.row, t.col) > reach) continue;
-		const s = worthFrom(b, u, t, { row: c.row, col: c.col });
-		if (s !== null && (best === null || gainOf(s) > gainOf(best))) best = s;
+		best = better(best, worthFrom(b, u, t, { row: c.row, col: c.col }));
 	}
 	return best;
 }
@@ -292,19 +252,7 @@ function artilleryOrder(b: Battle, main: { target: UnitState } | null): AssaultO
 	return null;
 }
 
-function bestOf(strikes: readonly (Strike | null)[]): Strike | null {
-	let best: Strike | null = null;
-	for (const s of strikes) if (s !== null && (best === null || gainOf(s) > gainOf(best))) best = s;
-	return best;
-}
-
-//A strike's commands, the move to its hex first, when the core allows the first
-function strikeCommands(w: World, s: Strike | null): Command[] | null {
-	if (s === null) return null;
-	const attack: Command = { type: "attack", unit: s.unit.id, target: s.target.id };
-	const commands: Command[] = s.from === null ? [attack] : [{ type: "move", unit: s.unit.id, to: s.from }, attack];
-	return check(w, commands[0]) === null ? commands : null;
-}
+const bestOf = (strikes: readonly (Strike | null)[]) => strikes.reduce(better, null);
 
 //The armour attacks the main target, wave by wave, from the hex that gives each attacker the best estimate
 function attackOrder(b: Battle, main: { strikes: Strike[] } | null): AssaultOrder | null {
@@ -321,20 +269,26 @@ function attackOrder(b: Battle, main: { strikes: Strike[] } | null): AssaultOrde
 function gunsForward(b: Battle, units: readonly UnitState[]): AssaultOrder | null {
 	for (const g of units) {
 		if (!isArtillery(b.w, g) || g.hasMoved || g.hasFired || isGunOn(b.w, g, b.sector)) continue;
-		const order = gunMove(b, g);
+		const order = gunMove(b, g, b.sector);
 		if (order !== null) return { step: "guns forward", commands: order };
 	}
 	return null;
 }
 
-//How far a hex is from firing on the sector next turn
-const gapOf = (b: Battle, g: UnitState, c: Position) => Math.max(0,
-	distance(c.row, c.col, b.sector.row, b.sector.col) - unitAttackRange(b.w, g) - TARGET_RADIUS);
+/** What a gun's move reads: the world and the side's maps. */
+export interface GunPark {
+	w: World;
+	a: Analysis;
+}
 
-//What a gun's hex is judged on, the first that differs decides: how far from firing on the sector, the enemy's threat
-//on it, how far from the sector (nearer follows the front), what the move costs
-const gunKey = (b: Battle, g: UnitState, c: MoveCell): number[] => [gapOf(b, g, c), b.a.threat.ground[hexOf(b.w, c)],
-	distance(c.row, c.col, b.sector.row, b.sector.col), c.cost];
+//How far a hex is from firing on the hexes around `front` next turn
+const gapOf = (w: World, g: UnitState, c: Position, front: Position) => Math.max(0,
+	distance(c.row, c.col, front.row, front.col) - unitAttackRange(w, g) - TARGET_RADIUS);
+
+//What a gun's hex is judged on, the first that differs decides: how far from firing on the front, the enemy's threat
+//on it, how far from the front (nearer follows it), what the move costs
+const gunKey = (p: GunPark, g: UnitState, c: MoveCell, front: Position): number[] => [gapOf(p.w, g, c, front),
+	p.a.threat.ground[hexOf(p.w, c)], distance(c.row, c.col, front.row, front.col), c.cost];
 
 //Whether one key comes before another: the first value that differs decides
 function before(a: readonly number[], b: readonly number[]): boolean {
@@ -342,23 +296,27 @@ function before(a: readonly number[], b: readonly number[]): boolean {
 	return false;
 }
 
-//The move nearer firing on the sector, the mount first when it rides; null when none brings the gun nearer
-function gunMove(b: Battle, g: UnitState): Command[] | null {
-	const best = gunCell(b, g);
-	if (best === null || gapOf(b, g, best.cell) >= gapOf(b, g, g)) return null;
+/**
+ * A gun's move nearer firing on the hexes around `front` (#234), the mount first when it rides: never beside an enemy,
+ * nor into the enemy's ground reach from out of it, on its transport only out of that reach. Null when no hex brings
+ * it nearer.
+ */
+export function gunMove(p: GunPark, g: UnitState, front: Position): Command[] | null {
+	const best = gunCell(p, g, front);
+	if (best === null || gapOf(p.w, g, best.cell, front) >= gapOf(p.w, g, g, front)) return null;
 	const move: Command = { type: "move", unit: g.id, to: { row: best.cell.row, col: best.cell.col } };
 	const first: Command = best.mounted ? { type: "mount", unit: g.id } : move;
-	if (check(b.w, first) !== null) return null;
+	if (check(p.w, first) !== null) return null;
 	return best.mounted ? [first, move] : [move];
 }
 
 //The gun's best hex by its key, never beside an enemy, nor into the enemy's reach from out of it
-function gunCell(b: Battle, g: UnitState): { cell: MoveCell; mounted: boolean } | null {
-	const exposed = inGroundReach(b.a, hexOf(b.w, g));
+function gunCell(p: GunPark, g: UnitState, front: Position): { cell: MoveCell; mounted: boolean } | null {
+	const exposed = inGroundReach(p.a, hexOf(p.w, g));
 	let best: { cell: MoveCell; mounted: boolean; key: number[] } | null = null;
-	for (const [cells, mounted] of gunCells(b, g)) for (const c of cells) {
-		if (!c.canMove || nextToSeenEnemy(b.w, g, c) || (!exposed && inGroundReach(b.a, hexOf(b.w, c)))) continue;
-		const key = gunKey(b, g, c);
+	for (const [cells, mounted] of gunCells(p, g)) for (const c of cells) {
+		if (!c.canMove || nextToSeenEnemy(p.w, g, c) || (!exposed && inGroundReach(p.a, hexOf(p.w, c)))) continue;
+		const key = gunKey(p, g, c, front);
 		if (best === null || before(key, best.key)) best = { cell: c, mounted, key };
 	}
 	return best;
@@ -366,9 +324,9 @@ function gunCell(b: Battle, g: UnitState): { cell: MoveCell; mounted: boolean } 
 
 //The hexes a gun moves to: its own move, and its transport's out of the enemy's ground reach (a gun on its truck is
 //what the enemy overruns, #315)
-function gunCells(b: Battle, g: UnitState): [MoveCell[], boolean][] {
-	const out: [MoveCell[], boolean][] = [[moveRange(b.w, g), false]];
-	if (canMount(b.w, g) && !g.isMounted)
-		out.push([moveRange(b.w, { ...g, isMounted: true }).filter((c) => !inGroundReach(b.a, hexOf(b.w, c))), true]);
+function gunCells(p: GunPark, g: UnitState): [MoveCell[], boolean][] {
+	const out: [MoveCell[], boolean][] = [[moveRange(p.w, g), false]];
+	if (canMount(p.w, g) && !g.isMounted)
+		out.push([moveRange(p.w, { ...g, isMounted: true }).filter((c) => !inGroundReach(p.a, hexOf(p.w, c))), true]);
 	return out;
 }
