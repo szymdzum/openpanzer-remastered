@@ -12,7 +12,7 @@ import { attackCells, attackableUnit } from "./attack";
 import { type AIPlan, attackPotential, attackScore, cellScore, findFreed, objectiveScore, type Scorer, standingOn } from "./aiscore";
 import type { Controller, Played } from "./controller";
 import { deploymentHexes } from "./deployment";
-import { adjacent, distance } from "./geometry";
+import { distance } from "./geometry";
 import type { GameEvent } from "./events";
 import { moveRange } from "./movement";
 import { check, step } from "./step";
@@ -20,8 +20,8 @@ import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
 import type { MoveCell, Position, UnitState, World } from "./types";
 import { canMount, firesOnlyBeforeMoving, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
-import { groundUnitAt, hexIndex, onMap, sideOf, unitData } from "./world";
-import { seesUnit } from "./sight";
+import { hexIndex, sideOf, unitData } from "./world";
+import { nextToSeenEnemy, seesUnit } from "./sight";
 
 export interface AIControllerOptions {
 	config?: AIConfig;	//the settings of the rules the game plays by (w.rules.ai) when not given
@@ -369,16 +369,6 @@ function nearSeenEnemy(w: World, u: UnitState, range: number): boolean {
 	const side = sideOf(w, u);
 	return w.state.units.some((other) => sideOf(w, other) !== side && distance(u.row, u.col, other.row, other.col) <= range
 		&& seesUnit(w, other, side));
-}
-
-/** Whether the hex is next to an enemy ground unit the unit's side sees. */
-export function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
-	const side = sideOf(w, u);
-	return adjacent(cell.row, cell.col).some((c) => {
-		if (!onMap(w, c.row, c.col)) return false;
-		const hex = hexIndex(w, c.row, c.col), other = groundUnitAt(w, hex);
-		return other !== null && sideOf(w, other) !== side && seesUnit(w, other, side);
-	});
 }
 
 //The best scored hex of the move range, then of the hexes only its transport reaches (mounted); null

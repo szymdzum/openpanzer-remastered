@@ -6,10 +6,10 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { nextToSeenEnemy } from "../ai";
 import type { Command } from "../command";
 import { distance } from "../geometry";
 import { moveRange } from "../movement";
+import { nextToSeenEnemy } from "../sight";
 import { check } from "../step";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canMount } from "../units";

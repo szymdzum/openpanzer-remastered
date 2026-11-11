@@ -7,11 +7,10 @@
  */
 
 import { unitAttackRange } from "../attack";
-import { nextToSeenEnemy } from "../ai";
 import type { Command } from "../command";
 import { distance } from "../geometry";
 import { moveRange } from "../movement";
-import { seesUnit, unitSpotRange } from "../sight";
+import { nextToSeenEnemy, seesUnit, unitSpotRange } from "../sight";
 import { check } from "../step";
 import { unitClass } from "../tables";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
