@@ -1,6 +1,7 @@
 /**
  * The remastered AI's staff: operations made from the commander's directives (#638), a garrison on each objective to
- * hold (#5), the reserve; and a unit onto an objective to take that the side's attack has just emptied (#312).
+ * hold (#5) and the line that stands fast by it, the reserve; and a unit onto an objective to take that the side's
+ * attack has just emptied (#312).
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -20,7 +21,8 @@ import { canCapture, canMount, isGround, unitUsesFuel } from "../units";
 import { groundUnitAt, hexIndex, unitById, unitData } from "../world";
 import type { Directive } from "./directives";
 import type { SideView } from "./perception";
-import { samePosition } from "./march";
+import type { AnalysisCache } from "./analysis";
+import { freeGround, samePosition, turnsTo } from "./march";
 
 /**
  * An operation's task: hold an objective of the side's (#5), take one it emptied (#312), assault one (#618), strike
@@ -125,6 +127,45 @@ function pickReserve(w: World, view: SideView, player: number, held: ReadonlySet
 		&& unitData(w, u, true).movpoints >= MOBILE_MOVES);
 	mobile.sort((x, y) => front(y) - front(x) || x.id - y.id);
 	return mobile.slice(0, Math.round(mobile.length * RESERVE_SHARE)).map((u) => u.id);
+}
+
+//The enemy this near an objective to hold calls units into its line
+const LINE_RADIUS = 4;
+//A unit of the line for each 10 points of the enemy's strength there: a unit at full strength for each of the enemy's
+const LINE_STRENGTH = 10;
+//The turns of its march within which a unit is near enough the objective to be its line
+const LINE_TURNS = 2;
+
+/**
+ * The line of the objectives to hold: the units that stand fast, pulled to no objective of the enemy's. For each
+ * `hold` or `delay`, the infantry and anti-tank guns no operation holds nearest it, within LINE_TURNS of their
+ * march, one for each LINE_STRENGTH of the enemy the side knows of within LINE_RADIUS of it. They stay where they
+ * are, in their holes: moved up beside the objective they were lost in the open (docs/ai/arena.md, #638).
+ */
+export function standFast(w: World, view: SideView, cache: AnalysisCache, player: number, held: ReadonlySet<UnitId>,
+	directives: readonly Directive[]): Set<UnitId> {
+	const line = new Set<UnitId>(), free = freeGround(w, player, held).filter((u) => holdsLine(w, u));
+	const apart = (u: UnitState, o: Position) => distance(u.row, u.col, o.row, o.col);
+	for (const d of posturesOf(directives)) {
+		const near = free.filter((u) => !line.has(u.id)).map((u) => ({ u, turns: turnsTo(w, cache, u, d.target) })).filter((x) => x.turns <= LINE_TURNS);
+		near.sort((x, y) => x.turns - y.turns || apart(x.u, d.target) - apart(y.u, d.target) || x.u.id - y.u.id);
+		for (const x of near.slice(0, Math.ceil(enemyNear(w, view, d.target) / LINE_STRENGTH))) line.add(x.u.id);
+	}
+	return line;
+}
+
+//Infantry and anti-tank guns hold a line; tanks and recon are the units that move
+function holdsLine(w: World, u: UnitState): boolean {
+	const uclass = unitData(w, u, true).uclass;
+	return uclass === unitClass.infantry || uclass === unitClass.antiTank;
+}
+
+//The strength of the ground enemies the side knows of within LINE_RADIUS of the hex, each by its confidence in it
+function enemyNear(w: World, view: SideView, at: Position): number {
+	let strength = 0;
+	for (const s of view.enemies)
+		if (w.equipment[s.eqid].uclass <= unitClass.airDefence && distance(s.row, s.col, at.row, at.col) <= LINE_RADIUS) strength += s.strength * s.confidence;
+	return strength;
 }
 
 const isStrike = (kind: string) => kind === "assault" || kind === "counterattack";
