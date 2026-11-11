@@ -49,6 +49,9 @@ export interface SideResult {
 	unitsLost: number;
 	unitsDestroyed: number;			//the enemy's
 	refused: number;			//its orders the core refused (the AI plans its turn at its start, #94)
+	bought: number;				//units bought
+	spent: number;				//prestige spent on them
+	reinforced: number;			//strength points reinforced
 	turnMs: number[];			//the time spent in its controller's calls, each turn (machine-dependent)
 }
 
@@ -83,6 +86,7 @@ export function playMatch(match: Match): GameResult {
 		endedSide: -1 };
 	const maxTurns = Math.min(match.turns || Infinity, s.world.state.scenario.maxTurns);
 	remember(s.world, g.owners);
+	if (s.first !== null) spending(g, s.first.events);
 	for (let n = 0; n < 200_000 && s.ended === null && s.world.state.turn.turn <= maxTurns; n++) {
 		const turn = s.world.state.turn.turn;
 		const a = advance(s);
@@ -103,7 +107,9 @@ function took(g: Play, a: Exclude<Advance, { kind: "ended" }>, turn: number) {
 	else {
 		g.endedSide = g.s.world.state.players[a.player].side;
 		turnPlayed(g, a.player);
+		if (a.started !== null) spending(g, a.started.events);
 	}
+	if (a.kind === "order") spending(g, a.events);
 	tally(g.sides, g.owners, turn, a.kind === "order" ? a.events : [...a.events, ...a.arrived]);
 	remember(g.s.world, g.owners);
 }
@@ -151,6 +157,20 @@ function ordered(match: Match, sides: SideResult[], w: World, a: Extract<Advance
 	return "command" in a.order ? 1 : 0;
 }
 
+//The units bought, their prestige and the strength reinforced that a turn start's or an order's events tell
+function spending(g: Play, events: GameEvent[]) {
+	for (const e of events) {
+		if (e.type === "bought") {
+			const by = g.sides[g.s.world.state.players[e.player].side];
+			by.bought++;
+			by.spent += e.cost;
+		} else if (e.type === "reinforced") {
+			const owner = g.owners.get(e.unit);
+			if (owner !== undefined) g.sides[owner].reinforced += e.strength;
+		}
+	}
+}
+
 //The losses and the captures of objectives an advance's events tell
 function tally(sides: SideResult[], owners: Map<number, number>, turn: number, events: GameEvent[]) {
 	for (const e of events) {
@@ -179,7 +199,7 @@ function endOf(s: Session, endedSide: number): Pick<GameResult, "end" | "winner"
 
 function side(player: Player): SideResult {
 	return { player, firstObjectiveTurn: null, objectivesTaken: 0, objectivesHeld: 0, unitsLost: 0, unitsDestroyed: 0, refused: 0,
-		turnMs: [] };
+		bought: 0, spent: 0, reinforced: 0, turnMs: [] };
 }
 
 function remember(w: World, owners: Map<number, number>) {
