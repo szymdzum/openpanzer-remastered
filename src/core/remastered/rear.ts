@@ -9,6 +9,8 @@
 import type { Command } from "../command";
 import { distance } from "../geometry";
 import { check } from "../step";
+import { canResupply, reinforcement } from "../supply";
+import { unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
 import { canUnmount, isAir, unitUsesFuel } from "../units";
 import { hexIndex, unitById, unitData } from "../world";
@@ -80,6 +82,53 @@ export function unmountOrder(w: World, a: Analysis, player: number, held: Readon
 		if (u === null || !isFree(u, player, held) || !canUnmount(u) || !inGroundReach(a, hexOf(w, u))) continue;
 		const unmount: Command = { type: "unmount", unit: u.id };
 		if (check(w, unmount) === null) return unmount;
+	}
+	return null;
+}
+
+//A unit worn down below this strength is reinforced before it does anything else, and one with less ammunition or
+//fuel than this resupplied, wherever it stands: it can't fight as it is (the classic AI's thresholds)
+const WORN_OUT = 4;
+const LOW_AMMO = 2;
+const LOW_FUEL = 5;
+
+const isLow = (w: World, u: UnitState) => u.ammo < LOW_AMMO || (unitUsesFuel(w, u) && u.fuel < LOW_FUEL);
+
+//The reinforcement of a unit the player's prestige, read from the world, pays a point of: not of a fortification
+function reinforced(w: World, u: UnitState): Command | null {
+	if (unitData(w, u, true).uclass === unitClass.fortification || reinforcement(w, u).bought < 1) return null;
+	const reinforce: Command = { type: "reinforce", unit: u.id };
+	return check(w, reinforce) === null ? reinforce : null;
+}
+
+function resupplied(w: World, u: UnitState): Command | null {
+	const resupply: Command = { type: "resupply", unit: u.id };
+	return canResupply(w, u) && check(w, resupply) === null ? resupply : null;
+}
+
+const canBeSupplied = (u: UnitState, player: number, held: ReadonlySet<UnitId>) => isFree(u, player, held) && !u.hasFired && !u.hasResupplied;
+
+/**
+ * The supply a unit no operation holds can't fight without, before its other orders: a reinforcement when it is worn
+ * out, a resupply when it is nearly out of ammunition or fuel.
+ */
+export function urgentSupply(w: World, player: number, held: ReadonlySet<UnitId>): Command | null {
+	for (const u of w.state.units) {
+		if (!canBeSupplied(u, player, held)) continue;
+		const cmd = (u.strength < WORN_OUT ? reinforced(w, u) : null) ?? (isLow(w, u) ? resupplied(w, u) : null);
+		if (cmd !== null) return cmd;
+	}
+	return null;
+}
+
+/**
+ * The supply of a unit no operation holds that neither moved nor fired this turn: a reinforcement while the player
+ * can pay for one, else a resupply.
+ */
+export function idleSupply(w: World, player: number, held: ReadonlySet<UnitId>): Command | null {
+	for (const u of w.state.units) {
+		const cmd = canBeSupplied(u, player, held) ? reinforced(w, u) ?? resupplied(w, u) : null;
+		if (cmd !== null) return cmd;
 	}
 	return null;
 }
