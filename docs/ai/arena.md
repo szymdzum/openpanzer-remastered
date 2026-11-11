@@ -790,6 +790,125 @@ games (430 before; Uman's defence 40 of 40). The targets of remastered-design.md
 before (Uman's defence 29 wins of 40, target 25). The planning time is the same: Zitadelle 157 ms a turn (95th
 percentile 380, worst 489), Uman 170 (158 before), the worst turn of the suite 771 ms (Luttich), the slowest game 3.9 s.
 
+## The remastered AI, the commander's first part (#638), 11 November 2026
+
+The commander's directives and what the staff makes of them (remastered-design.md, "Built: the commander"): the
+turn clock (behind schedule, the last turns' reach), the attacker's role by the turn limit's rule, the counterattack
+and the line that stands fast by an objective to hold. Before: main at da08500 (after the air rules, #631 and #632);
+after: this, the same seats, remaster rules, both runs `remastered`:
+
+```sh
+ARENA_SUITE=1 JOBS=3 ARENA_MATCHUPS=remastered-general,general-remastered,remastered-ai,ai-remastered ARENA_OUT=after.json npm run arena
+npm run arena:compare -- before.json after.json
+```
+
+**The staff reading directives changes no game.** With the commander giving only the holds and the assault the
+staff chose itself before, 320 of 320 games came out the same as on main (seeds 101-110, the suite, the four seats).
+One thing had to be kept for it: when its sector is hopeless and the only sector that isn't was taken this turn, the
+staff made a new assault on the same sector at every order, and each new operation has the classic plan made again.
+With the operation kept instead, Indochina's attack took 1.65 objectives against the general instead of 2.02 (seeds
+101-140, beyond the noise): a directive given anew starts its operation anew, as before.
+
+Tuned on seeds 101-140, each part alone against main, then together; the seats against the general:
+
+- **The roles by the turn limit's rule** (#353). For the attacker: Bzura's allies won 11 of 40 instead of 2 and
+  Taman's 22 instead of 13, since an attacker that holds more objectives than it has left to take no longer sits in
+  its holes. For the defender too, it held fewer: Bzura's axis 4.9 objectives at the end instead of 6.6 (a
+  defender that has lost the lead and stays dug in takes less back). So the attacker's role follows the rule, and a
+  defender that has lost more than the attacker has left to take still plays as one.
+- **Behind schedule**, an attack on an objective worth its cost, and **the last turns' reach**: nothing beyond the
+  noise on a main measure (531 and 529 of the 640 games came out the same). Both kept.
+- **An attacker's reserve**, a fifth of its mobile units held out of reach until behind schedule, the last turns, a
+  counterattack or a breakthrough: on these seeds neutral or better (Ostpreussen's axis took 5.2 objectives against
+  4.95, Bzura's allies won 6 of 40 against 2). On seeds 41-80, played to check the whole, Ostpreussen's attack took
+  4.4 objectives with it against 5.3 on main, at 3.1 units an objective against 2.5, and Zitadelle's won 9 of 40
+  against 12; with the reserve alone switched off, 5.4 objectives at 2.25 and 12 wins. Left out: the rule-based
+  commander gives no `reserve`; the staff carries one out for a commander that does.
+- **A defender's reserve** behind its first objective to hold, committed to a counterattack: Indochina's allies lost
+  11.95 units instead of 10.3, Luttich's axis 27.4 instead of 25.15, Taman's axis won 30 of 40 instead of 36. Left out.
+- **Counterattack**: for every side on an objective just lost, and on a worn-down enemy near an objective for a
+  defender only. On an attacker's side the worn-down enemy cost Bzura's allies 0.92 units an objective instead of
+  0.79. As it is: nothing beyond the noise on a main measure.
+- **Delay** (the units in front of an objective the enemy outweighs 2 or 3 to 1 fall back toward the next one): for
+  a defender only and at 3 to 1, Luttich's axis held 3.67 objectives instead of 3.88 and lost 27.1 units instead of
+  26.6 (both beyond the noise), Ostpreussen's allies held 3.73 instead of 3.92; for either side at 2 to 1, Bzura's
+  attacking allies took 7.4 instead of 8.0. Left out: the commander gives no `delay`, and the staff holds a delayed
+  objective as it holds any.
+- **Withdrawing a worn-down unit** (#6), in three gatings: away from every directive's hex (Zitadelle's attack took
+  4.3 objectives instead of 5.2, Uman's defence held 0.75 instead of 1.4, Battleaxe's 4.75 instead of 5.3, Luttich's
+  took back 1.9 instead of 3.0); away from every objective as well (Uman's defence took back 1.6 instead of 2.45,
+  Indochina's held 4.35 instead of 4.58); only in front of a delayed objective (5 of 640 games changed). Left out.
+- **Finishing off a weak enemy** (#6) inside the assault's sector: Luttich's attack took 4.75 objectives instead of
+  4.95, beyond the noise, nothing better elsewhere. Left out.
+- **The main effort by the enemy's known strength** within 3 hexes of a sector instead of its mean influence:
+  nothing beyond the noise in any attack. Left as it was.
+- **The line of a hold.** Every unit of a defender pulled to its objectives to hold instead of the enemy's:
+  Ostpreussen's allies held 4.92 objectives instead of 3.92 and lost 18.75 units instead of 29.45, Uman's won 40 of
+  40 instead of 26, Taman's axis 40 instead of 33; and Bzura's axis held 3.8 instead of 6.6, Indochina's allies 3.33
+  instead of 4.45, Zitadelle's lost 35.4 units instead of 28.1. Only the nearest units, as many as the enemy near
+  the objective calls for: the same in smaller numbers at every size of the line (Battleaxe's axis lost 21 to 23
+  units instead of 16.8). Only infantry and anti-tank guns: Battleaxe's still lost 20.2. The same units standing
+  where they are, pulled nowhere: Taman's axis lost 20.6 units instead of 22.75 and Luttich's held 4.25 objectives
+  instead of 3.88, nothing worse beyond the noise. Kept so.
+
+Accepted on seeds 1-40. The remastered AI's side, before (main) and after, where the paired difference is beyond
+the noise ("same": noise on every measure). Orders refused stayed 0:
+
+| Scenario | Side | against the classic AI | against the general |
+|---|---|---|---|
+| Ostpreussen | axis attacks | destroyed 21.0 → 22.5 | **units lost 12.15 → 13.63** (taken 4.70 → 5.00, lost per objective 2.59 → 2.73, same) |
+| | allies defend | destroyed 10.8 → 13.7 | destroyed 5.6 → 7.95 (held 3.95 → 4.10, units lost 31.35 → 28.65, same) |
+| Bzura | allies attack | wins 1 → 9 of 40, units lost 7.9 → 6.85, lost per objective 1.33 → 1.10 | wins 2 → 12 of 40, held 6.30 → 6.92 |
+| | axis defend | taken back 4.22 → 4.88, destroyed 7.95 → 9.95 | same (held 6.50 → 6.17, units lost 12.53 → 12.40) |
+| Indochina | axis attack | took one in 37 → 33 games | took one in 35 → 40 games, first objective turn 8.7 → 7.8 (taken 1.73 → 2.05, same) |
+| | allies defend | same | same |
+| Zitadelle | axis attack | same (wins 10 → 12 of 40) | same (wins 6 → 9 of 40, taken 5.00 → 5.28) |
+| | allies defend | same | same |
+| Uman | axis attack | same | same |
+| | allies defend | same | same (wins 31 → 29 of 40, units lost 75.3 → 73.4) |
+| Battleaxe | allies attack | same (wins 25 → 23 of 40) | same (wins 37 → 39 of 40) |
+| | axis defend | **held 4.08 → 3.20, units lost 23.7 → 25.8** (wins 38 → 36, same) | same (held 5.33 → 5.20, units lost 16.30 → 16.30) |
+| Taman | allies attack | same | units lost 28.2 → 25.6 (wins 13 → 17 of 40, same) |
+| | axis defend | took one back in 18 → 8 games, taken back 0.45 → 0.20 (wins 35 → 36, same) | same (wins 31 → 33 of 40) |
+| Luttich | allies attack | same (wins 16 → 11 of 40) | destroyed 18.35 → 19.75 (taken 4.42 → 4.78, lost per objective 10.45 → 9.72, same) |
+| | axis defend | same | **units lost 24.15 → 26.30** (held 4.17 → 3.92, same) |
+
+Against the general one main measure is worse beyond the noise: Luttich's defence loses 2.15 units more (0.26 to
+4.04). It doesn't hold on the other seeds, played with the same code: +0.13 on seeds 41-80, -1.43 on 101-140; over
+the 120 games the paired difference is +0.28 (-1.05 to 1.61), and the objectives held +0.07 (-0.13 to 0.28). On
+seeds 41-80 neither the counterattack nor the line alone moves it (24.35 and 25.77 against 25.50 on main). Of the
+suite's main measures, some thirty judged at 95%, one beyond the noise is what chance gives; it is the owner's call,
+and the defender's two parts are a commit of their own. Ostpreussen's attack loses 1.5 units more for 0.3 objectives more:
+its main measures, the objectives taken and the units lost for each, are within the noise, as are #629's two
+(Ostpreussen's lost per objective 2.59 → 2.73, on seeds 41-80 2.47 → 2.25; Luttich's objectives taken 4.42 → 4.78,
+on seeds 41-80 4.92 → 4.72): neither fixed nor added to. Against the classic AI, which the protocol reports,
+Battleaxe's defence holds fewer objectives; on seeds 41-80 it is within the noise (held 3.40 → 3.15, units lost
+25.55 → 24.88).
+
+Against the classic AI, both sides: 444 of 640 games (443 on main). Its wins by scenario, axis then allies:
+Ostpreussen 0 and 40, Bzura 40 and 9, Indochina 0 and 40, Zitadelle 12 and 40, Uman 39 and 40, Battleaxe 36 and 23,
+Taman 36 and 38, Luttich 40 and 11.
+
+The targets of remastered-design.md against the general: 25 of 29, as on main since the air rules (Taman's defence
+wins 31 of 40 there, 33 now). Now met: Ostpreussen's defender holds 4.10 objectives at the end (target 4.1). No
+longer met: Luttich's defender loses 26.3 units (target 26.2). Not met as before: the defender's units lost in
+Ostpreussen (28.65, target 22.3), Bzura (12.4, target 10.8) and Indochina (10.97, target 9.4).
+
+The planning time of the remastered AI, all its turns, seeds 1-40: Zitadelle 174 ms a turn (95th percentile 427,
+worst 571; 170, 420 and 567 on main), the worst turn of the suite 778 ms (Luttich), the slowest game 4.2 s: within
+the budget.
+
+What it says:
+
+- **The attacker that leads keeps attacking** (#353): Bzura's allies win 12 of 40 against the general (2 before) and
+  9 of 40 against the classic AI (1); on seeds 41-80 and 101-140 too (8 against 3, 15 against 2).
+- **Holding units back costs this AI more than it saves.** The reserve, the delay and the withdrawal each saved
+  units and lost objectives, and the turn limit counts objectives (#256). #6 stays open.
+- **Where a defender's units stand decides more than anything else measured here**: pulled to their objectives they
+  win Uman and Taman outright and hold a whole objective more in Ostpreussen, and lose two or three in Bzura and
+  Indochina, where the defender has to take objectives back. No rule tried tells the two apart; standing fast is
+  the part of it that costs nothing.
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the

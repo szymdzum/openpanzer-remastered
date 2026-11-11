@@ -5,7 +5,9 @@ next to the classic one rather than instead of it. foundations.md has the theory
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
 analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
 plan made again after every attack, the garrisons and the occupation of an emptied objective, the resupply before
-contact and the rides out of reach ("Built: the staff"), and the assault doctrine ("Built: the assault doctrine").
+contact and the rides out of reach ("Built: the staff"), the assault doctrine ("Built: the assault doctrine"), and
+the commander's first part: the directives, the turn clock, the main effort, the counterattack and the line of a
+hold ("Built: the commander").
 
 ## What the core already gives
 
@@ -169,6 +171,99 @@ keeps a clock: how many turns are left for how many objectives (#232). It answer
 The rule-based commander and the language-model one share that contract, so the model is a
 module that can be swapped, not a separate architecture.
 
+### Built: the commander (#638)
+
+In src/core/remastered/: directives.ts (the contract), commander.ts (the rules) and clock.ts (the turn clock); the
+remaster's rules only. The controller asks its commander at every review of the operations (each
+order: an objective may have fallen since the last) and the staff makes its operations from the answer alone
+("Built: the staff"). The measures: arena.md, "The remastered AI, the commander's first part (#638)".
+
+- **The contract** (`Directive`): `{ task, target, priority, until, reason }`: what to do, the hex it is about, its
+  rank (1 first), the last turn it stands, and why, in words. Plain data, the same after JSON. Any source may give
+  them (`Commander`, the controller's second argument; the rules of `command` when not given): the language model
+  later (#45).
+
+| Task | Target | What the staff makes of it |
+|---|---|---|
+| `hold` | an objective the side holds | a garrison (#5), and the infantry and anti-tank guns near it stand fast |
+| `delay` | an objective the side holds | the same as a hold, for now: falling back in front of it lost objectives (below) |
+| `assault` | an objective to take | the assault operation, one at a time: the battle group, the order of arms, the pull (#618) |
+| `counterattack` | any hex | an operation with the assault's fire and attack on the hex, before the assault's |
+| `reserve` | any hex | a fifth of the mobile units wait out of the enemy's reach, as near the hex as they get; the rules give none |
+
+- **The check** (`validateDirectives(list, world, side)`): every list passes it before the staff reads it, the rules'
+  own too. Dropped, each with its place in the list and the reason: what isn't a directive, an unknown task, a
+  target off the map, a hold or a delay that isn't on an objective the side holds, an assault that isn't on one to
+  take, a priority that isn't a number from 1, a last turn already passed, no reason; then, read in priority, a
+  second directive of the same task on the same hex, a second posture for an objective, a second assault, a second
+  reserve. A valid directive with nothing else in it is passed on as the same object.
+- **Kept or given anew.** A directive the commander keeps is the same object as the turn before, and the staff's
+  operation for it goes on. An assault given anew, even on the same sector, starts its operation anew and the classic
+  plan is made again: so it was before, when the staff weighed the sectors itself (the arena replays the same games,
+  below).
+- **`command(world, view, analysis, memory)`**, the rule-based commander, is pure: no random stream, nothing kept.
+  `memory` is the controller's (docs/STATE.md D6): its player, its last directives, the units the staff's operations
+  hold (the main effort counts only the others; the controller asks again once a new garrison has changed them) and
+  the analysis's cache. A loaded game starts with no last directives and gets the same ones at each load.
+- **The turn clock** (`clockOf`, #232): the side's turns left, this one included, for its objectives left to take.
+  `attacks`: the scenario's attacker by the turn limit's rule (#256), with none the side with more left to take;
+  the roles are read from it everywhere (#353). `behind`: the attacker's share of its objectives still to take is
+  more than its share of the turns left plus a quarter (`SCHEDULE_SLACK`: the march to the first objective takes
+  turns that take nothing). `late`: the last third of the turns (`LATE_SHARE`). What follows from it:
+  - an assault's deadline is the turns left shared among the objectives left, three at least (`deadlineOf`);
+  - behind schedule or in the last turns an attack on an objective's defender is worth what it costs (the assault's
+    and the classic plan's, "No attack that loses more than it kills");
+  - in the last turns the main effort is only on a sector a unit that can capture still reaches in the turns left
+    (its march on the distance fields), and a unit is pulled only to the objectives it reaches itself; to all of them
+    when it reaches none.
+- **The roles in the classic plan** (#353): `planTurn`'s `attacks` says whether the side leaves its holes away
+  from the enemy (#235); without it the plan counts the objectives as before. The remastered AI gives it the
+  scenario's attacker, even once it holds more objectives than it has left to take, and a defender that has lost
+  more than the attacker has left: by the rule alone a defender stayed in its holes and took back fewer (Bzura's
+  held 4.9 objectives at the end instead of 6.6).
+- **The main effort** (#629): the commander's choice, by the rule the assault had: the sector the side strikes best
+  (each free ground unit's strength over 1 + the turns of its march, less the enemy's mean influence around it),
+  kept until it is taken, its deadline passes or it is hopeless while another isn't. Scoring the enemy by its known
+  strength within 3 hexes instead moved nothing in the arena; the two costs of #629 are as they were.
+- **Hold**: an objective a ground enemy the side knows of can reach within two of its moves (`HOLD_TURNS`), for
+  three turns, then weighed again. The staff's garrison (#616), and its line: for a side that defends, the infantry
+  and anti-tank guns no operation holds within two turns' march of the objective, the nearest first, one for each 10
+  points of the enemy's known strength within 4 hexes of it (`LINE_TURNS`, `LINE_STRENGTH`, `LINE_RADIUS`), are
+  pulled to no objective of the enemy's: they stand fast, and the tanks and the recon are the units that move.
+- **Counterattack** (#5): on an objective the last directives held and the enemy has taken, while the side sees the
+  taker on it, for two turns (`COUNTER_TURNS`: it digs in after that); and, for a side that defends, on an enemy worn
+  down to 4 (`WORN`) out of its holes (entrenchment 1 or less) within 3 hexes of an objective it holds
+  (`COUNTER_RADIUS`), for the turn. Only when the estimate favours the units in reach: the kills less 0.7 of the
+  losses (`LOSS_WEIGHT`, the support fire counted) of every free ground unit that can strike it this turn, from its
+  hex or from the hex beside the enemy nearest it, sum to more than 0. The staff strikes the hex as the assault does
+  its sector, without the reconnaissance and the guns' march, and walks onto an objective emptied (#312). An
+  attacker's units are its main effort's: it counterattacks only for an objective lost.
+- **The reserve** is the staff's, for a commander that asks for one (reserve.ts): it holds back a fifth
+  (`RESERVE_SHARE`) of the player's mobile units (infantry, anti-tank, tanks and recon that move 4 hexes or more on
+  their own, `MOBILE_MOVES`), the furthest from the enemies it knows of. Each turn they move to the hex out of the
+  enemy's ground reach nearest the directive's, fire only from where they stand when the estimate gives more kills
+  than losses, and are resupplied or reinforced there. One of them goes first when an objective needs a garrison
+  (worth 6 points of strength more, `RESERVE_FIRST`). They are free units again once the directive is no longer
+  given. The rule-based commander gives none (below).
+- **Tried and left out**, each measured in the arena (arena.md):
+  - *An attacker's reserve*, kept from the first turn behind the main effort and committed for good behind
+    schedule, in the last turns, to a counterattack, or once the main effort broke through. On the tuning seeds it
+    was neutral or better (Ostpreussen's attack took 5.2 objectives against 4.95); on seeds 41-80 Ostpreussen's took
+    4.4 against 5.4 without it and lost 3.1 units an objective against 2.25. *A defender's reserve* behind its first
+    objective to hold lost it units and objectives (Indochina, Luttich, Taman), as the scripted general's did.
+  - *Delay*: where the enemy's influence around an objective was 2 or 3 times the side's, the units in front of it
+    fell back toward the next objective. A defender held fewer objectives and lost more units (Ostpreussen, Luttich),
+    and an attacker's units left its front for its rear objectives (Bzura). The task stays in the contract.
+  - *Withdrawing a worn-down unit* (#6) that holds nothing: away from every directive's hex, then away from every
+    objective too. It saved units and lost objectives for both sides again (Zitadelle's attack, Uman's, Battleaxe's
+    and Luttich's defence), as in #617.
+  - *Finishing off a weak enemy* (#6) inside the assault's sector before the main target: Luttich's attack took
+    fewer objectives.
+  - *A line pulled up beside the objective*: Ostpreussen's defence held 0.4 to 1.0 objectives more for 2 to 10 units
+    fewer, Uman's and Taman's won nearly every game, and Bzura's, Battleaxe's and Indochina's lost objectives and
+    units in the open, whatever the size of the line. Standing fast keeps a part of the gain and none of the cost.
+  - *The roles by the turn limit's rule for a defender*: above.
+
 ### 4. Staff: operations
 
 Groups the units into battle groups (by position and role) and breaks their tasks down with a
@@ -194,9 +289,10 @@ In src/core/remastered/staff.ts, called by the controller (controller.ts); the r
 AI and its rules untouched (the contracts and verify play them).
 
 - **Operations** (`Operation`): a kind, a target hex, the units held, a deadline turn and a reason, the design's
-  explanation ("garrison 15,12: enemy 2 hexes away"). They are the controller's memory (docs/STATE.md D6), kept
-  between its turns and reviewed at each order: one ends when its deadline passes, a unit of it is gone, or (a
-  garrison) its objective is lost or no longer threatened. A loaded game starts with none and plans them again.
+  explanation ("hold 15,12: enemy 2 hexes away"). They are made from the commander's directives and from nothing
+  else (#638, "Built: the commander"), but the occupation of an objective just emptied. They are the controller's
+  memory (docs/STATE.md D6), kept between its turns and reviewed at each order: one ends when its deadline passes, a
+  unit of it is gone, or its directive is no longer given. A loaded game starts with none and plans them again.
 - **One owner per unit.** The units the operations hold are left out of the classic plan (`planTurn`'s `held`,
   src/core/ai.ts): no move, attack, resupply or reinforcement of theirs comes from it. The purchases and the
   deployment stay the classic ones.
@@ -205,10 +301,10 @@ AI and its rules untouched (the contracts and verify play them).
   that fails on a plan just made is dropped. No order the core refuses is given. The first plan of a turn keeps its
   AI-stream draws in the world as the classic AI's does; the plans made again during the turn draw from where it left
   the stream (`next` returns no world), the same numbers each time. The staff draws nothing.
-- **Garrison** (#5): an objective of the side's that a ground enemy the side knows of (seen or remembered, #17)
-  can reach within two of its moves (hex distance, `GARRISON_TURNS`) gets one: the player's ground unit on it, else
-  the best of its infantry, anti-tank, tanks and recon that can get there within two moves: strength, +3 for
-  infantry and anti-tank, -3 a hex. It marches there first in the turn (in its transport when that goes nearer), never
+- **Garrison** (#5): an objective of the side's the commander holds (a ground enemy the side knows of, seen or
+  remembered, #17, can reach it within two of its moves, hex distance) gets one: the player's ground unit on it, else
+  the best of its infantry, anti-tank, tanks and recon that can get there within two moves (`GARRISON_TURNS`):
+  strength, +3 for infantry and anti-tank, -3 a hex. It marches there first in the turn (in its transport when that goes nearer), never
   leaves the hex while the operation lasts (three turns, then weighed again), fires from it when the estimate
   (estimate.ts) gives more kills than losses and the support fire doesn't stop it, and is resupplied or reinforced
   there once the classic plan is done. A garrison destroyed or gone is replaced at the next order.
@@ -230,7 +326,8 @@ The second part (#617), in rear.ts, ahead of the classic plan after the garrison
 - **Tried and left out** (#6, measured in arena.md): withdrawing a worn-down unit to reinforce saved units but lost
   objectives and games for a defender (Battleaxe, Luttich, Uman) and its attacks for an attacker, whatever spared the
   units near the objectives or on the front; finishing off a weak enemy first cost an attacker its wins (Luttich,
-  Taman) and a defender its units. Both wait for the commander's postures (#411).
+  Taman) and a defender its units. Both were measured again under the commander's directives (#638) and left out
+  again ("Built: the commander").
 
 The staff draws nothing in either part. The planning and the measures: arena.md, "The remastered AI, the staff's
 first part (#616)" and "the staff's second part (#617)".
@@ -240,19 +337,20 @@ first part (#616)" and "the staff's second part (#617)".
 In src/core/remastered/assault.ts, the staff's third part: the controller asks it for an order after the garrisons'
 marches and the resupplies, before the classic plan.
 
-- **Who assaults**: the side attacking (`attackerSide`, #256), or a side with more objectives to take than the enemy
-  (a defender that lost some, #231).
-- **One sector** (#233): an `assault` operation on the objective to take the side strikes best: each free ground
-  unit's strength over 1 + the turns of its march there (on the distance fields, in its transport when that goes
-  further), less the enemy's mean influence around it (`Sector`, `ENEMY_WEIGHT`). It holds no unit. It is kept until
-  the objective is taken, its deadline passes (the turns left shared among the objectives left, `MIN_ASSAULT_TURNS`
-  at least, #232), or it is hopeless: the enemy around it outweighs what the side brings while another sector doesn't.
-  Then the staff weighs the sectors again.
+- **Who assaults**: the side attacking (`attacks`, clock.ts, #256), or a side with more objectives to take than the
+  enemy (a defender that lost some, #231).
+- **One sector** (#233): an `assault` operation on the objective of the commander's `assault` directive (#638): the
+  one the side strikes best, each free ground unit's strength over 1 + the turns of its march there (on the distance
+  fields, in its transport when that goes further), less the enemy's mean influence around it (`Sector`,
+  `ENEMY_WEIGHT`). It holds no unit. It is kept until the objective is taken, its deadline passes (the turns left
+  shared among the objectives left, `MIN_ASSAULT_TURNS` at least, #232), or it is hopeless: the enemy around it
+  outweighs what the side brings while another sector doesn't. Then the commander weighs the sectors again.
 - **The battle group**: the free ground units within two turns' march of the sector (`GROUP_TURNS`), and the guns
   that reach it from where they stand. The rest go to the sector too: the classic plan's objective pull is the
   sector's for a ground unit (`planTurn`'s `pullTo`, #258), but for one within three turns of another objective to
-  take (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`), as the scripted general drops its
-  sector then, and for the side defending (#256): its units hold the line while it retakes an objective. Aircraft and ships keep the classic plan (#619).
+  take (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`: each to the objectives it still
+  reaches, #638), as the scripted general drops its sector then, and for the side defending (#256): its units hold
+  the line while it retakes an objective. Aircraft and ships keep the classic plan (#619).
 - **The order of arms**, one order at a time on the world as it is, each step only with units for it:
   1. a recon unit of the group moves where it sees most of the hexes within 4 of the sector it doesn't see yet, once a
      turn, never beside an enemy; its move is phased, the classic plan may move it again;
@@ -268,7 +366,8 @@ marches and the resupplies, before the classic plan.
 - **No attack that loses more than it kills**: the estimate counts the support fire the attacker meets in its losses
   and gives no kills to an attack the support fire stops (estimate.ts, as the screen's preview). A strike is worth
   ordering when it kills at least 1 and loses no more than it kills (`MIN_KILLS`); in the last third of the turns
-  (`LATE_SHARE`) an attack on an objective may cost more. The classic plan's attacks are held to the same rule.
+  (`LATE_SHARE`), or with the attack behind schedule (#638), an attack on an objective may cost more. The classic
+  plan's attacks are held to the same rule.
 
 The staff draws nothing here either; the classic rules don't call it. The measures: arena.md, "The remastered AI, the
 assault doctrine (#618)".

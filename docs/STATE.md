@@ -276,7 +276,8 @@ On the old engine (#127) `undoable` is filled from `UndoSlot`.
   saved in the format before and never read back). Since #377 the old UI's `MapSelection` holds them
   (src/legacy/selection.ts), not the map and the hexes, and neither the contracts nor the harness hash them.
 - A player's `handler` is a controller chosen from `type`; the AI's plan and queue are its
-  memory during its turn (saves happen at turn start).
+  memory during its turn (saves happen at turn start). The remastered AI's too: the enemies it last saw, its
+  commander's last directives and its staff's operations; a loaded game plans them again.
 - `noFOW` and `airMode` are inputs to a query or a command, not state; `isAI` picks the
   controllers.
 - The combat log is built from the core's events.
