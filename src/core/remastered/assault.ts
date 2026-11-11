@@ -41,7 +41,7 @@ const TARGET_RADIUS = 2;
 const SCOUT_RADIUS = 4;
 //A unit this few turns from another objective to take goes for the nearest: it is nearly there (in the arena, 1 sent
 //too many units past objectives they would have taken)
-const LOCAL_TURNS = 3;
+export const LOCAL_TURNS = 3;
 //The attackers in the order they go in: tanks, the anti-tank guns as the second line, then infantry and recon
 const WAVES: readonly (readonly number[])[] = [[unitClass.tank], [unitClass.antiTank], [unitClass.infantry, unitClass.recon]];
 

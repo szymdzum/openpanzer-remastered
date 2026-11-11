@@ -1,6 +1,7 @@
 //The remastered AI's maps of a side (src/core/remastered/, #610) as the command-line player shows them: the front, the
 //weak sectors, the threatened units, the enemies remembered, the objectives, its turn clock and its commander's
-//directives with their reasons (#638), the garrisons its staff would set (#616) and its assault (#618). A call has no
+//directives with their reasons (#638), the garrisons its staff would set (#616), its assault (#618) and what it would
+//buy for them (#640). A call has no
 //controller's memory, so the side knows only the enemies it sees now and its commander none of its last directives
 import { analyse, type Analysis, type AnalysisCache } from "../src/core/remastered/analysis";
 import { assaultOrder, battleGroup } from "../src/core/remastered/assault";
@@ -11,6 +12,7 @@ import { direct, type Orders } from "../src/core/remastered/controller";
 import { unitClassNames } from "../src/core/tables";
 import { UNREACHED } from "../src/core/remastered/fields";
 import { perceive, type SideView } from "../src/core/remastered/perception";
+import { needsOf, type Purchase, purchases, reserveOf, type Role } from "../src/core/remastered/purchases";
 import type { Operation } from "../src/core/remastered/staff";
 import type { Command } from "../src/core/command";
 import type { Position, UnitState, World } from "../src/core/types";
@@ -101,6 +103,20 @@ function assaultLine(w: World, view: AssaultView | null): string {
 	return `assault the staff would set now: ${cell(view.op.at)} (${view.op.reason}); group of ${view.group.length} (${group}); next order ${next}`;
 }
 
+//What the side's first player would buy now for the directives, and the army's strength by role against what it wants
+function purchasesOf(w: World, view: SideView, directives: readonly Directive[]): { lines: string[]; buys: Purchase[] } {
+	const player = w.state.players.find((p) => p.side === view.side);
+	if (player === undefined) return { lines: [], buys: [] };
+	const buys = purchases(w, view, directives, player.id), needs = needsOf(w, view, directives, player.id);
+	const total = Object.values(needs.own).reduce((n, x) => n + x, 0) || 1;
+	const percent = (x: number) => `${Math.round(x * 100)}%`;
+	const shares = (Object.keys(needs.wanted) as Role[]).filter((r) => needs.wanted[r] > 0 || needs.own[r] > 0)
+		.map((r) => `${r} ${percent(needs.wanted[r])} (has ${percent(needs.own[r] / total)})`).join(", ");
+	const bought = buys.map((b) => w.equipment[b.eqid].name + (b.transport > 0 ? ` + ${w.equipment[b.transport].name}` : ""));
+	return { buys, lines: [`strength by role, wanted (has): ${shares}`,
+		listed(bought, `purchases it would make now (prestige ${player.prestige}, reserve ${reserveOf(w, player.id)})`)] };
+}
+
 //Typed arrays as lists, for JSON
 const plain = (a: Analysis): unknown => JSON.parse(JSON.stringify(a, (_k, v: unknown) =>
 	ArrayBuffer.isView(v) ? Array.from(v as Float32Array, (x) => round(x)) : v));
@@ -114,6 +130,8 @@ export function analysisOf(w: World, side: number): { lines: string[]; data: unk
 		frontLine(w, a), sectorLines(a), threatenedLines(w, a), enemyLines(w, view),
 		objectiveLine(a, "objectives to take", a.objectives.take, w), objectiveLine(a, "objectives to hold", a.objectives.hold, w),
 		`clock: ${clockLine(clockOf(w, side))}`, ...directiveLines(directives), garrisonLine(w, garrisons), assaultLine(w, assault)];
+	const buying = purchasesOf(w, view, directives);
 	const assaultData = assault === null ? null : { ...assault.op, group: assault.group.map((u) => u.id), next: assault.next };
-	return { lines, data: { ...plain(a) as object, clock: clockOf(w, side), directives, garrisons, assault: assaultData } };
+	return { lines: [...lines, ...buying.lines],
+		data: { ...plain(a) as object, clock: clockOf(w, side), directives, garrisons, assault: assaultData, purchases: buying.buys } };
 }
