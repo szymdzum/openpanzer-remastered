@@ -33,7 +33,7 @@ test("the remastered AI garrisons an objective in the enemy's reach (#616, #5)",
 	const c = remasteredController(0);
 	const remastered = playOneTurn(c, w);
 	expect(position(remastered.world, 0)).toEqual({ row: 5, col: 3 });
-	expect(c.operations).toMatchObject([{ kind: "garrison", at: { row: 5, col: 3 }, units: [0], reason: "garrison 5,3: enemy 8 hexes away" }]);
+	expect(c.operations).toMatchObject([{ kind: "garrison", at: { row: 5, col: 3 }, units: [0], reason: "hold 5,3: enemy 8 hexes away" }]);
 });
 
 test("a garrison doesn't leave its objective to attack (#616, #5)", () => {
@@ -197,6 +197,22 @@ test("the operations are rebuilt the same after two loads of a save (#616)", () 
 	};
 	const a = load(), b = load();
 	expect(a.ops.length).toBeGreaterThan(0);
+	expect(b).toEqual(a);
+}, 60_000);
+
+test("the commander's directives are the same after two loads of a save (#638)", () => {
+	const saved = played(fresh(ostpreussen(), remasteredController), 3).session.saved as World;
+	const load = () => {
+		const made: ReturnType<typeof remasteredController>[] = [];
+		const s = startSession({ ...saved, state: structuredClone(saved.state) }, (_type, p) => made[p] = remasteredController(p), { loaded: true, localSide: -1 });
+		const now = () => made[saved.state.turn.currentPlayer].directives;
+		const atLoad = now();
+		played(s, saved.state.turn.turn);
+		return { atLoad, after: now() };
+	};
+	const a = load(), b = load();
+	//A loaded game's commander remembers nothing: it gives its directives anew, the same each time
+	expect(a.atLoad.map((d) => d.task)).toContain("assault");
 	expect(b).toEqual(a);
 }, 60_000);
 

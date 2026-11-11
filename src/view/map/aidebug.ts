@@ -135,11 +135,15 @@ function cellsOf(w: World, k: Knowledge, layer: AILayer, selected: UnitId | null
 	}
 }
 
+//How many of the commander's directives the legend lists, the first in priority
+const DIRECTIVES_SHOWN = 6;
+
 function legendOf(w: World, known: Known, layer: AILayer, selected: UnitId | null): string[] {
 	const [title, what] = TITLES[layer], k = known.knowledge;
 	const method = layer === "distance" ? `, ${distanceOf(w, k, selected).method}` : "";
 	return [`AI debug: ${title}, ${sideNames[k.view.side]}${method}`, what,
-		known.memory ? `the AI's own knowledge, its turn ${k.view.turn}` : "no memory: what the side sees now", "V next layer, X other side"];
+		known.memory ? `the AI's own knowledge, its turn ${k.view.turn}` : "no memory: what the side sees now",
+		...(k.directives ?? []).slice(0, DIRECTIVES_SHOWN).map((d) => `${d.priority}. ${d.reason}`), "V next layer, X other side"];
 }
 
 /**
