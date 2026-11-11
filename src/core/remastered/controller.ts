@@ -14,6 +14,7 @@ import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
 import { assaultOrder, losesMore, pullTo } from "./assault";
+import { assaults } from "./clock";
 import { command, type Commander } from "./commander";
 import { type Directive, type Dropped, validateDirectives } from "./directives";
 import { perceive, type Sighting, type SideView } from "./perception";
@@ -99,7 +100,7 @@ export function remasteredController(player: number, commander: Commander = comm
 	const assault = () => operations.find((op) => op.kind === "assault");
 	const classicPlan = (w: World) => {
 		const op = assault();
-		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
+		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held, attacks: assaults(w, sideOfPlayer(w)),
 			ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis, player), pullTo: op === undefined ? undefined : pullTo(w, cache, op) });
 	};
 	const replan = (w: World) => {

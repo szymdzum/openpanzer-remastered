@@ -1,6 +1,6 @@
 /**
- * The remastered AI's rule-based commander (#638): its directives from the maps: a hold for each objective in the
- * enemy's reach and the main effort.
+ * The remastered AI's rule-based commander (#638): its directives from the maps and the turn clock: a hold for each
+ * objective in the enemy's reach and the main effort.
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -9,8 +9,9 @@
 import { distance } from "../geometry";
 import { unitClass } from "../tables";
 import type { Position, UnitId, UnitState, World } from "../types";
+import { canCapture } from "../units";
 import type { Analysis, AnalysisCache, Sector } from "./analysis";
-import { assaults, deadlineOf } from "./clock";
+import { assaults, type Clock, clockLine, clockOf, deadlineOf } from "./clock";
 import { at, type Directive } from "./directives";
 import { freeGround, samePosition, turnsTo } from "./march";
 import type { SideView } from "./perception";
@@ -41,7 +42,7 @@ const ENEMY_WEIGHT = 1;
  * Pure: no random stream, nothing kept.
  */
 export function command(w: World, view: SideView, a: Analysis, memory: CommanderMemory): Directive[] {
-	const effort = mainEffort(w, a, memory, freeGround(w, memory.player, memory.held));
+	const effort = mainEffort(w, a, memory, freeGround(w, memory.player, memory.held), clockOf(w, a.side));
 	const out = [...holds(w, view, a), ...(effort === null ? [] : [effort])];
 	return out.map((d, i) => d.priority === i + 1 ? d : { ...d, priority: i + 1 });
 }
@@ -71,18 +72,28 @@ function nearestEnemy(w: World, view: SideView, target: Position): number {
 /**
  * The side's assault: the one of its last directives while its sector is still to take, its deadline not passed and it
  * isn't hopeless (the enemy around it stronger than what the side brings, where another sector isn't); else a new one
- * on the sector the side strikes best. None for a side that doesn't assault.
+ * on the sector the side strikes best. In the last turns only on a sector still in reach (#232). None for a side that
+ * doesn't assault.
  */
-function mainEffort(w: World, a: Analysis, memory: CommanderMemory, units: readonly UnitState[]): Directive | null {
+function mainEffort(w: World, a: Analysis, memory: CommanderMemory, units: readonly UnitState[], clock: Clock): Directive | null {
 	if (!assaults(w, a.side)) return null;
-	const toTake = w.state.objectives[a.side], sectors = a.sectors.filter((s) => toTake.some((o) => samePosition(o, s.at)));
+	const sectors = sectorsLeft(w, a, memory.cache, units, clock);
 	const current = memory.directives.find((d) => d.task === "assault");
 	if (current !== undefined && goesOn(w, a, memory.cache, units, sectors, current)) return current;
 	const s = pickSector(w, memory.cache, units, sectors);
 	if (s === null) return null;
 	const until = deadlineOf(w, a.side);
 	return { task: "assault", target: s.at, priority: 0, until,
-		reason: `assault ${at(s.at)}: enemy ${Math.round(s.enemy)} around it, until turn ${until}` };
+		reason: `assault ${at(s.at)}: enemy ${Math.round(s.enemy)} around it, until turn ${until}; ${clockLine(clock)}` };
+}
+
+//The sectors still to take; in the last turns those a unit that can take one reaches in the turns left, if any
+function sectorsLeft(w: World, a: Analysis, cache: AnalysisCache, units: readonly UnitState[], clock: Clock): Sector[] {
+	const toTake = w.state.objectives[a.side], left = a.sectors.filter((s) => toTake.some((o) => samePosition(o, s.at)));
+	if (!clock.late) return left;
+	const takers = units.filter((u) => canCapture(w, u));
+	const near = left.filter((s) => takers.some((u) => turnsTo(w, cache, u, s.at) <= clock.turnsLeft));
+	return near.length === 0 ? left : near;
 }
 
 //What the side brings to a sector, each unit's strength the less the further it marches, less the enemy around it
