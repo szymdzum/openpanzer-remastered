@@ -93,6 +93,16 @@ test("The enemies layer shows the AI's memory: a remembered enemy dashed with it
 	expect(o.legend[2]).toBe("the AI's own knowledge, its turn 1");
 });
 
+test("The legend lists the directives of the AI's own commander, the first in priority (#638)", () => {
+	const w = world(), view = perceive(w, 0, []);
+	const directives = [{ task: "hold" as const, target: { row: 4, col: 1 }, priority: 1, until: 3, reason: "hold 4,1: enemy 6 hexes away" },
+		{ task: "assault" as const, target: { row: 2, col: 8 }, priority: 2, until: 4, reason: "assault 2,8: enemy 3 around it, until turn 4" }];
+	const own: Knowledge = { view, analysis: analyse(w, view), directives };
+	const o = aiOverlay(w, { layer: "sectors", side: 0 }, null, (side) => side === 0 ? own : null)!;
+	expect(o.legend.slice(2)).toEqual(["the AI's own knowledge, its turn 1", "1. hold 4,1: enemy 6 hexes away",
+		"2. assault 2,8: enemy 3 around it, until turn 4", "V next layer, X other side"]);
+});
+
 test("The knowledge without memory is computed once a world and side, again for a new world (#611)", () => {
 	const w = world(), first = knownBy(w, 0, null).knowledge;
 	expect(knownBy(w, 0, null).knowledge).toBe(first);

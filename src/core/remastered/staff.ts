@@ -1,6 +1,6 @@
 /**
- * The remastered AI's staff: operations that hold units over turns, a garrison on each of the side's objectives in
- * the enemy's reach (#5), a unit onto an objective to take that the side's attack has just emptied (#312).
+ * The remastered AI's staff: operations made from the commander's directives (#638), a garrison on each objective to
+ * hold (#5), the reserve; and a unit onto an objective to take that the side's attack has just emptied (#312).
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -18,10 +18,15 @@ import { unitClass } from "../tables";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canCapture, canMount, isGround, unitUsesFuel } from "../units";
 import { groundUnitAt, hexIndex, unitById, unitData } from "../world";
+import type { Directive } from "./directives";
 import type { SideView } from "./perception";
+import { samePosition } from "./march";
 
-/** An operation's task: hold an objective of the side's (#5), take one it emptied (#312), assault one (#618). */
-export type OperationKind = "garrison" | "occupy" | "assault";
+/**
+ * An operation's task: hold an objective of the side's (#5), take one it emptied (#312), assault one (#618), strike
+ * back at a hex or wait in reserve (#638).
+ */
+export type OperationKind = "garrison" | "occupy" | "assault" | "counterattack" | "reserve";
 
 /** An operation of the staff: what it does and where, the units it holds, the last turn it holds them, and why. */
 export interface Operation {
@@ -30,18 +35,12 @@ export interface Operation {
 	units: UnitId[];
 	until: number;
 	reason: string;
+	//The directive an assault or a counterattack was made for
+	directive?: Directive;
 }
 
-/** An objective of the side's the enemy can reach soon, and why the staff thinks so. */
-export interface ThreatenedObjective {
-	at: Position;
-	reason: string;
-}
-
-//The turns of the enemy's moves within which an objective needs a garrison: one could be there before it otherwise
+//The turns of the enemy's moves within which a garrison's candidate has to reach its objective
 const GARRISON_TURNS = 2;
-//The turns after the first a garrison holds its unit; then the staff weighs the objective again, the enemy has moved
-const GARRISON_HOLD = 2;
 //A unit already on the objective is worth this much more than one that has to march there
 const ON_IT = 20;
 //Infantry and anti-tank guns hold a hex best: worth this much more than a tank or a recon as a garrison
@@ -49,27 +48,13 @@ const PREFERRED = 3;
 //Each hex further from the objective costs a candidate this much of its strength: nearer arrives sooner (the
 //scripted general's STRENGTH_PER_HEX)
 const PER_HEX = 3;
+//A unit of the reserve is sent to hold an objective before another this much better: that is what it waits for (the
+//scripted general's RESERVE_PREFERENCE, in strength)
+const RESERVE_FIRST = 6;
 //A garrison with nothing to fire at is reinforced below this strength: it holds the line where the enemy comes
 const REINFORCE_BELOW = 8;
 
-const samePosition = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-
 const isOn = (u: UnitState, at: Position) => u.row === at.row && u.col === at.col;
-
-/** The side's objectives a ground enemy it knows of (seen or remembered, #17) can reach within GARRISON_TURNS moves. */
-export function threatenedObjectives(w: World, view: SideView, held: readonly Position[]): ThreatenedObjective[] {
-	const out: ThreatenedObjective[] = [];
-	for (const at of held) {
-		let nearest = Infinity;
-		for (const s of view.enemies) {
-			if (w.equipment[s.eqid].uclass > unitClass.airDefence) continue;
-			const d = distance(at.row, at.col, s.row, s.col);
-			if (d <= GARRISON_TURNS * w.equipment[s.moving].movpoints && d < nearest) nearest = d;
-		}
-		if (nearest !== Infinity) out.push({ at, reason: `garrison ${at.row},${at.col}: enemy ${nearest} ${nearest === 1 ? "hex" : "hexes"} away` });
-	}
-	return out;
-}
 
 const isAlive = (w: World, id: UnitId) => {
 	const u = unitById(w, id);
@@ -77,19 +62,21 @@ const isAlive = (w: World, id: UnitId) => {
 };
 
 /**
- * The operations that go on: their units alive, their deadline not passed, a garrison's objective still the side's
- * and still threatened.
+ * The staff's operations that hold units, for the commander's directives and for nothing else: those going on (their
+ * units alive, their deadline not passed), a garrison for each `hold` or `delay` that has none, the directives' first
+ * in priority first, and the reserve while a `reserve` stands. `withStrikes` adds the assault and the counterattacks.
  */
-export function liveOperations(w: World, side: number, ops: readonly Operation[], threats: readonly ThreatenedObjective[]): Operation[] {
-	const turn = w.state.turn.turn;
-	return ops.filter((op) => turn <= op.until && op.units.every((id) => isAlive(w, id))
-		&& (op.kind !== "garrison" || (heldBy(w, op.at) === side && threats.some((t) => samePosition(t.at, op.at)))));
+export function holdingOperations(w: World, view: SideView, player: number, ops: readonly Operation[], directives: readonly Directive[]): Operation[] {
+	return withReserve(w, view, player, withGarrisons(w, player, liveOperations(w, ops, directives), directives), directives);
 }
 
-//The side holding a victory hex, -1 for none
-function heldBy(w: World, at: Position): number {
-	const owner = w.state.map.hexes[hexIndex(w, at.row, at.col)].owner;
-	return owner < 0 ? -1 : w.state.players[owner].side;
+const posturesOf = (directives: readonly Directive[]) => directives.filter((d) => d.task === "hold" || d.task === "delay");
+
+//The operations that go on. A reserve's is kept whole here: withReserve drops its dead
+function liveOperations(w: World, ops: readonly Operation[], directives: readonly Directive[]): Operation[] {
+	const turn = w.state.turn.turn, postures = posturesOf(directives);
+	return ops.filter((op) => op.kind === "reserve" || (turn <= op.until && op.units.every((id) => isAlive(w, id))
+		&& (op.kind !== "garrison" || postures.some((d) => samePosition(d.target, op.at)))));
 }
 
 /** The units the operations hold: the classic plan leaves them out. */
@@ -99,29 +86,77 @@ export function heldUnits(ops: readonly Operation[]): Set<UnitId> {
 	return held;
 }
 
-/** A garrison for each threatened objective that has none, the operations given first. */
-export function withGarrisons(w: World, player: number, ops: readonly Operation[], threats: readonly ThreatenedObjective[]): Operation[] {
-	const out = [...ops], held = heldUnits(ops), turn = w.state.turn.turn;
-	for (const t of threats) {
-		if (out.some((op) => op.kind === "garrison" && samePosition(op.at, t.at))) continue;
-		const u = garrisonFor(w, player, t.at, held);
+//A garrison for each posture that has none: a unit no operation holds or one of the reserve, which it leaves
+function withGarrisons(w: World, player: number, ops: readonly Operation[], directives: readonly Directive[]): Operation[] {
+	let out = [...ops];
+	const held = heldUnits(ops.filter((op) => op.kind !== "reserve")), reserve = heldUnits(ops.filter((op) => op.kind === "reserve"));
+	for (const d of posturesOf(directives)) {
+		if (out.some((op) => op.kind === "garrison" && samePosition(op.at, d.target))) continue;
+		const u = garrisonFor(w, player, d.target, held, reserve);
 		if (u === null) continue;
 		held.add(u.id);
-		out.push({ kind: "garrison", at: t.at, units: [u.id], until: turn + GARRISON_HOLD, reason: t.reason });
+		if (reserve.delete(u.id)) out = out.map((op) => op.kind === "reserve" ? { ...op, units: op.units.filter((id) => id !== u.id) } : op);
+		out.push({ kind: "garrison", at: d.target, units: [u.id], until: d.until, reason: d.reason });
 	}
 	return out;
 }
 
-//The unit on the objective, if it is the player's; else the best of the player's mobile ground units that can get
-//there in time: strong, near, infantry or anti-tank first. Null when another unit of the side stands on it
-function garrisonFor(w: World, player: number, at: Position, held: ReadonlySet<UnitId>): UnitState | null {
+//The share of the mobile units the reserve holds back: enough to answer one threat, few enough to attack with the
+//rest (the scripted general's RESERVE_SHARE)
+const RESERVE_SHARE = 0.2;
+//A unit that moves this far a turn can be sent where it is needed (the scripted general's MOBILE_MOVES)
+const MOBILE_MOVES = 4;
+
+//The reserve while the directive stands, its dead dropped: chosen when the directive first comes, RESERVE_SHARE of the
+//player's mobile units no operation holds, the furthest from the enemies the side knows of
+function withReserve(w: World, view: SideView, player: number, ops: Operation[], directives: readonly Directive[]): Operation[] {
+	const d = directives.find((x) => x.task === "reserve"), current = ops.find((op) => op.kind === "reserve");
+	if (d === undefined) return current === undefined ? ops : ops.filter((op) => op !== current);
+	if (current === undefined) return [...ops, { kind: "reserve", at: d.target, units: pickReserve(w, view, player, heldUnits(ops)), until: d.until, reason: d.reason }];
+	const alive = current.units.filter((id) => isAlive(w, id));
+	if (alive.length === current.units.length && samePosition(current.at, d.target) && current.until === d.until) return ops;
+	return ops.map((op) => op === current ? { ...op, at: d.target, units: alive, until: d.until } : op);
+}
+
+function pickReserve(w: World, view: SideView, player: number, held: ReadonlySet<UnitId>): UnitId[] {
+	const enemies = view.enemies.filter((s) => w.equipment[s.eqid].uclass <= unitClass.airDefence);
+	const front = (u: UnitState) => enemies.reduce((n, s) => Math.min(n, distance(u.row, u.col, s.row, s.col)), Infinity);
+	const mobile = w.state.units.filter((u) => u.owner === player && u.row >= 0 && !held.has(u.id) && canGarrison(w, u)
+		&& unitData(w, u, true).movpoints >= MOBILE_MOVES);
+	mobile.sort((x, y) => front(y) - front(x) || x.id - y.id);
+	return mobile.slice(0, Math.round(mobile.length * RESERVE_SHARE)).map((u) => u.id);
+}
+
+const isStrike = (kind: string) => kind === "assault" || kind === "counterattack";
+
+/**
+ * The operations with one for the `assault` and for each `counterattack`, in the directives' order: the one going on
+ * while the commander keeps its directive (the same object), a new one for a directive given anew, even on the same
+ * hex: the commander weighed its sectors again, and so does the plan.
+ */
+export function withStrikes(ops: Operation[], directives: readonly Directive[]): Operation[] {
+	const strikes = directives.filter((d) => isStrike(d.task)), going = ops.filter((op) => isStrike(op.kind));
+	if (strikes.length === going.length && strikes.every((d, i) => going[i].directive === d)) return ops;
+	return [...ops.filter((op) => !isStrike(op.kind)), ...strikes.map((d): Operation =>
+		going.find((op) => op.directive === d) ?? { kind: d.task as OperationKind, at: d.target, units: [], until: d.until, reason: d.reason, directive: d })];
+}
+
+//The unit on the objective, if it is the player's; else the best that can get there in time. Null when another unit
+//of the side stands on it
+function garrisonFor(w: World, player: number, at: Position, held: ReadonlySet<UnitId>, reserve: ReadonlySet<UnitId>): UnitState | null {
 	const on = groundUnitAt(w, hexIndex(w, at.row, at.col));
 	if (on !== null) return on.owner === player && !held.has(on.id) ? on : null;
+	return bestGarrison(w, player, at, held, reserve);
+}
+
+//The best of the player's mobile ground units that can get to the objective in time: strong, near, infantry or
+//anti-tank first, one of the reserve before another as good
+function bestGarrison(w: World, player: number, at: Position, held: ReadonlySet<UnitId>, reserve: ReadonlySet<UnitId>): UnitState | null {
 	let best: UnitState | null = null, bestScore = -Infinity;
 	for (const u of w.state.units) {
 		const d = distance(u.row, u.col, at.row, at.col);
 		if (!isFree(u, player, held) || !canGarrison(w, u) || d > GARRISON_TURNS * marchOf(w, u)) continue;
-		const score = garrisonScore(w, u, d);
+		const score = garrisonScore(w, u, d) + (reserve.has(u.id) ? RESERVE_FIRST : 0);
 		if (score > bestScore) {
 			best = u;
 			bestScore = score;
@@ -208,14 +243,26 @@ function mountedCells(w: World, u: UnitState, rides: Rides): MoveCell[] {
 	return moveRange(w, { ...u, isMounted: true }).filter((c) => !nextToSeenEnemy(w, u, c) && rides(u, c));
 }
 
+//The units that stand where they are for their operation: a garrison on its objective, the reserve
+function standing(w: World, ops: readonly Operation[]): UnitState[] {
+	const out: UnitState[] = [];
+	for (const op of ops) {
+		if (op.kind !== "garrison" && op.kind !== "reserve") continue;
+		for (const id of op.units) {
+			const u = unitById(w, id);
+			if (u !== null && (op.kind === "reserve" || isOn(u, op.at))) out.push(u);
+		}
+	}
+	return out;
+}
+
 /**
- * A garrison's fire from its objective, without a move: the attack the estimate gives most kills over losses, when
- * it gives more kills than losses and the support fire doesn't stop it. Null when no garrison has one.
+ * The fire of a garrison from its objective or of a reserve unit from where it waits, without a move: the attack the
+ * estimate gives most kills over losses, when it gives more kills than losses and the support fire doesn't stop it.
+ * Null when none has one.
  */
 export function garrisonFire(w: World, ops: readonly Operation[]): Command | null {
-	for (const op of ops) {
-		const u = op.kind === "garrison" ? unitById(w, op.units[0]) : null;
-		if (u === null || !isOn(u, op.at)) continue;
+	for (const u of standing(w, ops)) {
 		const target = bestTarget(w, u);
 		if (target === null) continue;
 		const attack: Command = { type: "attack", unit: u.id, target: target.id };
@@ -243,13 +290,13 @@ function bestTarget(w: World, u: UnitState): UnitState | null {
 }
 
 /**
- * A garrison's supply on its objective once it has nothing to fire at: reinforced when worn down and the player can
- * pay for a point, else resupplied when short of ammo or fuel. `tried`: the garrisons already given one this turn.
+ * The supply of a garrison on its objective, or of a reserve unit, once it has nothing to fire at: reinforced when
+ * worn down and the player can pay for a point, else resupplied when short of ammo or fuel. `tried`: the units
+ * already given one this turn.
  */
 export function garrisonSupply(w: World, ops: readonly Operation[], tried: Set<UnitId>): Command | null {
-	for (const op of ops) {
-		const u = op.kind === "garrison" ? unitById(w, op.units[0]) : null;
-		if (u === null || !isOn(u, op.at) || tried.has(u.id) || u.hasFired) continue;
+	for (const u of standing(w, ops)) {
+		if (tried.has(u.id) || u.hasFired) continue;
 		const cmd = supplyOf(w, u);
 		if (cmd === null) continue;
 		tried.add(u.id);

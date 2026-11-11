@@ -18,11 +18,13 @@ import { unitClass } from "../tables";
 import { attackerSide } from "../turn";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canMount, firesOnlyBeforeMoving, isGround } from "../units";
-import { ammoOf, hexIndex, isSpotted, sideOf, unitData } from "../world";
-import { type Analysis, type AnalysisCache, fieldTo, type Sector } from "./analysis";
-import { around, UNREACHED } from "./fields";
+import { ammoOf, isSpotted, sideOf, unitData } from "../world";
+import { type Analysis, type AnalysisCache, fieldTo } from "./analysis";
+import { isLate } from "./clock";
+import { around } from "./fields";
+import { classOf, freeGround, hexOf, marchOf, samePosition, turnsTo } from "./march";
 import { inGroundReach } from "./rear";
-import { heldUnits, type Operation } from "./staff";
+import type { Operation } from "./staff";
 
 /** The step of the assault's sequence an order belongs to. */
 export type AssaultStep = "recon" | "counter-battery" | "preparation" | "attack" | "guns forward";
@@ -39,111 +41,17 @@ const GROUP_TURNS = 2;
 const TARGET_RADIUS = 2;
 //The hexes a recon unit scouts around the sector: the targets and the guns that would cover them
 const SCOUT_RADIUS = 4;
-//An enemy influence point around a sector counts this much against an own strength point in reach
-const ENEMY_WEIGHT = 1;
 //A loss counts this much against a kill (the scripted general's LOSS_WEIGHT)
 const LOSS_WEIGHT = 0.7;
 //An attack worth ordering kills at least this much
 const MIN_KILLS = 1;
-//The fewest turns an assault is given before the staff weighs its sector again
-const MIN_ASSAULT_TURNS = 3;
 //A unit this few turns from another objective to take keeps the classic pull to the nearest: it is nearly there (in
 //the arena, 1 sent too many units past objectives they would have taken)
 const LOCAL_TURNS = 3;
-//The last share of the turns, when an attack on the objective is worth what it costs (the general's LATE_SHARE)
-const LATE_SHARE = 1 / 3;
-
 //The attackers in the order they go in: tanks, the anti-tank guns as the second line, then infantry and recon
 const WAVES: readonly (readonly number[])[] = [[unitClass.tank], [unitClass.antiTank], [unitClass.infantry, unitClass.recon]];
 
-const samePosition = (a: Position, b: Position) => a.row === b.row && a.col === b.col;
-const classOf = (w: World, u: UnitState) => unitData(w, u, true).uclass;
-const hexOf = (w: World, p: Position) => hexIndex(w, p.row, p.col);
 const standing = (u: UnitState, at: Position): UnitState => samePosition(u, at) ? u : { ...u, row: at.row, col: at.col };
-
-/**
- * Whether the side assaults: the side attacking (#256), or one with more objectives to take than the enemy, as a
- * defender is once it has lost some (#231).
- */
-export function assaults(w: World, side: number): boolean {
-	const attacker = attackerSide(w);
-	return attacker === side || w.state.objectives[side].length > w.state.objectives[~side & 1].length;
-}
-
-//Whether the game is in its last turns
-const isLate = (w: World): boolean => w.state.turn.turn > w.state.scenario.maxTurns * (1 - LATE_SHARE);
-
-//How a unit marches: in its transport when that goes further
-function marchOf(w: World, u: UnitState): EquipmentEntry {
-	const own = unitData(w, u, true);
-	if (u.transport === null) return own;
-	const transport = w.equipment[u.transport.eqid];
-	return transport.movpoints > own.movpoints ? transport : own;
-}
-
-//The turns of its march a unit needs to reach the hex, on the terrain alone (fields.ts); Infinity where it can't
-function turnsTo(w: World, cache: AnalysisCache, u: UnitState, at: Position): number {
-	const march = marchOf(w, u), points = fieldTo(w, cache, march.movmethod, [at])[hexOf(w, u)];
-	if (points === 0) return 0;
-	return march.movpoints <= 0 || points === UNREACHED ? Infinity : Math.ceil(points / march.movpoints);
-}
-
-//The player's ground units no operation holds, on the map, that fight
-function freeGround(w: World, player: number, held: ReadonlySet<UnitId>): UnitState[] {
-	return w.state.units.filter((u) => u.owner === player && u.row >= 0 && !held.has(u.id) && isGround(w, u)
-		&& classOf(w, u) !== unitClass.groundTransport && classOf(w, u) !== unitClass.fortification);
-}
-
-//What the side brings to a sector, each unit's strength the less the further it marches, less the enemy around it
-function sectorScore(w: World, cache: AnalysisCache, units: readonly UnitState[], s: Sector): number {
-	const own = units.reduce((n, u) => n + u.strength / (1 + turnsTo(w, cache, u, s.at)), 0);
-	return own - ENEMY_WEIGHT * s.enemy;
-}
-
-//The objective to take the side strikes best: what it brings there against the enemy's influence around it
-function pickSector(w: World, a: Analysis, cache: AnalysisCache, player: number, held: ReadonlySet<UnitId>): Sector | null {
-	const units = freeGround(w, player, held), toTake = w.state.objectives[a.side];
-	let best: Sector | null = null, bestScore = -Infinity;
-	for (const s of a.sectors) {
-		if (!toTake.some((o) => samePosition(o, s.at))) continue;
-		const score = sectorScore(w, cache, units, s);
-		if (score > bestScore) {
-			best = s;
-			bestScore = score;
-		}
-	}
-	return best;
-}
-
-//The turn the assault is weighed again: the turns left shared among the objectives left to take (#232), a few at least
-function deadlineOf(w: World, side: number): number {
-	const turn = w.state.turn.turn, max = w.state.scenario.maxTurns, left = Math.max(1, w.state.objectives[side].length);
-	return Math.min(max, turn + Math.max(MIN_ASSAULT_TURNS, Math.ceil((max - turn) / left)) - 1);
-}
-
-/**
- * The operations with the side's assault: the one going on while its sector is still to take, its deadline not passed
- * and it isn't hopeless (the enemy around it stronger than what the side brings, where another sector isn't); else a
- * new one on the sector the side strikes best. None for a side that doesn't assault.
- */
-export function withAssault(w: World, a: Analysis, cache: AnalysisCache, player: number, ops: readonly Operation[]): Operation[] {
-	const rest = ops.filter((op) => op.kind !== "assault"), current = ops.find((op) => op.kind === "assault");
-	if (!assaults(w, a.side)) return rest;
-	const held = heldUnits(rest);
-	if (current !== undefined && goesOn(w, a, cache, player, held, current)) return ops as Operation[];
-	const s = pickSector(w, a, cache, player, held);
-	if (s === null) return rest;
-	const until = deadlineOf(w, a.side);
-	const reason = `assault ${s.at.row},${s.at.col}: enemy ${Math.round(s.enemy)} around it, until turn ${until}`;
-	return [...rest, { kind: "assault", at: s.at, units: [], until, reason }];
-}
-
-function goesOn(w: World, a: Analysis, cache: AnalysisCache, player: number, held: ReadonlySet<UnitId>, op: Operation): boolean {
-	if (w.state.turn.turn > op.until || !w.state.objectives[a.side].some((o) => samePosition(o, op.at))) return false;
-	const units = freeGround(w, player, held), sector = a.sectors.find((s) => samePosition(s.at, op.at));
-	if (sector === undefined || sectorScore(w, cache, units, sector) >= 0) return true;
-	return !a.sectors.some((s) => s !== sector && sectorScore(w, cache, units, s) >= 0);
-}
 
 /**
  * Where the classic plan pulls a ground unit: to the assault's sector (#258), but for a unit already near another
@@ -196,11 +104,13 @@ const isGunOn = (w: World, u: UnitState, at: Position) => isArtillery(w, u)
 /**
  * The assault's next order on its sector, in the order of arms: a recon unit scouts it, the artillery fires on the
  * enemy guns that would support the target, then on the target, the armour attacks the target, and the guns that
- * couldn't fire move into range for the next turn. Null when it has none to give.
+ * couldn't fire move into range for the next turn. A counterattack's: the fire and the attack only. Null when it has
+ * none to give.
  */
 export function assaultOrder(w: World, a: Analysis, cache: AnalysisCache, op: Operation, player: number, held: ReadonlySet<UnitId>,
 	scouted: Set<UnitId>): AssaultOrder | null {
 	const b = battleOf(w, a, cache, op, player, held, scouted);
+	if (op.kind === "counterattack") return fireOrder(b);
 	return reconOrder(b) ?? fireOrder(b) ?? gunsForward(b, freeGround(w, player, held));
 }
 

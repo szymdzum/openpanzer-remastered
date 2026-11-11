@@ -13,16 +13,23 @@ import { check } from "../step";
 import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
-import { assaultOrder, losesMore, pullTo, withAssault } from "./assault";
+import { assaultOrder, losesMore, pullTo } from "./assault";
+import { command, type Commander } from "./commander";
+import { type Directive, type Dropped, validateDirectives } from "./directives";
 import { perceive, type Sighting, type SideView } from "./perception";
 import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
-import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, liveOperations, occupation, type Operation, type ThreatenedObjective,
-	threatenedObjectives, withGarrisons } from "./staff";
+import { reserveMarch } from "./reserve";
+import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, holdingOperations, occupation, type Operation, withStrikes } from "./staff";
 
-/** The remastered controller, with what it made of its last turn (null before it planned one) and its operations. */
+/**
+ * The remastered controller, with what it made of its last turn (null before it planned one): its commander's
+ * directives, those dropped by the check, and its staff's operations.
+ */
 export interface RemasteredController extends Controller {
 	readonly view: SideView | null;
 	readonly analysis: Analysis | null;
+	readonly directives: readonly Directive[];
+	readonly dropped: readonly Dropped[];
 	readonly operations: readonly Operation[];
 }
 
@@ -37,6 +44,7 @@ interface TurnMemory {
 	supplied: Set<UnitId>;
 	scouted: Set<UnitId>;	//the recon units the assault sent forward
 	mounted: Set<UnitId>;	//the units on their transports at the turn's start
+	waited: Set<UnitId>;	//the reserve's units the staff looked at this turn for a move to where they wait
 	orders: number;
 }
 
@@ -45,14 +53,16 @@ interface TurnMemory {
 const MAX_ORDERS = 2000;
 
 const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
-	scouted: new Set(), mounted: new Set(), orders: 0 });
+	scouted: new Set(), mounted: new Set(), waited: new Set(), orders: 0 });
 
 const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cmd];
 
 /**
- * The remastered AI. Its staff's operations hold some units over turns (a garrison on each objective in the enemy's
- * reach, a unit onto an objective its attack emptied), it resupplies units before contact and ends no ride in the
- * enemy's reach but near an objective, unless it defends and no enemy plays after it in the round. The classic plan
+ * The remastered AI. Its commander (`commander`: the rules of commander.ts when not given) answers in directives,
+ * checked before the staff reads them; the staff's operations are made from them alone and hold some units over turns
+ * (a garrison on each objective to hold, a unit onto an objective its attack emptied). It resupplies units before
+ * contact and ends no ride in the enemy's reach but near an objective, unless it defends and no enemy plays after it
+ * in the round. The classic plan
  * (src/core/ai.ts) orders the rest, made again on the world as it is after every attack, every order of the staff's
  * and every order the core would refuse: it gives none that `check` refuses. Its purchases and deployment are the
  * classic AI's.
@@ -60,13 +70,13 @@ const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cm
  * The staff draws from no random stream. The classic plan draws from the AI's: the turn's first plan keeps its
  * draws in the world, as the classic AI's does; the plans made again during the turn can't hand a world back
  * (`next` gives orders), so they draw from where the first one left the stream, the same numbers each time.
- * What it remembers (the enemies last seen, the fields that don't change, the operations) is the controller's,
- * not state (docs/STATE.md D6): a loaded game starts with none and plans the turn again.
+ * What it remembers (the enemies last seen, the fields that don't change, the directives, the operations) is the
+ * controller's, not state (docs/STATE.md D6): a loaded game starts with none and plans the turn again.
  */
-export function remasteredController(player: number): RemasteredController {
+export function remasteredController(player: number, commander: Commander = command): RemasteredController {
 	const classic = aiController(player), cache: AnalysisCache = new Map(), destroyed = new Set<UnitId>();
 	let memory: readonly Sighting[] = [], view: SideView | null = null, analysis: Analysis | null = null;
-	let operations: Operation[] = [], threats: ThreatenedObjective[] = [], held = new Set<UnitId>(), turn = newTurn();
+	let operations: Operation[] = [], directives: Directive[] = [], dropped: Dropped[] = [], held = new Set<UnitId>(), turn = newTurn();
 	let target: UnitId | null = null;
 	//An enemy its last attack took off the map was seen destroyed
 	const watch = (w: World) => {
@@ -80,9 +90,12 @@ export function remasteredController(player: number): RemasteredController {
 		if (changed) turn.stale = true;
 	};
 	const sideOfPlayer = (w: World) => w.state.players[player].side;
-	//The operations that go on, the garrisons the threatened objectives still lack and the assault
-	const review = (w: World, a: Analysis) => setOperations(withAssault(w, a, cache, player,
-		withGarrisons(w, player, liveOperations(w, sideOfPlayer(w), operations, threats), threats)));
+	function review(w: World, v: SideView, a: Analysis) {
+		const orders = direct(w, v, a, { directives, dropped, operations }, { player, commander, cache });
+		directives = orders.directives;
+		dropped = orders.dropped;
+		setOperations(orders.operations);
+	}
 	const assault = () => operations.find((op) => op.kind === "assault");
 	const classicPlan = (w: World) => {
 		const op = assault();
@@ -107,30 +120,37 @@ export function remasteredController(player: number): RemasteredController {
 		}
 	}
 
+	//The orders of the counterattacks, then of the assault, in the directives' order
+	function strikeOrder(w: World, a: Analysis): Command[] | null {
+		for (const op of operations) {
+			const order = op.kind === "assault" || op.kind === "counterattack" ? assaultOrder(w, a, cache, op, player, held, turn.scouted) : null;
+			if (order !== null) return order.commands;
+		}
+		return null;
+	}
+
 	//The staff's orders before the classic plan's, in this order: the move or attack after a mount or a move, onto an
-	//objective just emptied, off a transport in the enemy's reach, a garrison's march, a resupply before contact, the
-	//assault's
-	const sources: ((w: World, a: Analysis) => Command[] | null)[] = [
+	//objective just emptied, off a transport in the enemy's reach, a garrison's march, the reserve's to where it waits,
+	//a resupply before contact, the counterattacks' and the assault's
+	const sources: ((w: World, a: Analysis, v: SideView) => Command[] | null)[] = [
 		(w) => one(occupyOrder(w)),
-		(w, a) => {
-			review(w, a);
+		(w, a, v) => {
+			review(w, v, a);
 			return one(unmountOrder(w, a, player, held, turn.mounted));
 		},
 		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a, player)),
+		(w, a) => reserveMarch(w, a, operations, rideOutOfReach(w, a, player), turn.waited),
 		(w, a) => one(resupplyOrder(w, a, player, held)),
-		(w, a) => {
-			const op = assault();
-			return op === undefined ? null : assaultOrder(w, a, cache, op, player, held, turn.scouted)?.commands ?? null;
-		},
+		strikeOrder,
 	];
 
 	function staffFirst(w: World): Command | null {
 		const pending = turn.pending;
 		turn.pending = null;
 		if (pending !== null && check(w, pending) === null) return pending;
-		if (analysis === null) return null;
+		if (analysis === null || view === null) return null;
 		for (const source of sources) {
-			const cmds = source(w, analysis);
+			const cmds = source(w, analysis, view);
 			if (cmds === null) continue;
 			turn.pending = cmds.length > 1 ? cmds[1] : null;
 			return cmds[0];
@@ -182,6 +202,12 @@ export function remasteredController(player: number): RemasteredController {
 		get analysis() {
 			return analysis;
 		},
+		get directives() {
+			return directives;
+		},
+		get dropped() {
+			return dropped;
+		},
 		get operations() {
 			return operations;
 		},
@@ -193,10 +219,9 @@ export function remasteredController(player: number): RemasteredController {
 			memory = view.enemies;
 			destroyed.clear();
 			analysis = analyse(w, view, cache);
-			threats = threatenedObjectives(w, view, analysis.objectives.hold);
-			turn = newTurn();
+				turn = newTurn();
 			for (const u of w.state.units) if (u.owner === player && u.isMounted) turn.mounted.add(u.id);
-			review(w, analysis);
+			review(w, view, analysis);
 			const planned = classicPlan(w);
 			turn.queue = planned.queue;
 			turn.fresh = true;
@@ -211,17 +236,43 @@ export function remasteredController(player: number): RemasteredController {
 	};
 }
 
-/** What a side knows and makes of the map: its perception and analysis. */
+/** A commander's directives after the check, those it dropped, and the staff's operations for them. */
+export interface Orders {
+	directives: Directive[];
+	dropped: Dropped[];
+	operations: Operation[];
+}
+
+/**
+ * The commander's directives for the player now and the staff's operations for them, from the last ones. The units a
+ * new garrison takes aren't the main effort's: the commander is asked again once the staff's held units change.
+ */
+export function direct(w: World, view: SideView, a: Analysis, last: Orders,
+	by: { player: number; commander: Commander; cache: AnalysisCache }): Orders {
+	const held = heldUnits(last.operations);
+	const ask = (holding: ReadonlySet<UnitId>) => validateDirectives(
+		by.commander(w, view, a, { player: by.player, directives: last.directives, held: holding, cache: by.cache }), w, a.side);
+	let orders = ask(held), ops = holdingOperations(w, view, by.player, last.operations, orders.directives);
+	const holding = heldUnits(ops);
+	if (holding.size !== held.size || [...holding].some((id) => !held.has(id))) {
+		orders = ask(holding);
+		ops = holdingOperations(w, view, by.player, ops, orders.directives);
+	}
+	return { ...orders, operations: withStrikes(ops, orders.directives) };
+}
+
+/** What a side knows and makes of the map: its perception and analysis, and its commander's directives if any. */
 export interface Knowledge {
 	view: SideView;
 	analysis: Analysis;
+	directives?: readonly Directive[];
 }
 
 /** The last perception and analysis of the side by the remastered controller that plays one of its players, if any. */
 export function knowledgeOf(controllers: readonly (Controller | null)[], side: number): Knowledge | null {
 	for (const c of controllers) {
 		const r = c !== null && "analysis" in c ? c as RemasteredController : null;
-		if (r !== null && r.view !== null && r.analysis !== null && r.view.side === side) return { view: r.view, analysis: r.analysis };
+		if (r !== null && r.view !== null && r.analysis !== null && r.view.side === side) return { view: r.view, analysis: r.analysis, directives: r.directives };
 	}
 	return null;
 }
