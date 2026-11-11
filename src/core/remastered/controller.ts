@@ -65,14 +65,13 @@ const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cm
  * checked before the staff reads them; the staff's operations are made from them alone and hold some units over turns
  * (a garrison on each objective to hold, a unit onto an objective its attack emptied). It resupplies units before
  * contact and ends no ride in the enemy's reach but near an objective, unless it defends and no enemy plays after it
- * in the round. The classic plan
- * (src/core/ai.ts) orders the rest, made again on the world as it is after every attack, every order of the staff's
- * and every order the core would refuse: it gives none that `check` refuses. Its purchases and deployment are the
- * classic AI's.
+ * in the round. The classic plan (src/core/ai.ts) orders the rest, made again on the world as it is after every
+ * attack, every order of the staff's and every order the core would refuse: it gives none that `check` refuses. Its
+ * purchases and deployment are the classic AI's.
  *
- * The staff draws from no random stream. The classic plan draws from the AI's: the turn's first plan keeps its
- * draws in the world, as the classic AI's does; the plans made again during the turn can't hand a world back
- * (`next` gives orders), so they draw from where the first one left the stream, the same numbers each time.
+ * The commander and the staff draw from no random stream. The classic plan draws from the AI's: the turn's first plan
+ * keeps its draws in the world, as the classic AI's does; the plans made again during the turn can't hand a world
+ * back (`next` gives orders), so they draw from where the first one left the stream, the same numbers each time.
  * What it remembers (the enemies last seen, the fields that don't change, the directives, the operations) is the
  * controller's, not state (docs/STATE.md D6): a loaded game starts with none and plans the turn again.
  */
