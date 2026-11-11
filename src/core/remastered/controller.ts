@@ -1,24 +1,26 @@
 /**
  * The remastered AI as a controller: at each of its turns it reads what its side knows (perception.ts) and maps it
- * (analysis.ts); its staff's operations (staff.ts) order the units they hold, the classic AI's plan the rest.
+ * (analysis.ts); its commander directs, its staff's operations (staff.ts) order the units they hold and its planner
+ * (planner.ts) the rest, one order at a time.
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { aiController, planTurn } from "../ai";
+import { aiController } from "../ai";
 import type { Command } from "../command";
 import type { Controller } from "../controller";
 import { check } from "../step";
 import type { Position, UnitId, World } from "../types";
 import { unitById } from "../world";
 import { type Analysis, type AnalysisCache, analyse } from "./analysis";
-import { assaultOrder, losesMore, pullTo } from "./assault";
-import { assaults, attacks } from "./clock";
+import { assaultOrder, pullTo } from "./assault";
+import { assaults, attacks, pressed } from "./clock";
 import { command, type Commander } from "./commander";
 import { type Directive, type Dropped, validateDirectives } from "./directives";
 import { perceive, type Sighting, type SideView } from "./perception";
-import { resupplyOrder, rideOutOfReach, unmountOrder } from "./rear";
+import { newMemo, plannerOrder, type PlannerMemo } from "./planner";
+import { idleSupply, resupplyOrder, rideOutOfReach, unmountOrder, urgentSupply } from "./rear";
 import { reserveMarch } from "./reserve";
 import { garrisonFire, garrisonMarch, garrisonSupply, heldUnits, holdingOperations, occupation, type Operation, standFast, withStrikes } from "./staff";
 
@@ -34,27 +36,25 @@ export interface RemasteredController extends Controller {
 	readonly operations: readonly Operation[];
 }
 
-//What the controller keeps through one of its turns: the classic plan's commands left, whether that plan was made on
-//the world as it is (fresh) or has to be made again (stale), the hex its last attack hit, a move after a mount
+//What the controller keeps through one of its turns: the hex its last attack hit, the second command of an order (an
+//attack after its move, a move after its mount), and what its staff and planner looked at already
 interface TurnMemory {
-	queue: Command[];
-	fresh: boolean;
-	stale: boolean;
 	attacked: Position | null;
 	pending: Command | null;
 	supplied: Set<UnitId>;
 	scouted: Set<UnitId>;	//the recon units the assault sent forward
 	mounted: Set<UnitId>;	//the units on their transports at the turn's start
 	waited: Set<UnitId>;	//the reserve's units the staff looked at this turn for a move to where they wait
+	planner: PlannerMemo;
 	orders: number;
 }
 
-//Orders in one turn past which the controller ends it: a guard against a plan that would never end, far above any
+//Orders in one turn past which the controller ends it: a guard against a turn that would never end, far above any
 //real turn's (Zitadelle's biggest army gives about 300)
 const MAX_ORDERS = 2000;
 
-const newTurn = (): TurnMemory => ({ queue: [], fresh: false, stale: true, attacked: null, pending: null, supplied: new Set(),
-	scouted: new Set(), mounted: new Set(), waited: new Set(), orders: 0 });
+const newTurn = (): TurnMemory => ({ attacked: null, pending: null, supplied: new Set(), scouted: new Set(), mounted: new Set(),
+	waited: new Set(), planner: newMemo(), orders: 0 });
 
 const NO_UNITS: ReadonlySet<UnitId> = new Set();
 
@@ -65,13 +65,11 @@ const one = (cmd: Command | null): Command[] | null => cmd === null ? null : [cm
  * checked before the staff reads them; the staff's operations are made from them alone and hold some units over turns
  * (a garrison on each objective to hold, a unit onto an objective its attack emptied). It resupplies units before
  * contact and ends no ride in the enemy's reach but near an objective, unless it defends and no enemy plays after it
- * in the round. The classic plan (src/core/ai.ts) orders the rest, made again on the world as it is after every
- * attack, every order of the staff's and every order the core would refuse: it gives none that `check` refuses. Its
- * purchases and deployment are the classic AI's.
+ * in the round. Its planner (planner.ts) orders the units no operation holds, one order at a time on the world as it
+ * is: every order is asked of the core first (`check`), so it gives none the core refuses. Only its purchases and its
+ * deployment are the classic AI's (src/core/ai.ts), at the turn's start.
  *
- * The commander and the staff draw from no random stream. The classic plan draws from the AI's: the turn's first plan
- * keeps its draws in the world, as the classic AI's does; the plans made again during the turn can't hand a world
- * back (`next` gives orders), so they draw from where the first one left the stream, the same numbers each time.
+ * The commander, the staff and the planner draw from no random stream: the AI's stream moves only with the purchases.
  * What it remembers (the enemies last seen, the fields that don't change, the directives, the operations) is the
  * controller's, not state (docs/STATE.md D6): a loaded game starts with none and plans the turn again.
  */
@@ -86,10 +84,8 @@ export function remasteredController(player: number, commander: Commander = comm
 		target = null;
 	};
 	const setOperations = (ops: Operation[]) => {
-		const changed = ops.length !== operations.length || ops.some((op, i) => op !== operations[i]);
 		operations = ops;
 		held = heldUnits(ops);
-		if (changed) turn.stale = true;
 	};
 	const sideOfPlayer = (w: World) => w.state.players[player].side;
 	function review(w: World, v: SideView, a: Analysis) {
@@ -98,29 +94,15 @@ export function remasteredController(player: number, commander: Commander = comm
 		dropped = orders.dropped;
 		setOperations(orders.operations);
 	}
-	const assault = () => operations.find((op) => op.kind === "assault");
-	const classicPlan = (w: World) => {
-		const op = assault(), side = sideOfPlayer(w);
-		return planTurn(w, player, w.rules.ai.config, w.state.players[player].prestige, { held,
-			attacks: assaults(w, side), ridesTo: analysis === null ? undefined : rideOutOfReach(w, analysis, player),
-			pullTo: pullTo(w, cache, op, view === null || attacks(w, side) ? NO_UNITS : standFast(w, view, cache, player, held, directives)) });
-	};
-	const replan = (w: World) => {
-		turn.queue = classicPlan(w).queue;
-		turn.fresh = true;
-		turn.stale = false;
-	};
 
-	//The classic plan's next command for a unit no operation holds, one `check` allows
-	function classicOrder(w: World): Command | null {
-		if (turn.stale) replan(w);
-		for (;;) {
-			const cmd = turn.queue.shift();
-			if (cmd === undefined) return null;
-			if (("unit" in cmd && held.has(cmd.unit)) || losesMore(w, cmd)) continue;
-			if (check(w, cmd) === null) return cmd;
-			if (!turn.fresh) replan(w);
-		}
+	//The planner's order for a unit no operation holds, read from the directives: the main effort's sector, the
+	//objectives held and the line that stands fast by them
+	function plannerNext(w: World, a: Analysis, v: SideView): Command[] | null {
+		const side = sideOfPlayer(w), sector = operations.find((op) => op.kind === "assault");
+		const attacking = attacks(w, side), line = attacking ? NO_UNITS : standFast(w, v, cache, player, held, directives);
+		return plannerOrder({ w, a, cache, player, held, attacks: attacking, assaults: assaults(w, side), pressed: pressed(w, side),
+			goals: pullTo(w, cache, sector, line), ridesTo: rideOutOfReach(w, a, player), sector: sector === undefined ? null : sector.at,
+			holds: directives.filter((d) => d.task === "hold" || d.task === "delay").map((d) => d.target), memo: turn.planner });
 	}
 
 	//The orders of the counterattacks, then of the assault, in the directives' order
@@ -132,9 +114,10 @@ export function remasteredController(player: number, commander: Commander = comm
 		return null;
 	}
 
-	//The staff's orders before the classic plan's, in this order: the move or attack after a mount or a move, onto an
-	//objective just emptied, off a transport in the enemy's reach, a garrison's march, the reserve's to where it waits,
-	//a resupply before contact, the counterattacks' and the assault's
+	//The turn's orders, the first source that has one: onto an objective just emptied, off a transport in the enemy's
+	//reach, a garrison's march, the reserve's to where it waits, the supply a unit can't fight without and a resupply
+	//before contact, the counterattacks' and the assault's, the planner's for the free units; then what the garrisons
+	//and the units that did nothing do last: fire from their objectives, reinforce, resupply
 	const sources: ((w: World, a: Analysis, v: SideView) => Command[] | null)[] = [
 		(w) => one(occupyOrder(w)),
 		(w, a, v) => {
@@ -143,11 +126,14 @@ export function remasteredController(player: number, commander: Commander = comm
 		},
 		(w, a) => garrisonMarch(w, operations, rideOutOfReach(w, a, player)),
 		(w, a) => reserveMarch(w, a, operations, rideOutOfReach(w, a, player), turn.waited),
+		(w) => one(urgentSupply(w, player, held)),
 		(w, a) => one(resupplyOrder(w, a, player, held)),
 		strikeOrder,
+		plannerNext,
+		(w) => one(garrisonFire(w, operations) ?? garrisonSupply(w, operations, turn.supplied) ?? idleSupply(w, player, held)),
 	];
 
-	function staffFirst(w: World): Command | null {
+	function ordered(w: World): Command | null {
 		const pending = turn.pending;
 		turn.pending = null;
 		if (pending !== null && check(w, pending) === null) return pending;
@@ -170,31 +156,18 @@ export function remasteredController(player: number, commander: Commander = comm
 		return o.move;
 	}
 
-	//What the garrisons do once the classic plan has nothing left: fire from their objectives, else resupply there
-	const staffLast = (w: World) => garrisonFire(w, operations) || garrisonSupply(w, operations, turn.supplied);
-
-	function given(w: World, cmd: Command, staff: boolean): Command {
-		turn.fresh = false;
-		turn.orders++;
-		if (staff) turn.stale = true;
-		if (cmd.type === "attack") {
-			target = cmd.target;
-			const t = unitById(w, cmd.target);
-			turn.attacked = t === null ? null : { row: t.row, col: t.col };
-			//What the attack did can't be foreseen: the classic plan is made again after it
-			turn.stale = true;
-		}
-		return cmd;
-	}
-
 	function nextCommand(w: World): Command | null {
 		if (turn.orders >= MAX_ORDERS) return null;
-		const first = staffFirst(w);
-		if (first !== null) return given(w, first, true);
-		const order = classicOrder(w);
-		if (order !== null) return given(w, order, false);
-		const last = staffLast(w);
-		return last === null ? null : given(w, last, true);
+		const cmd = ordered(w);
+		if (cmd === null) return null;
+		turn.orders++;
+		if (cmd.type === "attack") {
+			target = cmd.target;
+			turn.planner.struck.add(cmd.target);
+			const t = unitById(w, cmd.target);
+			turn.attacked = t === null ? null : { row: t.row, col: t.col };
+		}
+		return cmd;
 	}
 
 	return {
@@ -222,14 +195,10 @@ export function remasteredController(player: number, commander: Commander = comm
 			memory = view.enemies;
 			destroyed.clear();
 			analysis = analyse(w, view, cache);
-				turn = newTurn();
+			turn = newTurn();
 			for (const u of w.state.units) if (u.owner === player && u.isMounted) turn.mounted.add(u.id);
 			review(w, view, analysis);
-			const planned = classicPlan(w);
-			turn.queue = planned.queue;
-			turn.fresh = true;
-			turn.stale = false;
-			return planned.world;
+			return w;
 		},
 		next(w) {
 			watch(w);

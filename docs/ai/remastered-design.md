@@ -4,10 +4,11 @@ A proposal: how the remaster's own computer opponent could be built if it were d
 next to the classic one rather than instead of it. foundations.md has the theory behind it,
 how-it-plays.md and weak-attacker.md the AI it would sit beside. Built so far: the perception and the
 analysis ("Built: perception and analysis" below), and the staff's first part: operations, one owner per unit, the
-plan made again after every attack, the garrisons and the occupation of an emptied objective, the resupply before
-contact and the rides out of reach ("Built: the staff"), the assault doctrine ("Built: the assault doctrine"), and
-the commander's first part: the directives, the turn clock, the main effort, the counterattack and the line of a
-hold ("Built: the commander").
+garrisons and the occupation of an emptied objective, the resupply before contact and the rides out of reach
+("Built: the staff"), the assault doctrine ("Built: the assault doctrine"), the commander's first part: the
+directives, the turn clock, the main effort, the counterattack and the line of a hold ("Built: the commander"), and
+its own planner for the units no operation holds ("Built: the planner"): the classic AI's plan is no longer part of
+it. Only its purchases and its deployment are still the classic AI's (#640).
 
 ## What the core already gives
 
@@ -212,15 +213,14 @@ order: an objective may have fallen since the last) and the staff makes its oper
   turns that take nothing). `late`: the last third of the turns (`LATE_SHARE`). What follows from it:
   - an assault's deadline is the turns left shared among the objectives left, three at least (`deadlineOf`);
   - behind schedule or in the last turns an attack on an objective's defender is worth what it costs (the assault's
-    and the classic plan's, "No attack that loses more than it kills");
+    and the planner's, "No attack that loses more than it kills");
   - in the last turns the main effort is only on a sector a unit that can capture still reaches in the turns left
     (its march on the distance fields), and a unit is pulled only to the objectives it reaches itself; to all of them
     when it reaches none.
-- **The roles in the classic plan** (#353): `planTurn`'s `attacks` says whether the side leaves its holes away
-  from the enemy (#235); without it the plan counts the objectives as before. The remastered AI gives it the
+- **The roles** (#353): a side that assaults leaves its holes away from the enemy (#235, "Built: the planner"): the
   scenario's attacker, even once it holds more objectives than it has left to take, and a defender that has lost
-  more than the attacker has left: by the rule alone a defender stayed in its holes and took back fewer (Bzura's
-  held 4.9 objectives at the end instead of 6.6).
+  more than the attacker has left: by the turn limit's rule alone a defender stayed in its holes and took back fewer
+  (Bzura's held 4.9 objectives at the end instead of 6.6).
 - **The main effort** (#629): the commander's choice, by the rule the assault had: the sector the side strikes best
   (each free ground unit's strength over 1 + the turns of its march, less the enemy's mean influence around it),
   kept until it is taken, its deadline passes or it is hopeless while another isn't. Scoring the enemy by its known
@@ -293,41 +293,40 @@ AI and its rules untouched (the contracts and verify play them).
   else (#638, "Built: the commander"), but the occupation of an objective just emptied. They are the controller's
   memory (docs/STATE.md D6), kept between its turns and reviewed at each order: one ends when its deadline passes, a
   unit of it is gone, or its directive is no longer given. A loaded game starts with none and plans them again.
-- **One owner per unit.** The units the operations hold are left out of the classic plan (`planTurn`'s `held`,
-  src/core/ai.ts): no move, attack, resupply or reinforcement of theirs comes from it. The purchases and the
-  deployment stay the classic ones.
-- **Replanning.** The classic plan of the free units is made again on the world as it is after every attack (its
-  result can't be foreseen), after every order of the staff's, and when its next command fails `check`; a command
-  that fails on a plan just made is dropped. No order the core refuses is given. The first plan of a turn keeps its
-  AI-stream draws in the world as the classic AI's does; the plans made again during the turn draw from where it left
-  the stream (`next` returns no world), the same numbers each time. The staff draws nothing.
+- **One owner per unit.** The units the operations hold are the staff's: no move, attack, resupply or reinforcement
+  of theirs comes from the planner, which orders the others ("Built: the planner"). The purchases and the deployment
+  stay the classic AI's (#640).
+- **One order at a time.** Every order, the staff's and the planner's, is chosen on the world as it is after the
+  last one and asked of the core first (`check`): no order the core refuses is given. Neither draws from a random
+  stream.
 - **Garrison** (#5): an objective of the side's the commander holds (a ground enemy the side knows of, seen or
   remembered, #17, can reach it within two of its moves, hex distance) gets one: the player's ground unit on it, else
   the best of its infantry, anti-tank, tanks and recon that can get there within two moves (`GARRISON_TURNS`):
   strength, +3 for infantry and anti-tank, -3 a hex. It marches there first in the turn (in its transport when that goes nearer), never
   leaves the hex while the operation lasts (three turns, then weighed again), fires from it when the estimate
   (estimate.ts) gives more kills than losses and the support fire doesn't stop it, and is resupplied or reinforced
-  there once the classic plan is done. A garrison destroyed or gone is replaced at the next order.
+  there once the planner has no order left. A garrison destroyed or gone is replaced at the next order.
 - **Occupy** (#312): after an attack of the side's, if the target's hex is an objective to take and now empty, the
   player's ground unit that reaches it this turn and can capture (infantry first, then the strongest) moves in before
   anything else, and is held to the turn's end.
 
-The second part (#617), in rear.ts, ahead of the classic plan after the garrisons' marches: an unmount, a resupply.
+The second part (#617), in rear.ts, ahead of the planner after the garrisons' marches: an unmount, a resupply.
 
 - **Resupply before contact**: a unit with a third of its ammunition or fuel or less (half the fuel for aircraft)
   where no ground enemy reaches next turn (aircraft: no air threat) resupplies instead of advancing.
-- **Rides out of reach** (#315): `planTurn`'s `ridesTo` keeps the classic plan's moves on a transport (a mount, or a
-  unit already mounted) off the hexes a ground enemy the side knows of reaches next turn (its influence, analysis.ts;
-  aircraft aside, they reach nearly everywhere), but for those within 2 hexes of an objective (`RIDE_TO_OBJECTIVE`:
-  arriving in time decides it); the garrisons' rides too. A unit that starts its turn on its transport within reach
-  gets off it first. Without `ridesTo` the classic plan rides as before. Every unit gets off its transport at the new
-  round, so only an enemy that plays after the side in the round catches a ride: a defender that no enemy plays after
-  rides anywhere (#626); an attacker keeps the rule, out of reach it lost fewer units for its objectives.
+- **Rides out of reach** (#315): no move on a transport (a mount, or a unit already mounted), the planner's or a
+  garrison's, ends on a hex a ground enemy the side knows of reaches next turn (its influence, analysis.ts; aircraft
+  aside, they reach nearly everywhere), but within 2 hexes of an objective (`RIDE_TO_OBJECTIVE`: arriving in time
+  decides it). A unit that starts its turn on its transport within reach gets off it first. Every unit gets off its
+  transport at the new round, so only an enemy that plays after the side in the round catches a ride: a defender
+  that no enemy plays after rides anywhere (#626); an attacker keeps the rule, out of reach it lost fewer units for
+  its objectives.
 - **Tried and left out** (#6, measured in arena.md): withdrawing a worn-down unit to reinforce saved units but lost
   objectives and games for a defender (Battleaxe, Luttich, Uman) and its attacks for an attacker, whatever spared the
   units near the objectives or on the front; finishing off a weak enemy first cost an attacker its wins (Luttich,
   Taman) and a defender its units. Both were measured again under the commander's directives (#638) and left out
-  again ("Built: the commander").
+  again ("Built: the commander"). The worn-down unit's part came back as scores of the planner (#627, "Built: the
+  planner").
 
 The staff draws nothing in either part. The planning and the measures: arena.md, "The remastered AI, the staff's
 first part (#616)" and "the staff's second part (#617)".
@@ -335,7 +334,7 @@ first part (#616)" and "the staff's second part (#617)".
 ### Built: the assault doctrine (#618)
 
 In src/core/remastered/assault.ts, the staff's third part: the controller asks it for an order after the garrisons'
-marches and the resupplies, before the classic plan.
+marches and the resupplies, before the planner.
 
 - **Who assaults**: the side attacking (`attacks`, clock.ts, #256), or a side with more objectives to take than the
   enemy (a defender that lost some, #231).
@@ -346,14 +345,14 @@ marches and the resupplies, before the classic plan.
   shared among the objectives left, `MIN_ASSAULT_TURNS` at least, #232), or it is hopeless: the enemy around it
   outweighs what the side brings while another sector doesn't. Then the commander weighs the sectors again.
 - **The battle group**: the free ground units within two turns' march of the sector (`GROUP_TURNS`), and the guns
-  that reach it from where they stand. The rest go to the sector too: the classic plan's objective pull is the
-  sector's for a ground unit (`planTurn`'s `pullTo`, #258), but for one within three turns of another objective to
-  take (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`: each to the objectives it still
-  reaches, #638), as the scripted general drops its sector then, and for the side defending (#256): its units hold
-  the line while it retakes an objective. Aircraft and ships keep the classic plan (#619).
+  that reach it from where they stand. The rest go to the sector too: the objective that pulls a ground unit in the
+  planner is the sector (`pullTo`, #258), but for one within three turns of another objective to take
+  (`LOCAL_TURNS`), for all in the last third of the turns (`LATE_SHARE`: each to the objectives it still reaches,
+  #638), as the scripted general drops its sector then, and for the side defending (#256): its units hold the line
+  while it retakes an objective. Aircraft and ships are pulled to every objective (the air doctrine is #619).
 - **The order of arms**, one order at a time on the world as it is, each step only with units for it:
   1. a recon unit of the group moves where it sees most of the hexes within 4 of the sector it doesn't see yet, once a
-     turn, never beside an enemy; its move is phased, the classic plan may move it again;
+     turn, never beside an enemy; its move is phased, the planner may move it again;
   2. the group's artillery fires on the enemy artillery and air defence that would cover the main target, then on the
      target, then on any enemy within 2 hexes of the sector (#234); a towed gun may take its step on foot first (the
      core lets a unit fire after a move on foot, moves.ts; only a ride uses its shot);
@@ -366,11 +365,126 @@ marches and the resupplies, before the classic plan.
 - **No attack that loses more than it kills**: the estimate counts the support fire the attacker meets in its losses
   and gives no kills to an attack the support fire stops (estimate.ts, as the screen's preview). A strike is worth
   ordering when it kills at least 1 and loses no more than it kills (`MIN_KILLS`); in the last third of the turns
-  (`LATE_SHARE`), or with the attack behind schedule (#638), an attack on an objective may cost more. The classic
-  plan's attacks are held to the same rule.
+  (`LATE_SHARE`), or with the attack behind schedule (#638), an attack on an objective may cost more. The planner's
+  attacks are held to the same rule ("Built: the planner").
 
 The staff draws nothing here either; the classic rules don't call it. The measures: arena.md, "The remastered AI, the
 assault doctrine (#618)".
+
+### Built: the planner (#627)
+
+In src/core/remastered/: planner.ts (the next order), advance.ts (what a hex is worth to a unit, the moves) and
+strike.ts (an attack before it is ordered). It orders every unit no operation holds, so the remastered AI no longer
+asks the classic AI for a plan: `planTurn` (src/core/ai.ts) plays the classic rules only, and the hooks the staff
+had in it (`held`, `ridesTo`, `pullTo`, `attacks`) are gone. The measures: arena.md, "The remastered AI on its own
+planner (#627)".
+
+- **One order at a time.** After the staff's orders (the garrisons' marches, the resupplies, the counterattacks and
+  the assault), the controller asks the planner for one order on the world as it is; nothing is queued, the next is
+  chosen afresh once that one is played (its attack after a move, its move after a mount). Each is asked of the core
+  first (`check`): the planner gives no order the core refuses. What it found for a unit is kept through the turn
+  and forgotten when a unit near it moved, fought, went or came into sight (`PlannerMemo`, the controller's, D6), so
+  an order doesn't cost a look at every unit.
+- **No draw.** The planner reads no random stream: of equal choices the first unit of the list and the first hex of
+  its range win. The AI's stream now moves only with the purchases at the turn's start, and two games from the same
+  save give the same orders whatever that stream holds.
+- **Capture.** An objective to take that stands empty as far as the side sees is taken by the free ground unit that
+  reaches it this turn and can capture: infantry first, then the strongest.
+- **Fire.** A strike is the estimate's (estimate.ts): its kills, and its losses with the support fire it meets. The
+  planner orders none that loses more than it kills (#618), but on an objective for a side pressed for time (the
+  last turns, behind schedule), and none that costs the unit more than one strength point in 2.5
+  (`MIN_STRENGTH_PER_LOSS`). A strike that kills nothing and loses nothing is ordered: it wears the target's
+  entrenchment down for the next. The arms fire in order: artillery and fortifications, ships, aircraft, then the
+  units that close with the enemy; within an arm the strike worth most first. A strike's worth is its kills by the
+  target's class less its losses by the unit's (`KILL_WORTH`, `LOSS_COST`: an artillery piece, a transport and what
+  it carries are worth most), more for an enemy the directives name: on an objective to take (`ON_OBJECTIVE`), in the
+  main effort's sector (`SECTOR_TARGET`), beside an objective the commander holds (`THREAT_TARGET`), and for one
+  already struck this turn (`STRUCK`: the units finish what they started).
+- **A unit weighs its hex and its strike together.** A ground unit that closes with the enemy, and an aircraft,
+  goes to the hex where the hex and the best strike from it are worth most, when that beats staying: so near an
+  objective getting onto it or beside it counts for more than a kill elsewhere, and far from one a unit fights what
+  is near. (With every strike ordered before any move the AI destroyed more and took fewer objectives: 3.1 instead
+  of 4.95 in Ostpreussen.) A hex is worth (advance.ts, `Footing`):
+
+| Part | Worth |
+|---|---|
+| The pull of the unit's objectives (below) | 6000 over the points of the march to the nearest, on the distance fields (fields.ts), counted on foot, and 100 more on it; 12000 for the scenario's attacker (`PULL`, `ATTACKER_PULL`) |
+| An objective the unit can stand on | infantry 600, a tank 350, another 300 |
+| Terrain it digs deeper in / with a better initiative / a river without a road | +50 / +20 / -70 |
+| Close terrain: infantry / an anti-tank gun / the others | +120 / +10 / -50 |
+| A town under another flag / a deployment hex of the player's | +50 / -100 |
+| Each neighbour: a friend (its artillery) / an enemy the side sees | +20 (+100) / +40 |
+| Each objective beside it: infantry / the others, less when the side holds it | +100 or +70 / +70 or +50 |
+| Staying: each level of entrenchment | +50, none for an assaulting side's unit with no enemy within 3 hexes (#235) |
+
+  The weights are the classic AI's, which years of play tuned; its noise (a factor 0.8 to 1.2 drawn for every hex)
+  is gone. The pull is not: the classic AI's 4000 was over hexes, and the fields count a forest or a river at more
+  than a hex. At 4000 over them a defender's units stayed in their holes with an objective to take back (Bzura's
+  defence held 5.75 objectives instead of 6.6, Indochina's 3.85 instead of 4.4), at 6000 no side did worse than with
+  the classic plan. The scenario's attacker, which loses at the turn limit unless it took everything (#256), is
+  pulled twice as hard: at 12000 Zitadelle's attack won 30 games of 40 against the general instead of 11 and
+  Bzura's 40 instead of 26, while a defender pulled so lost more units (Luttich's 30.7 instead of 27.3). An
+  aircraft's hex is a third of the pull, by hex distance, less 10 for each enemy strength point that can strike an
+  aircraft there next turn (`AIR_THREAT`): it doesn't fly alone into known air defence when it can go around (the
+  air doctrine proper is #619).
+- **Where a unit goes** is the directives': the main effort's sector for an attacker's free ground units, but one
+  within three turns of another objective goes for that one (`pullTo`, assault.ts, "Built: the assault doctrine");
+  every objective to take for a defender's; none for the line that stands fast by an objective to hold ("Built: the
+  commander"). A unit that no objective leads moves only to strike: with nothing to do it stays in its holes (the
+  classic plan walked it to the better terrain beside it).
+- **A worn-down unit spares itself** (#6). A ground unit at strength 4 or less (`WORN`) gives no attack that loses
+  as much as it kills, each strength point a strike would cost it counts 50 more against the strike (`WORN_LOSS`),
+  and a hex costs it 5 for each enemy strength point that can strike it there next turn (`WORN_EXPOSED`, the threat
+  map): of the hexes as near its objective it takes one out of the enemy's reach, and it falls back where no
+  objective pulls harder. Measured three times under the classic plan and left out each time ("Built: the staff",
+  "Built: the commander"): the withdrawal cost objectives. As scores in the planner it costs none: on the tuning
+  seeds Luttich's attack won 18 games of 40 instead of 11 and its defence lost 24.9 units instead of 27.3, nothing
+  worse; on seeds 41-80 nothing beyond the noise either way.
+- **Guns** (artillery, air defence, flak) fire from where they stand (#625), then move into range of their nearest
+  objective to take for the next turn, out of the enemy's ground reach and never beside an enemy (#234, the assault's
+  rule, `gunMove`), when the hex's pull is worth more than their holes.
+- **Aircraft** strike by the estimate, which counts the flak, the air defence and the fighter that would meet them
+  (#632). One out of ammunition flies back to an airfield of its player's (the supply map) and is resupplied there.
+- **Ships** fire by the estimate from the hex that gives the best strike, else move into their guns' range of the
+  nearest objective to take.
+- **A unit on an air or naval transport** is carried toward its nearest objective and lands once that is within two
+  turns of its own march from the hex it lands on (`LANDING_TURNS`), or where the transport gets it no nearer. The
+  AI doesn't embark a unit (the classic AI never did, nor landed one).
+- **Supply** (rear.ts): before its other orders a unit worn down below 4 is reinforced and one with less than 2
+  ammunition or 5 fuel resupplied, wherever it stands (`urgentSupply`: it can't fight as it is); a unit short of a
+  third resupplies out of the enemy's reach (the staff's second part); and a unit that neither moved nor fired in
+  the turn is reinforced while the player's prestige, read from the world, pays for a point, else resupplied
+  (`idleSupply`). A fortification isn't reinforced.
+
+What each pass of the classic plan became:
+
+| The classic plan's pass | In the remastered AI |
+|---|---|
+| reinforce below 4, resupply when low | `urgentSupply`, and the staff's resupply before contact |
+| move to the best scored hex, then attack from it | the planner: hex and strike weighed together, one order at a time |
+| guns: attack, then move (#625) | the assault's fire and `gunMove`; the planner's for the guns outside it |
+| attack scores, a threshold by class | the estimate with its support fire, the rule of #618 |
+| the score's noise (the AI's stream) | none |
+| reinforce and resupply what did nothing | `idleSupply`, after the garrisons' |
+| purchases and deployment (`buyAndDeploy`) | still the classic AI's `startTurn` (#640) |
+
+- **Tried and left out**, each measured on the tuning seeds against the general (arena.md has the numbers):
+  - *Every attack before any move*, the best by the estimate's gain first: the AI destroyed more and took fewer
+    objectives. *Only attacks that kill*: Zitadelle's and Battleaxe's attacks won a quarter and two thirds of their
+    games.
+  - *A unit that fired from where it stood stays there* (the classic plan's): the attackers took fewer objectives.
+    *A defender's guns left where they stand*: it held fewer.
+  - *The pull by hex distance*, *the moves in the unit list's order*, *a hex weighed by every strike from it, allowed
+    or not* (the classic plan's attack potential, the best or the sum): each cost a defender units or objectives.
+  - *No ground unit sent blind onto a hex where an enemy is remembered*: nothing beyond the noise.
+  - *The line that stands fast by an attacker's objectives too*: its attack won fewer games (Battleaxe 26 of 40
+    instead of 35, Taman 6 instead of 11).
+  - *Aircraft heedless of the air threat*, *holes worth half*, *an objective under the unit worth double*: worse or
+    no better. *The attacker pulled harder than 12000*: Ostpreussen's attack won its first games ever (12 of 40 at
+    32000), and Taman's and Zitadelle's, on the crowded fronts, lost theirs.
+  - *Finishing off a weak enemy* (#6), a strike the estimate has destroy its target worth 100 more: nothing beyond
+    the noise alone, and with the worn-down unit's rule Luttich's defence lost 28.0 units instead of 24.9. The
+    planner already strikes first the enemy struck this turn (`STRUCK`).
 
 ### 5. Tactics: execution
 
@@ -494,14 +608,16 @@ measured:
   rules choose (`rules.ai`, #53), and the arena can set either. It starts as a wrapper that passes
   every call to the classic `aiController` and plays exactly as it does: the arena shows the same
   numbers on the same seeds.
-- **Each unit has one owner.** Once the new layers hold units, at each order they take the units
-  their operations hold and the classic logic plans the rest. The classic AI plans its turn once,
-  at its start, so the wrapper asks it again for the units left each time the new layers have no
-  order (a plan on the world as it is, as the scripted general does). Nothing is ordered by both.
-- **What goes over first**: the analysis (step 1, nothing changes in play), then the units the
-  assault and garrison operations take (step 2), then the commander's choice of where (step 3).
-  The purchases and the deployment stay the classic ones until their own modules replace them.
-  When the classic logic has no units left to plan, the wrapper is gone.
+- **Each unit has one owner.** While the new layers held only some units, at each order they took
+  the units their operations hold and the classic logic planned the rest, asked again each time
+  the new layers had no order. Nothing was ordered by both.
+- **What went over**: the analysis (step 1, nothing changes in play), then the units the assault
+  and garrison operations take (step 2), the commander's choice of where (step 3), and the units
+  no operation holds: the remastered AI's own planner orders them since #627 ("Built: the
+  planner"), and the classic plan is no longer called.
+- **What is still borrowed**: the purchases and the deployment at the turn's start, the classic
+  AI's `startTurn` (`buyAndDeploy`, src/core/ai.ts), until their own modules replace them (#640).
+  They are the only draws the remastered AI makes from the AI's stream.
 - **Memory.** The operations live in the controller between its calls, not in the state
   (docs/STATE.md D6). A loaded game rebuilds them by planning again at the start of the turn it was
   saved on, as the classic AI does today (#71): a loaded game may play differently from one played

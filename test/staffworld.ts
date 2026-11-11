@@ -1,11 +1,16 @@
 //The remastered AI's staff on hand-built maps (test/remastered-staff.test.ts, test/remastered-rear.test.ts): a map of
 //the remaster's rules with objectives, and one turn of a controller played as the session plays it
+import { JSDOM } from "jsdom";
 import type { Command } from "../src/core/command";
 import type { Controller } from "../src/core/controller";
-import { remasterRules } from "../src/core/rules";
+import { createWorld } from "../src/core/create";
+import { newGame } from "../src/core/newgame";
+import { classicRules, remasterRules } from "../src/core/rules";
 import { step } from "../src/core/step";
-import type { Position, UnitState, World } from "../src/core/types";
+import { playerType } from "../src/core/tables";
+import type { Position, RulesetName, UnitState, World } from "../src/core/types";
 import { hexIndex, unitById } from "../src/core/world";
+import { setupOf } from "./corefiles";
 import { germanyPoland, type HandUnit, handWorld } from "./coreworld";
 
 //A hand-built 12 x 16 map of the remaster's rules, everything in sight unless `fog`, seeded: `own` are Germany's
@@ -52,3 +57,11 @@ export const position = (w: World, id: number): Position => {
 	return { row: u.row, col: u.col };
 };
 
+//A scenario's start in the rules given, seeded, every player the AI
+export function scenarioWorld(file: string, rules: RulesetName = "remaster", seed = 5): World {
+	const setup = { ...setupOf(file, { game: seed, ai: seed + 7919 }, null, undefined, [], new new JSDOM().window.DOMParser()),
+		rules: rules === "remaster" ? remasterRules : classicRules };
+	const created = newGame(setup);
+	for (const p of created.state.players) p.type = playerType.aiLocal;
+	return createWorld(created, setup.equipment, { spotSide: -1, rules: setup.rules });
+}
