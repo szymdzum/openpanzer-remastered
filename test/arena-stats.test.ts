@@ -66,7 +66,7 @@ describe("The arena's 95% intervals (#604)", () => {
 });
 
 const side = (player: Player, unitsLost: number): SideResult => ({ player, firstObjectiveTurn: 5, objectivesTaken: 1,
-	objectivesHeld: 2, unitsLost, unitsDestroyed: 3, refused: 0, turnMs: [10, 20] });
+	objectivesHeld: 2, unitsLost, unitsDestroyed: 3, refused: 0, bought: 0, spent: 0, reinforced: 0, turnMs: [10, 20] });
 
 function game(seed: number, lost: number, file = "drpzop01.xml"): GameResult {
 	return { match: { file, sides: ["ai", "general"], seed, rules: "remaster" }, turns: 17, end: "turnLimit", winner: seed % 2,
