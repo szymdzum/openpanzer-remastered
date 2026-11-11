@@ -7,12 +7,11 @@
  * http://www.gnu.org/licenses/gpl.html
  */
 
-import { nextToSeenEnemy } from "../ai";
 import { unitAttackRange } from "../attack";
 import type { Command } from "../command";
 import { cellsInRange, distance } from "../geometry";
 import { moveRange, unitMoveRange } from "../movement";
-import { seesUnit } from "../sight";
+import { nextToSeenEnemy, seesUnit } from "../sight";
 import { check } from "../step";
 import { unitClass } from "../tables";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";

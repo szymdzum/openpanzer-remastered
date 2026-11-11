@@ -80,3 +80,13 @@ export function unitsNear(w: World, u: UnitState): UnitState[] {
 	}
 	return near;
 }
+
+/** Whether the hex is next to an enemy ground unit the unit's side sees. */
+export function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean {
+	const side = sideOf(w, u);
+	return adjacent(cell.row, cell.col).some((c) => {
+		if (!onMap(w, c.row, c.col)) return false;
+		const hex = hexIndex(w, c.row, c.col), other = groundUnitAt(w, hex);
+		return other !== null && sideOf(w, other) !== side && seesUnit(w, other, side);
+	});
+}
