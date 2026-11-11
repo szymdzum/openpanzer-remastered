@@ -18,7 +18,7 @@ import { moveRange } from "./movement";
 import { check, step } from "./step";
 import { canReinforce, canResupply, reinforceValue } from "./supply";
 import { costPerStrength, unitCost } from "./costs";
-import type { MoveCell, Position, UnitId, UnitState, World } from "./types";
+import type { MoveCell, Position, UnitState, World } from "./types";
 import { canMount, firesOnlyBeforeMoving, isAir, isGround, isSea, isTransportable, unitUsesFuel } from "./units";
 import { groundUnitAt, hexIndex, onMap, sideOf, unitData } from "./world";
 import { seesUnit } from "./sight";
@@ -73,7 +73,7 @@ function isAttacker(w: World, side: number): boolean {
 
 //The share of the entrenchment bonus its units keep away from the enemy: the rules' for a side that
 //attacks, all of it for one that defends (#235).
-const stayShareOf = (w: World, attacks: boolean): number => attacks ? w.rules.ai.attackerEntrenchment : 1;
+const stayShareOf = (w: World, side: number): number => isAttacker(w, side) ? w.rules.ai.attackerEntrenchment : 1;
 
 //The AI's stream (its state is null when the state's streams aren't seeded: Math.random). The purchases
 //and the scores draw from it, and the order of the draws is behavior.
@@ -243,46 +243,18 @@ interface Planning {
 	queue: Command[];
 	prestigeLeft: number;
 	stayShare: number;
-	ridesTo: ((u: UnitState, cell: Position) => boolean) | null;
-	pullTo: ((u: UnitState) => readonly Position[]) | null;
 }
 
-/** A turn's classic plan: its commands in order, the world with the AI stream after its draws, the prestige left. */
-export interface ClassicPlan {
-	world: World;
-	queue: Command[];
-	prestigeLeft: number;
-}
-
-/** What another planner (the remastered AI's staff) changes in the classic plan. */
-export interface PlanOptions {
-	held?: ReadonlySet<UnitId>;	//the units it orders, which the plan leaves out
-	//Whether a move on the unit's transport may end on the cell; when not given, any cell but one next to an enemy
-	//ground unit the side sees
-	ridesTo?: (u: UnitState, cell: Position) => boolean;
-	//The objectives a unit's moves are pulled to; when not given, the side's objectives to take
-	pullTo?: (u: UnitState) => readonly Position[];
-	//Whether the side attacks (#235); when not given, while it has more objectives to take than the enemy
-	attacks?: boolean;
-}
-
-const NO_UNITS: ReadonlySet<UnitId> = new Set();
-
-/**
- * The classic plan of the player's turn, with what another planner changes in it (`options`). Artillery,
- * fortifications, air and naval combat units go first, each given another pass (reinforce, resupply, move, attack;
- * attack, then move, for a gun whose move uses its shot) until it can do nothing more. A unit that did nothing in
- * its first pass scores its moves again in the next (new draws: it may move then).
- */
-export function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number, options: PlanOptions = {}): ClassicPlan {
-	const held = options.held || NO_UNITS;
+//Artillery, fortifications, air and naval combat units go first, each given another pass (reinforce, resupply, move,
+//attack; attack, then move, for a gun whose move uses its shot) until it can do nothing more. A unit that did nothing
+//in its first pass scores its moves again in the next (new draws: it may move then).
+function planTurn(w: World, player: number, config: AIConfig, prestigeLeft: number) {
 	const rng = aiStream(w), side = w.state.players[player].side;
 	const plan: AIPlan = { enemyUnits: new Map(), takenPositions: [], freedPositions: [], objectives: w.state.objectives[side] };
-	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, options.attacks ?? isAttacker(w, side)),
-		ridesTo: options.ridesTo || null, pullTo: options.pullTo || null };
+	const t: Planning = { s: { w, player, config, plan, rng }, queue: [], prestigeLeft, stayShare: stayShareOf(w, side) };
 	const units: AIUnit[] = [];
 	for (const u of w.state.units) {
-		if (u.owner !== player || held.has(u.id)) continue;
+		if (u.owner !== player) continue;
 		const a: AIUnit = { u, noAttack: false, noMove: false, noReinforce: false, noResupply: false, didAttack: false, didMove: false,
 			didResupplyReinforce: false, didMount: false, newPosition: null };
 		if (actsFirst(w, u)) units.unshift(a);
@@ -362,10 +334,9 @@ function isLow(config: AIConfig, w: World, u: UnitState): boolean {
 function moveUnit(t: Planning, a: AIUnit) {
 	const s = t.s, u = a.u;
 	const moving = !(a.didMove || a.didResupplyReinforce);
-	const cells = moving ? ridden(t, u, moveRange(s.w, u)) : [];
-	const mounted = moving ? mountedCells(s.w, u, cells, t.ridesTo) : [];
-	const pull = t.pullTo === null ? s.plan.objectives : t.pullTo(u);
-	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, { cells, mounted, pull }, t.stayShare);
+	const cells = moving ? moveRange(s.w, u) : [];
+	const mounted = moving ? mountedCells(s.w, u, cells) : [];
+	const to = cells.length + mounted.length === 0 ? null : bestMove(s, u, cells, mounted, t.stayShare);
 	if (to === null) {
 		a.noMove = true;
 		return;
@@ -385,16 +356,10 @@ function moveUnit(t: Planning, a: AIUnit) {
 //The hexes a ground unit reaches only in its transport (a towed gun's whole range): the AI drives its
 //guns and infantry up in their trucks (#82). None for a unit without one or already mounted, and none
 //next to an enemy ground unit the side sees: it would stand there in its truck until the round ends.
-function mountedCells(w: World, u: UnitState, cells: MoveCell[], ridesTo: Planning["ridesTo"]): MoveCell[] {
+function mountedCells(w: World, u: UnitState, cells: MoveCell[]): MoveCell[] {
 	if (u.isMounted || !canMount(w, u)) return [];
 	return moveRange(w, { ...u, isMounted: true }).filter((m) => !cells.some((c) => c.row === m.row && c.col === m.col)
-		&& !nextToSeenEnemy(w, u, m) && (ridesTo === null || ridesTo(u, m)));
-}
-
-//The move range of a unit already on its transport, but for the cells another planner keeps it from riding to
-function ridden(t: Planning, u: UnitState, cells: MoveCell[]): MoveCell[] {
-	const ridesTo = t.ridesTo;
-	return ridesTo === null || !u.isMounted ? cells : cells.filter((c) => (c.row === u.row && c.col === u.col) || ridesTo(u, c));
+		&& !nextToSeenEnemy(w, u, m));
 }
 
 //Within this distance of a seen enemy a unit is in contact: what one move of the enemy reaches.
@@ -416,24 +381,17 @@ export function nextToSeenEnemy(w: World, u: UnitState, cell: Position): boolean
 	});
 }
 
-//Where a unit may move: its move range, the hexes only its transport reaches, and the objectives that pull it
-interface MoveChoice {
-	cells: MoveCell[];
-	mounted: MoveCell[];
-	pull: readonly Position[];
-}
-
 //The best scored hex of the move range, then of the hexes only its transport reaches (mounted); null
 //when none beats staying. The objective it nears counts less for an air unit (0.3) and not for a ship.
 //A hex under -2000 (taken) skips attackPotential, so its draws too. A hex is scored for the unit
 //standing there, not its transport: it gets off it at the round's end.
-function bestMove(s: Scorer, u: UnitState, choice: MoveChoice, stayShare: number): { cell: Position; mounted: boolean } | null {
-	const { cells, mounted, pull } = choice;
-	let best = stayScore(s, u, stayShare, pull);
+function bestMove(s: Scorer, u: UnitState, cells: MoveCell[], mounted: MoveCell[], stayShare: number)
+	: { cell: Position; mounted: boolean } | null {
+	let best = stayScore(s, u, stayShare);
 	const nearing = isSea(s.w, u) ? 0 : isAir(s.w, u) ? 0.3 : 1;
 	let bestCell: MoveCell | null = null;
 	for (const c of [...cells, ...mounted]) {
-		const objective = nearing === 0 ? 0 : nearing === 1 ? objectiveScore(s, c, pull).score : objectiveScore(s, c, pull).score * nearing;
+		const objective = nearing === 0 ? 0 : nearing === 1 ? objectiveScore(s, c).score : objectiveScore(s, c).score * nearing;
 		let score = cellScore(s, u, c, c.canMove) + objective;
 		if (score < -2000) continue;
 		score += attackPotential(s, u, c);
@@ -448,10 +406,10 @@ function bestMove(s: Scorer, u: UnitState, choice: MoveChoice, stayShare: number
 //Away from the enemy an attacker's unit keeps only a share of its entrenchment's worth: the holes it
 //dug far from the front don't hold it back (#235); in contact it keeps them all, to hold the line it
 //reached.
-function stayScore(s: Scorer, u: UnitState, stayShare: number, pull: readonly Position[]): number {
+function stayScore(s: Scorer, u: UnitState, stayShare: number): number {
 	const pos = { row: u.row, col: u.col };
 	let score = cellScore(s, u, pos, true);
-	if (isGround(s.w, u)) score += objectiveScore(s, pos, pull).score;
+	if (isGround(s.w, u)) score += objectiveScore(s, pos).score;
 	const share = stayShare === 1 || nearSeenEnemy(s.w, u, CONTACT) ? 1 : stayShare;
 	score += u.entrenchment * s.config.entrenchmentScore * share;
 	return score + attackPotential(s, u, pos);
