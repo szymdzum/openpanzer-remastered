@@ -19,7 +19,7 @@ import { unitClass } from "../tables";
 import type { MoveCell, Position, UnitId, UnitState, World } from "../types";
 import { canCapture, canMount, isGround, unitUsesFuel } from "../units";
 import { groundUnitAt, hexIndex, unitById, unitData } from "../world";
-import type { Directive } from "./directives";
+import { type Directive, isGroup } from "./directives";
 import type { SideView } from "./perception";
 import type { AnalysisCache } from "./analysis";
 import { freeGround, samePosition, turnsTo } from "./march";
@@ -173,10 +173,10 @@ const isStrike = (kind: string) => kind === "assault" || kind === "counterattack
 /**
  * The operations with one for the `assault` and for each `counterattack`, in the directives' order: the one going on
  * while the commander keeps its directive (the same object), a new one for a directive given anew, even on the same
- * hex: the commander weighed its sectors again, and so does the plan.
+ * hex: the commander weighed its sectors again, and so does the plan. A group that joins the main effort is its own.
  */
 export function withStrikes(ops: Operation[], directives: readonly Directive[]): Operation[] {
-	const strikes = directives.filter((d) => isStrike(d.task)), going = ops.filter((op) => isStrike(op.kind));
+	const strikes = directives.filter((d) => isStrike(d.task) && !(isGroup(d) && d.task === "assault")), going = ops.filter((op) => isStrike(op.kind));
 	if (strikes.length === going.length && strikes.every((d, i) => going[i].directive === d)) return ops;
 	return [...ops.filter((op) => !isStrike(op.kind)), ...strikes.map((d): Operation =>
 		going.find((op) => op.directive === d) ?? { kind: d.task as OperationKind, at: d.target, units: [], until: d.until, reason: d.reason, directive: d })];
