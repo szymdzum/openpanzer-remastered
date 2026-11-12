@@ -552,6 +552,45 @@ equipment window. The measures: arena.md, "The remastered AI's own purchases and
   ground unit on the ocean; the capturing floor raised by how far apart the objectives lie (Luttich's attack won 6 of 40
   instead of 10).
 
+### Built: reinforcements (#639)
+
+In the remaster's rules the remastered AI plans with its reinforcements on the turn they arrive, and a group that
+arrives together gets a directive of its own. The session's order is as it was: the controller's `plan` is called
+before `arriveReinforcements` deploys the player's reinforcements (#94, kept for the classic AI, whose plan collects its
+units then, and pinned by the contracts). The planner picks every order on the world as it is, so the units that
+arrived already got orders; what was computed before them is the plan's perception, analysis and directives. The
+measures: arena.md, "The remastered AI's reinforcements (#639)".
+
+- **The refresh** (controller.ts): the plan notes the player's units; before each order the controller looks for units
+  of the player's it didn't know of (the reinforcements, before its first order of the turn) and, when there are
+  some, perceives and analyses the side again on the world as it is, and tells its commander which units arrived
+  (`CommanderMemory.arrived`). With none it does nothing more: a turn without reinforcements plays the same orders.
+- **Group directives** (directives.ts): a directive may name its `units`. It stands beside the directive of the same
+  task without units (it doesn't clash with it); the check drops a group whose units aren't the side's on the map, or
+  one of whose units is already in another group. A reserve takes no group (the staff chooses its units). The planner
+  pulls a group's units to its target instead of their objectives, but for those of the line, which stand fast; a
+  group's counterattack is a strike operation like the others; a group that joins the main effort is the assault's
+  battle group once in reach, no second operation.
+- **The commander's part** (commander.ts): the units that arrived this turn, free and fighting on the ground, form
+  groups, each unit within 3 hexes of another of its group (`GROUP_RADIUS`). A group's directive, the first that
+  applies:
+
+| Directive | When |
+|---|---|
+| `assault` on the main effort's objective | the group's mean march there is 2 turns or fewer (`JOIN_TURNS`: it fights with the battle group) |
+| `hold` on the nearest objective the commander holds | a side that doesn't attack, within 4 turns of its march (`RELIEF_TURNS`: further away the plan's units nearer it are its relief) |
+| `counterattack` on the nearest enemy within 3 hexes of an objective the side holds | a side that doesn't attack, when the estimate favours the group (the counterattack's rule, above) |
+| none | its units are the plan's |
+
+  It stands for 4 turns (`GROUP_FOR`: its march to a relief), while its units are free and its main effort or hold is
+  still given (the counterattack: while the enemy is still seen on the hex). No random draw, as everywhere else.
+- **Tried and left out** (seeds 101-140 against the general, Bzura's defence, the scenario with reinforcements): the
+  refresh alone moved nothing beyond the noise; a relief at any distance sent a group across the map (the one by a
+  quiet objective to a threatened one 17 rows away); within 2 or 3 turns it came out no better than the refresh alone.
+  Joining the main effort within 0, 2 or 3 turns came out the same: a defender's groups rarely arrive by it. *An
+  attacker's relief*: Taman's Soviet reinforcements, sent to hold the objective behind them instead of going on with
+  the plan, won 11 games of 40 against the general instead of 26; an attacker's groups only join the main effort.
+
 ### 5. Tactics: execution
 
 Within one operation there are few actions, so search pays off there: the AI tries orders of

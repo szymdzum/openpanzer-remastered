@@ -1,6 +1,7 @@
 /**
  * The remastered AI's rule-based commander (#638): its directives from the maps and the turn clock: a hold for each
- * objective in the enemy's reach, the counterattacks and the main effort.
+ * objective in the enemy's reach, the counterattacks and the main effort; and one for each group of reinforcements
+ * that arrived together (#639).
  *
  * Licensed under the GPL license:
  * http://www.gnu.org/licenses/gpl.html
@@ -14,20 +15,22 @@ import type { Position, UnitId, UnitState, World } from "../types";
 import { canCapture, firesOnlyBeforeMoving, isGround } from "../units";
 import { ammoOf, onMap, unitData } from "../world";
 import type { Analysis, AnalysisCache, Sector } from "./analysis";
-import { assaults, type Clock, clockLine, clockOf, deadlineOf } from "./clock";
-import { at, type Directive } from "./directives";
+import { assaults, attacks, type Clock, clockLine, clockOf, deadlineOf } from "./clock";
+import { at, type Directive, type GroupDirective, isGroup } from "./directives";
 import { freeGround, samePosition, turnsTo } from "./march";
 import type { SideView } from "./perception";
 
 /**
  * What the commander is told beside the maps: its player, its last directives (none after a load), the units the
- * staff's operations hold, and the analysis's cache for the distance fields.
+ * staff's operations hold, the analysis's cache for the distance fields, and the player's units that arrived this
+ * turn after its plan (its reinforcements, #94), if any.
  */
 export interface CommanderMemory {
 	player: number;
 	directives: readonly Directive[];
 	held: ReadonlySet<UnitId>;
 	cache: AnalysisCache;
+	arrived?: readonly UnitId[];
 }
 
 /** A source of directives: the rules of `command`, or anything that answers in the same data. */
@@ -49,19 +52,31 @@ const OPEN_ENTRENCHMENT = 1;
 const COUNTER_TURNS = 2;
 //A loss counts this much against a kill in a counterattack's estimate (the scripted general's LOSS_WEIGHT)
 const LOSS_WEIGHT = 0.7;
+//Reinforcements this near another of a group arrived with it: the scenario sends them together
+const GROUP_RADIUS = 3;
+//A group joins the main effort when its sector is this many turns of the group's march away or fewer: it fights
+//there with the battle group (assault.ts GROUP_TURNS)
+const JOIN_TURNS = 2;
+//A group relieves a hold within this many turns of its march: further away, the plan's units nearer it are its relief
+const RELIEF_TURNS = 4;
+//The turns after its arrival a group's directive stands: its march to a relief; then its units are the plan's
+const GROUP_FOR = RELIEF_TURNS;
 
 /**
  * The rule-based commander's directives, the first in priority first: a hold for each of the side's objectives a
  * ground enemy can reach soon, the counterattacks the estimate favours, and the main effort, one objective to assault,
- * kept from `memory` while it goes on. It keeps no reserve: held back, a fifth of an attacker's mobile units cost it
- * objectives on other seeds than those it was tuned on (docs/ai/arena.md). Pure: no random stream, nothing kept.
+ * kept from `memory` while it goes on; then one for each group of the reinforcements that arrived this turn (#639). It
+ * keeps no reserve: held back, a fifth of an attacker's mobile units cost it objectives on other seeds than those it
+ * was tuned on (docs/ai/arena.md). Pure: no random stream, nothing kept.
  */
 export function command(w: World, view: SideView, a: Analysis, memory: CommanderMemory): Directive[] {
 	const clock = clockOf(w, a.side), units = freeGround(w, memory.player, memory.held);
-	const strikes = counterattacks(w, view, a, memory, units, clock);
-	const effort = mainEffort(w, a, memory, units, clock);
-	const out = [...holds(w, view, a), ...strikes, ...(effort === null ? [] : [effort])];
-	return out.map((d, i) => d.priority === i + 1 ? d : { ...d, priority: i + 1 });
+	const last = { ...memory, directives: memory.directives.filter((d) => !isGroup(d)) };
+	const strikes = counterattacks(w, view, a, last, units, clock);
+	const effort = mainEffort(w, a, last, units, clock);
+	const sides = holds(w, view, a), out = [...sides, ...strikes, ...(effort === null ? [] : [effort])];
+	const groups = groupDirectives(w, view, a, memory, { effort, holds: sides, units });
+	return [...out, ...groups].map((d, i) => d.priority === i + 1 ? d : { ...d, priority: i + 1 });
 }
 
 //A hold for each objective a ground enemy the side knows of (seen or remembered, #17) can reach within HOLD_TURNS moves
@@ -209,4 +224,94 @@ function goesOn(w: World, a: Analysis, cache: AnalysisCache, units: readonly Uni
 	if (w.state.turn.turn > d.until || sector === undefined) return false;
 	if (sectorScore(w, cache, units, sector) >= 0) return true;
 	return !a.sectors.some((s) => s !== sector && sectorScore(w, cache, units, s) >= 0);
+}
+
+//What a group's directive is weighed against: the main effort, the holds and the free ground units
+interface Plan {
+	effort: Directive | null;
+	holds: readonly Directive[];
+	units: readonly UnitState[];
+}
+
+/**
+ * A directive for each group of reinforcements: those of the last directives that still stand, and for each group
+ * that arrived together this turn and has none: the main effort if within JOIN_TURNS of its march; else, for a side
+ * that doesn't attack, the hold nearest it within RELIEF_TURNS, else a counterattack on the enemy nearest it by an
+ * objective the side holds, when the estimate favours the group; none else, its units are the plan's.
+ */
+function groupDirectives(w: World, view: SideView, a: Analysis, memory: CommanderMemory, plan: Plan): GroupDirective[] {
+	const out = memory.directives.filter(isGroup).map((d) => stillStands(w, view, plan, d)).filter((d) => d !== null);
+	const taken = new Set<UnitId>();
+	for (const d of out) for (const id of d.units) taken.add(id);
+	const free = plan.units.filter((u) => memory.arrived?.includes(u.id) && !taken.has(u.id));
+	for (const group of groupsOf(free)) {
+		const d = groupDirective(w, view, a, memory.cache, plan, group);
+		if (d !== null) out.push(d);
+	}
+	return out;
+}
+
+//A group's last directive, its units still free, while it stands: its last turn not passed, the main effort or the
+//hold it joined still given, the enemy it counterattacks still seen there
+function stillStands(w: World, view: SideView, plan: Plan, d: GroupDirective): GroupDirective | null {
+	const units = d.units.filter((id) => plan.units.some((u) => u.id === id));
+	const joined = d.task === "assault" ? plan.effort !== null && samePosition(plan.effort.target, d.target)
+		: d.task === "counterattack" ? enemyOn(view, d.target) !== undefined : plan.holds.some((h) => samePosition(h.target, d.target));
+	if (w.state.turn.turn > d.until || units.length === 0 || !joined) return null;
+	return units.length === d.units.length ? d : { ...d, units };
+}
+
+//The units in groups, each within GROUP_RADIUS of another of its group, in the order they came
+function groupsOf(units: readonly UnitState[]): UnitState[][] {
+	const groups: UnitState[][] = [];
+	for (const u of units) {
+		const near = groups.filter((g) => g.some((x) => distance(x.row, x.col, u.row, u.col) <= GROUP_RADIUS));
+		if (near.length === 0) groups.push([u]);
+		else near[0].push(u);
+		for (const g of near.slice(1)) {
+			near[0].push(...g);
+			groups.splice(groups.indexOf(g), 1);
+		}
+	}
+	return groups;
+}
+
+//The turns of its march the group needs to reach the hex, its units' mean; Infinity when none reaches it
+function groupTurns(w: World, cache: AnalysisCache, group: readonly UnitState[], target: Position): number {
+	const turns = group.map((u) => turnsTo(w, cache, u, target)).filter((t) => t !== Infinity);
+	return turns.length === 0 ? Infinity : turns.reduce((n, t) => n + t, 0) / turns.length;
+}
+
+function groupDirective(w: World, view: SideView, a: Analysis, cache: AnalysisCache, plan: Plan, group: UnitState[]): GroupDirective | null {
+	const turn = w.state.turn.turn, units = group.map((u) => u.id), lead = group[0];
+	const arrived = `${units.length} ${units.length === 1 ? "unit" : "units"} arrived at ${at(lead)}`;
+	const effort = plan.effort === null ? null : plan.effort.target;
+	if (effort !== null && groupTurns(w, cache, group, effort) <= JOIN_TURNS)
+		return { task: "assault", target: effort, priority: 0, until: turn + GROUP_FOR, reason: `${arrived}: join the main effort on ${at(effort)}`, units };
+	//An attacker's reinforcements are its attack's: its plan pulls them to the objectives. Sent to relieve an objective
+	//behind them, they won fewer games (docs/ai/arena.md)
+	if (attacks(w, a.side)) return null;
+	const relief = (p: Position) => {
+		const turns = groupTurns(w, cache, group, p);
+		return turns <= RELIEF_TURNS ? turns : Infinity;
+	};
+	const hold = nearestTo(plan.holds.map((h) => h.target), relief);
+	if (hold !== null) return { task: "hold", target: hold, priority: 0, until: turn + GROUP_FOR, reason: `${arrived}: relieve ${at(hold)}`, units };
+	const near = view.seen.filter((t) => isGround(w, t) && a.objectives.hold.some((o) => distance(o.row, o.col, t.row, t.col) <= COUNTER_RADIUS));
+	const t = nearestTo(near, (p) => distance(lead.row, lead.col, p.row, p.col));
+	if (t === null || favourOn(w, group, enemyOn(view, t)) <= 0) return null;
+	return { task: "counterattack", target: { row: t.row, col: t.col }, priority: 0, until: turn, reason: `${arrived}: counterattack ${at(t)}`, units };
+}
+
+//The nearest of the hexes by `far`, the first of equally near ones; null when none is reachable
+function nearestTo<T extends Position>(hexes: readonly T[], far: (p: Position) => number): T | null {
+	let best: T | null = null, nearest = Infinity;
+	for (const p of hexes) {
+		const d = far(p);
+		if (d < nearest) {
+			best = p;
+			nearest = d;
+		}
+	}
+	return best;
 }
