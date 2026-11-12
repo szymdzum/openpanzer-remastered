@@ -1166,6 +1166,58 @@ What it says:
 - **Where it deploys** mattered as much in Indochina: its landings take the coast's objective, and units deployed
   nearest the objective the planner pulls them to.
 
+## The remastered AI's reinforcements (#639), 12 November 2026
+
+In the remaster's rules the remastered AI looks at its side again once its reinforcements are on the map, and a group
+that arrives together gets a directive of its own (remastered-design.md, "Built: reinforcements"). The session's order
+and the classic AI are as they were. Before: main at 8501f32; after: this; remaster rules, the four seats.
+
+Tuned on seeds 101-140 (Bzura alone, then the suite):
+
+- **The refresh alone** (the perception, the analysis and the directives again, no group directive): nothing beyond the
+  noise anywhere; Bzura's defence held 6.75 objectives at the end instead of 6.80.
+- **A relief at any distance**: the group by Leczyca, an objective nothing threatened, marched to Lodz, 17 rows away.
+  Within 2 or 3 turns of the group's march: no better than the refresh. Within 4 (kept): Bzura's defence took back 7.70
+  objectives instead of 7.05 and lost 1.10 units an objective instead of 1.24 (both beyond the noise), held 7.13 at the
+  end instead of 6.80. The directive standing 1 or 4 turns came out within the noise of each other; 4 kept, the march
+  to a relief. Joining the main effort within 0, 2 or 3 turns: the same games, a defender's groups rarely arrive by it.
+- **An attacker's relief**: on the whole suite Taman's Soviet attack, its reinforcements sent to hold Abinsk behind
+  them, won 11 games of 40 against the general instead of 26. An attacker's groups now only join the main effort:
+  Taman came out within the noise (26 of 40), and so did every other scenario's attack.
+- **The group made once**, where it arrived: the commander was asked at every order with the units that arrived this
+  turn, so a unit given nothing on arriving could get a directive alone once it had moved. Now it hears of them once.
+  The same measures on the tuning seeds within 0.05.
+
+Diagnosed on seeds 41-80 (Bzura): the defence held 6.95 objectives at the end instead of 6.45 (+0.50, 0.11 to 0.89)
+and destroyed 2.3 units more.
+
+Accepted on seeds 1-40, the suite, the four seats (the version before the group was made once: the laptop slept
+through the final version's suite run; its Bzura games are below, and every other scenario came out within the noise on
+the tuning seeds). 1012 of 1280 games came out the same; orders refused stayed 0. Bzura, the final version, the
+remastered AI's side and its opponent:
+
+| Seat | Side | measure | before | after | after - before (95%) |
+|---|---|---|---|---|---|
+| remastered vs general | axis (remastered) defends | held at the end | 6.47 | 6.95 | +0.47 (0.10 to 0.85) |
+| | | objectives taken | 7.33 | 7.67 | +0.35 (-0.27 to 0.97) |
+| | | units lost | 8.82 | 9.25 | +0.42 (-0.43 to 1.28) |
+| | allies (general) | units lost | 10.93 | 12.18 | +1.25 (0.02 to 2.48) |
+| remastered vs ai | axis (remastered) defends | held at the end | 6.42 | 6.97 | +0.55 (-0.02 to 1.12) |
+| | | units lost | 9.93 | 9.28 | -0.65 (-1.64 to 0.34) |
+| | allies (ai) | objectives taken | 6.00 | 5.30 | -0.70 (-1.18 to -0.22) |
+| general vs remastered, ai vs remastered | allies (remastered) attacks | every measure | | | the same games: the Poles get no reinforcements |
+
+Elsewhere, against the general, nothing beyond the noise on a main measure; better: Ostpreussen's defence held 4.20
+objectives at the end instead of 4.03 (+0.17, within the noise on 1-40, +0.30 beyond it on 101-140). Against the
+classic AI: Ostpreussen's defence took back 0.13 objectives instead of 0.30 (beyond the noise, not a main measure).
+
+The targets of remastered-design.md against the general: 27 of 29 (26 on main). Now met: Ostpreussen's defender holds
+4.20 objectives at the end (target 4.1). Not met as before: Ostpreussen's defender's units lost (27.9, target 22.3) and
+Uman's defence (16 wins, target 25). Against the classic AI, both sides: 518 of 640 games (516 on main).
+
+The planning time is as it was (the refresh perceives and analyses once more on a turn with reinforcements): Zitadelle
+249 ms a turn, 95th percentile 890, worst 1812 (main 265, 956, 2123 in the same run), Bzura 13, 33, 101.
+
 ## Baseline, 24 October 2026
 
 Baseline from 24 October, before the suite: Ostpreussen alone, 20 seeds, the old outcome and the
